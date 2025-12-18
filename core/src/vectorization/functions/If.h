@@ -49,8 +49,11 @@ namespace omniruntime::vectorization {
                         auto res =  static_cast<ConstVector<std::string> *>(trueVec)->GetConstValue();
                         std::string_view sv = res;
                         static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,sv);
-                    } else {
+                    } else if (trueVec->GetEncoding() == OMNI_FLAT) {
                         auto res = static_cast<Vector<LargeStringContainer<std::string_view>> *>(trueVec)->GetValue(row);
+                        static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,res);
+                    } else {
+                        auto res = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(trueVec)->GetValue(row);
                         static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,res);
                     }
                 } else {
@@ -58,8 +61,11 @@ namespace omniruntime::vectorization {
                         auto res =  static_cast<ConstVector<std::string> *>(falseVec)->GetConstValue();
                         std::string_view sv = res;
                         static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,sv);
-                    } else {
+                    } else if (falseVec->GetEncoding() == OMNI_FLAT) {
                         auto res = static_cast<Vector<LargeStringContainer<std::string_view>> *>(falseVec)->GetValue(row);
+                        static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,res);
+                    } else {
+                        auto res = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(falseVec)->GetValue(row);
                         static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,res);
                     }
                 }

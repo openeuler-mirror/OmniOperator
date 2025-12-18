@@ -31,11 +31,17 @@ public:
 };
 }
 
-void RegisterIsNullFunction(const std::string &name)
-{
-    auto signatures = IsNullSignatures(name);
-    for (const auto &signature : signatures) {
-        VectorFunction::functionMap_.insert(std::make_pair(signature, std::make_shared<IsNullFunction>()));
+    void RegisterIsNullFunction(const std::string &name)
+    {
+        std::vector<std::vector<DataTypeId>> params = {{OMNI_INT}, {OMNI_VARCHAR}, {OMNI_DOUBLE}, {OMNI_BOOLEAN},
+                                                       {OMNI_SHORT}, {OMNI_DECIMAL64}, {OMNI_DECIMAL128}, {OMNI_DATE32},
+                                                       {OMNI_DATE64}, {OMNI_TIME32}, {OMNI_TIME64}, {OMNI_TIMESTAMP},
+                                                       {OMNI_INTERVAL_MONTHS}, {OMNI_INTERVAL_DAY_TIME}, {OMNI_CHAR},
+                                                       {OMNI_CONTAINER}, {OMNI_BYTE}, {OMNI_FLOAT}, {OMNI_VARBINARY},
+                                                       {OMNI_ARRAY}, {OMNI_MAP}, {OMNI_ROW}};
+        for (const auto &param: params) {
+            auto signature = std::make_shared<codegen::FunctionSignature>(name, param, OMNI_BOOLEAN);
+            VectorFunction::functionMap_.insert(std::make_pair(signature, std::make_shared<IsNullFunction>()));
+        }
     }
-}
 }
