@@ -146,6 +146,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             case OMNI_SHORT:
             case OMNI_BOOLEAN:
             case OMNI_DOUBLE:
+            case OMNI_FLOAT:
                 break;
             case OMNI_DATE32:
                 protoDataTypeExtBuild.setDateUnit(

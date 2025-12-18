@@ -20,7 +20,7 @@ class BaseVector;
 
 namespace omniruntime {
 namespace type {
-constexpr int32_t DATA_TYPE_MAX_COUNT = 20;
+constexpr int32_t DATA_TYPE_MAX_COUNT = 28;
 const std::string ID = "id";
 const std::string WIDTH = "width";
 const std::string PRECISION = "precision";

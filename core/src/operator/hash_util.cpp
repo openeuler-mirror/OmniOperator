@@ -48,6 +48,7 @@ std::unique_ptr<omniruntime::vec::Vector<int32_t>> HashUtil::ComputePartitionIds
             case type::OMNI_SHORT:
             case type::OMNI_INT:
             case type::OMNI_DATE32:
+            case type::OMNI_FLOAT:
                 Mm3Int(vecs[col], rowCount, partitionIds);
                 break;
             case type::OMNI_LONG:

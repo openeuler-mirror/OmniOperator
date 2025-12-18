@@ -63,7 +63,15 @@ static constexpr SetVector GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     SetVarcharVector,
     SetContainerVector,
     nullptr,
+    SetVectorImpl<Vector<float>>,
     nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr
 };
 
 OmniStatus HashAggregationOperatorFactory::Init()
