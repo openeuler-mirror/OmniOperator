@@ -116,7 +116,7 @@ public:
     {
         curVectorBatch = vectorBatch;
         std::shared_ptr<NullsHelper> nullMap = nullptr;
-        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap);
 
         ProcessSingleInternal(state + aggStateOffset, vector, rowOffset, rowCount, nullMap);
     }
@@ -129,7 +129,7 @@ public:
         std::shared_ptr<NullsHelper> nullMap = nullptr;
 
         int32_t rowCount = vectorBatch->GetRowCount();
-        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap);
 
         Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterIndex));
         bool needFilterJude = DoNeedHandleAggFilter(booleanVector, rowOffset, rowCount);
@@ -166,7 +166,7 @@ public:
         curVectorBatch = vectorBatch;
         std::shared_ptr<NullsHelper> nullMap = nullptr;
 
-        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap);
         ProcessGroupInternal(rowStates, vector, rowOffset, nullMap);
     }
 
@@ -178,7 +178,7 @@ public:
         std::shared_ptr<NullsHelper> nullMap = nullptr;
 
         auto rowCount = static_cast<int32_t>(rowStates.size());
-        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap);
 
         Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterOffset));
         bool needFilterJude = DoNeedHandleAggFilter(booleanVector, rowOffset, rowCount);
@@ -213,7 +213,7 @@ public:
     {
         int32_t rowCount = inputVecBatch->GetRowCount();
         std::shared_ptr<NullsHelper> nullMap = nullptr;
-        BaseVector *originVector = GetVector(inputVecBatch, 0, rowCount, &nullMap, 0);
+        BaseVector *originVector = GetVector(inputVecBatch, 0, rowCount, &nullMap);
 
         Vector<bool> *booleanVector = static_cast<Vector<bool> *>(inputVecBatch->Get(filterIndex));
         bool needFilterJude = DoNeedHandleAggFilter(booleanVector, 0, rowCount);
@@ -244,7 +244,7 @@ public:
     {
         int32_t rowCount = inputVecBatch->GetRowCount();
         std::shared_ptr<NullsHelper> nullMap = nullptr;
-        BaseVector *originVector = GetVector(inputVecBatch, 0, rowCount, &nullMap, 0);
+        BaseVector *originVector = GetVector(inputVecBatch, 0, rowCount, &nullMap);
         ProcessAlignAggSchema(result, originVector, nullMap, false);
     }
 
@@ -280,7 +280,7 @@ protected:
     }
 
     virtual BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-        std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx);
+        std::shared_ptr<NullsHelper> *nullMap);
 
     // this is needed in case, we directly create aggregator (using Aggregator::Create) without using AggregatorFactory
     static bool CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,

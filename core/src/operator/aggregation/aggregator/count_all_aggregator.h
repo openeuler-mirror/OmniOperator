@@ -54,13 +54,13 @@ protected:
     {}
 
     virtual ALWAYS_INLINE BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset,
-        const int32_t rowCount,  std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx) override
+        const int32_t rowCount,  std::shared_ptr<NullsHelper> *nullMap) override
     {
         if (CountColumnAggregator<IN_ID, OUT_ID>::inputRaw) {
             *nullMap = nullptr;
             return nullptr;
         } else {
-            return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap, channelIdx);
+            return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap);
         }
     }
 };

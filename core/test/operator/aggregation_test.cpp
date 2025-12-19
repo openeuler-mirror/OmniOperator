@@ -5019,9 +5019,9 @@ TEST(AggregatorTest, typed_aggregator_test)
         };
 
         BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-            std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx)
+            std::shared_ptr<NullsHelper> *nullMap)
         {
-            return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap, channelIdx);
+            return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap);
         }
         void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) {}
 
@@ -5089,10 +5089,10 @@ TEST(AggregatorTest, typed_aggregator_test)
             isOverflowAsNull);
 
         std::shared_ptr<NullsHelper> nullMap = nullptr;
-        agg.GetVector(vectorBatch, 0, dataSize, &nullMap, 0);
-        agg.GetVector(rawVectorBatch, 0, dataSize, &nullMap, 0);
+        agg.GetVector(vectorBatch, 0, dataSize, &nullMap);
+        agg.GetVector(rawVectorBatch, 0, dataSize, &nullMap);
         rawVectorBatch->Get(0)->SetNull(1);
-        agg.GetVector(vectorBatch, 0, dataSize, &nullMap, 0);
+        agg.GetVector(vectorBatch, 0, dataSize, &nullMap);
     }
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(rawVectorBatch);
