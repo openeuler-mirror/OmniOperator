@@ -36,7 +36,7 @@ import java.io.InputStream;
 public class OmniLibs {
     private static volatile OmniLibs instance;
 
-    private static final String LIBRARY_NAME = "boostkit-omniop-java-binding-1.9.0-aarch64";
+    private static final String LIBRARY_NAME = "boostkit-omniop-java-binding-2.0.0-aarch64";
 
     private static final Logger LOG = LoggerFactory.getLogger(OmniLibs.class);
 
