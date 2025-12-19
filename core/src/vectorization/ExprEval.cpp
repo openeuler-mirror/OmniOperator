@@ -48,7 +48,8 @@ BaseVector *ColumnProjectionVarCharVectorHelper(BaseVector *colVec, int32_t numS
 }
 
 template <typename T>
-BaseVector *ColumnProjectionVarCharCopyPositionsHelper(BaseVector *colVec, const int32_t *selectedRows, int32_t numSelectedRows)
+BaseVector *ColumnProjectionVarCharCopyPositionsHelper(BaseVector *colVec, const int32_t *selectedRows,
+    int32_t numSelectedRows)
 {
     if (colVec->GetEncoding() == OMNI_FLAT) {
         auto flatVec = reinterpret_cast<Vector<LargeStringContainer<T>> *>(colVec);
@@ -127,6 +128,9 @@ void ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec, con
         case OMNI_CHAR:
             SetConstantValues<std::string_view>(*literalVal.stringVal, outVec);
             break;
+        case OMNI_VARBINARY:
+            SetConstantValues<std::string_view>(*literalVal.stringVal, outVec);
+            break;
         default:
             std::string errorMessage = "Do not support such vector type " +
                 std::to_string(literalVal.GetReturnTypeId());
@@ -177,7 +181,8 @@ void ExprEval::Visit(const LiteralExpr &e)
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                inputValues_.push(new ConstVector(*e.stringVal, typeId));
+            case OMNI_VARBINARY:
+                inputValues_.push(new ConstVector(std::string_view(*e.stringVal), typeId));
                 break;
             default: LogError("Do not support such vector type %d", typeIds[e.dataType->GetId()]);
         }
@@ -249,10 +254,9 @@ void ExprEval::Visit(const FieldExpr &e)
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                {
-                    auto strVec = ColumnProjectionVarCharCopyPositionsHelper<std::string_view>(colVec, selectRow, selectSize);
-                    inputValues_.push(strVec);
-                }
+            case OMNI_VARBINARY:
+                inputValues_.push(
+                    ColumnProjectionVarCharCopyPositionsHelper<std::string_view>(colVec, selectRow, selectSize));
                 break;
             case OMNI_ARRAY:
                 inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->Slice(0, selectSize));
@@ -327,7 +331,7 @@ void ExprEval::Visit(const BinaryExpr &e)
 void ExprEval::Visit(const InExpr &e)
 {
     e.fieldExpr->Accept(*this);
-    BaseVector* result = VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowSize);
+    BaseVector *result = VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowSize);
     e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }

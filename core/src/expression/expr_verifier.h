@@ -34,7 +34,7 @@ public:
 
 private:
     std::string unSupportedReason = "";
-    bool isSupportCodegen_ = false;
+    bool isSupportCodegen_ = true;
     bool isSupportVectorization_ = true;
 
     static bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);

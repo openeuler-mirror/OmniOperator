@@ -24,6 +24,24 @@ public:
     static FunctionMap functionMap_;
 };
 
+template <typename UDFHolder>
+class SimpleFunctionAdapterFactoryImpl : public SimpleFunctionAdapterFactory {
+public:
+    explicit SimpleFunctionAdapterFactoryImpl() {}
+
+    std::unique_ptr<VectorFunction> createVectorFunction(const std::vector<DataTypeId> &inputTypes,
+        const config::QueryConfig &config, const std::vector<BaseVector *> &constantInputs) const override
+    {
+        return std::make_unique<SimpleFunction<UDFHolder>>(inputTypes, config, constantInputs);
+    }
+};
+
+template <typename T>
+static std::unique_ptr<T> CreateUdf()
+{
+    return std::make_unique<T>();
+}
+
 // New registration function; mostly a copy from the function above, but taking
 // the inner "udf" struct directly, instead of the wrapper. We can keep both for
 // a while to maintain backwards compatibility, but the idea is to remove the
@@ -35,8 +53,8 @@ bool RegisterFunction(const std::string &name, std::vector<DataTypeId> paramsTyp
     using funcClass = Func<TReturn>;
     using holderClass = FunctionHolder<funcClass, TReturn, TArgs...>;
     auto signature = std::make_shared<codegen::FunctionSignature>(name, paramsType, returnType);
-    VectorFunction::functionMap_.insert(std::make_pair(signature,
-        std::make_shared<SimpleFunction<holderClass>>()));
+    const auto factory = []() { return CreateUdf<SimpleFunctionAdapterFactoryImpl<holderClass>>(); };
+    VectorFunction::simpleFunctionFactoryMap_.insert(std::make_pair(signature, factory));
     return true;
 }
 }

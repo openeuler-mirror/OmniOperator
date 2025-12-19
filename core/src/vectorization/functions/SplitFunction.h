@@ -39,7 +39,7 @@ public:
             OMNI_THROW("SplitFunction Error:", "Result vector is not an ArrayVector");
         }
 
-        auto *constVec = dynamic_cast<ConstVector<std::string> *>(delimiterArg);
+        auto *constVec = dynamic_cast<ConstVector<std::string_view> *>(delimiterArg);
         std::string_view delimiter = constVec->GetConstValue();
 
         ConstVectorReader<int32_t> limitReader(limitArg);
@@ -91,7 +91,7 @@ private:
                 return dictVector->GetValue(row);
             }
             case OMNI_ENCODING_CONST: {
-                auto *constVector = static_cast<ConstVector<std::string> *>(vector);
+                auto *constVector = static_cast<ConstVector<std::string_view> *>(vector);
                 return constVector->GetConstValue();
             }
             default: OMNI_THROW("SplitFunction Error:", "Unsupported encoding type");

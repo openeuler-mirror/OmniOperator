@@ -15,6 +15,7 @@ namespace omniruntime::vectorization {
 void RegisterStringFunctions(const std::string &prefix)
 {
     RegisterString<StartsWithFunction>({prefix + "startswith"});
+    RegisterString<ContainsFunction>({prefix + "Contains"});
     VectorFunction::RegisterVectorFunction("split", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_ARRAY,
         std::make_shared<SplitFunction>());
     //todo cast and if expr datatype need to be expanded

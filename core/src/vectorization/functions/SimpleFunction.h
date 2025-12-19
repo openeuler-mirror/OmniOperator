@@ -12,6 +12,7 @@
 #include "util/config/QueryConfig.h"
 #include "vector/unsafe_vector.h"
 #include "vectorization/Status.h"
+#include "../ComplexViewTypes.h"
 
 namespace omniruntime::vectorization {
 template <typename T>
@@ -77,18 +78,41 @@ class SimpleFunction final : public VectorFunction {
     };
 
     template <int32_t POSITION, typename... Values>
-    void unpackInitialize(const std::vector<type::DataTypePtr>& inputTypes, const config::QueryConfig& config,
-                          const std::vector<VectorPtr>& packed, const Values*... values) const
+    void UnpackInitialize(const std::vector<DataTypeId> &inputTypes, const config::QueryConfig &config,
+        const std::vector<BaseVector *> &packed, const Values *... values) const
     {
-        (*fn_).initialize(inputTypes, config, packed);
+        if constexpr (POSITION == FUNC::num_args) {
+            return (*fn_).initialize(inputTypes, config, values...);
+        } else {
+            if (packed.at(POSITION) != nullptr) {
+                if constexpr (is_array_view_v<arg_at<POSITION>>) {
+                    auto oneReader = VectorReader<Array<typename arg_at<POSITION>::element_t>>(packed.at(POSITION));
+                    auto oneValue = oneReader[0];
+                    UnpackInitialize<POSITION + 1>(inputTypes, config, packed, values..., &oneValue);
+                } else {
+                    auto constVector = dynamic_cast<const ConstVector<arg_at<POSITION>> *>(packed.at(POSITION));
+                    if (constVector == nullptr) {
+                        OMNI_THROW("Runtime Error:", "Initialize vector must be const!");
+                    }
+                    auto oneValue = constVector->GetConstValue();
+                    UnpackInitialize<POSITION + 1>(inputTypes, config, packed, values..., &oneValue);
+                }
+            } else {
+                using temp_type = exec_arg_at<POSITION>;
+                UnpackInitialize<POSITION + 1>(inputTypes, config, packed, values...,
+                    static_cast<const temp_type *>(nullptr));
+            }
+        }
     }
 
 public:
-    SimpleFunction(const std::vector<DataTypePtr> &inputTypes, const config::QueryConfig &config,
-        const std::vector<VectorPtr> &constantInputs)
+    SimpleFunction(const std::vector<DataTypeId> &inputTypes, const config::QueryConfig &config,
+        const std::vector<BaseVector *> &constantInputs)
         : fn_{std::make_unique<FUNC>()}
     {
-        unpackInitialize<0>(inputTypes, config, constantInputs);
+        if constexpr (FUNC::udf_has_initialize) {
+            UnpackInitialize<0>(inputTypes, config, constantInputs);
+        }
     }
 
     explicit SimpleFunction() {}
@@ -114,14 +138,24 @@ private:
         } else {
             auto arg = rawArgs.top();
             rawArgs.pop();
-            using type = exec_arg_at<POSITION>;
+            using type = exec_arg_at<FUNC::num_args - POSITION - 1>;
             if (arg->GetEncoding() != OMNI_ENCODING_CONST) {
                 context.IntersectNull(arg);
             }
             if constexpr (is_string_type_v<type>) {
-                // string_view use StringVectorReader
-                auto reader = StringVectorReader(arg);
-                unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, readers..., reader);
+                if (arg->GetEncoding() == OMNI_ENCODING_CONST) {
+                    auto reader = ConstVectorReader<type>(arg);
+                    unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, reader, readers...);
+                } else {
+                    // string_view use StringVectorReader
+                    auto reader = StringVectorReader(arg);
+                    unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, reader, readers...);
+                }
+                return;
+            }
+            if constexpr (is_array_view_v<type>) {
+                auto reader = VectorReader<Array<typename type::element_t>>(arg);
+                unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, reader, readers...);
             } else {
                 switch (arg->GetEncoding()) {
                     case OMNI_FLAT: {

@@ -34,13 +34,13 @@ class EqualStringFunction final : public VectorFunction {
             });
         } else if (leftArg->GetEncoding() == OMNI_ENCODING_CONST && rightArg->GetEncoding() == OMNI_FLAT) {
             // Fast path for (const, flat).
-            auto constant = reinterpret_cast<ConstVector<std::string> *>(leftArg)->GetConstValue();
+            auto constant = reinterpret_cast<ConstVector<std::string_view> *>(leftArg)->GetConstValue();
             rows->applyToSelected([&](vector_size_t i) {
                 flatResult->SetValue(i, constant == static_cast<Vector<LargeStringContainer<std::string_view>> *>(rightArg)->GetValue(i));
             });
         } else if (leftArg->GetEncoding() == OMNI_FLAT && rightArg->GetEncoding() == OMNI_ENCODING_CONST) {
             // Fast path for (flat, const).
-            auto constant = reinterpret_cast<ConstVector<std::string> *>(rightArg)->GetConstValue();
+            auto constant = reinterpret_cast<ConstVector<std::string_view> *>(rightArg)->GetConstValue();
             rows->applyToSelected([&](vector_size_t i) {
                 flatResult->SetValue(i, constant == static_cast<Vector<LargeStringContainer<std::string_view>> *>(leftArg)->GetValue(i));
             });

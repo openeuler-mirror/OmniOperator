@@ -28,4 +28,17 @@ struct StartsWithFunction {
         return Status::OK();
     }
 };
+
+/// contains function
+/// contains(string, string) -> bool
+/// Searches the second argument in the first one.
+/// Returns true if it is found
+template <typename T>
+struct ContainsFunction {
+    ALWAYS_INLINE bool call(bool &result, const std::string_view &str, const std::string_view &pattern)
+    {
+        result = std::string_view(str).find(std::string_view(pattern)) != std::string_view::npos;
+        return true;
+    }
+};
 }

@@ -34,7 +34,16 @@ struct Equals {
 
 class VectorFunction;
 
-using VectorPtr = std::shared_ptr<vec::BaseVector>;
+class SimpleFunctionAdapterFactory {
+public:
+    virtual std::unique_ptr<VectorFunction> createVectorFunction(const std::vector<type::DataTypeId> &inputTypes,
+        const config::QueryConfig &config, const std::vector<vec::BaseVector *> &constantInputs) const = 0;
+
+    virtual ~SimpleFunctionAdapterFactory() = default;
+};
+
+using AdapterFunction = SimpleFunctionAdapterFactory;
+using FunctionFactory = std::function<std::unique_ptr<AdapterFunction>()>;
 
 using FunctionMap = std::unordered_map<FunctionSignaturePtr, std::shared_ptr<VectorFunction>, Hash, Equals>;
 
@@ -43,10 +52,13 @@ using VectorFunctionFactory = std::function<std::shared_ptr<VectorFunction>(cons
 
 using FunctionFactoryMap = std::unordered_map<FunctionSignaturePtr, VectorFunctionFactory, Hash, Equals>;
 
-using VectorFunctionFactoryWithConstants = std::function<std::shared_ptr<VectorFunction>(const std::string &name,
-    const std::vector<type::DataTypeId> &inputArgs, const config::QueryConfig &config, const std::vector<VectorPtr> &constantInputs)>;
+using SimpleFunctionFactory = std::function<std::shared_ptr<VectorFunction>(
+    const std::vector<type::DataTypeId> &inputArgs, const config::QueryConfig &config,
+    const std::vector<vec::BaseVector *> &constantInputs)>;
 
-using FunctionFactoryWithConstantsMap = std::unordered_map<FunctionSignaturePtr, VectorFunctionFactoryWithConstants, Hash, Equals>;
+using SimpleFunctionFactoryMap = std::unordered_map<FunctionSignaturePtr, FunctionFactory, Hash, Equals>;
+
+using VectorPtr = std::shared_ptr<vec::BaseVector>;
 
 class VectorFunction {
 public:
@@ -88,29 +100,25 @@ public:
         if (factory != functionFactoryMap_.end()) {
             return factory->second(signature->GetName(), signature->GetParams(), config);
         }
+        auto simpleFactory = simpleFunctionFactoryMap_.find(signature);
+        if (simpleFactory != simpleFunctionFactoryMap_.end()) {
+            return simpleFactory->second()->createVectorFunction(signature->GetParams(), config, {});
+        }
         return nullptr;
     }
 
-    static bool RegisterVectorFunctionFactory(
-        std::vector<std::shared_ptr<codegen::FunctionSignature>> functionSignatures,
-        const VectorFunctionFactoryWithConstants &factory);
-
     static std::shared_ptr<VectorFunction> Find(const FunctionSignaturePtr &signature,
-        const config::QueryConfig &config, const std::vector<VectorPtr> &constantInputs)
+        const std::vector<vec::BaseVector *> &constantInputs, const config::QueryConfig &config = config::QueryConfig())
     {
-        auto it = functionMap_.find(signature);
-        if (it != functionMap_.end()) {
-            return it->second;
-        }
-        auto factory = functionFactoryWithConstantsMap_.find(signature);
-        if (factory != functionFactoryWithConstantsMap_.end()) {
-            return factory->second(signature->GetName(), signature->GetParams(), config, constantInputs);
+        auto simpleFactory = simpleFunctionFactoryMap_.find(signature);
+        if (simpleFactory != simpleFunctionFactoryMap_.end()) {
+            return simpleFactory->second()->createVectorFunction(signature->GetParams(), config, constantInputs);
         }
         return nullptr;
     }
 
     static inline FunctionMap functionMap_;
     static inline FunctionFactoryMap functionFactoryMap_;
-    static inline FunctionFactoryWithConstantsMap functionFactoryWithConstantsMap_;
+    static inline SimpleFunctionFactoryMap simpleFunctionFactoryMap_;
 };
 }

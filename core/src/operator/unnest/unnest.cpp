@@ -48,7 +48,8 @@ int32_t UnnestOperator::AddInput(omniruntime::vec::VectorBatch* vecBatch)
         return 0;
     }
     int32_t numElements = 0;
-    rawMaxSizes_.resize(vecBatch->Get(0)->GetSize(), 1);
+    rawMaxSizes_.resize(vecBatch->Get(0)->GetSize());
+    std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), 1);
     for (size_t channel = 0; channel < unnestChannels_.size(); ++channel) {
         const auto& unnestVector = vecBatch->Get(unnestChannels_[channel]);
 

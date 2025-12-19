@@ -33,14 +33,4 @@ bool VectorFunction::RegisterVectorFunctionFactory(std::vector<std::shared_ptr<F
     }
     return true;
 }
-
-bool VectorFunction::RegisterVectorFunctionFactory(
-        std::vector<std::shared_ptr<codegen::FunctionSignature>> functionSignatures,
-        const VectorFunctionFactoryWithConstants &factory)
-{
-    for (const auto &signature : functionSignatures) {
-        functionFactoryWithConstantsMap_.insert(std::make_pair(signature, factory));
-    }
-    return true;
-}
 }

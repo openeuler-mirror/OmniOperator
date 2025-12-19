@@ -8,6 +8,7 @@
 #include <utility>
 #include "vectorization/functions/IsNull.h"
 #include "type/data_type.h"
+#include "vector/vector.h"
 #include "codegen/func_registry.h"
 #include "util/type_util.h"
 #include "expr_verifier.h"
@@ -17,6 +18,7 @@
 using namespace std;
 using namespace omniruntime::type;
 using namespace omniruntime::codegen;
+using namespace omniruntime::vec;
 
 namespace omniruntime {
 namespace expressions {
@@ -24,6 +26,56 @@ namespace expressions {
 static ExprVerifier globalExprVerifier;
 static ExprPrinter globalExprPrinter;
 const static int32_t NEON_BYTE_SIZE = 16;
+
+std::vector<BaseVector *> GetConstantInputs(const std::vector<Expr *> &arguments)
+{
+    std::vector<BaseVector *> constantInputs;
+    for (auto arg : arguments) {
+        auto literalExpr = dynamic_cast<LiteralExpr *>(arg);
+        if (literalExpr && !literalExpr->isNull) {
+            auto typeId = arg->dataType->GetId();
+            switch (typeId) {
+                case OMNI_INT:
+                case OMNI_DATE32:
+                    constantInputs.push_back(new ConstVector(literalExpr->intVal, typeId));
+                    break;
+                case OMNI_SHORT:
+                    constantInputs.push_back(new ConstVector(literalExpr->shortVal, typeId));
+                    break;
+                case OMNI_BYTE:
+                    constantInputs.push_back(new ConstVector(literalExpr->byteVal, typeId));
+                    break;
+                case OMNI_LONG:
+                case OMNI_TIMESTAMP:
+                case OMNI_DECIMAL64:
+                    constantInputs.push_back(new ConstVector(literalExpr->longVal, typeId));
+                    break;
+                case OMNI_DOUBLE:
+                    constantInputs.push_back(new ConstVector(literalExpr->doubleVal, typeId));
+                    break;
+                case OMNI_FLOAT:
+                    constantInputs.push_back(new ConstVector(literalExpr->floatVal, typeId));
+                    break;
+                case OMNI_BOOLEAN:
+                    constantInputs.push_back(new ConstVector(literalExpr->boolVal, typeId));
+                    break;
+                case OMNI_DECIMAL128:
+                    constantInputs.push_back(new ConstVector(literalExpr->stringVal, typeId));
+                    break;
+                case OMNI_VARCHAR:
+                case OMNI_CHAR:
+                    constantInputs.push_back(new ConstVector(std::string_view(*literalExpr->stringVal), typeId));
+                case OMNI_VARBINARY:
+                    constantInputs.push_back(new ConstVector(std::string_view(*literalExpr->stringVal), typeId));
+                    break;
+                default: LogError("Do not support such vector type %d", typeId);
+            }
+        } else {
+            constantInputs.push_back(nullptr);
+        }
+    }
+    return constantInputs;
+}
 
 bool IsNullLiteral(const std::string &value)
 {
@@ -732,66 +784,20 @@ InExpr::~InExpr()
     DeleteExprs(arguments);
 }
 
-InExpr::InExpr(std::vector<Expr *> args) {
+InExpr::InExpr(std::vector<Expr *> args)
+{
     dataType = BooleanType();
     arguments = std::move(args);
-    if (arguments.empty()) {
-        fieldExpr = nullptr;
-        return;
-    }
-    fieldExpr = arguments[0];
-    if (!fieldExpr) {
-        OMNI_THROW("InExpr Error", "Field expression is null");
-    }
 
-    DataTypeId fieldTypeId = fieldExpr->GetReturnTypeId();
-    int32_t constantCount = arguments.size() - 1;
-    constantRowVec = std::make_shared<vec::RowVector>(constantCount);
-
-    for (size_t i = 1; i < arguments.size(); ++i) {
-        auto* literal = dynamic_cast<LiteralExpr*>(arguments[i]);
-        if (!literal) {
-            OMNI_THROW("InExpr Error", "IN list only support literal constants");
-        }
-        if (literal->GetReturnTypeId() != fieldTypeId) {
-            OMNI_THROW("InExpr Error", "Constant type mismatch with field (field: %d, constant: %d)",
-                fieldTypeId, literal->GetReturnTypeId());
-        }
-        std::shared_ptr<vec::BaseVector> constVec;
-        switch (fieldTypeId) {
-            case OMNI_INT:
-                constVec = std::make_shared<vec::ConstVector<int32_t>>(literal->intVal, OMNI_INT);
-                if (literal->isNull) constVec->SetNull(0);
-                break;
-            case OMNI_LONG:
-                constVec = std::make_shared<vec::ConstVector<int64_t>>(literal->longVal, OMNI_LONG);
-                if (literal->isNull) constVec->SetNull(0);
-                break;
-            case OMNI_VARCHAR:
-                constVec = std::make_shared<vec::ConstVector<std::string>>(*literal->stringVal, OMNI_VARCHAR);
-                if (literal->isNull) constVec->SetNull(0);
-                break;
-            case OMNI_FLOAT:
-                constVec = std::make_shared<vec::ConstVector<float>>(literal->floatVal, OMNI_FLOAT);
-                if (literal->isNull) constVec->SetNull(0);
-                break;
-            case OMNI_DOUBLE:
-                constVec = std::make_shared<vec::ConstVector<double>>(literal->doubleVal, OMNI_DOUBLE);
-                if (literal->isNull) constVec->SetNull(0);
-                break;
-            default:
-                OMNI_THROW("InExpr Error", "Unsupported field type: %d", fieldTypeId);
-        }
-        constantRowVec->AddChild(constVec);
-    }
-
-    std::vector<DataTypeId> argTypes = {fieldTypeId, OMNI_ROW};
-    auto signature = std::make_shared<codegen::FunctionSignature>("in", argTypes, OMNI_BOOLEAN);
-
-    std::vector<vectorization::VectorPtr> constantInputs = {constantRowVec};
-    vectorFunction = vectorization::VectorFunction::Find(signature, config::QueryConfig(), constantInputs);
-    if (!vectorFunction) {
-        OMNI_THROW("InExpr Error", "Failed to find In vector function for signature: " + signature->ToString());
+    std::vector<DataTypeId> argTypes(arguments.size());
+    std::transform(arguments.begin(), arguments.end(), argTypes.begin(), [](Expr *expr) -> DataTypeId {
+        return expr->GetReturnTypeId();
+    });
+    auto signature = std::make_shared<FunctionSignature>("in", argTypes, dataType->GetId());
+    std::vector<vec::BaseVector *> constantInputs = GetConstantInputs(arguments);
+    vectorFunction = VectorFunction::Find(signature, constantInputs);
+    if (vectorFunction == nullptr) {
+        vectorFunction = VectorFunction::Find(signature);
     }
 }
 
@@ -953,7 +959,11 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     });
     auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
     this->function = FunctionRegistry::LookupFunction(signature.get());
-    vectorFunction = VectorFunction::Find(signature);
+    std::vector<vec::BaseVector *> constantInputs = GetConstantInputs(arguments);
+    vectorFunction = VectorFunction::Find(signature, constantInputs);
+    if (vectorFunction == nullptr) {
+        vectorFunction = VectorFunction::Find(signature);
+    }
 }
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,

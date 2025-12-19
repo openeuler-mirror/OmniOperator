@@ -14,6 +14,6 @@ void RegisterCompareFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("greaterThanEqual"), makeGreaterThanOrEqual);
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("lessThan"), makeLessThan);
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("lessThanEqual"), makeLessThanOrEqual);
-    VectorFunction::RegisterVectorFunctionFactory(getInSignatures("in"), makeInSimpleFunction);
+    registerIn(prefix);
 }
 }

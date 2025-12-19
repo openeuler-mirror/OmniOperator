@@ -50,7 +50,6 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
         case OMNI_FLOAT:
         case OMNI_ROW:
         case OMNI_ARRAY:
-            this->isSupportCodegen_ = true;
             break;
         default:
             this->isSupportCodegen_ = false;
@@ -77,7 +76,6 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_DECIMAL128:
         case OMNI_ROW:
         case OMNI_ARRAY:
-            this->isSupportCodegen_ = true;
             break;
         default:
             this->supportedFlag = false;
@@ -98,7 +96,6 @@ void ExprVerifier::Visit(const UnaryExpr &unaryExpr)
     }
     switch (unaryExpr.op) {
         case omniruntime::expressions::Operator::NOT:
-            this->isSupportCodegen_ = true;
             break;
         default:
             this->isSupportCodegen_ = false;
@@ -130,8 +127,10 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
 
     if (binaryExpr.op == omniruntime::expressions::Operator::AND || binaryExpr.op ==
         omniruntime::expressions::Operator::OR) {
-        this->isSupportCodegen_ = (binaryExpr.left->GetReturnTypeId() == binaryExpr.right->GetReturnTypeId() &&
-            binaryExpr.left->GetReturnTypeId() == DataTypeId::OMNI_BOOLEAN);
+        if (!(binaryExpr.left->GetReturnTypeId() == binaryExpr.right->GetReturnTypeId() && binaryExpr.left->
+            GetReturnTypeId() == DataTypeId::OMNI_BOOLEAN)) {
+            this->isSupportCodegen_ = false;
+        }
         return;
     }
 
@@ -139,7 +138,6 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
         binaryExpr.left->GetReturnTypeId() == OMNI_INT || binaryExpr.left->GetReturnTypeId() == OMNI_LONG || binaryExpr.
         left->GetReturnTypeId() == OMNI_DATE32 || binaryExpr.left->GetReturnTypeId() == OMNI_DOUBLE || binaryExpr.left->
         GetReturnTypeId() == OMNI_FLOAT) {
-        this->isSupportCodegen_ = true;
         return;
     } else if (TypeUtil::IsStringType(binaryExpr.left->GetReturnTypeId()) || binaryExpr.left->GetReturnTypeId() ==
         OMNI_TIMESTAMP) {
@@ -150,7 +148,6 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
             case omniruntime::expressions::Operator::GTE:
             case omniruntime::expressions::Operator::EQ:
             case omniruntime::expressions::Operator::NEQ:
-                this->isSupportCodegen_ = true;
                 break;
             default:
                 this->isSupportCodegen_ = false;
@@ -158,7 +155,6 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
         }
         return;
     } else if (TypeUtil::IsDecimalType(binaryExpr.left->GetReturnTypeId())) {
-        this->isSupportCodegen_ = true;
         return;
     }
     this->isSupportCodegen_ = false;
@@ -203,7 +199,6 @@ void ExprVerifier::Visit(const InExpr &inExpr)
             return;
         }
     }
-    this->isSupportCodegen_ = true;
 }
 
 void ExprVerifier::Visit(const BetweenExpr &betweenExpr)
@@ -230,8 +225,6 @@ void ExprVerifier::Visit(const BetweenExpr &betweenExpr)
         this->isSupportCodegen_ = false;
         return;
     }
-
-    this->isSupportCodegen_ = true;
 }
 
 void ExprVerifier::Visit(const IfExpr &ifExpr)
@@ -255,7 +248,6 @@ void ExprVerifier::Visit(const IfExpr &ifExpr)
         this->isSupportCodegen_ = false;
         return;
     }
-    this->isSupportCodegen_ = true;
 }
 
 void ExprVerifier::Visit(const CoalesceExpr &coalesceExpr)
@@ -274,7 +266,6 @@ void ExprVerifier::Visit(const CoalesceExpr &coalesceExpr)
         return;
     }
 
-    this->isSupportCodegen_ = true;
 }
 
 void ExprVerifier::Visit(const IsNullExpr &isNullExpr)
@@ -287,7 +278,6 @@ void ExprVerifier::Visit(const IsNullExpr &isNullExpr)
         this->isSupportCodegen_ = false;
         return;
     }
-    this->isSupportCodegen_ = true;
 }
 
 void ExprVerifier::Visit(const FuncExpr &funcExpr)
@@ -326,7 +316,6 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
         this->isSupportCodegen_ = false;
         return;
     }
-    this->isSupportCodegen_ = true;
 }
 
 void ExprVerifier::Visit(const SwitchExpr &switchExpr)
@@ -355,8 +344,6 @@ void ExprVerifier::Visit(const SwitchExpr &switchExpr)
         this->isSupportCodegen_ = false;
         return;
     }
-
-    this->isSupportCodegen_ = true;
 }
 }
 }

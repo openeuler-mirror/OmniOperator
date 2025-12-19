@@ -27,7 +27,7 @@ BaseVector *ApplyMapTyped(const SelectivityVector &rows, BaseVector *mapArg, Bas
         auto offset = mapVector->GetOffsets();
         int32_t index = 0;
         if constexpr (kind == OMNI_VARCHAR || kind == OMNI_CHAR) {
-            auto constKeyVector = dynamic_cast<ConstVector<std::string> *>(indexArg);
+            auto constKeyVector = dynamic_cast<ConstVector<std::string_view> *>(indexArg);
             auto key = constKeyVector->GetConstValue();
             auto keyVector = dynamic_cast<Vector<LargeStringContainer<KeyType>> *>(mapVector->GetKeyVector().get());
             int32_t i = 0;
