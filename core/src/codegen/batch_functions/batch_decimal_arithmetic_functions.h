@@ -468,6 +468,13 @@ extern "C" DLLEXPORT void BatchFloorDecimal128(int64_t contextPtr, type::Decimal
 
 extern "C" DLLEXPORT void BatchFloorDecimal64(int64_t contextPtr, int64_t *x, int32_t xPrecision, int32_t xScale,
     bool *isNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchNegativeDecimal64(int64_t *x, int32_t xPrecision, int32_t xScale, bool *isNull,
+        int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchNegativeDecimal128(type::Decimal128 *x, int32_t xPrecision, int32_t xScale, bool *isNull,
+        type::Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
 }
 
 #endif // OMNI_RUNTIME_BATCH_DECIMAL_ARITHMETIC_FUNCTIONS_H

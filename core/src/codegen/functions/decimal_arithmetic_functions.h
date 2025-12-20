@@ -427,6 +427,12 @@ extern "C" DLLEXPORT void FloorDecimal128(int64_t contextPtr, int64_t xHigh, uin
 
 extern "C" DLLEXPORT int64_t FloorDecimal64(int64_t contextPtr, int64_t x, int32_t xPrecision, int32_t xScale,
      bool isNull, int32_t outPrecision, int32_t outScale);
+
+extern "C" DLLEXPORT int64_t NegativeDecimal64(int64_t x, int32_t xPrecision, int32_t xScale, bool isNull,
+     int32_t outPrecision, int32_t outScale);
+
+extern "C" DLLEXPORT void NegativeDecimal128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale, bool isNull,
+     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 }
 
 #endif // OMNI_RUNTIME_DECIMAL_ARITHMETIC_FUNCTIONS_H

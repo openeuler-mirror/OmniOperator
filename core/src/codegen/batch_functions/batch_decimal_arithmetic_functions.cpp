@@ -1868,4 +1868,26 @@ extern "C" DLLEXPORT void BatchGreatestDecimal128RetNull(bool *isNull, type::Dec
             output[i] = input.GetValue();
         }
     }
+
+extern "C" DLLEXPORT void BatchNegativeDecimal128(Decimal128 *x, int32_t xPrecision, int32_t xScale, bool *isNull,
+                                                 Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
+        output[i] = Decimal128Wrapper(x[i]).Negate().ToDecimal128();
+    }
+}
+
+extern "C" DLLEXPORT void BatchNegativeDecimal64(int64_t *x, int32_t xPrecision, int32_t xScale, bool *isNull,
+                                                     int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
+        output[i] = (x[i] == std::numeric_limits<int64_t>::min()) ? x[i] : -x[i];
+    }
+}
 }

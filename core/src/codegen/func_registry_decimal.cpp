@@ -248,6 +248,12 @@ const std::string TryDivDecimal128FnStr()
     return "Try_div_decimal128";
 }
 
+const std::string DecimalNegativeFnStr()
+{
+    const std::string decimalNegativeFnStr = "negative";
+    return decimalNegativeFnStr;
+}
+
 std::vector<Function> DecimalFunctionRegistry::GetFunctions()
 {
     std::vector<DataTypeId> paramTypes128 = { OMNI_DECIMAL128, OMNI_DECIMAL128 };
@@ -706,6 +712,10 @@ std::vector<Function> DecimalFunctionRegistryReScale::GetFunctions()
             retType64, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(ModDec64Dec128Dec128ReScale), ModDecimal64FnStr(), {}, paramTypes64Op128,
             retType128, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(NegativeDecimal64), DecimalNegativeFnStr(), {}, { OMNI_DECIMAL64 }, OMNI_DECIMAL64,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(NegativeDecimal128), DecimalNegativeFnStr(), {}, { OMNI_DECIMAL128 }, retType128,
+            INPUT_DATA)
     };
 
     return decimalFnRegistry;
