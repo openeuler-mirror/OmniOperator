@@ -208,5 +208,18 @@ template <typename T> extern DLLEXPORT void BatchFloor(T *x, bool *isAnyNull, in
         }
     }
 }
+
+template <typename T> extern DLLEXPORT void BatchNegative(T *x, bool *resIsNull, T *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        if constexpr (std::is_integral_v<T>) {
+            // Avoid undefined integer overflow.
+            output[i] = (x[i] == std::numeric_limits<T>::min()) ? x[i] : -x[i];
+        } else {
+            output[i] = -x[i];
+        }
+    }
+}
+
 }
 #endif // OMNI_RUNTIME_BATCH_MATHFUNCTIONS_H

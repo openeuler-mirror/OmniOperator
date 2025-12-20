@@ -29,6 +29,7 @@ const std::string PMOD_FN_STR = "batch_pmod";
 const std::string NORMALIZE_ZERO_FN_STR = "batch_NormalizeNaNAndZero";
 const std::string GREATEST_NUM_FN_STR = "batch_Greatest";
 const std::string POWER_FN_STR = "batch_power";
+const std::string NEGATIVE_FN_STR = "batch_negative";
 }
 
 std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
@@ -149,7 +150,13 @@ std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchGreatest<double>), GREATEST_NUM_FN_STR, {}, { OMNI_DOUBLE, OMNI_DOUBLE },
             OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(BatchFloor<int64_t>), FLOOR_FN_STR, {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchFloor<double>), FLOOR_FN_STR, {}, { OMNI_DOUBLE }, OMNI_LONG, INPUT_DATA)
+        Function(reinterpret_cast<void *>(BatchFloor<double>), FLOOR_FN_STR, {}, { OMNI_DOUBLE }, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchNegative<int8_t>), NEGATIVE_FN_STR, {}, { OMNI_BYTE }, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchNegative<int16_t>), NEGATIVE_FN_STR, {}, { OMNI_SHORT }, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchNegative<int32_t>), NEGATIVE_FN_STR, {}, { OMNI_INT }, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchNegative<int64_t>), NEGATIVE_FN_STR, {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchNegative<float>), NEGATIVE_FN_STR, {}, { OMNI_FLOAT }, OMNI_FLOAT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchNegative<double>), NEGATIVE_FN_STR, {}, { OMNI_DOUBLE }, OMNI_DOUBLE, INPUT_DATA)
     };
 
     return batchMathFunctions;

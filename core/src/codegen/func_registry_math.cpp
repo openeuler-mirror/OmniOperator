@@ -170,6 +170,12 @@ const std::string ShiftLeftFnStr()
     return shiftStr;
 }
 
+const std::string NegativeFnStr()
+{
+    const std::string shiftStr = "negative";
+    return shiftStr;
+}
+
 std::vector<Function> MathFunctionRegistry::GetFunctions()
 {
     const std::vector<omniruntime::type::DataTypeId> doubleParams = { OMNI_DOUBLE, OMNI_DOUBLE };
@@ -338,6 +344,13 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(ShiftLeft<int32_t, int32_t>), ShiftLeftFnStr(), {}, { OMNI_INT, OMNI_INT}, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(ShiftLeft<int64_t, int32_t>), ShiftLeftFnStr(), {}, { OMNI_LONG, OMNI_INT}, OMNI_LONG, INPUT_DATA),
+
+        Function(reinterpret_cast<void *>(Negative<int8_t>), NegativeFnStr(), {}, { OMNI_BYTE}, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Negative<int16_t>), NegativeFnStr(), {}, { OMNI_SHORT}, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Negative<int32_t>), NegativeFnStr(), {}, { OMNI_INT}, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Negative<int64_t>), NegativeFnStr(), {}, { OMNI_LONG}, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Negative<float>), NegativeFnStr(), {}, { OMNI_FLOAT}, OMNI_FLOAT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Negative<double>), NegativeFnStr(), {}, { OMNI_DOUBLE}, OMNI_DOUBLE, INPUT_DATA)
     };
 
     return mathFnRegistry;

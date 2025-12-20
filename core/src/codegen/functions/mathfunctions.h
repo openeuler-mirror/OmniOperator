@@ -364,6 +364,17 @@ template <typename T1, typename T2> T1 ShiftLeft(T1 a, T2 b)
     }
     return a << b;
 }
+
+template <typename T> extern DLLEXPORT T Negative(T a) {
+    T result;
+    if constexpr (std::is_integral_v<T>) {
+        // Avoid undefined integer overflow.
+        result = a == std::numeric_limits<T>::min() ? a : -a;
+    } else {
+        result = -a;
+    }
+    return result;
+}
 }
 
 #endif
