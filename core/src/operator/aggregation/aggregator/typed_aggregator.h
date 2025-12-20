@@ -117,7 +117,6 @@ public:
         curVectorBatch = vectorBatch;
         std::shared_ptr<NullsHelper> nullMap = nullptr;
         BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap);
-
         ProcessSingleInternal(state + aggStateOffset, vector, rowOffset, rowCount, nullMap);
     }
 
@@ -278,6 +277,9 @@ protected:
         }
         vector->SetNull(index);
     }
+
+    virtual BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
+        std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx);
 
     virtual BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
         std::shared_ptr<NullsHelper> *nullMap);
