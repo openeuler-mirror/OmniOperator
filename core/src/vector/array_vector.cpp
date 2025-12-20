@@ -20,9 +20,11 @@ void ArrayVector::SetValue(int index, BaseVector *value)
     }
 
     int valueSize = value->GetSize();
-    int elementVectorSize = GetOffset(index);
-    elements->Expand(elementVectorSize + valueSize);
-    VectorHelper::AppendVector(elements.get(), elementVectorSize, value, valueSize);
+    if (valueSize > 0) {
+        int elementVectorSize = GetOffset(index);
+        elements->Expand(elementVectorSize + valueSize);
+        VectorHelper::AppendVector(elements.get(), elementVectorSize, value, valueSize);
+    }
     SetSize(index, valueSize);
 }
 
