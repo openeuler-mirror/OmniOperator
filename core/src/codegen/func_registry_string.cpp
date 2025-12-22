@@ -315,6 +315,8 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToDoubleRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR },
             OMNI_DOUBLE, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStringToTimestampReturnNull), CastNullFnStr(), {}, {OMNI_VARCHAR},
+            OMNI_TIMESTAMP, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStrWithDiffWidthsRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR },
             OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
 

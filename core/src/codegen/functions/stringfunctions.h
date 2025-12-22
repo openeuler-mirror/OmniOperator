@@ -138,6 +138,8 @@ extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr,
 
 extern "C" DLLEXPORT int64_t CastStringToTimestamp(int64_t contextPtr, const char *str, int32_t strLen, bool isNull);
 
+extern "C" DLLEXPORT int64_t CastStringToTimestampReturnNull(bool *isNull, const char *str, int32_t strLen);
+
 /* *
  * If isSupportNegativeIndex is false,the result of substr is "" when start index is negative
  * If isSupportNegativeIndex is true,the substr rule is as follows:

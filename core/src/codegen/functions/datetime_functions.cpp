@@ -160,8 +160,7 @@ extern "C" DLLEXPORT int32_t DateAdd(int32_t right, int32_t left)
 
 extern "C" DLLEXPORT int32_t HourFunction(int64_t timestamp)
 {
-    Timestamp t(timestamp);
-    std::chrono::minutes zero_min(0);
+    auto t = Timestamp::fromMicros(timestamp);
     tz::TimeZone tz("Asia/Shanghai", 1980, tzdb::locate_zone("Asia/Shanghai"));
     return util::GetDateTime(t, &tz).tm_hour;
 }

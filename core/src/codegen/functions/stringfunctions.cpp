@@ -1556,7 +1556,20 @@ extern "C" DLLEXPORT int64_t CastStringToTimestamp(int64_t contextPtr, const cha
     }
 
     auto sessionTimezone = tz::locateZone("Asia/Shanghai");
-    return util::fromParsedTimestampWithTimeZone(conversionResult.value(), sessionTimezone).getSeconds();
+    return util::fromParsedTimestampWithTimeZone(conversionResult.value(), sessionTimezone).toMicros();
+}
+
+extern "C" DLLEXPORT int64_t CastStringToTimestampReturnNull(bool *isNull, const char *str, int32_t strLen)
+{
+    std::string_view view(str, strLen);
+    auto conversionResult = util::fromTimestampWithTimezoneString(view.data(), view.size());
+    if (!conversionResult.has_value()) {
+        *isNull = true;
+        return 0;
+    }
+    *isNull = false;
+    auto sessionTimezone = tz::locateZone("Asia/Shanghai");
+    return util::fromParsedTimestampWithTimeZone(conversionResult.value(), sessionTimezone).toMicros();
 }
 }
 
