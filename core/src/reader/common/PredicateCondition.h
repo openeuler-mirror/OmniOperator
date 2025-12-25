@@ -28,6 +28,7 @@
 #include "vector/vector_common.h"
 #include "util/bit_util.h"
 #include "PredicateOperatorType.h"
+#include "TimeRebaseInfo.h"
 
 using omniruntime::BitUtil;
 using omniruntime::mem::AlignedBuffer;
@@ -257,6 +258,8 @@ namespace common {
         std::set<int32_t> &getIsAllNotNullColumns() {
             return isAllNotNullColumns;
         }
+
+        std::unique_ptr<common::TimeRebaseInfo> timeRebaseInfo;
 
     protected:
         PredicateOperatorType op;

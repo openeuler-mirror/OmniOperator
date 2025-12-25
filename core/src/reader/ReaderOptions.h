@@ -10,7 +10,11 @@
 #include "reader/common/JulianGregorianRebase.h"
 #include "reader/common/PredicateCondition.h"
 #include "type/data_type.h"
+#include "parquet/ParquetExpression.h"
+#include "codegen/Options.h"
+#include "reader/common/TimeRebaseInfo.h"
 
+using omniruntime::codegen::FileFormat;
 
 namespace omniruntime::reader {
 class ReaderOptions {
@@ -35,6 +39,18 @@ public:
         extensions_[key] = ext;
     }
 
+    std::unique_ptr<common::TimeRebaseInfo> timeRebaseInfo_;
+
+    const std::unique_ptr<common::TimeRebaseInfo>& GetTimeRebaseInfo() const
+    {
+        return timeRebaseInfo_;
+    }
+
+    void SetTimeRebaseInfo(std::unique_ptr<common::TimeRebaseInfo> info)
+    {
+        timeRebaseInfo_ = std::move(info);
+    }
+
 private:
     std::map<std::string, std::shared_ptr<void>> extensions_;
     std::shared_ptr<UriInfo> uri_;
@@ -51,6 +67,8 @@ private:
     int64_t splitEnd_;
     std::unique_ptr<::orc::SearchArgument> searchArgument_;
     std::list<std::string> includedColumnsList_;
+    Expression parquetPushedFilterArray_;
+    std::vector<std::string> parquetIncludedColumns_;
 
 public:
     const std::shared_ptr<UriInfo>& GetUri() const
@@ -135,6 +153,8 @@ public:
 
     void ParseEnhanceJson(const std::string& enhancementJson);
 
+    void ParseEnhanceJson(const std::string &enhancementJson, FileFormat format);
+
     void ParsePredicate();
 
     const std::shared_ptr<common::JulianGregorianRebase> &GetJulianPtr() const
@@ -181,6 +201,27 @@ public:
     {
         includedColumnsList_ = includedColumnsList;
     }
+
+    const Expression& GetParquetPushedFilterArray() const
+    {
+        return parquetPushedFilterArray_;
+    }
+
+    void SetParquetPushedFilterArray(const Expression& filterArray)
+    {
+        parquetPushedFilterArray_ = filterArray;
+    }
+
+    const std::vector<std::string>& GetParquetIncludedColumns() const
+    {
+        return parquetIncludedColumns_;
+    }
+
+    void SetParquetIncludedColumns(const std::vector<std::string>& columns)
+    {
+        parquetIncludedColumns_ = columns;
+    }
+
 };
 } // namespace omniruntime::reader
 #endif //READEROPTIONS_H_H

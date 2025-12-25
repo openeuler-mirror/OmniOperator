@@ -58,15 +58,15 @@ namespace omniruntime::reader {
         Timestamp
     };
 
-    arrow::Result<Expression> GetSubExpr(const json& json, const std::string& sub);
+    arrow::Result<Expression> GetSubExpr(const nlohmann::json& json, const std::string& sub);
 
-    arrow::Result<Expression> GetFieldExpr(const json& json);
+    arrow::Result<Expression> GetFieldExpr(const nlohmann::json& json);
 
-    arrow::Result<Expression> GetLiteralExpr(const json& json);
+    arrow::Result<Expression> GetLiteralExpr(const nlohmann::json& json);
 
-    arrow::Result<std::shared_ptr<arrow::Array>> GetSetLiteralExpr(const json& json);
+    arrow::Result<std::shared_ptr<arrow::Array>> GetSetLiteralExpr(const nlohmann::json& json);
 
-    arrow::Result<Expression> ParseToArrowExpression(const json& json);
+    arrow::Result<Expression> ParseToArrowExpression(const nlohmann::json& json);
 
     std::vector<std::string> GetFieldNames(const nlohmann::json& json);
 }

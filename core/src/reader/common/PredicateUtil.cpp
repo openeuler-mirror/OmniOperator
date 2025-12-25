@@ -20,8 +20,11 @@
 #include "PredicateUtil.h"
 #include <algorithm>
 #include <nlohmann/json.hpp>
+#include "../common/JulianGregorianRebase.h"
+#include "../common/TimeRebaseInfo.h"
 
 using namespace omniruntime::vec;
+static common::JulianGregorianRebaseDays g_dateRebaseDays;
 
 namespace common {
     std::unique_ptr<PredicateCondition> buildLeafPredicateCondition(PredicateOperatorType &op,
@@ -63,6 +66,45 @@ namespace common {
         }
     }
 
+    std::unique_ptr<PredicateCondition> buildLeafPredicateConditionWithRebase(
+            PredicateOperatorType &op,
+            nlohmann::json &jsonCondition,
+            const std::unique_ptr<common::TimeRebaseInfo>& rebaseInfo
+    ) {
+        using namespace omniruntime::type;
+        int32_t index = jsonCondition["index"].get<int32_t>();
+        std::string value = jsonCondition["value"];
+        DataTypeId typeId = jsonCondition["dataType"].get<DataTypeId>();
+        switch (typeId) {
+            case OMNI_SHORT: {
+                return std::make_unique<LeafPredicateCondition<int16_t>>(op, index, static_cast<int16_t>(stoi(value)));
+            }
+            case OMNI_INT: {
+                return std::make_unique<LeafPredicateCondition<int32_t>>(op, index, stoi(value));
+            }
+            case OMNI_LONG: {
+                return std::make_unique<LeafPredicateCondition<int64_t>>(op, index, stol(value));
+            }
+            case OMNI_DOUBLE: {
+                return std::make_unique<LeafPredicateCondition<double>>(op, index, stod(value));
+            }
+            case OMNI_DATE32: {
+                int32_t epochDay = stoi(value);
+                if (rebaseInfo != nullptr) {
+                    epochDay = g_dateRebaseDays.RebaseJulianToGregorianDays(epochDay);
+                }
+                return std::make_unique<LeafPredicateCondition<int32_t>>(op, index, epochDay);
+            }
+            case OMNI_BOOLEAN: {
+                return std::make_unique<LeafPredicateCondition<int8_t>>(op, index, value == "true" ? 1 : 0);
+            }
+            default: {
+                throw OmniException("OPERATOR_RUNTIME_ERROR", "buildLeafPredicateConditionWithRebase UnSupport DataTypeId: " + std::to_string(typeId));
+            }
+        }
+    }
+
+
     std::unique_ptr<PredicateCondition> buildPredicateCondition(nlohmann::json &jsonCondition, int32_t columnCount) {
         PredicateOperatorType op = jsonCondition["op"].get<PredicateOperatorType>();
         switch (op) {
@@ -97,6 +139,42 @@ namespace common {
         }
     }
 
+    std::unique_ptr<PredicateCondition> buildPredicateConditionWithRebase(
+            nlohmann::json &jsonCondition,
+            const std::unique_ptr<common::TimeRebaseInfo>& rebaseInfo
+    ) {
+        PredicateOperatorType op = jsonCondition["op"].get<PredicateOperatorType>();
+        switch (op) {
+            case TRUE:
+            case EQUAL_TO:
+            case GREATER_THAN:
+            case GREATER_THAN_OR_EQUAL:
+            case LESS_THAN:
+            case LESS_THAN_OR_EQUAL:
+            case IS_NOT_NULL:
+            case IS_NULL: {
+                return buildLeafPredicateConditionWithRebase(op, jsonCondition, rebaseInfo);
+            }
+            case OR: {
+                auto orLeft = buildPredicateConditionWithRebase(jsonCondition["left"], rebaseInfo);
+                auto orRight = buildPredicateConditionWithRebase(jsonCondition["right"], rebaseInfo);
+                return std::make_unique<OrPredicateCondition>(std::move(orLeft), std::move(orRight));
+            }
+            case AND: {
+                auto andLeft = buildPredicateConditionWithRebase(jsonCondition["left"], rebaseInfo);
+                auto andRight = buildPredicateConditionWithRebase(jsonCondition["right"], rebaseInfo);
+                return std::make_unique<AndPredicateCondition>(std::move(andLeft), std::move(andRight));
+            }
+            case NOT: {
+                auto child = buildPredicateConditionWithRebase(jsonCondition["child"], rebaseInfo);
+                return std::make_unique<NotPredicateCondition>(std::move(child));
+            }
+            default: {
+                throw OmniException("OPERATOR_RUNTIME_ERROR", "buildPredicateConditionWithRebase UnSupport PredicateOperatorType: " + std::to_string(op));
+            }
+        }
+    }
+
     std::unique_ptr<PredicateCondition> BuildVecPredicateCondition(nlohmann::json &json, int32_t columnCount) {
         if (!json.contains("vecPredicateCondition")) {
             return nullptr;
@@ -106,6 +184,23 @@ namespace common {
         std::string conditionStr = conditionField.get<std::string>();
         auto jsonCondition = nlohmann::json::parse(conditionStr);
         auto predicate = buildPredicateCondition(jsonCondition, columnCount);
+        predicate->buildNullColumns(columnCount);
+        return predicate;
+    }
+
+    std::unique_ptr<PredicateCondition> BuildVecPredicateConditionWithRebase(
+            nlohmann::json &json,
+            int32_t columnCount,
+            std::unique_ptr<common::TimeRebaseInfo> rebaseInfo
+    ) {
+        if (!json.contains("vecPredicateCondition")) {
+            return nullptr;
+        }
+
+        const auto& conditionField = json["vecPredicateCondition"];
+        std::string conditionStr = conditionField.get<std::string>();
+        auto jsonCondition = nlohmann::json::parse(conditionStr);
+        auto predicate= buildPredicateConditionWithRebase(jsonCondition, rebaseInfo);
         predicate->buildNullColumns(columnCount);
         return predicate;
     }

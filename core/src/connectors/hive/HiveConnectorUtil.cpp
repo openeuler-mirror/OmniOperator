@@ -159,6 +159,12 @@ void configureReaderOptions(
         }
         case FileFormat::PARQUET: {
             baseReaderOpts->SetUri(uri);
+            uint64_t splitStart = hiveSplit->start;
+            uint64_t splitEnd = (hiveSplit->length == std::numeric_limits<uint64_t>::max())
+                                ? hiveSplit->length
+                                : (hiveSplit->start + hiveSplit->length);
+            baseReaderOpts->SetSplitStart(static_cast<int64_t>(splitStart));
+            baseReaderOpts->SetSplitEnd(static_cast<int64_t>(splitEnd));
             break;
         }
         default: {

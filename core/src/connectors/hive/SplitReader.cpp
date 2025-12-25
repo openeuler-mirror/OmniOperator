@@ -102,7 +102,7 @@ uint64_t SplitReader::next(vec::VectorBatch **output_, int *omniTypeId, uint64_t
 
 void SplitReader::createReader()
 {
-    baseReaderOpts_->ParseEnhanceJson(hiveTableHandle_->GetEnhancementJson());
+    baseReaderOpts_->ParseEnhanceJson(hiveTableHandle_->GetEnhancementJson(), hiveSplit_->fileFormat);
     configureReaderOptions(hiveConfig_, hiveSplit_, baseReaderOpts_);
     baseReader_ = omniruntime::reader::GetReaderFactory(hiveSplit_->fileFormat)
         ->CreateReader(baseReaderOpts_);

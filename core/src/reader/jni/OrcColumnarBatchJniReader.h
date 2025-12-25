@@ -44,6 +44,7 @@
 #include <util/omni_exception.h>
 #include <reader/orc/OrcReader.h>
 #include "reader/common/debug.h"
+#include "../parquet/ParquetExpression.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -76,6 +77,11 @@ void ParseJson(nlohmann::json &json,
     std::shared_ptr<common::JulianGregorianRebase>& julianPtr,
     std::shared_ptr<common::PredicateCondition>& predicate,
     std::unique_ptr<::orc::SearchArgument>& searchArgument);
+
+void ParsePredicateJson(nlohmann::json &json,
+    std::shared_ptr<common::PredicateCondition>& predicate,
+    Expression* pushedFilterArray = nullptr,
+    std::vector<std::string>* includedColumns = nullptr);
 
 #ifdef __cplusplus
 }

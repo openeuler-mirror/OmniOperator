@@ -49,41 +49,55 @@ protected:
     // run before each case...
     virtual void SetUp() override
     {
-        auto readerOpts = std::make_shared<omniruntime::reader::OrcReaderOptions>();
-        auto rowReaderOptions = std::make_shared<omniruntime::reader::OrcRowReaderOptions>();
+        auto readerOpts = std::make_shared<omniruntime::reader::ReaderOptions>();
+
+        auto orcReaderOptions = std::make_shared<::orc::ReaderOptions>();
+        orc::MemoryPool *pool = orc::getDefaultPool();
+        orcReaderOptions->setMemoryPool(*pool);
+        orcReaderOptions->setTailLocation(std::numeric_limits<uint64_t>::max());
+        const std::string SerializedFileTail = "";
+        orcReaderOptions->setSerializedFileTail(SerializedFileTail);
+        readerOpts->SetOrcReaderOptions(std::move(orcReaderOptions));
+        readerOpts->SetOrcRowReaderOptions(std::make_shared<::orc::RowReaderOptions>());
+
         std::string filename = "/../resources/orc_data_all_type";
         filename = PROJECT_PATH + filename;
-        UriInfo uriInfo("file", filename, "", "-1");
-        std::unique_ptr<::orc::InputStream> inputStream = omniruntime::reader::readFileOverride(uriInfo);
-        auto baseFileInput = std::make_unique<omniruntime::reader::ORCBufferInput>(
-            std::move(inputStream));
-        std::unique_ptr<omniruntime::reader::Reader> reader = omniruntime::reader::GetReaderFactory(omniruntime::codegen::FileFormat::ORC)
-            ->CreateReader(std::move(baseFileInput), readerOpts);
+        auto uriInfo = std::make_shared<UriInfo>("file", filename, "", "-1");
+        readerOpts->SetUri(uriInfo);
+
+        omniruntime::type::RowTypePtr emptyRowType = omniruntime::type::ROW({}, {});
+        omniruntime::type::RowTypePtr emptyFileRowType = omniruntime::type::ROW({}, {});
+        readerOpts->SetRowType(emptyRowType);
+        readerOpts->SetFileRowType(emptyFileRowType);
+
+        std::unique_ptr<omniruntime::reader::Reader> reader =
+                omniruntime::reader::GetReaderFactory(omniruntime::codegen::FileFormat::ORC)->CreateReader(readerOpts);
 
         std::list<std::string> includedColumns = {"c1", "c2", "c3", "c4", "c5", "c7", "c8", "c9", "c10", "c11", "c13"};
-        rowReaderOptions->GetOrcRowReaderOptions().include(includedColumns);
-
+        readerOpts->GetOrcRowReaderOptions().include(includedColumns);
 
         auto readerPtr = static_cast<omniruntime::reader::Reader*>(reader.get());
-        std::unique_ptr<common::JulianGregorianRebase> julianPtr;
-        std::unique_ptr<common::PredicateCondition> predicate;
-        rowReader = readerPtr->CreateRowReader(rowReaderOptions, julianPtr, predicate).release();
+        rowReader = readerPtr->CreateRowReader().release();
         omniruntime::reader::RowReader *rowReaderPtr = (omniruntime::reader::RowReader*) rowReader;
         rowReaderPtr->Next(&recordBatch, nullptr, 4096);
     }
 
     // run after each case...
     virtual void TearDown() override {
-        for (auto vec : recordBatch) {
-            delete vec;
+        if (recordBatch != nullptr) {
+            for (auto vec : *recordBatch) {
+                delete vec;
+            }
+            delete recordBatch;
+            recordBatch = nullptr;
         }
-        recordBatch.clear();
+
         delete rowReader;
         rowReader = nullptr;
     }
 
     omniruntime::reader::RowReader *rowReader;
-    std::vector<omniruntime::vec::BaseVector*> recordBatch;
+    std::vector<omniruntime::vec::BaseVector*>* recordBatch;
 };
 
 TEST_F(ScanTest, test_literal_get_long)
@@ -174,7 +188,7 @@ TEST_F(ScanTest, test_literal_get_bool)
 TEST_F(ScanTest, test_correctness_intVec)
 {
     // int type, "c1"
-    auto *olbInt = (omniruntime::vec::Vector<int32_t> *)(recordBatch[0]);
+    auto *olbInt = (omniruntime::vec::Vector<int32_t> *)((*recordBatch)[0]);
     ASSERT_EQ(olbInt->GetValue(0), 10);
 }
 
@@ -182,7 +196,7 @@ TEST_F(ScanTest, test_correctness_varCharVec)
 {
     // varchar type, "c2"
     auto *olbVc = (omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>> *)(
-            recordBatch[1]);
+            (*recordBatch)[1]);
     std::string_view actualStr = olbVc->GetValue(0);
     ASSERT_EQ(actualStr, "varchar_1");
 }
@@ -191,7 +205,7 @@ TEST_F(ScanTest, test_correctness_stringVec)
 {
     // string type, "c3"
     auto *olbStr = (omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>> *)(
-            recordBatch[2]);
+            (*recordBatch)[2]);
     std::string_view actualStr = olbStr->GetValue(0);
     ASSERT_EQ(actualStr, "string_type_1");
 }
@@ -199,7 +213,7 @@ TEST_F(ScanTest, test_correctness_stringVec)
 TEST_F(ScanTest, test_correctness_longVec)
 {
     // bigint type, "c4"
-    auto *olbLong = (omniruntime::vec::Vector<int64_t> *)(recordBatch[3]);
+    auto *olbLong = (omniruntime::vec::Vector<int64_t> *)((*recordBatch)[3]);
     ASSERT_EQ(olbLong->GetValue(0), 10000);
 }
 
@@ -207,7 +221,7 @@ TEST_F(ScanTest, test_correctness_charVec)
 {
     // char type, "c5"
     auto *olbChar = (omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>> *)(
-            recordBatch[4]);
+            (*recordBatch)[4]);
     std::string_view actualStr = olbChar->GetValue(0);
     ASSERT_EQ(actualStr, "char_1");
 }
@@ -215,21 +229,21 @@ TEST_F(ScanTest, test_correctness_charVec)
 TEST_F(ScanTest, test_correctness_doubleVec)
 {
     // double type, "c7"
-    auto *olbDouble = (omniruntime::vec::Vector<double> *)(recordBatch[5]);
+    auto *olbDouble = (omniruntime::vec::Vector<double> *)((*recordBatch)[5]);
     ASSERT_EQ(olbDouble->GetValue(0), 1111.1111);
 }
 
 TEST_F(ScanTest, test_correctness_booleanVec)
 {
     // boolean type, "c10"
-    auto *olbBoolean = (omniruntime::vec::Vector<bool> *)(recordBatch[8]);
+    auto *olbBoolean = (omniruntime::vec::Vector<bool> *)((*recordBatch)[8]);
     ASSERT_EQ(olbBoolean->GetValue(0), true);
 }
 
 TEST_F(ScanTest, test_correctness_shortVec)
 {
     // short type, "c11"
-    auto *olbShort = (omniruntime::vec::Vector<short> *)(recordBatch[9]);
+    auto *olbShort = (omniruntime::vec::Vector<short> *)((*recordBatch)[9]);
     ASSERT_EQ(olbShort->GetValue(0), 11);
 }
 

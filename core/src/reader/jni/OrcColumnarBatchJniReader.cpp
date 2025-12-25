@@ -266,6 +266,43 @@ void ParseJson(nlohmann::json &jsonConfig,
     }
 }
 
+void ParsePredicateJson(nlohmann::json &jsonConfig, std::shared_ptr<common::PredicateCondition>& predicate,
+    Expression* pushedFilterArray, std::vector<std::string>* includedColumns)
+{
+    if (pushedFilterArray != nullptr && jsonConfig.contains("expressionTree")) {
+        auto expressionTree = jsonConfig["expressionTree"];
+        auto result = omniruntime::reader::ParseToArrowExpression(expressionTree);
+        if (!result.ok()) {
+            throw OmniException(result.status().ToString().c_str());
+        }
+        *pushedFilterArray = result.MoveValueUnsafe();
+    }
+
+    std::list<std::string> includedColumnsList;
+    if (jsonConfig.contains("includedColumns") && jsonConfig["includedColumns"].is_string()) {
+        std::string colsStr = jsonConfig["includedColumns"].get<std::string>();
+        std::stringstream ss(colsStr);
+        std::string col;
+        while (std::getline(ss, col, ',')) {
+            col.erase(0, col.find_first_not_of(" \t"));
+            col.erase(col.find_last_not_of(" \t") + 1);
+            if (!col.empty()) {
+                includedColumnsList.push_back(col);
+            }
+        }
+    }
+
+    if (includedColumns != nullptr) {
+        *includedColumns = std::vector<std::string>(includedColumnsList.begin(), includedColumnsList.end());
+    }
+
+    auto new_time_rebase = common::BuildTimeRebaseInfo(jsonConfig);
+
+    if (jsonConfig.contains("vecPredicateCondition")) {
+        predicate = common::BuildVecPredicateConditionWithRebase(jsonConfig, includedColumnsList.size(), std::move(new_time_rebase));
+    }
+}
+
 int BuildLeaves(PredicateOperatorType leafOp, vector<Literal> &litList, Literal &lit, const std::string &leafNameString,
     PredicateDataType leafType, SearchArgumentBuilder &builder)
 {

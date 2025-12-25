@@ -28,6 +28,7 @@
 #include "ParquetExpression.h"
 #include "reader/Reader.h"
 #include "reader/common/TimeRebaseInfo.h"
+#include <set>
 
 using namespace arrow::internal;
 
@@ -51,13 +52,15 @@ private:
 class ParquetReader;
 class ParquetRowReader : public omniruntime::reader::RowReader {
 public:
-    explicit ParquetRowReader(ParquetReader &parquetReader) : parquetReader_(parquetReader) {}
+    explicit ParquetRowReader(ParquetReader &parquetReader);
 
     ~ParquetRowReader() override = default;
 
-    uint64_t Next(uint64_t size, vec::VectorPtr &result) override {};
+    uint64_t Next(uint64_t size, vec::VectorPtr &result) override {
+        return 0;
+    };
 
-    uint64_t NextDirect(std::vector<BaseVector *> *batch, int *omniTypeId, uint64_t batchLen) override {};
+    uint64_t NextDirect(std::vector<BaseVector *> *batch, int *omniTypeId, uint64_t batchLen) override;
 
     uint64_t Next(std::vector<BaseVector *> **batch, int *omniTypeId, uint64_t batchLen) override;
 
@@ -74,6 +77,8 @@ public:
     {
         options_ = options;
     }
+
+    std::shared_ptr<ReaderOptions> GetOptions() { return options_; }
 
     arrow::Status InitReader(UriInfo &uri, int64_t capacity, std::string& ugi);
 
@@ -96,26 +101,15 @@ public:
         int64_t end = options_->GetSplitEnd();
 
         auto jsonConfig = options_->GetEnhancementJson();
-        // Get Filter Expression
         bool hasExpressionTree = jsonConfig->contains("expressionTree");
-        // todo zhangxin
-        Expression pushedFilterArray;
-        if (hasExpressionTree) {
-            auto expressionTree = jsonConfig->at("expressionTree");
-            auto result = omniruntime::reader::ParseToArrowExpression( expressionTree);
-            if (!result.ok()) {
-                throw OmniException(result.status().ToString().c_str());
-                return 0;
-            }
-            pushedFilterArray = result.MoveValueUnsafe();
-        }
+        Expression pushedFilterArray = options_->GetParquetPushedFilterArray();
 
-        auto fieldNames = GetFieldNames(*jsonConfig);
+        const auto& fieldNames = options_->GetParquetIncludedColumns();
 
         auto state = InitRecordReader(start, end, hasExpressionTree, pushedFilterArray, fieldNames);
         if (state != Status::OK()) {
             throw OmniException(state.ToString().c_str());
-            return 0;
+            return nullptr;
         }
 
         auto rowReader = std::make_unique<ParquetRowReader>(*this);

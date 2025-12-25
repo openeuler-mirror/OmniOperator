@@ -24,11 +24,13 @@
 #include "reader/arrowadapter/FileSystemAdapter.h"
 #include "arrow/dataset/file_parquet.h"
 #include "mutex"
+#include "reader/common/PredicateCondition.h"
 
 using namespace arrow;
 using namespace arrow::internal;
 using namespace parquet::arrow;
 using namespace omniruntime::reader;
+using namespace omniruntime::type;
 
 static std::mutex mutex_;
 static std::mutex map_mutex;
@@ -38,22 +40,93 @@ static constexpr int32_t LOCAL_FILE_PREFIX_EXT = 7;
 static const std::string LOCAL_FILE = "file:";
 static const std::string HDFS_FILE = "hdfs:";
 
+namespace
+{
+
+void ClearRecordBatch(std::vector<BaseVector*>& recordBatch)
+{
+    for (auto vec : recordBatch)
+    {
+        delete vec;
+    }
+    recordBatch.clear();
+}
+
+uint64_t FilterData(uint8_t *bitMark, std::vector<BaseVector*> *recordBatch, int32_t vectorSize,
+                    const std::set<int32_t>& isNullSet, const std::set<int32_t>& isNotNullSet)
+{
+    std::vector<BaseVector*> resultBatch;
+    if (common::GetFlatBaseVectorsFromBitMark(*recordBatch, resultBatch, bitMark, vectorSize, isNullSet, isNotNullSet)) {
+        ClearRecordBatch(*recordBatch);
+        *recordBatch = std::move(resultBatch);
+        return (*recordBatch)[0]->GetSize();
+    }
+    ClearRecordBatch(resultBatch);
+    return vectorSize;
+}
+
+bool ReadAndFilterData(ParquetRowReader& rowReaderPtr,
+                       std::vector<BaseVector*> *recordBatch, uint64_t &batchRowSize, int *omniTypeId, uint64_t batchLen)
+{
+    batchRowSize = rowReaderPtr.NextDirect(recordBatch, omniTypeId, batchLen);
+    std::shared_ptr<common::PredicateCondition>& predicateCondition = rowReaderPtr.GetPredicatePtr();
+    if (batchRowSize == 0 || predicateCondition == nullptr) {
+        return false;
+    }
+    try {
+        uint8_t *bitMark = predicateCondition->compute(*recordBatch);
+        int32_t vectorSize = (*recordBatch)[0]->GetSize();
+        if (omniruntime::BitUtil::CountBits(reinterpret_cast<const uint64_t *>(bitMark), 0, vectorSize) == 0) {
+            ClearRecordBatch(*recordBatch);
+            return true;
+        }
+        batchRowSize = FilterData(bitMark, recordBatch, vectorSize, predicateCondition->getIsAllNullColumns(),
+                                  predicateCondition->getIsAllNotNullColumns());
+    } catch (const std::exception &e) {
+        LogError("filterData fail: %s", e.what());
+    }
+    return false;
+}
+
+}
+
+ParquetRowReader::ParquetRowReader(ParquetReader &parquetReader) : parquetReader_(parquetReader) {
+    this->predicatePtr = parquetReader.GetOptions()->GetPredicatePtr();
+    this->rowType_ = parquetReader.GetOptions()->GetRowType();
+    this->fileRowType_ = parquetReader.GetOptions()->GetFileRowType();
+    this->julianPtr = parquetReader.GetOptions()->GetJulianPtr();
+}
+
 uint64_t ParquetRowReader::Next(std::vector<BaseVector *> **batch, int *omniTypeId, uint64_t batchLen)
 {
-    auto recordBatch = new std::vector<omniruntime::vec::BaseVector *>(parquetReader_.columnReaders.size(), 0);
-    long batchRowSize = 0;
-    auto state = parquetReader_.ReadNextBatch(*recordBatch, &batchRowSize);
+    auto recordBatch = new std::vector<omniruntime::vec::BaseVector *>(parquetReader_.columnReaders.size(), nullptr);
+    uint64_t batchRowSize = 0;
+    bool needReadAgain = ReadAndFilterData(*this, recordBatch, batchRowSize, omniTypeId, batchLen);
+    while (needReadAgain) {
+        ClearRecordBatch(*recordBatch);
+        recordBatch->assign(parquetReader_.columnReaders.size(), nullptr);
+        needReadAgain = ReadAndFilterData(*this, recordBatch, batchRowSize, omniTypeId, batchLen);
+    }
+
     *batch = recordBatch;
-    if (state != Status::OK()) {
-        for (auto vec : *recordBatch) {
-            delete vec;
-        }
-        recordBatch->clear();
-        throw OmniException(state.ToString().c_str());
+    if (batchRowSize <= 0) {
+        ClearRecordBatch(*recordBatch);
         return 0;
     }
 
     return batchRowSize;
+}
+
+uint64_t ParquetRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omniTypeId, uint64_t batchLen)
+{
+    long batchRowSize = 0;
+    auto state = parquetReader_.ReadNextBatch(*batch, &batchRowSize);
+    if (!state.ok()) {
+        ClearRecordBatch(*batch);
+        throw OmniException(state.ToString().c_str());
+        return 0;
+    }
+    return static_cast<uint64_t>(batchRowSize);
 }
 
 // the ugi is UserGroupInformation

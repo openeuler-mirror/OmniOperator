@@ -67,6 +67,14 @@ Result<std::shared_ptr<DataType>> GetLiteralDataType(const json& json)
 
 inline Result<std::shared_ptr<Scalar>> ParseStringToScalar(const std::shared_ptr<DataType>& type, const std::string& str)
 {
+    if (type->id() == arrow::Type::DATE32) {
+        try {
+            int32_t epoch_day = std::stoi(str);
+            return std::make_shared<Date32Scalar>(epoch_day, type);
+        } catch (const std::exception& e) {
+            return Status::Invalid("Failed to parse date32 epoch day: ", str, " error: ", e.what());
+        }
+    }
     if (type->id() == arrow::Type::DECIMAL128) {
         return std::make_shared<Decimal128Scalar>(Decimal128(str), type);
     }
@@ -76,7 +84,7 @@ inline Result<std::shared_ptr<Scalar>> ParseStringToScalar(const std::shared_ptr
     return arrow::Scalar::Parse(type, str);
 }
 
-arrow::Result<Expression> GetSubExpr(const json& json, const std::string& sub)
+arrow::Result<Expression> GetSubExpr(const nlohmann::json& json, const std::string& sub)
 {
     auto it = json.find(sub);
     if (it == json.end() || !it->is_object()) {
@@ -85,13 +93,13 @@ arrow::Result<Expression> GetSubExpr(const json& json, const std::string& sub)
     return ParseToArrowExpression(*it);
 }
 
-arrow::Result<Expression> GetFieldExpr(const json& json)
+arrow::Result<Expression> GetFieldExpr(const nlohmann::json& json)
 {
     std::string field = get_value_or_throw<std::string>(json, "field");
     return arrow::compute::field_ref(field);
 }
 
-arrow::Result<Expression> GetLiteralExpr(const json& json)
+arrow::Result<Expression> GetLiteralExpr(const nlohmann::json& json)
 {
     ARROW_ASSIGN_OR_RAISE(auto dataType, GetLiteralDataType(json));
 
@@ -101,7 +109,7 @@ arrow::Result<Expression> GetLiteralExpr(const json& json)
     return arrow::compute::literal(scalar);
 }
 
-arrow::Result<std::shared_ptr<Array>> GetSetLiteralExpr(const json& json)
+arrow::Result<std::shared_ptr<Array>> GetSetLiteralExpr(const nlohmann::json& json)
 {
     ARROW_ASSIGN_OR_RAISE(auto dataType, GetLiteralDataType(json));
     ARROW_ASSIGN_OR_RAISE(auto builder, arrow::MakeBuilder(dataType));
@@ -124,7 +132,7 @@ arrow::Result<std::shared_ptr<Array>> GetSetLiteralExpr(const json& json)
     return builder->Finish();
 }
 
-arrow::Result<Expression> ParseToArrowExpression(const json& json)
+arrow::Result<Expression> ParseToArrowExpression(const nlohmann::json& json)
 {
     if (json.is_null()) {
         return Status::Invalid("expression is null");

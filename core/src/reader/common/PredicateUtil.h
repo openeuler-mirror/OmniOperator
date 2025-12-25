@@ -23,9 +23,16 @@
 #include "PredicateCondition.h"
 #include "reader/jni/jni_common.h"
 #include <set>
+#include "../common/TimeRebaseInfo.h"
 
 namespace common {
     std::unique_ptr<PredicateCondition> BuildVecPredicateCondition(nlohmann::json &json, int32_t columnCount);
+
+    std::unique_ptr<PredicateCondition> BuildVecPredicateConditionWithRebase(
+            nlohmann::json &json,
+            int32_t columnCount,
+            std::unique_ptr<common::TimeRebaseInfo> rebaseInfo
+    );
 
     bool GetFlatBaseVectorsFromBitMark(std::vector<BaseVector *> &baseVectors, std::vector<BaseVector *> &result,
         uint8_t *bitMark, int32_t vectorSize, const std::set<int32_t>& isNullSet, const std::set<int32_t>& isNotNullSet);
