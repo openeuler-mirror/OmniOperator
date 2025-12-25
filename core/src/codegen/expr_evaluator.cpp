@@ -717,6 +717,81 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
     return projectedVecs.release();
 }
 
+template <typename T>
+BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    if (colVec->GetEncoding() == OMNI_DICTIONARY) {
+        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
+    } else {
+        return reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows);
+    }
+}
+
+BaseVector *ColumnProjectionStructVectorSliceHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    auto rowVector = dynamic_cast<RowVector *>(colVec);
+    return rowVector->Slice(0, numSelectedRows);
+}
+
+BaseVector *ColumnProjectionMapVectorSliceHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    auto rowVector = dynamic_cast<MapVector *>(colVec);
+    return rowVector->Slice(0, numSelectedRows);
+}
+
+BaseVector *ColumnProjectionArrayVectorSliceHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    auto rowVector = dynamic_cast<ArrayVector *>(colVec);
+    return rowVector->Slice(0, numSelectedRows);
+}
+
+template <typename T>
+BaseVector *ColumnProjectionVarCharVectorHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    if (colVec->GetEncoding() == OMNI_DICTIONARY) {
+        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
+    } else {
+        return reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows);
+    }
+}
+
+BaseVector *ColumnProjectionProxy(BaseVector *colVec, int32_t numSelectedRows, int32_t typeId)
+{
+    switch (typeId) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            return ColumnProjectionHelper<int32_t>(colVec, numSelectedRows);
+        case OMNI_SHORT:
+            return ColumnProjectionHelper<int16_t>(colVec, numSelectedRows);
+        case OMNI_BYTE:
+            return ColumnProjectionHelper<int8_t>(colVec, numSelectedRows);
+        case OMNI_LONG:
+        case OMNI_TIMESTAMP:
+        case OMNI_DECIMAL64:
+            return ColumnProjectionHelper<int64_t>(colVec, numSelectedRows);
+        case OMNI_DOUBLE:
+            return ColumnProjectionHelper<double>(colVec, numSelectedRows);
+        case OMNI_FLOAT:
+            return ColumnProjectionHelper<float>(colVec, numSelectedRows);
+        case OMNI_BOOLEAN:
+            return ColumnProjectionHelper<bool>(colVec, numSelectedRows);
+        case OMNI_DECIMAL128:
+            return ColumnProjectionHelper<Decimal128>(colVec, numSelectedRows);
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+        case OMNI_VARBINARY:
+            return ColumnProjectionVarCharVectorHelper<std::string_view>(colVec, numSelectedRows);
+        case OMNI_MAP:
+            return ColumnProjectionMapVectorSliceHelper(colVec, numSelectedRows);
+        case OMNI_ROW:
+            return ColumnProjectionStructVectorSliceHelper(colVec, numSelectedRows);
+        case OMNI_ARRAY:
+            return ColumnProjectionArrayVectorSliceHelper(colVec, numSelectedRows);
+        default: LogError("Do not support such vector type %d", typeId);
+            return nullptr;
+    }
+}
+
 VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context)
 {
     context->hasFilter = false;
@@ -750,8 +825,15 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
     context->hasFilter = true;
     context->SetIsSelectRow(selectAddr);
     for (int32_t i = 0; i < projectVecCount; i++) {
+        if (projExprs[i]->GetType() == ExprType::FIELD_E && numSelectedRows != 0 && numSelectedRows == rowCount &&
+            dynamic_cast<FieldExpr *>(projExprs[i])->input == nullptr) {
+            auto colVal = dynamic_cast<FieldExpr *>(projExprs[i])->colVal;
+            auto typeId = GetInputDataTypes().GetIds()[colVal];
+            auto colVec = vecBatch->Get(colVal);
+            projectedVecs->Append(ColumnProjectionProxy(colVec, numSelectedRows, typeId));
+            continue;
+        }
         context->SetResultRowSize(vecBatch->GetRowCount());
-
         ExprEval e2(vecBatch, context);
         e2.VisitExpr(*projExprs[i]);
         auto outCol = e2.GetResult();

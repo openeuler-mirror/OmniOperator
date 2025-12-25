@@ -259,10 +259,13 @@ void ExprEval::Visit(const FieldExpr &e)
                     ColumnProjectionVarCharCopyPositionsHelper<std::string_view>(colVec, selectRow, selectSize));
                 break;
             case OMNI_ARRAY:
-                inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->Slice(0, selectSize));
+                inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->CopyPositions(selectRow, 0, selectSize));
                 break;
             case OMNI_MAP:
-                inputValues_.push(reinterpret_cast<MapVector *>(colVec)->Slice(0, selectSize));
+                inputValues_.push(reinterpret_cast<MapVector *>(colVec)->CopyPositions(selectRow, 0, selectSize));
+                break;
+            case OMNI_ROW:
+                inputValues_.push(reinterpret_cast<RowVector *>(colVec)->CopyPositions(selectRow, 0, selectSize));
                 break;
             default: LogError("Do not support such vector type %d", typeIds[e.colVal]);
         }
@@ -305,6 +308,9 @@ void ExprEval::Visit(const FieldExpr &e)
             break;
         case OMNI_MAP:
             inputValues_.push(reinterpret_cast<MapVector *>(colVec)->Slice(0, rowSize));
+            break;
+        case OMNI_ROW:
+            inputValues_.push(reinterpret_cast<RowVector *>(colVec)->Slice(0, rowSize));
             break;
         default: LogError("Do not support such vector type %d", typeIds[e.colVal]);
     }
