@@ -109,13 +109,14 @@ TEST(NativeOmniJoinWithPlanNodeTest, TestInnerEqualityJoinWithOneBuildOp)
 {
     auto *queryConfig = new config::QueryConfig();
     auto [joinNode, leftKey, rightKey] = ConstructSimpleJoinKeyHashJoinNode(OMNI_JOIN_TYPE_INNER, false, true, nullptr);
-    HashBuilderWithExprOperatorFactory *hashBuilderFactory = HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(joinNode, *queryConfig);
-    auto *hashBuilderOperator = dynamic_cast<HashBuilderWithExprOperator *>(hashBuilderFactory->CreateOperator());
+    HashBuilderWithExprOperatorFactory *hashBuilderWithExprFactory = HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(joinNode, *queryConfig);
+    auto *hashBuilderOperator = dynamic_cast<HashBuilderWithExprOperator *>(hashBuilderWithExprFactory->CreateOperator());
     VectorBatch *vecBatch = ConstructSimpleBuildVectorBatch();
     hashBuilderOperator->AddInput(vecBatch);
     VectorBatch *hashBuildOutput = nullptr;
     hashBuilderOperator->GetOutput(&hashBuildOutput);
 
+    auto hashBuilderFactory = hashBuilderWithExprFactory->GetHashBuilderOperatorFactory();
     LookupJoinWithExprOperatorFactory *lookupJoinFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(joinNode, hashBuilderFactory, *queryConfig);
     auto *lookupJoinOperator = dynamic_cast<LookupJoinWithExprOperator *>(lookupJoinFactory->CreateOperator());
     VectorBatch *probeVecBatch = ConstructSimpleProbeVectorBatch();
@@ -136,19 +137,20 @@ TEST(NativeOmniJoinWithPlanNodeTest, TestInnerEqualityJoinWithOneBuildOp)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
-    DeleteHashBuilderAndLookupJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
+    DeleteHashBuilderAndLookupJoinOperatorFactory(hashBuilderWithExprFactory, lookupJoinFactory);
 }
 
 TEST(NativeOmniJoinWithPlanNodeTest, TestFullEqualityJoinWithOneBuildOp)
 {
     auto [joinNode, leftKey, rightKey] = ConstructSimpleJoinKeyHashJoinNode(OMNI_JOIN_TYPE_FULL, false, true, nullptr);
-    HashBuilderWithExprOperatorFactory *hashBuilderFactory = HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(joinNode, config::QueryConfig());
-    auto *hashBuilderOperator = dynamic_cast<HashBuilderWithExprOperator *>(CreateTestOperator(hashBuilderFactory));
+    HashBuilderWithExprOperatorFactory *hashBuilderWithExprFactory = HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(joinNode, config::QueryConfig());
+    auto *hashBuilderOperator = dynamic_cast<HashBuilderWithExprOperator *>(CreateTestOperator(hashBuilderWithExprFactory));
     VectorBatch *vecBatch = ConstructSimpleBuildVectorBatch();
     hashBuilderOperator->AddInput(vecBatch);
     VectorBatch *hashBuildOutput = nullptr;
     hashBuilderOperator->GetOutput(&hashBuildOutput);
 
+    auto hashBuilderFactory = hashBuilderWithExprFactory->GetHashBuilderOperatorFactory();
     LookupJoinWrapperOperatorFactory *lookupJoinWrapperOperatorFactory = LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(joinNode, hashBuilderFactory, config::QueryConfig());
     auto lookupJoinWrapperOperator = lookupJoinWrapperOperatorFactory->CreateOperator();
     VectorBatch *probeVecBatch = ConstructSimpleProbeVectorBatch();
