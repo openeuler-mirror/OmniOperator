@@ -22,7 +22,7 @@ public:
        LookupOuterJoinWithExprOperatorFactory &lookupOuterJoinWithExprOperatorFactory, bool isNeedOuterJoin);
     ~LookupJoinWrapperOperatorFactory() override;
     static LookupJoinWrapperOperatorFactory *CreateLookupJoinWrapperOperatorFactory(std::shared_ptr<const HashJoinNode> planNode,
-        HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig);
+        HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig);
     Operator *CreateOperator() override;
 
 private:

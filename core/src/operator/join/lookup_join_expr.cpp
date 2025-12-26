@@ -100,7 +100,7 @@ void getOutputList(std::shared_ptr<const HashJoinNode> planNode,
 }
 
 LookupJoinWithExprOperatorFactory *LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
-    std::shared_ptr<const HashJoinNode> planNode, HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory,
+    std::shared_ptr<const HashJoinNode> planNode, HashBuilderOperatorFactory* hashBuilderOperatorFactory,
     const config::QueryConfig &queryConfig)
 {
     auto buildTypes = planNode->RightOutputType();
@@ -165,12 +165,12 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     OperatorUtil::CreateProjections(probeTypes, probeHashKeys, newProbeTypes, this->projections, this->probeHashCols,
         overflowConfig);
     this->probeTypes = std::make_unique<DataTypes>(newProbeTypes);
-    auto hashBuilderWithExprOperatorFactory =
-        reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
+    auto hashBuilderOperatorFactory =
+        reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     this->operatorFactory =
         LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(*(this->probeTypes), probeOutputCols,
         probeOutputColsCount, this->probeHashCols.data(), probeHashKeysCount, buildOutputCols, buildOutputColsCount,
-        std::move(buildOutputTypes), (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()),
+        std::move(buildOutputTypes), (int64_t)(hashBuilderOperatorFactory),
         filterExpr, probeTypes.GetSize(), isShuffleExchangeBuildPlan, overflowConfig, outputList);
 }
 

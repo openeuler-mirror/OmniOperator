@@ -98,6 +98,31 @@ OperatorFactory* createOperatorFactory(
     }
 }
 
+std::pair<OperatorFactory*, HashBuilderOperatorFactory*> createHashBuilderOperatorPairFactory(
+    const std::shared_ptr<const HashJoinNode>& joinNode,
+    const config::QueryConfig& queryConfig)
+{
+    auto buildKeysSize = joinNode->RightKeys().size();
+    bool isWithExpr = false;
+    for (size_t index = 0; index < buildKeysSize; index++) {
+        auto expr = joinNode->RightKeys()[index];
+        if (expr->GetType() != omniruntime::expressions::ExprType::FIELD_E) {
+            isWithExpr = true;
+            break;
+        }
+    }
+    if (isWithExpr) {
+        auto hashBuilderWithExprOperatorFactory =
+            HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(joinNode, queryConfig);
+        auto hashBuilderOperatorFactory = hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory();
+        return std::make_pair(hashBuilderWithExprOperatorFactory, hashBuilderOperatorFactory);
+    } else {
+        auto hashBuilderOperatorFactory =
+            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
+        return std::make_pair(hashBuilderOperatorFactory, hashBuilderOperatorFactory);
+    }
+}
+
 void planDetail(
     const std::shared_ptr<const PlanNode>& planNode,
     std::vector<std::shared_ptr<omniruntime::op::Operator>>* currentOperators,
@@ -124,19 +149,18 @@ void planDetail(
 
     // JoinNode and UnionNode has multiple sources, so we need to create a builder driver for each source
     if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
-        auto hashBuilderOperatorFactory =
-            HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(joinNode, queryConfig);
+        auto res = createHashBuilderOperatorPairFactory(joinNode, queryConfig);
         auto builderDriver = builderDrivers[1][0];
-        builderDriver->operators()->emplace_back(createOperator(hashBuilderOperatorFactory, joinNode));
-        factories->emplace_back(hashBuilderOperatorFactory);
+        builderDriver->operators()->emplace_back(createOperator(res.first, joinNode));
+        factories->emplace_back(res.first);
 
         auto joinType = joinNode->GetJoinType();
         if (joinNode->IsFullJoin() || (joinNode->IsLeftJoin() && joinNode->IsBuildLeft()) || (joinNode->IsRightJoin() && joinNode->IsBuildRight())) {
             factory =
-                LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
+                LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(joinNode, res.second, queryConfig);
         } else {
             factory =
-                LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
+                LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(joinNode, res.second, queryConfig);
         }
     } else if (auto sortMergejoinNode = std::dynamic_pointer_cast<const MergeJoinNode>(planNode)) {
         auto streamedTableWithExprOperatorFactoryV2 =

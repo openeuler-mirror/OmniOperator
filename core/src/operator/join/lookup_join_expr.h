@@ -26,7 +26,7 @@ public:
         bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig);
 
     static LookupJoinWithExprOperatorFactory *CreateLookupJoinWithExprOperatorFactory(std::shared_ptr<const HashJoinNode> planNode,
-        HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig &queryConfig);
+        HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig &queryConfig);
 
     LookupJoinWithExprOperatorFactory(const DataTypes &probeTypes, int32_t *probeOutputCols,
         int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
