@@ -377,6 +377,10 @@ public:
 
     std::string_view Name() const override { return "Window"; }
 
+    bool CanSpill(const config::QueryConfig &queryConfig) const override {
+        return queryConfig.orderBySpillEnabled();
+    }
+
 private:
     const std::vector<int32_t> windowFunctionTypes;
     const std::vector<int32_t> partitionCols;
