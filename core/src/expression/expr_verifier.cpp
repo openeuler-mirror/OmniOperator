@@ -76,6 +76,7 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_DECIMAL128:
         case OMNI_ROW:
         case OMNI_ARRAY:
+        case OMNI_MAP:
             break;
         default:
             this->unSupportedReason = "unSupported FieldExpr DataTypeId: "

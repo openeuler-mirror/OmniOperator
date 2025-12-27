@@ -584,9 +584,8 @@ ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vect
         verifier.VisitExpr(*projExpr);
     }
 
-    if (verifier.IsSupportVectorization()) {
-        isSupportCodegen = false;
-    }
+    isSupportVectorization = verifier.IsSupportVectorization();
+    isSupportCodegen = verifier.IsSupportCodegen();
 }
 
 ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionExprs, const DataTypes &inputDataTypes,
@@ -610,9 +609,8 @@ ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionEx
         verifier.VisitExpr(*projExpr);
     }
 
-    if (verifier.IsSupportVectorization()) {
-        isSupportCodegen = false;
-    }
+    isSupportVectorization = verifier.IsSupportVectorization();
+    isSupportCodegen = verifier.IsSupportCodegen();
 }
 
 bool ExpressionEvaluator::IsSupportedExpr() const

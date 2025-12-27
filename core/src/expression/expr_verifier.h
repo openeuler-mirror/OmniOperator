@@ -32,6 +32,11 @@ public:
         return isSupportVectorization_;
     }
 
+    bool IsSupportCodegen() const
+    {
+        return isSupportCodegen_;
+    }
+
 private:
     std::string unSupportedReason = "";
     bool isSupportCodegen_ = true;

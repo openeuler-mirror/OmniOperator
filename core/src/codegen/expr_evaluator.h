@@ -259,6 +259,7 @@ public:
 
 private:
     bool isSupportCodegen = true;
+    bool isSupportVectorization = true;
     Expr *filterExpr = nullptr;
     std::vector<Expr *> projExprs;
     int32_t projectVecCount = 0;
