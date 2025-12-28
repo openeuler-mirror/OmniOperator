@@ -15,6 +15,34 @@ namespace omniruntime {
 using vector_size_t = int32_t;
 using ByteCount = int32_t;
 
+/**
+ * useage of SelectivityVector
+ * there are two exmpale of SelectivityVector for vectors or vector with const comparison
+ * the usage is also explain in class EqualStringFunction.h
+ *
+ * 1. vectors comparison
+ * auto leftVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(leftArg);
+ * auto rightVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rightArg);
+ * auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
+ * const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+ * leftSelectivity->setFromBitsNegate(leftNullBits, rowSize); // bits is used identify which row is null or not
+ * auto rightSelectivity = std::make_shared<SelectivityVector>(rowSize);
+ * const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+ * leftSelectivity->setFromBitsNegate(rightNullBits, rowSize);
+ * leftSelectivity->intersect(*rightSelectivity); // acquire the not null bits which will compare laterly using intersect method
+ * leftSelectivity->applyToSelected([&](vector_size_t i) {
+ *                   comparedResult->SetValue(i, leftVector->GetValue(i) == rightVector->GetValue(i));
+ *              }); // the compared reuslt is stored in comparedResult
+ *
+ * 2. vector and constant
+ * auto leftVector = static_cast<Vector<DictionaryContainer<std::string_view>> *>(leftArg);
+ * auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
+ * const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+ * leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
+ * leftSelectivity->applyToSelected([&](vector_size_t i) {
+ *                   comparedResult->SetValue(i, leftVector->GetValue(i) == constant);
+ *              });
+ */
 class SelectivityVector {
 public:
     SelectivityVector() {}
