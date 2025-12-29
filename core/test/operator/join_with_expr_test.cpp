@@ -186,6 +186,394 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     delete overflowConfig;
 }
 
+TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExprWithArrayVector)
+{
+    // construct input data
+    const int32_t dataSize = 4;
+
+    auto arrayColType = std::make_shared<omniruntime::type::ArrayType>(LongType());
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    int64_t buildData0[] = {1, 2, 3, 4};
+    int64_t buildData1[] = {111, 11, 333, 33};
+    auto *buildVecBatch = new VectorBatch(dataSize);
+    buildVecBatch->Append(CreateVector(dataSize, buildData0));
+    int32_t ids[] = {0, 1, 2, 3};
+    buildVecBatch->Append(CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1));
+
+    auto buildElementVector = std::make_shared<Vector<int64_t>>(8, OMNI_LONG);
+    int64_t buildVals[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    for (int i = 0; i < 8; i++) {
+        buildElementVector->SetValue(i, buildVals[i]);
+    }
+    auto buildArrayVec = new ArrayVector(dataSize, buildElementVector);
+    for (int row = 0; row <= dataSize; row++) {
+        buildArrayVec->SetOffset(row, row * 2);
+    }
+    buildVecBatch->Append(buildArrayVec);
+
+    std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
+        LongType()) };
+    int32_t hashTableCount = 1;
+    auto overflowConfig = new OverflowConfig();
+    HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_INNER, buildTypes,
+        buildHashKeys, hashTableCount, overflowConfig);
+    auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
+    hashBuilderWithExprOperator->AddInput(buildVecBatch);
+    VectorBatch *hashBuilderOutput = nullptr;
+    hashBuilderWithExprOperator->GetOutput(&hashBuilderOutput);
+
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    int64_t probeData0[] = {1, 2, 3, 4};
+    int64_t probeData1[] = {11, 22, 33, 44};
+    auto probeElementVector = std::make_shared<Vector<int64_t>>(8, OMNI_LONG);
+    int64_t probeVals[8] = {8, 7, 6, 5, 4, 3, 2, 1};
+    for (int i = 0; i < 8; i++) {
+        probeElementVector->SetValue(i, probeVals[i]);
+    }
+    auto probeArrayVec = new ArrayVector(dataSize, probeElementVector);
+    for (int row = 0; row <= dataSize; row++) {
+        probeArrayVec->SetOffset(row, row * 2);
+    }
+    auto *probeVecBatch = new VectorBatch(dataSize);
+    probeVecBatch->Append(CreateVector(dataSize, probeData0));
+    probeVecBatch->Append(CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1));
+    probeVecBatch->Append(probeArrayVec);
+
+    int32_t probeOutputCols[3]= {0, 1, 2};
+    int32_t probeOutputColsCount = 3;
+    std::vector<omniruntime::expressions::Expr *> probeHashKeys = { new omniruntime::expressions::FieldExpr(1,
+        LongType()) };
+    int32_t probeHashKeysCount = 1;
+    int32_t buildOutputCols[3] = {0, 1, 2};
+    int32_t buildOutputColsCount = 3;
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, nullptr, false, overflowConfig);
+    auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
+    lookupJoinWithExprOperator->AddInput(probeVecBatch);
+    VectorBatch *lookupJoinOutputVecBatch = nullptr;
+    lookupJoinWithExprOperator->GetOutput(&lookupJoinOutputVecBatch);
+
+    const int32_t expectedDataSize = 2;
+    int64_t expectedProbeCol0[] = {1, 3};
+    int64_t expectedProbeCol1[] = {11, 33};
+    auto expectedProbeElementVector = std::make_shared<Vector<int64_t>>(4, OMNI_LONG);
+    int64_t expectedProbeVals[4] = {8, 7, 4, 3};
+    for (int i = 0; i < 4; i++) {
+        expectedProbeElementVector->SetValue(i, expectedProbeVals[i]);
+    }
+    auto expectedProbeArrayVec =  new ArrayVector(expectedDataSize, expectedProbeElementVector);
+    for (int row = 0; row <= expectedDataSize; row++) {
+        expectedProbeArrayVec->SetOffset(row, row * 2);
+    }
+
+    int64_t expectedBuildCol0[] = {2, 4};
+    int64_t expectedBuildCol1[] = {11, 33};
+    auto expectedBuildElementVector = std::make_shared<Vector<int64_t>>(4, OMNI_LONG);
+    int64_t expectedBuildVals[4] = {3, 4, 7, 8};
+    for (int i = 0; i < 4; i++) {
+        expectedBuildElementVector->SetValue(i, expectedBuildVals[i]);
+    }
+    auto expectedBuildArrayVec =  new ArrayVector(expectedDataSize, expectedBuildElementVector);
+    for (int row = 0; row <= expectedDataSize; row++) {
+        expectedBuildArrayVec->SetOffset(row, row * 2);
+    }
+
+    auto *expectedVecBatch = new VectorBatch(expectedDataSize);
+    expectedVecBatch->Append(CreateVector(expectedDataSize, expectedProbeCol0));
+    expectedVecBatch->Append(CreateVector(expectedDataSize, expectedProbeCol1));
+    expectedVecBatch->Append(expectedProbeArrayVec);
+    expectedVecBatch->Append(CreateVector(expectedDataSize, expectedBuildCol0));
+    expectedVecBatch->Append(CreateVector(expectedDataSize, expectedBuildCol1));
+    expectedVecBatch->Append(expectedBuildArrayVec);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(lookupJoinOutputVecBatch, expectedVecBatch));
+
+    Expr::DeleteExprs(buildHashKeys);
+    Expr::DeleteExprs(probeHashKeys);
+    VectorHelper::FreeVecBatch(lookupJoinOutputVecBatch);
+    VectorHelper::FreeVecBatch(expectedVecBatch);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
+    DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory);
+    delete overflowConfig;
+}
+
+TEST(JoinWithExprTest, TestLeftJoinOnKeyWithoutExprWithArrayVector)
+{
+    // construct input data
+    const int32_t dataSize = 4;
+
+    auto arrayColType = std::make_shared<omniruntime::type::ArrayType>(LongType());
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    int64_t buildData0[] = {1, 2, 3, 4};
+    int64_t buildData1[] = {22, 11, 44, 33};
+    auto *buildVecBatch = new VectorBatch(dataSize);
+    buildVecBatch->Append(CreateVector(dataSize, buildData0));
+    int32_t ids[] = {0, 1, 2, 3};
+    buildVecBatch->Append(CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1));
+
+    auto buildElementVector = std::make_shared<Vector<int64_t>>(8, OMNI_LONG);
+    int64_t buildVals[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    for (int i = 0; i < 8; i++) {
+        buildElementVector->SetValue(i, buildVals[i]);
+    }
+    auto buildArrayVec = new ArrayVector(dataSize, buildElementVector);
+    for (int row = 0; row <= dataSize; row++) {
+        buildArrayVec->SetOffset(row, row * 2);
+    }
+    buildVecBatch->Append(buildArrayVec);
+
+    std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
+        LongType()) };
+    int32_t hashTableCount = 1;
+    auto overflowConfig = new OverflowConfig();
+    HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_LEFT, buildTypes,
+            buildHashKeys, hashTableCount, overflowConfig);
+    auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
+    hashBuilderWithExprOperator->AddInput(buildVecBatch);
+    VectorBatch *hashBuilderOutput = nullptr;
+    hashBuilderWithExprOperator->GetOutput(&hashBuilderOutput);
+
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    int64_t probeData0[] = {1, 2, 3, 4};
+    int64_t probeData1[] = {11, 22, 33, 44};
+    auto probeElementVector = std::make_shared<Vector<int64_t>>(8, OMNI_LONG);
+    int64_t probeVals[8] = {8, 7, 6, 5, 4, 3, 2, 1};
+    for (int i = 0; i < 8; i++) {
+        probeElementVector->SetValue(i, probeVals[i]);
+    }
+    auto probeArrayVec = new ArrayVector(dataSize, probeElementVector);
+    for (int row = 0; row <= dataSize; row++) {
+        probeArrayVec->SetOffset(row, row * 2);
+    }
+    auto *probeVecBatch = new VectorBatch(dataSize);
+    probeVecBatch->Append(CreateVector(dataSize, probeData0));
+    probeVecBatch->Append(CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1));
+    probeVecBatch->Append(probeArrayVec);
+
+    int32_t probeOutputCols[3]= {0, 1, 2};
+    int32_t probeOutputColsCount = 3;
+    std::vector<omniruntime::expressions::Expr *> probeHashKeys = { new omniruntime::expressions::FieldExpr(1,
+        LongType()) };
+    int32_t probeHashKeysCount = 1;
+    int32_t buildOutputCols[3] = {0, 1, 2};
+    int32_t buildOutputColsCount = 3;
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, nullptr, false, overflowConfig);
+    auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
+    lookupJoinWithExprOperator->AddInput(probeVecBatch);
+    VectorBatch *lookupJoinOutputVecBatch = nullptr;
+    lookupJoinWithExprOperator->GetOutput(&lookupJoinOutputVecBatch);
+
+    const int32_t expectedDataSize = 4;
+    int64_t expectedProbeCol0[] = {1, 2, 3, 4};
+    int64_t expectedProbeCol1[] = {11, 22, 33, 44};
+    auto expectedProbeElementVector = std::make_shared<Vector<int64_t>>(8, OMNI_LONG);
+    expectedProbeElementVector->SetValue(0, 8);
+    expectedProbeElementVector->SetValue(1, 7);
+    expectedProbeElementVector->SetValue(2, 6);
+    expectedProbeElementVector->SetValue(3, 5);
+    expectedProbeElementVector->SetValue(4, 4);
+    expectedProbeElementVector->SetValue(5, 3);
+    expectedProbeElementVector->SetValue(6, 2);
+    expectedProbeElementVector->SetValue(7, 1);
+    auto expectedProbeArrayVec =  new ArrayVector(expectedDataSize, expectedProbeElementVector);
+    expectedProbeArrayVec->SetSize(0, 2);
+    expectedProbeArrayVec->SetSize(1, 2);
+    expectedProbeArrayVec->SetSize(2, 2);
+    expectedProbeArrayVec->SetSize(3, 2);
+
+    auto expectedBuildElementVector = std::make_shared<Vector<int64_t>>(8, OMNI_LONG);
+    expectedBuildElementVector->SetValue(0, 3);
+    expectedBuildElementVector->SetValue(1, 4);
+    expectedBuildElementVector->SetValue(2, 1);
+    expectedBuildElementVector->SetValue(3, 2);
+    expectedBuildElementVector->SetValue(4, 7);
+    expectedBuildElementVector->SetValue(5, 8);
+    expectedBuildElementVector->SetValue(6, 5);
+    expectedBuildElementVector->SetValue(7, 6);
+    auto expectedBuildArrayVec =  new ArrayVector(expectedDataSize, expectedBuildElementVector);
+    expectedBuildArrayVec->SetSize(0, 2);
+    expectedBuildArrayVec->SetSize(1, 2);
+    expectedBuildArrayVec->SetSize(2, 2);
+    expectedBuildArrayVec->SetSize(3, 2);
+
+    auto *expectedVecBatch = new VectorBatch(expectedDataSize);
+    expectedVecBatch->Append(CreateVector(expectedDataSize, expectedProbeCol0));
+    expectedVecBatch->Append(CreateVector(expectedDataSize, expectedProbeCol1));
+    expectedVecBatch->Append(expectedProbeArrayVec);
+
+    int size = 4;
+    auto* expectedBuildCol0 = new vec::Vector<int64_t>(size);
+    auto* expectedBuildCol1 = new vec::Vector<int64_t>(size);
+    expectedBuildCol0->SetValue(0, 2);
+    expectedBuildCol0->SetValue(1, 1);
+    expectedBuildCol0->SetValue(2, 4);
+    expectedBuildCol0->SetValue(3, 3);
+    expectedBuildCol1->SetValue(0, 11);
+    expectedBuildCol1->SetValue(1, 22);
+    expectedBuildCol1->SetValue(2, 33);
+    expectedBuildCol1->SetValue(3, 44);
+    expectedVecBatch->Append(expectedBuildCol0);
+    expectedVecBatch->Append(expectedBuildCol1);
+    expectedVecBatch->Append(expectedBuildArrayVec);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(lookupJoinOutputVecBatch, expectedVecBatch));
+
+    Expr::DeleteExprs(buildHashKeys);
+    Expr::DeleteExprs(probeHashKeys);
+    VectorHelper::FreeVecBatch(lookupJoinOutputVecBatch);
+    VectorHelper::FreeVecBatch(expectedVecBatch);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
+    DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory);
+    delete overflowConfig;
+}
+
+TEST(JoinWithExprTest, TestLeftJoinOnKeyWithoutExprWithArrayVectorWithNull)
+{
+    // construct input data
+    const int32_t dataSize = 4;
+
+    auto arrayColType = std::make_shared<omniruntime::type::ArrayType>(LongType());
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    int64_t buildData0[] = {1, 2, 3, 4};
+    int64_t buildData1[] = {111, 11, 333, 33};
+    auto *buildVecBatch = new VectorBatch(dataSize);
+    buildVecBatch->Append(CreateVector(dataSize, buildData0));
+    int32_t ids[] = {0, 1, 2, 3};
+    buildVecBatch->Append(CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1));
+
+    auto buildElementVector = std::make_shared<Vector<int64_t>>(8, OMNI_LONG);
+    int64_t buildVals[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    for (int i = 0; i < 8; i++) {
+        buildElementVector->SetValue(i, buildVals[i]);
+    }
+    auto buildArrayVec = new ArrayVector(dataSize, buildElementVector);
+    for (int row = 0; row <= dataSize; row++) {
+        buildArrayVec->SetOffset(row, row * 2);
+    }
+    buildVecBatch->Append(buildArrayVec);
+
+    std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
+        LongType()) };
+    int32_t hashTableCount = 1;
+    auto overflowConfig = new OverflowConfig();
+    HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_LEFT, buildTypes,
+            buildHashKeys, hashTableCount, overflowConfig);
+    auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
+    hashBuilderWithExprOperator->AddInput(buildVecBatch);
+    VectorBatch *hashBuilderOutput = nullptr;
+    hashBuilderWithExprOperator->GetOutput(&hashBuilderOutput);
+
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    int64_t probeData0[] = {1, 2, 3, 4};
+    int64_t probeData1[] = {11, 22, 33, 44};
+    auto probeElementVector = std::make_shared<Vector<int64_t>>(8, OMNI_LONG);
+    int64_t probeVals[8] = {8, 7, 6, 5, 4, 3, 2, 1};
+    for (int i = 0; i < 8; i++) {
+        probeElementVector->SetValue(i, probeVals[i]);
+    }
+    auto probeArrayVec = new ArrayVector(dataSize, probeElementVector);
+    for (int row = 0; row <= dataSize; row++) {
+        probeArrayVec->SetOffset(row, row * 2);
+    }
+    auto *probeVecBatch = new VectorBatch(dataSize);
+    probeVecBatch->Append(CreateVector(dataSize, probeData0));
+    probeVecBatch->Append(CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1));
+    probeVecBatch->Append(probeArrayVec);
+
+    int32_t probeOutputCols[3]= {0, 1, 2};
+    int32_t probeOutputColsCount = 3;
+    std::vector<omniruntime::expressions::Expr *> probeHashKeys = { new omniruntime::expressions::FieldExpr(1,
+        LongType()) };
+    int32_t probeHashKeysCount = 1;
+    int32_t buildOutputCols[3] = {0, 1, 2};
+    int32_t buildOutputColsCount = 3;
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, nullptr, false, overflowConfig);
+    auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
+    lookupJoinWithExprOperator->AddInput(probeVecBatch);
+    VectorBatch *lookupJoinOutputVecBatch = nullptr;
+    lookupJoinWithExprOperator->GetOutput(&lookupJoinOutputVecBatch);
+
+    const int32_t expectedDataSize = 4;
+    int64_t expectedProbeCol0[] = {1, 2, 3, 4};
+    int64_t expectedProbeCol1[] = {11, 22, 33, 44};
+    auto expectedProbeElementVector = std::make_shared<Vector<int64_t>>(8, OMNI_LONG);
+    expectedProbeElementVector->SetValue(0, 8);
+    expectedProbeElementVector->SetValue(1, 7);
+    expectedProbeElementVector->SetValue(2, 6);
+    expectedProbeElementVector->SetValue(3, 5);
+    expectedProbeElementVector->SetValue(4, 4);
+    expectedProbeElementVector->SetValue(5, 3);
+    expectedProbeElementVector->SetValue(6, 2);
+    expectedProbeElementVector->SetValue(7, 1);
+    auto expectedProbeArrayVec =  new ArrayVector(expectedDataSize, expectedProbeElementVector);
+    expectedProbeArrayVec->SetSize(0, 2);
+    expectedProbeArrayVec->SetSize(1, 2);
+    expectedProbeArrayVec->SetSize(2, 2);
+    expectedProbeArrayVec->SetSize(3, 2);
+
+    auto expectedBuildElementVector = std::make_shared<Vector<int64_t>>(6, OMNI_LONG);
+    expectedBuildElementVector->SetValue(0, 3);
+    expectedBuildElementVector->SetValue(1, 4);
+    expectedBuildElementVector->SetNull(2);
+    expectedBuildElementVector->SetValue(3, 7);
+    expectedBuildElementVector->SetValue(4, 8);
+    expectedBuildElementVector->SetNull(5);
+    auto expectedBuildArrayVec =  new ArrayVector(expectedDataSize, expectedBuildElementVector);
+    expectedBuildArrayVec->SetSize(0, 2);
+    expectedBuildArrayVec->SetSize(1, 1);
+    expectedBuildArrayVec->SetNull(1);
+    expectedBuildArrayVec->SetSize(2, 2);
+    expectedBuildArrayVec->SetSize(3, 1);
+    expectedBuildArrayVec->SetNull(3);
+
+    auto *expectedVecBatch = new VectorBatch(expectedDataSize);
+    expectedVecBatch->Append(CreateVector(expectedDataSize, expectedProbeCol0));
+    expectedVecBatch->Append(CreateVector(expectedDataSize, expectedProbeCol1));
+    expectedVecBatch->Append(expectedProbeArrayVec);
+
+    int size = 4;
+    auto* expectedBuildCol0 = new vec::Vector<int64_t>(size);
+    auto* expectedBuildCol1 = new vec::Vector<int64_t>(size);
+    expectedBuildCol0->SetValue(0, 2);
+    expectedBuildCol0->SetNull(1);
+    expectedBuildCol0->SetValue(2, 4);
+    expectedBuildCol0->SetNull(3);
+    expectedBuildCol1->SetValue(0, 11);
+    expectedBuildCol1->SetNull(1);
+    expectedBuildCol1->SetValue(2, 33);
+    expectedBuildCol1->SetNull(3);
+    expectedVecBatch->Append(expectedBuildCol0);
+    expectedVecBatch->Append(expectedBuildCol1);
+    expectedVecBatch->Append(expectedBuildArrayVec);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(lookupJoinOutputVecBatch, expectedVecBatch));
+
+    Expr::DeleteExprs(buildHashKeys);
+    Expr::DeleteExprs(probeHashKeys);
+    VectorHelper::FreeVecBatch(lookupJoinOutputVecBatch);
+    VectorHelper::FreeVecBatch(expectedVecBatch);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
+    DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory);
+    delete overflowConfig;
+}
+
 TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
 {
     // construct input data
@@ -284,6 +672,175 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinWithExprOperator);
     DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory,
         lookupOuterJoinFactory);
+}
+
+TEST(JoinWithExprTest, TestLeftJoinOnKeyWithoutExprWithArrayVectorWithVarchar)
+{
+    // construct input data
+    const int32_t dataSize = 4;
+
+    auto arrayColType = std::make_shared<omniruntime::type::ArrayType>(VarcharType(500));
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    int64_t buildData0[] = {1, 2, 3, 4};
+    int64_t buildData1[] = {22, 11, 44, 33};
+    auto *buildVecBatch = new VectorBatch(dataSize);
+    buildVecBatch->Append(CreateVector(dataSize, buildData0));
+    int32_t ids[] = {0, 1, 2, 3};
+    buildVecBatch->Append(CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1));
+
+    auto buildStringVector = VectorHelper::CreateStringVector(4);
+    auto *buildElementVector = (Vector<LargeStringContainer<std::string_view>> *)buildStringVector;
+    std::string buildValue;
+    for (int i = 0; i < 4; i++) {
+        if (i % 3 == 0) {
+            buildValue = "he";
+        } else {
+            buildValue = "hi";
+        }
+        std::string_view input(buildValue.data(), buildValue.size());
+        buildElementVector->SetValue(i, input);
+    }
+    for (int i = 0; i < 4; i++)  {
+        omniruntime::vec::VectorHelper::PrintVectorValue(buildElementVector, i);
+    }
+
+    auto buildElementVectorPtr = std::shared_ptr<BaseVector>(buildElementVector);
+    auto buildArrayVec = new ArrayVector(dataSize, buildElementVectorPtr);
+    for (int row = 0; row < dataSize; row++) {
+        buildArrayVec->SetSize(row, 1);
+    }
+    buildVecBatch->Append(buildArrayVec);
+
+    std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
+        LongType()) };
+    int32_t hashTableCount = 1;
+    auto overflowConfig = new OverflowConfig();
+    HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_LEFT, buildTypes,
+            buildHashKeys, hashTableCount, overflowConfig);
+    auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
+    hashBuilderWithExprOperator->AddInput(buildVecBatch);
+    VectorBatch *hashBuilderOutput = nullptr;
+    hashBuilderWithExprOperator->GetOutput(&hashBuilderOutput);
+
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    int64_t probeData0[] = {1, 2, 3, 4};
+    int64_t probeData1[] = {11, 22, 33, 44};
+
+    auto probeStringVector = VectorHelper::CreateStringVector(4);
+    auto *probeElementVector = (Vector<LargeStringContainer<std::string_view>> *)probeStringVector;
+    std::string probeValue;
+    for (int i = 0; i < 4; i++) {
+        if (i % 3 == 0) {
+            probeValue = "ab";
+        } else {
+            probeValue = "de";
+        }
+        std::string_view input(probeValue.data(), probeValue.size());
+        probeElementVector->SetValue(i, input);
+    }
+    auto probeElementVectorPtr = std::shared_ptr<BaseVector>(probeElementVector);
+    auto probeArrayVec = new ArrayVector(dataSize, probeElementVectorPtr);
+    for (int row = 0; row < dataSize; row++) {
+        probeArrayVec->SetSize(row, 1);
+    }
+    auto *probeVecBatch = new VectorBatch(dataSize);
+    probeVecBatch->Append(CreateVector(dataSize, probeData0));
+    probeVecBatch->Append(CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1));
+    probeVecBatch->Append(probeArrayVec);
+
+    for (int i = 0; i < dataSize; i++) {
+        omniruntime::vec::VectorHelper::PrintArrayVectorOffsetsAndNulls(probeArrayVec, i);
+    }
+
+    int32_t probeOutputCols[3]= {0, 1, 2};
+    int32_t probeOutputColsCount = 3;
+    std::vector<omniruntime::expressions::Expr *> probeHashKeys = { new omniruntime::expressions::FieldExpr(1,
+                                                                                                                LongType()) };
+    int32_t probeHashKeysCount = 1;
+    int32_t buildOutputCols[3] = {0, 1, 2};
+    int32_t buildOutputColsCount = 3;
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), arrayColType }));
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, nullptr, false, overflowConfig);
+    auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
+    lookupJoinWithExprOperator->AddInput(probeVecBatch);
+    VectorBatch *lookupJoinOutputVecBatch = nullptr;
+    lookupJoinWithExprOperator->GetOutput(&lookupJoinOutputVecBatch);
+
+    const int32_t expectedDataSize = 4;
+    int64_t expectedProbeCol0[] = {1, 2, 3, 4};
+    int64_t expectedProbeCol1[] = {11, 22, 33, 44};
+
+    auto expectedProbeStringVector = VectorHelper::CreateStringVector(4);
+    auto *expectedProbeElementVector = (Vector<LargeStringContainer<std::string_view>> *)expectedProbeStringVector;
+    std::string expectedProbeValue;
+    for (int i = 0; i < 4; i++) {
+        if (i % 3 == 0) {
+            expectedProbeValue = "ab";
+        } else {
+            expectedProbeValue = "de";
+        }
+        std::string_view input(expectedProbeValue.data(), expectedProbeValue.size());
+        expectedProbeElementVector->SetValue(i, input);
+    }
+    auto expectedProbeElementVectorPtr = std::shared_ptr<BaseVector>(expectedProbeElementVector);
+    auto expectedProbeArrayVec = new ArrayVector(dataSize, expectedProbeElementVectorPtr);
+    for (int row = 0; row < dataSize; row++) {
+        expectedProbeArrayVec->SetSize(row, 1);
+    }
+
+
+    auto expectedBuildStringVector = VectorHelper::CreateStringVector(4);
+    auto *expectedBuildElementVector = (Vector<LargeStringContainer<std::string_view>> *)expectedBuildStringVector;
+    std::string expectedBuildValue;
+    for (int i = 0; i < 4; i++) {
+        if (i % 3 == 0) {
+            expectedBuildValue = "hi";
+        } else {
+            expectedBuildValue = "he";
+        }
+        std::string_view input(expectedBuildValue.data(), expectedBuildValue.size());
+        expectedBuildElementVector->SetValue(i, input);
+    }
+    auto expectedBuildElementVectorPtr = std::shared_ptr<BaseVector>(expectedBuildElementVector);
+    auto expectedBuildArrayVec = new ArrayVector(dataSize, expectedBuildElementVectorPtr);
+    for (int row = 0; row < dataSize; row++) {
+        expectedBuildArrayVec->SetSize(row, 1);
+    }
+
+    auto *expectedVecBatch = new VectorBatch(expectedDataSize);
+    expectedVecBatch->Append(CreateVector(expectedDataSize, expectedProbeCol0));
+    expectedVecBatch->Append(CreateVector(expectedDataSize, expectedProbeCol1));
+    expectedVecBatch->Append(expectedProbeArrayVec);
+
+    int size = 4;
+    auto* expectedBuildCol0 = new vec::Vector<int64_t>(size);
+    auto* expectedBuildCol1 = new vec::Vector<int64_t>(size);
+    expectedBuildCol0->SetValue(0, 2);
+    expectedBuildCol0->SetValue(1, 1);
+    expectedBuildCol0->SetValue(2, 4);
+    expectedBuildCol0->SetValue(3, 3);
+    expectedBuildCol1->SetValue(0, 11);
+    expectedBuildCol1->SetValue(1, 22);
+    expectedBuildCol1->SetValue(2, 33);
+    expectedBuildCol1->SetValue(3, 44);
+    expectedVecBatch->Append(expectedBuildCol0);
+    expectedVecBatch->Append(expectedBuildCol1);
+    expectedVecBatch->Append(expectedBuildArrayVec);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(lookupJoinOutputVecBatch, expectedVecBatch));
+
+    Expr::DeleteExprs(buildHashKeys);
+    Expr::DeleteExprs(probeHashKeys);
+    VectorHelper::FreeVecBatch(lookupJoinOutputVecBatch);
+    VectorHelper::FreeVecBatch(expectedVecBatch);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
+    DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory);
+    delete overflowConfig;
 }
 
 TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)

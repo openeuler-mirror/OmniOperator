@@ -34,6 +34,10 @@ public abstract class ComplexVec extends Vec {
             dataType);
     }
 
+    public static DataType getComplexDataType(long nativeVector) {
+        return getComplexDataTypeNative(nativeVector);
+    }
+
     protected static native int getComplexCapacityNative(long nativeVector, int vecEncodingId);
 
     protected static native long newComplexVectorNative(int size, int vecEncodingId, DataType[] dataType);
@@ -42,7 +46,7 @@ public abstract class ComplexVec extends Vec {
 
     protected static native DataType getComplexDataTypeNative(long nativeVector);
 
-    public static Vec createVec(long nativeVector , DataType dataType){
+    public static Vec createVec(long nativeVector, DataType dataType){
         switch (dataType.getId()) {
             case OMNI_BOOLEAN: {
                 return new BooleanVec(nativeVector);

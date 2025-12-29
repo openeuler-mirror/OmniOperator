@@ -28,6 +28,8 @@ const std::string SCALE = "scale";
 const std::string DATE_UNIT = "dateUnit";
 const std::string TIME_UNIT = "timeUnit";
 const std::string FIELD_TYPES = "fieldTypes";
+const std::string ELEMENT_TYPE = "elementType";
+const std::string ELEMENT_SIZE = "elementSize";
 const static uint32_t CHAR_MAX_WIDTH = 65536;
 const static int32_t DECIMAL128_DEFAULT_PRECISION = 38;
 const static int32_t DECIMAL64_DEFAULT_PRECISION = 18;
@@ -324,7 +326,12 @@ public:
         elementSize = size;
     }
 
-    void Serialize(nlohmann::json &nlohmannJson) const override {}
+    void Serialize(nlohmann::json &nlohmannJson) const override {
+        nlohmannJson = nlohmann::json { {ID, id}, {ELEMENT_SIZE, elementSize} };
+        nlohmann::json childJson;
+        child->Serialize(childJson);
+        nlohmannJson[ELEMENT_TYPE] = childJson;
+    }
 
 protected:
     std::shared_ptr<DataType> child;

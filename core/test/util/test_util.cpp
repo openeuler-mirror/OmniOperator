@@ -749,6 +749,47 @@ int32_t DecodeFetchFlag(int32_t resultCode)
     return resultCode & SHRT_MAX;
 }
 
+bool CompareArrayUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const double error) {
+    auto resultVec = dynamic_cast<ArrayVector *>(resVec);
+    auto expectedVec = dynamic_cast<ArrayVector *>(dstVec);
+    if (!resultVec || !expectedVec) {
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "ArrayVector dynamic_cast failed!");
+        return false;
+    }
+    if (resultVec->vec::BaseVector::GetSize() != expectedVec->vec::BaseVector::GetSize()) {
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Vector size does not match!");
+        return false;
+    }
+
+    for (int row = 0; row < resultVec->vec::BaseVector::GetSize(); row++) {
+        if (resultVec->IsNull(row) != expectedVec->IsNull(row)) {
+            return false;
+        }
+        if (resultVec->IsNull(row)) {
+            continue;
+        }
+
+        int32_t resSize = resultVec->GetSize(row);
+        int32_t expSize = expectedVec->GetSize(row);
+        if (resSize != expSize) {
+            return false;
+        }
+
+        int32_t resOffset = resultVec->GetOffset(row);
+        int32_t expOffset = expectedVec->GetOffset(row);
+        auto resSubArray = resultVec->GetElementVector()->Slice(resOffset, resSize, false);
+        auto expSubArray = expectedVec->GetElementVector()->Slice(expOffset, expSize, false);
+        bool match = ColumnMatchIgnoreOrder(resSubArray, expSubArray, error);
+
+        delete resSubArray;
+        delete expSubArray;
+        if (!match) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool CompareVarcharUnorderedRows(BaseVector *resultVector, BaseVector *expectedVector, const double error)
 {
     std::multiset<std::string_view> resRows;
@@ -927,6 +968,10 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
         case OMNI_CONTAINER: {
             isMatched = CompareUnorderedRowsContainer(static_cast<ContainerVector *>(resultVector),
                 static_cast<ContainerVector *>(expectedVector), error);
+            break;
+        }
+        case OMNI_ARRAY: {
+            isMatched = CompareArrayUnorderedRows(resultVector, expectedVector, error);
             break;
         }
         default: {

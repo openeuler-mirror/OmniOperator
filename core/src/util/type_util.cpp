@@ -263,5 +263,10 @@ std::shared_ptr<ContainerDataType> ContainerType(std::vector<DataTypePtr> &&fiel
     return std::make_shared<ContainerDataType>(fieldTypes);
 }
 
+std::shared_ptr<ArrayType> ArrayDataType(DataTypePtr child)
+{
+    return std::make_shared<ArrayType>(child);
+}
+
 }
 }

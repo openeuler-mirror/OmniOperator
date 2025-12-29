@@ -96,7 +96,7 @@ DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
             return std::make_shared<RowType>(fieldTypes);
         }
         case OMNI_ARRAY: {
-            DataTypePtr child = DataTypeJsonParser(dataTypeJson["child"]);
+            DataTypePtr child = DataTypeJsonParser(dataTypeJson[ELEMENT_TYPE]);
             return std::make_shared<ArrayType>(child);
         }
         default:

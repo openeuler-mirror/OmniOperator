@@ -228,6 +228,44 @@ public:
         size = needCapacity;
     }
 
+    /* *
+     * append another arrayVector to the current arrayVector
+     *
+     * @param other the dst data from
+     * @param positionOffset element position
+     * @param length number of elements
+     */
+    void Append(BaseVector *other, int positionOffset, int length)
+    {
+        auto *otherArrayVector = static_cast<ArrayVector *>(other);
+
+        if (length <= 0) {
+            return; // 表示没有数据需要追加
+        }
+        if (positionOffset < 0 || positionOffset != GetSize()) {
+            std::string message = "Invalid append position";
+            throw OmniException("ARRAYVECTOR_APPEND_ERROR", message);
+        }
+
+        int64_t oldSize = size;
+        int64_t newSize = size + length;
+        Expand(newSize);
+
+        int newIndex = oldSize;
+        for (int i = 0; i < length; i++) {
+            if (otherArrayVector->IsNull(i)) {
+                SetNull(newIndex);
+                SetSize(newIndex, 1);
+                int elementVectorSize = elements->GetSize();
+                elements->Expand(elementVectorSize + 1);
+                elements->SetNull(elementVectorSize);
+            } else {
+                SetValue(newIndex, otherArrayVector->GetValue(i));
+            }
+            newIndex++;
+        }
+    }
+
     void SetValue(int index, BaseVector* elements);
 
     BaseVector* GetValue(int index);

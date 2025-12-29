@@ -4,6 +4,7 @@
 
 package nova.hetu.omniruntime.type;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -33,6 +34,7 @@ public class DataType implements Serializable {
         return id;
     }
 
+    @JsonIgnore
     public int getIdValue() {
         return id.toValue();
     }

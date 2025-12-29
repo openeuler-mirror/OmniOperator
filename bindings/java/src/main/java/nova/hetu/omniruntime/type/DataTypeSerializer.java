@@ -105,7 +105,7 @@ public class DataTypeSerializer {
         @Override
         public JavaType typeFromId(DatabindContext context, String id) throws IOException {
             Class<?> subType = null;
-            DataType.DataTypeId dataTypeId = DataType.DataTypeId.values()[Integer.parseInt(id)];
+            DataType.DataTypeId dataTypeId = DataType.DataTypeId.fromValue(Integer.parseInt(id));
             switch (dataTypeId) {
                 case OMNI_INT:
                     subType = IntDataType.class;
@@ -154,6 +154,9 @@ public class DataTypeSerializer {
                     break;
                 case OMNI_DATE64:
                     subType = Date64DataType.class;
+                    break;
+                case OMNI_ARRAY:
+                    subType = ArrayDataType.class;
                     break;
                 default:
                     throw new OmniRuntimeException(OMNI_NOSUPPORT, "Unsupported data type : " + id);

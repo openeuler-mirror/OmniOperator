@@ -853,6 +853,9 @@ public:
             case type::OMNI_CONTAINER:
                 reinterpret_cast<ContainerVector *>(destVector)->Append(srcVector, offset, length);
                 break;
+            case type::OMNI_ARRAY:
+                reinterpret_cast<ArrayVector *>(destVector)->Append(srcVector, offset, length);
+                break;
             default: {
                 std::string omniExceptionInfo =
                     "In function AppendVector, no such data type " + std::to_string(dataTypeId);
