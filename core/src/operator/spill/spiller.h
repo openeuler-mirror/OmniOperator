@@ -10,6 +10,7 @@
 #include "spill_merger.h"
 #include "operator/pages_index.h"
 #include "operator/aggregation/group_aggregation_sort.h"
+#include "io/ColumnWriter.hh"
 
 namespace omniruntime {
 namespace op {
@@ -52,6 +53,8 @@ private:
 
     ErrorCode Write(void *buf, size_t length);
 
+    void InitCompressStream();
+
     type::DataTypes dataTypes;
     std::string dirPath;
     int32_t fd = -1;
@@ -61,6 +64,13 @@ private:
     char *writeBuffer = nullptr;
     uint64_t fileLength = 0;
     uint64_t totalRowCount = 0;
+
+    std::unique_ptr<omniSpark::OutputStream> out_stream;
+    std::unique_ptr<omniSpark::StreamsFactory> stream_factory;
+    std::unique_ptr<omniSpark::BufferedOutputStream> compress_stream;
+    std::vector<char> scratch_buffer;
+    uint64_t unflushed_size = 0;
+    constexpr static uint64_t FLUSH_THRESHOLD = 16 * 1024 * 1024;
 };
 
 class Spiller {

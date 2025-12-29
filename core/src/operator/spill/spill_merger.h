@@ -11,6 +11,8 @@
 #include "loser_tree.h"
 #include "operator/util/operator_util.h"
 #include "spill_tracker.h"
+#include "io/ColumnWriter.hh"
+#include "io/Decompression.hh"
 
 namespace omniruntime {
 namespace op {
@@ -85,6 +87,10 @@ private:
     uint64_t totalRowCount = 0;
     uint64_t rowOffset = 0;
     int32_t maxRowCount = 0; // for reuse vector batch memory
+
+    char* currentBuffer_ = nullptr;
+    char* prevBuffer_ = nullptr;
+    int32_t remainLength = 0;
 };
 
 class SpillMergeStream {

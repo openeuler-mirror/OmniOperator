@@ -209,6 +209,7 @@ ErrorCode SpillWriter::WriteVecBatch(vec::VectorBatch *vectorBatch, uint64_t vec
         if (result != ErrorCode::SUCCESS) {
             return result;
         }
+        InitCompressStream();
     }
 
     if (writeBufferSize != 0) {
@@ -422,56 +423,94 @@ template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseV
 {
     uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
     int32_t nullsSize = BitUtil::Nbytes(rowCount);
-    if (Write(nulls, nullsSize) != ErrorCode::SUCCESS) {
-        LogError("Write value nulls to %s failed.", filePath.c_str());
+
+    uint64_t totalSize = nullsSize;
+    int32_t valuesSize = 0;
+    int32_t offsetsSize = 0;
+
+    if constexpr (std::is_same_v<T, std::string_view>) {
+        offsetsSize = (rowCount + 1) * sizeof(int32_t);
+        auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
+        valuesSize = offsets[rowCount] - offsets[0];
+        totalSize += offsetsSize + valuesSize;
+    } else {
+        valuesSize = rowCount * sizeof(T);
+        totalSize += valuesSize;
+    }
+
+    // 2. 调整临时缓冲区大小（复用，避免频繁内存分配）
+    if (scratch_buffer.size() < totalSize) {
+        scratch_buffer.resize(totalSize);
+    }
+
+    // 3. 将数据按顺序拷贝到临时缓冲区
+    char *tmp_ptr = scratch_buffer.data();
+    size_t current_offset = 0;
+
+    // 拷贝 nulls
+    errno_t ret = memcpy_s(tmp_ptr + current_offset, nullsSize, nulls, nullsSize);
+    if (ret != EOK) {
+        LogError("Write merged nulls to buffer failed.");
+        return ErrorCode::WRITE_FAILED;
+    }
+    current_offset += nullsSize;
+
+    // 拷贝 offsets (仅VARCHAR)
+    if constexpr (std::is_same_v<T, std::string_view>) {
+        auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
+        ret = memcpy_s(tmp_ptr + current_offset, offsetsSize, offsets, offsetsSize);
+        if (ret != EOK) {
+            LogError("Write merged offsets to buffer failed.");
+            return ErrorCode::WRITE_FAILED;
+        }
+        current_offset += offsetsSize;
+    }
+
+    // 拷贝 values
+    if (valuesSize > 0) {
+        void *values_ptr = nullptr;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            values_ptr = unsafe::UnsafeStringVector::GetValues(reinterpret_cast<VarcharVector *>(vector));
+        } else {
+            values_ptr = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(vector));
+        }
+        ret = memcpy_s(tmp_ptr + current_offset, valuesSize, values_ptr, valuesSize);
+        if (ret != EOK) {
+            LogError("Write merged values to buffer failed.");
+            return ErrorCode::WRITE_FAILED;
+        }
+    }
+
+    // 4. 一次性写入所有数据
+    if (Write(scratch_buffer.data(), totalSize) != ErrorCode::SUCCESS) {
+        LogError("Write merged data to file %s failed.", filePath.c_str());
         return ErrorCode::WRITE_FAILED;
     }
 
-    if constexpr (std::is_same_v<T, std::string_view>) {
-        // write offsets
-        auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
-        auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
-        if (Write(offsets, offsetSize) != ErrorCode::SUCCESS) {
-            LogError("Write value offsets to %s failed.", filePath.c_str());
-            return op::ErrorCode::WRITE_FAILED;
-        }
-
-        auto valueLength = static_cast<ssize_t>(offsets[rowCount] - offsets[0]);
-        if (valueLength > 0) {
-            // write values
-            char *values = unsafe::UnsafeStringVector::GetValues(reinterpret_cast<VarcharVector *>(vector));
-            if (Write(values, valueLength) != ErrorCode::SUCCESS) {
-                LogError("Write values to %s failed.", filePath.c_str());
-                return op::ErrorCode::WRITE_FAILED;
-            }
-        }
-        return ErrorCode::SUCCESS;
-    } else {
-        auto length = static_cast<ssize_t>(rowCount * sizeof(T));
-        T *values = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(vector));
-        if (Write(values, length) != ErrorCode::SUCCESS) {
-            LogError("Write values to %s failed.", filePath.c_str());
-            return ErrorCode::WRITE_FAILED;
-        }
-        return ErrorCode::SUCCESS;
-    }
+    return ErrorCode::SUCCESS;
 }
 
 ErrorCode SpillWriter::Write(void *buf, size_t length)
 {
-    size_t bytesWritten = 0;
-    while (bytesWritten < length) {
-        auto expectBytes = length - bytesWritten;
-        ssize_t actualBytes = write(fd, static_cast<char *>(buf) + bytesWritten, expectBytes);
-        if (actualBytes <= 0) {
-            auto errorNum = errno;
-            char errorBuf[ERROR_BUFFER_SIZE];
-            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
-            LogError("Write to %s failed since %s, expect write bytes is %lld but actual write bytes is %lld.",
-                filePath.c_str(), errorBuf, expectBytes, actualBytes);
-            return ErrorCode::WRITE_FAILED;
+
+    size_t remaining_len = length;
+    const char* data_ptr = static_cast<const char *>(buf);
+    void* buffer = nullptr;
+    int buffer_size = 0;
+    while (remaining_len > 0 && compress_stream->Next(&buffer, &buffer_size)) {
+        size_t write_len = std::min(remaining_len, static_cast<size_t>(buffer_size));
+        memcpy(buffer, data_ptr, write_len);
+        remaining_len -= write_len;
+        data_ptr += write_len;
+
+        if (remaining_len == 0 && write_len < static_cast<size_t>(buffer_size)) {
+            compress_stream->BackUp(static_cast<int>(buffer_size - write_len));
         }
-        bytesWritten += actualBytes;
+    }
+    unflushed_size += length;
+    if (unflushed_size >= FLUSH_THRESHOLD) {
+        compress_stream->flush();
+        unflushed_size = 0;
     }
     return ErrorCode::SUCCESS;
 }
@@ -488,8 +527,24 @@ ErrorCode SpillWriter::Close()
         }
         writeBufferOffset = 0;
     }
+    if (compress_stream && unflushed_size > 0) {
+        compress_stream->flush();
+        unflushed_size = 0;
+    }
     close(fd);
     return result;
+}
+
+void SpillWriter::InitCompressStream()
+{
+    const int32_t compress_block_size = 32 * 1024 * 1024;
+    omniSpark::WriterOptions writer_options;
+    writer_options.setCompression(omniSpark::CompressionKind_LZ4);
+    writer_options.setCompressionBlockSize(compress_block_size);
+    writer_options.setCompressionStrategy(omniSpark::CompressionStrategy_COMPRESSION);
+    out_stream = omniSpark::writeLocalFile(filePath);
+    stream_factory = createStreamsFactory(writer_options, out_stream.get());
+    compress_stream = stream_factory->createStream();
 }
 }
 }

@@ -14,6 +14,7 @@ else ()
     add_subdirectory(function)
     add_subdirectory(memory)
     add_subdirectory(vectorization)
+    add_subdirectory(io)
 if (DEFINED ENABLE_BENCHMARK AND ENABLE_BENCHMARK STREQUAL "ON")
     find_package(benchmark REQUIRED)
     add_subdirectory(benchmark)
@@ -35,6 +36,7 @@ endif ()
             planNodeTest
             computeTest
             vectorizationTest
+            ioTest
             )
 
     # find gtest package
