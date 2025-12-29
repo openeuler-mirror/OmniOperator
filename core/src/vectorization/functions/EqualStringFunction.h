@@ -82,24 +82,24 @@ class EqualStringFunction final : public VectorFunction {
 
 
     // this method is used to compare between column and constant
-    static void handleConstComparison(BaseVector *leftArg, const std::string_view &constant, Vector<bool> * comparedResult, int32_t rowSize) {
+    static void handleConstComparison(BaseVector *vectorArg, const std::string_view &constant, Vector<bool> * comparedResult, int32_t rowSize) {
 
-        if (leftArg->GetEncoding() == OMNI_DICTIONARY) {
-            auto leftVector = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(leftArg);
-            auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
-            const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
-            leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
-            leftSelectivity->applyToSelected([&](vector_size_t i) {
-                comparedResult->SetValue(i, leftVector->GetValue(i) == constant);
+        if (vectorArg->GetEncoding() == OMNI_DICTIONARY) {
+            auto vector = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vectorArg);
+            auto selectivity = std::make_shared<SelectivityVector>(rowSize);
+            const auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
+            selectivity->setFromBitsNegate(nullBits, rowSize);
+            selectivity->applyToSelected([&](vector_size_t i) {
+                comparedResult->SetValue(i, vector->GetValue(i) == constant);
             });
 
         } else {
-            auto leftVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(leftArg);
-            auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
-            const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
-            leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
-            leftSelectivity->applyToSelected([&](vector_size_t i) {
-                comparedResult->SetValue(i, leftVector->GetValue(i) == constant);
+            auto vector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorArg);
+            auto selectivity = std::make_shared<SelectivityVector>(rowSize);
+            const auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
+            selectivity->setFromBitsNegate(nullBits, rowSize);
+            selectivity->applyToSelected([&](vector_size_t i) {
+                comparedResult->SetValue(i, vector->GetValue(i) == constant);
             });
         }
     }
@@ -118,9 +118,9 @@ class EqualStringFunction final : public VectorFunction {
         memset_sp(alignedBuffer, rowSize, 0, rowSize);
         if (leftArg->GetEncoding() == OMNI_ENCODING_CONST || rightArg->GetEncoding() == OMNI_ENCODING_CONST) {
             // Fast path for (flat, const).
-            auto reverse = leftArg->GetEncoding() == OMNI_ENCODING_CONST;
-            auto constant = reverse ? reinterpret_cast<ConstVector<std::string_view> *>(leftArg)->GetConstValue() : reinterpret_cast<ConstVector<std::string_view> *>(rightArg)->GetConstValue();
-            handleConstComparison(reverse ? rightArg : leftArg, constant, flatResult, rowSize);
+            auto leftIsConst = leftArg->GetEncoding() == OMNI_ENCODING_CONST;
+            auto constant = leftIsConst ? reinterpret_cast<ConstVector<std::string_view> *>(leftArg)->GetConstValue() : reinterpret_cast<ConstVector<std::string_view> *>(rightArg)->GetConstValue();
+            handleConstComparison(leftIsConst ? rightArg : leftArg, constant, flatResult, rowSize);
         } else if (leftArg->GetEncoding() == OMNI_FLAT && rightArg->GetEncoding() == OMNI_FLAT) {
             // Fast path for (flat, flat).
             handleFlatColumnComparison(leftArg, rightArg, flatResult, rowSize);

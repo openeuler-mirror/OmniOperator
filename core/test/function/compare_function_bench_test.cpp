@@ -4,6 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "util/test_util.h"
+#include "vectorization/functions/Comparisons.h"
 
 namespace omniruntime {
 using namespace omniruntime::op;
@@ -222,4 +223,146 @@ TEST(varcharType, CompareVarcharByLongPerf)
     delete vector2;
     delete vector3;
 }
+
+TEST(CompareDictionaryIntPerf, intType)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<int> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_INT,  vectorSize));
+    auto buffer = unsafe::UnsafeVector::GetValues(baseVector)->GetBuffer();
+    for (size_t i = 0; i < vectorSize; i++) {
+        buffer[i] = i;
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_INT);
+    auto dictionaryVectory2 = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_INT);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_INT);
+    typeIds.emplace_back(OMNI_INT);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(dictionaryVectory2);
+
+    // auto vector_function = makeLessThan("lessThan", typeIds, config::QueryConfig{});
+    auto vector_function = makeEqualTo("equal", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete dictionaryVectory2;
+    delete baseVector;
+
+}
+
+TEST(CompareFlatWithDictionaryIntPerf, intType)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<int> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_INT,  vectorSize));
+    auto buffer = unsafe::UnsafeVector::GetValues(baseVector)->GetBuffer();
+    for (size_t i = 0; i < vectorSize; i++) {
+        buffer[i] = i;
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_INT);
+    auto flatVector = reinterpret_cast<Vector<int> *>(VectorHelper::CreateFlatVector(type::OMNI_INT, rowSize));
+    auto flatBuffer = unsafe::UnsafeVector::GetValues(flatVector)->GetBuffer();
+
+    for (size_t i = 0; i < vectorSize; i++) {
+        flatBuffer[i] = i;
+    }
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_INT);
+    typeIds.emplace_back(OMNI_INT);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(flatVector);
+
+    auto vector_function = makeEqualTo("equal", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete flatVector;
+    delete baseVector;
+
+}
+
+
+TEST(CompareConstWithDictionaryIntPerf, intType)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<int> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_INT,  vectorSize));
+    auto buffer = unsafe::UnsafeVector::GetValues(baseVector)->GetBuffer();
+    for (size_t i = 0; i < vectorSize; i++) {
+        buffer[i] = i;
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_INT);
+    auto constVector = new ConstVector<int32_t>(5, OMNI_INT, rowSize);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_INT);
+    typeIds.emplace_back(OMNI_INT);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(constVector);
+
+    auto vector_function = makeEqualTo("equal", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete baseVector;
+}
+
+
 }

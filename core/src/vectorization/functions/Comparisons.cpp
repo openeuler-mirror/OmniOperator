@@ -18,36 +18,129 @@ class ComparisonFunction final : public VectorFunction {
         return true;
     }
 
+    // this method is used to compare between columns which one is dictionary and another is flat
+    // if leftArg is DICTIONARY comparison is cmp(left, right) corresponding to comparison order
+    static void handleColumnWithDiffEncodingComparison(BaseVector *leftArg, BaseVector* rightArg, Vector<bool> * comparedResult, int32_t rowSize) {
+        const Cmp cmp;
+        if (leftArg->GetEncoding() == OMNI_DICTIONARY) {
+            auto leftVector = static_cast<Vector<DictionaryContainer<T>> *>(leftArg);
+            auto rightVector = static_cast<Vector<T> *>(rightArg);
+            auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
+            const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+            leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
+            auto rightSelectivity = std::make_shared<SelectivityVector>(rowSize);
+            const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+            leftSelectivity->setFromBitsNegate(rightNullBits, rowSize);
+            leftSelectivity->intersect(*rightSelectivity);
+            leftSelectivity->applyToSelected([&](vector_size_t i) {
+                comparedResult->SetValue(i, cmp(leftVector->GetValue(i), rightVector->GetValue(i)));
+            });
+
+        } else {
+            auto leftVector = static_cast<Vector<T> *>(leftArg);
+            auto rightVector = static_cast<Vector<DictionaryContainer<T>> *>(rightArg);
+            auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
+            const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+            leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
+            auto rightSelectivity = std::make_shared<SelectivityVector>(rowSize);
+            const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+            leftSelectivity->setFromBitsNegate(rightNullBits, rowSize);
+            leftSelectivity->intersect(*rightSelectivity);
+            leftSelectivity->applyToSelected([&](vector_size_t i) {
+                comparedResult->SetValue(i, cmp(rightVector->GetValue(i), leftVector->GetValue(i)));
+            });
+        }
+    }
+
+    // this method is used to compare between columns
+    // this is also an example of how to use Selectivity
+    static void handleDictColumnComparison(BaseVector* leftArg, BaseVector* rightArg, Vector<bool> * comparedResult, int32_t rowSize) {
+        const Cmp cmp;
+        auto leftVector = static_cast<Vector<DictionaryContainer<T>> *>(leftArg);
+        auto rightVector = static_cast<Vector<DictionaryContainer<T>> *>(rightArg);
+        auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
+        const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+        leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
+        auto rightSelectivity = std::make_shared<SelectivityVector>(rowSize);
+        const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+        leftSelectivity->setFromBitsNegate(rightNullBits, rowSize);
+        leftSelectivity->intersect(*rightSelectivity);
+        leftSelectivity->applyToSelected([&](vector_size_t i) {
+            comparedResult->SetValue(i, cmp(leftVector->GetValue(i), rightVector->GetValue(i)));
+        });
+    }
+
+
+    static void handleFlatColumnComparison(BaseVector* leftArg, BaseVector* rightArg, Vector<bool> * comparedResult, int32_t rowSize) {
+        const Cmp cmp;
+        auto leftVector = static_cast<Vector<T> *>(leftArg);
+        auto rightVector = static_cast<Vector<T> *>(rightArg);
+        auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
+        const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+        leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
+        auto rightSelectivity = std::make_shared<SelectivityVector>(rowSize);
+        const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
+        leftSelectivity->setFromBitsNegate(rightNullBits, rowSize);
+        leftSelectivity->intersect(*rightSelectivity);
+        leftSelectivity->applyToSelected([&](vector_size_t i) {
+            comparedResult->SetValue(i, cmp(leftVector->GetValue(i), rightVector->GetValue(i)));
+        });
+    }
+
+    // this method is used to compare between column and constant
+    /**
+     *
+     * @param leftIsConst ture means original expresion is original expression is cmp(const, rightArg), false means cmp(leftArg, constant)
+     */
+    static void handleConstComparison(BaseVector *vectorArg, ConstVector<T> *constantVector, Vector<bool> * comparedResult, int32_t rowSize, bool leftIsConst) {
+        const Cmp cmp;
+        auto constantValue = constantVector->GetConstValue();
+        if (vectorArg->GetEncoding() == OMNI_DICTIONARY) {
+            auto vector = static_cast<Vector<DictionaryContainer<T>> *>(vectorArg);
+            auto selectivity = std::make_shared<SelectivityVector>(rowSize);
+            const auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
+            selectivity->setFromBitsNegate(nullBits, rowSize);
+            selectivity->applyToSelected([&](vector_size_t i) {
+                comparedResult->SetValue(i, leftIsConst ? cmp(constantValue, vector->GetValue(i)) : cmp(vector->GetValue(i), constantValue));
+            });
+        } else {
+            auto vector = static_cast<Vector<T> *>(vectorArg);
+            auto selectivity = std::make_shared<SelectivityVector>(rowSize);
+            const auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
+            selectivity->setFromBitsNegate(nullBits, rowSize);
+            selectivity->applyToSelected([&](vector_size_t i) {
+                comparedResult->SetValue(i, leftIsConst ? cmp(constantValue, vector->GetValue(i)) : cmp(vector->GetValue(i), constantValue));
+            });
+        }
+    }
+
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         op::ExecutionContext *context) const override
     {
-        const Cmp cmp;
         auto rightArg = args.top();
         args.pop();
         auto leftArg = args.top();
         args.pop();
         auto rowSize = context->GetResultRowSize();
         auto *flatResult = reinterpret_cast<Vector<bool> *>(VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowSize));
-        auto rows = std::make_shared<SelectivityVector>(rowSize);
-        if (leftArg->GetEncoding() == OMNI_FLAT && rightArg->GetEncoding() == OMNI_FLAT) {
-            // Fast path for (flat, flat).
-            const auto *rawA = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(leftArg));
-            const auto *rawB = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(rightArg));
-            rows->applyToSelected([&](vector_size_t i) { flatResult->SetValue(i, cmp(rawA[i], rawB[i])); });
-        } else if (leftArg->GetEncoding() == OMNI_ENCODING_CONST && rightArg->GetEncoding() == OMNI_FLAT) {
-            // Fast path for (const, flat).
-            auto constant = reinterpret_cast<ConstVector<T> *>(leftArg)->GetConstValue();
-            const auto *rawValues = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(rightArg));
-            rows->applyToSelected([&](vector_size_t i) {
-                flatResult->SetValue(i, cmp(constant, rawValues[i]));
-            });
-        } else if (leftArg->GetEncoding() == OMNI_FLAT && rightArg->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto alignedBuffer = unsafe::UnsafeVector::GetValues(flatResult)->GetBuffer();
+        // set defualt compared result is 0 which means the result is filtered for there might exists some row not compare when it's null
+        memset_sp(alignedBuffer, rowSize, 0, rowSize);
+        if (leftArg->GetEncoding() == OMNI_ENCODING_CONST || rightArg->GetEncoding() == OMNI_ENCODING_CONST) {
             // Fast path for (flat, const).
-            const auto *rawValues = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(leftArg));
-            auto constant = reinterpret_cast<ConstVector<T> *>(rightArg)->GetConstValue();
-            rows->applyToSelected([&](vector_size_t i) {
-                flatResult->SetValue(i, cmp(rawValues[i], constant));
-            });
+            auto leftIsConst = leftArg->GetEncoding() == OMNI_ENCODING_CONST;
+            auto constant =  leftIsConst ? reinterpret_cast<ConstVector<T> *>(leftArg) : reinterpret_cast<ConstVector<T> *>(rightArg);
+            handleConstComparison(leftIsConst ? rightArg : leftArg, constant, flatResult, rowSize, leftIsConst);
+        } else if (leftArg->GetEncoding() == OMNI_FLAT && rightArg->GetEncoding() == OMNI_FLAT) {
+            // Fast path for (flat, flat).
+            handleFlatColumnComparison(leftArg, rightArg, flatResult, rowSize);
+        } else if (leftArg->GetEncoding() == OMNI_DICTIONARY && rightArg->GetEncoding() == OMNI_DICTIONARY) {
+            // Fast path for (dict, dict).
+            handleDictColumnComparison(leftArg, rightArg, flatResult, rowSize);
+        } else if (leftArg->GetEncoding() == OMNI_DICTIONARY && rightArg->GetEncoding() == OMNI_FLAT
+            || leftArg->GetEncoding() == OMNI_FLAT && rightArg->GetEncoding() == OMNI_DICTIONARY) {
+            // Fast path for (dict, flat) or (flat, dict)
+            handleColumnWithDiffEncodingComparison(leftArg, rightArg, flatResult, rowSize);
         } else {
             // Path if one or more arguments are encoded.
             OMNI_THROW("ComparisonFunction Error:", "Not support decoded vector");
