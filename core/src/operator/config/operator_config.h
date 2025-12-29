@@ -27,24 +27,25 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SpillConfigId, { { SPILL_CONFIG_NONE, "SPILL_CONFIG
 
 class SpillConfig {
 public:
-    SpillConfig() : SpillConfig(SPILL_CONFIG_NONE, false, "", DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE) {}
+    SpillConfig() : SpillConfig(SPILL_CONFIG_NONE, false, "", DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE, false) {}
 
     SpillConfig(SpillConfigId id, bool enabled, const std::string &spillPath, uint64_t maxSpillBytes)
-        : SpillConfig(id, enabled, spillPath, maxSpillBytes, DEFAULT_WRITE_BUFFER_SIZE)
+        : SpillConfig(id, enabled, spillPath, maxSpillBytes, DEFAULT_WRITE_BUFFER_SIZE, false)
     {}
 
     SpillConfig(SpillConfigId id, bool enabled, const std::string &spillPath, uint64_t maxSpillBytes,
-        uint64_t writeBufferSize)
+        uint64_t writeBufferSize, bool isCompressEnabled)
         : spillConfigId(id),
           spillEnabled(enabled),
           spillPath(spillPath),
           maxSpillBytes(maxSpillBytes),
-          writeBufferSize(writeBufferSize)
+          writeBufferSize(writeBufferSize),
+          spillCompressEnabled(isCompressEnabled)
     {}
 
     SpillConfig(const SpillConfig &spillConfig)
         : SpillConfig(spillConfig.spillConfigId, spillConfig.spillEnabled, spillConfig.spillPath,
-        spillConfig.maxSpillBytes, spillConfig.writeBufferSize)
+        spillConfig.maxSpillBytes, spillConfig.writeBufferSize, spillConfig.spillCompressEnabled)
     {}
 
     virtual ~SpillConfig() = default;
@@ -89,6 +90,11 @@ public:
         return writeBufferSize;
     }
 
+    bool IsSpillCompressEnabled() const
+    {
+        return spillCompressEnabled;
+    }
+
 protected:
     static constexpr uint64_t DEFAULT_MAX_SPILL_BYTES = 100UL * (1 << 30);
     static constexpr uint64_t DEFAULT_WRITE_BUFFER_SIZE = 4 * (1 << 20);
@@ -97,6 +103,7 @@ protected:
     std::string spillPath;
     uint64_t maxSpillBytes;
     uint64_t writeBufferSize;
+    bool spillCompressEnabled;
 };
 
 class OLKSpillConfig : public SpillConfig {
@@ -115,8 +122,8 @@ public:
 class SparkSpillConfig : public SpillConfig {
 public:
     SparkSpillConfig(bool enabled, const std::string &spillPath, uint64_t maxSpillBytes, int32_t numElementsThreshold,
-        int32_t memUsagePctThreshold, uint64_t writeBufferSize)
-        : SpillConfig(SPILL_CONFIG_SPARK, enabled, spillPath, maxSpillBytes, writeBufferSize),
+        int32_t memUsagePctThreshold, uint64_t writeBufferSize, bool isCompressEnabled)
+        : SpillConfig(SPILL_CONFIG_SPARK, enabled, spillPath, maxSpillBytes, writeBufferSize, isCompressEnabled),
           numElementsForSpillThreshold(numElementsThreshold)
     {
         auto limit = mem::MemoryManager::GetGlobalMemoryLimit();
@@ -128,8 +135,8 @@ public:
     }
 
     SparkSpillConfig(const std::string &spillPath, uint64_t maxSpillBytes, int32_t numElementsThreshold,
-        int32_t memUsageThreshold = 90, uint64_t writeBufferSize = 0)
-        : SparkSpillConfig(true, spillPath, maxSpillBytes, numElementsThreshold, memUsageThreshold, writeBufferSize)
+        int32_t memUsageThreshold = 90, uint64_t writeBufferSize = 0, bool isCompressEnabled = false)
+        : SparkSpillConfig(true, spillPath, maxSpillBytes, numElementsThreshold, memUsageThreshold, writeBufferSize, isCompressEnabled)
     {}
 
     SparkSpillConfig(const std::string &spillPath, int32_t numElementsThreshold)

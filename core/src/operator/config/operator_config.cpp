@@ -85,13 +85,14 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
         auto spillPath = result.at("spillConfig").at("spillPath").get<std::string>();
         auto maxSpillBytes = result.at("spillConfig").at("maxSpillBytes").get<uint64_t>();
         auto writeBufferSize = result.at("spillConfig").at("writeBufferSize").get<uint64_t>();
+        auto spillCompressEnabled = result.at("spillConfig").at("spillCompressEnabled").get<bool>();
 
         switch (spillConfigId) {
             case SPILL_CONFIG_NONE:
             case SPILL_CONFIG_OLK:
             case SPILL_CONFIG_INVALID: {
                 resultSpillConfig =
-                    new SpillConfig(spillConfigId, spillEnabled, spillPath, maxSpillBytes, writeBufferSize);
+                    new SpillConfig(spillConfigId, spillEnabled, spillPath, maxSpillBytes, writeBufferSize, spillCompressEnabled);
                 break;
             }
             case SPILL_CONFIG_SPARK: {
@@ -100,7 +101,7 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
                 auto memUsagePctForSpillThreshold =
                     result.at("spillConfig").at("memUsagePctForSpillThreshold").get<int32_t>();
                 resultSpillConfig = new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes,
-                    numElementsForSpillThreshold, memUsagePctForSpillThreshold, writeBufferSize);
+                    numElementsForSpillThreshold, memUsagePctForSpillThreshold, writeBufferSize, spillCompressEnabled);
                 break;
             }
             default: {

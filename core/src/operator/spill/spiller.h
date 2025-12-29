@@ -16,8 +16,10 @@ namespace omniruntime {
 namespace op {
 class SpillWriter {
 public:
-    SpillWriter(const type::DataTypes &dataTypes, const std::string &dirPath, uint64_t writeBufferSize = 0)
-        : dataTypes(dataTypes), dirPath(dirPath), writeBufferSize(writeBufferSize), writeBufferOffset(0)
+    SpillWriter(const type::DataTypes &dataTypes, const std::string &dirPath, uint64_t writeBufferSize = 0,
+                bool IsSpillCompressEnabled = false)
+        : dataTypes(dataTypes), dirPath(dirPath), writeBufferSize(writeBufferSize), writeBufferOffset(0),
+          IsSpillCompressEnabled(IsSpillCompressEnabled)
     {
         if (writeBufferSize != 0) {
             writeBuffer = new char[writeBufferSize];
@@ -36,6 +38,8 @@ public:
         SpillFileInfo file{ filePath, fileLength, totalRowCount };
         return file;
     }
+
+    uint64_t getTotalCompressBytes() const;
 
     ErrorCode Close();
 
@@ -71,14 +75,17 @@ private:
     std::vector<char> scratch_buffer;
     uint64_t unflushed_size = 0;
     constexpr static uint64_t FLUSH_THRESHOLD = 16 * 1024 * 1024;
+    bool IsSpillCompressEnabled = false;
+    uint64_t totalCompressBytes = 0;
 };
 
 class Spiller {
 public:
     Spiller(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
         const std::vector<SortOrder> &sortOrders, const std::string &spillPath, uint64_t maxSpillBytes,
-        uint64_t writeBufferSize = 0)
-        : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders), writeBufferSize(writeBufferSize)
+        uint64_t writeBufferSize = 0, bool isSpillCompressEnabled = false)
+        : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders), writeBufferSize(writeBufferSize),
+          isSpillCompressEnabled(isSpillCompressEnabled)
     {
         dirPaths.emplace_back(spillPath);
         int32_t dataTypeCount = dataTypes.GetSize();
@@ -111,9 +118,9 @@ public:
         return spillFiles;
     }
 
-    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles)
+    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled)
     {
-        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles);
+        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, isSpillCompressEnabled);
         return merger;
     }
 
@@ -136,6 +143,8 @@ public:
         }
     }
 
+    bool isSpillCompressEnabled1() const;
+
 private:
     uint64_t CollectVecBatchSize(vec::VectorBatch *vectorBatch);
 
@@ -151,6 +160,7 @@ private:
     std::vector<SpillWriter *> writers;
     SpillTracker *spillTracker = nullptr;
     uint64_t writeBufferSize = 0;
+    bool isSpillCompressEnabled = false;
 };
 }
 }

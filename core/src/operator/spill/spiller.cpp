@@ -28,7 +28,7 @@ ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
         return ErrorCode::SUCCESS;
     }
     // create spill writer object
-    auto writer = new SpillWriter(dataTypes, dirPaths[0], writeBufferSize);
+    auto writer = new SpillWriter(dataTypes, dirPaths[0], writeBufferSize, isSpillCompressEnabled);
     writers.emplace_back(writer);
 
     int64_t totalRowOffset = 0;
@@ -46,7 +46,11 @@ ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
         auto spillVecBatchPtr = spillVecBatch.get();
         aggregationSort->SetSpillVectorBatch(spillVecBatchPtr, totalRowOffset);
         auto vecBatchSize = CollectVecBatchSize(spillVecBatchPtr);
-        if (spillTracker->CheckIfExceedAndReserve(vecBatchSize)) {
+        if (isSpillCompressEnabled) {
+            if (writer->getTotalCompressBytes() + vecBatchSize> UINT64_MAX) {
+                return ErrorCode::EXCEED_SPILL_THRESHOLD;
+            }
+        } else if (spillTracker->CheckIfExceedAndReserve(vecBatchSize)) {
             return ErrorCode::EXCEED_SPILL_THRESHOLD;
         }
 
@@ -67,7 +71,7 @@ ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRa
     }
 
     // create spill writer object
-    auto writer = new SpillWriter(dataTypes, dirPaths[0], writeBufferSize);
+    auto writer = new SpillWriter(dataTypes, dirPaths[0], writeBufferSize, isSpillCompressEnabled);
     writers.emplace_back(writer);
 
     int64_t totalRowOffset = 0;
@@ -86,7 +90,11 @@ ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRa
         auto spillVecBatchPtr = spillVecBatch.get();
         pagesIndex->SetSpillVecBatch(spillVecBatchPtr, outputCols, totalRowOffset, canInplaceSort, canRadixSort);
         auto vecBatchSize = CollectVecBatchSize(spillVecBatchPtr);
-        if (spillTracker->CheckIfExceedAndReserve(vecBatchSize)) {
+        if (isSpillCompressEnabled) {
+            if (writer->getTotalCompressBytes() + vecBatchSize> UINT64_MAX) {
+                return ErrorCode::EXCEED_SPILL_THRESHOLD;
+            }
+        } else if (spillTracker->CheckIfExceedAndReserve(vecBatchSize)) {
             return ErrorCode::EXCEED_SPILL_THRESHOLD;
         }
 
@@ -143,7 +151,11 @@ uint64_t Spiller::CollectVecBatchSize(vec::VectorBatch *vectorBatch)
     return result;
 }
 
-template <typename T> uint64_t Spiller::CollectVectorSize(vec::BaseVector *vector)
+    bool Spiller::isSpillCompressEnabled1() const {
+        return isSpillCompressEnabled;
+    }
+
+    template <typename T> uint64_t Spiller::CollectVectorSize(vec::BaseVector *vector)
 {
     int32_t rowCount = vector->GetSize();
     uint64_t result = BitUtil::Nbytes(rowCount); // nulls byte size
@@ -209,7 +221,9 @@ ErrorCode SpillWriter::WriteVecBatch(vec::VectorBatch *vectorBatch, uint64_t vec
         if (result != ErrorCode::SUCCESS) {
             return result;
         }
-        InitCompressStream();
+        if (IsSpillCompressEnabled) {
+            InitCompressStream();
+        }
     }
 
     if (writeBufferSize != 0) {
@@ -421,6 +435,44 @@ ErrorCode SpillWriter::WriteVecBatchToFile(vec::VectorBatch *vectorBatch)
  */
 template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseVector *vector, int32_t rowCount)
 {
+    if (!IsSpillCompressEnabled) {
+        uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
+        int32_t nullsSize = BitUtil::Nbytes(rowCount);
+        if (Write(nulls, nullsSize) != ErrorCode::SUCCESS) {
+            LogError("Write value nulls to %s failed.", filePath.c_str());
+            return ErrorCode::WRITE_FAILED;
+        }
+
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            // write offsets
+            auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
+            auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
+            if (Write(offsets, offsetSize) != ErrorCode::SUCCESS) {
+                LogError("Write value offsets to %s failed.", filePath.c_str());
+                return op::ErrorCode::WRITE_FAILED;
+            }
+
+            auto valueLength = static_cast<ssize_t>(offsets[rowCount] - offsets[0]);
+            if (valueLength > 0) {
+                // write values
+                char *values = unsafe::UnsafeStringVector::GetValues(reinterpret_cast<VarcharVector *>(vector));
+                if (Write(values, valueLength) != ErrorCode::SUCCESS) {
+                    LogError("Write values to %s failed.", filePath.c_str());
+                    return op::ErrorCode::WRITE_FAILED;
+                }
+            }
+            return ErrorCode::SUCCESS;
+        } else {
+            auto length = static_cast<ssize_t>(rowCount * sizeof(T));
+            T *values = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(vector));
+            if (Write(values, length) != ErrorCode::SUCCESS) {
+                LogError("Write values to %s failed.", filePath.c_str());
+                return ErrorCode::WRITE_FAILED;
+            }
+            return ErrorCode::SUCCESS;
+        }
+    }
+
     uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
     int32_t nullsSize = BitUtil::Nbytes(rowCount);
 
@@ -488,11 +540,28 @@ template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseV
     }
 
     return ErrorCode::SUCCESS;
+
 }
 
 ErrorCode SpillWriter::Write(void *buf, size_t length)
 {
-
+    if (!IsSpillCompressEnabled) {
+        size_t bytesWritten = 0;
+        while (bytesWritten < length) {
+            auto expectBytes = length - bytesWritten;
+            ssize_t actualBytes = write(fd, static_cast<char *>(buf) + bytesWritten, expectBytes);
+            if (actualBytes <= 0) {
+                auto errorNum = errno;
+                char errorBuf[ERROR_BUFFER_SIZE];
+                GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+                LogError("Write to %s failed since %s, expect write bytes is %lld but actual write bytes is %lld.",
+                         filePath.c_str(), errorBuf, expectBytes, actualBytes);
+                return ErrorCode::WRITE_FAILED;
+            }
+            bytesWritten += actualBytes;
+        }
+        return ErrorCode::SUCCESS;
+    }
     size_t remaining_len = length;
     const char* data_ptr = static_cast<const char *>(buf);
     void* buffer = nullptr;
@@ -509,10 +578,11 @@ ErrorCode SpillWriter::Write(void *buf, size_t length)
     }
     unflushed_size += length;
     if (unflushed_size >= FLUSH_THRESHOLD) {
-        compress_stream->flush();
+        totalCompressBytes += compress_stream->flush();
         unflushed_size = 0;
     }
     return ErrorCode::SUCCESS;
+
 }
 
 ErrorCode SpillWriter::Close()
@@ -527,8 +597,8 @@ ErrorCode SpillWriter::Close()
         }
         writeBufferOffset = 0;
     }
-    if (compress_stream && unflushed_size > 0) {
-        compress_stream->flush();
+    if (IsSpillCompressEnabled && compress_stream && unflushed_size > 0) {
+        totalCompressBytes += compress_stream->flush();
         unflushed_size = 0;
     }
     close(fd);
@@ -546,5 +616,9 @@ void SpillWriter::InitCompressStream()
     stream_factory = createStreamsFactory(writer_options, out_stream.get());
     compress_stream = stream_factory->createStream();
 }
+
+    uint64_t SpillWriter::getTotalCompressBytes() const {
+        return totalCompressBytes;
+    }
 }
 }

@@ -156,6 +156,7 @@ public:
     static constexpr const char *KColumnarSpillMemThreshold = "columnar_spil_mem_threshold";
     static constexpr const char *KColumnarSpillWriteBufferSize = "columnar_spill_write_buffer_size";
     static constexpr const char *KColumnarSpillDirDiskReserveSize = "columnar_spil_dir_disk_reserve_size";
+    static constexpr const char *KColumnarSpillEnableCompress = "columnar_spil_enable_compress";
 
     static constexpr const char *KEnableAdaptivePartialAggregation = "enable_adaptive_partial_aggregation";
     static constexpr const char *KAdaptivePartialAggregationMinRows = "adaptive_partial_aggregation_min_rows";
@@ -341,6 +342,11 @@ public:
     {
         constexpr uint64_t kDefaultValue = 10737418240L;
         return get<uint64_t>(KColumnarSpillDirDiskReserveSize, kDefaultValue);
+    }
+
+    uint64_t SpillEnableCompress() const
+    {
+        return get<bool>(KColumnarSpillEnableCompress, false);
     }
 
     int32_t SpillHashAggRowThreshold() const

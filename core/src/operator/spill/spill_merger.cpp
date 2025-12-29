@@ -193,6 +193,21 @@ std::pair<size_t, bool> parseCompressionHeader(const char* header_buf) {
 
 ErrorCode SpillReader::Read(void *buf, size_t bufSize)
 {
+    if (!isSpillCompressEnabled) {
+        if (fread(buf, bufSize, NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
+            auto errorNum = errno;
+            char errorBuf[ERROR_BUFFER_SIZE];
+            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+            LogError("Read from %s failed since %s.", filePath.c_str(), errorBuf);
+            return ErrorCode::READ_FAILED;
+        }
+        return ErrorCode::SUCCESS;
+    }
+    return ReadWithCompress(buf, bufSize);
+}
+
+ErrorCode SpillReader::ReadWithCompress(void *buf, size_t bufSize)
+{
 
     if (remainLength == 0) {
         if (prevBuffer_ != nullptr) {

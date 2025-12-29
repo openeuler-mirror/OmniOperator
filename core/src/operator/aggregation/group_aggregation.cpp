@@ -1138,7 +1138,7 @@ ErrorCode HashAggregationOperator::SpillHashMap()
         InitSpillInfos();
         spiller = new Spiller(DataTypes(spillTypes), groupByCloIdx, sortOrders,
                               operatorConfig.GetSpillConfig()->GetSpillPath(), spillConfig->GetMaxSpillBytes(),
-                              spillConfig->GetWriteBufferSize());
+                              spillConfig->GetWriteBufferSize(), spillConfig->IsSpillCompressEnabled());
         hasSpill = true;
     }
     UpdateSpillTimesInfo();
@@ -1451,7 +1451,7 @@ void HashAggregationOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         spilledBytes = spiller->GetSpilledBytes();
         auto spillFiles = spiller->FinishSpill();
         UpdateSpillFileInfo(spillFiles.size());
-        spillMerger = spiller->CreateSpillMerger(spillFiles);
+        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnabled1());
         delete spiller;
         spiller = nullptr;
         if (spillMerger == nullptr) {

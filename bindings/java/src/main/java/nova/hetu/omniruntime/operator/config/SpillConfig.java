@@ -54,11 +54,13 @@ public class SpillConfig implements Serializable {
 
     private long writeBufferSize;
 
+    private boolean isSpillCompressEnabled;
+
     /**
      * Spill config default constructor.
      */
     public SpillConfig() {
-        this(SpillConfigId.SPILL_CONFIG_NONE, false, "", DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE);
+        this(SpillConfigId.SPILL_CONFIG_NONE, false, "", DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE, false);
     }
 
     /**
@@ -67,7 +69,7 @@ public class SpillConfig implements Serializable {
      * @param spillConfigId the spill config id
      */
     public SpillConfig(SpillConfigId spillConfigId) {
-        this(spillConfigId, false, "", DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE);
+        this(spillConfigId, false, "", DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE, false);
     }
 
     /**
@@ -78,7 +80,7 @@ public class SpillConfig implements Serializable {
      * @param spillPath the spill path
      */
     public SpillConfig(SpillConfigId spillConfigId, boolean isSpillEnabled, String spillPath) {
-        this(spillConfigId, isSpillEnabled, spillPath, DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE);
+        this(spillConfigId, isSpillEnabled, spillPath, DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE, false);
     }
 
     /**
@@ -89,9 +91,10 @@ public class SpillConfig implements Serializable {
      * @param spillPath the spill path
      * @param maxSpillBytes the max spill bytes
      * @param writeBufferSize the sill write buffer size
+     * @param isSpillCompressEnabled whether the spill with compress
      */
     public SpillConfig(SpillConfigId spillConfigId, boolean isSpillEnabled, String spillPath, long maxSpillBytes,
-        long writeBufferSize) {
+        long writeBufferSize, boolean isSpillCompressEnabled) {
         if (isSpillEnabled && (spillPath == null || spillPath.isEmpty())) {
             throw new OmniRuntimeException(OMNI_PARAM_ERROR, "Enable spill but do not config spill path.");
         }
@@ -100,6 +103,7 @@ public class SpillConfig implements Serializable {
         this.spillPath = spillPath;
         this.maxSpillBytes = maxSpillBytes;
         this.writeBufferSize = writeBufferSize;
+        this.isSpillCompressEnabled = isSpillCompressEnabled;
     }
 
     /**
@@ -192,6 +196,24 @@ public class SpillConfig implements Serializable {
         this.writeBufferSize = writeBufferSize;
     }
 
+     /**
+     * get whether the spill compress enabled.
+     *
+     * @return return true if enable spill compress, return false if disable spill compress
+     */
+    public boolean isSpillCompressEnabled() {
+        return isSpillCompressEnabled;
+    }
+
+    /**
+     * set whether spill compress enabled.
+     *
+     * @param isSpillCompressEnabled the status of spill compress enabled
+     */
+    public void setSpillCompressEnabled(boolean isSpillCompressEnabled) {
+        this.isSpillCompressEnabled = isSpillCompressEnabled;
+    }
+
     /**
      * The enum for spill config id.
      */
@@ -213,11 +235,12 @@ public class SpillConfig implements Serializable {
         SpillConfig spillConfig = (SpillConfig) obj;
         return spillConfigId == spillConfig.spillConfigId && isSpillEnabled == isSpillEnabled
                 && spillPath.equals(spillConfig.spillPath) && maxSpillBytes == spillConfig.maxSpillBytes
-                && writeBufferSize == spillConfig.writeBufferSize;
+                && writeBufferSize == spillConfig.writeBufferSize
+                && isSpillCompressEnabled == spillConfig.isSpillCompressEnabled;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(spillConfigId, isSpillEnabled, spillPath, maxSpillBytes, writeBufferSize);
+        return Objects.hash(spillConfigId, isSpillEnabled, spillPath, maxSpillBytes, writeBufferSize, isSpillCompressEnabled);
     }
 }

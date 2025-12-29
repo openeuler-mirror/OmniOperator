@@ -480,7 +480,7 @@ ErrorCode WindowOperator::SpillToDisk()
             sortOrders.emplace_back(sortOrder);
         }
         spiller = new Spiller(sourceTypes, sortCols, sortOrders, spillConfig->GetSpillPath(),
-            spillConfig->GetMaxSpillBytes(), spillConfig->GetWriteBufferSize());
+            spillConfig->GetMaxSpillBytes(), spillConfig->GetWriteBufferSize(), spillConfig->IsSpillCompressEnabled());
         hasSpill = true;
     }
 
@@ -522,7 +522,7 @@ void WindowOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         }
         auto spillFiles = spiller->FinishSpill();
         UpdateSpillFileInfo(spillFiles.size());
-        spillMerger = spiller->CreateSpillMerger(spillFiles);
+        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnabled1());
         if (spillMerger == nullptr) {
             delete spiller;
             spiller = nullptr;
