@@ -132,7 +132,8 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
     SpillConfig *spillConfig = planNode->CanSpill(queryConfig)
                                ? new SparkSpillConfig(true, queryConfig.SpillDir(),
                                                       queryConfig.maxSpillBytes(), queryConfig.SpillSortRowThreshold(),
-                                                      queryConfig.memFractionPct(), queryConfig.SpillWriteBufferSize())
+                                                      queryConfig.memFractionPct(), queryConfig.SpillWriteBufferSize(),
+                                                      queryConfig.SpillEnableCompress())
                                : new SpillConfig();
     OverflowConfig *overflowConfig = queryConfig.IsOverFlowASNull()? new OverflowConfig(OVERFLOW_CONFIG_NULL) : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     OperatorConfig config(spillConfig, overflowConfig);

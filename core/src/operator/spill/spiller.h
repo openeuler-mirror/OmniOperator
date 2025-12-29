@@ -74,7 +74,7 @@ private:
     std::unique_ptr<omniSpark::BufferedOutputStream> compress_stream;
     std::vector<char> scratch_buffer;
     uint64_t unflushed_size = 0;
-    constexpr static uint64_t FLUSH_THRESHOLD = 16 * 1024 * 1024;
+    constexpr static uint64_t FLUSH_THRESHOLD = 64 * 1024 * 1024;
     bool IsSpillCompressEnabled = false;
     uint64_t totalCompressBytes = 0;
 };
