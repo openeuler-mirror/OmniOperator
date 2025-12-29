@@ -161,6 +161,7 @@ public:
     static constexpr const char *KEnableAdaptivePartialAggregation = "enable_adaptive_partial_aggregation";
     static constexpr const char *KAdaptivePartialAggregationMinRows = "adaptive_partial_aggregation_min_rows";
     static constexpr const char *KAdaptivePartialAggregationRatio = "adaptive_partial_aggregation_ratio";
+    static constexpr const char *KPreferVectorizationExpression = "prefer_vectorization_expression";
 
     uint64_t maxRowCount() const
     {
@@ -377,6 +378,12 @@ public:
     {
         constexpr double kDefaultValue = 0.8;
         return get<double>(KAdaptivePartialAggregationRatio, kDefaultValue);
+    }
+
+    bool PreferVectorizationExpression() const
+    {
+        constexpr bool kDefaultValue = false;
+        return get<bool>(KPreferVectorizationExpression, kDefaultValue);
     }
 
     /// Test-only method to override the current query config properties.

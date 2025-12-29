@@ -562,8 +562,8 @@ BaseVector *Projection::ColumnProjectionVarCharVectorHelper(VectorBatch *vecBatc
 }
 
 ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vector<Expr *> &projectionExprs,
-    const DataTypes &inputDataTypes, OverflowConfig *ofConfig)
-    : inputTypes(const_cast<DataTypes &>(inputDataTypes))
+    const DataTypes &inputDataTypes, OverflowConfig *ofConfig, bool preferVectorization)
+    : inputTypes(const_cast<DataTypes &>(inputDataTypes)), preferVectorization(preferVectorization)
 {
     hasFilter = true;
     filterExpr = filterExpression;
@@ -586,11 +586,12 @@ ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vect
 
     isSupportVectorization = verifier.IsSupportVectorization();
     isSupportCodegen = verifier.IsSupportCodegen();
+    useCodegen = !(preferVectorization && isSupportVectorization) && isSupportCodegen;
 }
 
 ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionExprs, const DataTypes &inputDataTypes,
-    OverflowConfig *ofConfig)
-    : inputTypes(const_cast<DataTypes &>(inputDataTypes))
+    OverflowConfig *ofConfig, bool preferVectorization)
+    : inputTypes(const_cast<DataTypes &>(inputDataTypes)), preferVectorization(preferVectorization)
 {
     hasFilter = false;
     for (auto &projectionExpr : projectionExprs) {
@@ -611,6 +612,7 @@ ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionEx
 
     isSupportVectorization = verifier.IsSupportVectorization();
     isSupportCodegen = verifier.IsSupportCodegen();
+    useCodegen = !(preferVectorization && isSupportVectorization) && isSupportCodegen;
 }
 
 bool ExpressionEvaluator::IsSupportedExpr() const
@@ -627,7 +629,7 @@ VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionConte
     intptr_t offsetAddrs[vectorCount];
     intptr_t dictionaries[vectorCount];
 
-    if (isSupportCodegen) {
+    if (useCodegen) {
         GetAddr(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries, this->inputTypes);
     }
     if (hasFilter) {
@@ -640,7 +642,7 @@ VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionConte
 
 void ExpressionEvaluator::FilterFuncGeneration()
 {
-    if (!isSupportCodegen) {
+    if (!useCodegen) {
         return;
     }
 
@@ -661,7 +663,7 @@ void ExpressionEvaluator::FilterFuncGeneration()
 
 void ExpressionEvaluator::ProjectFuncGeneration()
 {
-    if (!isSupportCodegen) {
+    if (!useCodegen) {
         return;
     }
 
@@ -682,7 +684,7 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
     auto rowCount = vecBatch->GetRowCount();
     auto projectedVecs = std::make_unique<VectorBatch>(rowCount);
 
-    if (!isSupportCodegen) {
+    if (!useCodegen) {
         for (int32_t i = 0; i < projectVecCount; i++) {
             context->SetResultRowSize(vecBatch->GetRowCount());
             ExprEval e(vecBatch, context);
@@ -851,7 +853,7 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
     AlignedBuffer<int32_t> *selectedRowsBuffer, intptr_t *valueAddrs, intptr_t *nullAddrs, intptr_t *offsetAddrs,
     intptr_t *dictionaries)
 {
-    if (!isSupportCodegen) {
+    if (!useCodegen) {
         return ProcessFilterAndProject(vecBatch, context);
     }
     const int rowCount = vecBatch->GetRowCount();
