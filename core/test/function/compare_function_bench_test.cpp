@@ -270,6 +270,264 @@ TEST(CompareDictionaryIntPerf, intType)
 
 }
 
+
+TEST(CompareDictionaryVarcharPerf, equal)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+
+
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = i > 2 ? i + 1 : static_cast<int>(i);
+    }
+
+    auto dictionaryVectory2 = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(dictionaryVectory2);
+
+    auto vector_function = makeEqualTo("equal", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+
+    delete dictionaryVectory;
+    delete dictionaryVectory2;
+    delete baseVector;
+
+}
+
+
+TEST(CompareDictionaryVarcharPerf, lessThan)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+
+
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i + 2);
+    }
+
+    auto dictionaryVectory2 = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(dictionaryVectory2);
+
+    auto vector_function = makeLessThan("lessThan", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+
+    delete dictionaryVectory;
+    delete dictionaryVectory2;
+    delete baseVector;
+}
+
+TEST(CompareDictionaryVarcharPerf, greaterThan)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+
+
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i + 2);
+    }
+
+    auto dictionaryVectory2 = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(dictionaryVectory2);
+
+    auto vector_function = makeGreaterThan("greaterThan", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+
+    delete dictionaryVectory;
+    delete dictionaryVectory2;
+    delete baseVector;
+}
+
+TEST(CompareDictionaryVarcharPerf, greaterThanOrEqual)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+
+
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i + 2);
+    }
+
+    auto dictionaryVectory2 = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(dictionaryVectory2);
+
+    auto vector_function = makeGreaterThanOrEqual("greaterThanOrEqual", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+
+    delete dictionaryVectory;
+    delete dictionaryVectory2;
+    delete baseVector;
+}
+
+TEST(CompareDictionaryVarcharPerf, lessThanOrEqual)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+
+
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i + 2);
+    }
+
+    auto dictionaryVectory2 = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(dictionaryVectory2);
+
+    auto vector_function = makeLessThanOrEqual("lessThanOrEqual", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+
+    delete dictionaryVectory;
+    delete dictionaryVectory2;
+    delete baseVector;
+}
+
 TEST(CompareFlatWithDictionaryIntPerf, intType)
 {
 
@@ -320,6 +578,260 @@ TEST(CompareFlatWithDictionaryIntPerf, intType)
 
 }
 
+TEST(CompareFlatWithDictionaryVarcharPerf, equal)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = i > 2 ? i + 1 : static_cast<int>(i);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+    auto flatVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateFlatVector(type::OMNI_VARCHAR, rowSize));
+
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        flatVector->SetValue(i, sv);
+    }
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(flatVector);
+
+    auto vector_function = makeEqualTo("equal", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete flatVector;
+    delete baseVector;
+}
+
+TEST(CompareFlatWithDictionaryVarcharPerf, lessThan)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i + 2);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+    auto flatVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateFlatVector(type::OMNI_VARCHAR, rowSize));
+
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        flatVector->SetValue(i, sv);
+    }
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(flatVector);
+
+    auto vector_function = makeLessThan("lessThan", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete flatVector;
+    delete baseVector;
+}
+
+TEST(CompareFlatWithDictionaryVarcharPerf, greaterThan)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i + 2);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+    auto flatVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateFlatVector(type::OMNI_VARCHAR, rowSize));
+
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        flatVector->SetValue(i, sv);
+    }
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(flatVector);
+
+    auto vector_function = makeGreaterThan("greaterThan", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete flatVector;
+    delete baseVector;
+}
+
+TEST(CompareFlatWithDictionaryVarcharPerf, greaterThanOrEqual)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i + 2);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+    auto flatVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateFlatVector(type::OMNI_VARCHAR, rowSize));
+
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        flatVector->SetValue(i, sv);
+    }
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(flatVector);
+
+    auto vector_function = makeGreaterThanOrEqual("greaterThanOrEqual", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete flatVector;
+    delete baseVector;
+}
+
+TEST(CompareFlatWithDictionaryVarcharPerf, lessThanOrEqual)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i + 2);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+    auto flatVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateFlatVector(type::OMNI_VARCHAR, rowSize));
+
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        flatVector->SetValue(i, sv);
+    }
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(flatVector);
+
+    auto vector_function = makeLessThanOrEqual("lessThanOrEqual", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete flatVector;
+    delete baseVector;
+}
 
 TEST(CompareConstWithDictionaryIntPerf, intType)
 {
@@ -364,5 +876,237 @@ TEST(CompareConstWithDictionaryIntPerf, intType)
     delete baseVector;
 }
 
+TEST(CompareConstWithDictionaryVarcharPerf, equal)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+    std::string_view constValue = prefix + std::to_string(1);
+    auto constVector = new ConstVector<std::string_view>(constValue, OMNI_VARCHAR, rowSize);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(constVector);
+
+    auto vector_function = makeEqualTo("equal", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    std::cout << "Equal" << std::endl;
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete baseVector;
+}
+
+
+TEST(CompareConstWithDictionaryVarcharPerf, lessThan)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+    std::string_view constValue = prefix + std::to_string(1);
+    auto constVector = new ConstVector<std::string_view>(constValue, OMNI_VARCHAR, rowSize);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(constVector);
+
+    auto vector_function = makeLessThan("lessThan", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete baseVector;
+}
+
+TEST(CompareConstWithDictionaryVarcharPerf, greaterThan)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+    std::string_view constValue = prefix + std::to_string(1);
+    auto constVector = new ConstVector<std::string_view>(constValue, OMNI_VARCHAR, rowSize);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(constVector);
+
+    auto vector_function = makeGreaterThan("greaterThan", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete baseVector;
+}
+
+TEST(CompareConstWithDictionaryVarcharPerf, greaterThanOrEqual)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+    std::string_view constValue = prefix + std::to_string(1);
+    auto constVector = new ConstVector<std::string_view>(constValue, OMNI_VARCHAR, rowSize);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(constVector);
+
+    auto vector_function = makeGreaterThanOrEqual("greaterThanOrEqual", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete baseVector;
+}
+
+
+TEST(CompareConstWithDictionaryVarcharPerf, lessThanOrEqual)
+{
+
+    int vectorSize = 100;
+    int rowSize = 10;
+    auto baseVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR,  vectorSize));
+
+    auto prefix = "compare";
+    for (size_t i = 0; i < vectorSize; i++) {
+        std::string_view sv = prefix + std::to_string(i);
+        baseVector->SetValue(i, sv);
+    }
+
+    std::vector<int> indexes(rowSize);
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = static_cast<int>(i);
+    }
+
+    auto dictionaryVectory = VectorHelper::CreateDictionaryVector(indexes.data(), 10, baseVector, type::OMNI_VARCHAR);
+    std::string_view constValue = prefix + std::to_string(1);
+    auto constVector = new ConstVector<std::string_view>(constValue, OMNI_VARCHAR, rowSize);
+
+    std::vector<DataTypeId> typeIds;
+    typeIds.emplace_back(OMNI_VARCHAR);
+    typeIds.emplace_back(OMNI_VARCHAR);
+
+    std::stack<BaseVector *> s;
+    s.push(dictionaryVectory);
+    s.push(constVector);
+
+    auto vector_function = makeLessThanOrEqual("lessThanOrEqual", typeIds, config::QueryConfig{});
+    auto result = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    op::ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    vector_function->Apply(s, arrayType, result, &context);
+
+    auto printResult = reinterpret_cast<Vector<bool> *>(result);
+    for (size_t i = 0; i < rowSize; i++) {
+        std::cout << "result is " << printResult->GetValue(i) << std::endl;
+    }
+
+    delete dictionaryVectory;
+    delete baseVector;
+}
 
 }

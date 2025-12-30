@@ -110,6 +110,7 @@ inline std::vector<std::shared_ptr<codegen::FunctionSignature>> ComparisonSignat
              type::OMNI_BYTE,
              type::OMNI_INT,
              type::OMNI_LONG,
+             type::OMNI_VARCHAR,
              type::OMNI_DOUBLE
          }) {
         signatures.emplace_back(

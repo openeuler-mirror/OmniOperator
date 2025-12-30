@@ -13,6 +13,9 @@ template <typename Cmp, DataTypeId kind>
 class ComparisonFunction final : public VectorFunction {
     using T = typename NativeType<kind>::type;
 
+    using DictionaryVectorType = std::conditional_t<kind == OMNI_VARCHAR, Vector<DictionaryContainer<std::string_view, LargeStringContainer>>, Vector<DictionaryContainer<T>>>;
+    using FlatVectorType = std::conditional_t<kind == OMNI_VARCHAR, Vector<LargeStringContainer<std::string_view>>, Vector<T>>;
+
     bool SupportsFlatNoNullsFastPath() const override
     {
         return true;
@@ -23,8 +26,8 @@ class ComparisonFunction final : public VectorFunction {
     static void handleColumnWithDiffEncodingComparison(BaseVector *leftArg, BaseVector* rightArg, Vector<bool> * comparedResult, int32_t rowSize) {
         const Cmp cmp;
         if (leftArg->GetEncoding() == OMNI_DICTIONARY) {
-            auto leftVector = static_cast<Vector<DictionaryContainer<T>> *>(leftArg);
-            auto rightVector = static_cast<Vector<T> *>(rightArg);
+            auto leftVector = static_cast<DictionaryVectorType *>(leftArg);
+            auto rightVector = static_cast<FlatVectorType *>(rightArg);
             auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
             const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
             leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
@@ -37,8 +40,8 @@ class ComparisonFunction final : public VectorFunction {
             });
 
         } else {
-            auto leftVector = static_cast<Vector<T> *>(leftArg);
-            auto rightVector = static_cast<Vector<DictionaryContainer<T>> *>(rightArg);
+            auto leftVector = static_cast<FlatVectorType *>(leftArg);
+            auto rightVector = static_cast<DictionaryVectorType *>(rightArg);
             auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
             const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
             leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
@@ -56,8 +59,8 @@ class ComparisonFunction final : public VectorFunction {
     // this is also an example of how to use Selectivity
     static void handleDictColumnComparison(BaseVector* leftArg, BaseVector* rightArg, Vector<bool> * comparedResult, int32_t rowSize) {
         const Cmp cmp;
-        auto leftVector = static_cast<Vector<DictionaryContainer<T>> *>(leftArg);
-        auto rightVector = static_cast<Vector<DictionaryContainer<T>> *>(rightArg);
+        auto leftVector = static_cast<DictionaryVectorType *>(leftArg);
+        auto rightVector = static_cast<DictionaryVectorType *>(rightArg);
         auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
         const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
         leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
@@ -73,8 +76,8 @@ class ComparisonFunction final : public VectorFunction {
 
     static void handleFlatColumnComparison(BaseVector* leftArg, BaseVector* rightArg, Vector<bool> * comparedResult, int32_t rowSize) {
         const Cmp cmp;
-        auto leftVector = static_cast<Vector<T> *>(leftArg);
-        auto rightVector = static_cast<Vector<T> *>(rightArg);
+        auto leftVector = static_cast<FlatVectorType *>(leftArg);
+        auto rightVector = static_cast<FlatVectorType *>(rightArg);
         auto leftSelectivity = std::make_shared<SelectivityVector>(rowSize);
         const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
         leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
@@ -87,6 +90,7 @@ class ComparisonFunction final : public VectorFunction {
         });
     }
 
+
     // this method is used to compare between column and constant
     /**
      *
@@ -94,22 +98,30 @@ class ComparisonFunction final : public VectorFunction {
      */
     static void handleConstComparison(BaseVector *vectorArg, ConstVector<T> *constantVector, Vector<bool> * comparedResult, int32_t rowSize, bool leftIsConst) {
         const Cmp cmp;
-        auto constantValue = constantVector->GetConstValue();
+        auto selectivity = std::make_shared<SelectivityVector>(rowSize);
+
+        // we always think vlaue type is same with const type
+        using ValueType = std::conditional_t<kind == OMNI_VARCHAR, std::string_view, T>;
+        ValueType constValue;
+        if constexpr (kind == OMNI_VARCHAR) {
+            constValue = reinterpret_cast<ConstVector<std::string_view>*>(constantVector)->GetConstValue();
+        } else {
+            constValue = constantVector->GetConstValue();
+        }
+
         if (vectorArg->GetEncoding() == OMNI_DICTIONARY) {
-            auto vector = static_cast<Vector<DictionaryContainer<T>> *>(vectorArg);
-            auto selectivity = std::make_shared<SelectivityVector>(rowSize);
+            auto* vector = static_cast<DictionaryVectorType*>(vectorArg);
             const auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
             selectivity->setFromBitsNegate(nullBits, rowSize);
             selectivity->applyToSelected([&](vector_size_t i) {
-                comparedResult->SetValue(i, leftIsConst ? cmp(constantValue, vector->GetValue(i)) : cmp(vector->GetValue(i), constantValue));
+                comparedResult->SetValue(i, leftIsConst ? cmp(constValue, vector->GetValue(i)) : cmp(vector->GetValue(i), constValue));
             });
         } else {
-            auto vector = static_cast<Vector<T> *>(vectorArg);
-            auto selectivity = std::make_shared<SelectivityVector>(rowSize);
+            auto* vector = static_cast<FlatVectorType*>(vectorArg);
             const auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
             selectivity->setFromBitsNegate(nullBits, rowSize);
             selectivity->applyToSelected([&](vector_size_t i) {
-                comparedResult->SetValue(i, leftIsConst ? cmp(constantValue, vector->GetValue(i)) : cmp(vector->GetValue(i), constantValue));
+                comparedResult->SetValue(i, leftIsConst ? cmp(constValue, vector->GetValue(i)) : cmp(vector->GetValue(i), constValue));
             });
         }
     }
@@ -167,6 +179,8 @@ std::shared_ptr<VectorFunction> MakeImpl(const std::string &functionName, const 
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_INT>>();
         case OMNI_LONG:
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_LONG>>();
+        case OMNI_VARCHAR:
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_VARCHAR>>();
         case OMNI_DOUBLE:
             return std::make_shared<ComparisonFunction<Cmp<double>, OMNI_DOUBLE>>();
         default: OMNI_THROW("Compare error:", "{} Not support type!", functionName);

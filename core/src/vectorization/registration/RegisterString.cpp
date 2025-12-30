@@ -22,6 +22,6 @@ void RegisterStringFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_LONG, std::make_shared<CastFunction>());
     VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_INT, std::make_shared<CastFunction>());
     VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, std::make_shared<IfFunction>());
-    VectorFunction::RegisterVectorFunction("equal", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, std::make_shared<EqualStringFunction>());
+    // VectorFunction::RegisterVectorFunction("equal", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, std::make_shared<EqualStringFunction>());
 }
 }
