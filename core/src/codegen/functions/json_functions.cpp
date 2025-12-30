@@ -28,9 +28,10 @@ extern "C" DLLEXPORT const char *GetJsonObject(int64_t contextPtr, const char *j
             return nullptr;
         }
     } catch (const json::exception& e) {
-        std::ostringstream errorMessage;
-        errorMessage << "ERROR ! nlohmann json exception id : " << e.id << " for " << e.what();
-        SetError(contextPtr, errorMessage.str());
+        // WARN: Here return null if parsing failed, as the Spark does.
+        // std::ostringstream errorMessage;
+        // errorMessage << "ERROR ! nlohmann json exception id : " << e.id << " for " << e.what();
+        // SetError(contextPtr, errorMessage.str());
         return nullptr;
     }
 
