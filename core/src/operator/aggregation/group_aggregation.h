@@ -35,7 +35,7 @@ public:
         uint32_t aggInputColsSize, std::vector<DataTypes> &aggInputTypes, std::vector<DataTypes> &aggOutputTypes,
         std::vector<std::unique_ptr<Aggregator>> &&aggs, std::vector<bool> &inputRaws,
         std::vector<bool> &outputPartials, const std::vector<int8_t> &hasAggFilters,
-        const OperatorConfig &operatorConfig)
+        const OperatorConfig &operatorConfig, std::vector<uint32_t> aggFuncTypesVector)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials),
           groupByCols(groupByCols),
           aggInputCols(aggInputCols),
@@ -48,6 +48,12 @@ public:
         isStepPartials = outputPartials.size() != 0;
         for (auto outputPartial : outputPartials) {
             if (!outputPartial) {
+                isStepPartials = false;
+                break;
+            }
+        }
+        for (auto i : aggFuncTypesVector) {
+            if (i == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL || i == OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL) {
                 isStepPartials = false;
                 break;
             }

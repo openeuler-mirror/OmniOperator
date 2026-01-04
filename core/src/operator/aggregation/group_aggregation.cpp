@@ -144,7 +144,7 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
     }
 
     auto groupByOperator = new HashAggregationOperator(groupByIndex, aggsInputCols, aggInputColsSize, aggInputTypes,
-        aggOutputTypes, std::move(aggs), inputRaws, outputPartials, hasAggFilters, operatorConfig);
+        aggOutputTypes, std::move(aggs), inputRaws, outputPartials, hasAggFilters, operatorConfig, aggFuncTypesVector);
     groupByOperator->SetGroupByColumnsHandleType(handleType);
     groupByOperator->Init();
     return groupByOperator;
