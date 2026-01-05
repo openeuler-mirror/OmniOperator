@@ -341,7 +341,7 @@ void SortOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
             throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
         }
         auto spillFiles = spiller->FinishSpill();
-        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnabled1());
+        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnable());
         UpdateSpillFileInfo(spillFiles.size());
         // when the spill completed, the spiller object can be released in advance
         if (spillMerger == nullptr) {

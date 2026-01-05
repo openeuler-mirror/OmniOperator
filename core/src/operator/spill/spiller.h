@@ -143,7 +143,7 @@ public:
         }
     }
 
-    bool isSpillCompressEnabled1() const;
+    bool isSpillCompressEnable() const;
 
 private:
     uint64_t CollectVecBatchSize(vec::VectorBatch *vectorBatch);

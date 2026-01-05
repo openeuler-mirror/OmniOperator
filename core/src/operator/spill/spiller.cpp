@@ -151,7 +151,7 @@ uint64_t Spiller::CollectVecBatchSize(vec::VectorBatch *vectorBatch)
     return result;
 }
 
-    bool Spiller::isSpillCompressEnabled1() const {
+    bool Spiller::isSpillCompressEnable() const {
         return isSpillCompressEnabled;
     }
 

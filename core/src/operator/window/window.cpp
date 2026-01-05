@@ -522,7 +522,7 @@ void WindowOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         }
         auto spillFiles = spiller->FinishSpill();
         UpdateSpillFileInfo(spillFiles.size());
-        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnabled1());
+        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnable());
         if (spillMerger == nullptr) {
             delete spiller;
             spiller = nullptr;
