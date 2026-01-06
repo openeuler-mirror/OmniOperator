@@ -215,7 +215,7 @@ ErrorCode SortOperator::SpillToDisk()
 
     LogDebug("Spill data to disk starting in sort operator, rowCount=%lld\n", rowCount);
     UpdateSpillTimesInfo();
-    auto result = spiller->Spill(pagesIndex.get(), canInplaceSort, canRadixSort);
+    auto result = spiller->Spill(pagesIndex.get(), canInplaceSort, canRadixSort, this);
     LogDebug("Spill data to disk finished in sort operator, rowCount=%lld\n", rowCount);
     return result;
 }

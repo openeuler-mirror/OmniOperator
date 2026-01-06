@@ -118,6 +118,10 @@ int32_t SortWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 
 OmniStatus SortWithExprOperator::Close()
 {
+    // update sort expr operator metircs
+    auto sortOpStats = sortOperator->stats();
+    stats_.AddSpilledBytes(sortOpStats.spilledBytes, sortOpStats.spilledRows, 0);
+
     sortOperator->Close();
     return OMNI_STATUS_NORMAL;
 }

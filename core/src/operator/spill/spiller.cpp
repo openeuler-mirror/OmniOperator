@@ -63,12 +63,14 @@ ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
     return writer->Close();
 }
 
-ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort)
+ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort, Operator* op)
 {
     int64_t totalRowCount = pagesIndex->GetRowCount();
     if (totalRowCount <= 0) {
         return ErrorCode::SUCCESS;
     }
+
+    auto lockedStats = op != nullptr ? &op->stats() : nullptr;
 
     // create spill writer object
     auto writer = new SpillWriter(dataTypes, dirPaths[0], writeBufferSize, isSpillCompressEnabled);
@@ -98,7 +100,14 @@ ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRa
             return ErrorCode::EXCEED_SPILL_THRESHOLD;
         }
 
+        int64_t cpuTimeStartNs = ThreadCpuNanos();
         auto result = writer->WriteVecBatch(spillVecBatchPtr, vecBatchSize);
+
+        const int64_t cpuTimeSegment = ThreadCpuNanos() - cpuTimeStartNs;
+        if (lockedStats != nullptr) {
+            lockedStats->AddSpilledBytes(vecBatchSize, rowCount, cpuTimeSegment);
+        }
+
         if (result != ErrorCode::SUCCESS) {
             return result;
         }

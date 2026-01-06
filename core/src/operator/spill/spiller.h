@@ -105,7 +105,7 @@ public:
         writers.clear();
     }
 
-    ErrorCode Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort);
+    ErrorCode Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort, Operator* op);
 
     ErrorCode Spill(AggregationSort *aggregationSort);
 

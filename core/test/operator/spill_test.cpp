@@ -81,7 +81,7 @@ TEST(SpillTest, TestSpillNoneSinceExceededLimit)
     }
 
     Spiller spiller(sourceTypes, sortCols, sortOrders, path, 50);
-    auto status = spiller.Spill(&pagesIndex, false, false);
+    auto status = spiller.Spill(&pagesIndex, false, false, nullptr);
     ASSERT_EQ(status, ErrorCode::EXCEED_SPILL_THRESHOLD);
     ASSERT_EQ(spiller.GetSpilledBytes(), 0);
     auto spillTracker = spiller.GetSpillTracker();

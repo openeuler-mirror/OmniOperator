@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #ifndef OPERATOR_STATS_H
 #define OPERATOR_STATS_H
 
@@ -31,13 +31,13 @@
 namespace omniruntime::compute {
 using namespace std;
 using PlanNodeId = std::string;
- 
+
 struct OperatorStats {
     /// Initial ordinal position in the operator's pipeline.
     int32_t operatorId{0};
     int32_t pipelineId{0};
     PlanNodeId planNodeId;
- 
+
     /// Some operators perform the logic describe in multiple consecutive plan
     /// nodes. For example, FilterProject operator maps to Filter node followed by
     /// Project node. In this case, runtime stats are collected for the combined
@@ -48,46 +48,49 @@ struct OperatorStats {
     /// cardinality reduction to Filter and making Project cardinality neutral.
     using StatsSplitter = std::function<std::vector<OperatorStats>(
         const OperatorStats& combinedStats)>;
- 
+
     std::optional<StatsSplitter> statsSplitter;
- 
+
     /// Name for reporting. We use Presto compatible names set at
     /// construction of the Operator where applicable.
     std::string operatorType;
- 
+
     /// Number of splits (or chunks of work). Split can be a part of data file to
     /// read.
     int64_t numSplits{0};
- 
+
     CpuWallTiming isBlockedTiming;
- 
+
     /// For Scan
     uint64_t rawInputBytes{0};
     uint64_t rawInputRows{0};
- 
+
     /// Bytes of input in terms of retained size of input vectors.
     uint64_t inputRows{0};
     uint64_t inputBytes{0};
     uint64_t numInputVecBatches{0};
 
     CpuWallTiming addInputTime;
- 
+
+    /// For Agg/Sort/Window
+    // CpuWallTiming spilledTiming;
+
     /// Bytes of output in terms of retained size of vectors.
     uint64_t outputBytes{0};
     uint64_t outputRows{0};
     uint64_t numOutputVecBatches{0};
 
     CpuWallTiming getOutputTime;
- 
+
     // Total bytes written to file for spilling.
     uint64_t spilledBytes{0};
- 
+
     // Total rows written for spilling.
     uint64_t spilledRows{0};
- 
+
     // Total spilled partitions.
     uint32_t spilledPartitions{0};
- 
+
     // Total current spilled files.
     uint32_t spilledFiles{0};
 
@@ -107,9 +110,9 @@ struct OperatorStats {
     uint64_t lookupNumOutputVecBatches{0};
     CpuWallTiming lookupAddInputTime;
     CpuWallTiming lookupGetOutputTime;
- 
+
     OperatorStats() = default;
- 
+
     OperatorStats(
         int32_t _operatorId,
         int32_t _pipelineId,
@@ -119,24 +122,31 @@ struct OperatorStats {
           pipelineId(_pipelineId),
           planNodeId(std::move(_planNodeId)),
           operatorType(std::move(_operatorType)) {}
- 
+
     void setStatSplitter(StatsSplitter splitter)
     {
         statsSplitter = std::move(splitter);
     }
- 
+
     void AddInputVector(uint64_t bytes, uint64_t inputVecBatches, uint64_t rowCount)
     {
         inputBytes += bytes;
         numInputVecBatches += 1;
         inputRows += rowCount;
     }
- 
+
     void AddOutputVector(uint64_t bytes, uint64_t outputVecBatches, uint64_t rowCount)
     {
         outputBytes += bytes;
         numOutputVecBatches += 1;
         outputRows += rowCount;
+    }
+
+    void AddSpilledBytes(uint64_t bytes, uint64_t rowCount, uint64_t cpuNanos)
+    {
+        // spilledTiming.cpuNanos += cpuNanos;
+        spilledBytes += bytes;
+        spilledRows += rowCount;
     }
 
     void HashJoinOperator(const OperatorStats& stats)
@@ -169,17 +179,17 @@ struct OperatorStats {
         numSplits += other.numSplits;
         rawInputBytes += other.rawInputBytes;
         rawInputRows += other.rawInputRows;
- 
+
         addInputTime.Add(other.addInputTime);
         inputBytes += other.inputBytes;
         inputRows += other.inputRows;
         numInputVecBatches += other.numInputVecBatches;
- 
+
         getOutputTime.Add(other.getOutputTime);
         outputBytes += other.outputBytes;
         numOutputVecBatches += other.numOutputVecBatches;
         outputRows += other.outputRows;
- 
+
         isBlockedTiming.Add(other.isBlockedTiming);
 
         numDrivers += other.numDrivers;
@@ -190,23 +200,23 @@ struct OperatorStats {
 
         finishTiming.Add(other.finishTiming);
     }
- 
+
     void Clear()
     {
         numSplits = 0;
         rawInputBytes = 0;
         rawInputRows = 0;
- 
+
         addInputTime.Clear();
         inputBytes = 0;
         inputRows = 0;
         numInputVecBatches = 0;
- 
+
         getOutputTime.Clear();
         outputBytes = 0;
         outputRows = 0;
         numOutputVecBatches = 0;
- 
+
         numDrivers = 0;
         spilledBytes = 0;
         spilledRows = 0;
