@@ -22,6 +22,10 @@ namespace omniruntime::vec {
             : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW),
               children_(std::move(children)) {}
 
+        RowVector(int32_t size, std::vector<BaseVector*> children)
+            : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW),
+            rawChildren_(std::move(children)) {}
+
         ~RowVector() override = default;
 
         std::shared_ptr<BaseVector>& ChildAt(int32_t index)
@@ -32,6 +36,11 @@ namespace omniruntime::vec {
         std::vector<std::shared_ptr<BaseVector>>& Children()
         {
             return children_;
+        }
+
+        std::vector<BaseVector *> GetRawChildren()
+        {
+            return rawChildren_;
         }
 
         void AddChild(std::shared_ptr<BaseVector> child)
@@ -99,6 +108,8 @@ namespace omniruntime::vec {
 
     private:
         std::vector<std::shared_ptr<BaseVector>> children_;
+        // rawChildren_ elements no needs to release, this only use for immutable view, like string and string_view
+        std::vector<BaseVector *> rawChildren_;
     };
 }
 

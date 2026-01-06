@@ -180,6 +180,11 @@ public:
         OMNI_THROW("Vector Error: ", "Expand method not implemented for this vector type");
     }
 
+    NullsBuffer* GetNullsBuffer() const
+    {
+        return nullsBuffer.get();
+    }
+
 protected:
     bool isField_ = false;
     friend class unsafe::UnsafeBaseVector;
@@ -404,6 +409,10 @@ public:
         sliced->offset = offset + positionOffset; // update offset
         sliced->isSliced = true;
         return sliced;
+    }
+
+    RAW_DATA_TYPE * GetValuesBuffer() {
+        return values;
     }
 
     ALWAYS_INLINE void Expand(int32_t needCapacity)
