@@ -249,7 +249,9 @@ void FunctionRegistry::InitHiveUdfMap()
 const std::string &FunctionRegistry::LookupHiveUdf(const std::string &udfName)
 {
     std::call_once(initHiveUdfMap, InitHiveUdfMap);
-    auto result = hiveUdfMap->find(udfName);
+    string lowerStr = udfName;
+    transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), [](unsigned char c) { return tolower(c); });
+    auto result = hiveUdfMap->find(lowerStr);
     if (result == hiveUdfMap->end()) {
         return INVALID_HIVE_UDF;
     }

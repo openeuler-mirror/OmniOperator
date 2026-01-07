@@ -286,6 +286,25 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
         this->isSupportVectorization_ = false;
     }
 
+    if (funcExpr.functionType == HIVE_UDF) {
+        for (auto arg : funcExpr.arguments) {
+            switch (arg->dataType->GetId()) {
+                case OMNI_INT:
+                case OMNI_LONG:
+                case OMNI_SHORT:
+                case OMNI_BOOLEAN:
+                case OMNI_DOUBLE:
+                case OMNI_VARCHAR:
+                case OMNI_CHAR:
+                    break;
+                default:
+                    this->isSupportCodegen_ = false;
+                    break;
+            }
+        }
+        return;
+    }
+
     if (funcExpr.funcName == "DateFormat") {
         if (funcExpr.arguments.size() >= 2) {
             auto literalArg = dynamic_cast<LiteralExpr *>(funcExpr.arguments[1]);
