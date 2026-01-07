@@ -112,16 +112,17 @@ int32_t SortWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
     } else {
         UpdateGetOutputInfo(0);
     }
+
+    if (sortOperator->GetStatus() == OMNI_STATUS_FINISHED) {
+        UpdateSpilledMetrics(sortOperator);
+    }
+
     SetStatus(sortOperator->GetStatus());
     return status;
 }
 
 OmniStatus SortWithExprOperator::Close()
 {
-    // update sort expr operator metircs
-    auto sortOpStats = sortOperator->stats();
-    stats_.AddSpilledBytes(sortOpStats.spilledBytes, sortOpStats.spilledRows, 0);
-
     sortOperator->Close();
     return OMNI_STATUS_NORMAL;
 }

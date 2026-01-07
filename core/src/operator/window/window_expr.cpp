@@ -181,6 +181,9 @@ int32_t WindowWithExprOperator::AddInput(VectorBatch *vecBatch)
 int32_t WindowWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     int32_t status = windowOperator->GetOutput(outputVecBatch);
+    if (windowOperator->GetStatus() == OMNI_STATUS_FINISHED) {
+        UpdateSpilledMetrics(windowOperator);
+    }
     SetStatus(windowOperator->GetStatus());
     return status;
 }
