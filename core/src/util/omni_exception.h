@@ -43,16 +43,21 @@ private:
 };
 }
 
-#define OMNI_THROW(errorCode, ...)                                                                                 \
-    do {                                                                                                           \
+#define OMNI_THROW(errorCode, ...)                                                                \
+    do {                                                                                          \
         throw omniruntime::exception::OmniException(errorCode, omniruntime::Format(__VA_ARGS__)); \
     } while (0)
 
-#define OMNI_CHECK(expr, errMessage)                                                 \
-    do {                                                                             \
-        if (__builtin_expect(!(expr), 0)) {                                           \
-            throw omniruntime::exception::OmniException("CHECK_ERROR:", errMessage); \
-        }                                                                            \
+#define OMNI_CHECK(expr, ...)                                                                              \
+    do {                                                                                                   \
+        if (__builtin_expect(!(expr), 0)) {                                                                \
+            throw omniruntime::exception::OmniException("CHECK_ERROR:", omniruntime::Format(__VA_ARGS__)); \
+        }                                                                                                  \
+    } while (0)
+
+#define OMNI_FAIL(...)                                                                                   \
+    do {                                                                                                 \
+        throw omniruntime::exception::OmniException("Runtime error:", omniruntime::Format(__VA_ARGS__)); \
     } while (0)
 
 #endif // OMNI_RUNTIME_OMNI_EXCEPTION_H

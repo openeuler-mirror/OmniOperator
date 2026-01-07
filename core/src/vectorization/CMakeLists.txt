@@ -4,5 +4,8 @@ add_library(${VECTORIZATION_TARGET} ${VECTORIZATION_LIST})
 
 find_package(fmt REQUIRED)
 target_link_libraries(${VECTORIZATION_TARGET} PRIVATE util expression udf re2::re2 fmt::fmt)
-file(GLOB EXPRESSION_HEAD_FILES ${SOURCE_ROOT}/src/vectorization/VectorFunction.h)
+file(GLOB EXPRESSION_HEAD_FILES ${SOURCE_ROOT}/src/vectorization/*.h)
 install(FILES ${EXPRESSION_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vectorization)
+
+file(GLOB REGISTRATION_HEAD_FILES ${SOURCE_ROOT}/src/vectorization/registration/*.h)
+install(FILES ${REGISTRATION_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vectorization/registration)

@@ -3,7 +3,7 @@
  * Description: In expression implementation for SimpleFunction framework (无空值版)
  */
 
-#include "SimpleFunction.h"
+#include "vectorization/SimpleFunction.h"
 #include "./vectorization/VectorReaders.h"
 #include "type/data_type.h"
 #include "../SimpleFunctionMetadata.h"

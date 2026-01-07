@@ -9,7 +9,7 @@
 #include <util/compiler_util.h>
 #include <vector>
 #include "vectorization/Status.h"
-#include "vectorization/functions/SimpleFunction.h"
+#include "vectorization/SimpleFunction.h"
 
 namespace omniruntime::vectorization {
 // Declares a method resolver to be used with has_method.
@@ -137,8 +137,7 @@ public:
         } else if constexpr (udf_has_callNullable) {
             return callNullableImpl(out, notNull, (&args)...);
         } else {
-            OMNI_THROW("runtime error:",
-                "call should never be called if the UDF does not " "implement call or callNullable.");
+            OMNI_FAIL("call should never be called if the UDF does not implement call or callNullable!");
         }
     }
 };

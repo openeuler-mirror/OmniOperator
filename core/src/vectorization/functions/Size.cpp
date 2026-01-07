@@ -6,7 +6,7 @@
 #include "Size.h"
 
 #include <vector>
-#include "SimpleFunction.h"
+#include "vectorization/SimpleFunction.h"
 #include "./vectorization/VectorReaders.h"
 #include "type/data_type.h"
 #include "../SimpleFunctionMetadata.h"

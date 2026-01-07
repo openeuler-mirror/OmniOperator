@@ -6,7 +6,7 @@
 #pragma once
 
 #include <string>
-#include "vectorization/functions/SimpleFunction.h"
+#include "vectorization/SimpleFunction.h"
 #include "SimpleFunctionRegistry.h"
 
 namespace omniruntime::vectorization {

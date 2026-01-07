@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include "../SimpleFunctionMetadata.h"
 #include "../VectorFunction.h"
-#include "vectorization/functions/SimpleFunction.h"
+#include "vectorization/SimpleFunction.h"
 
 namespace omniruntime::vectorization {
 
