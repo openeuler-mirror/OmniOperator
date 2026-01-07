@@ -229,6 +229,61 @@ public:
         }
     }
 
+    template <type::DataTypeId typeId> static void PrintArrayElement(BaseVector* elementVec, int32_t index) {
+        using namespace omniruntime::type;
+        using T = typename NativeType<typeId>::type;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            std::cout << std::dec << static_cast<Vector<LargeStringContainer<T>> *>(elementVec)->GetValue(index) << "\t";
+        } else {
+            std::cout << std::dec << static_cast<Vector<T> *>(elementVec)->GetValue(index) << "\t";
+        }
+    }
+
+    static void PrintArrayVectorValue(BaseVector* vector, int32_t rowIndex) {
+        auto* arrayVec = dynamic_cast<ArrayVector*>(vector);
+        if (!arrayVec) {
+            std::cout << "[Invalid ArrayVector]";
+            return;
+        }
+        int32_t offset = arrayVec->GetOffset(rowIndex);
+        int32_t size = arrayVec->GetSize(rowIndex);
+        auto elementVec = arrayVec->GetElementVector();
+        if (!elementVec) {
+            std::cout << "[No Element Vector]";
+            return;
+        }
+        const auto elementType = elementVec->GetTypeId();
+        std::cout << " [ ";
+        for (int i = 0; i < size; i++) {
+            if (i > 0)
+                std::cout << ", ";
+            switch (elementType) {
+                case OMNI_INT:
+                    PrintArrayElement<OMNI_INT>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_LONG:
+                    PrintArrayElement<OMNI_LONG>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_VARCHAR:
+                    PrintArrayElement<OMNI_VARCHAR>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_CHAR:
+                    PrintArrayElement<OMNI_CHAR>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_BOOLEAN:
+                    PrintArrayElement<OMNI_BOOLEAN>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_DOUBLE:
+                    PrintArrayElement<OMNI_DOUBLE>(elementVec.get(), offset + i);
+                    break;
+                default:
+                    std::cout << "?";
+                    break;
+            }
+        }
+        std::cout << " ] ";
+    }
+
     template <type::DataTypeId typeId> static void PrintDictionaryVectorValue(BaseVector *vector, int32_t rowIndex)
     {
         using namespace omniruntime::type;
@@ -288,6 +343,8 @@ public:
                 auto valueVec = reinterpret_cast<BaseVector *>(value);
                 DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, valueVec->GetTypeId(), valueVec, rowIndex);
             }
+        } else if (encoding == vec::OMNI_ENCODING_ARRAY) {
+            PrintArrayVectorValue(vector, rowIndex);
         } else {
             DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, vector->GetTypeId(), vector, rowIndex);
         }

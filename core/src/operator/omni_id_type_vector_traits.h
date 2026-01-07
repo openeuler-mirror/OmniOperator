@@ -7,6 +7,7 @@
 
 #include <type/data_type.h>
 #include <vector/vector.h>
+#include <vector/array_vector.h>
 #include "vector/large_string_container.h"
 #include "type/string_ref.h"
 namespace omniruntime {
@@ -99,6 +100,11 @@ template <> struct NativeAndVectorType<type::DataTypeId::OMNI_VARCHAR> {
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_CHAR> {
     using type = std::string_view;
     using vector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
+    using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
+};
+template <> struct NativeAndVectorType<type::DataTypeId::OMNI_ARRAY> {
+    using type = type::ArrayType;
+    using vector = vec::ArrayVector;
     using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
 };
 }

@@ -153,11 +153,7 @@ Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
     auto *op = new HashAggregationWithExprOperator(*originSourceTypes, *sourceTypes, projections, aggSimpleFilters,
         hashAggOperator, queryConfig);
-    std::vector<type::DataTypeId> dataTypeIds;
-    for (int32_t i = 0; i < originSourceTypes->GetSize(); ++i) {
-        dataTypeIds.push_back(originSourceTypes->GetType(i)->GetId());
-    }
-    op->Init(dataTypeIds);
+    op->Init();
     return op;
 }
 
@@ -346,9 +342,9 @@ VectorBatch *HashAggregationWithExprOperator::AlignSchema(VectorBatch *inputVecB
     return result;
 }
 
-OmniStatus HashAggregationWithExprOperator::Init(const std::vector<type::DataTypeId> &dataTypeIds)
+OmniStatus HashAggregationWithExprOperator::Init()
 {
-    oneRowAdaptor.Init(dataTypeIds);
+    oneRowAdaptor.Init(sourceTypes);
     return OMNI_STATUS_NORMAL;
 }
 }

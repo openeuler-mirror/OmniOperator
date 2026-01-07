@@ -60,7 +60,7 @@ public:
 
     void ProcessRow(uintptr_t rowValues[], int32_t lens[]);
 
-    OmniStatus Init(const std::vector<type::DataTypeId> &dataTypeIds);
+    OmniStatus Init();
 
     uint64_t GetSpilledBytes() override;
 

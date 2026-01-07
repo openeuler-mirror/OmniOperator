@@ -93,6 +93,10 @@ template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_CONTAINER> {
     using type = double;
     using vector = Vector<type>;
 };
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_ARRAY> {
+    using type =ArrayType;
+    using vector = ArrayVector;
+};
 template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_NONE> {
     using type = void;
     using vector = void;

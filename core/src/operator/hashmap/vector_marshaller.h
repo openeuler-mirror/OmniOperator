@@ -33,11 +33,18 @@ using FixedKeyVectorSerializerIgnoreNull = bool (*)(BaseVector *baseVector, int3
 using FixedKeyVectorSerializerIgnoreNullSimd = bool (*)(BaseVector *baseVector, int32_t rowIdx,
     std::vector<StringRef> &result, size_t &pos, int32_t joinRownum);
 
+using SerializerFunc = void (*)(BaseVector *baseVector, int32_t rowIdx, mem::SimpleArenaAllocator &arenaAllocator,
+                                type::StringRef &result);
+using DeSerializerFunc = const char *(*)(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
+
 template <type::DataTypeId id> char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
 
 extern std::vector<VectorSerializer> vectorSerializerCenter;
 extern std::vector<VectorSerializer> dicVectorSerializerCenter;
 extern std::vector<VectorDeSerializer> vectorDeSerializerCenter;
+
+extern std::unordered_map<DataTypeId, SerializerFunc> complexVectorSerializerCenter;
+extern std::unordered_map<DataTypeId, DeSerializerFunc> complexVectorDeSerializerCenter;
 
 extern std::vector<VectorSerializerIgnoreNull> vectorSerializerIgnoreNullCenter;
 extern std::vector<VectorSerializerIgnoreNull> dicVectorSerializerIgnoreNullCenter;

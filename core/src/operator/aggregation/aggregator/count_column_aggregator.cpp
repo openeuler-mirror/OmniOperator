@@ -243,6 +243,8 @@ template class CountColumnAggregator<OMNI_VARCHAR, OMNI_LONG>;
 
 template class CountColumnAggregator<OMNI_CHAR, OMNI_LONG>;
 
+template class CountColumnAggregator<OMNI_ARRAY, OMNI_LONG>;
+
 template class CountColumnAggregator<OMNI_INVALID, OMNI_LONG>;
 }
 }
