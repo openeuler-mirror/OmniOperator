@@ -21,12 +21,15 @@ static int32_t SPILL_TEMPLATE_SIZE = static_cast<int32_t>(SPILL_TEMPLATE.size())
 constexpr int PID_LENGTH = 10;
 constexpr int TID_LENGTH = 10;
 
-ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
+ErrorCode Spiller::Spill(AggregationSort *aggregationSort, Operator* op)
 {
     size_t totalRowCount = aggregationSort->GetRowCount();
     if (totalRowCount <= 0) {
         return ErrorCode::SUCCESS;
     }
+
+    auto lockedStats = op != nullptr ? &op->stats() : nullptr;
+
     // create spill writer object
     auto writer = new SpillWriter(dataTypes, dirPaths[0], writeBufferSize, isSpillCompressEnabled);
     writers.emplace_back(writer);
@@ -54,7 +57,14 @@ ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
             return ErrorCode::EXCEED_SPILL_THRESHOLD;
         }
 
+        int64_t cpuTimeStartNs = ThreadCpuNanos();
+
         auto result = writer->WriteVecBatch(spillVecBatchPtr, vecBatchSize);
+
+        const int64_t cpuTimeSegment = ThreadCpuNanos() - cpuTimeStartNs;
+        if (lockedStats != nullptr) {
+            lockedStats->AddSpilledBytes(vecBatchSize, rowCount, cpuTimeSegment);
+        }
         if (result != ErrorCode::SUCCESS) {
             return result;
         }

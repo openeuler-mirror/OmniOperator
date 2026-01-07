@@ -1161,7 +1161,7 @@ ErrorCode HashAggregationOperator::SpillToDisk()
     aggregationSort->SortKvVector();
     auto rowCount = aggregationSort->GetRowCount();
     LogDebug("Spill data to disk starting in hash aggregation operator, rowCount=%lld\n", rowCount);
-    ErrorCode result = spiller->Spill(aggregationSort.get());
+    ErrorCode result = spiller->Spill(aggregationSort.get(), this);
     LogDebug("Spill data to disk finished in hash aggregation operator, rowCount=%lld\n", rowCount);
     aggregationSort->ClearVector();
     return result;

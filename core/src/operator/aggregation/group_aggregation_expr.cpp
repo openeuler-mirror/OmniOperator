@@ -251,6 +251,7 @@ int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
                 SetStatus(OMNI_STATUS_NORMAL);
                 return 0;
             }
+            UpdateSpilledMetrics(hashAggOperator);
             SetStatus(OMNI_STATUS_FINISHED);
             return 0;
         }
@@ -264,6 +265,7 @@ int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
                 SetStatus(OMNI_STATUS_NORMAL);
                 return 0;
             }
+            UpdateSpilledMetrics(hashAggOperator);
             SetStatus(OMNI_STATUS_FINISHED);
             return 0;
         }
@@ -275,6 +277,7 @@ int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
         return 0;
     }
     if (isFinished() || hashAggOperator->isFinished()) {
+        UpdateSpilledMetrics(hashAggOperator);
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
     }
@@ -282,6 +285,10 @@ int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
     SetStatus(hashAggOperator->GetStatus());
     if (*outputVecBatch == nullptr) {
         SetStatus(OMNI_STATUS_FINISHED);
+    }
+
+    if (status == OMNI_STATUS_FINISHED) {
+        UpdateSpilledMetrics(hashAggOperator);
     }
     return status;
 }
