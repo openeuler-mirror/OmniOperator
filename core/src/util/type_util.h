@@ -114,6 +114,10 @@ std::shared_ptr<omniruntime::type::ContainerDataType> ContainerType(
 
 std::shared_ptr<omniruntime::type::ArrayType> ArrayDataType(std::shared_ptr<DataType> child);
 
+std::shared_ptr<omniruntime::type::RowType> RowDataType(std::vector<std::shared_ptr<DataType>> &fieldTypes);
+
+std::shared_ptr<omniruntime::type::MapType> MapDataType(std::shared_ptr<DataType> keyType, std::shared_ptr<DataType> valueType);
+
 template <typename...> struct CheckTypesContainsDecimal128 {
     static constexpr bool value = false;
 };

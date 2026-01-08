@@ -14,6 +14,7 @@
 #include "row_vector.h"
 #include "map_vector.h"
 #include "array_vector.h"
+#include "util/type_util.h"
 
 namespace omniruntime::vec {
 class VectorHelper {
@@ -1110,6 +1111,80 @@ public:
             default: {
                 std::string message("Unsupported data type " + std::to_string(destDataTypeId));
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", message);
+            }
+        }
+    }
+
+    static DataTypePtr GetDataType(BaseVector *srcVector)
+    {
+        DataTypeId dataTypeId = srcVector->GetTypeId();
+        switch (dataTypeId) {
+            case type::OMNI_INT: {
+                return IntType();
+            }
+            case type::OMNI_DATE32: {
+                return Date32Type();
+            }
+            case type::OMNI_SHORT: {
+                return ShortType();
+            }
+            case type::OMNI_BYTE: {
+                return ByteType();
+            }
+            case type::OMNI_LONG: {
+                return LongType();
+            }
+            case type::OMNI_TIMESTAMP: {
+                return TimestampType();
+            }
+            case type::OMNI_DATE64: {
+                return Date64Type();
+            }
+            case type::OMNI_DECIMAL64: {
+                return Decimal64Type();
+            }
+            case type::OMNI_DECIMAL128: {
+                return Decimal128Type();
+            }
+            case type::OMNI_DOUBLE: {
+                return DoubleType();
+            }
+            case type::OMNI_FLOAT: {
+                return FloatType();
+            }
+            case type::OMNI_BOOLEAN: {
+                return BooleanType();
+            }
+            case type::OMNI_VARCHAR: {
+                return VarcharType();
+            }
+            case type::OMNI_CHAR: {
+                return CharType();
+            }
+            case type::OMNI_CONTAINER: {
+                return ContainerType();
+            }
+            case type::OMNI_ROW: {
+                auto rowVector = static_cast<RowVector *>(srcVector);
+                std::vector<DataTypePtr> fieldTypes;
+                for (int i = 0; i < rowVector->ChildSize(); i++) {
+                    fieldTypes.push_back(GetDataType(rowVector->ChildAt(i).get()));
+                }
+                return RowDataType(fieldTypes);
+            }
+            case type::OMNI_ARRAY: {
+                auto arrayVector = static_cast<ArrayVector *>(srcVector);
+                return ArrayDataType(GetDataType(arrayVector->GetElementVector().get()));
+            }
+            case type::OMNI_MAP: {
+                auto mapVector = static_cast<MapVector *>(srcVector);
+                return MapDataType(GetDataType(mapVector->GetKeyVector().get()),
+                    GetDataType(mapVector->GetValueVector().get()));
+            }
+            default: {
+                std::string omniExceptionInfo =
+                    "In function GetDataType, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }

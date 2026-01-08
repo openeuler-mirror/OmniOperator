@@ -41,4 +41,54 @@ BaseVector* ArrayVector::GetValue(int index)
 
     return GetElementVector()->Slice(startOffset, arraySize, false);
 }
+
+/* *
+ * Copies the values of the vector at the indicated positions
+ * @param positions
+ * @param offset
+ * @param length
+ */
+ArrayVector *ArrayVector::CopyPositions(const int *positions, int positionOffset, int length)
+{
+    if (UNLIKELY((positions == nullptr) || (length < 0))) {
+        std::string message("ArrayVector positions is null or the input length is incorrect: %d.", length);
+        throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+    }
+    ArrayVector *newArrayVector = new ArrayVector(length);
+    auto startPositions = positions + positionOffset;
+
+    std::vector<int> elementPositions;
+    int elementLength = 0;
+    for (int32_t i = 0; i < length; i++) {
+        int position = startPositions[i];
+        // position == -1 means that this position in newArrayVector should be set to NULL.
+        if (UNLIKELY(position == -1)) {
+            newArrayVector->SetNull(i);
+            elementPositions.push_back(-1);
+            elementLength += 1;
+            newArrayVector->SetSize(i, 1);
+            continue;
+        }
+        if (UNLIKELY(IsNull(position))) {
+            newArrayVector->SetNull(i);
+        }
+        int elementIndex = this->GetOffset(position);
+        int elementSize = this->GetSize(position);
+        newArrayVector->SetSize(i, elementSize);
+        elementLength += elementSize;
+        updateElementPositions(elementPositions, elementIndex, elementSize);
+    }
+
+    auto elementVector = this->GetElementVector();
+    if (UNLIKELY(elementLength == 0)) {
+        // need create concreate vector, not BaseVector
+        auto elementDataType = VectorHelper::GetDataType(elementVector.get());
+        newArrayVector->AddElements(VectorHelper::CreateComplexVector(elementDataType.get(), elementLength));
+    } else {
+        auto newElementVector = elementVector->CopyPositions(elementPositions.data(), 0, elementLength);
+        newArrayVector->AddElements(newElementVector);
+    }
+
+    return newArrayVector;
+}
 }

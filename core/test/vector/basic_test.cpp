@@ -901,6 +901,92 @@ TEST(vector, copy_positions_row)
     delete rowVec;
 }
 
+TEST(vector, copy_positions_array_0length)
+{
+    int arraySize = 3;
+    int elementSize = 6;
+    auto* elements = new Vector<LargeStringContainer<std::string_view>>(elementSize);
+    for (int i = 0; i < elementSize; i++) {
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        elements->SetValue(i, value);
+    }
+
+    auto* arrayVec = new ArrayVector(arraySize);
+
+    arrayVec->SetOffset(0, 0);
+    // row0: empty length
+    arrayVec->SetOffset(1, 0);
+    // row1: null
+    arrayVec->SetOffset(2, 0);
+    arrayVec->SetNull(1);
+    arrayVec->SetOffset(3, 6);
+
+    arrayVec->AddElements(elements);
+
+    int positions[] = {0, 1};
+    auto* newArrayVector = arrayVec->CopyPositions((const int*)positions, 0, 2);
+    EXPECT_EQ(newArrayVector->GetOffset(1), 0);
+    EXPECT_EQ(newArrayVector->GetOffset(2), 0);
+
+    EXPECT_EQ(newArrayVector->IsNull(0), false);
+    EXPECT_EQ(newArrayVector->IsNull(1), true);
+
+    auto newValues = std::dynamic_pointer_cast<Vector<LargeStringContainer<std::string_view>>>(
+        newArrayVector->GetElementVector());
+    EXPECT_GE(omniruntime::vec::unsafe::UnsafeStringVector::GetContainer(newValues.get())->GetCapacityInBytes(),0);
+
+    delete newArrayVector;
+    delete arrayVec;
+}
+
+TEST(vector, copy_positions_map_0length)
+{
+    int mapSize = 3;
+    int elementSize = 6;
+    auto* keyElements = new Vector<LargeStringContainer<std::string_view>>(elementSize);
+    for (int i = 0; i < elementSize; i++) {
+        std::string str = "key" + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        keyElements->SetValue(i, value);
+    }
+
+    auto* valueElements = new Vector<LargeStringContainer<std::string_view>>(elementSize);
+    for (int i = 0; i < elementSize; i++) {
+        std::string str = "value" + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        valueElements->SetValue(i, value);
+    }
+
+    auto* mapVec = new MapVector(mapSize);
+
+    mapVec->SetOffset(0, 0);
+    // row0: empty length
+    mapVec->SetOffset(1, 0);
+    // row1: null
+    mapVec->SetOffset(2, 0);
+    mapVec->SetNull(1);
+    mapVec->SetOffset(3, 6);
+
+    mapVec->AddKeys(keyElements);
+    mapVec->AddValues(valueElements);
+
+    int positions[] = {0, 1};
+    auto* newMapVector = mapVec->CopyPositions((const int*)positions, 0, 2);
+    EXPECT_EQ(newMapVector->GetOffset(1), 0);
+    EXPECT_EQ(newMapVector->GetOffset(2), 0);
+
+    EXPECT_EQ(newMapVector->IsNull(0), false);
+    EXPECT_EQ(newMapVector->IsNull(1), true);
+
+    auto newValues = std::dynamic_pointer_cast<Vector<LargeStringContainer<std::string_view>>>(
+        newMapVector->GetKeyVector());
+    EXPECT_GE(omniruntime::vec::unsafe::UnsafeStringVector::GetContainer(newValues.get())->GetCapacityInBytes(),0);
+
+    delete newMapVector;
+    delete mapVec;
+}
+
 TEST(vector, dict_get_value_with_null_int32)
 {
     dict_vector_get_value_with_null<int32_t>();

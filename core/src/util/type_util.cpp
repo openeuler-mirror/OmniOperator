@@ -268,5 +268,15 @@ std::shared_ptr<ArrayType> ArrayDataType(DataTypePtr child)
     return std::make_shared<ArrayType>(child);
 }
 
+std::shared_ptr<RowType> RowDataType(std::vector<DataTypePtr> &fieldTypes)
+{
+    return std::make_shared<RowType>(fieldTypes);
+}
+
+std::shared_ptr<omniruntime::type::MapType> MapDataType(std::shared_ptr<DataType> keyType, std::shared_ptr<DataType> valueType)
+{
+    return std::make_shared<MapType>(keyType, valueType);
+}
+
 }
 }

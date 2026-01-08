@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <memory>
+#include "vector.h"
 
 namespace omniruntime::vec {
 
@@ -126,50 +127,7 @@ public:
      * @param offset
      * @param length
      */
-    MapVector* CopyPositions(const int *positions, int positionOffset, int length) override
-    {
-        if ((positions == nullptr) || (length < 0)) {
-            std::string message("MapVector positions is null or the input length is incorrect: %d.", length);
-            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
-        }
-
-        MapVector* newMapVector = new MapVector(length);
-        auto startPositions = positions + positionOffset;
-
-        std::vector<int> keyPositions;
-        int keyLength = 0;
-        for (int32_t i = 0; i < length; i++) {
-            int position = startPositions[i];
-            if (UNLIKELY(IsNull(position))) {
-                newMapVector->SetNull(i);
-            }
-            int keyIndex = this->GetOffset(position);
-            int keySize = this->GetSize(position);
-
-            newMapVector->SetOffset(i, keyLength);
-            keyLength += keySize;
-
-            UpdateKeyPositions(keyPositions, keyIndex, keySize);
-        }
-        newMapVector->SetOffset(length, keyLength);
-
-        auto keyVector = this->GetKeyVector();
-        if (UNLIKELY(keyLength == 0)) {
-            newMapVector->AddKeys(new BaseVector(0, keyVector->GetEncoding(), keyVector->GetTypeId()));
-        } else {
-            auto newKeyVector = keyVector->CopyPositions(keyPositions.data(), 0, keyLength);
-            newMapVector->AddKeys(newKeyVector);
-        }
-
-        auto valueVector = this->GetValueVector();
-        if (UNLIKELY(keyLength == 0)) {
-            newMapVector->AddValues(new BaseVector(0, valueVector->GetEncoding(), valueVector->GetTypeId()));
-        } else {
-            auto newValueVector = valueVector->CopyPositions(keyPositions.data(), 0, keyLength);
-            newMapVector->AddValues(newValueVector);
-        }
-        return newMapVector;
-    }
+    MapVector* CopyPositions(const int *positions, int positionOffset, int length) ;
 
     static void UpdateKeyPositions(std::vector<int> &keyPositions, int index, int size)
     {
