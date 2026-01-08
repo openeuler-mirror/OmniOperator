@@ -94,6 +94,8 @@ namespace omniruntime::codegen {
 extern "C" DLLEXPORT
 {
     char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size);
+    char *ArenaAllocatorMallocReuse(int64_t contextPtr, int32_t size);
+    void ArenaAllocatorFreeReuse(int64_t contextPtr, char *buf, int32_t size);
     bool ArenaAllocatorReset(int64_t contextPtr);
     bool SetError(int64_t contextPtr, std::string errorMessage);
     bool HasError(int64_t contextPtr);

@@ -3,6 +3,8 @@
  * Description: registry  function  implementation
  */
 
+#include <cstdint>
+#include <limits>
 #include <re2/re2.h>
 #include "stringfunctions.h"
 #include "md5.h"
@@ -10,6 +12,11 @@
 #include "type/string_Impl.h"
 
 namespace omniruntime::codegen::function {
+
+const char *INT64_MIN_STR = "-9223372036854775808";
+
+constexpr int32_t INT64_MAX_LEN = 20;
+
 extern "C" DLLEXPORT int64_t CountChar(const char *str, int32_t strLen, const char *target, int32_t targetWidth, int32_t targetLen, bool isNull)
 {
     if (isNull) {
@@ -525,16 +532,14 @@ extern "C" DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t va
     if (isNull) {
         return nullptr;
     }
-    std::string str = std::to_string(value);
-    *outLen = static_cast<int32_t>(strlen(str.c_str()));
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-    if (res != EOK) {
-        SetError(contextPtr, "cast failed");
-        *outLen = 0;
-        return nullptr;
+    if (value == std::numeric_limits<int64_t>::min()) {
+        *outLen = INT64_MAX_LEN;
+        return INT64_MIN_STR;
     }
-    return ret;
+    auto buf = ArenaAllocatorMallocReuse(contextPtr, INT64_MAX_LEN);
+    *outLen = StringUtil::toString(value, buf);
+    ArenaAllocatorFreeReuse(contextPtr, buf, INT64_MAX_LEN);
+    return buf;
 }
 
 extern "C" DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value, bool isNull, int32_t *outLen)
@@ -928,16 +933,14 @@ extern "C" DLLEXPORT const char *CastInt8ToStringRetNull(int64_t contextPtr, boo
 extern "C" DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, bool *isNull, int64_t value,
     int32_t *outLen)
 {
-    std::string str = std::to_string(value);
-    *outLen = static_cast<int32_t>(strlen(str.c_str()));
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-    if (res != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
+    if (value == std::numeric_limits<int64_t>::min()) {
+        *outLen = INT64_MAX_LEN;
+        return INT64_MIN_STR;
     }
-    return ret;
+    auto buf = ArenaAllocatorMallocReuse(contextPtr, INT64_MAX_LEN);
+    *outLen = StringUtil::toString(value, buf);
+    ArenaAllocatorFreeReuse(contextPtr, buf, INT64_MAX_LEN);
+    return buf;
 }
 
 extern "C" DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, bool *isNull, double value,

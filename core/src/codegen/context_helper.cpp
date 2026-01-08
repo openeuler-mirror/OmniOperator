@@ -22,6 +22,17 @@ extern "C" DLLEXPORT
         return reinterpret_cast<char *>(context->GetArena()->Allocate(size));
     }
 
+    char *ArenaAllocatorMallocReuse(int64_t contextPtr, int32_t size)
+    {
+        auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
+        return reinterpret_cast<char *>(context->GetArena()->AllocateReuse(size));
+    }
+
+    void ArenaAllocatorFreeReuse(int64_t contextPtr, char *buf, int32_t size) {
+        auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
+        context->GetArena()->FreeReuse(buf, size);
+    }
+
     bool ArenaAllocatorReset(int64_t contextPtr)
     {
         auto context = reinterpret_cast<ExecutionContext *>(contextPtr);

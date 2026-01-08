@@ -41,6 +41,41 @@ static uint8_t BytesOfCodePointInUTF8[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 // 0xF5..FF - disallowed in UTF-8
 };
 
+static uint8_t  DigitOnes[] = {
+               '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+               '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+               '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+               '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+               '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+               '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+               '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+               '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+               '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+               '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+               } ;
+
+static uint8_t  DigitTens[] = {
+        '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+        '1', '1', '1', '1', '1', '1', '1', '1', '1', '1',
+        '2', '2', '2', '2', '2', '2', '2', '2', '2', '2',
+        '3', '3', '3', '3', '3', '3', '3', '3', '3', '3',
+        '4', '4', '4', '4', '4', '4', '4', '4', '4', '4',
+        '5', '5', '5', '5', '5', '5', '5', '5', '5', '5',
+        '6', '6', '6', '6', '6', '6', '6', '6', '6', '6',
+        '7', '7', '7', '7', '7', '7', '7', '7', '7', '7',
+        '8', '8', '8', '8', '8', '8', '8', '8', '8', '8',
+        '9', '9', '9', '9', '9', '9', '9', '9', '9', '9',
+        };
+
+static uint8_t digits[] = {
+        '0' , '1' , '2' , '3' , '4' , '5' ,
+        '6' , '7' , '8' , '9' , 'a' , 'b' ,
+        'c' , 'd' , 'e' , 'f' , 'g' , 'h' ,
+        'i' , 'j' , 'k' , 'l' , 'm' , 'n' ,
+        'o' , 'p' , 'q' , 'r' , 's' , 't' ,
+        'u' , 'v' , 'w' , 'x' , 'y' , 'z'
+    };
+
 class StringUtil {
 public:
     static inline std::wstring ToWideString(std::string &s)
@@ -400,6 +435,74 @@ public:
         uint8_t offset = c & 0xFF;
         uint8_t numBytes = BytesOfCodePointInUTF8[offset];
         return (numBytes == 0) ? 1 : numBytes;
+    }
+
+// Requires positive x
+    static int stringSize(int64_t x) {
+        int64_t p = 10;
+        for(int32_t i=1; i<19; i++) {
+            if (x < p)
+                return i;
+            p = p * 10;
+        }
+        return 19;
+    }
+
+    static void getChars(int64_t i, int index, char *buf) {
+         int64_t q;
+         int32_t r;
+         int32_t charPos = index;
+         char sign = 0;
+
+         if (i < 0) {
+             sign = '-';
+             i = -i;
+         }
+
+         // Get 2 digits/iteration using longs until quotient fits into an int
+         while (i > std::numeric_limits<int32_t>::max()) {
+             q = i / 100;
+             // really: r = i - (q * 100);
+             r = static_cast<int32_t>(i - ((q << 6) + (q << 5) + (q << 2)));
+             i = q;
+             buf[--charPos] = DigitOnes[r];
+             buf[--charPos] = DigitTens[r];
+         }
+
+         // Get 2 digits/iteration using ints
+         int q2;
+         int i2 = (int)i;
+         while (i2 >= 65536) {
+             q2 = i2 / 100;
+             // really: r = i2 - (q * 100);
+             r = i2 - ((q2 << 6) + (q2 << 5) + (q2 << 2));
+             i2 = q2;
+             buf[--charPos] = DigitOnes[r];
+             buf[--charPos] = DigitTens[r];
+         }
+
+         // Fall thru to fast mode for smaller numbers
+         // assert(i2 <= 65536, i2);
+         for (;;) {
+             q2 = static_cast<uint32_t>(i2 * 52429) >> (16+3);
+             r = i2 - ((q2 << 3) + (q2 << 1));  // r = i2-(q2*10) ...
+             buf[--charPos] = digits[r];
+             i2 = q2;
+             if (i2 == 0) break;
+         }
+         if (sign != 0) {
+             buf[--charPos] = sign;
+         }
+    }
+
+    /*
+     params: i a long to be converted into buf
+     returns: actual use size
+    */
+    static int32_t toString(int64_t i, char *buf) {
+        int32_t size = (i < 0) ? stringSize(-i) + 1 : stringSize(i);
+        getChars(i, size, buf);
+        return size;
     }
 }; // class stringUtils
 } // namespace codegen function
