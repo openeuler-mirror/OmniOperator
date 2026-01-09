@@ -536,9 +536,10 @@ extern "C" DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t va
         *outLen = INT64_MAX_LEN;
         return INT64_MIN_STR;
     }
-    auto buf = ArenaAllocatorMallocReuse(contextPtr, INT64_MAX_LEN);
+    const uint8_t *continualBuf = nullptr;
+    auto buf = ArenaAllocatorContinualMem(contextPtr, continualBuf, INT64_MAX_LEN);
     *outLen = StringUtil::toString(value, buf);
-    ArenaAllocatorFreeReuse(contextPtr, buf, INT64_MAX_LEN);
+    ArenaAllocatorRollBackContinualMem(contextPtr);
     return buf;
 }
 
@@ -937,9 +938,10 @@ extern "C" DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, boo
         *outLen = INT64_MAX_LEN;
         return INT64_MIN_STR;
     }
-    auto buf = ArenaAllocatorMallocReuse(contextPtr, INT64_MAX_LEN);
+    const uint8_t *continualBuf = nullptr;
+    auto buf = ArenaAllocatorContinualMem(contextPtr, continualBuf, INT64_MAX_LEN);
     *outLen = StringUtil::toString(value, buf);
-    ArenaAllocatorFreeReuse(contextPtr, buf, INT64_MAX_LEN);
+    ArenaAllocatorRollBackContinualMem(contextPtr);
     return buf;
 }
 

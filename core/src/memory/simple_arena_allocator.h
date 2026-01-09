@@ -11,12 +11,6 @@
 namespace omniruntime {
 namespace mem {
 
-struct FreeNode {
-    FreeNode *next;
-    uint8_t *buf;
-    int64_t size;
-};
-
 // this allocator is not thread-safe, and mainly applies for temporary memory usage for operators,
 // such as when dealing with types such as varchar/decimal and so on.
 class SimpleArenaAllocator {
@@ -82,45 +76,6 @@ public:
         usedBytes += sizeInBytes;
         continuousUsed = false;
         return ret;
-    }
-
-    uint8_t *AllocateReuse(int64_t sizeInBytes, int32_t retries = 5)
-    {
-        if (lastRequireSizeInBytes >= sizeInBytes) {
-            lastRequireSizeInBytes = -1;
-            return lastReleaseReuseBuffer;
-        } else if (freeList != nullptr && retries > 0) {
-            FreeNode *prev = nullptr;
-            FreeNode *cur = freeList;
-            do {
-                int64_t size = cur->size;
-                if (size >= sizeInBytes) break;
-                prev = cur;
-                cur = cur->next;
-            } while(cur != nullptr && --retries > 0);
-            if (cur != nullptr) {
-                if (prev == nullptr) {
-                    freeList = cur->next;
-                } else {
-                    prev->next = cur->next;
-                }
-               return reinterpret_cast<uint8_t *>(cur);
-            }
-        }
-        return Allocate(sizeInBytes);
-    }
-
-    void FreeReuse(char *buf, int64_t sizeInBytes)
-    {
-        if (lastRequireSizeInBytes > 0 && lastRequireSizeInBytes >= sizeof(FreeNode)) {
-           FreeNode *free = reinterpret_cast<FreeNode *>(lastReleaseReuseBuffer);
-           free->next = freeList;
-           freeList = free;
-           free->buf = lastReleaseReuseBuffer;
-           free->size = lastRequireSizeInBytes;
-        }
-        lastReleaseReuseBuffer = buf;
-        lastRequireSizeInBytes = sizeInBytes;
     }
 
     uint8_t *GetAvailBuf()
@@ -265,9 +220,6 @@ private:
     std::vector<Chunk *> chunks;
     Allocator *allocator;
     uint64_t linearGrowthThreshold;
-    uint8_t *lastReleaseReuseBuffer;
-    int64_t lastRequireSizeInBytes = -1;
-    FreeNode *freeList = nullptr;
 };
 } // namespace mem
 } // namespace omniruntime

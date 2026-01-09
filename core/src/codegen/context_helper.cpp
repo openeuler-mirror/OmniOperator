@@ -22,15 +22,15 @@ extern "C" DLLEXPORT
         return reinterpret_cast<char *>(context->GetArena()->Allocate(size));
     }
 
-    char *ArenaAllocatorMallocReuse(int64_t contextPtr, int32_t size)
+    char *ArenaAllocatorContinualMem(int64_t contextPtr, const uint8_t *continualBuf, int32_t size)
     {
         auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
-        return reinterpret_cast<char *>(context->GetArena()->AllocateReuse(size));
+        return reinterpret_cast<char *>(context->GetArena()->AllocateContinue(size, continualBuf));
     }
 
-    void ArenaAllocatorFreeReuse(int64_t contextPtr, char *buf, int32_t size) {
+    void ArenaAllocatorRollBackContinualMem(int64_t contextPtr) {
         auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
-        context->GetArena()->FreeReuse(buf, size);
+        context->GetArena()->RollBackContinualMem();
     }
 
     bool ArenaAllocatorReset(int64_t contextPtr)
