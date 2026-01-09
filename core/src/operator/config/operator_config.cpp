@@ -85,6 +85,7 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
         auto spillPath = result.at("spillConfig").at("spillPath").get<std::string>();
         auto maxSpillBytes = result.at("spillConfig").at("maxSpillBytes").get<uint64_t>();
         auto writeBufferSize = result.at("spillConfig").at("writeBufferSize").get<uint64_t>();
+        auto spillCompressEnabled = result.at("spillConfig").at("spillCompressEnabled").get<bool>();
 
         switch (spillConfigId) {
             case SPILL_CONFIG_NONE:
