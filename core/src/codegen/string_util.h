@@ -463,8 +463,8 @@ public:
              // really: r = i - (q * 100);
              r = static_cast<int32_t>(i - ((q << 6) + (q << 5) + (q << 2)));
              i = q;
-             buf[--charPos] = DIGIT_PAIRS[r<<1];
              buf[--charPos] = DIGIT_PAIRS[r<<1 | 1];
+             buf[--charPos] = DIGIT_PAIRS[r<<1];
          }
 
          // Get 2 digits/iteration using ints
@@ -475,14 +475,14 @@ public:
              // really: r = i2 - (q * 100);
              r = i2 - ((q2 << 6) + (q2 << 5) + (q2 << 2));
              i2 = q2;
-             buf[--charPos] = DIGIT_PAIRS[r<<1];
              buf[--charPos] = DIGIT_PAIRS[r<<1 | 1];
+             buf[--charPos] = DIGIT_PAIRS[r<<1];
          }
 
          // Fall thru to fast mode for smaller numbers
          // assert(i2 <= 65536, i2);
          for (;;) {
-             q2 = static_cast<uint32_t>(i2 * 52429) >> (16+3);
+             q2 = (i2 * 52429U) >> 19;
              r = i2 - ((q2 << 3) + (q2 << 1));  // r = i2-(q2*10) ...
              buf[--charPos] = digits[r];
              i2 = q2;
