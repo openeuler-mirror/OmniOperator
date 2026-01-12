@@ -157,6 +157,8 @@ public:
 
     void ParsePredicate();
 
+    void ParseParquetPredicate();
+
     const std::shared_ptr<common::JulianGregorianRebase> &GetJulianPtr() const
     {
         return julianPtr_;

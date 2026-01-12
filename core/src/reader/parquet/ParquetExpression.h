@@ -42,7 +42,9 @@ namespace omniruntime::reader {
         LtEq,
         IsNotNull,
         IsNull,
-        IN
+        IN,
+        True,
+        False
     };
 
     enum PredicateDataType {

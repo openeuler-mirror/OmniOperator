@@ -78,10 +78,10 @@ void ParseJson(nlohmann::json &json,
     std::shared_ptr<common::PredicateCondition>& predicate,
     std::unique_ptr<::orc::SearchArgument>& searchArgument);
 
-void ParsePredicateJson(nlohmann::json &json,
+void ParsePredicateJson(nlohmann::json &jsonConfig,
     std::shared_ptr<common::PredicateCondition>& predicate,
-    Expression* pushedFilterArray = nullptr,
-    std::vector<std::string>* includedColumns = nullptr);
+    Expression* pushedFilterArray,
+    std::list<std::string>* includedColumnsList);
 
 #ifdef __cplusplus
 }

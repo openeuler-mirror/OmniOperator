@@ -55,6 +55,9 @@ public:
         }
 
         options->SetIncludedColumnsList(updateIncludedColumnsList);
+
+        options->ParseParquetPredicate();
+
         std::vector<std::string> filtered_parquet_cols(updateIncludedColumnsList.begin(), updateIncludedColumnsList.end());
         options->SetParquetIncludedColumns(filtered_parquet_cols);
 

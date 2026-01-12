@@ -192,6 +192,12 @@ arrow::Result<Expression> ParseToArrowExpression(const nlohmann::json& json)
             ARROW_ASSIGN_OR_RAISE(auto set, GetSetLiteralExpr(json));
             return arrow::compute::call("is_in", {fieldExpr}, compute::SetLookupOptions{set});
         }
+        case ParquetPredicateOperator::True: {
+            return arrow::compute::literal(true);
+        }
+        case ParquetPredicateOperator::False: {
+            return arrow::compute::literal(false);
+        }
         default:
             return Status::Invalid("ParquetPredicateOperator is not supported: " + std::to_string(op));
     }

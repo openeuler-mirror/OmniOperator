@@ -35,10 +35,10 @@ namespace common {
         std::string value = jsonCondition["value"];
         DataTypeId typeId = jsonCondition["dataType"].get<DataTypeId>();
         if (index >= columnCount) {
-            if (op == IS_NOT_NULL) {
-                return std::make_unique<LeafPredicateCondition<int8_t>>(FALSE, 0, 0);
-            } else {
+            if (op == IS_NULL) {
                 return std::make_unique<LeafPredicateCondition<int8_t>>(TRUE, 0, 1);
+            } else {
+                return std::make_unique<LeafPredicateCondition<int8_t>>(FALSE, 0, 0);
             }
         }
         switch (typeId) {
@@ -69,12 +69,22 @@ namespace common {
     std::unique_ptr<PredicateCondition> buildLeafPredicateConditionWithRebase(
             PredicateOperatorType &op,
             nlohmann::json &jsonCondition,
+            int32_t columnCount,
             const std::unique_ptr<common::TimeRebaseInfo>& rebaseInfo
     ) {
         using namespace omniruntime::type;
         int32_t index = jsonCondition["index"].get<int32_t>();
         std::string value = jsonCondition["value"];
         DataTypeId typeId = jsonCondition["dataType"].get<DataTypeId>();
+
+        if (index >= columnCount) {
+            if (op == IS_NULL) {
+                return std::make_unique<LeafPredicateCondition<int8_t>>(TRUE, 0, 1);
+            } else {
+                return std::make_unique<LeafPredicateCondition<int8_t>>(FALSE, 0, 0);
+            }
+        }
+
         switch (typeId) {
             case OMNI_SHORT: {
                 return std::make_unique<LeafPredicateCondition<int16_t>>(op, index, static_cast<int16_t>(stoi(value)));
@@ -103,7 +113,6 @@ namespace common {
             }
         }
     }
-
 
     std::unique_ptr<PredicateCondition> buildPredicateCondition(nlohmann::json &jsonCondition, int32_t columnCount) {
         PredicateOperatorType op = jsonCondition["op"].get<PredicateOperatorType>();
@@ -141,11 +150,13 @@ namespace common {
 
     std::unique_ptr<PredicateCondition> buildPredicateConditionWithRebase(
             nlohmann::json &jsonCondition,
+            int32_t columnCount,
             const std::unique_ptr<common::TimeRebaseInfo>& rebaseInfo
     ) {
         PredicateOperatorType op = jsonCondition["op"].get<PredicateOperatorType>();
         switch (op) {
             case TRUE:
+            case FALSE:
             case EQUAL_TO:
             case GREATER_THAN:
             case GREATER_THAN_OR_EQUAL:
@@ -153,20 +164,20 @@ namespace common {
             case LESS_THAN_OR_EQUAL:
             case IS_NOT_NULL:
             case IS_NULL: {
-                return buildLeafPredicateConditionWithRebase(op, jsonCondition, rebaseInfo);
+                return buildLeafPredicateConditionWithRebase(op, jsonCondition, columnCount, rebaseInfo);
             }
             case OR: {
-                auto orLeft = buildPredicateConditionWithRebase(jsonCondition["left"], rebaseInfo);
-                auto orRight = buildPredicateConditionWithRebase(jsonCondition["right"], rebaseInfo);
+                auto orLeft = buildPredicateConditionWithRebase(jsonCondition["left"], columnCount, rebaseInfo);
+                auto orRight = buildPredicateConditionWithRebase(jsonCondition["right"], columnCount, rebaseInfo);
                 return std::make_unique<OrPredicateCondition>(std::move(orLeft), std::move(orRight));
             }
             case AND: {
-                auto andLeft = buildPredicateConditionWithRebase(jsonCondition["left"], rebaseInfo);
-                auto andRight = buildPredicateConditionWithRebase(jsonCondition["right"], rebaseInfo);
+                auto andLeft = buildPredicateConditionWithRebase(jsonCondition["left"], columnCount, rebaseInfo);
+                auto andRight = buildPredicateConditionWithRebase(jsonCondition["right"], columnCount, rebaseInfo);
                 return std::make_unique<AndPredicateCondition>(std::move(andLeft), std::move(andRight));
             }
             case NOT: {
-                auto child = buildPredicateConditionWithRebase(jsonCondition["child"], rebaseInfo);
+                auto child = buildPredicateConditionWithRebase(jsonCondition["child"], columnCount, rebaseInfo);
                 return std::make_unique<NotPredicateCondition>(std::move(child));
             }
             default: {
@@ -200,7 +211,7 @@ namespace common {
         const auto& conditionField = json["vecPredicateCondition"];
         std::string conditionStr = conditionField.get<std::string>();
         auto jsonCondition = nlohmann::json::parse(conditionStr);
-        auto predicate= buildPredicateConditionWithRebase(jsonCondition, rebaseInfo);
+        auto predicate = buildPredicateConditionWithRebase(jsonCondition, columnCount, rebaseInfo);
         predicate->buildNullColumns(columnCount);
         return predicate;
     }

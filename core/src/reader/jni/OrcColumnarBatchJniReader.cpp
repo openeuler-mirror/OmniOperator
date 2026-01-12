@@ -266,40 +266,68 @@ void ParseJson(nlohmann::json &jsonConfig,
     }
 }
 
+nlohmann::json OptimizeJsonPredicate(
+        const nlohmann::json& json_predicate,
+        const std::unordered_set<std::string>& available_columns) {
+
+    if (json_predicate.contains("field")) {
+        std::string field_name = json_predicate["field"];
+
+        if (available_columns.find(field_name) == available_columns.end()) {
+            if (!json_predicate.contains("op")) {
+                nlohmann::json false_expr;
+                false_expr["op"] = static_cast<int>(omniruntime::reader::ParquetPredicateOperator::False);
+                return false_expr;
+            }
+
+            int op_code = json_predicate["op"];
+            auto predicate_op = static_cast<omniruntime::reader::ParquetPredicateOperator>(op_code);
+
+            nlohmann::json constant_expr;
+            if (predicate_op == omniruntime::reader::ParquetPredicateOperator::IsNull) {
+                constant_expr["op"] = static_cast<int>(omniruntime::reader::ParquetPredicateOperator::True);
+            } else {
+                constant_expr["op"] = static_cast<int>(omniruntime::reader::ParquetPredicateOperator::False);
+            }
+            return constant_expr;
+        }
+        return json_predicate;
+    }
+
+    nlohmann::json optimized_json = json_predicate;
+
+    if (json_predicate.contains("left") && json_predicate.contains("right")) {
+        optimized_json["left"] = OptimizeJsonPredicate(json_predicate["left"], available_columns);
+        optimized_json["right"] = OptimizeJsonPredicate(json_predicate["right"], available_columns);
+    } else if (json_predicate.contains("predicate")) {
+        optimized_json["predicate"] = OptimizeJsonPredicate(json_predicate["predicate"], available_columns);
+    }
+
+    return optimized_json;
+}
+
 void ParsePredicateJson(nlohmann::json &jsonConfig, std::shared_ptr<common::PredicateCondition>& predicate,
-    Expression* pushedFilterArray, std::vector<std::string>* includedColumns)
+                        arrow::compute::Expression* pushedFilterArray, std::list<std::string>* includedColumnsList)
 {
     if (pushedFilterArray != nullptr && jsonConfig.contains("expressionTree")) {
-        auto expressionTree = jsonConfig["expressionTree"];
-        auto result = omniruntime::reader::ParseToArrowExpression(expressionTree);
-        if (!result.ok()) {
-            throw OmniException(result.status().ToString().c_str());
-        }
-        *pushedFilterArray = result.MoveValueUnsafe();
-    }
+        std::unordered_set<std::string> available_columns(includedColumnsList->begin(), includedColumnsList->end());
 
-    std::list<std::string> includedColumnsList;
-    if (jsonConfig.contains("includedColumns") && jsonConfig["includedColumns"].is_string()) {
-        std::string colsStr = jsonConfig["includedColumns"].get<std::string>();
-        std::stringstream ss(colsStr);
-        std::string col;
-        while (std::getline(ss, col, ',')) {
-            col.erase(0, col.find_first_not_of(" \t"));
-            col.erase(col.find_last_not_of(" \t") + 1);
-            if (!col.empty()) {
-                includedColumnsList.push_back(col);
-            }
-        }
-    }
+        const nlohmann::json& expr_json = jsonConfig["expressionTree"];
 
-    if (includedColumns != nullptr) {
-        *includedColumns = std::vector<std::string>(includedColumnsList.begin(), includedColumnsList.end());
+        nlohmann::json optimized_json = OptimizeJsonPredicate(expr_json, available_columns);
+
+        auto parse_result = omniruntime::reader::ParseToArrowExpression(optimized_json);
+        if (!parse_result.ok()) {
+            throw OmniException(parse_result.status().ToString().c_str());
+        }
+
+        *pushedFilterArray = parse_result.MoveValueUnsafe();
     }
 
     auto new_time_rebase = common::BuildTimeRebaseInfo(jsonConfig);
-
     if (jsonConfig.contains("vecPredicateCondition")) {
-        predicate = common::BuildVecPredicateConditionWithRebase(jsonConfig, includedColumnsList.size(), std::move(new_time_rebase));
+        int32_t columnCount = (includedColumnsList != nullptr) ? includedColumnsList->size() : 0;
+        predicate = common::BuildVecPredicateConditionWithRebase(jsonConfig, columnCount, std::move(new_time_rebase));
     }
 }
 

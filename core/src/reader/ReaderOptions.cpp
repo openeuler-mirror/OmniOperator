@@ -43,6 +43,14 @@ void ReaderOptions::ParsePredicate()
     }
 }
 
+void ReaderOptions::ParseParquetPredicate()
+{
+    ParsePredicateJson(*enhancementJson_, predicatePtr_, &parquetPushedFilterArray_, &includedColumnsList_);
+    if (batchLen_ > 0 && predicatePtr_ != nullptr) {
+        predicatePtr_->init(batchLen_);
+    }
+}
+
 void ReaderOptions::ParseEnhanceJson(const std::string &enhancementJson, FileFormat format)
 {
     enhancementJson_ = std::make_shared<nlohmann::json>(nlohmann::json::parse(enhancementJson));
@@ -76,16 +84,21 @@ void ReaderOptions::ParseEnhanceJson(const std::string &enhancementJson, FileFor
         case FileFormat::PARQUET: {
             timeRebaseInfo_ = common::BuildTimeRebaseInfo(*enhancementJson_);
 
-            Expression pushedFilterArray;
             std::vector<std::string> includedColumns;
-            ParsePredicateJson(*enhancementJson_, predicatePtr_, &pushedFilterArray, &includedColumns);
-            SetParquetPushedFilterArray(std::move(pushedFilterArray));
-            SetParquetIncludedColumns(std::move(includedColumns));
-            includedColumnsList_.assign(includedColumns.begin(), includedColumns.end());
-
-            if (batchLen_ > 0 && predicatePtr_ != nullptr) {
-                predicatePtr_->init(batchLen_);
+            if (enhancementJson_->contains("includedColumns") && enhancementJson_->at("includedColumns").is_string()) {
+                std::string colsStr = enhancementJson_->at("includedColumns").get<std::string>();
+                std::stringstream ss(colsStr);
+                std::string col;
+                while (std::getline(ss, col, ',')) {
+                    col.erase(0, col.find_first_not_of(" \t"));
+                    col.erase(col.find_last_not_of(" \t") + 1);
+                    if (!col.empty()) {
+                        includedColumns.push_back(col);
+                    }
+                }
             }
+            includedColumnsList_.assign(includedColumns.begin(), includedColumns.end());
+            SetParquetIncludedColumns(std::move(includedColumns));
             break;
         }
         default: {
