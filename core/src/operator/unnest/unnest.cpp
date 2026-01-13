@@ -126,16 +126,21 @@ void UnnestOperator::generateComplexRepeatedValuesForType(DataTypeId typeId, int
                                                           BaseVector* inputElementVector, BaseVector* outputElementVector)
 {
     switch (typeId) {
-        case OMNI_INT:
-        case OMNI_DATE32:
+        case OMNI_BYTE:
             generateComplexRepeatedValues(inputSize, inputVector, outputVector,
-                                          dynamic_cast<omniruntime::vec::Vector<int32_t>*>(inputElementVector),
-                                          dynamic_cast<omniruntime::vec::Vector<int32_t>*>(outputElementVector));
+                                          dynamic_cast<omniruntime::vec::Vector<int8_t>*>(inputElementVector),
+                                          dynamic_cast<omniruntime::vec::Vector<int8_t>*>(outputElementVector));
             break;
         case OMNI_SHORT:
             generateComplexRepeatedValues(inputSize, inputVector, outputVector,
                                           dynamic_cast<omniruntime::vec::Vector<int16_t>*>(inputElementVector),
                                           dynamic_cast<omniruntime::vec::Vector<int16_t>*>(outputElementVector));
+            break;
+        case OMNI_INT:
+        case OMNI_DATE32:
+            generateComplexRepeatedValues(inputSize, inputVector, outputVector,
+                                          dynamic_cast<omniruntime::vec::Vector<int32_t>*>(inputElementVector),
+                                          dynamic_cast<omniruntime::vec::Vector<int32_t>*>(outputElementVector));
             break;
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
@@ -154,6 +159,11 @@ void UnnestOperator::generateComplexRepeatedValuesForType(DataTypeId typeId, int
             generateComplexRepeatedValues(inputSize, inputVector, outputVector,
                                           dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(inputElementVector),
                                           dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(outputElementVector));
+            break;
+        case OMNI_FLOAT:
+            generateComplexRepeatedValues(inputSize, inputVector, outputVector,
+                                          dynamic_cast<omniruntime::vec::Vector<float>*>(inputElementVector),
+                                          dynamic_cast<omniruntime::vec::Vector<float>*>(outputElementVector));
             break;
         case OMNI_DOUBLE:
             generateComplexRepeatedValues(inputSize, inputVector, outputVector,
@@ -298,14 +308,18 @@ void UnnestOperator::generateRepeatedColumns(int32_t numElements, omniruntime::v
         }
 
         switch (typeId) {
-            case OMNI_INT:
-            case OMNI_DATE32:
-                generateRepeatedValues(dynamic_cast<omniruntime::vec::Vector<int32_t>*>(inputVector),
-                                       dynamic_cast<omniruntime::vec::Vector<int32_t>*>(outputVector));
+            case OMNI_BYTE:
+                generateRepeatedValues(dynamic_cast<omniruntime::vec::Vector<int8_t>*>(inputVector),
+                                       dynamic_cast<omniruntime::vec::Vector<int8_t>*>(outputVector));
                 break;
             case OMNI_SHORT:
                 generateRepeatedValues(dynamic_cast<omniruntime::vec::Vector<int16_t>*>(inputVector),
                                        dynamic_cast<omniruntime::vec::Vector<int16_t>*>(outputVector));
+                break;
+            case OMNI_INT:
+            case OMNI_DATE32:
+                generateRepeatedValues(dynamic_cast<omniruntime::vec::Vector<int32_t>*>(inputVector),
+                                       dynamic_cast<omniruntime::vec::Vector<int32_t>*>(outputVector));
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
@@ -321,6 +335,10 @@ void UnnestOperator::generateRepeatedColumns(int32_t numElements, omniruntime::v
             case OMNI_VARCHAR:
                 generateRepeatedValues(dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(inputVector),
                                        dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(outputVector));
+                break;
+            case OMNI_FLOAT:
+                generateRepeatedValues(dynamic_cast<omniruntime::vec::Vector<float>*>(inputVector),
+                                       dynamic_cast<omniruntime::vec::Vector<float>*>(outputVector));
                 break;
             case OMNI_DOUBLE:
                 generateRepeatedValues(dynamic_cast<omniruntime::vec::Vector<double>*>(inputVector),
@@ -373,16 +391,21 @@ omniruntime::vec::BaseVector* UnnestOperator::generateUnrepeatedValuesForType(om
     auto outputVector = VectorHelper::CreateVector(OMNI_FLAT, typeId, numElements);
 
     switch (typeId) {
-        case OMNI_INT:
-        case OMNI_DATE32:
+        case OMNI_BYTE:
             generateUnrepeatedValues(inputVector,
-                                     dynamic_cast<omniruntime::vec::Vector<int32_t>*>(elementVector),
-                                     dynamic_cast<omniruntime::vec::Vector<int32_t>*>(outputVector));
+                                     dynamic_cast<omniruntime::vec::Vector<int8_t>*>(elementVector),
+                                     dynamic_cast<omniruntime::vec::Vector<int8_t>*>(outputVector));
             break;
         case OMNI_SHORT:
             generateUnrepeatedValues(inputVector,
                                      dynamic_cast<omniruntime::vec::Vector<int16_t>*>(elementVector),
                                      dynamic_cast<omniruntime::vec::Vector<int16_t>*>(outputVector));
+            break;
+        case OMNI_INT:
+        case OMNI_DATE32:
+            generateUnrepeatedValues(inputVector,
+                                     dynamic_cast<omniruntime::vec::Vector<int32_t>*>(elementVector),
+                                     dynamic_cast<omniruntime::vec::Vector<int32_t>*>(outputVector));
             break;
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
