@@ -8,6 +8,7 @@ import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_ARRAY;
 
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.ArrayDataType;
+import nova.hetu.omniruntime.utils.NullsBufHelper;
 
 /**
  * array vec.
@@ -96,6 +97,26 @@ public class ArrayVec extends ComplexVec {
         return (size + 1) * Long.BYTES;
     }
 
+    @Override
+    public void append(Vec other, int offset, int length) {
+        super.append(other, offset, length);
+
+        int newSize = getSizeNative(nativeVector);
+        if (newSize != size) {
+            size = newSize;
+            long newOffsetsAddress = getValueOffsetsNative(nativeVector);
+            long newNullsAddress = getValueNullsNative(nativeVector);
+            long newElementsAddress = getElementsAddrNative(nativeVector);
+            // update offset buffer
+            offsetsBuf = OmniBufferFactory.create(newOffsetsAddress, (size + 1) * Long.BYTES);
+            // update null buffer
+            nullsBuf = OmniBufferFactory.create(newNullsAddress, NullsBufHelper.nBytes(size));
+            // update element vector
+            ArrayDataType arrayType = (ArrayDataType) getType();
+            elementVec = createVec(newElementsAddress, arrayType.getElementType());
+        }
+    }
+
     public OmniBuffer getOffsetsBuf() {
         return offsetsBuf;
     }
@@ -104,20 +125,16 @@ public class ArrayVec extends ComplexVec {
         offsetsBuf.setBytes(0, buf, 0, buf.length);
     }
 
-    /**
-     * get value offset buffer from native vector.
-     *
-     * @param nativeVector native vector address
-     * @return value offset buffer
-     */
-    protected static native long getValueOffsetsNative(long nativeVector);
-
     public long getOffset(long rowId) {
         return getOffsetNative(nativeVector, rowId);
     }
 
     public long getSize(long rowId) {
         return getSizeNative(nativeVector, rowId);
+    }
+
+    public Vec getElementVec() {
+        return elementVec;
     }
 
     public void addElements(Vec elements) {
@@ -133,6 +150,14 @@ public class ArrayVec extends ComplexVec {
         setSizeByIndexNative(this.nativeVector, index, size);
     }
 
+    /**
+     * get value offset buffer from native vector.
+     *
+     * @param nativeVector native vector address
+     * @return value offset buffer
+     */
+    protected static native long getValueOffsetsNative(long nativeVector);
+
     protected static native long setSizeByIndexNative(long nativeVector, int index, int size);
 
     protected static native long getElementsAddrNative(long nativeVector);
@@ -144,10 +169,6 @@ public class ArrayVec extends ComplexVec {
     protected static native void addElementsNative(long nativeVector, long elements);
 
     protected static native void addOffsetsNative(long nativeVector, int[] offsets);
-
-    public Vec getElementVec() {
-        return elementVec;
-    }
 }
 
 
