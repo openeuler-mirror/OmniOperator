@@ -155,4 +155,13 @@ extern "C" DLLEXPORT int32_t DateAdd(int32_t right, int32_t left)
 {
     return right + left;
 }
+
+extern "C" DLLEXPORT int32_t DateDiff(int32_t endDate, bool endIsNull, int32_t startDate, bool startIsNull, bool *retIsNull)
+{
+    if (endIsNull || startIsNull) {
+        *retIsNull = true;
+        return 0;
+    }
+    return endDate - startDate;
+}
 }
