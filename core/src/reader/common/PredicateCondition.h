@@ -39,7 +39,7 @@ using omniruntime::vec::unsafe::UnsafeBaseVector;
 using omniruntime::exception::OmniException;
 
 namespace common {
-    const static int32_t NEON_BYTE_SIZE = 16;
+    constexpr int32_t NEON_BYTE_SIZE = 16;
     namespace vector_type {
         template<size_t S>
         struct neon_vector_type_impl;

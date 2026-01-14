@@ -387,7 +387,7 @@ namespace omniruntime::reader {
         return static_cast<int>(bytes_to_decode);
     }
 
-    static inline int64_t ReadByteArray(const uint8_t* data, int64_t data_size,
+    inline int64_t ReadByteArray(const uint8_t* data, int64_t data_size,
                                         ::parquet::ByteArray* out) {
         if (ARROW_PREDICT_FALSE(data_size < 4)) {
             parquet::ParquetException::EofException();

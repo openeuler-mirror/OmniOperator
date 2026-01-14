@@ -10,8 +10,6 @@ using omniruntime::codegen::FileFormat;
 
 namespace omniruntime::reader {
 
-// todo zhangxin这个能不能删掉
-
 class ReaderFactory {
 public:
     explicit ReaderFactory(FileFormat orc);

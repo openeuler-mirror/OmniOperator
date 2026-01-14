@@ -270,7 +270,7 @@ private:
     uint8_t memo_[1 << N]{0};
 };
 
-const static BitNotFlip bitNotFlip;
+constexpr BitNotFlip bitNotFlip;
 
 inline void ReverseAndFlipBytes(uint8_t *bytes, int length) {
     for (int i = 0; i < length; i++) {
@@ -301,7 +301,7 @@ private:
     uint8_t memo_[(1 << N) * (N + 1)]{0};
 };
 
-const static NotNullBitMask notNullBitMask;
+constexpr NotNullBitMask notNullBitMask;
 
 }
 

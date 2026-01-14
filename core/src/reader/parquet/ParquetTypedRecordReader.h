@@ -32,7 +32,7 @@ using namespace omniruntime::vec;
 
 namespace omniruntime::reader {
     constexpr int64_t kMinLevelBatchSize = 1024;
-    static constexpr int32_t PARQUET_MAX_DECIMAL64_DIGITS = 18;
+    constexpr int32_t PARQUET_MAX_DECIMAL64_DIGITS = 18;
 
     inline void CheckNumberDecoded(int64_t number_decoded, int64_t expected) {
         if (ARROW_PREDICT_FALSE(number_decoded != expected)) {
