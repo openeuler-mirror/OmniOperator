@@ -15,6 +15,8 @@ extern void RegisterBitwiseFunctions(const std::string &prefix);
 
 extern void RegisterCompareFunctions(const std::string &prefix);
 
+extern void RegisterConversionFunctions(const std::string &prefix);
+
 extern void RegisterDatetimeFunctions(const std::string &prefix);
 
 extern void RegisterJsonFunctions(const std::string &prefix);
@@ -43,6 +45,7 @@ void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
 {
     RegisterArrayFunctions(prefix);
     RegisterCompareFunctions(prefix);
+    RegisterConversionFunctions(prefix);
     RegisterMapFunctions(prefix);
     RegisterMathFunctions(prefix);
     RegisterStringFunctions(prefix);

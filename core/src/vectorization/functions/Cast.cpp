@@ -429,12 +429,9 @@ void CastFunction::CastFromBoolean(BaseVector *input, BaseVector *&result,
                 SetValueToVector(result, row, static_cast<int16_t>(boolValue ? 1 : 0));
                 break;
             case OMNI_INT:
-            case OMNI_DATE32:
                 SetValueToVector(result, row, static_cast<int32_t>(boolValue ? 1 : 0));
                 break;
             case OMNI_LONG:
-            case OMNI_TIMESTAMP:
-            case OMNI_DECIMAL64:
                 SetValueToVector(result, row, static_cast<int64_t>(boolValue ? 1 : 0));
                 break;
             case OMNI_FLOAT:
