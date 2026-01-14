@@ -8,6 +8,7 @@
 #include "../functions/SplitFunction.h"
 #include "../functions/Cast.h"
 #include "../functions/If.h"
+// #include "../functions/Switch.h"
 #include "../functions/EqualStringFunction.h"
 #include "RegistrationHelpers.h"
 
@@ -18,9 +19,104 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterString<ContainsFunction>({prefix + "Contains"});
     VectorFunction::RegisterVectorFunction("split", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_ARRAY,
         std::make_shared<SplitFunction>());
-    //todo cast and if expr datatype need to be expanded
-    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_LONG, std::make_shared<CastFunction>());
-    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_INT, std::make_shared<CastFunction>());
+    // Register comprehensive cast function for all supported type combinations
+    auto castFunction = std::make_shared<CastFunction>();
+    
+    // String to numeric types
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_BYTE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_SHORT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_INT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_LONG, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_FLOAT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_DOUBLE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_BOOLEAN, castFunction);
+    
+    // Numeric to string types
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BYTE}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_SHORT}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_FLOAT}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BOOLEAN}, OMNI_VARCHAR, castFunction);
+    
+    // Numeric to numeric conversions - BYTE
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_SHORT}, OMNI_BYTE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_BYTE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_BYTE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_FLOAT}, OMNI_BYTE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_BYTE, castFunction);
+    
+    // Numeric to numeric conversions - SHORT
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BYTE}, OMNI_SHORT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_SHORT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_SHORT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_FLOAT}, OMNI_SHORT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_SHORT, castFunction);
+    
+    // Numeric to numeric conversions - INT
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BYTE}, OMNI_INT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_SHORT}, OMNI_INT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_INT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_FLOAT}, OMNI_INT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_INT, castFunction);
+    
+    // Numeric to numeric conversions - LONG
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BYTE}, OMNI_LONG, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_SHORT}, OMNI_LONG, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_LONG, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_FLOAT}, OMNI_LONG, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_LONG, castFunction);
+    
+    // Numeric to numeric conversions - FLOAT
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BYTE}, OMNI_FLOAT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_SHORT}, OMNI_FLOAT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_FLOAT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_FLOAT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_FLOAT, castFunction);
+    
+    // Numeric to numeric conversions - DOUBLE
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BYTE}, OMNI_DOUBLE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_SHORT}, OMNI_DOUBLE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_DOUBLE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_DOUBLE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_FLOAT}, OMNI_DOUBLE, castFunction);
+    
+    // Boolean conversions
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BOOLEAN}, OMNI_BYTE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BOOLEAN}, OMNI_SHORT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BOOLEAN}, OMNI_INT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BOOLEAN}, OMNI_LONG, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BOOLEAN}, OMNI_FLOAT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BOOLEAN}, OMNI_DOUBLE, castFunction);
+    
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BYTE}, OMNI_BOOLEAN, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_SHORT}, OMNI_BOOLEAN, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_BOOLEAN, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_BOOLEAN, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_FLOAT}, OMNI_BOOLEAN, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_BOOLEAN, castFunction);
+    
+    // Same type conversions (identity casts)
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BYTE}, OMNI_BYTE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_SHORT}, OMNI_SHORT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_INT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_LONG, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_FLOAT}, OMNI_FLOAT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_DOUBLE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BOOLEAN}, OMNI_BOOLEAN, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_VARCHAR, castFunction);
+
+
+    // Date/Timestamp conversions (treated as numeric types)
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DATE32}, OMNI_INT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_DATE32, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_TIMESTAMP}, OMNI_LONG, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_TIMESTAMP, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DATE32}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_TIMESTAMP}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_DATE32, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_TIMESTAMP, castFunction);
     VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, std::make_shared<IfFunction>());
     // VectorFunction::RegisterVectorFunction("equal", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, std::make_shared<EqualStringFunction>());
 }
