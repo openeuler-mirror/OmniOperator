@@ -31,7 +31,7 @@ using TimePoint =
         std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
 
 constexpr int64_t kNoSize = -1;
-constexpr TimePoint kNoTime = TimePoint(TimePoint::duration(-1));
+const TimePoint kNoTime = TimePoint(TimePoint::duration(-1));
 
 enum class FileType : int8_t {
     /// Entry is not found
