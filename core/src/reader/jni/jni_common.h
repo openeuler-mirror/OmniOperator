@@ -47,10 +47,10 @@ jmethodID GetMethodID(JNIEnv* env, jclass this_class, const char* name, const ch
 
 #define JNI_FUNC_END_WITH_VECBATCH(exceptionClass, recordBatch)  \
     } catch (const std::exception &e) {                          \
-        for (auto vec : recordBatch) {                           \
+        for (auto vec : (recordBatch)) {                           \
             delete vec;                                          \
         }                                                        \
-        recordBatch.clear();                                     \
+        (recordBatch).clear();                                     \
         env->ThrowNew(runtimeExceptionClass, e.what());          \
         return 0;                                                \
     }                                                            \

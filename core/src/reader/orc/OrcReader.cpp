@@ -131,7 +131,7 @@ void OrcRowReader::StartNextStripe()
     }
 }
 
-uint64_t OrcRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omniTypeId, uint64_t batchLen)
+uint64_t OrcRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omniTypeID, uint64_t batchLen)
 {
     if (currentStripe >= lastStripe) {
         if (lastStripe > 0) {
@@ -161,7 +161,7 @@ uint64_t OrcRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omniTyp
         throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT", "enableEncodedBlock is not finished!!!");
     } else {
         const ::orc::Type &baseTp = this->getSelectedType();
-        reader->next(reinterpret_cast<void *&>(batch), rowsToRead, nullptr, baseTp, omniTypeId);
+        reader->next(reinterpret_cast<void *&>(batch), rowsToRead, nullptr, baseTp, omniTypeID);
     }
     previousRow = firstRowOfStripe[currentStripe] + currentRowInStripe;
     currentRowInStripe += rowsToRead;
@@ -183,13 +183,13 @@ uint64_t OrcRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omniTyp
     return rowsToRead;
 }
 
-uint64_t OrcRowReader::Next(std::vector<BaseVector *> **batch, int *omniTypeId, uint64_t batchLen)
+uint64_t OrcRowReader::Next(std::vector<BaseVector *> **batch, int *omniTypeID, uint64_t batchLen)
 {
     auto recordBatch = new std::vector<BaseVector *>();
     uint64_t batchRowSize = 0;
-    bool needReadAgain = ReadAndFilterData(*this, recordBatch, batchRowSize, omniTypeId, batchLen);
+    bool needReadAgain = ReadAndFilterData(*this, recordBatch, batchRowSize, omniTypeID, batchLen);
     while (needReadAgain) {
-        needReadAgain = ReadAndFilterData(*this, recordBatch, batchRowSize, omniTypeId, batchLen);
+        needReadAgain = ReadAndFilterData(*this, recordBatch, batchRowSize, omniTypeID, batchLen);
     }
     *batch = recordBatch;
     if (batchRowSize <= 0) {

@@ -209,7 +209,7 @@ namespace common {
             uint64_t res = 0;
             for (int32_t i = 0; i < size; i++) {
                 if (buffer[i]) {
-                    res |= 1ul << i;
+                    res |= 1uL << i;
                 }
             }
             return res;
@@ -286,17 +286,17 @@ namespace common {
             Vector<T> *realVector = reinterpret_cast<Vector<T> *>(vector);
             T *values = UnsafeVector::GetRawValues(realVector);
             T buffer[step];
-            int32_t index = 0;
-            for (; index + step <= vectorSize; index += step) {
-                BatchType valuesBatch = data_transfer::load_data(values + index);
+            int32_t idx = 0;
+            for (; idx + step <= vectorSize; idx += step) {
+                BatchType valuesBatch = data_transfer::load_data(values + idx);
                 BatchType result = BATCH_OP(valuesBatch, broadcast);
                 data_transfer::store_data(buffer, result);
                 uint64_t mask = data_operator::mask(buffer, step);
-                BitUtil::StoreBits<uint64_t>(reinterpret_cast<uint64_t *>(bitMark), index, mask, 64);
+                BitUtil::StoreBits<uint64_t>(reinterpret_cast<uint64_t *>(bitMark), idx, mask, 64);
             }
-            for (; index < vectorSize; index++) {
-                bool result = OP(values[index], value);
-                BitUtil::SetBit(bitMark, index, result);
+            for (; idx < vectorSize; idx++) {
+                bool result = OP(values[idx], value);
+                BitUtil::SetBit(bitMark, idx, result);
             }
         }
 
@@ -342,14 +342,14 @@ namespace common {
                     uint8_t *nulls = reinterpret_cast<uint8_t *>(UnsafeBaseVector::GetNulls(vector));
                     int32_t step = static_cast<int32_t>(NEON_BYTE_SIZE / sizeof(uint8_t));
                     int32_t byteLen = BitUtil::Nbytes(vectorSize);
-                    int32_t index = 0;
-                    for (; index + step <= byteLen; index += step) {
-                        uint8x16_t valuesBatch = vld1q_u8(nulls + index);
+                    int32_t idx = 0;
+                    for (; idx + step <= byteLen; idx += step) {
+                        uint8x16_t valuesBatch = vld1q_u8(nulls + idx);
                         uint8x16_t result = ~valuesBatch;
-                        vst1q_u8(bitMark + index, result);
+                        vst1q_u8(bitMark + idx, result);
                     }
-                    for (; index < byteLen; index++) {
-                        bitMark[index] = ~nulls[index];
+                    for (; idx < byteLen; idx++) {
+                        bitMark[idx] = ~nulls[idx];
                     }
                     break;
                 }

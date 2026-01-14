@@ -72,7 +72,9 @@ namespace omniruntime::reader {
                 memmove_s(buffer + i, sizeof(T), buffer + idx_decode, sizeof(T));
             }
         }
-        assert(idx_decode == 0);
+        if (idx_decode != 0) {
+            throw std::runtime_error("SpacedExpand failed: idx_decode not zero, data mismatch or corrupted!");
+        }
         return num_values;
     }
 
