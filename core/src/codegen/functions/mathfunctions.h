@@ -158,8 +158,6 @@ extern "C" DLLEXPORT bool EqualInt32(int32_t left, int32_t right);
 
 extern "C" DLLEXPORT bool NotEqualInt32(int32_t left, int32_t right);
 
-extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);
-
 extern "C" DLLEXPORT int64_t RoundLong(int64_t num, int32_t decimals);
 
 // short binary operations
@@ -219,6 +217,19 @@ extern "C" DLLEXPORT bool GreaterThanEqualInt8(int8_t left, int8_t right);
 extern "C" DLLEXPORT bool EqualInt8(int8_t left, int8_t right);
 
 extern "C" DLLEXPORT bool NotEqualInt8(int8_t left, int8_t right);
+
+template <typename T> extern DLLEXPORT T Pmod(T x, T y)
+{
+    if (y == 0) {
+        return 0;
+    }
+    T r = x % y;
+    if (r < 0) {
+        return (r + y) % y;
+    } else {
+        return r;
+    }
+}
 
 template <typename T> extern DLLEXPORT T Round(T num, int32_t decimals)
 {
