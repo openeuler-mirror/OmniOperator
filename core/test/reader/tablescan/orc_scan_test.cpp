@@ -50,6 +50,7 @@ protected:
     virtual void SetUp() override
     {
         auto readerOpts = std::make_shared<omniruntime::reader::ReaderOptions>();
+        readerOpts->ParseEnhanceJson("{}");
 
         auto orcReaderOptions = std::make_shared<::orc::ReaderOptions>();
         orc::MemoryPool *pool = orc::getDefaultPool();
