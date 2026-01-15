@@ -279,7 +279,7 @@ static uint8_t *StringRowSetVecValue(uint8_t *row, Vector<LargeStringContainer<s
     // point to strLen value
     ++row;
     int32_t strLen = 0;
-    std::copy(row, row + valueLen, &strLen);
+    std::copy(row, row + valueLen, reinterpret_cast<uint8_t*>(&strLen));
     // point to str
     row += valueLen;
     // row will be copied to value 's string buffer
@@ -300,7 +300,7 @@ static uint8_t *StringRowGetValue(uint8_t *row)
     // point to strLen value
     ++row;
     int32_t strLen = 0;
-    std::copy(row, row + valueLen, &strLen);
+    std::copy(row, row + valueLen, reinterpret_cast<uint8_t*>(&strLen));
     // point to str
     row += valueLen;
 #ifdef DEBUG
