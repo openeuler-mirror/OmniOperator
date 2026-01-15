@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <re2/re2.h>
+#include <shared_mutex>
 #include "stringfunctions.h"
 #include "md5.h"
 #include "dtoa.h"
