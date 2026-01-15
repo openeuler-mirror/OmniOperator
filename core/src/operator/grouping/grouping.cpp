@@ -155,7 +155,7 @@ std::shared_ptr<OperatorFactory> GroupingOperator::CreateResidualOperatorFactory
         aggregationNode->GetGroupByNum(), aggsKeys_, aggregationNode->OutputType(),
         aggregationNode->GetAggsOutputTypes(), aggregationNode->GetAggFuncTypes(), aggregationNode->GetAggFilters(),
         aggregationNode->GetMaskColumns(), inputRaws, aggregationNode->GetOutputPartials(),
-        aggregationNode->GetIsStatisticalAggregate(), aggregationNode->OutputType(), aggregationNode->Sources()[0]);
+        aggregationNode->GetIsStatisticalAggregate(), aggregationNode->OutputType(), aggregationNode->Sources()[0], aggregationNode->GetStep());
     if (aggregationNode->GetGroupByKeys().empty()) {
         return std::shared_ptr<AggregationWithExprOperatorFactory>(
             AggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(residualPlanNoded,

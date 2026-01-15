@@ -162,7 +162,7 @@ TEST(DriverTest, TestGroupingOperator)
     bool isStatisticalAggregate = false;
     auto aggregationNode = std::make_shared<AggregationNode>("AggregationNode", groupingExprs, groupByNum, aggsKeys,
         sourceDataTypes, outPutDataTypes, aggFuncTypes, aggFilters, maskColumns, inputRaws, outputPartial,
-        isStatisticalAggregate, sourceDataTypes, valueStreamNode);
+        isStatisticalAggregate, sourceDataTypes, valueStreamNode, AggregationNode::Step::K_SINGLE);
 
     auto groupingNode = std::make_shared<GroupingNode>("GroupingNode", expandNode, aggregationNode);
 
