@@ -1475,10 +1475,58 @@ extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *
     return result;
 }
 
+static const re2::RE2 kRegex_FixNameGroup("[(][?]<([^>]*)>", re2::RE2::Quiet);
+static std::unordered_map<std::string, std::shared_ptr<re2::RE2>> re2_cache;
+static std::shared_mutex re2_mutex;
+static constexpr size_t MAX_CACHE_SIZE = 128;
+
+static constexpr std::array<bool, 128> GetMetaCharTable() {
+    std::array<bool, 128> arr{};
+    const char meta[] = R"(\.+*?^$()[]{}|)";
+    for (char c : meta) {
+        arr[static_cast<uint8_t>(c)] = true;
+    }
+    return arr;
+}
+static constexpr std::array<bool, 128> g_re_meta_chars = GetMetaCharTable();
+
 extern "C" DLLEXPORT const char *Re2SearchAndExtract(int64_t contextPtr, const char *str, int32_t strLen,
     const char *pattern, int32_t patternLen, int32_t idx, bool isNull, int32_t *outLen)
 {
-    auto re = RE2(re2::StringPiece(pattern, patternLen), RE2::Quiet);
+    std::string newPattern(pattern, patternLen);
+    std::shared_ptr<const re2::RE2> re_sp;
+    {
+        std::shared_lock<std::shared_mutex> read_lock(re2_mutex);
+        auto cache_iter = re2_cache.find(newPattern);
+        if (cache_iter != re2_cache.end()) {
+            re_sp = cache_iter->second;
+        }
+    }
+
+    if (!re_sp) {
+        std::unique_lock<std::shared_mutex> write_lock(re2_mutex);
+        auto cache_iter = re2_cache.find(newPattern);
+        if (cache_iter != re2_cache.end()) {
+            re_sp = cache_iter->second;
+        } else {
+            if (re2_cache.size() >= MAX_CACHE_SIZE) {
+                re2_cache.clear();
+            }
+            if (newPattern.empty()) {
+                SetError(contextPtr, "Regex compile failed: empty pattern");
+                return nullptr;
+            }
+            auto re_uptr = std::make_shared<re2::RE2>(stringImpl::toStringPiece(newPattern), re2::RE2::Quiet);
+            if (!re_uptr->ok()) {
+                SetError(contextPtr, ("Regex compile failed: " + newPattern).c_str());
+                return nullptr;
+            }
+            re2_cache.emplace(newPattern, re_uptr);
+            re_sp = std::move(re_uptr);
+        }
+    }
+
+    const re2::RE2& re = *re_sp;
     std::vector<re2::StringPiece> groups(idx + 1);
     auto input = re2::StringPiece(str, strLen);
     if (!re.Match(input, 0, strLen, RE2::UNANCHORED, groups.data(), idx + 1)) {
@@ -1503,63 +1551,118 @@ extern "C" DLLEXPORT const char *RegexpReplace(int64_t contextPtr, const char *s
     const char *pattern, int32_t patternLen, const char *replacement, int32_t replacementLen, int32_t position,
     bool isNull, int32_t *outLen)
 {
-    auto input = std::string(stringInput, stringInputLen);
-    auto p = std::string(pattern, patternLen);
-    auto r = std::string(replacement, replacementLen);
-    std::string out;
-    if (stringImpl::performChecks(out, input, p, r, position - 1)) {
-        auto result = ArenaAllocatorMalloc(contextPtr, out.size());
-        errno_t res = memcpy_s(result, out.size(), out.data(), out.size());
-        if (res != EOK) {
-            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
-            *outLen = 0;
-            return nullptr;
+    *outLen = 0;
+    if (isNull || stringInputLen <= 0 || patternLen <= 0 || replacementLen < 0 || stringInput == nullptr || pattern == nullptr) {
+        return nullptr;
+    }
+
+    const int32_t start_pos = std::max(position - 1, static_cast<int32_t>(0));
+    const int32_t suffix_len = stringInputLen - start_pos;
+    std::string newPattern(pattern, patternLen);
+    const std::string replacementStr(replacement == nullptr ? "" : std::string(replacement, replacementLen));
+    std::string buf;
+    buf.reserve(stringInputLen);
+
+    bool is_plain_text = true;
+    for (char c : newPattern) {
+        auto uc = static_cast<uint8_t>(c);
+        if (uc < 128 && g_re_meta_chars[uc]) {
+            is_plain_text = false;
+            break;
         }
-        *outLen = out.size();
-        return result;
     }
-    size_t start = stringImpl::cappedByteLength<false>(input, position - 1);
-    if (start > stringInputLen + 1) {
-        auto result = ArenaAllocatorMalloc(contextPtr, stringInputLen);
-        errno_t res = memcpy_s(result, stringInputLen, stringInput, stringInputLen);
-        if (res != EOK) {
-            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
-            *outLen = 0;
-            return nullptr;
+
+    if (!is_plain_text) {
+        re2::RE2::GlobalReplace(&newPattern, kRegex_FixNameGroup, R"((?P<\1>))");
+    }
+
+    if (is_plain_text) {
+        const std::string_view src_sv(stringInput, stringInputLen);
+        const std::string_view pattern_sv(newPattern);
+        const size_t pattern_len = pattern_sv.size();
+        const size_t repl_len = replacementStr.size();
+        const std::string_view suffix_sv = src_sv.substr(start_pos);
+
+        const size_t max_possible_len = start_pos + suffix_sv.size() + (suffix_sv.size() / pattern_len) * std::abs(static_cast<int>(repl_len - pattern_len));
+        buf.reserve(max_possible_len);
+
+        if (start_pos > 0) {
+            buf.append(stringInput, start_pos);
         }
-        *outLen = 0;
-        return result;
+
+        size_t last_pos = 0;
+        size_t curr_pos = suffix_sv.find(pattern_sv, last_pos);
+        while (curr_pos != std::string_view::npos) {
+            buf.append(suffix_sv.data() + last_pos, curr_pos - last_pos);
+            if (!replacementStr.empty()) {
+                buf.append(replacementStr);
+            }
+            last_pos = curr_pos + pattern_len;
+            curr_pos = suffix_sv.find(pattern_sv, last_pos);
+        }
+
+        buf.append(suffix_sv.data() + last_pos, suffix_sv.size() - last_pos);
+    } else {
+        std::shared_ptr<const re2::RE2> re_sp;
+        {
+            std::shared_lock<std::shared_mutex> read_lock(re2_mutex);
+            auto cache_iter = re2_cache.find(newPattern);
+            if (cache_iter != re2_cache.end()) {
+                re_sp = cache_iter->second;
+            }
+        }
+
+        if (!re_sp) {
+            std::unique_lock<std::shared_mutex> write_lock(re2_mutex);
+            auto cache_iter = re2_cache.find(newPattern);
+            if (cache_iter != re2_cache.end()) {
+                re_sp = cache_iter->second;
+            } else {
+                if (re2_cache.size() >= MAX_CACHE_SIZE) {
+                    re2_cache.clear();
+                }
+                if (newPattern.empty()) {
+                    SetError(contextPtr, "Regex compile failed: empty pattern");
+                    return nullptr;
+                }
+                auto re_uptr = std::make_shared<re2::RE2>(stringImpl::toStringPiece(newPattern), re2::RE2::Quiet);
+                if (!re_uptr->ok()) {
+                    SetError(contextPtr, ("Regex compile failed: " + newPattern).c_str());
+                    return nullptr;
+                }
+                re2_cache.emplace(newPattern, re_uptr);
+                re_sp = std::move(re_uptr);
+            }
+        }
+
+        const re2::RE2& re = *re_sp;
+        const auto& processedReplacement = stringImpl::PrepareRegexpReplaceReplacement(re, replacementStr);
+        re2::StringPiece suffix_sp(stringInput + start_pos, suffix_len);
+        std::string suffix(suffix_sp);
+        re2::RE2::GlobalReplace(&suffix, re, processedReplacement);
+
+        buf.append(stringInput, 0, start_pos);
+        buf.append(std::move(suffix));
     }
 
-    static const RE2 kRegex("[(][?]<([^>]*)>");
-
-    std::string newPattern = std::string(pattern, patternLen);
-    RE2::GlobalReplace(&newPattern, kRegex, R"((?P<\1>)");
-    auto re = std::make_unique<RE2>(stringImpl::toStringPiece(newPattern), RE2::Quiet);
-
-    const auto &processedReplacement = stringImpl::PrepareRegexpReplaceReplacement(*re, r);
-
-    std::string prefix(stringInput, position - 1);
-    std::string targetString(stringInput, stringInputLen);
-
-    RE2::GlobalReplace(&targetString, *re, processedReplacement);
-    auto buf = prefix + targetString;
-
-    auto length = prefix.size() + targetString.size();
-    auto result = ArenaAllocatorMalloc(contextPtr, length);
-    errno_t res = 0;
-    if (!prefix.empty()) {
-        res = memcpy_s(result, prefix.size(), prefix.data(), prefix.size());
-    }
-    if (!targetString.empty()) {
-        res = memcpy_s(result + prefix.size(), targetString.size(), targetString.data(), targetString.size());
-    }
-    if (res != EOK) {
-        SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+    const size_t length = buf.size();
+    if (length == 0) {
         *outLen = 0;
         return nullptr;
     }
-    *outLen = length;
+
+    auto result = ArenaAllocatorMalloc(contextPtr, length);
+    if (result == nullptr) {
+        *outLen = 0;
+        return result;
+    }
+
+    errno_t copy_ret = memcpy_s(result, length, buf.data(), length);
+    if (copy_ret != 0) {
+        *outLen = 0;
+        return nullptr;
+    }
+    *outLen = static_cast<int32_t>(length);
     return result;
 }
 
