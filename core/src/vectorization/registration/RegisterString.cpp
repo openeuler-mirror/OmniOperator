@@ -17,6 +17,7 @@ void RegisterStringFunctions(const std::string &prefix)
 {
     RegisterString<StartsWithFunction>({prefix + "startswith"});
     RegisterString<ContainsFunction>({prefix + "Contains"});
+    RegisterFunction<TrimFunction, std::string, std::string_view>(prefix + "trim", {OMNI_VARCHAR}, OMNI_VARCHAR);
     VectorFunction::RegisterVectorFunction("split", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_ARRAY,
         std::make_shared<SplitFunction>());
     VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, std::make_shared<IfFunction>());
