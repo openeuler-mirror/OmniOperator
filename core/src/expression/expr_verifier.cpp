@@ -78,7 +78,6 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_ARRAY:
             break;
         default:
-            this->supportedFlag = false;
             this->unSupportedReason = "unSupported FieldExpr DataTypeId: "
                                       + std::to_string(static_cast<int>(fieldExpr.GetReturnTypeId()));
             break;
