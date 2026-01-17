@@ -4267,7 +4267,7 @@ TEST(AggregatorTest, spark_avg_decimal128_normal_when_inputRaw_is_true_and_outpu
 TEST(AggregatorTest, spark_sum_short_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumShortAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(ShortType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
@@ -4306,7 +4306,7 @@ TEST(AggregatorTest, spark_sum_short_normal)
 TEST(AggregatorTest, spark_sum_int_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumIntAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
@@ -4345,7 +4345,7 @@ TEST(AggregatorTest, spark_sum_int_normal)
 TEST(AggregatorTest, spark_sum_long_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumLongAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
@@ -4384,7 +4384,7 @@ TEST(AggregatorTest, spark_sum_long_normal)
 TEST(AggregatorTest, spark_sum_long_overflow)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumLongAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
@@ -4425,7 +4425,7 @@ TEST(AggregatorTest, spark_sum_long_final_stage)
     // -9223372036854775807 + -256 = 9223372036854775553
     // overflow  but same with vanilla spark
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
 
     auto *longVec1 = new Vector<int64_t>(2);
     longVec1->SetValue(0, 851451);
@@ -4467,7 +4467,7 @@ TEST(AggregatorTest, spark_sum_long_final_stage)
 TEST(AggregatorTest, spark_sum_double_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumDoubleAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, true, true);

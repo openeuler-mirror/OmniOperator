@@ -163,7 +163,7 @@ extern "C" DLLEXPORT char *DateFormat(int64_t contextPtr, int64_t timestamp, con
         *outLen = 0;
         return nullptr;
     }
-    if (fmtStr == nullptr || std::memcpy(fmtStr, "yyyy-MM-dd", 10) != 0 ) {
+    if (fmtStr == nullptr || std::memcmp(fmtStr, "yyyy-MM-dd", fmtLen) != 0 ) {
         *outLen = 0;
         SetError(contextPtr, " Error: date_format now only support formatStr = \"yyyy-MM-dd\" ! ");
         return nullptr;
