@@ -7,7 +7,6 @@
 #include "../functions/String.h"
 #include "../functions/SplitFunction.h"
 #include "../functions/Cast.h"
-#include "../functions/If.h"
 // #include "../functions/Switch.h"
 #include "../functions/EqualStringFunction.h"
 #include "RegistrationHelpers.h"
@@ -20,7 +19,7 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterFunction<TrimFunction, std::string, std::string_view>(prefix + "Trim", {OMNI_VARCHAR}, OMNI_VARCHAR);
     VectorFunction::RegisterVectorFunction("split", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_ARRAY,
         std::make_shared<SplitFunction>());
-    VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, std::make_shared<IfFunction>());
+    // Note: if function is now registered in RegisterConditional.cpp
     // VectorFunction::RegisterVectorFunction("equal", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, std::make_shared<EqualStringFunction>());
 }
 }

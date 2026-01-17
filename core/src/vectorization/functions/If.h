@@ -1,6 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
- * Description: visitor class for expressions
+ * Description: If function for vectorized conditional expressions
  */
 
 #pragma once
@@ -8,73 +8,51 @@
 #include "vector/array_vector.h"
 #include "type/data_operations.h"
 #include "util/debug.h"
+#include "util/type_util.h"
+#include "vector/vector_helper.h"
 #include <vector>
 #include <string_view>
 
 namespace omniruntime::vectorization {
-using namespace omniruntime::type;
-using namespace omniruntime::vec;
-using namespace omniruntime::op;
+    using namespace omniruntime::type;
+    using namespace omniruntime::vec;
+    using namespace omniruntime::op;
 
 class IfFunction : public VectorFunction {
 public:
     explicit IfFunction() {}
 
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
-        ExecutionContext *context) const override
-    {
-        auto falseVec = args.top();
-        args.pop();
-        auto trueVec = args.top();
-        args.pop();
-        auto condVec = args.top();
-        args.pop();
+               ExecutionContext *context) const override;
 
-        if (condVec->GetTypeId() != OMNI_BOOLEAN) {
-            OMNI_THROW("If expr Error", "condVec must be a BooleanVector");
-        }
-
-        auto *stringTrueVector = static_cast<ConstVector<std::string_view> *>(trueVec);
-        auto *boolVec = static_cast<Vector<bool> *>(condVec);
-
-        auto size = boolVec->GetSize();
-
-        result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
-
-        for (int32_t row = 0; row < size; ++row) {
-            if (condVec->IsNull(row)) {
-                result->SetNull(row);
-                continue;
-            }
-            auto cond = boolVec->GetValue(row);
-            if (cond) {
-                if (trueVec->GetEncoding() == OMNI_ENCODING_CONST) {
-                    auto res = static_cast<ConstVector<std::string_view> *>(trueVec)->GetConstValue();
-                    std::string_view sv = res;
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, sv);
-                } else if (trueVec->GetEncoding() == OMNI_FLAT) {
-                    auto res = static_cast<Vector<LargeStringContainer<std::string_view>> *>(trueVec)->GetValue(row);
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, res);
-                } else {
-                    auto res = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(
-                        trueVec)->GetValue(row);
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, res);
-                }
-            } else {
-                if (falseVec->GetEncoding() == OMNI_ENCODING_CONST) {
-                    auto res = static_cast<ConstVector<std::string_view> *>(falseVec)->GetConstValue();
-                    std::string_view sv = res;
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, sv);
-                } else if (falseVec->GetEncoding() == OMNI_FLAT) {
-                    auto res = static_cast<Vector<LargeStringContainer<std::string_view>> *>(falseVec)->GetValue(row);
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, res);
-                } else {
-                    auto res = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(
-                        falseVec)->GetValue(row);
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, res);
-                }
-            }
-        }
-    }
+private:
+    // Helper: Get value from vector with different encodings
+    template<typename T>
+    T GetValueFromVector(BaseVector *vec, int32_t row) const;
+    
+    // Helper: Get string value from vector
+    std::string_view GetStringValueFromVector(BaseVector *vec, int32_t row) const;
+    
+    // Helper: Set value to vector
+    template<typename T>
+    void SetValueToVector(BaseVector *vec, int32_t row, const T &value) const;
+    
+    // Helper: Set string value to vector
+    void SetStringValueToVector(BaseVector *vec, int32_t row, std::string_view &value) const;
+    
+    // Dispatch if based on output type
+    void DispatchIf(BaseVector *condVec, BaseVector *trueVec, BaseVector *falseVec, 
+                    const DataTypePtr &outputType, BaseVector *&result) const;
+    
+    // Template implementations for different types
+    template<typename T>
+    void IfNumeric(BaseVector *condVec, BaseVector *trueVec, BaseVector *falseVec, 
+                   BaseVector *&result, const DataTypePtr &outputType) const;
+    
+    void IfString(BaseVector *condVec, BaseVector *trueVec, BaseVector *falseVec, 
+                  BaseVector *&result, const DataTypePtr &outputType) const;
+    
+    void IfBoolean(BaseVector *condVec, BaseVector *trueVec, BaseVector *falseVec, 
+                   BaseVector *&result, const DataTypePtr &outputType) const;
 };
 }
