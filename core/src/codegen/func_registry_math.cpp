@@ -110,6 +110,13 @@ const std::string GreatestFnStr()
     return greatestFnStr;
 }
 
+const std::string LeastFnStr()
+{
+    const std::string leastFnStr = "Least";
+    return leastFnStr;
+}
+
+
 const std::string PowerFnStr()
 {
     const std::string powerFnStr = "power";
@@ -263,7 +270,14 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             OMNI_BOOLEAN, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(Greatest<double>), GreatestFnStr(), {}, { OMNI_DOUBLE, OMNI_DOUBLE },
             OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
-
+        Function(reinterpret_cast<void *>(Least<int32_t>), LeastFnStr(), {}, { OMNI_INT, OMNI_INT }, OMNI_INT,
+            INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(Least<int64_t>), LeastFnStr(), {}, { OMNI_LONG, OMNI_LONG }, OMNI_LONG,
+            INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(Least<bool>), LeastFnStr(), {}, { OMNI_BOOLEAN, OMNI_BOOLEAN },
+            OMNI_BOOLEAN, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(Least<double>), LeastFnStr(), {}, { OMNI_DOUBLE, OMNI_DOUBLE },
+            OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         // insert native function for each short operations
         Function(reinterpret_cast<void *>(AddInt16), AddFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
         Function(reinterpret_cast<void *>(SubtractInt16), SubtractFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),

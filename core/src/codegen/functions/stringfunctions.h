@@ -380,6 +380,9 @@ extern "C" DLLEXPORT bool ContainsStr(const char *srcStr, int32_t srcLen, const 
 extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
     int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen);
 
+extern "C" DLLEXPORT const char *LeastStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
+    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen);
+
 extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *str, int32_t strLen, const char *delim,
     int32_t delimLen, int32_t count, bool isNull, int32_t *outLen);
 }

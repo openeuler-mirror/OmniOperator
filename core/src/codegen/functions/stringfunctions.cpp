@@ -1196,8 +1196,8 @@ extern "C" DLLEXPORT bool ContainsStr(const char *srcStr, int32_t srcLen, const 
     return StringUtil::StrContainsStr(srcStr, srcLen, matchStr, matchLen);
 }
 
-extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
-    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
+inline const char *ExtremeStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
+    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen, bool pickGreater)
 {
     if (lIsNull && rIsNull) {
         *retIsNull = true;
@@ -1208,15 +1208,27 @@ extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, b
         *outLen = rLen;
         return rValue;
     }
-    if (!rIsNull) {
-        int32_t cmpRet = memcmp(lValue, rValue, std::min(lLen, rLen));
-        if (cmpRet < 0 || (cmpRet == 0 && rLen > lLen)) {
-            *outLen = rLen;
-            return rValue;
-        }
+    if (rIsNull) {
+        *outLen = lLen;
+        return lValue;
     }
-    *outLen = lLen;
-    return lValue;
+    int32_t cmpRet = memcmp(lValue, rValue, std::min(lLen, rLen));
+    bool pickRight = cmpRet == 0 ? (pickGreater ? rLen > lLen : rLen < lLen)
+                                 : (pickGreater ? cmpRet < 0 : cmpRet > 0);
+    *outLen  = pickRight ? rLen : lLen;
+    return pickRight ? rValue : lValue;
+}
+
+extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
+    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
+{
+    return ExtremeStr(lValue, lLen, lIsNull, rValue, rLen, rIsNull, retIsNull, outLen, true);
+}
+
+extern "C" DLLEXPORT const char *LeastStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
+    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
+{
+    return ExtremeStr(lValue, lLen, lIsNull, rValue, rLen, rIsNull, retIsNull, outLen, false);
 }
 
 extern "C" DLLEXPORT const char *EmptyToNull(const char *str, int32_t len, bool isNull, int32_t *outLen)

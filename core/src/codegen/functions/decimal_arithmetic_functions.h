@@ -410,7 +410,15 @@ extern "C" DLLEXPORT int64_t GreatestDecimal64(int64_t contextPtr, int64_t xValu
     bool xIsNull, int64_t yValue, int32_t yPrecision, int32_t yScale, bool yIsNull, bool *retIsNull,
     int32_t newPrecision, int32_t newScale);
 
+extern "C" DLLEXPORT int64_t LeastDecimal64(int64_t contextPtr, int64_t xValue, int32_t xPrecision, int32_t xScale,
+    bool xIsNull, int64_t yValue, int32_t yPrecision, int32_t yScale, bool yIsNull, bool *retIsNull,
+    int32_t newPrecision, int32_t newScale);
+
 extern "C" DLLEXPORT void GreatestDecimal128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
+    bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT void LeastDecimal128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
     int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
     bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
@@ -418,7 +426,15 @@ extern "C" DLLEXPORT int64_t GreatestDecimal64RetNull(bool *isNull, int64_t xVal
     bool xIsNull, int64_t yValue, int32_t yPrecision, int32_t yScale, bool yIsNull, bool *retIsNull,
     int32_t newPrecision, int32_t newScale);
 
+extern "C" DLLEXPORT int64_t LeastDecimal64RetNull(bool *isNull, int64_t xValue, int32_t xPrecision, int32_t xScale,
+    bool xIsNull, int64_t yValue, int32_t yPrecision, int32_t yScale, bool yIsNull, bool *retIsNull,
+    int32_t newPrecision, int32_t newScale);
+
 extern "C" DLLEXPORT void GreatestDecimal128RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
+    bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT void LeastDecimal128RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
     int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
     bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 }
