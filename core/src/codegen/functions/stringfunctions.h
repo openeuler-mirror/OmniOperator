@@ -130,6 +130,9 @@ extern "C" DLLEXPORT const char *EmptyToNull(const char *str, int32_t len, bool 
 extern "C" DLLEXPORT const char *StaticInvokeVarcharTypeWriteSideCheck(int64_t contextPtr, const char *str, int32_t len,
     int32_t limit, bool isNull, int32_t *outLen);
 
+extern "C" DLLEXPORT const char *StaticInvokeCharTypeWriteSideCheck(int64_t contextPtr, const char *str, int32_t len,
+    int32_t limit, bool isNull, int32_t *outLen);
+
 extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr, const char *str,
     int32_t len, int32_t limit, bool isNull, int32_t *outLen);
 

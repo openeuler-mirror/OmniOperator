@@ -1282,6 +1282,60 @@ extern "C" DLLEXPORT const char *StaticInvokeVarcharTypeWriteSideCheck(int64_t c
     return padded;
 }
 
+extern "C" DLLEXPORT const char *StaticInvokeCharTypeWriteSideCheck(int64_t contextPtr, const char *str, int32_t len,
+    int32_t limit, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+    int32_t ssLen = StringUtil::NumChars(str, len);
+    if (ssLen == limit) {
+        *outLen = len;
+        return str;
+    }
+    if (ssLen < limit) {
+        int32_t numTailSpacesToAdd = limit - ssLen;
+        *outLen = len + numTailSpacesToAdd;
+        auto resStr = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        errno_t res = memcpy_s(resStr, len, str, len);
+        errno_t res1 = memset_s(resStr + len, numTailSpacesToAdd + 1, ' ', numTailSpacesToAdd);
+        if (res != EOK || res1 != EOK) {
+            SetError(contextPtr, "charTypeWriteSideCheck failed：memcpy_s error");
+            *outLen = 0;
+            return nullptr;
+        }
+        resStr[*outLen] = '\0';
+        return resStr;
+    }
+    int32_t numTailSpacesToTrim = ssLen - limit;
+    int32_t endIdx = len - 1;
+    int32_t trimTo = len - numTailSpacesToTrim;
+    while (endIdx >= trimTo && str[endIdx] == 0x20) {
+        endIdx--;
+    }
+    int32_t outByteNum = endIdx + 1;
+    ssLen = StringUtil::NumChars(str, outByteNum);
+    if (ssLen > limit) {
+        std::ostringstream errorMessage;
+        errorMessage << "Exceeds char type length limitation: " << limit;
+        SetError(contextPtr, errorMessage.str());
+        *outLen = 0;
+        return nullptr;
+    }
+
+    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+    errno_t res = memcpy_s(padded, outByteNum, str, outByteNum);
+    if (res != EOK) {
+        SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
+        *outLen = 0;
+        return nullptr;
+    }
+    padded[outByteNum] = '\0';
+    *outLen = outByteNum;
+    return padded;
+}
+
 extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr, const char *str, int32_t len,
     int32_t limit, bool isNull, int32_t *outLen)
 {
