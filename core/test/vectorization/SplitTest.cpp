@@ -45,7 +45,7 @@ public:
             inputVector->SetValue(i, inputStr);
         }
 
-        delimiterVec = new ConstVector<std::string>(delimiter, OMNI_VARCHAR, rowSize);
+        delimiterVec = new ConstVector<std::string_view>(std::string_view(delimiter), OMNI_VARCHAR, rowSize);
         limitVec = new ConstVector<int32_t>(limit, OMNI_INT, rowSize);
     }
 

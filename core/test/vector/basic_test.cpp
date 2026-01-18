@@ -805,7 +805,7 @@ TEST(vector, append_array_with_null)
     EXPECT_EQ(dstArrayVec->GetOffset(5), 14);
     EXPECT_EQ(dstArrayVec->GetOffset(6), 16);
     EXPECT_EQ(dstArrayVec->GetOffset(7), 20);
-    EXPECT_EQ(dstArrayVec->IsNull(6), true);
+    EXPECT_EQ(dstArrayVec->IsNull(8), true);
 
     delete dstArrayVec;
     delete srcArrayVec;
