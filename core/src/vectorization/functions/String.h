@@ -48,28 +48,23 @@ struct ContainsFunction {
 /// Whitespace characters include space, tab, newline, carriage return, etc.
 template <typename T>
 struct TrimFunction {
-    ALWAYS_INLINE Status call(std::string &result, bool &notNull, const std::string_view &str)
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *str)
     {
-        notNull = true;
-        if (str.empty()) {
-            result.clear();
-            return Status::OK();
+        if (str == nullptr) {
+            return false;
         }
-
         // Find the first non-whitespace character from the beginning
-        auto start = str.find_first_not_of(" \t\n\r\f\v");
+        auto start = str->find_first_not_of(" ");
         if (start == std::string_view::npos) {
             // All characters are whitespace
             result.clear();
-            return Status::OK();
+            return true;
         }
-
         // Find the last non-whitespace character from the end
-        auto end = str.find_last_not_of(" \t\n\r\f\v");
-        
+        auto end = str->find_last_not_of(" ");
         // Extract the trimmed substring
-        result = std::string(str.substr(start, end - start + 1));
-        return Status::OK();
+        result = std::string(str->substr(start, end - start + 1));
+        return true;
     }
 };
 }
