@@ -19,6 +19,7 @@
 #include "type/data_type.h"
 #include "vector/vector_helper.h"
 #include "vector/large_string_container.h"
+#include "vector/array_vector.h"
 
 namespace omniruntime::TestUtil {
 using namespace omniruntime::expressions;
@@ -31,6 +32,9 @@ bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &re
 bool ColumnMatch(vec::BaseVector *actualColumn, vec::BaseVector *expectColumn);
 
 vec::VectorBatch *CreateVectorBatch(const type::DataTypes &types, int32_t rowCount, ...);
+
+vec::VectorBatch *CreateArrayVectorBatch(const DataTypes &types, std::vector<int32_t> &offsets,
+    int32_t dataSize, int32_t elementSize, ...);
 
 omniruntime::vec::BaseVector *CreateVector(type::DataType &dataType, int32_t rowCount, va_list &args);
 
@@ -103,6 +107,7 @@ void FreeVecBatches(vec::VectorBatch **vecBatches, int32_t vecBatchCount);
 void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount,
     int32_t expectedRowCount, ...);
 void AssertDoubleVectorEquals(omniruntime::vec::BaseVector *vector, double *expectedValues);
+void AssertFloatVectorEquals(omniruntime::vec::BaseVector *vector, float *expectedValues);
 void AssertVarcharVectorEquals(omniruntime::vec::BaseVector *vector, std::string *expectedValues);
 
 vec::BaseVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount, int32_t *ids,
@@ -163,6 +168,8 @@ void AssertDoubleEquals(std::vector<double> &expected, std::vector<double> &resu
 void AssertBoolEquals(std::vector<bool> &expected, bool *result);
 
 std::string GenerateSpillPath();
+
+std::vector<std::shared_ptr<vec::BaseVector>> CreateVectors(const type::DataTypes &types, int32_t rowCount, ...);
 
 int8_t *MakeBytes(int32_t size, const int32_t start = 0);
 

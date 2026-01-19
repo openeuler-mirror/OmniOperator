@@ -165,6 +165,29 @@ bool ColumnMatch(BaseVector *actualColumn, BaseVector *expectColumn)
                     return false;
                 }
             }
+        } else if (typeId == OMNI_ARRAY) {
+            auto actualElementVector = static_cast<ArrayVector *>(actualColumn)->GetElementVector();
+            auto expectElementVector = static_cast<ArrayVector *>(expectColumn)->GetElementVector();
+            result =
+                ColumnMatch(reinterpret_cast<BaseVector *>(actualElementVector.get()), reinterpret_cast<BaseVector *>(expectElementVector.get()));
+            if (!result) {
+                return false;
+            }
+        } else if (typeId == OMNI_MAP) {
+            auto actualKeyVector = static_cast<MapVector *>(actualColumn)->GetKeyVector();
+            auto expectKeyVector = static_cast<MapVector *>(expectColumn)->GetKeyVector();
+            auto actualValueVector = static_cast<MapVector *>(actualColumn)->GetValueVector();
+            auto expectValueVector = static_cast<MapVector *>(expectColumn)->GetValueVector();
+            result =
+                ColumnMatch(reinterpret_cast<BaseVector *>(actualKeyVector.get()), reinterpret_cast<BaseVector *>(expectKeyVector.get()));
+            if (!result) {
+                return false;
+            }
+            result =
+                ColumnMatch(reinterpret_cast<BaseVector*>(actualValueVector.get()), reinterpret_cast<BaseVector*>(expectValueVector.get()));
+            if (!result) {
+                return false;
+            }
         } else {
             result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, typeId, actualColumn, expectColumn, rowIndex);
             if (!result) {
@@ -185,6 +208,26 @@ VectorBatch *CreateVectorBatch(const DataTypes &types, int32_t rowCount, ...)
     for (int32_t i = 0; i < typesCount; i++) {
         auto &type = types.GetType(i);
         vectorBatch->Append(CreateVector(*type, rowCount, args));
+    }
+    va_end(args);
+    return vectorBatch;
+}
+
+VectorBatch *CreateArrayVectorBatch(const DataTypes &types, std::vector<int32_t> &offsets,
+    int32_t dataSize, int32_t elementSize, ...)
+{
+    int32_t typesCount = types.GetSize();
+    auto *vectorBatch = new VectorBatch(dataSize);
+    va_list args;
+    va_start(args, elementSize);
+    for (int32_t i = 0; i < typesCount; i++) {
+        auto &type = types.GetType(i);
+        auto elementVector = std::shared_ptr<BaseVector>(CreateVector(*type, elementSize, args));
+        auto *arrayVector = new ArrayVector(dataSize, elementVector);
+        for (size_t j = 0; j < offsets.size(); j++) {
+            arrayVector->SetOffset(j, offsets[j]);
+        }
+        vectorBatch->Append(arrayVector);
     }
     va_end(args);
     return vectorBatch;
@@ -425,6 +468,16 @@ void AssertDoubleVectorEquals(BaseVector *vector, double *expectedValues)
     }
 }
 
+void AssertFloatVectorEquals(BaseVector *vector, float *expectedValues)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsNull(i)) {
+            continue;
+        }
+        EXPECT_TRUE(std::fabs(static_cast<Vector<float> *>(vector)->GetValue(i) - expectedValues[i]) <= DBL_EPSILON);
+    }
+}
+
 void AssertVarcharVectorEquals(BaseVector *vector, std::string *expectedValues)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
@@ -471,6 +524,20 @@ void AssertDictionaryVectorEquals(BaseVector *vector, va_list &args)
     }
 }
 
+std::vector<std::shared_ptr<vec::BaseVector>> CreateVectors(const type::DataTypes &types, int32_t rowCount, ...)
+{
+    int32_t typesCount = types.GetSize();
+    std::vector<std::shared_ptr<BaseVector>> vectors;
+    va_list args;
+    va_start(args, rowCount);
+    for (int32_t i = 0; i < typesCount; i++) {
+        auto &type = types.GetType(i);
+        vectors.push_back(std::shared_ptr<BaseVector>(CreateVector(*type, rowCount, args)));
+    }
+    va_end(args);
+    return vectors;
+}
+
 void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, int32_t expectedRowCount, ...)
 {
     int32_t vectorCount = vectorBatch->GetVectorCount();
@@ -503,6 +570,9 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
                 break;
             case omniruntime::type::OMNI_DOUBLE:
                 AssertDoubleVectorEquals(vector, va_arg(args, double *));
+                break;
+            case omniruntime::type::OMNI_FLOAT:
+                AssertFloatVectorEquals(vector, va_arg(args, float *));
                 break;
             case omniruntime::type::OMNI_BOOLEAN:
                 AssertVectorEquals<bool>(vector, va_arg(args, bool *));
@@ -679,6 +749,47 @@ int32_t DecodeFetchFlag(int32_t resultCode)
     return resultCode & SHRT_MAX;
 }
 
+bool CompareArrayUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const double error) {
+    auto resultVec = dynamic_cast<ArrayVector *>(resVec);
+    auto expectedVec = dynamic_cast<ArrayVector *>(dstVec);
+    if (!resultVec || !expectedVec) {
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "ArrayVector dynamic_cast failed!");
+        return false;
+    }
+    if (resultVec->vec::BaseVector::GetSize() != expectedVec->vec::BaseVector::GetSize()) {
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Vector size does not match!");
+        return false;
+    }
+
+    for (int row = 0; row < resultVec->vec::BaseVector::GetSize(); row++) {
+        if (resultVec->IsNull(row) != expectedVec->IsNull(row)) {
+            return false;
+        }
+        if (resultVec->IsNull(row)) {
+            continue;
+        }
+
+        int32_t resSize = resultVec->GetSize(row);
+        int32_t expSize = expectedVec->GetSize(row);
+        if (resSize != expSize) {
+            return false;
+        }
+
+        int32_t resOffset = resultVec->GetOffset(row);
+        int32_t expOffset = expectedVec->GetOffset(row);
+        auto resSubArray = resultVec->GetElementVector()->Slice(resOffset, resSize, false);
+        auto expSubArray = expectedVec->GetElementVector()->Slice(expOffset, expSize, false);
+        bool match = ColumnMatchIgnoreOrder(resSubArray, expSubArray, error);
+
+        delete resSubArray;
+        delete expSubArray;
+        if (!match) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool CompareVarcharUnorderedRows(BaseVector *resultVector, BaseVector *expectedVector, const double error)
 {
     std::multiset<std::string_view> resRows;
@@ -831,6 +942,10 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
             isMatched = CompareUnorderedRows<double, double>(resultVector, expectedVector, error);
             break;
         }
+        case OMNI_FLOAT: {
+            isMatched = CompareUnorderedRows<float, float>(resultVector, expectedVector, error);
+            break;
+        }
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
@@ -853,6 +968,10 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
         case OMNI_CONTAINER: {
             isMatched = CompareUnorderedRowsContainer(static_cast<ContainerVector *>(resultVector),
                 static_cast<ContainerVector *>(expectedVector), error);
+            break;
+        }
+        case OMNI_ARRAY: {
+            isMatched = CompareArrayUnorderedRows(resultVector, expectedVector, error);
             break;
         }
         default: {

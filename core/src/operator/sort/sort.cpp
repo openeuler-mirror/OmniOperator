@@ -58,7 +58,7 @@ SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(std::shared_
 {
     auto spillConfig =  SparkSpillConfig(planNode->CanSpill(queryConfig) & queryConfig.orderBySpillEnabled(),
         queryConfig.SpillDir(), queryConfig.SpillDirDiskReserveSize(), queryConfig.SpillSortRowThreshold(),
-        queryConfig.SpillMemThreshold(), queryConfig.SpillWriteBufferSize());
+        queryConfig.SpillMemThreshold(), queryConfig.SpillWriteBufferSize(), queryConfig.SpillEnableCompress());
     auto dataTypes = planNode->GetSourceTypes();
     auto outputCols = planNode->GetOutputCols();
     auto sortCols = planNode->GetSortCols();
@@ -203,7 +203,7 @@ ErrorCode SortOperator::SpillToDisk()
             sortOrders.emplace_back(sortOrder);
         }
         spiller = new Spiller(sourceTypes, sortCols, sortOrders, spillConfig->GetSpillPath(),
-            spillConfig->GetMaxSpillBytes(), spillConfig->GetWriteBufferSize());
+            spillConfig->GetMaxSpillBytes(), spillConfig->GetWriteBufferSize(), spillConfig->IsSpillCompressEnabled());
         hasSpill = true;
     }
 
@@ -215,7 +215,7 @@ ErrorCode SortOperator::SpillToDisk()
 
     LogDebug("Spill data to disk starting in sort operator, rowCount=%lld\n", rowCount);
     UpdateSpillTimesInfo();
-    auto result = spiller->Spill(pagesIndex.get(), canInplaceSort, canRadixSort);
+    auto result = spiller->Spill(pagesIndex.get(), canInplaceSort, canRadixSort, this);
     LogDebug("Spill data to disk finished in sort operator, rowCount=%lld\n", rowCount);
     return result;
 }
@@ -341,7 +341,7 @@ void SortOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
             throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
         }
         auto spillFiles = spiller->FinishSpill();
-        spillMerger = spiller->CreateSpillMerger(spillFiles);
+        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnable());
         UpdateSpillFileInfo(spillFiles.size());
         // when the spill completed, the spiller object can be released in advance
         if (spillMerger == nullptr) {
@@ -405,6 +405,9 @@ void SortOperator::SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t &
                 break;
             case OMNI_DOUBLE:
                 SetSpillOutputVector<double>(outputVector, offset, rowCount, outputCol);
+                break;
+            case OMNI_FLOAT:
+                SetSpillOutputVector<float>(outputVector, offset, rowCount, outputCol);
                 break;
             case OMNI_BOOLEAN:
                 SetSpillOutputVector<bool>(outputVector, offset, rowCount, outputCol);

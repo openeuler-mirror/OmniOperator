@@ -6,7 +6,7 @@
 #include "util/debug.h"
 #include "jni_util.h"
 
-static const char *HIVE_UDF_EXECUTOR = "omniruntime/udf/HiveUdfExecutor";
+static const char *HIVE_UDF_EXECUTOR = "com/huawei/boostkit/spark/udf/HiveUdfExecutor";
 static const char *EXEC_SINGLE_SIGNATURE = "(Ljava/lang/String;[Lnova/hetu/omniruntime/type/DataType$DataTypeId;Lnova/"
     "hetu/omniruntime/type/DataType$DataTypeId;JJJJJJ)V";
 static const char *EXEC_BATCH_SIGNATURE = "(Ljava/lang/String;[Lnova/hetu/omniruntime/type/DataType$DataTypeId;Lnova/"
@@ -15,7 +15,7 @@ static jclass hiveUdfExecutorCls;
 static jmethodID executeSingleMethod;
 static jmethodID executeBatchMethod;
 
-static const char *UDF_UTIL = "omniruntime/udf/UdfUtil";
+static const char *UDF_UTIL = "com/huawei/boostkit/spark/udf/UdfUtil";
 static const char *THROWABLE_TO_STRING_SIGNATURE = "(Ljava/lang/Throwable;)Ljava/lang/String;";
 static jclass udfUtilCls;
 static jmethodID throwableToStringMethod;

@@ -41,6 +41,27 @@ static uint8_t BytesOfCodePointInUTF8[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 // 0xF5..FF - disallowed in UTF-8
 };
 
+static const char DIGIT_PAIRS[] =
+    "00010203040506070809"
+    "10111213141516171819"
+    "20212223242526272829"
+    "30313233343536373839"
+    "40414243444546474849"
+    "50515253545556575859"
+    "60616263646566676869"
+    "70717273747576777879"
+    "80818283848586878889"
+    "90919293949596979899";
+
+static uint8_t digits[] = {
+        '0' , '1' , '2' , '3' , '4' , '5' ,
+        '6' , '7' , '8' , '9' , 'a' , 'b' ,
+        'c' , 'd' , 'e' , 'f' , 'g' , 'h' ,
+        'i' , 'j' , 'k' , 'l' , 'm' , 'n' ,
+        'o' , 'p' , 'q' , 'r' , 's' , 't' ,
+        'u' , 'v' , 'w' , 'x' , 'y' , 'z'
+    };
+
 class StringUtil {
 public:
     static inline std::wstring ToWideString(std::string &s)
@@ -251,6 +272,235 @@ public:
             i += numBytes == 0 ? 1 : numBytes;
         }
         return len;
+    }
+
+    static inline void CopyChars(const char *srcStr, int32_t srcStrLen, int32_t startIdx, int32_t copyLen,
+        char *outStr, int32_t outStrLen, bool *hasErr)
+    {
+        int32_t maxCopy = std::min({srcStrLen - startIdx, copyLen, outStrLen});
+        error_t res = memcpy_s(outStr, outStrLen, srcStr + startIdx, maxCopy);
+        if (res != EOK) {
+            *hasErr = true;
+        }
+    }
+
+    static inline int32_t FindChar(const char *str, int32_t strLen, const char *searchChar, int32_t searchCharLen,
+        int32_t start)
+    {
+        while (start <= strLen - searchCharLen) {
+            if (std::memcmp(str + start, searchChar, searchCharLen) == 0) {
+                return start;
+            }
+            start += 1;
+        }
+        return -1;
+    }
+
+    static inline std::string StringTrimLeft(const std::string &srcStr, const std::string &trimStr, bool *hasErr)
+    {
+        int32_t searchIdx = 0;
+        int32_t trimIdx = 0;
+        while (searchIdx < srcStr.size()) {
+            int32_t searchCharBytes = NumBytesForFirstByte(srcStr[searchIdx]);
+            char searchChar[searchCharBytes] = {0};
+            CopyChars(srcStr.c_str(), srcStr.size(), searchIdx, searchCharBytes, searchChar, searchCharBytes, hasErr);
+            if (FindChar(trimStr.c_str(), trimStr.size(), searchChar, searchCharBytes, 0) >= 0) {
+                trimIdx += searchCharBytes;
+            } else {
+                break;
+            }
+            searchIdx += searchCharBytes;
+        }
+        if (searchIdx == 0) {
+            return srcStr;
+        }
+        if (trimIdx >= srcStr.size()) {
+            return "";
+        }
+        return srcStr.substr(trimIdx);
+    }
+
+    static inline std::string StringTrimRight(const std::string &srcStr, const std::string &trimStr, bool *hasErr)
+    {
+        int32_t charIdx = 0;
+        int32_t numChars = 0;
+        int32_t stringCharLen[srcStr.size()] = {};
+        int32_t stringCharPos[srcStr.size()] = {};
+
+        while (charIdx < srcStr.size()) {
+            stringCharPos[numChars] = charIdx;
+            stringCharLen[numChars] = NumBytesForFirstByte(srcStr[charIdx]);
+            charIdx += stringCharLen[numChars];
+            numChars++;
+        }
+
+        int32_t trimEnd = srcStr.size() - 1;
+        while (numChars > 0) {
+            int32_t searchIdx = stringCharPos[numChars - 1];
+            int32_t searchCharBytes = stringCharLen[numChars - 1];
+            char searchChar[searchCharBytes] = {0};
+            CopyChars(srcStr.c_str(), srcStr.size(), searchIdx, searchCharBytes, searchChar, searchCharBytes, hasErr);
+            if (FindChar(trimStr.c_str(), trimStr.size(), searchChar, searchCharBytes, 0) >= 0) {
+                trimEnd -= searchCharBytes;
+            } else {
+                break;
+            }
+            numChars --;
+        }
+        if (trimEnd == srcStr.size() - 1) {
+            return srcStr;
+        }
+        if (trimEnd < 0) {
+            return "";
+        }
+        return srcStr.substr(0, trimEnd + 1);
+    }
+
+    static inline const char *Trim(int64_t contextPtr, const char *srcStr, int32_t srcStrLen, const char *trimStr,
+        int32_t trimStrLen, bool *hasErr, int32_t *outLen)
+    {
+        std::string src = std::string(srcStr, srcStrLen);
+        std::string trim = std::string(trimStr, trimStrLen);
+        std::string result = StringTrimRight(StringTrimLeft(src, trim, hasErr), trim, hasErr);
+        if (*hasErr) {
+        *outLen = 0;
+        return nullptr;
+        }
+        *outLen = static_cast<int32_t>(result.length());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        if (memcpy_s(ret, *outLen + 1, result.c_str(), result.length()) != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        return ret;
+    }
+
+    static inline const char *LTrim(int64_t contextPtr, const char *srcStr, int32_t srcStrLen, const char *trimStr,
+        int32_t trimStrLen, bool *hasErr, int32_t *outLen)
+    {
+        std::string src = std::string(srcStr, srcStrLen);
+        std::string trim = std::string(trimStr, trimStrLen);
+        std::string result = StringTrimLeft(src, trim, hasErr);
+        if (*hasErr) {
+        *outLen = 0;
+        return nullptr;
+        }
+        *outLen = static_cast<int32_t>(result.length());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        if (memcpy_s(ret, *outLen + 1, result.c_str(), result.length()) != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        return ret;
+    }
+
+    static inline const char *RTrim(int64_t contextPtr, const char *srcStr, int32_t srcStrLen, const char *trimStr,
+        int32_t trimStrLen, bool *hasErr, int32_t *outLen)
+    {
+        std::string src = std::string(srcStr, srcStrLen);
+        std::string trim = std::string(trimStr, trimStrLen);
+        std::string result = StringTrimRight(src, trim, hasErr);
+        if (*hasErr) {
+        *outLen = 0;
+        return nullptr;
+        }
+        *outLen = static_cast<int32_t>(result.length());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        if (memcpy_s(ret, *outLen + 1, result.c_str(), result.length()) != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        return ret;
+    }
+
+    static inline int32_t NumBytesForFirstByte(const char c)
+    {
+        uint8_t offset = c & 0xFF;
+        uint8_t numBytes = BytesOfCodePointInUTF8[offset];
+        return (numBytes == 0) ? 1 : numBytes;
+    }
+
+// Requires positive x
+    static int stringSize(int64_t x) {
+        if (x < 10) return 1;
+        if (x < 100) return 2;
+        if (x < 1000) return 3;
+        if (x < 10000) return 4;
+        if (x < 100000) return 5;
+        if (x < 1000000) return 6;
+        if (x < 10000000) return 7;
+        if (x < 100000000) return 8;
+        if (x < 1000000000) return 9;
+        if (x < 10000000000LL) return 10;
+        if (x < 100000000000LL) return 11;
+        if (x < 1000000000000LL) return 12;
+        if (x < 10000000000000LL) return 13;
+        if (x < 100000000000000LL) return 14;
+        if (x < 1000000000000000LL) return 15;
+        if (x < 10000000000000000LL) return 16;
+        if (x < 100000000000000000LL) return 17;
+        if (x < 1000000000000000000LL) return 18;
+        return 19;
+    }
+
+    static void getChars(int64_t i, int index, char *buf) {
+         int64_t q;
+         int32_t r;
+         int32_t charPos = index;
+         char sign = 0;
+
+         if (i < 0) {
+             sign = '-';
+             i = -i;
+         }
+
+         // Get 2 digits/iteration using longs until quotient fits into an int
+         while (i > std::numeric_limits<int32_t>::max()) {
+             q = i / 100;
+             // really: r = i - (q * 100);
+             r = static_cast<int32_t>(i - ((q << 6) + (q << 5) + (q << 2)));
+             i = q;
+             buf[--charPos] = DIGIT_PAIRS[r<<1 | 1];
+             buf[--charPos] = DIGIT_PAIRS[r<<1];
+         }
+
+         // Get 2 digits/iteration using ints
+         int q2;
+         int i2 = (int)i;
+         while (i2 >= 65536) {
+             q2 = i2 / 100;
+             // really: r = i2 - (q * 100);
+             r = i2 - ((q2 << 6) + (q2 << 5) + (q2 << 2));
+             i2 = q2;
+             buf[--charPos] = DIGIT_PAIRS[r<<1 | 1];
+             buf[--charPos] = DIGIT_PAIRS[r<<1];
+         }
+
+         // Fall thru to fast mode for smaller numbers
+         // assert(i2 <= 65536, i2);
+         for (;;) {
+             q2 = (i2 * 52429U) >> 19;
+             r = i2 - ((q2 << 3) + (q2 << 1));  // r = i2-(q2*10) ...
+             buf[--charPos] = digits[r];
+             i2 = q2;
+             if (i2 == 0) break;
+         }
+         if (sign != 0) {
+             buf[--charPos] = sign;
+         }
+    }
+
+    /*
+     params: i a long to be converted into buf
+     returns: actual use size
+    */
+    static int32_t toString(int64_t i, char *buf) {
+        int32_t size = (i < 0) ? stringSize(-i) + 1 : stringSize(i);
+        getChars(i, size, buf);
+        return size;
     }
 }; // class stringUtils
 } // namespace codegen function

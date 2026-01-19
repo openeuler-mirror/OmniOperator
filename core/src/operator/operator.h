@@ -253,6 +253,15 @@ protected:
         metrics.SetOperatorName(operatorName);
     }
 
+    // update spilled metrics of encapsulate operator, such as SortExprOperator/HashAggregationWithExprOperator/WindowWithExprOperator
+    // parameter op usually is SortOperator/HashAggregationOperator/WindowOperator
+    void UpdateSpilledMetrics(Operator* op)
+    {
+        auto sortOpStats = op->stats();
+        stats_.spilledBytes = sortOpStats.spilledBytes;
+        stats_.spilledRows = sortOpStats.spilledRows;
+    }
+
 private:
     OmniStatus status;
     Metrics metrics;

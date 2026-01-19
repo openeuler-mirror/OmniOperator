@@ -20,6 +20,12 @@ const std::string RoundFnStr()
     return roundFnStr;
 }
 
+const std::string FloorFnStr()
+{
+    const std::string floorFnStr = "floor";
+    return floorFnStr;
+}
+
 const std::string AddFnStr()
 {
     const std::string addFnStr = "add";
@@ -146,9 +152,27 @@ const std::string BitwiseAndFnStr()
     return bitwiseAndStr;
 }
 
+const std::string BitwiseOrFnStr()
+{
+    const std::string bitwiseOrStr = "bitwise_or";
+    return bitwiseOrStr;
+}
+
 const std::string ShiftRightFnStr()
 {
     const std::string shiftStr = "shiftright";
+    return shiftStr;
+}
+
+const std::string ShiftLeftFnStr()
+{
+    const std::string shiftStr = "shiftleft";
+    return shiftStr;
+}
+
+const std::string NegativeFnStr()
+{
+    const std::string shiftStr = "negative";
     return shiftStr;
 }
 
@@ -261,6 +285,8 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             OMNI_BOOLEAN, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(Greatest<double>), GreatestFnStr(), {}, { OMNI_DOUBLE, OMNI_DOUBLE },
             OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(Floor<int64_t>), FloorFnStr(), {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Floor<double>), FloorFnStr(), {}, { OMNI_DOUBLE }, OMNI_LONG, INPUT_DATA),
 
         // insert native function for each short operations
         Function(reinterpret_cast<void *>(AddInt16), AddFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
@@ -301,14 +327,30 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(EqualInt8), EqualFnStr(), {}, byteParams, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(NotEqualInt8), NotEqualFnStr(), {}, byteParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(ExpFunction), "exp", {}, {OMNI_DOUBLE}, OMNI_DOUBLE, INPUT_DATA),
 
         Function(reinterpret_cast<void *>(BitwiseAndFunction<int8_t>), BitwiseAndFnStr(), {}, { OMNI_BYTE, OMNI_BYTE}, OMNI_BYTE, INPUT_DATA),
         Function(reinterpret_cast<void *>(BitwiseAndFunction<int16_t>), BitwiseAndFnStr(), {}, { OMNI_SHORT, OMNI_SHORT}, OMNI_SHORT, INPUT_DATA),
         Function(reinterpret_cast<void *>(BitwiseAndFunction<int32_t>), BitwiseAndFnStr(), {}, { OMNI_INT, OMNI_INT}, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(BitwiseAndFunction<int64_t>), BitwiseAndFnStr(), {}, { OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA),
 
+        Function(reinterpret_cast<void *>(BitwiseOrFunction<int8_t>), BitwiseOrFnStr(), {}, { OMNI_BYTE, OMNI_BYTE}, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BitwiseOrFunction<int16_t>), BitwiseOrFnStr(), {}, { OMNI_SHORT, OMNI_SHORT}, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BitwiseOrFunction<int32_t>), BitwiseOrFnStr(), {}, { OMNI_INT, OMNI_INT}, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BitwiseOrFunction<int64_t>), BitwiseOrFnStr(), {}, { OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA),
+
         Function(reinterpret_cast<void *>(ShiftRight<int32_t, int32_t>), ShiftRightFnStr(), {}, { OMNI_INT, OMNI_INT}, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(ShiftRight<int64_t, int32_t>), ShiftRightFnStr(), {}, { OMNI_LONG, OMNI_INT}, OMNI_LONG, INPUT_DATA),
+
+        Function(reinterpret_cast<void *>(ShiftLeft<int32_t, int32_t>), ShiftLeftFnStr(), {}, { OMNI_INT, OMNI_INT}, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(ShiftLeft<int64_t, int32_t>), ShiftLeftFnStr(), {}, { OMNI_LONG, OMNI_INT}, OMNI_LONG, INPUT_DATA),
+
+        Function(reinterpret_cast<void *>(Negative<int8_t>), NegativeFnStr(), {}, { OMNI_BYTE}, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Negative<int16_t>), NegativeFnStr(), {}, { OMNI_SHORT}, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Negative<int32_t>), NegativeFnStr(), {}, { OMNI_INT}, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Negative<int64_t>), NegativeFnStr(), {}, { OMNI_LONG}, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Negative<float>), NegativeFnStr(), {}, { OMNI_FLOAT}, OMNI_FLOAT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Negative<double>), NegativeFnStr(), {}, { OMNI_DOUBLE}, OMNI_DOUBLE, INPUT_DATA)
     };
 
     return mathFnRegistry;

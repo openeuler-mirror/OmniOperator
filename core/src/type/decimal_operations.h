@@ -1706,6 +1706,23 @@ public:
         }
     }
 
+    template<typename Decimal>
+    static inline void Floor(Decimal &input)
+    {
+        int32_t inScale = input.GetScale();
+        if (inScale == 0) {
+            return;
+        } else {
+            uint128_t tenOfScale = TenOfScaleMultipliers[inScale];
+            if (input.IsNegative()) {
+                input /= tenOfScale;
+                input = input.Subtract(1);
+            } else {
+                input /= tenOfScale;
+            }
+        }
+    }
+
     // Decimal Internal Operation
     template<typename Decimal>
     static inline void InternalDecimalAdd(Decimal x, int32_t xScale, int32_t xPrecision, Decimal y,

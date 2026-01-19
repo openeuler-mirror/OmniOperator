@@ -1,13 +1,22 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2025. All rights reserved.
  * Description: registry  function  implementation
  */
+
+#include <cstdint>
+#include <limits>
+#include <re2/re2.h>
 #include "stringfunctions.h"
 #include "md5.h"
 #include "dtoa.h"
 #include "type/string_Impl.h"
 
 namespace omniruntime::codegen::function {
+
+const char *INT64_MIN_STR = "-9223372036854775808";
+
+constexpr int32_t INT64_MAX_LEN = 20;
+
 extern "C" DLLEXPORT int64_t CountChar(const char *str, int32_t strLen, const char *target, int32_t targetWidth, int32_t targetLen, bool isNull)
 {
     if (isNull) {
@@ -195,19 +204,111 @@ extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *a
 }
 
 extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, const char *ap, int32_t apLen, const char *bp, int32_t bpLen, bool isNull, int32_t *outLen)
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, bool isNull, int32_t *outLen)
 {
     if (isNull) {
+        *outLen = 0;
         return nullptr;
     }
-    if (separatorIsNull) {
+    bool hasErr = false;
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *ConcatWs3Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, bool isNull,
+    int32_t *outLen)
+{
+    if (isNull) {
         *outLen = 0;
-        isNull = true;
         return nullptr;
     }
 
     bool hasErr = false;
-    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, ap, apLen, bp, bpLen, &hasErr, outLen);
+    int32_t tmpLen = 0;
+    const char *tmp = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, &tmpLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp, tmpLen, s3, s3Len,
+    &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *ConcatWs4Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, const char *s4,
+    int32_t s4Len, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+
+    bool hasErr = false;
+    int32_t tmp1Len = 0, tmp2Len = 0;
+    const char *tmp1 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, &tmp1Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *tmp2 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp1, tmp1Len, s3, s3Len,
+    &hasErr, &tmp2Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp2, tmp2Len, s4, s4Len,
+    &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *ConcatWs5Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, const char *s4,
+    int32_t s4Len, const char *s5, int32_t s5Len, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+
+    bool hasErr = false;
+    int32_t tmp1Len = 0, tmp2Len = 0, tmp3Len = 0;
+    const char *tmp1 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, &tmp1Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *tmp2 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp1, tmp1Len, s3, s3Len,
+    &hasErr, &tmp2Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *tmp3 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp2, tmp2Len, s4, s4Len,
+    &hasErr, &tmp3Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp3, tmp3Len, s5, s5Len,
+    &hasErr, outLen);
     if (hasErr) {
         SetError(contextPtr, CONCAT_ERR_MSG);
         return nullptr;
@@ -431,16 +532,15 @@ extern "C" DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t va
     if (isNull) {
         return nullptr;
     }
-    std::string str = std::to_string(value);
-    *outLen = static_cast<int32_t>(strlen(str.c_str()));
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-    if (res != EOK) {
-        SetError(contextPtr, "cast failed");
-        *outLen = 0;
-        return nullptr;
+    if (value == std::numeric_limits<int64_t>::min()) {
+        *outLen = INT64_MAX_LEN;
+        return INT64_MIN_STR;
     }
-    return ret;
+    const uint8_t *continualBuf = nullptr;
+    auto buf = ArenaAllocatorContinualMem(contextPtr, continualBuf, INT64_MAX_LEN);
+    *outLen = StringUtil::toString(value, buf);
+    ArenaAllocatorRollBackContinualMem(contextPtr);
+    return buf;
 }
 
 extern "C" DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value, bool isNull, int32_t *outLen)
@@ -529,6 +629,15 @@ extern "C" DLLEXPORT int16_t CastStringToShort(int64_t contextPtr, const char *s
         return 0;
     }
     return result;
+}
+
+extern "C" DLLEXPORT const char *CastStringToBinary(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
+    int32_t *outLen)
+{
+    *outLen = strLen;
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    errno_t res = memcpy_s(ret, *outLen, str, *outLen);
+    return ret;
 }
 
 extern "C" DLLEXPORT int8_t CastStringToByte(int64_t contextPtr, const char *str, int32_t strLen, bool isNull)
@@ -825,16 +934,15 @@ extern "C" DLLEXPORT const char *CastInt8ToStringRetNull(int64_t contextPtr, boo
 extern "C" DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, bool *isNull, int64_t value,
     int32_t *outLen)
 {
-    std::string str = std::to_string(value);
-    *outLen = static_cast<int32_t>(strlen(str.c_str()));
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-    if (res != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
+    if (value == std::numeric_limits<int64_t>::min()) {
+        *outLen = INT64_MAX_LEN;
+        return INT64_MIN_STR;
     }
-    return ret;
+    const uint8_t *continualBuf = nullptr;
+    auto buf = ArenaAllocatorContinualMem(contextPtr, continualBuf, INT64_MAX_LEN);
+    *outLen = StringUtil::toString(value, buf);
+    ArenaAllocatorRollBackContinualMem(contextPtr);
+    return buf;
 }
 
 extern "C" DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, bool *isNull, double value,
@@ -1039,25 +1147,42 @@ extern "C" DLLEXPORT bool EndsWithStr(const char *srcStr, int32_t srcLen, const 
     return memcmp(srcStr + srcLen - matchLen, matchStr, matchLen) == 0;
 }
 
+extern "C" DLLEXPORT bool RLikeStr(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen,
+    bool isNull)
+{
+    if (isNull) {
+        return false;
+    }
+    std::string s = std::string(str, strLen);
+    std::string r = std::string(regexToMatch, regexLen);
+
+    thread_local std::string cachedPattern;
+    thread_local std::wregex cachedRegex;
+    if (cachedPattern != r) {
+        cachedPattern = r;
+        cachedRegex = std::wregex(StringUtil::ToWideString(r));
+    }
+
+    return std::regex_search(StringUtil::ToWideString(s), cachedRegex);
+}
+
 extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
     bool isNull)
 {
     if (isNull) {
         return false;
     }
-    if (matchLen == 0) {
-        return true;
+    std::string s = std::string(srcStr, srcLen);
+    std::string r = std::string(matchStr, matchLen);
+
+    thread_local std::string cachedPattern;
+    thread_local std::unique_ptr<RE2> cachedRegex;
+    if (cachedPattern != r) {
+        cachedPattern = r;
+        cachedRegex = std::make_unique<RE2>(re2::StringPiece(matchStr, matchLen), RE2::Quiet);
     }
-    if (srcLen == 0) {
-        return false;
-    }
-    for (int32_t i = 0; i < srcLen; i++) {
-        char c = srcStr[i];
-        if (c < '0' || c > '9') {
-            return false;
-        }
-    }
-    return true;
+
+    return RE2::PartialMatch(re2::StringPiece(srcStr, srcLen), *cachedRegex.get());
 }
 
 extern "C" DLLEXPORT const char *CastDateToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value,
@@ -1264,5 +1389,155 @@ extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *
     *outLen = length;
     return result;
 }
+
+extern "C" DLLEXPORT const char *Re2SearchAndExtract(int64_t contextPtr, const char *str, int32_t strLen,
+    const char *pattern, int32_t patternLen, int32_t idx, bool isNull, int32_t *outLen)
+{
+    auto re = RE2(re2::StringPiece(pattern, patternLen), RE2::Quiet);
+    std::vector<re2::StringPiece> groups(idx + 1);
+    auto input = re2::StringPiece(str, strLen);
+    if (!re.Match(input, 0, strLen, RE2::UNANCHORED, groups.data(), idx + 1)) {
+        *outLen = 0;
+        auto result = ArenaAllocatorMalloc(contextPtr, 1);
+        return result;
+    } else {
+        const re2::StringPiece extracted = groups[idx];
+        auto result = ArenaAllocatorMalloc(contextPtr, extracted.size());
+        errno_t res = memcpy_s(result, extracted.size(), extracted.data(), extracted.size());
+        if (res != EOK) {
+            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+            *outLen = 0;
+            return nullptr;
+        }
+        *outLen = extracted.size();
+        return result;
+    }
+}
+
+extern "C" DLLEXPORT const char *RegexpReplace(int64_t contextPtr, const char *stringInput, int32_t stringInputLen,
+    const char *pattern, int32_t patternLen, const char *replacement, int32_t replacementLen, int32_t position,
+    bool isNull, int32_t *outLen)
+{
+    auto input = std::string(stringInput, stringInputLen);
+    auto p = std::string(pattern, patternLen);
+    auto r = std::string(replacement, replacementLen);
+    std::string out;
+    if (stringImpl::performChecks(out, input, p, r, position - 1)) {
+        auto result = ArenaAllocatorMalloc(contextPtr, out.size());
+        errno_t res = memcpy_s(result, out.size(), out.data(), out.size());
+        if (res != EOK) {
+            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+            *outLen = 0;
+            return nullptr;
+        }
+        *outLen = out.size();
+        return result;
+    }
+    size_t start = stringImpl::cappedByteLength<false>(input, position - 1);
+    if (start > stringInputLen + 1) {
+        auto result = ArenaAllocatorMalloc(contextPtr, stringInputLen);
+        errno_t res = memcpy_s(result, stringInputLen, stringInput, stringInputLen);
+        if (res != EOK) {
+            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+            *outLen = 0;
+            return nullptr;
+        }
+        *outLen = 0;
+        return result;
+    }
+
+    static const RE2 kRegex("[(][?]<([^>]*)>");
+
+    std::string newPattern = std::string(pattern, patternLen);
+    RE2::GlobalReplace(&newPattern, kRegex, R"((?P<\1>)");
+    auto re = std::make_unique<RE2>(stringImpl::toStringPiece(newPattern), RE2::Quiet);
+
+    const auto &processedReplacement = stringImpl::PrepareRegexpReplaceReplacement(*re, r);
+
+    std::string prefix(stringInput, position - 1);
+    std::string targetString(stringInput, stringInputLen);
+
+    RE2::GlobalReplace(&targetString, *re, processedReplacement);
+    auto buf = prefix + targetString;
+
+    auto length = prefix.size() + targetString.size();
+    auto result = ArenaAllocatorMalloc(contextPtr, length);
+    errno_t res = 0;
+    if (!prefix.empty()) {
+        res = memcpy_s(result, prefix.size(), prefix.data(), prefix.size());
+    }
+    if (!targetString.empty()) {
+        res = memcpy_s(result + prefix.size(), targetString.size(), targetString.data(), targetString.size());
+    }
+    if (res != EOK) {
+        SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+        *outLen = 0;
+        return nullptr;
+    }
+    *outLen = length;
+    return result;
+}
+
+extern "C" DLLEXPORT const char *TrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    bool hasErr = false;
+    const char *ret = StringUtil::Trim(contextPtr, srcStr, srcStrLen, trimStr, trimStrLen, &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, " trim failed ");
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *Trim1Str(int64_t contextPtr, const char *srcStr, int32_t srcStrLen, bool isNull,
+    int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    bool hasErr = false;
+    const char *ret = StringUtil::Trim(contextPtr, srcStr, srcStrLen, " ", 1, &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, " trim failed ");
+        return nullptr;
+    }
+    return ret;
+}
+
+
+extern "C" DLLEXPORT const char *LeftTrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    bool hasErr = false;
+    const char *ret = StringUtil::LTrim(contextPtr, srcStr, srcStrLen, trimStr, trimStrLen, &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, " ltrim failed ");
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *RightTrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    bool hasErr = false;
+    const char *ret = StringUtil::RTrim(contextPtr, srcStr, srcStrLen, trimStr, trimStrLen, &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, " rtrim failed ");
+        return nullptr;
+    }
+    return ret;
+}
+
 }
 

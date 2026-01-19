@@ -55,6 +55,7 @@ public:
     OmniStatus Close() override;
 
     uint64_t GetSpilledBytes() override;
+
     void setNoMoreInput(bool noMoreInput) override
     {
         noMoreInput_ = noMoreInput;

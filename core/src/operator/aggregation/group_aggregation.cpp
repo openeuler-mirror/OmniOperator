@@ -10,6 +10,7 @@
 #include "util/type_util.h"
 #include "util/debug.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
+#include "type/data_type.h"
 
 #if defined(DEBUG_OPERATOR) && defined(TRACE)
 #include <sstream>
@@ -63,7 +64,15 @@ static constexpr SetVector GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     SetVarcharVector,
     SetContainerVector,
     nullptr,
+    SetVectorImpl<Vector<float>>,
     nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr
 };
 
 OmniStatus HashAggregationOperatorFactory::Init()
@@ -136,7 +145,7 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
     }
 
     auto groupByOperator = new HashAggregationOperator(groupByIndex, aggsInputCols, aggInputColsSize, aggInputTypes,
-        aggOutputTypes, std::move(aggs), inputRaws, outputPartials, hasAggFilters, operatorConfig);
+        aggOutputTypes, std::move(aggs), inputRaws, outputPartials, hasAggFilters, operatorConfig, aggFuncTypesVector);
     groupByOperator->SetGroupByColumnsHandleType(handleType);
     groupByOperator->Init();
     return groupByOperator;
@@ -369,10 +378,16 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         if (serialize != nullptr) {
             if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
                 serialize->PushBackSerializer(dicVectorSerializerCenter[omniId]);
+            } else if (omniId == type::OMNI_ARRAY) {
+                serialize->PushBackSerializer(complexVectorSerializerCenter[omniId]);
             } else {
                 serialize->PushBackSerializer(vectorSerializerCenter[omniId]);
             }
-            serialize->PushBackDeSerializer(vectorDeSerializerCenter[omniId]);
+            if (omniId == type::OMNI_ARRAY) {
+                serialize->PushBackDeSerializer(complexVectorDeSerializerCenter[omniId]);
+            } else {
+                serialize->PushBackDeSerializer(vectorDeSerializerCenter[omniId]);
+            }
         }
         groupVectors[i] = curVector;
     }
@@ -442,12 +457,56 @@ void HashAggregationOperator::InitSpillInfos()
     aggregationSort = std::make_unique<AggregationSort>(aggregators);
 }
 
+void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType)
+{
+    std::shared_ptr<BaseVector> elementVector;
+    auto elemTypeId = elementType->GetId();
+    switch (elemTypeId) {
+        case type::OMNI_INT:
+        case type::OMNI_DATE32:
+            elementVector = std::make_shared<Vector<int32_t>>(0);
+            break;
+        case type::OMNI_LONG:
+        case type::OMNI_DATE64:
+            elementVector = std::make_shared<Vector<int64_t>>(0);
+            break;
+        case type::OMNI_SHORT:
+            elementVector = std::make_shared<Vector<int16_t>>(0);
+            break;
+        case type::OMNI_DOUBLE:
+            elementVector = std::make_shared<Vector<double>>(0);
+            break;
+        case type::OMNI_FLOAT:
+            elementVector = std::make_shared<Vector<float>>(0);
+            break;
+        case type::OMNI_BOOLEAN:
+            elementVector = std::make_shared<Vector<bool>>(0);
+            break;
+        case type::OMNI_CHAR:
+        case type::OMNI_VARCHAR:
+            elementVector = std::make_shared<Vector<LargeStringContainer<std::string_view>>>(0);
+            break;
+        default:
+            throw omniruntime::exception::OmniException("Set ArrayVector error, unsupport element type:", std::to_string(elemTypeId));
+    }
+    auto arrayVector = new ArrayVector(0, elementVector);
+    //initialize arrayVector's size to 0 for expanding it's capacity with Expand function
+    vecBatch->Append(arrayVector);
+}
+
 void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount)
 {
     auto colSize = types.size();
     for (size_t colIndex = 0; colIndex < colSize; ++colIndex) {
         const DataTypePtr &type = types[colIndex];
-        GROUP_AGG_FUNCTIONS[type->GetId()](output, rowCount);
+        auto typeId = type->GetId();
+        if (typeId < DATA_TYPE_MAX_COUNT) {
+            GROUP_AGG_FUNCTIONS[type->GetId()](output, rowCount);
+        } else if (typeId == OMNI_ARRAY) {
+            auto arrayType = std::static_pointer_cast<ArrayType>(type);
+            DataTypePtr elementType = arrayType->ElementType();
+            SetArrayVector(output, elementType);
+        }
     }
 }
 
@@ -1102,7 +1161,7 @@ ErrorCode HashAggregationOperator::SpillToDisk()
     aggregationSort->SortKvVector();
     auto rowCount = aggregationSort->GetRowCount();
     LogDebug("Spill data to disk starting in hash aggregation operator, rowCount=%lld\n", rowCount);
-    ErrorCode result = spiller->Spill(aggregationSort.get());
+    ErrorCode result = spiller->Spill(aggregationSort.get(), this);
     LogDebug("Spill data to disk finished in hash aggregation operator, rowCount=%lld\n", rowCount);
     aggregationSort->ClearVector();
     return result;
@@ -1130,7 +1189,7 @@ ErrorCode HashAggregationOperator::SpillHashMap()
         InitSpillInfos();
         spiller = new Spiller(DataTypes(spillTypes), groupByCloIdx, sortOrders,
                               operatorConfig.GetSpillConfig()->GetSpillPath(), spillConfig->GetMaxSpillBytes(),
-                              spillConfig->GetWriteBufferSize());
+                              spillConfig->GetWriteBufferSize(), spillConfig->IsSpillCompressEnabled());
         hasSpill = true;
     }
     UpdateSpillTimesInfo();
@@ -1443,7 +1502,7 @@ void HashAggregationOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         spilledBytes = spiller->GetSpilledBytes();
         auto spillFiles = spiller->FinishSpill();
         UpdateSpillFileInfo(spillFiles.size());
-        spillMerger = spiller->CreateSpillMerger(spillFiles);
+        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnable());
         delete spiller;
         spiller = nullptr;
         if (spillMerger == nullptr) {

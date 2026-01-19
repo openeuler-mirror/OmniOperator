@@ -13,8 +13,14 @@
 #include "util/debug.h"
 
 namespace omniruntime {
+namespace vec {
+class BaseVector;
+}
+}
+
+namespace omniruntime {
 namespace type {
-constexpr int32_t DATA_TYPE_MAX_COUNT = 20;
+constexpr int32_t DATA_TYPE_MAX_COUNT = 28;
 const std::string ID = "id";
 const std::string WIDTH = "width";
 const std::string PRECISION = "precision";
@@ -22,6 +28,8 @@ const std::string SCALE = "scale";
 const std::string DATE_UNIT = "dateUnit";
 const std::string TIME_UNIT = "timeUnit";
 const std::string FIELD_TYPES = "fieldTypes";
+const std::string ELEMENT_TYPE = "elementType";
+const std::string ELEMENT_SIZE = "elementSize";
 const static uint32_t CHAR_MAX_WIDTH = 65536;
 const static int32_t DECIMAL128_DEFAULT_PRECISION = 38;
 const static int32_t DECIMAL64_DEFAULT_PRECISION = 18;
@@ -47,9 +55,9 @@ enum DataTypeId {
     OMNI_VARCHAR = 15,
     OMNI_CHAR = 16,
     OMNI_CONTAINER = 17,
-    OMNI_INVALID = 18,
-    OMNI_BYTE = 19,
-    OMNI_FLOAT = 20,
+    OMNI_BYTE = 18,
+    OMNI_FLOAT = 19,
+    OMNI_VARBINARY = 20,
     OMNI_TIME_WITHOUT_TIME_ZONE = 21,
     OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22,
     OMNI_TIMESTAMP_WITH_TIME_ZONE = 23,
@@ -60,7 +68,8 @@ enum DataTypeId {
     OMNI_ROW = 32,
     OMNI_UNKNOWN = 33,
     OMNI_FUNCTION = 34,
-    OMNI_OPAQUE = 35
+    OMNI_OPAQUE = 35,
+    OMNI_INVALID
 };
 
 template <DataTypeId dataTypeId> struct NativeType {};
@@ -75,6 +84,10 @@ template <> struct NativeType<DataTypeId::OMNI_LONG> {
 
 template <> struct NativeType<DataTypeId::OMNI_DOUBLE> {
     using type = double;
+};
+
+template <> struct NativeType<DataTypeId::OMNI_FLOAT> {
+    using type = float;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_BOOLEAN> {
@@ -116,12 +129,20 @@ template <> struct NativeType<DataTypeId::OMNI_CHAR> {
     using type = std::string_view;
 };
 
+template <> struct NativeType<DataTypeId::OMNI_VARBINARY> {
+    using type = std::string_view;
+};
+
 template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
     using type = int64_t;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
     using type = int64_t;
+};
+
+template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
+    using type = vec::BaseVector*;
 };
 
 #define DYNAMIC_TYPE_DISPATCH(CALLBACK, typeId, ...)                                          \
@@ -144,6 +165,9 @@ template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
             }                                                                                 \
             case OMNI_DOUBLE: {                                                               \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_DOUBLE>(__VA_ARGS__);     \
+            }                                                                                 \
+            case OMNI_FLOAT: {                                                                \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_FLOAT>(__VA_ARGS__);      \
             }                                                                                 \
             case OMNI_BOOLEAN: {                                                              \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_BOOLEAN>(__VA_ARGS__);    \
@@ -177,6 +201,7 @@ template <> inline constexpr DataTypeId TYPE_ID<int16_t> = DataTypeId::OMNI_SHOR
 template <> inline constexpr DataTypeId TYPE_ID<int32_t> = DataTypeId::OMNI_INT;
 template <> inline constexpr DataTypeId TYPE_ID<int64_t> = DataTypeId::OMNI_LONG;
 template <> inline constexpr DataTypeId TYPE_ID<double> = DataTypeId::OMNI_DOUBLE;
+template <> inline constexpr DataTypeId TYPE_ID<float> = DataTypeId::OMNI_FLOAT;
 template <> inline constexpr DataTypeId TYPE_ID<bool> = DataTypeId::OMNI_BOOLEAN;
 template <> inline constexpr DataTypeId TYPE_ID<Decimal128> = DataTypeId::OMNI_DECIMAL128;
 template <> inline constexpr DataTypeId TYPE_ID<std::string_view> = DataTypeId::OMNI_CHAR;
@@ -257,12 +282,120 @@ public:
 using ByteDataType = FixedWidthDataType<OMNI_BYTE>;
 using IntDataType = FixedWidthDataType<OMNI_INT>;
 using ShortDataType = FixedWidthDataType<OMNI_SHORT>;
+using FloatDataType = FixedWidthDataType<OMNI_FLOAT>;
 using DoubleDataType = FixedWidthDataType<OMNI_DOUBLE>;
 using LongDataType = FixedWidthDataType<OMNI_LONG>;
 using BooleanDataType = FixedWidthDataType<OMNI_BOOLEAN>;
 using TimestampDataType = FixedWidthDataType<OMNI_TIMESTAMP>;
 using InvalidDataType = FixedWidthDataType<OMNI_INVALID>;
 using NoneDataType = FixedWidthDataType<OMNI_NONE>;
+
+class ArrayType : public DataType {
+public:
+    explicit ArrayType(std::shared_ptr<DataType> type): DataType(OMNI_ARRAY), child(std::move(type)) {}
+
+    bool operator ==(const DataType &right) const override
+    {
+        if (&right == this) {
+            return true;
+        }
+        if (right.GetId() != DataTypeId::OMNI_ARRAY) {
+            return false;
+        }
+        auto otherTyped = reinterpret_cast<const ArrayType*>(&right);
+        return *child == *(otherTyped->child);
+    }
+
+    const std::shared_ptr<DataType> ElementType() const
+    {
+        return child;
+    }
+
+    size_t Size() const
+    {
+        return 1;
+    }
+
+    size_t GetElementSize() const
+    {
+        return elementSize;
+    }
+
+    void SetElementSize(size_t size)
+    {
+        elementSize = size;
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override {
+        nlohmannJson = nlohmann::json { {ID, id}, {ELEMENT_SIZE, elementSize} };
+        nlohmann::json childJson;
+        child->Serialize(childJson);
+        nlohmannJson[ELEMENT_TYPE] = childJson;
+    }
+
+protected:
+    std::shared_ptr<DataType> child;
+    size_t elementSize;
+};
+
+class VarBinaryDataType : public DataType {
+public:
+    VarBinaryDataType(const VarBinaryDataType &type) : VarBinaryDataType(type.GetWidth()) {}
+    explicit VarBinaryDataType() : VarBinaryDataType(INT_MAX) {}
+
+    explicit VarBinaryDataType(uint32_t width) : DataType(DataTypeId::OMNI_VARBINARY)
+    {
+        this->width = width;
+    }
+
+    ~VarBinaryDataType() override = default;
+
+    static DataTypePtr Instance()
+    {
+        return std::make_shared<VarBinaryDataType>(INT_MAX);
+    }
+
+    uint32_t GetWidth() const
+    {
+        return width;
+    }
+
+    void SetWidth(const uint32_t newWidth)
+    {
+        width = newWidth;
+    }
+
+    bool operator ==(const DataType &right) const override
+    {
+        if (id != right.GetId()) {
+            return false;
+        } else if (width != static_cast<const VarBinaryDataType &>(right).GetWidth()) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    VarBinaryDataType &operator =(const VarBinaryDataType &right)
+    {
+        id = right.GetId();
+        width = static_cast<const VarBinaryDataType &>(right).GetWidth();
+        return *this;
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override
+    {
+        nlohmannJson = nlohmann::json{{ID, id}, {WIDTH, width}};
+    }
+
+protected:
+    uint32_t width;
+
+    explicit VarBinaryDataType(uint32_t width, DataTypeId dataTypeId) : DataType(dataTypeId)
+    {
+        this->width = width;
+    }
+};
 
 class RowType : public DataType {
 public:
@@ -293,6 +426,11 @@ public:
     const std::vector<std::shared_ptr<DataType>> &Children() const
     {
         return children;
+    }
+
+    std::shared_ptr<DataType> Type(int index) const
+    {
+        return children[index];
     }
 
     void Serialize(nlohmann::json &nlohmannJson) const override {}
@@ -336,6 +474,52 @@ protected:
     {}
     int32_t precision;
     int32_t scale;
+};
+
+class MapType : public DataType {
+public:
+    explicit MapType(std::shared_ptr<DataType> keyType, std::shared_ptr<DataType> valueType)
+        : DataType(OMNI_MAP),
+        keyType(std::move(keyType)),
+        valueType(std::move(valueType)) {}
+
+    bool operator ==(const DataType &right) const override
+    {
+        if (&right == this) {
+            return true;
+        }
+        if (right.GetId() != DataTypeId::OMNI_MAP) {
+            return false;
+        }
+        auto otherTyped = reinterpret_cast<const MapType*>(&right);
+        return (*keyType == *(otherTyped->keyType)) && (*valueType == *(otherTyped->valueType));
+    }
+
+    const std::shared_ptr<DataType> &Key() const
+    {
+        return keyType;
+    }
+
+    const std::shared_ptr<DataType> &Value() const
+    {
+        return valueType;
+    }
+
+    std::vector<std::shared_ptr<DataType>> Children() const
+    {
+        return {keyType, valueType};
+    }
+
+    size_t Size() const
+    {
+        return 2;
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override {}
+
+protected:
+    std::shared_ptr<DataType> keyType;
+    std::shared_ptr<DataType> valueType;
 };
 
 class Decimal64DataType : public DecimalDataType {

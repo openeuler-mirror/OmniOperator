@@ -159,6 +159,11 @@ void ConfigUtil::SetRoundingRule(RoundingRule rule)
     g_properties.GetPolicy()->SetRoundingRule(rule);
 }
 
+void ConfigUtil::SetIsComplexTypeWithCodegen(IsComplexTypeWithCodegen isEnable)
+{
+    g_properties.GetPolicy()->SetIsComplexTypeWithCodegen(isEnable);
+}
+
 RoundingRule ConfigUtil::GetRoundingRule()
 {
     return g_properties.GetPolicy()->GetRoundingRule();
@@ -172,6 +177,11 @@ void ConfigUtil::SetCheckReScaleRule(CheckReScaleRule rule)
 CheckReScaleRule ConfigUtil::GetCheckReScaleRule()
 {
     return g_properties.GetPolicy()->GetCheckReScaleRule();
+}
+
+IsComplexTypeWithCodegen ConfigUtil::GetIsComplexTypeWithCodegen()
+{
+    return g_properties.GetPolicy()->GetIsComplexTypeWithCodegen();
 }
 
 void ConfigUtil::SetEmptySearchStrReplaceRule(EmptySearchStrReplaceRule rule)
@@ -265,6 +275,7 @@ Policy *ConfigUtil::InitializePolicy()
     std::map<const char *, std::function<void(Policy *, std::string) >> initFunctionMap = { { "RoundingRule",
         InitRoundingRule },
         { "CheckReScaleRule", InitCheckReScaleRule },
+        { "IsComplexTypeWithCodegen", InitIsComplexTypeWithCodegen },
         { "EmptySearchStrReplaceRule", InitEmptySearchStrReplaceRule },
         { "CastDecimalToDoubleRule", InitCastDecimalToDoubleRule },
         { "NegativeStartIndexOutOfBoundsRule", InitNegativeStartIndexOutOfBoundsRule },
@@ -300,6 +311,15 @@ void ConfigUtil::InitCheckReScaleRule(Policy *policy, const std::string &ruleVal
         policy->SetCheckReScaleRule(CheckReScaleRule::CHECK_RESCALE);
     } else if (ruleValueStr == "NOT_CHECK_RESCALE") {
         policy->SetCheckReScaleRule(CheckReScaleRule::NOT_CHECK_RESCALE);
+    }
+}
+
+void ConfigUtil::InitIsComplexTypeWithCodegen(Policy *policy, const std::string &ruleValueStr)
+{
+    if (ruleValueStr == "TRUE") {
+        policy->SetIsComplexTypeWithCodegen(IsComplexTypeWithCodegen::TRUE);
+    } else if (ruleValueStr == "FALSE") {
+        policy->SetIsComplexTypeWithCodegen(IsComplexTypeWithCodegen::FALSE);
     }
 }
 

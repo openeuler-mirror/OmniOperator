@@ -64,7 +64,25 @@ static std::vector<SetValueFunction> setValueFunctions{
     SetValueIntoVector<uint8_t *>,  // OMNI_VARCHAR = 15
     SetValueIntoVector<uint8_t *>,  // OMNI_CHAR = 16
     nullptr,                        // OMNI_CONTAINER = 17
-    SetValueIntoVector<int8_t>      // OMNI_BYTE = 19
+    SetValueIntoVector<int8_t>,     // OMNI_BYTE = 18
+    SetValueIntoVector<float>,      // OMNI_FLOAT = 19
+    nullptr,                        // OMNI_VARBINARY = 20
+    nullptr,                        // 21
+    nullptr,                        // 22
+    nullptr,                        // 23
+    nullptr,                        // 24
+    nullptr,                        // 25
+    nullptr,                        // 26
+    nullptr,                        // 27
+    nullptr,                        // 28
+    nullptr,                        // 29
+    SetValueIntoVector<type::ArrayType>,    // OMNI_ARRAY = 30
+    nullptr,                        // OMNI_MAP = 31
+    nullptr,                        // OMNI_ROW = 32
+    nullptr,                        // OMNI_UNKNOWN = 33
+    nullptr,                        // OMNI_FUNCTION = 34
+    nullptr,                        // OMNI_OPAQUE = 35
+    nullptr                         // OMNI_INVALID
 };
 /**
  * handle resource by RAII
@@ -73,13 +91,12 @@ class OneRowAdaptor {
 public:
     OneRowAdaptor() {}
 
-    void Init(const std::vector<type::DataTypeId> &inputTypes)
+    void Init(const type::DataTypes &sourceTypes)
     {
-        types.reserve(inputTypes.size());
-        for (auto type : inputTypes) {
-            types.push_back(type);
-        }
-        totalTypeSize = types.size();
+        static_assert(std::is_same<decltype(this->dataTypes), type::DataTypes>::value, "Type Mismatch!");
+        this->dataTypes.GetSize();
+        this->dataTypes = sourceTypes;
+        this->totalTypeSize = dataTypes.GetSize();
         InitFunc();
         InitMem();
     }
@@ -113,12 +130,13 @@ private:
     {
         // init function to set value depend on different omni type
         setFuncs.reserve(totalTypeSize);
+        const int32_t *ids = dataTypes.GetIds();
         for (int i = 0; i < totalTypeSize; ++i) {
-            setFuncs.emplace_back(setValueFunctions.at(types.at(i)));
+            auto id = static_cast<DataTypeId>(ids[i]);
+            setFuncs.emplace_back(setValueFunctions.at(id));
         }
     }
 
-    // init memory of one row vector batch, only init once in operator
     void InitMem()
     {
         if (rowVectorBatch != nullptr) {
@@ -126,20 +144,12 @@ private:
         }
 
         rowVectorBatch = new VectorBatch(1);
-        // use typeAdaptors to trans std::vector<OmniId> , the NewVectors need this structure
-        std::vector<DataTypePtr> typeAdaptors;
-        typeAdaptors.reserve(totalTypeSize);
-        for (int32_t i = 0; i < totalTypeSize; ++i) {
-            auto id = types[i];
-            typeAdaptors.push_back(std::make_shared<DataType>(id));
-        }
-        type::DataTypes outDataTypes(typeAdaptors);
-        VectorHelper::AppendVectors(rowVectorBatch, outDataTypes, rowVectorBatch->GetRowCount());
+        VectorHelper::AppendVectors(rowVectorBatch, dataTypes, rowVectorBatch->GetRowCount());
     }
 
 private:
     std::vector<SetValueFunction> setFuncs;
-    std::vector<DataTypeId> types;
+    type::DataTypes dataTypes;
     int totalTypeSize = 0;
     VectorBatch *rowVectorBatch = nullptr;
 };

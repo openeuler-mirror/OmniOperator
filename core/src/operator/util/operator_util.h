@@ -36,6 +36,7 @@ public:
     static const int32_t SIZE_OF_INT = sizeof(int32_t);
     static const int32_t SIZE_OF_LONG = sizeof(int64_t);
     static const int32_t SIZE_OF_DOUBLE = sizeof(double);
+    static const int32_t SIZE_OF_FLOAT = sizeof(float);
     static const int32_t SIZE_OF_DECIMAL64 = SIZE_OF_LONG;
     static const int32_t SIZE_OF_DECIMAL128 = SIZE_OF_LONG << 1;
     static const int32_t SIZE_OF_DATE32 = SIZE_OF_INT;
@@ -56,6 +57,8 @@ public:
                 return OperatorUtil::SIZE_OF_LONG;
             case OMNI_DOUBLE:
                 return OperatorUtil::SIZE_OF_DOUBLE;
+            case OMNI_FLOAT:
+                return OperatorUtil::SIZE_OF_FLOAT;
             case OMNI_BOOLEAN:
                 return OperatorUtil::SIZE_OF_BOOL;
             case OMNI_SHORT:

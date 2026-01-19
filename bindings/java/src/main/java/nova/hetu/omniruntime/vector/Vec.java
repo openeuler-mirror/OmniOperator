@@ -155,7 +155,7 @@ public abstract class Vec implements Closeable {
                 true);
     }
 
-    private Vec(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
+    protected Vec(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
             int capacityInBytes, int size, DataType dataType, boolean isWritable) {
         this.capacityInBytes = capacityInBytes;
         this.size = size;

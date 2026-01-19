@@ -257,8 +257,11 @@ template <typename T> void vector_copy_positions_value()
     int offset1 = 0;
     int offset2 = 1;
     int copySize = 4;
-    auto v1OffsetZero = vector.CopyPositions(index, offset1, copySize);
-    auto v2OffsetNotZero = vector.CopyPositions(index, offset2, copySize);
+    auto v1OffsetZero = (Vector<T> *)(vector.CopyPositions(index, offset1, copySize));
+    auto v2OffsetNotZero = (Vector<T> *)(vector.CopyPositions(index, offset2, copySize));
+
+    EXPECT_ANY_THROW(vector.CopyPositions(nullptr, offset2, copySize));
+    EXPECT_ANY_THROW(vector.CopyPositions(index, offset2, -1));
 
     for (int32_t i = 0; i < copySize; i++) {
         if (i % 2 == 0) {
@@ -270,7 +273,7 @@ template <typename T> void vector_copy_positions_value()
         EXPECT_EQ(v1OffsetZero->GetValue(i), expected[index[i + offset1]]);
     }
 
-    auto v3Empty = vector.CopyPositions(index, offset2, 0);
+    auto v3Empty = (Vector<T> *)(vector.CopyPositions(index, offset2, 0));
     EXPECT_EQ(v3Empty->GetSize(), 0);
     EXPECT_ANY_THROW(vector.CopyPositions(index, offset1, -1));
     delete v1OffsetZero;
@@ -299,7 +302,7 @@ template <typename T> void dict_copy_positions_value()
     int32_t positions[] = {1, 3, 5, 6};
     int32_t offset = 1;
     int32_t newValueSize = 3;
-    auto copyPositions = vector->CopyPositions(positions, offset, newValueSize);
+    auto copyPositions = (Vector<DictionaryContainer<T>> *)(vector->CopyPositions(positions, offset, newValueSize));
 
     for (int i = 0; i < newValueSize; i++) {
         if (values[positions[i + offset]] % 2 == 0) {
@@ -310,7 +313,7 @@ template <typename T> void dict_copy_positions_value()
         EXPECT_EQ(dictionary->GetValue(values[positions[i + offset]]), expectValue);
     }
 
-    auto v3Empty = vector->CopyPositions(positions, offset, 0);
+    auto v3Empty = (Vector<DictionaryContainer<T>> *)(vector->CopyPositions(positions, offset, 0));
     EXPECT_EQ(v3Empty->GetSize(), 0);
     EXPECT_ANY_THROW(vector->CopyPositions(positions, offset, -1));
     delete copyPositions;
@@ -342,7 +345,7 @@ template <> void dict_copy_positions_value<std::string_view>()
     int32_t positions[] = {1, 3, 5, 6};
     int32_t offset = 1;
     int32_t newValueSize = 3;
-    auto copyPositions = vector->CopyPositions(positions, offset, newValueSize);
+    auto copyPositions = (Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *)(vector->CopyPositions(positions, offset, newValueSize));
 
     for (int i = 0; i < newValueSize; i++) {
         if (values[positions[i + offset]] % 2 == 0) {
@@ -353,7 +356,7 @@ template <> void dict_copy_positions_value<std::string_view>()
         EXPECT_EQ(dictionary->GetValue(values[positions[i + offset]]), expectValue);
     }
 
-    auto v3Empty = vector->CopyPositions(positions, offset, 0);
+    auto v3Empty = (Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *)(vector->CopyPositions(positions, offset, 0));
     EXPECT_EQ(v3Empty->GetSize(), 0);
     EXPECT_ANY_THROW(vector->CopyPositions(positions, offset, -1));
     delete copyPositions;
@@ -517,6 +520,7 @@ TEST(vector, SliceVector)
     for (int i = 0; i < vecSize; i++) {
         vector->SetValue(i, i);
     }
+    EXPECT_ANY_THROW(VectorHelper::SliceVector(vector.get(), 100, 100));
     auto sliceVector = reinterpret_cast<Vector<int32_t>*>(VectorHelper::SliceVector(vector.get(), 3, 5));
     for (int i = 0; i < 5; i++) {
         EXPECT_EQ(sliceVector->GetValue(i), i+3);
@@ -599,6 +603,388 @@ TEST(vector, copy_positions_bool)
 TEST(vector, copy_positions_dec128)
 {
     vector_copy_positions_value<int128_t>();
+}
+
+TEST(vector, copy_positions_array)
+{
+    int arraySize = 4;
+    int elementSize = 11;
+
+    auto* elements = new vec::Vector<int32_t>(elementSize);
+
+    for (int i = 0; i < elementSize; i++) {
+        elements->SetValue(i, i);
+    }
+
+    auto* arrayVec = new ArrayVector(arraySize);
+
+    arrayVec->SetOffset(0, 0);
+    arrayVec->SetOffset(1, 3);
+    arrayVec->SetOffset(2, 5);
+    arrayVec->SetOffset(3, 9);
+    arrayVec->SetOffset(4, 11);
+
+    arrayVec->AddElements(elements);
+
+    int positions[] = {1, 3};
+    auto* newArrayVector = arrayVec->CopyPositions((const int*)positions, 0, 2);
+    EXPECT_EQ(newArrayVector->GetOffset(0), 0);
+    EXPECT_EQ(newArrayVector->GetOffset(1), 2);
+    EXPECT_EQ(newArrayVector->GetOffset(2), 4);
+
+    auto newElements = std::dynamic_pointer_cast<vec::Vector<int32_t>>(newArrayVector->GetElementVector());
+    EXPECT_EQ(newElements->GetValue(0), 3);
+    EXPECT_EQ(newElements->GetValue(1), 4);
+    EXPECT_EQ(newElements->GetValue(2), 9);
+    EXPECT_EQ(newElements->GetValue(3), 10);
+
+    auto* newArrayVectorSlice = arrayVec->Slice(1, 2);
+    EXPECT_EQ(newArrayVectorSlice->GetOffset(0), 0);
+    EXPECT_EQ(newArrayVectorSlice->GetOffset(1), 2);
+
+    EXPECT_ANY_THROW(arrayVec->Slice(1, 10));
+    EXPECT_ANY_THROW(arrayVec->CopyPositions(nullptr, 0, 2));
+
+    auto* newArrayVectorNull = arrayVec->CopyPositions((const int*)positions, 0, 0);
+
+    auto sepecifiedElementVec = std::dynamic_pointer_cast<vec::Vector<int32_t>>(arrayVec->GetArrayAt(1, false));
+    EXPECT_EQ(sepecifiedElementVec->GetValue(0), 3);
+
+    EXPECT_ANY_THROW(arrayVec->GetArrayAt(5, false));
+
+    delete newArrayVectorNull;
+    delete newArrayVectorSlice;
+    delete newArrayVector;
+    delete arrayVec;
+}
+
+TEST(vector, copy_positions_array_with_null)
+{
+    int arraySize = 3;
+    int elementSize = 6;
+
+    auto* elements = new vec::Vector<int32_t>(elementSize);
+
+    elements->SetValue(0, 11);
+    elements->SetValue(1, 12);
+    elements->SetValue(2, 13);
+    elements->SetValue(3, 14);
+    elements->SetValue(4, 15);
+    elements->SetValue(5, 16);
+
+    auto* arrayVec = new ArrayVector(arraySize);
+
+    arrayVec->SetOffset(0, 0);
+    arrayVec->SetOffset(1, 3);
+    arrayVec->SetOffset(2, 4);
+    arrayVec->SetOffset(3, 6);
+
+    arrayVec->AddElements(elements);
+
+    int positions[] = {0, -1, 1, -1, -1, -1, 1, -1, 1};
+    auto* newArrayVector = arrayVec->CopyPositions((const int*)positions, 0, 9);
+    EXPECT_EQ(newArrayVector->GetOffset(0), 0);
+    EXPECT_EQ(newArrayVector->GetOffset(1), 3);
+    EXPECT_EQ(newArrayVector->GetOffset(2), 4);
+    EXPECT_EQ(newArrayVector->GetOffset(3), 5);
+    EXPECT_EQ(newArrayVector->GetOffset(4), 6);
+    EXPECT_EQ(newArrayVector->GetOffset(5), 7);
+    EXPECT_EQ(newArrayVector->GetOffset(6), 8);
+    EXPECT_EQ(newArrayVector->GetOffset(7), 9);
+    EXPECT_EQ(newArrayVector->GetOffset(8), 10);
+    EXPECT_EQ(newArrayVector->GetOffset(9), 11);
+
+    auto newElements = std::dynamic_pointer_cast<vec::Vector<int32_t>>(newArrayVector->GetElementVector());
+    EXPECT_EQ(newElements->GetValue(0), 11);
+    EXPECT_EQ(newElements->GetValue(1), 12);
+    EXPECT_EQ(newElements->GetValue(2), 13);
+    EXPECT_EQ(newElements->IsNull(3), true);
+    EXPECT_EQ(newElements->GetValue(4), 14);
+    EXPECT_EQ(newElements->IsNull(5), true);
+    EXPECT_EQ(newElements->IsNull(6), true);
+    EXPECT_EQ(newElements->IsNull(7), true);
+    EXPECT_EQ(newElements->GetValue(8), 14);
+    EXPECT_EQ(newElements->IsNull(9), true);
+    EXPECT_EQ(newElements->GetValue(10), 14);
+
+    delete newArrayVector;
+    delete arrayVec;
+}
+
+TEST(vector, append_array)
+{
+    int arraySize = 4;
+    int elementSize = 11;
+
+    auto* dstElements = new vec::Vector<int32_t>(elementSize);
+    auto* srcElements = new vec::Vector<int32_t>(elementSize);
+
+    for (int i = 0; i < elementSize; i++) {
+        dstElements->SetValue(i, i);
+        srcElements->SetValue(i, i + 1);
+    }
+
+    auto* dstArrayVec = new ArrayVector(arraySize);
+    auto* srcArrayVec = new ArrayVector(arraySize);
+
+    dstArrayVec->SetOffset(0, 0);
+    dstArrayVec->SetOffset(1, 3);
+    dstArrayVec->SetOffset(2, 5);
+    dstArrayVec->SetOffset(3, 9);
+    dstArrayVec->SetOffset(4, 11);
+    srcArrayVec->SetOffset(0, 0);
+    srcArrayVec->SetOffset(1, 3);
+    srcArrayVec->SetOffset(2, 5);
+    srcArrayVec->SetOffset(3, 9);
+    srcArrayVec->SetOffset(4, 11);
+
+    dstArrayVec->AddElements(dstElements);
+    srcArrayVec->AddElements(srcElements);
+
+    dstArrayVec->Append(srcArrayVec, arraySize, 1);
+    EXPECT_EQ(dstArrayVec->GetOffset(0), 0);
+    EXPECT_EQ(dstArrayVec->GetOffset(1), 3);
+    EXPECT_EQ(dstArrayVec->GetOffset(2), 5);
+    EXPECT_EQ(dstArrayVec->GetOffset(3), 9);
+    EXPECT_EQ(dstArrayVec->GetOffset(4), 11);
+    EXPECT_EQ(dstArrayVec->GetOffset(5), 14);
+
+    delete dstArrayVec;
+    delete srcArrayVec;
+}
+
+TEST(vector, append_array_with_null)
+{
+    int arraySize = 4;
+    int elementSize = 11;
+
+    auto* dstElements = new vec::Vector<int32_t>(elementSize);
+    auto* srcElements = new vec::Vector<int32_t>(elementSize + 1);
+
+    for (int i = 0; i < elementSize; i++) {
+        dstElements->SetValue(i, i);
+        srcElements->SetValue(i, i + 1);
+    }
+    srcElements->SetNull(elementSize);
+
+    auto* dstArrayVec = new ArrayVector(arraySize);
+    auto* srcArrayVec = new ArrayVector(arraySize + 1);
+
+    dstArrayVec->SetOffset(0, 0);
+    dstArrayVec->SetOffset(1, 3);
+    dstArrayVec->SetOffset(2, 5);
+    dstArrayVec->SetOffset(3, 9);
+    dstArrayVec->SetOffset(4, 11);
+
+    srcArrayVec->SetOffset(0, 0);
+    srcArrayVec->SetOffset(1, 3);
+    srcArrayVec->SetOffset(2, 5);
+    srcArrayVec->SetOffset(3, 9);
+    srcArrayVec->SetOffset(4, 11);
+    srcArrayVec->SetOffset(5, 12);
+    srcArrayVec->SetNull(4);
+
+    for (int i = 0; i < arraySize + 1; i++) {
+        omniruntime::vec::VectorHelper::PrintArrayVectorOffsetsAndNulls(srcArrayVec, i);
+    }
+    std::cout << std::endl;
+
+    for (int i = 0; i <= elementSize; i++) {
+        omniruntime::vec::VectorHelper::PrintVectorValue(srcElements, i);
+    }
+
+    dstArrayVec->AddElements(dstElements);
+    srcArrayVec->AddElements(srcElements);
+
+    dstArrayVec->Append(srcArrayVec, arraySize, 5);
+    EXPECT_EQ(dstArrayVec->GetOffset(0), 0);
+    EXPECT_EQ(dstArrayVec->GetOffset(1), 3);
+    EXPECT_EQ(dstArrayVec->GetOffset(2), 5);
+    EXPECT_EQ(dstArrayVec->GetOffset(3), 9);
+    EXPECT_EQ(dstArrayVec->GetOffset(4), 11);
+    EXPECT_EQ(dstArrayVec->GetOffset(5), 14);
+    EXPECT_EQ(dstArrayVec->GetOffset(6), 16);
+    EXPECT_EQ(dstArrayVec->GetOffset(7), 20);
+    EXPECT_EQ(dstArrayVec->IsNull(8), true);
+
+    delete dstArrayVec;
+    delete srcArrayVec;
+}
+
+TEST(vector, copy_positions_map)
+{
+    int mapSize = 4;
+    int keySize = 11;
+
+    auto* keys = new vec::Vector<double>(keySize);
+    auto* values = new vec::Vector<int32_t>(keySize);
+
+    for (int i = 0; i < keySize; i++) {
+        keys->SetValue(i, 0.1 * i);
+        values->SetValue(i, i);
+    }
+
+    auto* mapVec = new MapVector(mapSize);
+
+    mapVec->SetOffset(0, 0);
+    mapVec->SetOffset(1, 3);
+    mapVec->SetOffset(2, 5);
+    mapVec->SetOffset(3, 9);
+    mapVec->SetOffset(4, 11);
+
+    mapVec->AddKeys(keys);
+    mapVec->AddValues(values);
+
+    int positions[] = {1, 3};
+    auto* newMapVector = mapVec->CopyPositions((const int*)positions, 0, 2);
+    EXPECT_EQ(newMapVector->GetOffset(0), 0);
+    EXPECT_EQ(newMapVector->GetOffset(1), 2);
+    EXPECT_EQ(newMapVector->GetOffset(2), 4);
+
+    auto newKeys = std::dynamic_pointer_cast<vec::Vector<double>>(newMapVector->GetKeyVector());
+    EXPECT_NEAR(newKeys->GetValue(0), 0.3, 0.000001);
+    EXPECT_NEAR(newKeys->GetValue(1), 0.4, 0.000001);
+    EXPECT_NEAR(newKeys->GetValue(2), 0.9, 0.000001);
+    EXPECT_NEAR(newKeys->GetValue(3), 1.0, 0.000001);
+
+    auto newValues = std::dynamic_pointer_cast<vec::Vector<int32_t>>(newMapVector->GetValueVector());
+    EXPECT_EQ(newValues->GetValue(0), 3);
+    EXPECT_EQ(newValues->GetValue(1), 4);
+    EXPECT_EQ(newValues->GetValue(2), 9);
+    EXPECT_EQ(newValues->GetValue(3), 10);
+
+    auto* newMapVectorSlice = mapVec->Slice(1, 2);
+    EXPECT_EQ(newMapVectorSlice->GetOffset(0), 0);
+    EXPECT_EQ(newMapVectorSlice->GetOffset(1), 2);
+
+    EXPECT_ANY_THROW(mapVec->Slice(1, 10));
+    EXPECT_ANY_THROW(mapVec->CopyPositions(nullptr, 0, 2));
+
+    auto* newMapVectorNull = mapVec->CopyPositions((const int*)positions, 0, 0);
+
+    delete newMapVectorNull;
+    delete newMapVectorSlice;
+    delete newMapVector;
+    delete mapVec;
+}
+
+TEST(vector, copy_positions_row)
+{
+    int rowSize = 2;
+    int childSize = 11;
+
+    auto* keys = new vec::Vector<double>(childSize);
+    auto* values = new vec::Vector<int32_t>(childSize);
+
+    for (int i = 0; i < childSize; i++) {
+        keys->SetValue(i, 0.1 * i);
+        values->SetValue(i, i);
+    }
+
+    auto* rowVec = new RowVector(rowSize);
+
+    rowVec->Append(keys);
+    rowVec->Append(values);
+
+    auto child = rowVec->ChildAt(0);
+
+    EXPECT_EQ(rowVec->ChildSize(), 2);
+    EXPECT_ANY_THROW(rowVec->Slice(0, 10));
+
+    int positions[] = {0};
+    auto* newRowVector = rowVec->CopyPositions((const int*)positions, 0, 1);
+    auto* newRowVectorSlice = rowVec->Slice(0, 1);
+    EXPECT_ANY_THROW(rowVec->CopyPositions(nullptr, 0, 1));
+
+    delete newRowVectorSlice;
+    delete newRowVector;
+    delete rowVec;
+}
+
+TEST(vector, copy_positions_array_0length)
+{
+    int arraySize = 3;
+    int elementSize = 6;
+    auto* elements = new Vector<LargeStringContainer<std::string_view>>(elementSize);
+    for (int i = 0; i < elementSize; i++) {
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        elements->SetValue(i, value);
+    }
+
+    auto* arrayVec = new ArrayVector(arraySize);
+
+    arrayVec->SetOffset(0, 0);
+    // row0: empty length
+    arrayVec->SetOffset(1, 0);
+    // row1: null
+    arrayVec->SetOffset(2, 0);
+    arrayVec->SetNull(1);
+    arrayVec->SetOffset(3, 6);
+
+    arrayVec->AddElements(elements);
+
+    int positions[] = {0, 1};
+    auto* newArrayVector = arrayVec->CopyPositions((const int*)positions, 0, 2);
+    EXPECT_EQ(newArrayVector->GetOffset(1), 0);
+    EXPECT_EQ(newArrayVector->GetOffset(2), 0);
+
+    EXPECT_EQ(newArrayVector->IsNull(0), false);
+    EXPECT_EQ(newArrayVector->IsNull(1), true);
+
+    auto newValues = std::dynamic_pointer_cast<Vector<LargeStringContainer<std::string_view>>>(
+        newArrayVector->GetElementVector());
+    EXPECT_GE(omniruntime::vec::unsafe::UnsafeStringVector::GetContainer(newValues.get())->GetCapacityInBytes(),0);
+
+    delete newArrayVector;
+    delete arrayVec;
+}
+
+TEST(vector, copy_positions_map_0length)
+{
+    int mapSize = 3;
+    int elementSize = 6;
+    auto* keyElements = new Vector<LargeStringContainer<std::string_view>>(elementSize);
+    for (int i = 0; i < elementSize; i++) {
+        std::string str = "key" + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        keyElements->SetValue(i, value);
+    }
+
+    auto* valueElements = new Vector<LargeStringContainer<std::string_view>>(elementSize);
+    for (int i = 0; i < elementSize; i++) {
+        std::string str = "value" + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        valueElements->SetValue(i, value);
+    }
+
+    auto* mapVec = new MapVector(mapSize);
+
+    mapVec->SetOffset(0, 0);
+    // row0: empty length
+    mapVec->SetOffset(1, 0);
+    // row1: null
+    mapVec->SetOffset(2, 0);
+    mapVec->SetNull(1);
+    mapVec->SetOffset(3, 6);
+
+    mapVec->AddKeys(keyElements);
+    mapVec->AddValues(valueElements);
+
+    int positions[] = {0, 1};
+    auto* newMapVector = mapVec->CopyPositions((const int*)positions, 0, 2);
+    EXPECT_EQ(newMapVector->GetOffset(1), 0);
+    EXPECT_EQ(newMapVector->GetOffset(2), 0);
+
+    EXPECT_EQ(newMapVector->IsNull(0), false);
+    EXPECT_EQ(newMapVector->IsNull(1), true);
+
+    auto newValues = std::dynamic_pointer_cast<Vector<LargeStringContainer<std::string_view>>>(
+        newMapVector->GetKeyVector());
+    EXPECT_GE(omniruntime::vec::unsafe::UnsafeStringVector::GetContainer(newValues.get())->GetCapacityInBytes(),0);
+
+    delete newMapVector;
+    delete mapVec;
 }
 
 TEST(vector, dict_get_value_with_null_int32)

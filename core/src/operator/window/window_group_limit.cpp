@@ -818,15 +818,20 @@ int32_t WindowGroupLimitOperator::AddInput(omniruntime::vec::VectorBatch *inputV
 
 int32_t WindowGroupLimitOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
+    if (!noMoreInput_) {
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
     int32_t outputRowCount = 0;
     std::unordered_map<type::StringRef, LimitPartitionValue *, WindowGroupLimitPartitionHash>::iterator mapPos;
     auto mapEnd = partitionedMap.end();
     for (mapPos = currentIter; mapPos != mapEnd; ++mapPos) {
         auto value = mapPos->second;
-        outputRowCount += value->nextIndex;
-        if (outputRowCount >= maxRowCount) {
+        auto rowsToAdd = value->nextIndex;
+        if (outputRowCount + rowsToAdd > maxRowCount) {
             break;
         }
+        outputRowCount += rowsToAdd;
     }
     if (outputRowCount == 0) {
         SetStatus(OMNI_STATUS_FINISHED);
@@ -847,12 +852,17 @@ int32_t WindowGroupLimitOperator::GetOutput(omniruntime::vec::VectorBatch **outp
     int32_t resultRowIdx = 0;
     VectorHelper::AppendVectors(result.get(), sourceTypes, outputRowCount);
     auto resultVectors = result->GetVectors();
-    for (auto iter = currentIter; iter != end; ++iter) {
+    bool stopOutput = false;
+    for (auto iter = currentIter; iter != end && !stopOutput; ++iter) {
         auto mapValue = iter->second;
         auto vecBatches = mapValue->vecBatches;
         auto rowIndexes = mapValue->rowIndexes;
         auto vecBatchSize = mapValue->nextIndex;
         for (int32_t i = 0; i < vecBatchSize; i++) {
+            if (resultRowIdx >= maxRowCount) {
+                stopOutput = true;
+                break;
+            }
             auto vecBatch = vecBatches[i];
             auto rowIndex = rowIndexes[i];
             for (int32_t j = 0; j < outputColNum; j++) {

@@ -17,5 +17,7 @@ add_subdirectory(type)
 add_subdirectory(cpu_checker)
 add_subdirectory(udf/cplusplus)
 add_subdirectory(compute)
+add_subdirectory(vectorization)
+add_subdirectory(io)
 
 include_directories(/usr/lib/llvm-15/include)

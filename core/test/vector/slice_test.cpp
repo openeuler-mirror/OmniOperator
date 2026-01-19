@@ -20,7 +20,7 @@ template <typename T> void v2_slice_get_set_value()
         parent->SetValue(i, value);
     }
 
-    auto vector = parent->Slice(g_offset, g_len, false);
+    auto vector = (Vector<T> *)(parent->Slice(g_offset, g_len, false));
     EXPECT_EQ(vector->GetTypeId(), parent->GetTypeId());
     delete parent;
 
@@ -29,6 +29,18 @@ template <typename T> void v2_slice_get_set_value()
         EXPECT_EQ(value, vector->GetValue(i));
     }
     delete vector;
+}
+
+template <typename T> void v2_slice_get_set_value_exception()
+{
+    auto parent = new Vector<T>(g_vecSize);
+    for (int i = 0; i < g_vecSize; i++) {
+        T value = T(i * 2 / 3);
+        parent->SetValue(i, value);
+    }
+
+    EXPECT_ANY_THROW(parent->Slice(1000, g_len, false));
+    delete parent;
 }
 
 template <> void v2_slice_get_set_value<std::string_view>()
@@ -40,7 +52,7 @@ template <> void v2_slice_get_set_value<std::string_view>()
         parent->SetValue(i, value);
     }
 
-    auto vector = parent->Slice(g_offset, g_len, false);
+    auto vector = (Vector<LargeStringContainer<std::string_view>> *)(parent->Slice(g_offset, g_len, false));
     EXPECT_EQ(vector->GetTypeId(), parent->GetTypeId());
     delete parent;
 
@@ -63,6 +75,14 @@ TEST(vector2, v2_slice_get_set_value_int64)
 TEST(vector2, v2_slice_get_set_value_double)
 {
     v2_slice_get_set_value<double>();
+}
+TEST(vector2, v2_slice_get_set_value_float)
+{
+    v2_slice_get_set_value<float>();
+}
+TEST(vector2, v2_slice_get_set_value_float_exception)
+{
+    v2_slice_get_set_value_exception<float>();
 }
 TEST(vector2, v2_slice_get_set_value_string)
 {

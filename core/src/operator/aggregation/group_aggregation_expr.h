@@ -20,7 +20,8 @@ public:
         uint32_t groupByNum, std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys,
         std::vector<omniruntime::expressions::Expr *> &aggFilters, DataTypes &sourceDataTypes,
         std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColumns,
-        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OperatorConfig &operatorConfig);
+        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OperatorConfig &operatorConfig,
+        config::QueryConfig queryConfig = config::QueryConfig());
 
     ~HashAggregationWithExprOperatorFactory() override;
 
@@ -30,6 +31,7 @@ public:
     Operator *CreateOperator() override;
 
 private:
+    config::QueryConfig queryConfig;
     // originalSourceTypes is used to store raw input type which is not handled by projection function
     std::unique_ptr<DataTypes> originSourceTypes;
     // sourceTypes is used to store input type which has been handled by projection function
@@ -46,7 +48,7 @@ class HashAggregationWithExprOperator : public Operator {
 public:
     HashAggregationWithExprOperator(const DataTypes &originSourceTypes, const type::DataTypes &sourceTypes,
         std::vector<std::unique_ptr<Projection>> &projections, std::vector<SimpleFilter *> &aggSimpleFilters,
-        HashAggregationOperator *hashAggOperator);
+        HashAggregationOperator *hashAggOperator, config::QueryConfig queryConfig = config::QueryConfig());
 
     ~HashAggregationWithExprOperator() override;
 
@@ -58,7 +60,7 @@ public:
 
     void ProcessRow(uintptr_t rowValues[], int32_t lens[]);
 
-    OmniStatus Init(const std::vector<type::DataTypeId> &dataTypeIds);
+    OmniStatus Init();
 
     uint64_t GetSpilledBytes() override;
 
@@ -72,6 +74,11 @@ public:
 
     VectorBatch *AlignSchema(VectorBatch *inputVecBatch) override;
 
+    bool IsStepPartials() const
+    {
+        return hashAggOperator->IsStepPartials();
+    }
+
 private:
     OneRowAdaptor oneRowAdaptor;
     DataTypes originTypes;
@@ -79,7 +86,14 @@ private:
     std::vector<std::unique_ptr<Projection>> &projections;
     std::vector<SimpleFilter *> aggSimpleFilters;
     HashAggregationOperator *hashAggOperator;
+    bool adaptivePartialAgg = true;
     bool hasAggFilter = false;
+    bool abandonedPartialAggregation = false;
+    long adaptivePartialAggMinRows = 500000;
+    long numInputRows = 0;
+    double adaptivePartialAggRatio = 0.8;
+    bool isActivateAdaptivePartial = false;
+    VectorBatch * abandonedInputVecBatch = nullptr;
 };
 }
 }

@@ -289,14 +289,15 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
 TEST(NativeOmniWindowOperatorTest, testRank)
 {
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), FloatType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     int16_t data3[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3);
+    float data4[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4);
 
-    int32_t outputCols[4] = {1, 2, 0, 3};
+    int32_t outputCols[5] = {1, 2, 0, 3, 4};
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
@@ -312,12 +313,12 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), LongType() }));
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), FloatType(), LongType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
-        4, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        5, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
         windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -327,14 +328,15 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), DoubleType(), IntType(), ShortType(), LongType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), DoubleType(), IntType(), ShortType(), FloatType(), LongType() }));
     int64_t expectData1[DATA_SIZE] = {8, 8, 5, 4, 2, 1};
     double expectData2[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
     int32_t expectData3[DATA_SIZE] = {0, 0, 2, 1, 2, 1};
     int16_t expectData4[DATA_SIZE] = {5, 2, 0, 1, 3, 4};
+    float expectData6[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
     int64_t expectData5[DATA_SIZE] = {1, 1, 3, 4, 5, 6};
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData6, expectData5);
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 

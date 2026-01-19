@@ -367,7 +367,9 @@ inline bool ValidateOverflow(const std::string &stageName, const int32_t valueCo
             if (!found) {
                 printf("ERROR: no raws in result matches expected row %d\n", i);
                 printf("================== Expected Result (%s) ==================\n", stageName.c_str());
+                VectorHelper::PrintVecBatch(expectedResult);
                 printf("================== Actual Result (%s) ==================\n", stageName.c_str());
+                VectorHelper::PrintVecBatch(actualResult);
                 return false;
             }
         }

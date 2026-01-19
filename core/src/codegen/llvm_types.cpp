@@ -25,6 +25,7 @@ LLVMTypes::LLVMTypes(llvm::LLVMContext &context) : context(context)
     VectorToLLVMTypeMap = { { OMNI_INT, I32Type() },
         { OMNI_LONG, I64Type() },
         { OMNI_DOUBLE, DoubleType() },
+        { OMNI_FLOAT, FloatType() },
         { OMNI_BOOLEAN, I1Type() },
         { OMNI_BYTE, I8Type() },
         { OMNI_SHORT, I16Type() },
@@ -36,7 +37,10 @@ LLVMTypes::LLVMTypes(llvm::LLVMContext &context) : context(context)
         { OMNI_INTERVAL_MONTHS, I32Type() },
         { OMNI_INTERVAL_DAY_TIME, I32Type() },
         { OMNI_VARCHAR, I8PtrType() },
-        { OMNI_CHAR, I8PtrType() } };
+        { OMNI_CHAR, I8PtrType() },
+        { OMNI_VARBINARY, I8PtrType() },
+        { OMNI_ROW, I64Type() }
+    };
 }
 
 LLVMTypes::~LLVMTypes() = default;
@@ -67,6 +71,11 @@ Value *LLVMTypes::CreateConstantLong(int64_t v)
 }
 
 Value *LLVMTypes::CreateConstantDouble(double v)
+{
+    return ConstantFP::get(context, APFloat(v));
+}
+
+Value *LLVMTypes::CreateConstantFloat(float v)
 {
     return ConstantFP::get(context, APFloat(v));
 }
@@ -116,6 +125,11 @@ llvm::Type *LLVMTypes::DoubleType()
     return llvm::Type::getDoubleTy(context);
 }
 
+llvm::Type *LLVMTypes::FloatType()
+{
+    return llvm::Type::getFloatTy(context);
+}
+
 llvm::PointerType *LLVMTypes::PtrType(llvm::Type *type)
 {
     return type->getPointerTo();
@@ -156,6 +170,11 @@ llvm::PointerType *LLVMTypes::DoublePtrType()
     return PtrType(DoubleType());
 }
 
+llvm::PointerType *LLVMTypes::FloatPtrType()
+{
+    return PtrType(FloatType());
+}
+
 llvm::Type *LLVMTypes::ToLLVMType(DataTypeId id)
 {
     auto result = VectorToLLVMTypeMap.find(id);
@@ -183,10 +202,13 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             return I64PtrType();
+        case OMNI_FLOAT:
+            return FloatPtrType();
         case OMNI_DOUBLE:
             return DoublePtrType();
         case OMNI_CHAR:
         case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
             return I8PtrType();
         case OMNI_DECIMAL128:
             return I128PtrType();
@@ -214,8 +236,11 @@ llvm::Type *LLVMTypes::ToBatchDataPointerType(DataTypeId typeId)
             return I64PtrType();
         case OMNI_DOUBLE:
             return DoublePtrType();
+        case OMNI_FLOAT:
+            return FloatPtrType();
         case OMNI_CHAR:
         case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
             return PtrType(I8PtrType());
         case OMNI_DECIMAL128:
             return I128PtrType();

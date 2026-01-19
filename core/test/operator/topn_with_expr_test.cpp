@@ -25,9 +25,10 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     int32_t data1[dataSize] = {5, 8, 8, 6, 8, 4, 13, 15};
     int64_t data2[dataSize] = {2L, 5L, 3L, 11L, 4L, 3L, 0L, 23L};
     int64_t data3[dataSize] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};
+    float data4[dataSize] = {5.0F, 3.0F, 2.0F, 6.0F, 1.0F, 4.0F, 7.0F, 8.0F};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType(), FloatType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
@@ -51,11 +52,12 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     int32_t expData1[dataSize] = {15, 13, 8, 8, 8};
     int64_t expData2[dataSize] = {23, 0, 5, 4, 3};
     int64_t expData3[dataSize] = {8, 7, 3, 1, 2};
+    float expData6[dataSize] = {8, 7, 3, 1, 2};
     int32_t expData4[dataSize] = {20, 18, 13, 13, 13};
     int64_t expData5[dataSize] = {2, 1, 0, 1, 2};
-    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType(), IntType(), LongType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType(), FloatType(), IntType(), LongType() }));
     VectorBatch *expectVectorBatch =
-        CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4, expData5);
+        CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData6, expData4, expData5);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 

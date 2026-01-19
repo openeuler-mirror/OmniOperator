@@ -11,6 +11,10 @@
 #include "vector_batch.h"
 #include "operator/aggregation/container_vector.h"
 #include "omni_row.h"
+#include "row_vector.h"
+#include "map_vector.h"
+#include "array_vector.h"
+#include "util/type_util.h"
 
 namespace omniruntime::vec {
 class VectorHelper {
@@ -97,6 +101,52 @@ public:
         }
     }
 
+    static BaseVector *CreateComplexVector(DataType* dataType, int32_t size)
+    {
+        using namespace omniruntime::type;
+        auto fieldType = dataType->GetId();
+        if (fieldType == OMNI_ROW) {
+            std::vector<std::shared_ptr<BaseVector>> children;
+            auto rowType = static_cast<RowType*>(dataType);
+            for (int i = 0; i < rowType->Size(); i++) {
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(rowType->Type(i).get(), size)));
+            }
+            return new RowVector(size, children);
+        } else if (fieldType == OMNI_MAP) {
+            std::vector<std::shared_ptr<BaseVector>> children;
+            auto mapType = static_cast<MapType*>(dataType);
+            for (int i = 0; i < mapType->Size(); i++) {
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(mapType->Children()[i].get(), size)));
+            }
+            return new MapVector(size, children[0], children[1]);
+        } else if (fieldType == OMNI_ARRAY) {
+            std::vector<std::shared_ptr<BaseVector>> children;
+            auto arrayType = static_cast<ArrayType*>(dataType);
+            for (int i = 0; i < arrayType->Size(); i++) {
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(arrayType->ElementType().get(), size)));
+            }
+            return new ArrayVector(size, children[0]);
+        } else {
+            return CreateFlatVector(fieldType, size);
+        }
+    }
+
+    static BaseVector *CreateEmptyComplexVector(DataType* dataType, int32_t size)
+    {
+        using namespace omniruntime::type;
+        auto fieldType = dataType->GetId();
+        if (fieldType == OMNI_ROW) {
+            return new RowVector(size);
+        } else if (fieldType == OMNI_MAP) {
+            return new MapVector(size);
+        } else if (fieldType == OMNI_ARRAY) {
+            auto arrayType = static_cast<ArrayType*>(dataType);
+            return new ArrayVector(size);
+        } else {
+            return CreateFlatVector(fieldType, size);
+        }
+    }
+
     static BaseVector *CreateFlatVector(int32_t dataTypeId, int32_t size, int32_t capacityInBytes = INITIAL_STRING_SIZE)
     {
         using namespace omniruntime::type;
@@ -111,6 +161,24 @@ public:
             return new Vector<LargeStringContainer<std::string_view>>(size, capacityInBytes);
         }
         return new Vector<T>(size, typeId);
+    }
+
+    static std::shared_ptr<BaseVector> CreateFlatVectorShared(int32_t dataTypeId, int32_t size,
+        int32_t capacityInBytes = INITIAL_STRING_SIZE)
+    {
+        using namespace omniruntime::type;
+        return DYNAMIC_TYPE_DISPATCH(CreateFlatVectorShared, dataTypeId, size, capacityInBytes);
+    }
+
+    template <type::DataTypeId typeId>
+    static std::shared_ptr<BaseVector> CreateFlatVectorShared(int32_t size,
+        int32_t capacityInBytes = INITIAL_STRING_SIZE)
+    {
+        using T = typename type::NativeType<typeId>::type;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            return std::make_shared<Vector<LargeStringContainer<std::string_view>>>(size, capacityInBytes);
+        }
+        return std::make_shared<Vector<T>>(size, typeId);
     }
 
     template <type::DataTypeId typeId> static void VectorSetValue(vec::BaseVector *vector, int32_t index, void *value)
@@ -154,6 +222,69 @@ public:
         }
     }
 
+    static void PrintVec(BaseVector *vector, int32_t rowCount)
+    {
+        for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
+            PrintVectorValue(vector, rowIdx);
+            std::cout << std::endl;
+        }
+    }
+
+    template <type::DataTypeId typeId> static void PrintArrayElement(BaseVector* elementVec, int32_t index) {
+        using namespace omniruntime::type;
+        using T = typename NativeType<typeId>::type;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            std::cout << std::dec << static_cast<Vector<LargeStringContainer<T>> *>(elementVec)->GetValue(index) << "\t";
+        } else {
+            std::cout << std::dec << static_cast<Vector<T> *>(elementVec)->GetValue(index) << "\t";
+        }
+    }
+
+    static void PrintArrayVectorValue(BaseVector* vector, int32_t rowIndex) {
+        auto* arrayVec = dynamic_cast<ArrayVector*>(vector);
+        if (!arrayVec) {
+            std::cout << "[Invalid ArrayVector]";
+            return;
+        }
+        int32_t offset = arrayVec->GetOffset(rowIndex);
+        int32_t size = arrayVec->GetSize(rowIndex);
+        auto elementVec = arrayVec->GetElementVector();
+        if (!elementVec) {
+            std::cout << "[No Element Vector]";
+            return;
+        }
+        const auto elementType = elementVec->GetTypeId();
+        std::cout << " [ ";
+        for (int i = 0; i < size; i++) {
+            if (i > 0)
+                std::cout << ", ";
+            switch (elementType) {
+                case OMNI_INT:
+                    PrintArrayElement<OMNI_INT>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_LONG:
+                    PrintArrayElement<OMNI_LONG>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_VARCHAR:
+                    PrintArrayElement<OMNI_VARCHAR>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_CHAR:
+                    PrintArrayElement<OMNI_CHAR>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_BOOLEAN:
+                    PrintArrayElement<OMNI_BOOLEAN>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_DOUBLE:
+                    PrintArrayElement<OMNI_DOUBLE>(elementVec.get(), offset + i);
+                    break;
+                default:
+                    std::cout << "?";
+                    break;
+            }
+        }
+        std::cout << " ] ";
+    }
+
     template <type::DataTypeId typeId> static void PrintDictionaryVectorValue(BaseVector *vector, int32_t rowIndex)
     {
         using namespace omniruntime::type;
@@ -164,6 +295,17 @@ public:
         } else {
             std::cout << std::dec << static_cast<Vector<DictionaryContainer<T>> *>(vector)->GetValue(rowIndex) << "\t";
         }
+    }
+
+    static void PrintArrayVectorOffsetsAndNulls(BaseVector* vector, int32_t rowIndex)
+    {
+        auto* arrayVec = dynamic_cast<ArrayVector*>(vector);
+        if (!arrayVec) {
+            throw omniruntime::exception::OmniException("RUNTIME_ERROR", "ArrayVector is null!");
+        }
+        int32_t offset = arrayVec->GetOffset(rowIndex);
+        int32_t size = arrayVec->GetSize(rowIndex);
+        std::cout << rowIndex << "--- offset: " << offset << "; size: " << size << "; isNull: " << arrayVec->IsNull(rowIndex) << std::endl;
     }
 
     template <type::DataTypeId typeId> static void PrintFlatVectorValue(BaseVector *vector, int32_t rowIndex)
@@ -202,6 +344,8 @@ public:
                 auto valueVec = reinterpret_cast<BaseVector *>(value);
                 DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, valueVec->GetTypeId(), valueVec, rowIndex);
             }
+        } else if (encoding == vec::OMNI_ENCODING_ARRAY) {
+            PrintArrayVectorValue(vector, rowIndex);
         } else {
             DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, vector->GetTypeId(), vector, rowIndex);
         }
@@ -229,6 +373,9 @@ public:
             }
             case type::OMNI_DOUBLE: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<double> *>(vector));
+            }
+            case type::OMNI_FLOAT: {
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<float> *>(vector));
             }
             case type::OMNI_BOOLEAN: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<bool> *>(vector));
@@ -277,6 +424,10 @@ public:
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
                     reinterpret_cast<Vector<DictionaryContainer<double>> *>(vector)));
             }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
+                    reinterpret_cast<Vector<DictionaryContainer<float>> *>(vector)));
+            }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
                     reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)));
@@ -289,6 +440,76 @@ public:
             default: {
                 std::string omniExceptionInfo =
                     "In function UnsafeGetValuesDictionary, no such data type " + std::to_string(vector->GetTypeId());
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+            }
+        }
+    }
+
+    static BaseVector *CastConstVectorToVector(BaseVector *vector)
+    {
+        switch (vector->GetTypeId()) {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
+                auto *col = new Vector<int32_t>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<int32_t> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_SHORT: {
+                auto *col = new Vector<int16_t>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<int16_t> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_BYTE: {
+                auto *col = new Vector<int8_t>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<int8_t> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
+                auto *col = new Vector<int64_t>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<int64_t> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_DECIMAL128: {
+                auto *col = new Vector<Decimal128>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<Decimal128> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_DOUBLE: {
+                auto *col = new Vector<double>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<double> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_FLOAT: {
+                auto *col = new Vector<float>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<float> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_BOOLEAN: {
+                auto *col = new Vector<bool>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<bool> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
+                auto *col = new Vector<LargeStringContainer<std::string_view>>(1);
+                auto tmp = std::string_view(reinterpret_cast<ConstVector<std::string> *>(vector)->GetConstValue());
+                col->SetValue(0, tmp);
+                return col;
+            }
+            default: {
+                std::string omniExceptionInfo = "In function UnsafeGetValuesDictionary, no such data type " +
+                    std::to_string(vector->GetTypeId());
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
@@ -329,6 +550,10 @@ public:
                 return reinterpret_cast<void *>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<double> *>(vector)));
             }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<void *>(
+                        unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<float> *>(vector)));
+            }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<void *>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<bool> *>(vector)));
@@ -341,6 +566,10 @@ public:
             case type::OMNI_CONTAINER:
                 return reinterpret_cast<void *>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<ContainerVector *>(vector)));
+            case type::OMNI_ARRAY:
+            case type::OMNI_MAP:
+            case type::OMNI_ROW:
+                return 0;
             default: {
                 std::string omniExceptionInfo =
                     "In function UnsafeGetValues, no such data type " + std::to_string(dataTypeId);
@@ -388,6 +617,9 @@ public:
             }
             case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<DictionaryContainer<double>> *>(vector)->Slice(positionOffset, length);
+            }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<Vector<DictionaryContainer<float>> *>(vector)->Slice(positionOffset, length);
             }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)->Slice(positionOffset, length);
@@ -445,6 +677,9 @@ public:
             case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<double> *>(vector)->Slice(positionOffset, length);
             }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<Vector<float> *>(vector)->Slice(positionOffset, length);
+            }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<bool> *>(vector)->Slice(positionOffset, length);
             }
@@ -452,6 +687,15 @@ public:
             case type::OMNI_CHAR: {
                 return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->Slice(positionOffset,
                     length);
+            }
+            case type::OMNI_ARRAY: {
+                return reinterpret_cast<ArrayVector *>(vector)->Slice(positionOffset, length);
+            }
+            case type::OMNI_MAP: {
+                return reinterpret_cast<MapVector *>(vector)->Slice(positionOffset, length);
+            }
+            case type::OMNI_ROW: {
+                return reinterpret_cast<RowVector *>(vector)->Slice(positionOffset, length);
             }
             default: {
                 std::string omniExceptionInfo =
@@ -491,6 +735,10 @@ public:
             }
             case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<DictionaryContainer<double>> *>(vector)->CopyPositions(positions, offset,
+                    length);
+            }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<Vector<DictionaryContainer<float>> *>(vector)->CopyPositions(positions, offset,
                     length);
             }
             case type::OMNI_BOOLEAN: {
@@ -535,6 +783,9 @@ public:
             }
             case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<double> *>(vector)->CopyPositions(positions, offset, length);
+            }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<Vector<float> *>(vector)->CopyPositions(positions, offset, length);
             }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<bool> *>(vector)->CopyPositions(positions, offset, length);
@@ -589,6 +840,10 @@ public:
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
                     static_cast<Vector<DictionaryContainer<double>> *>(vector)));
             }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
+                    static_cast<Vector<DictionaryContainer<float>> *>(vector)));
+            }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
                     static_cast<Vector<DictionaryContainer<bool>> *>(vector)));
@@ -639,6 +894,10 @@ public:
                 reinterpret_cast<Vector<double> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
+            case type::OMNI_FLOAT: {
+                reinterpret_cast<Vector<float> *>(destVector)->Append(srcVector, offset, length);
+                break;
+            }
             case type::OMNI_BOOLEAN: {
                 reinterpret_cast<Vector<bool> *>(destVector)->Append(srcVector, offset, length);
                 break;
@@ -651,6 +910,9 @@ public:
             }
             case type::OMNI_CONTAINER:
                 reinterpret_cast<ContainerVector *>(destVector)->Append(srcVector, offset, length);
+                break;
+            case type::OMNI_ARRAY:
+                reinterpret_cast<ArrayVector *>(destVector)->Append(srcVector, offset, length);
                 break;
             default: {
                 std::string omniExceptionInfo =
@@ -665,7 +927,7 @@ public:
     {
         const std::vector<omniruntime::type::DataTypePtr> &types = sourceTypes.Get();
         for (int i = 0; i < sourceTypes.GetSize(); i++) {
-            vectorBatch->Append(CreateVector(OMNI_FLAT, types[i]->GetId(), positionCount));
+            vectorBatch->Append(CreateComplexVector(types[i].get(), positionCount));
         }
     }
 
@@ -744,6 +1006,9 @@ public:
             }
             case type::OMNI_DOUBLE: {
                 return DecodeFlatDictionaryVector<double>(vector);
+            }
+            case type::OMNI_FLOAT: {
+                return DecodeFlatDictionaryVector<float>(vector);
             }
             case type::OMNI_BOOLEAN: {
                 return DecodeFlatDictionaryVector<bool>(vector);
@@ -835,6 +1100,10 @@ public:
                 CopyFlatVector<double>(destVector, srcVector, offset, length);
                 break;
             }
+            case type::OMNI_FLOAT: {
+                CopyFlatVector<float>(destVector, srcVector, offset, length);
+                break;
+            }
             case type::OMNI_BOOLEAN: {
                 CopyFlatVector<bool>(destVector, srcVector, offset, length);
                 break;
@@ -842,6 +1111,80 @@ public:
             default: {
                 std::string message("Unsupported data type " + std::to_string(destDataTypeId));
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", message);
+            }
+        }
+    }
+
+    static DataTypePtr GetDataType(BaseVector *srcVector)
+    {
+        DataTypeId dataTypeId = srcVector->GetTypeId();
+        switch (dataTypeId) {
+            case type::OMNI_INT: {
+                return IntType();
+            }
+            case type::OMNI_DATE32: {
+                return Date32Type();
+            }
+            case type::OMNI_SHORT: {
+                return ShortType();
+            }
+            case type::OMNI_BYTE: {
+                return ByteType();
+            }
+            case type::OMNI_LONG: {
+                return LongType();
+            }
+            case type::OMNI_TIMESTAMP: {
+                return TimestampType();
+            }
+            case type::OMNI_DATE64: {
+                return Date64Type();
+            }
+            case type::OMNI_DECIMAL64: {
+                return Decimal64Type();
+            }
+            case type::OMNI_DECIMAL128: {
+                return Decimal128Type();
+            }
+            case type::OMNI_DOUBLE: {
+                return DoubleType();
+            }
+            case type::OMNI_FLOAT: {
+                return FloatType();
+            }
+            case type::OMNI_BOOLEAN: {
+                return BooleanType();
+            }
+            case type::OMNI_VARCHAR: {
+                return VarcharType();
+            }
+            case type::OMNI_CHAR: {
+                return CharType();
+            }
+            case type::OMNI_CONTAINER: {
+                return ContainerType();
+            }
+            case type::OMNI_ROW: {
+                auto rowVector = static_cast<RowVector *>(srcVector);
+                std::vector<DataTypePtr> fieldTypes;
+                for (int i = 0; i < rowVector->ChildSize(); i++) {
+                    fieldTypes.push_back(GetDataType(rowVector->ChildAt(i).get()));
+                }
+                return RowDataType(fieldTypes);
+            }
+            case type::OMNI_ARRAY: {
+                auto arrayVector = static_cast<ArrayVector *>(srcVector);
+                return ArrayDataType(GetDataType(arrayVector->GetElementVector().get()));
+            }
+            case type::OMNI_MAP: {
+                auto mapVector = static_cast<MapVector *>(srcVector);
+                return MapDataType(GetDataType(mapVector->GetKeyVector().get()),
+                    GetDataType(mapVector->GetValueVector().get()));
+            }
+            default: {
+                std::string omniExceptionInfo =
+                    "In function GetDataType, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }

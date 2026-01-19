@@ -38,9 +38,13 @@ extern "C" DLLEXPORT int32_t DateTruncRetNull(bool *isNull, int32_t days, const 
 
 extern "C" DLLEXPORT int32_t DateAdd(int32_t right, int32_t left);
 
+extern "C" DLLEXPORT char *DateFormat(int64_t contextPtr, int64_t timestamp, const char *fmtStr, int32_t fmtLen,
+    bool isNull, int32_t *outLen);
+
 std::string toOmniTimeFormat(const std::string& format);
 
 extern "C" DLLEXPORT int32_t GetHourFromTimestamp(int64_t timestamp, bool isNull);
 
+extern "C" DLLEXPORT int32_t DateDiff(int32_t endDate, bool endIsNull, int32_t startDate, bool startIsNull, bool *retIsNull);
 }
 #endif // OMNI_RUNTIME_DATETIME_FUNCTIONS_H

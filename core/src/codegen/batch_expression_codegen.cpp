@@ -147,6 +147,10 @@ CodeGenValue *BatchExpressionCodeGen::BatchLiteralExprConstantHelper(const Liter
             literalValue = llvmTypes->CreateConstantDouble(lExpr.doubleVal);
             break;
         }
+        case OMNI_FLOAT: {
+            literalValue = llvmTypes->CreateConstantFloat(lExpr.floatVal);
+            break;
+        }
         case OMNI_CHAR:
         case OMNI_VARCHAR: {
             literalValue = this->CreateConstantString(*(lExpr.stringVal));
@@ -407,6 +411,9 @@ void BatchExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DOUBLE) {
         this->BatchBinaryExprDoubleHelper(bExpr, leftValue, rightValue, leftNull, rightNull);
         return;
+    } else if (bExpr->left->GetReturnTypeId() == OMNI_FLOAT) {
+        this->BatchBinaryExprFloatHelper(bExpr, leftValue, rightValue, leftNull, rightNull);
+        return;
     } else if (TypeUtil::IsStringType(bExpr->left->GetReturnTypeId())) {
         this->BatchBinaryExprStringHelper(bExpr, leftValue, leftLen, rightValue, rightLen, leftNull, rightNull);
         return;
@@ -487,6 +494,10 @@ llvm::AllocaInst *BatchExpressionCodeGen::GetResultArray(omniruntime::type::Data
         }
         case OMNI_DOUBLE: {
             resultArray = builder->CreateAlloca(llvmTypes->DoubleType(), rowCnt, "DATA_PTR");
+            break;
+        }
+        case OMNI_FLOAT: {
+            resultArray = builder->CreateAlloca(llvmTypes->FloatType(), rowCnt, "DATA_PTR");
             break;
         }
         case OMNI_CHAR:
@@ -760,6 +771,9 @@ Value *BatchExpressionCodeGen::GetTypeSize(DataTypeId dataTypeId)
         case OMNI_DOUBLE:
             typeSize = sizeof(double);
             break;
+        case OMNI_FLOAT:
+            typeSize = sizeof(float);
+            break;
         case OMNI_BOOLEAN:
             typeSize = sizeof(bool);
             break;
@@ -989,6 +1003,7 @@ void BatchExpressionCodeGen::Visit(const IfExpr &ifExpr)
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DOUBLE:
+        case OMNI_FLOAT:
         case OMNI_BOOLEAN: {
             CallExternFunction("batch_if", { baseType }, baseType,
                 { evCond->data, evCond->isNull, evTrueValue, evTrueNull, evFalseValue, evFalseNull,
@@ -1119,6 +1134,7 @@ void BatchExpressionCodeGen::Visit(const InExpr &inExpr)
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DOUBLE:
+        case OMNI_FLOAT:
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128: {
             args = { llvmTypes->CreateConstantInt(size - 1),
@@ -1224,6 +1240,7 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
         case OMNI_DATE32:
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
+        case OMNI_FLOAT:
         case OMNI_DOUBLE: {
             args = { llvmTypes->CreateConstantInt(size),
                 whenClauses,
@@ -1444,6 +1461,81 @@ void BatchExpressionCodeGen::BatchBinaryExprDoubleHelper(const omniruntime::expr
             return;
         default: {
             LogError("Unsupported double binary operator %u", static_cast<uint32_t>(binaryExpr->op));
+            this->value = CreateInvalidCodeGenValue();
+            return;
+        }
+    }
+}
+
+void BatchExpressionCodeGen::BatchBinaryExprFloatHelper(const omniruntime::expressions::BinaryExpr *binaryExpr,
+    llvm::Value *left, llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull)
+{
+    std::vector<omniruntime::type::DataTypeId> floatParams { OMNI_FLOAT, OMNI_FLOAT };
+    std::vector<omniruntime::type::DataTypeId> boolParams { OMNI_BOOLEAN, OMNI_BOOLEAN };
+    DataTypeId returnTypeId = binaryExpr->GetReturnTypeId();
+    AllocaInst *logicalArrayPtr = nullptr;
+    std::vector<Value *> logicalFuncParams;
+    if (returnTypeId == OMNI_BOOLEAN) {
+        logicalArrayPtr = builder->CreateAlloca(llvmTypes->I1Type(), this->batchCodegenContext->rowCnt, "LOGICAL_PTR");
+        logicalFuncParams = { left, right, logicalArrayPtr, this->batchCodegenContext->rowCnt };
+    }
+    std::vector<Value *> arithFuncParams { left, right, this->batchCodegenContext->rowCnt };
+
+    std::vector<Value *> nullFuncParams { leftIsNull, rightIsNull, this->batchCodegenContext->rowCnt };
+    CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
+
+    switch (binaryExpr->op) {
+        case omniruntime::expressions::Operator::LT:
+            CallExternFunction("batch_lessThan", floatParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_lt");
+            this->value = std::make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
+            return;
+        case omniruntime::expressions::Operator::GT:
+            CallExternFunction("batch_greaterThan", floatParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_gt");
+            this->value = std::make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
+            return;
+        case omniruntime::expressions::Operator::LTE:
+            CallExternFunction("batch_lessThanEqual", floatParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_le");
+            this->value = std::make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
+            return;
+        case omniruntime::expressions::Operator::GTE:
+            CallExternFunction("batch_greaterThanEqual", floatParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_ge");
+            this->value = std::make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
+            return;
+        case omniruntime::expressions::Operator::EQ:
+            CallExternFunction("batch_equal", floatParams, OMNI_BOOLEAN, logicalFuncParams, nullptr, "relational_eq");
+            this->value = std::make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
+            return;
+        case omniruntime::expressions::Operator::NEQ:
+            CallExternFunction("batch_notEqual", floatParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_neq");
+            this->value = std::make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
+            return;
+        case omniruntime::expressions::Operator::ADD:
+            CallExternFunction("batch_add", floatParams, OMNI_FLOAT, arithFuncParams, nullptr, "arithmetic_add");
+            this->value = std::make_shared<CodeGenValue>(left, leftIsNull);
+            return;
+        case omniruntime::expressions::Operator::SUB:
+            CallExternFunction("batch_subtract", floatParams, OMNI_FLOAT, arithFuncParams, nullptr, "arithmetic_sub");
+            this->value = std::make_shared<CodeGenValue>(left, leftIsNull);
+            return;
+        case omniruntime::expressions::Operator::MUL:
+            CallExternFunction("batch_multiply", floatParams, OMNI_FLOAT, arithFuncParams, nullptr, "arithmetic_mul");
+            this->value = std::make_shared<CodeGenValue>(left, leftIsNull);
+            return;
+        case omniruntime::expressions::Operator::DIV:
+            CallExternFunction("batch_divide", floatParams, OMNI_FLOAT, arithFuncParams, nullptr, "arithmetic_div");
+            this->value = std::make_shared<CodeGenValue>(left, leftIsNull);
+            return;
+        case omniruntime::expressions::Operator::MOD:
+            CallExternFunction("batch_modulus", floatParams, OMNI_FLOAT, arithFuncParams, nullptr, "arithmetic_mod");
+            this->value = std::make_shared<CodeGenValue>(left, leftIsNull);
+            return;
+        default: {
+            LogError("Unsupported float binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             this->value = CreateInvalidCodeGenValue();
             return;
         }

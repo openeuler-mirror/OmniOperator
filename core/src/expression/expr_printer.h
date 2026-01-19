@@ -7,6 +7,7 @@
 
 #include "expr_visitor.h"
 #include "util/type_util.h"
+#include "expressions.h"
 
 class ExprPrinter : public ExprVisitor {
 public:

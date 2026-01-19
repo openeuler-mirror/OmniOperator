@@ -27,24 +27,25 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SpillConfigId, { { SPILL_CONFIG_NONE, "SPILL_CONFIG
 
 class SpillConfig {
 public:
-    SpillConfig() : SpillConfig(SPILL_CONFIG_NONE, false, "", DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE) {}
+    SpillConfig() : SpillConfig(SPILL_CONFIG_NONE, false, "", DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE, false) {}
 
     SpillConfig(SpillConfigId id, bool enabled, const std::string &spillPath, uint64_t maxSpillBytes)
-        : SpillConfig(id, enabled, spillPath, maxSpillBytes, DEFAULT_WRITE_BUFFER_SIZE)
+        : SpillConfig(id, enabled, spillPath, maxSpillBytes, DEFAULT_WRITE_BUFFER_SIZE, false)
     {}
 
     SpillConfig(SpillConfigId id, bool enabled, const std::string &spillPath, uint64_t maxSpillBytes,
-        uint64_t writeBufferSize)
+        uint64_t writeBufferSize, bool isCompressEnabled)
         : spillConfigId(id),
           spillEnabled(enabled),
           spillPath(spillPath),
           maxSpillBytes(maxSpillBytes),
-          writeBufferSize(writeBufferSize)
+          writeBufferSize(writeBufferSize),
+          spillCompressEnabled(isCompressEnabled)
     {}
 
     SpillConfig(const SpillConfig &spillConfig)
         : SpillConfig(spillConfig.spillConfigId, spillConfig.spillEnabled, spillConfig.spillPath,
-        spillConfig.maxSpillBytes, spillConfig.writeBufferSize)
+        spillConfig.maxSpillBytes, spillConfig.writeBufferSize, spillConfig.spillCompressEnabled)
     {}
 
     virtual ~SpillConfig() = default;
@@ -89,6 +90,11 @@ public:
         return writeBufferSize;
     }
 
+    bool IsSpillCompressEnabled() const
+    {
+        return spillCompressEnabled;
+    }
+
 protected:
     static constexpr uint64_t DEFAULT_MAX_SPILL_BYTES = 100UL * (1 << 30);
     static constexpr uint64_t DEFAULT_WRITE_BUFFER_SIZE = 4 * (1 << 20);
@@ -97,6 +103,7 @@ protected:
     std::string spillPath;
     uint64_t maxSpillBytes;
     uint64_t writeBufferSize;
+    bool spillCompressEnabled;
 };
 
 class OLKSpillConfig : public SpillConfig {
@@ -115,8 +122,8 @@ public:
 class SparkSpillConfig : public SpillConfig {
 public:
     SparkSpillConfig(bool enabled, const std::string &spillPath, uint64_t maxSpillBytes, int32_t numElementsThreshold,
-        int32_t memUsagePctThreshold, uint64_t writeBufferSize)
-        : SpillConfig(SPILL_CONFIG_SPARK, enabled, spillPath, maxSpillBytes, writeBufferSize),
+        int32_t memUsagePctThreshold, uint64_t writeBufferSize, bool isCompressEnabled)
+        : SpillConfig(SPILL_CONFIG_SPARK, enabled, spillPath, maxSpillBytes, writeBufferSize, isCompressEnabled),
           numElementsForSpillThreshold(numElementsThreshold)
     {
         auto limit = mem::MemoryManager::GetGlobalMemoryLimit();
@@ -128,8 +135,8 @@ public:
     }
 
     SparkSpillConfig(const std::string &spillPath, uint64_t maxSpillBytes, int32_t numElementsThreshold,
-        int32_t memUsageThreshold = 90, uint64_t writeBufferSize = 0)
-        : SparkSpillConfig(true, spillPath, maxSpillBytes, numElementsThreshold, memUsageThreshold, writeBufferSize)
+        int32_t memUsageThreshold = 90, uint64_t writeBufferSize = 0, bool isCompressEnabled = false)
+        : SparkSpillConfig(true, spillPath, maxSpillBytes, numElementsThreshold, memUsageThreshold, writeBufferSize, isCompressEnabled)
     {}
 
     SparkSpillConfig(const std::string &spillPath, int32_t numElementsThreshold)
@@ -194,9 +201,7 @@ private:
 class OperatorConfig {
 public:
     OperatorConfig()
-        : spillConfig(new SpillConfig()),
-          overflowConfig(new OverflowConfig()),
-          isSkipVerify(false),
+        : spillConfig(std::make_shared<SpillConfig>()), overflowConfig(std::make_shared<OverflowConfig>()), isSkipVerify(false),
           adaptivityThreshold(-1)
     {}
 
@@ -204,56 +209,56 @@ public:
 
     OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig, bool isSkipVerify,
         int adaptivityThreshold = -1, bool isRowOutput = false, bool isStatisticalAggregate = false)
-        : spillConfig((spillConfig != nullptr) ? spillConfig : new SpillConfig()),
-          overflowConfig((overflowConfig != nullptr) ? overflowConfig : new OverflowConfig()),
-          isSkipVerify(isSkipVerify),
-          adaptivityThreshold(adaptivityThreshold),
-        isRowOutput(isRowOutput),
+        : spillConfig((spillConfig != nullptr)
+                      ? std::shared_ptr<SpillConfig>(spillConfig)
+                      : std::make_shared<SpillConfig>()),
+        overflowConfig((overflowConfig != nullptr)
+                       ? std::shared_ptr<OverflowConfig>(overflowConfig)
+                       : std::make_shared<OverflowConfig>()), isSkipVerify(isSkipVerify),
+        adaptivityThreshold(adaptivityThreshold), isRowOutput(isRowOutput),
         isStatisticalAggregate(isStatisticalAggregate)
     {}
 
     OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig)
-        : spillConfig((spillConfig != nullptr) ? spillConfig : new SpillConfig()),
-          overflowConfig((overflowConfig != nullptr) ? overflowConfig : new OverflowConfig()),
-          isSkipVerify(false)
-    {}
+        : spillConfig((spillConfig != nullptr)
+                      ? std::shared_ptr<SpillConfig>(spillConfig)
+                      : std::make_shared<SpillConfig>()),
+        overflowConfig((overflowConfig != nullptr)
+                       ? std::shared_ptr<OverflowConfig>(overflowConfig)
+                       : std::make_shared<OverflowConfig>()), isSkipVerify(false) {}
 
     explicit OperatorConfig(const OverflowConfig &overflowConfig)
-        : spillConfig(new SpillConfig()), overflowConfig(new OverflowConfig(overflowConfig)), isSkipVerify(false)
-    {}
+        : spillConfig(std::make_shared<SpillConfig>()),
+        overflowConfig(std::make_shared<OverflowConfig>(overflowConfig)), isSkipVerify(false) {}
 
     explicit OperatorConfig(const SpillConfig &spillConfig)
-        : spillConfig(new SpillConfig(spillConfig)), overflowConfig(new OverflowConfig()), isSkipVerify(false)
-    {}
+        : spillConfig(std::make_shared<SpillConfig>(spillConfig)), overflowConfig(std::make_shared<OverflowConfig>()),
+        isSkipVerify(false) {}
 
     explicit OperatorConfig(const SparkSpillConfig &sparkSpillConfig)
-        : spillConfig(new SparkSpillConfig(sparkSpillConfig)), overflowConfig(new OverflowConfig()), isSkipVerify(false)
-    {}
+        : spillConfig(std::make_shared<SparkSpillConfig>(sparkSpillConfig)),
+        overflowConfig(std::make_shared<OverflowConfig>()), isSkipVerify(false) {}
 
-    ~OperatorConfig()
-    {
-        delete spillConfig;
-        delete overflowConfig;
-    }
+    ~OperatorConfig() {}
 
     SpillConfig *GetSpillConfig() const
     {
-        return spillConfig;
+        return spillConfig.get();
     }
 
     void SetSpillConfig(SpillConfig *pSpillConfig)
     {
-        this->spillConfig = pSpillConfig;
+        this->spillConfig = std::shared_ptr<SpillConfig>(pSpillConfig);
     }
 
     OverflowConfig *GetOverflowConfig() const
     {
-        return overflowConfig;
+        return overflowConfig.get();
     }
 
     void SetOverflowConfig(OverflowConfig *pOverflowConfig)
     {
-        this->overflowConfig = pOverflowConfig;
+        this->overflowConfig = std::shared_ptr<OverflowConfig>(pOverflowConfig);
     }
 
     bool IsSkipVerify() const
@@ -286,8 +291,8 @@ public:
     static void CheckSpillConfig(SpillConfig *spillConfig);
 
 private:
-    SpillConfig *spillConfig = nullptr;
-    OverflowConfig *overflowConfig = nullptr;
+    std::shared_ptr<SpillConfig> spillConfig = nullptr;
+    std::shared_ptr<OverflowConfig> overflowConfig = nullptr;
     bool isSkipVerify = false;
     int adaptivityThreshold = -1;
     bool isRowOutput = false;

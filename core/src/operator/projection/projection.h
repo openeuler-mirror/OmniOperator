@@ -16,6 +16,7 @@
 #include "type/data_types.h"
 #include "util/config/QueryConfig.h"
 #include "vector/vector_common.h"
+#include "vectorization/registration/Register.h"
 
 namespace omniruntime {
 namespace op {
@@ -46,6 +47,7 @@ public:
     explicit ProjectionOperatorFactory(std::shared_ptr<ExpressionEvaluator> &&exprEvaluator)
         : exprEvaluator(std::move(exprEvaluator))
     {
+        link_register_functions();
         this->exprEvaluator->ProjectFuncGeneration();
     }
 

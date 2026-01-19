@@ -12,6 +12,7 @@
 #include "codegen/batch_projection_codegen.h"
 #include "util/config_util.h"
 #include "vector/vector_helper.h"
+#include "util/cache_map.h"
 
 namespace omniruntime::codegen {
 using namespace omniruntime::expressions;
@@ -33,6 +34,7 @@ typedef struct LiteralValue {
         int32_t intVal;
         int64_t longVal;
         double doubleVal;
+        float floatVal;
         Decimal128 decimal128Val;
         std::string_view stringVal;
 
@@ -60,8 +62,16 @@ public:
         return isSupported;
     }
 
+    const Expr *GetExpr() const
+    {
+        return expr;
+    }
+
 private:
-    std::unique_ptr<FilterCodeGen> codeGen;
+    const Expr *expr;
+    static CacheMap<std::string, intptr_t> filterFuncCache;
+    static CacheMap<std::string, std::shared_ptr<FilterCodeGen>> rtCache;
+    std::shared_ptr<FilterCodeGen> codeGen;
     std::unique_ptr<BatchFilterCodeGen> batchCodeGen;
     bool isSupported;
     FilterFunc apply;
@@ -89,6 +99,8 @@ public:
     BaseVector *Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
         ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds);
 
+    BaseVector *ProjectVec(VectorBatch *vecBatch, ExecutionContext *context);
+
     omniruntime::type::DataType &GetOutputType() const
     {
         return *(this->outType);
@@ -114,9 +126,16 @@ public:
         return columnProjectionIndex;
     }
 
+    const Expr *GetExpr() const
+    {
+        return expr;
+    }
+
 private:
+    static CacheMap<std::string, intptr_t> projFuncCache;
+    static CacheMap<std::string, std::shared_ptr<ProjectionCodeGen>> rtCache;
     const omniruntime::expressions::Expr *expr;
-    std::unique_ptr<ProjectionCodeGen> codeGen { nullptr };
+    std::shared_ptr<ProjectionCodeGen> codeGen { nullptr };
     std::unique_ptr<BatchProjectionCodeGen> batchCodeGen { nullptr };
     bool isSupported = true;
     bool isColumnProjection = false;
@@ -152,6 +171,15 @@ private:
     BaseVector *ColumnProjectionFlatVectorCopyPositionsHelper(const int32_t *selectedRows, int32_t numSelectedRows,
         BaseVector *colVec) const;
 
+    BaseVector *ColumnProjectionStructVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+        int32_t numSelectedRows) const;
+
+    BaseVector *ColumnProjectionMapVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+        int32_t numSelectedRows) const;
+
+    BaseVector *ColumnProjectionArrayVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+        int32_t numSelectedRows) const;
+
     bool SetLiteralValue(const LiteralExpr *literalExpr);
 
     bool NullColumnProjection(ExecutionContext *context, BaseVector *outVec);
@@ -164,10 +192,10 @@ private:
 class ExpressionEvaluator {
 public:
     ExpressionEvaluator(Expr *filterExpression, const std::vector<Expr *> &projectionExprs,
-        const DataTypes &inputDataTypes, OverflowConfig *ofConfig);
+        const DataTypes &inputDataTypes, OverflowConfig *ofConfig, bool preferVectorization = false);
 
     ExpressionEvaluator(const std::vector<Expr *> &projectionExprs, const DataTypes &inputDataTypes,
-        OverflowConfig *ofConfig);
+        OverflowConfig *ofConfig, bool preferVectorization = false);
 
     ~ExpressionEvaluator()
     {
@@ -188,6 +216,11 @@ public:
     std::vector<type::DataTypePtr> &GetOutputDataTypes()
     {
         return outputTypes;
+    }
+
+    Expr *GetFilterExpression()
+    {
+        return filterExpr;
     }
 
     FilterFunc GetFilterFunc()
@@ -214,7 +247,21 @@ public:
 
     void ProjectFuncGeneration();
 
+    void SetSupportCodegen(const bool isSupport)
+    {
+        isSupportCodegen = isSupport;
+    }
+
+    bool IsSupportCodegen() const
+    {
+        return isSupportCodegen;
+    }
+
 private:
+    bool isSupportCodegen = true;
+    bool isSupportVectorization = true;
+    bool preferVectorization = false;
+    bool useCodegen = true;
     Expr *filterExpr = nullptr;
     std::vector<Expr *> projExprs;
     int32_t projectVecCount = 0;
@@ -223,6 +270,7 @@ private:
     bool hasFilter = false;
     DataTypes inputTypes;
     std::vector<type::DataTypePtr> outputTypes;
+    std::vector<std::vector<FieldExpr *>> fieldExprMap;
 
     std::unique_ptr<Filter> filter;
     std::vector<std::unique_ptr<Projection>> projections;
@@ -230,6 +278,8 @@ private:
     VectorBatch *ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context,
         AlignedBuffer<int32_t> *selectedRowsBuffer, intptr_t *valueAddrs, intptr_t *nullAddrs, intptr_t *offsetAddrs,
         intptr_t *dictionaries);
+
+    VectorBatch *ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context);
 
     VectorBatch *ProcessProject(VectorBatch *vecBatch, ExecutionContext *context, intptr_t *valueAddrs,
         intptr_t *nullAddrs, intptr_t *offsetAddrs, intptr_t *dictionaries);

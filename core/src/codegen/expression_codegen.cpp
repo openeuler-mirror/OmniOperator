@@ -903,6 +903,9 @@ static bool GetValueOffsets(const FuncExpr &fExpr, std::vector<int32_t> &valueOf
             case OMNI_DOUBLE:
                 valueSize += sizeof(double);
                 break;
+            case OMNI_FLOAT:
+                valueSize += sizeof(float);
+                break;
             case OMNI_BOOLEAN:
                 valueSize += sizeof(bool);
                 break;
@@ -1322,6 +1325,9 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
             case OMNI_DOUBLE:
                 leftZero = llvmTypes->CreateConstantDouble(0);
                 break;
+            case OMNI_FLOAT:
+                leftZero = llvmTypes->CreateConstantFloat(0);
+                break;
             case OMNI_DECIMAL128:
                 leftZero = llvmTypes->CreateConstant128(0);
                 break;
@@ -1341,6 +1347,9 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
                 break;
             case OMNI_DOUBLE:
                 rightOne = llvmTypes->CreateConstantDouble(1);
+                break;
+            case OMNI_FLOAT:
+                rightOne = llvmTypes->CreateConstantFloat(1);
                 break;
             case OMNI_DECIMAL128:
                 rightOne = llvmTypes->CreateConstant128(1);
@@ -2006,6 +2015,11 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
                 llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
+        case OMNI_FLOAT: {
+            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantDouble(lExpr.floatVal),
+                llvmTypes->CreateConstantBool(isNullLiteral));
+            break;
+        }
         case OMNI_CHAR:
         case OMNI_VARCHAR: {
             Constant *strValConst = CreateConstantString(*(lExpr.stringVal));
@@ -2218,12 +2232,19 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(const omniruntime::type::Data
         case OMNI_DOUBLE:
             dictionaryFuncSignature = FunctionSignature(dictionaryGetDoubleStr, paramTypes, OMNI_DOUBLE);
             break;
+        case OMNI_FLOAT:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetFloatStr, paramTypes, OMNI_FLOAT);
+            break;
         case OMNI_BOOLEAN:
             dictionaryFuncSignature = FunctionSignature(dictionaryGetBooleanStr, paramTypes, OMNI_BOOLEAN);
             break;
         case OMNI_CHAR:
         case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
             dictionaryFuncSignature = FunctionSignature(dictionaryGetVarcharStr, paramTypes, OMNI_VARCHAR);
+            break;
+        case OMNI_ROW:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetLongStr, paramTypes, OMNI_LONG);
             break;
         default:
             LogWarn("Unsupported dictionary value type: %d", typeId);

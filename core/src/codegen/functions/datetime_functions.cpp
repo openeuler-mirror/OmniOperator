@@ -133,7 +133,7 @@ extern "C" DLLEXPORT int32_t DateTrunc(int64_t contextPtr, int32_t days, const c
 extern "C" DLLEXPORT int32_t DateTruncRetNull(bool *isNull, int32_t days, const char *levelStr, int32_t len)
 {
     type::DateTruncMode level = type::Date32::ParseTruncLevel(std::string(levelStr, len));
-    int32_t result;
+    int32_t result = 0;
     if (type::Date32::TruncDate(days, level, result) != type::Status::CONVERT_SUCCESS) {
         *isNull = true;
     }
@@ -154,5 +154,46 @@ extern "C" DLLEXPORT int32_t GetHourFromTimestamp(int64_t timestamp, bool isNull
 extern "C" DLLEXPORT int32_t DateAdd(int32_t right, int32_t left)
 {
     return right + left;
+}
+
+extern "C" DLLEXPORT char *DateFormat(int64_t contextPtr, int64_t timestamp, const char *fmtStr, int32_t fmtLen,
+    bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+    if (fmtStr == nullptr || std::memcmp(fmtStr, "yyyy-MM-dd", fmtLen) != 0 ) {
+        *outLen = 0;
+        SetError(contextPtr, " Error: date_format now only support formatStr = \"yyyy-MM-dd\" ! ");
+        return nullptr;
+    }
+    const char *tzStr = "UTC";
+    time_t timeStampVal = timestamp / 1e6;
+    setenv("TZ",TimeZoneUtil::GetTZ(tzStr), 1);
+    tzset();
+    struct tm ltm;
+    localtime_r(&timeStampVal, &ltm);
+    int32_t resultLen = fmtLen + 3;
+    auto result = ArenaAllocatorMalloc(contextPtr, resultLen);
+    std::string fmtStr1(fmtStr, fmtLen);
+    std::string fmtOmniTimeStr = toOmniTimeFormat(fmtStr1);
+    auto ret = strftime(result, resultLen, fmtOmniTimeStr.c_str(), &ltm);
+    if (ret == 0) {
+        SetError(contextPtr, " Error: date_format strftime failed ! ");
+        *outLen = 0;
+        return nullptr;
+    }
+    *outLen = ret;
+    return result;
+}
+
+extern "C" DLLEXPORT int32_t DateDiff(int32_t endDate, bool endIsNull, int32_t startDate, bool startIsNull, bool *retIsNull)
+{
+    if (endIsNull || startIsNull) {
+        *retIsNull = true;
+        return 0;
+    }
+    return endDate - startDate;
 }
 }

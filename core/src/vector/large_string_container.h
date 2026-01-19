@@ -35,6 +35,8 @@ public:
 
     int64_t GetContainerCapacity();
 
+    void Expand(int needSize);
+
 private:
     char *GetBufferWithSpace(uint32_t needCapacityInBytes);
 

@@ -11,6 +11,7 @@ TypedAggregator::TypedAggregator(const FunctionType aggregateType, const DataTyp
     : Aggregator(aggregateType, inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull)
 {}
 
+
 BaseVector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
     std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx)
 {
@@ -39,6 +40,46 @@ BaseVector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t r
     *nullMap = nullsHelper;
     return vector;
 }
+
+BaseVector* TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
+    std::shared_ptr<NullsHelper> *nullMap) {
+    std::vector<BaseVector*> baseVectors;
+    auto nullsBuffer = std::make_shared<NullsBuffer>(rowCount, nullptr, 0);
+
+    std::vector<BaseVector*> vectors;
+    for (size_t i = 0; i < channels.size(); ++i) {
+        vectors.emplace_back(vectorBatch->Get(channels[i]));
+    }
+
+    if (channels.size() == 1) {
+        auto channel = channels[0];
+        auto vector = vectorBatch->Get(channel);
+        auto nullsHelper = vector->HasNull() ? unsafe::UnsafeBaseVector::GetNullsHelper(vector) : nullptr;
+        if (nullsHelper != nullptr) {
+            *nullsHelper += rowOffset;
+        }
+        *nullMap = nullsHelper;
+        return vector;
+    } else {
+        for (size_t i = rowOffset; i < rowCount; ++i) {
+            bool isNull = std::any_of(vectors.begin(), vectors.end(), [i](BaseVector* baseVector) {
+                return baseVector->IsNull(i);
+            });
+            nullsBuffer->SetNull(i, isNull);
+        }
+
+        auto channel = channels[0];
+        auto vector = vectorBatch->Get(channel);
+
+        auto nullsHelper = nullsBuffer->HasNull() ? std::make_shared<NullsHelper>(nullsBuffer) : nullptr;
+        if (nullsHelper != nullptr) {
+            *nullsHelper += rowOffset;
+        }
+        *nullMap = nullsHelper;
+        return vector;
+    }
+}
+
 
 bool TypedAggregator::CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,
     const DataTypeId inId, const DataTypeId outId)

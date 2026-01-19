@@ -11,6 +11,8 @@
 #include "loser_tree.h"
 #include "operator/util/operator_util.h"
 #include "spill_tracker.h"
+#include "io/ColumnWriter.hh"
+#include "io/Decompression.hh"
 
 namespace omniruntime {
 namespace op {
@@ -55,8 +57,9 @@ struct SpillFileInfo {
 class SpillReader {
 public:
     SpillReader(const type::DataTypes &dataTypes, const std::string &filePath, uint64_t fileLength,
-        uint64_t totalRowCount)
-        : dataTypes(dataTypes), filePath(filePath), fileLength(fileLength), totalRowCount(totalRowCount)
+        uint64_t totalRowCount, bool isSpillCompressEnabled)
+        : dataTypes(dataTypes), filePath(filePath), fileLength(fileLength), totalRowCount(totalRowCount),
+          isSpillCompressEnabled(isSpillCompressEnabled)
     {}
 
     ~SpillReader();
@@ -78,6 +81,8 @@ private:
 
     ErrorCode Read(void *buf, size_t bufSize);
 
+    ErrorCode ReadWithCompress(void *buf, size_t bufSize);
+
     DataTypes dataTypes;
     std::string filePath;
     uint64_t fileLength = 0;
@@ -85,15 +90,20 @@ private:
     uint64_t totalRowCount = 0;
     uint64_t rowOffset = 0;
     int32_t maxRowCount = 0; // for reuse vector batch memory
+
+    char* currentBuffer_ = nullptr;
+    char* prevBuffer_ = nullptr;
+    int32_t remainLength = 0;
+    bool isSpillCompressEnabled = false;
 };
 
 class SpillMergeStream {
 public:
     static SpillMergeStream *Create(const type::DataTypes &dataTypes, const SpillFileInfo &fileInfo,
         const std::vector<int32_t> &sortCols, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs,
-        SpillTracker *spillTracker)
+        SpillTracker *spillTracker, bool isSpillCompressEnabled)
     {
-        auto *stream = new SpillMergeStream(dataTypes, fileInfo, sortCols, sortCompareFuncs, spillTracker);
+        auto *stream = new SpillMergeStream(dataTypes, fileInfo, sortCols, sortCompareFuncs, spillTracker, isSpillCompressEnabled);
         auto result = stream->GetNextBatch();
         if (result != ErrorCode::SUCCESS) {
             delete stream;
@@ -165,10 +175,10 @@ public:
 private:
     SpillMergeStream(const type::DataTypes &dataTypes, const SpillFileInfo &fileInfo,
         const std::vector<int32_t> &sortCols, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs,
-        SpillTracker *spillTracker)
+        SpillTracker *spillTracker, bool isSpillCompressEnabled)
         : sortCols(sortCols), sortCompareFuncs(sortCompareFuncs), spillTracker(spillTracker)
     {
-        reader = new SpillReader(dataTypes, fileInfo.filePath, fileInfo.fileLength, fileInfo.totalRowCount);
+        reader = new SpillReader(dataTypes, fileInfo.filePath, fileInfo.fileLength, fileInfo.totalRowCount, isSpillCompressEnabled);
     }
 
     std::vector<int32_t> sortCols; // which columns in currentBatch will be used to sort ?
@@ -179,13 +189,14 @@ private:
     vec::VectorBatch *currentBatchPtr = nullptr;
     int32_t currentRowIdx = 0;
     int32_t currentRowCount = 0;
+    bool isSpillCompressEnabled = false;
 };
 
 class SpillMerger {
 public:
     static SpillMerger *Create(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
         const std::vector<SortOrder> &sortOrders, SpillTracker *spillTracker,
-        const std::vector<SpillFileInfo> &spillFiles)
+        const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled)
     {
         std::vector<OperatorUtil::CompareFunc> sortCompareFuncs;
         SetCompareFunctions(dataTypes, sortCols, sortOrders, sortCompareFuncs);
@@ -193,7 +204,7 @@ public:
         std::vector<SpillMergeStream *> streams;
         uint64_t totalRowCount = 0;
         for (auto &fileInfo : spillFiles) {
-            auto stream = SpillMergeStream::Create(dataTypes, fileInfo, sortCols, sortCompareFuncs, spillTracker);
+            auto stream = SpillMergeStream::Create(dataTypes, fileInfo, sortCols, sortCompareFuncs, spillTracker, isSpillCompressEnabled);
             if (stream == nullptr) {
                 for (auto createdStream : streams) {
                     delete createdStream;

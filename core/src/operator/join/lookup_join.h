@@ -20,9 +20,9 @@ namespace op {
 class LookupJoinOutputBuilder {
 public:
     LookupJoinOutputBuilder(std::vector<int32_t> &probeOutputCols, const int32_t *probeOutputTypes,
-        std::vector<int32_t> &buildOutputCols, const int32_t *buildOutputTypes, int32_t outputRowSize);
+        std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, int32_t outputRowSize);
     LookupJoinOutputBuilder(std::vector<int32_t> &probeOutputCols, const int32_t *probeOutputTypes,
-                            std::vector<int32_t> &buildOutputCols, const int32_t *buildOutputTypes, int32_t outputRowSize,
+                            std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, int32_t outputRowSize,
                             std::vector<int32_t> &outputList);
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, BaseVector ***array, uint64_t address);
@@ -89,7 +89,9 @@ private:
             // we want to keep only one level dictionary vector here
             // if the data is non-dictionary, we build dictionary to avoid data copy
             BaseVector *probeColumn = nullptr;
-            if (column->GetEncoding() == vec::OMNI_DICTIONARY) {
+            if (column->GetEncoding() == vec::OMNI_ENCODING_ARRAY) {
+                probeColumn = column->CopyPositions(probePositions, 0, rowCount);
+            } else if (column->GetEncoding() == vec::OMNI_DICTIONARY) {
                 probeColumn = VectorHelper::CopyPositionsVector(column, probePositions, 0, rowCount);
             } else {
                 probeColumn = VectorHelper::CreateDictionaryVector(probePositions, rowCount, column, type);
@@ -126,7 +128,7 @@ private:
     const int32_t *probeOutputTypes;
     std::vector<int32_t> buildOutputCols;
     std::vector<int32_t> outputList;
-    const int32_t *buildOutputTypes;
+    DataTypes buildOutputTypes;
     int32_t probeRowCount = 0;
     int32_t probeRowOffset = 0;
     std::vector<std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t>> probeBuildIndex;

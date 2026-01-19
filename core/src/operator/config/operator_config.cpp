@@ -50,16 +50,16 @@ OperatorConfig::OperatorConfig(const OperatorConfig &operatorConfig)
         case SPILL_CONFIG_NONE:
         case SPILL_CONFIG_OLK:
         case SPILL_CONFIG_INVALID: {
-            spillConfig = new SpillConfig(*inputSpillConfig);
+            spillConfig = std::make_shared<SpillConfig>(*inputSpillConfig);
             break;
         }
         case SPILL_CONFIG_SPARK: {
             auto sparkSpillConfig = static_cast<SparkSpillConfig *>(inputSpillConfig);
-            spillConfig = new SparkSpillConfig(*sparkSpillConfig);
+            spillConfig = std::make_shared<SparkSpillConfig>(*sparkSpillConfig);
             break;
         }
     }
-    this->overflowConfig = new OverflowConfig(operatorConfig.GetOverflowConfig()->GetOverflowConfigId());
+    this->overflowConfig = std::make_shared<OverflowConfig>(operatorConfig.GetOverflowConfig()->GetOverflowConfigId());
     this->adaptivityThreshold = operatorConfig.GetAdaptivityThreshold();
     this->isRowOutput = operatorConfig.IsRowOutput();
 }
@@ -91,7 +91,7 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
             case SPILL_CONFIG_OLK:
             case SPILL_CONFIG_INVALID: {
                 resultSpillConfig =
-                    new SpillConfig(spillConfigId, spillEnabled, spillPath, maxSpillBytes, writeBufferSize);
+                    new SpillConfig(spillConfigId, spillEnabled, spillPath, maxSpillBytes, writeBufferSize, false);
                 break;
             }
             case SPILL_CONFIG_SPARK: {
@@ -100,7 +100,7 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
                 auto memUsagePctForSpillThreshold =
                     result.at("spillConfig").at("memUsagePctForSpillThreshold").get<int32_t>();
                 resultSpillConfig = new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes,
-                    numElementsForSpillThreshold, memUsagePctForSpillThreshold, writeBufferSize);
+                    numElementsForSpillThreshold, memUsagePctForSpillThreshold, writeBufferSize, false);
                 break;
             }
             default: {

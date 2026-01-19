@@ -29,9 +29,11 @@ std::vector<Function> DateTimeFunctionRegistry::GetFunctions()
             OMNI_DATE32, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(DateTruncRetNull), "trunc_date_null", {}, { OMNI_DATE32, OMNI_VARCHAR },
             OMNI_DATE32, INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(DateAdd), "date_add", {}, {OMNI_DATE32, OMNI_INT}, OMNI_DATE32, INPUT_DATA)
+        Function(reinterpret_cast<void *>(DateAdd), "date_add", {}, {OMNI_DATE32, OMNI_INT}, OMNI_DATE32, INPUT_DATA),
+        Function(Function(reinterpret_cast<void *>(DateFormat), "DateFormat", {},{ OMNI_TIMESTAMP, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true)),
+        Function(reinterpret_cast<void *>(DateDiff), "date_diff", {}, { OMNI_DATE32, OMNI_DATE32 }, OMNI_INT, INPUT_DATA_AND_NULL_AND_RETURN_NULL)
     };
-
     return dateTimeFnRegistry;
-}
+};
 }

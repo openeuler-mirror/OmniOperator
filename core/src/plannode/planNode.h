@@ -377,6 +377,10 @@ public:
 
     std::string_view Name() const override { return "Window"; }
 
+    bool CanSpill(const config::QueryConfig &queryConfig) const override {
+        return queryConfig.orderBySpillEnabled();
+    }
+
 private:
     const std::vector<int32_t> windowFunctionTypes;
     const std::vector<int32_t> partitionCols;
@@ -397,6 +401,64 @@ private:
     const std::vector<PlanNodePtr> sources;
     const DataTypesPtr sourceTypes;
     std::vector<int32_t> outputCols;
+};
+
+class WindowGroupLimitNode : public PlanNode {
+public:
+    WindowGroupLimitNode(
+        const PlanNodeId& id,
+        const PlanNodePtr& source,
+        int32_t n,
+        const std::string& funcName,
+        const std::vector<omniruntime::expressions::Expr *>& partitionKeys,
+        const std::vector<omniruntime::expressions::Expr *>& sortKeys,
+        const std::vector<int32_t>& sortAscendings,
+        const std::vector<int32_t>& sortNullFirsts,
+        const DataTypesPtr& outputTypes
+    )
+    : PlanNode(id),
+      sources({source}),
+      sourceTypes(source->OutputType()),
+      n(n),
+      funcName(funcName),
+      partitionKeys(partitionKeys),
+      sortKeys(sortKeys),
+      sortAscendings(sortAscendings),
+      sortNullFirsts(sortNullFirsts),
+      outputTypes(outputTypes) { }
+
+    ~WindowGroupLimitNode() override = default;
+
+    const DataTypesPtr &GetSourceType() const { return sourceTypes; }
+
+    int32_t GetN() const { return n; }
+
+    const std::string& GetFuncName() const { return funcName; }
+
+    const std::vector<omniruntime::expressions::Expr *>& GetPartitionKeys() const { return partitionKeys; }
+
+    const std::vector<omniruntime::expressions::Expr *>& GetSortKeys() const { return sortKeys; }
+
+    const std::vector<int32_t>& GetSortAscendings() const { return sortAscendings; }
+
+    const std::vector<int32_t>& GetSortNullFirsts() const { return sortNullFirsts; }
+
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
+
+    const DataTypesPtr &OutputType() const override { return outputTypes; }
+
+    std::string_view Name() const override { return "WindowGroupLimit"; }
+
+private:
+    const DataTypesPtr sourceTypes;
+    const int32_t n;
+    const std::string funcName;
+    const std::vector<omniruntime::expressions::Expr *> partitionKeys;
+    const std::vector<omniruntime::expressions::Expr *> sortKeys;
+    const std::vector<int32_t> sortAscendings;
+    const std::vector<int32_t> sortNullFirsts;
+    const std::vector<PlanNodePtr> sources;
+    const DataTypesPtr outputTypes;
 };
 
 enum JoinType {
@@ -936,4 +998,90 @@ private:
     const std::vector<PlanNodePtr> sources_;
     DataTypesPtr outputType_;
 };
+
+/// Expands arrays and maps into separate columns. Arrays are expanded into a
+/// single column, and maps are expanded into two columns (key, value). Can be
+/// used to expand multiple columns. In this case will produce as many rows as
+/// the highest cardinality array or map (the other columns are padded with
+/// nulls). Optionally can produce an ordinality column that specifies the row
+/// number starting with 1.
+class UnnestNode : public PlanNode {
+public:
+    /// @param replicateVariables Inputs that are projected as is
+    /// @param unnestVariables Inputs that are unnested. Must be of type ARRAY
+    /// or MAP.
+    UnnestNode(const PlanNodeId& id, std::vector<ExprPtr> replicateVariables,
+        std::vector<ExprPtr> unnestVariables, const PlanNodePtr& source, bool withOrdinality = false)
+        : PlanNode(id), replicateVariables_(std::move(replicateVariables)),
+        unnestVariables_(std::move(unnestVariables)), sources_{source}, withOrdinality_(withOrdinality),
+        outputType_(MakeOutputType(replicateVariables_, unnestVariables_, withOrdinality_)) {}
+
+    /// The order of columns in the output is: replicated columns (in the order
+    /// specified), unnested columns (in the order specified, for maps: key
+    /// comes before value), optional ordinality column.
+    static DataTypesPtr MakeOutputType(const std::vector<ExprPtr>& replicateVariables,
+                                       const std::vector<ExprPtr>& unnestVariables, bool withOrdinality = false)
+    {
+        std::vector<DataTypePtr> dataTypes;
+        for (const auto &variable : replicateVariables) {
+            dataTypes.push_back(variable->dataType);
+        }
+        for (const auto &variable : unnestVariables) {
+            auto fieldExpr = dynamic_cast<FieldExpr *>(variable);
+            if (fieldExpr->FieldIsArray()) {
+                auto arrayType = dynamic_cast<ArrayType*>(variable->dataType.get());
+                dataTypes.push_back(arrayType->ElementType());
+            } else if (fieldExpr->FieldIsMap()) {
+                auto mapType = dynamic_cast<MapType*>(variable->dataType.get());
+                dataTypes.push_back(mapType->Key());
+                dataTypes.push_back(mapType->Value());
+            } else {
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Unnest operator supports only ARRAY and MAP types");
+            }
+        }
+
+        if (withOrdinality) {
+            dataTypes.push_back(LongType());
+        }
+        return std::make_shared<DataTypes>(std::move(dataTypes));
+    }
+
+    const DataTypesPtr &OutputType() const override
+    {
+        return outputType_;
+    }
+
+    const std::vector<PlanNodePtr>& Sources() const override
+    {
+        return sources_;
+    }
+
+    const std::vector<ExprPtr>& replicateVariables() const
+    {
+        return replicateVariables_;
+    }
+
+    const std::vector<ExprPtr>& unnestVariables() const
+    {
+        return unnestVariables_;
+    }
+
+    bool withOrdinality() const
+    {
+        return withOrdinality_;
+    }
+
+    std::string_view Name() const override
+    {
+        return "Unnest";
+    }
+
+private:
+    const std::vector<ExprPtr> replicateVariables_;
+    const std::vector<ExprPtr> unnestVariables_;
+    const bool withOrdinality_;
+    const std::vector<PlanNodePtr> sources_;
+    const DataTypesPtr outputType_;
+};
+
 } // namespace omniruntime

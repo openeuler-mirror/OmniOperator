@@ -10,6 +10,7 @@
 
 namespace omniruntime {
 namespace mem {
+
 // this allocator is not thread-safe, and mainly applies for temporary memory usage for operators,
 // such as when dealing with types such as varchar/decimal and so on.
 class SimpleArenaAllocator {
@@ -215,9 +216,9 @@ private:
     // Record the size of the memory used continuously.
     uint64_t continuousUsedMemoryBytes;
     uint32_t continuousUsed = false;
+    uint32_t growthFactor;
     std::vector<Chunk *> chunks;
     Allocator *allocator;
-    uint32_t growthFactor;
     uint64_t linearGrowthThreshold;
 };
 } // namespace mem

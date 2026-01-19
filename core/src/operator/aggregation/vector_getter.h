@@ -92,7 +92,16 @@ const std::vector<NewUniqueVectorFunction> newUniqueVectorFunctions {
     NewUniqueVector<OMNI_VARCHAR>,    // OMNI_VARCHAR
     NewUniqueVector<OMNI_CHAR>,       // OMNI_CHAR
     NewUniqueVector<OMNI_CONTAINER>,  // OMNI_CONTAINER
-    NewUniqueVector<OMNI_BYTE>        // OMNI_BYTE
+    NewUniqueVector<OMNI_BYTE>,       // OMNI_BYTE
+    NewUniqueVector<OMNI_FLOAT>,      // OMNI_FLOAT
+    nullptr,                          // OMNI_VARBINARY
+    nullptr,                          // OMNI_ARRAY
+    nullptr,                          // OMNI_MAP
+    nullptr,                          // OMNI_ROW
+    nullptr,                          // OMNI_UNKNOWN
+    nullptr,                          // OMNI_FUNCTION
+    nullptr,                          // OMNI_OPAQUE
+    nullptr                           // OMNI_INVALID
 };
 
 static ALWAYS_INLINE void GetDecimalValue(BaseVector *vector, const int32_t &dataTypeId, const int32_t &rowIndex,

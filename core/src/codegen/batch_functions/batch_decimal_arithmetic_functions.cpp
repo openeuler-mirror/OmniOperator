@@ -1839,4 +1839,55 @@ extern "C" DLLEXPORT void BatchGreatestDecimal128RetNull(bool *isNull, type::Dec
         }
     }
 }
+    extern "C" DLLEXPORT void BatchFloorDecimal128(int64_t contextPtr, type::Decimal128 *x, int32_t xPrecision,
+        int32_t xScale, bool *isNull, type::Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+    {
+        for (int i = 0; i < rowCnt; i++) {
+            if (isNull[i]) {
+                continue;
+            }
+            Decimal128Wrapper input(x[i]);
+            input.SetScale(xScale);
+            DecimalOperations::Floor(input);
+            CHECK_OVERFLOW_CONTINUE(input, outPrecision);
+            output[i] = input.ToDecimal128();
+        }
+    }
+
+    extern "C" DLLEXPORT void BatchFloorDecimal64(int64_t contextPtr, int64_t *x, int32_t xPrecision, int32_t xScale,
+        bool *isNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+    {
+        for (int i = 0; i < rowCnt; i++) {
+            if (isNull[i]) {
+                continue;
+            }
+            Decimal64 input(x[i]);
+            input.SetScale(xScale);
+            DecimalOperations::Floor(input);
+            CHECK_OVERFLOW_CONTINUE(input, outPrecision);
+            output[i] = input.GetValue();
+        }
+    }
+
+extern "C" DLLEXPORT void BatchNegativeDecimal128(Decimal128 *x, int32_t xPrecision, int32_t xScale, bool *isNull,
+                                                 Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
+        output[i] = Decimal128Wrapper(x[i]).Negate().ToDecimal128();
+    }
+}
+
+extern "C" DLLEXPORT void BatchNegativeDecimal64(int64_t *x, int32_t xPrecision, int32_t xScale, bool *isNull,
+                                                     int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
+        output[i] = (x[i] == std::numeric_limits<int64_t>::min()) ? x[i] : -x[i];
+    }
+}
 }

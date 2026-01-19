@@ -11,6 +11,13 @@
 #include <vector>
 #include "type/data_type.h"
 #include "type/decimal128.h"
+#include <locale>
+#include <regex>
+#include <codecvt>
+#include "vector/vector_common.h"
+#include "vectorization/VectorFunction.h"
+#include "codegen/bloom_filter.h"
+#include "memory/aligned_buffer.h"
 
 class ExprVisitor;
 
@@ -18,6 +25,7 @@ namespace omniruntime {
 namespace expressions {
 using namespace type;
 using namespace codegen;
+using namespace vectorization;
 
 enum class Operator {
     // Comparison
@@ -78,6 +86,10 @@ enum ExprFunctionType { BUILTIN = 0, HIVE_UDF };
 class Expr {
 public:
     DataTypePtr dataType; // dataType of returned value
+    std::shared_ptr<VectorFunction> vectorFunction;
+    bool isAllSupportVectorization_ = true;
+    bool isRoot = false;
+
     DataTypePtr GetReturnType() const;
     omniruntime::type::DataTypeId GetReturnTypeId() const;
     virtual ExprType GetType() const;
@@ -85,7 +97,38 @@ public:
     virtual void Accept(ExprVisitor &visitor) const = 0;
     static void DeleteExprs(const std::vector<Expr *> &exprs);
     static void DeleteExprs(const std::vector<std::vector<Expr *>> &exprs);
+
+    virtual uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) { return nullptr; }
+
+    virtual bool supportVectorized() { return false; }
+
+    virtual std::string toString() const
+    {
+        OMNI_THROW("RUNTIME_ERROR:", "not implementation expr!");
+    };
 };
+
+class LiteralExpr;
+
+std::string GetBoolValOutput(const LiteralExpr &e);
+
+std::string GetIntValOutput(const LiteralExpr &e);
+
+std::string GetLongValOutput(const LiteralExpr &e);
+
+std::string GetDoubleValOutput(const LiteralExpr &e);
+
+std::string GetCharValOutput(const LiteralExpr &e);
+
+std::string GetDecimal64ValOutput(const LiteralExpr &e);
+
+std::string GetDecimal128ValOutput(const LiteralExpr &e);
+
+std::string GetShortValOutput(const LiteralExpr &e);
+
+std::string GetByteValOutput(const LiteralExpr &e);
+
+std::string GetFloatValOutput(const LiteralExpr &e);
 
 class LiteralExpr : public Expr {
 public:
@@ -96,6 +139,7 @@ public:
     int32_t intVal = 0;
     int64_t longVal = 0;
     double doubleVal = 0;
+    float floatVal = 0;
     std::string *stringVal = nullptr;
 
     LiteralExpr();
@@ -104,11 +148,17 @@ public:
     explicit LiteralExpr(int8_t val, DataTypePtr colType, bool isNull = false);
     explicit LiteralExpr(int16_t val, DataTypePtr colType, bool isNull = false);
     explicit LiteralExpr(int32_t val, DataTypePtr colType, bool isNull = false);
-    explicit LiteralExpr(int64_t val, DataTypePtr colType);
+    explicit LiteralExpr(int64_t val, DataTypePtr colType, bool isNulls = false);
     explicit LiteralExpr(double val, DataTypePtr colType);
+    explicit LiteralExpr(float val, DataTypePtr colType);
     explicit LiteralExpr(std::string *val, DataTypePtr colType);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
+    bool supportVectorized() override
+    {
+        return true;
+    }
     LiteralExpr* Copy()
     {
         auto newExpr = new LiteralExpr();
@@ -122,18 +172,57 @@ public:
         newExpr->stringVal = (stringVal != nullptr) ? new std::string(*stringVal) : nullptr;
         return newExpr;
     };
+    std::string toString() const override;
 };
 
 class FieldExpr : public Expr {
 public:
     bool isNull = false;
     int32_t colVal = 0;
+    int32_t oColVal = -1;
+    int32_t ordinal = -1;
+    Expr* input = nullptr;
+
+    bool operator==(const FieldExpr &other) const
+    {
+        return isNull == other.isNull && colVal == other.colVal &&
+               ordinal == other.ordinal && input == other.input;
+    }
 
     FieldExpr();
     ~FieldExpr() override;
     FieldExpr(int32_t colIdx, DataTypePtr colType);
+    FieldExpr(int32_t colIdx, DataTypePtr colType, int32_t oridinal);
+    FieldExpr(int32_t colIdx, DataTypePtr colType, int32_t oridinal, Expr* input);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    omniruntime::vec::BaseVector *GetFieldVector(omniruntime::vec::VectorBatch *vecBatch);
+
+    bool supportVectorized() override
+    {
+        return this->dataType->GetId() == OMNI_ROW || this->dataType->GetId() == OMNI_VARCHAR || this->dataType->GetId() == OMNI_MAP ;
+    }
+
+    bool FieldIsArray();
+    bool FieldIsMap();
+
+    std::string toString() const override
+    {
+        std::string output = "Field:";
+        output += TypeUtil::TypeToString(this->GetReturnTypeId());
+        if (this->GetReturnTypeId() == OMNI_CHAR) {
+            output += '[' + std::to_string(static_cast<CharDataType &>(*(this->GetReturnType())).GetWidth()) + ']';
+        } else if (this->GetReturnTypeId() == OMNI_DECIMAL64 || this->GetReturnTypeId() == OMNI_DECIMAL128) {
+            output += "(";
+            output += std::to_string(static_cast<DecimalDataType *>(this->dataType.get())->GetPrecision());
+            output += ", ";
+            output += std::to_string(static_cast<DecimalDataType *>(this->dataType.get())->GetScale());
+            output += ")";
+        }
+        output += ":#" + std::to_string(this->colVal);
+        return output;
+    }
 };
 
 class UnaryExpr : public Expr {
@@ -148,6 +237,31 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    uint8_t* computeNOT(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
+
+    bool supportVectorized() override
+    {
+        return exp->supportVectorized();
+    }
+
+    std::string toString() const override
+    {
+        std::string indent = "";
+        std::string output = indent;
+        switch (this->op) {
+            case Operator::NOT:
+                output += "Unary:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(NOT ";
+                break;
+            default:
+                output += "InvalidUnaryOperator:" + std::to_string(static_cast<int32_t>(this->op)) + "(";
+                break;
+        }
+        output += this->exp->toString();
+        output += ")";
+        return output;
+    }
 };
 
 class BinaryExpr : public Expr {
@@ -161,12 +275,27 @@ public:
     BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePtr dt);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    uint8_t* computeEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
+    uint8_t* computeAND(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
+    uint8_t* computeOR(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
+    uint8_t* computeNEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
+
+    bool supportVectorized() override
+    {
+        return left->supportVectorized() && right->supportVectorized();
+    }
+
+    std::string toString() const override;
 };
 
 class InExpr : public Expr {
 public:
     // first element of arguments is the value to be compared to every other argument
     std::vector<Expr *> arguments;
+    Expr* fieldExpr = nullptr;
+    std::shared_ptr<vec::RowVector> constantRowVec;
 
     InExpr();
     ~InExpr() override;
@@ -174,6 +303,17 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    std::string toString() const override
+    {
+        std::string indent = "";
+        std::string output = indent + "In:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(";
+        for (uint32_t i = 0; i < this->arguments.size(); i++) {
+            output += (this->arguments[i])->toString();
+        }
+        output += ")";
+        return output;
+    }
 };
 
 class BetweenExpr : public Expr {
@@ -188,6 +328,19 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    std::string toString() const override
+    {
+        std::string indent = "";
+        std::string output = indent + "Between:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(";
+        output += this->value->toString();
+
+        output += this->lowerBound->toString();
+
+        output += this->upperBound->toString();
+        output += ")";
+        return output;
+    }
 };
 
 class SwitchExpr : public Expr {
@@ -200,6 +353,19 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    std::string toString() const override
+    {
+        std::string indent = "";
+        std::string output = indent + "Switch:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(";
+        for (const auto &i : this->whenClause) {
+            output += i.first->toString();
+            output += i.second->toString();
+        }
+        output += this->falseExpr->toString();
+        output += ")";
+        return output;
+    }
 };
 
 class IfExpr : public Expr {
@@ -214,6 +380,20 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    std::string toString() const override
+    {
+        std::string indent = "";
+        std::string output = indent + "If:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(";
+        output += this->condition->toString();
+
+        output += this->trueExpr->toString();
+
+        output += this->falseExpr->toString();
+
+        output += ")";
+        return output;
+    }
 };
 
 class CoalesceExpr : public Expr {
@@ -227,6 +407,16 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    std::string toString() const override
+    {
+        std::string indent = "";
+        std::string output = indent + "Coalesce:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(";
+        output += this->value1->toString();
+        output += this->value2->toString();
+        output += ")";
+        return output;
+    }
 };
 
 class IsNullExpr : public Expr {
@@ -238,6 +428,22 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
+
+    bool supportVectorized() override
+    {
+        return value->supportVectorized();
+    }
+
+    std::string toString() const override
+    {
+        std::string indent = "";
+        std::string output = indent + "IsNull:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(";
+        output += this->value->toString();
+        output += ")";
+        return output;
+    }
 };
 
 class FuncExpr : public Expr {
@@ -263,6 +469,59 @@ public:
             e.arguments[0]->GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR &&
             e.GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR;
     }
+
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatc, uint8_t *bitMark) override;
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
+
+    bool supportVectorized() override
+    {
+        return funcName == "RLike";
+    }
+
+    std::string toString() const override
+    {
+        std::string indent = "";
+        std::string typeStr = TypeUtil::TypeToString(this->GetReturnTypeId());
+        if (TypeUtil::IsDecimalType(this->GetReturnTypeId())) {
+            auto decimalDataType = static_cast<DecimalDataType *>(this->GetReturnType().get());
+            typeStr += "(";
+            typeStr += std::to_string(decimalDataType->GetPrecision());
+            typeStr += ", ";
+            typeStr += std::to_string(decimalDataType->GetScale());
+            typeStr += ")";
+        } else if (TypeUtil::IsStringType(this->GetReturnTypeId())) {
+            typeStr += "[";
+            typeStr += std::to_string(static_cast<VarcharDataType *>(this->GetReturnType().get())->GetWidth());
+            typeStr += "]";
+        }
+
+        std::string output = indent + "Function:" + ":" + this->funcName + ":" + typeStr + "(";
+        for (uint32_t i = 0; i < this->arguments.size(); i++) {
+            output += this->arguments[i]->toString();
+            if (i == this->arguments.size() - 1) {
+                output += ")";
+            }
+        }
+        return output;
+    }
+};
+
+class BloomFilterFuncExpr : public FuncExpr
+{
+public:
+    BloomFilterFuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
+        std::unique_ptr<mem::AlignedBuffer<int8_t>> bloomFilterBuf, std::unique_ptr<op::BloomFilter> bloomFilter)
+     : FuncExpr(fnName, args, returnType),
+       bloomFilterBuf_(std::move(bloomFilterBuf)),
+       bloomFilter_(std::move(bloomFilter)) {}
+   ~BloomFilterFuncExpr() = default;
+   BloomFilterFuncExpr(const BloomFilterFuncExpr &) = delete;
+   BloomFilterFuncExpr &operator=(const BloomFilterFuncExpr &) = delete;
+   BloomFilterFuncExpr(BloomFilterFuncExpr &&) = delete;
+   BloomFilterFuncExpr &operator=(BloomFilterFuncExpr &&) = delete;
+private:
+    std::unique_ptr<mem::AlignedBuffer<int8_t>> bloomFilterBuf_;
+    std::unique_ptr<op::BloomFilter> bloomFilter_;
 };
 } // namespace expressions
 } // namespace omniruntime

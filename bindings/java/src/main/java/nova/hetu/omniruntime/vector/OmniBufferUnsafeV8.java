@@ -130,6 +130,26 @@ public class OmniBufferUnsafeV8 implements OmniBuffer {
     }
 
     @Override
+    public void setFloat(int index, float value) {
+        JvmUtils.UNSAFE.putFloat(addr(index), value);
+    }
+
+    @Override
+    public float getFloat(int index) {
+        return JvmUtils.UNSAFE.getFloat(addr(index));
+    }
+
+    @Override
+    public void setFloatArray(int index, float[] src, int srcIndex, int length) {
+        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_FLOAT_BASE_OFFSET + srcIndex, null, addr(index), length);
+    }
+
+    @Override
+    public void getFloatArray(int index, float[] target, int targetIndex, int length) {
+        JvmUtils.UNSAFE.copyMemory(null, addr(index), target, Unsafe.ARRAY_FLOAT_BASE_OFFSET + targetIndex, length);
+    }
+
+    @Override
     public int getCapacity() {
         return capacity;
     }

@@ -592,7 +592,11 @@ TEST(AggregationWithExprOperatorTest, test_agg_first_expr)
 TEST(HashAggregationWithExprOperatorTest, adaptor_header_with_null)
 {
     OneRowAdaptor adaptor;
-    adaptor.Init({ DataTypeId::OMNI_INT, DataTypeId::OMNI_DECIMAL128 });
+    std::vector<type::DataTypePtr> typeList;
+    typeList.push_back(std::make_shared<type::DataType>(type::OMNI_INT));
+    typeList.push_back(std::make_shared<type::DataType>(type::OMNI_DECIMAL128));
+    type::DataTypes dataTypes(typeList);
+    adaptor.Init(dataTypes);
 
     {
         type::Decimal128 decimal128(250);
@@ -632,7 +636,11 @@ TEST(HashAggregationWithExprOperatorTest, adaptor_header_with_null)
 
     {
         OneRowAdaptor adaptor;
-        adaptor.Init({ DataTypeId::OMNI_INT, DataTypeId::OMNI_VARCHAR });
+        std::vector<type::DataTypePtr> typeList;
+        typeList.push_back(std::make_shared<type::DataType>(type::OMNI_INT));
+        typeList.push_back(std::make_shared<type::DataType>(type::OMNI_VARCHAR));
+        type::DataTypes dataTypes(typeList);
+        adaptor.Init(dataTypes);
 
         int32_t data1 = 32;
         std::string hello = "hello";

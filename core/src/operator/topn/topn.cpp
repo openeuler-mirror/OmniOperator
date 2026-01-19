@@ -194,6 +194,9 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
             case OMNI_DOUBLE:
                 SetValueForSingleRowVecBatch<OMNI_DOUBLE>(singleRowVecBatch, i, vector, position);
                 break;
+            case OMNI_FLOAT:
+                SetValueForSingleRowVecBatch<OMNI_FLOAT>(singleRowVecBatch, i, vector, position);
+                break;
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
                 SetVarCharForSingleRowVecBatch(singleRowVecBatch, i, vector, position);

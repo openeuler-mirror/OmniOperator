@@ -46,6 +46,13 @@ extern DLLEXPORT double GetDoubleFromDictionaryVector(int64_t dictionaryVectorAd
     return dictionaryVectorPtr->GetValue(index);
 }
 
+DLLEXPORT float GetFloatFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index)
+{
+    auto dictionaryVectorPtr =
+            reinterpret_cast<vec::Vector<vec::DictionaryContainer<float>> *>(dictionaryVectorAddr);
+    return dictionaryVectorPtr->GetValue(index);
+}
+
 extern DLLEXPORT bool GetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index)
 {
     auto dictionaryVectorPtr =

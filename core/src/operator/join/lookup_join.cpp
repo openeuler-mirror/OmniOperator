@@ -208,7 +208,7 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
     this->probeOutputTypes = DataTypes(tmpProbeOutputTypesVec);
 
     this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeOutputCols, probeOutputTypes.GetIds(),
-        buildOutputCols, buildOutputTypes.GetIds(), outputRowSize);
+        buildOutputCols, buildOutputTypes, outputRowSize);
     this->probeHashColumns = new BaseVector *[probeHashCols.size()]();     // 2D array
     this->probeOutputColumns = new BaseVector *[probeOutputCols.size()](); // 2D array
     SetOperatorName(opNameForLookUpJoin);
@@ -251,7 +251,7 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
     hashTables, simpleFilter, originalProbeColsCount, outputRowSize, isShuffleExchangeBuildPlan)
 {
 	this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeOutputCols, probeOutputTypes.GetIds(),
-																	buildOutputCols, buildOutputTypes.GetIds(),
+																	buildOutputCols, buildOutputTypes,
 																    outputRowSize, outputList);
 }
 
@@ -1592,6 +1592,9 @@ void ALWAYS_INLINE LookupJoinOperator::PopulateProbeHashes()
             case omniruntime::type::OMNI_DOUBLE:
                 CalculateColHashes<double>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
+            case omniruntime::type::OMNI_FLOAT:
+                CalculateColHashes<float>(hashCol, rowCount, hashes, curProbeNulls);
+                break;
             case omniruntime::type::OMNI_BOOLEAN:
                 CalculateColHashes<bool>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
@@ -1626,7 +1629,7 @@ void ALWAYS_INLINE LookupJoinOperator::PopulateProbeNulls()
 }
 
 LookupJoinOutputBuilder::LookupJoinOutputBuilder(std::vector<int32_t> &probeOutputCols, const int32_t *probeOutputTypes,
-    std::vector<int32_t> &buildOutputCols, const int32_t *buildOutputTypes, int32_t outputRowSize)
+    std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, int32_t outputRowSize)
     : probeOutputCols(probeOutputCols),
       probeOutputTypes(probeOutputTypes),
       buildOutputCols(buildOutputCols),
@@ -1640,7 +1643,7 @@ LookupJoinOutputBuilder::LookupJoinOutputBuilder(std::vector<int32_t> &probeOutp
 }
 
 LookupJoinOutputBuilder::LookupJoinOutputBuilder(std::vector<int32_t> &probeOutputCols, const int32_t *probeOutputTypes,
-    std::vector<int32_t> &buildOutputCols, const int32_t *buildOutputTypes, int32_t outputRowSize, std::vector<int32_t> &outputList)
+    std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, int32_t outputRowSize, std::vector<int32_t> &outputList)
     : probeOutputCols(probeOutputCols),
       probeOutputTypes(probeOutputTypes),
       buildOutputCols(buildOutputCols),
@@ -1850,6 +1853,54 @@ static NO_INLINE BaseVector *ConstructBuildVarcharColumn(
     return ret;
 }
 
+template<bool isInnerJoin>
+static NO_INLINE BaseVector *ConstructBuildArrayColumn(
+    const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp, uint32_t outputCol, int32_t numRows, std::shared_ptr<DataType> elementType)
+{
+    auto *ret = new ArrayVector(numRows);
+    DataTypeId typeId = elementType->GetId();
+    BaseVector *elementVector = vec::VectorHelper::CreateFlatVector(static_cast<int32_t>(typeId), 0);
+    for (int32_t i = 0; i < numRows; i++) {
+        BaseVector ***array = std::get<1>(buildTemp[i]);
+        if constexpr (!isInnerJoin) {
+            if (array == nullptr) {
+                ret->SetNull(i);
+                ret->SetSize(i, 1);
+
+                int elementVectorSize = elementVector->GetSize();
+                elementVector->Expand(elementVectorSize + 1);
+                elementVector->SetNull(elementVectorSize);
+                continue;
+            }
+        }
+        auto vecBatchIndex = std::get<2>(buildTemp[i]);
+        auto buildRowIdx = std::get<3>(buildTemp[i]);
+        auto buildVector = array[outputCol][vecBatchIndex];
+        if (buildVector->IsNull(buildRowIdx)) {
+            ret->SetNull(i);
+            ret->SetSize(i, 1);
+
+            int elementVectorSize = elementVector->GetSize();
+            elementVector->Expand(elementVectorSize + 1);
+            elementVector->SetNull(elementVectorSize);
+            continue;
+        }
+
+        auto subVector = buildVector->Slice(buildRowIdx, 1, false);
+        ArrayVector* subArrayVector = dynamic_cast<ArrayVector *>(subVector);
+        auto subElementVector = subArrayVector->GetElementVector();
+        int64_t subElementVectorLength = subArrayVector->GetSize(0);
+        int elementVectorSize = elementVector->GetSize();
+        elementVector->Expand(elementVectorSize + subElementVectorLength);
+        VectorHelper::AppendVector(elementVector, elementVectorSize, subElementVector.get(), subElementVectorLength);
+
+        ret->SetSize(i, subElementVectorLength);
+        delete subVector;
+    }
+    ret->AddElements(elementVector);
+    return ret;
+}
+
 void NO_INLINE LookupJoinOutputBuilder::ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeOutputColumns,
     int32_t rowCount)
 {
@@ -1885,7 +1936,7 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
     for (size_t j = 0; j < buildOutputCols.size(); j++) {
         uint32_t outputCol = buildOutputCols[j];
         BaseVector *buildColumn = nullptr;
-        switch (buildOutputTypes[j]) {
+        switch (buildOutputTypes.GetIds()[j]) {
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
@@ -1908,12 +1959,22 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
             case OMNI_DOUBLE:
                 buildColumn = ConstructBuildColumn<double, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
                 break;
+            case OMNI_FLOAT:
+                buildColumn = ConstructBuildColumn<float, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
+                break;
             case OMNI_BOOLEAN:
                 buildColumn = ConstructBuildColumn<bool, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
                 break;
             case OMNI_BYTE:
                 buildColumn = ConstructBuildColumn<int8_t, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
                 break;
+            case OMNI_ARRAY: {
+                DataTypePtr dataType = buildOutputTypes.GetType(j);
+                auto arrayType = dynamic_cast<ArrayType*>(dataType.get());
+                std::shared_ptr<DataType> elementType = arrayType->ElementType();
+                buildColumn = ConstructBuildArrayColumn<isInnerJoin>(buildTemp, outputCol, rowCount, elementType);
+                break;
+            }
             default:
                 break;
         }

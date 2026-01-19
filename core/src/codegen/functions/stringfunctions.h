@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2025. All rights reserved.
  * Description: registry  function
  */
 #ifndef __STRINGFUNCTIONS_H__
@@ -61,7 +61,19 @@ extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *a
     int32_t bWidth, int32_t bpLen, bool isNull, int32_t *outLen);
 
 extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, const char *ap, int32_t apLen, const char *bp, int32_t bpLen, bool isNull, int32_t *outLen);
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *ConcatWs3Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, bool isNull,
+    int32_t *outLen);
+
+extern "C" DLLEXPORT const char *ConcatWs4Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, const char *s4,
+    int32_t s4Len, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *ConcatWs5Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, const char *s4,
+    int32_t s4Len, const char *s5, int32_t s5Len, bool isNull, int32_t *outLen);
 
 extern "C" DLLEXPORT int32_t CastStringToDateNotAllowReducePrecison(int64_t contextPtr, const char *str, int32_t strLen,
     bool isNull);
@@ -90,6 +102,9 @@ extern "C" DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const
     int32_t srcWidth, bool isNull, int32_t dstWidth, int32_t *outLen);
 
 // Cast string to numeric type
+
+extern "C" DLLEXPORT const char *CastStringToBinary(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
+    int32_t *outLen);
 
 extern "C" DLLEXPORT int8_t CastStringToByte(int64_t contextPtr, const char *str, int32_t strLen, bool isNull);
 
@@ -370,5 +385,24 @@ extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, b
 
 extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *str, int32_t strLen, const char *delim,
     int32_t delimLen, int32_t count, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *Re2SearchAndExtract(int64_t contextPtr, const char *str, int32_t strLen, const char *pattern,
+    int32_t patternLen, int32_t idx, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *RegexpReplace(int64_t contextPtr, const char *stringInput, int32_t stringInputLen,
+    const char *pattern, int32_t patternLen, const char *replacement, int32_t replacementLen, int32_t count,
+    bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *TrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *Trim1Str(int64_t contextPtr, const char *srcStr, int32_t srcStrLen, bool isNull,
+    int32_t *outLen);
+
+extern "C" DLLEXPORT const char *LeftTrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *RightTrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen);
 }
 #endif

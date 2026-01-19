@@ -10,13 +10,16 @@
 #include "spill_merger.h"
 #include "operator/pages_index.h"
 #include "operator/aggregation/group_aggregation_sort.h"
+#include "io/ColumnWriter.hh"
 
 namespace omniruntime {
 namespace op {
 class SpillWriter {
 public:
-    SpillWriter(const type::DataTypes &dataTypes, const std::string &dirPath, uint64_t writeBufferSize = 0)
-        : dataTypes(dataTypes), dirPath(dirPath), writeBufferSize(writeBufferSize), writeBufferOffset(0)
+    SpillWriter(const type::DataTypes &dataTypes, const std::string &dirPath, uint64_t writeBufferSize = 0,
+                bool IsSpillCompressEnabled = false)
+        : dataTypes(dataTypes), dirPath(dirPath), writeBufferSize(writeBufferSize), writeBufferOffset(0),
+          IsSpillCompressEnabled(IsSpillCompressEnabled)
     {
         if (writeBufferSize != 0) {
             writeBuffer = new char[writeBufferSize];
@@ -36,6 +39,8 @@ public:
         return file;
     }
 
+    uint64_t getTotalCompressBytes() const;
+
     ErrorCode Close();
 
 private:
@@ -52,6 +57,8 @@ private:
 
     ErrorCode Write(void *buf, size_t length);
 
+    void InitCompressStream();
+
     type::DataTypes dataTypes;
     std::string dirPath;
     int32_t fd = -1;
@@ -61,14 +68,24 @@ private:
     char *writeBuffer = nullptr;
     uint64_t fileLength = 0;
     uint64_t totalRowCount = 0;
+
+    std::unique_ptr<omniSpark::OutputStream> out_stream;
+    std::unique_ptr<omniSpark::StreamsFactory> stream_factory;
+    std::unique_ptr<omniSpark::BufferedOutputStream> compress_stream;
+    std::vector<char> scratch_buffer;
+    uint64_t unflushed_size = 0;
+    constexpr static uint64_t FLUSH_THRESHOLD = 64 * 1024 * 1024;
+    bool IsSpillCompressEnabled = false;
+    uint64_t totalCompressBytes = 0;
 };
 
 class Spiller {
 public:
     Spiller(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
         const std::vector<SortOrder> &sortOrders, const std::string &spillPath, uint64_t maxSpillBytes,
-        uint64_t writeBufferSize = 0)
-        : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders), writeBufferSize(writeBufferSize)
+        uint64_t writeBufferSize = 0, bool isSpillCompressEnabled = false)
+        : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders), writeBufferSize(writeBufferSize),
+          isSpillCompressEnabled(isSpillCompressEnabled)
     {
         dirPaths.emplace_back(spillPath);
         int32_t dataTypeCount = dataTypes.GetSize();
@@ -88,9 +105,9 @@ public:
         writers.clear();
     }
 
-    ErrorCode Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort);
+    ErrorCode Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort, Operator* op);
 
-    ErrorCode Spill(AggregationSort *aggregationSort);
+    ErrorCode Spill(AggregationSort *aggregationSort, Operator* op);
 
     std::vector<SpillFileInfo> FinishSpill()
     {
@@ -101,9 +118,9 @@ public:
         return spillFiles;
     }
 
-    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles)
+    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled)
     {
-        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles);
+        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, isSpillCompressEnabled);
         return merger;
     }
 
@@ -126,6 +143,8 @@ public:
         }
     }
 
+    bool isSpillCompressEnable() const;
+
 private:
     uint64_t CollectVecBatchSize(vec::VectorBatch *vectorBatch);
 
@@ -141,6 +160,7 @@ private:
     std::vector<SpillWriter *> writers;
     SpillTracker *spillTracker = nullptr;
     uint64_t writeBufferSize = 0;
+    bool isSpillCompressEnabled = false;
 };
 }
 }

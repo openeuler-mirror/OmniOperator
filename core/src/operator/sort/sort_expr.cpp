@@ -34,7 +34,7 @@ SortWithExprOperatorFactory* SortWithExprOperatorFactory::CreateSortWithExprOper
     auto expressionCount = static_cast<int32_t>(sortExpressions.size());
     auto spillConfig = new SparkSpillConfig(planNode->CanSpill(queryConfig) & queryConfig.orderBySpillEnabled(),
         queryConfig.SpillDir(), queryConfig.SpillDirDiskReserveSize(), queryConfig.SpillSortRowThreshold(),
-        queryConfig.SpillMemThreshold(), queryConfig.SpillWriteBufferSize());
+        queryConfig.SpillMemThreshold(), queryConfig.SpillWriteBufferSize(), queryConfig.SpillEnableCompress());
     auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                                                                  : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     auto pOperatorFactory = new SortWithExprOperatorFactory(*sourceTypes, outputCols, outputColsCount, sortExpressions,
@@ -112,6 +112,11 @@ int32_t SortWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
     } else {
         UpdateGetOutputInfo(0);
     }
+
+    if (sortOperator->GetStatus() == OMNI_STATUS_FINISHED) {
+        UpdateSpilledMetrics(sortOperator);
+    }
+
     SetStatus(sortOperator->GetStatus());
     return status;
 }

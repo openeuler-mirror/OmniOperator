@@ -35,6 +35,37 @@ private:
     omniruntime::type::DataTypeId retType;
     void *funcAddress = nullptr;
 };
+
+class FunctionSignatureBuilder {
+public:
+    FunctionSignatureBuilder() = default;
+
+    FunctionSignatureBuilder &FuncName(const std::string &name)
+    {
+        this->funcName_ = name;
+        return *this;
+    }
+
+    FunctionSignatureBuilder &ReturnType(type::DataTypeId type)
+    {
+        returnType_ = type;
+        return *this;
+    }
+
+    FunctionSignatureBuilder &ArgumentType(type::DataTypeId type)
+    {
+        argumentTypes_.emplace_back(type);
+        return *this;
+    }
+
+    std::shared_ptr<FunctionSignature> Build();
+
+private:
+    std::string funcName_;
+    type::DataTypeId returnType_;
+    std::vector<type::DataTypeId> argumentTypes_;
+    bool variableArity_{false};
+};
 }
 
 #endif

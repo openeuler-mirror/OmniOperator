@@ -20,6 +20,8 @@ std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(GetLongFromDictionaryVector), "DictionaryGetLong", {}, paramTypes, OMNI_LONG),
         Function(reinterpret_cast<void *>(GetDoubleFromDictionaryVector), "DictionaryGetDouble", {}, paramTypes,
             OMNI_DOUBLE),
+        Function(reinterpret_cast<void *>(GetFloatFromDictionaryVector), "DictionaryGetFloat", {}, paramTypes,
+            OMNI_FLOAT),
         Function(reinterpret_cast<void *>(GetBooleanFromDictionaryVector), "DictionaryGetBoolean", {}, paramTypes,
             OMNI_BOOLEAN),
         Function(reinterpret_cast<void *>(GetVarcharFromDictionaryVector), "DictionaryGetVarchar", {}, paramTypes,

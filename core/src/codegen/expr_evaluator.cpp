@@ -2,38 +2,53 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
  * Description: Expression evaluator
  */
+#include <iostream>
+#include <sstream>
+#include <mutex>
 #include "expr_evaluator.h"
+#include "vectorization/ExprEval.h"
+#include "expression/expr_verifier.h"
 
 namespace omniruntime::codegen {
+std::mutex mtx;
+CacheMap<std::string, intptr_t> Projection::projFuncCache(100);
+CacheMap<std::string, std::shared_ptr<ProjectionCodeGen>> Projection::rtCache(100);
+CacheMap<std::string, intptr_t> Filter::filterFuncCache(100);
+CacheMap<std::string, std::shared_ptr<FilterCodeGen>> Filter::rtCache(100);
+
 int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
 {
     switch (types.GetIds()[i]) {
         case OMNI_INT:
         case OMNI_DATE32:
-            return reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int32_t> *>(colVec)));
+            return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
+                reinterpret_cast<Vector<int32_t> *>(colVec)));
         case OMNI_SHORT:
-            return reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int16_t> *>(colVec)));
+            return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
+                reinterpret_cast<Vector<int16_t> *>(colVec)));
         case OMNI_BYTE:
-            return reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int8_t> *>(colVec)));
+            return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
+                reinterpret_cast<Vector<int8_t> *>(colVec)));
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
-            return reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(colVec)));
+            return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
+                reinterpret_cast<Vector<int64_t> *>(colVec)));
         case OMNI_DOUBLE:
-            return reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<double> *>(colVec)));
+            return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
+                reinterpret_cast<Vector<double> *>(colVec)));
+        case OMNI_FLOAT:
+            return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
+                reinterpret_cast<Vector<float> *>(colVec)));
         case OMNI_BOOLEAN:
-            return reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<bool> *>(colVec)));
+            return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
+                reinterpret_cast<Vector<bool> *>(colVec)));
         case OMNI_DECIMAL128:
-            return reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<Decimal128> *>(colVec)));
+            return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
+                reinterpret_cast<Vector<Decimal128> *>(colVec)));
         case OMNI_VARCHAR:
         case OMNI_CHAR:
+        case OMNI_VARBINARY:
             return reinterpret_cast<int64_t>(unsafe::UnsafeStringVector::GetValues(
                 reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(colVec)));
         case OMNI_TIMESTAMP_WITHOUT_TIME_ZONE:
@@ -51,7 +66,8 @@ void GetAddr(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[],
     intptr_t valuesAddress;
     intptr_t dictVecAddress;
     int32_t vectorCount = vecBatch.GetVectorCount();
-    for (int32_t i = 0; i < vectorCount; i++) {
+    int32_t size = std::min(vectorCount, types.GetSize());
+    for (int32_t i = 0; i < size; i++) {
         auto colVec = vecBatch.Get(i);
         dictVecAddress = 0;
         valuesAddress = 0;
@@ -75,6 +91,7 @@ void GetAddr(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[],
 
 Filter::Filter(const Expr &expression, const DataTypes &inputDataTypes, OverflowConfig *overflowConfig)
 {
+std::lock_guard<std::mutex> lock(mtx);
 #ifdef DEBUG
     std::cout << "String expression in Filter: " << std::endl;
     ExprPrinter printExprTree;
@@ -83,8 +100,20 @@ Filter::Filter(const Expr &expression, const DataTypes &inputDataTypes, Overflow
 #endif
     intptr_t f;
     if (!ConfigUtil::IsEnableBatchExprEvaluate()) {
-        this->codeGen = std::make_unique<FilterCodeGen>("filterFunc", expression, overflowConfig);
-        f = this->codeGen->GetFunction(inputDataTypes);
+        auto overflowKey = overflowConfig ? std::to_string(overflowConfig->IsOverflowAsNull()) : "0";
+        auto key = expression.toString() + overflowKey;
+        auto cacheRtValue = rtCache.Get(key);
+        auto cacheValue = filterFuncCache.Get(key);
+
+        if (cacheValue != std::nullopt) {
+            f = cacheValue.value();
+            this->codeGen = cacheRtValue.value();
+        }  else {
+            this->codeGen = std::make_shared<FilterCodeGen>("filterFunc", expression, overflowConfig);
+            f = this->codeGen->GetFunction(inputDataTypes);
+            filterFuncCache.Set(key, f);
+            rtCache.Set(key, this->codeGen);
+        }
     } else {
         this->batchCodeGen = std::make_unique<BatchFilterCodeGen>("filterFunc", expression, overflowConfig);
         f = this->batchCodeGen->GetFunction();
@@ -129,6 +158,10 @@ bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
             literalVal.value.doubleVal = literalExpr->doubleVal;
             break;
         }
+        case OMNI_FLOAT: {
+            literalVal.value.floatVal = literalExpr->floatVal;
+            break;
+        }
         case OMNI_BOOLEAN: {
             literalVal.value.boolVal = literalExpr->boolVal;
             break;
@@ -140,6 +173,7 @@ bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
             break;
         }
         case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
         case OMNI_CHAR: {
             literalVal.value.stringVal = std::string_view(*(literalExpr->stringVal));
             break;
@@ -153,6 +187,7 @@ bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
 
 bool Projection::Initialize(bool filter, const DataTypes &inputDataTypes, OverflowConfig *overflowConfig)
 {
+    std::lock_guard<std::mutex> lock(mtx);
     // short-circuit logic for column projections
     // no need to go through codegen
     if (expr->GetType() == ExprType::FIELD_E) {
@@ -169,11 +204,22 @@ bool Projection::Initialize(bool filter, const DataTypes &inputDataTypes, Overfl
 
     intptr_t f;
     if (!ConfigUtil::IsEnableBatchExprEvaluate()) {
-        this->codeGen = std::make_unique<ProjectionCodeGen>("proj_func", *(this->expr), filter, overflowConfig);
-        f = this->codeGen->GetFunction(inputDataTypes);
+        auto overflowKey = overflowConfig ? std::to_string(overflowConfig->IsOverflowAsNull()) : "0";
+        auto key = expr->toString() + overflowKey;
+        auto cacheRtValue = rtCache.Get(key);
+        auto cacheValue = projFuncCache.Get(key);
+        if (cacheValue != std::nullopt)  {
+           f = cacheValue.value();
+           this->codeGen = cacheRtValue.value();
+        }  else {
+            this->codeGen = std::make_shared<ProjectionCodeGen>("proj_func", *(this->expr), filter, overflowConfig);
+            f = this->codeGen->GetFunction(inputDataTypes);
+            projFuncCache.Set(key, f);
+            rtCache.Set(key, this->codeGen);
+        }
     } else {
-        this->batchCodeGen =
-            std::make_unique<BatchProjectionCodeGen>("proj_func", *(this->expr), filter, overflowConfig);
+        this->batchCodeGen = std::make_unique<BatchProjectionCodeGen>("proj_func", *(this->expr), filter,
+            overflowConfig);
         f = this->batchCodeGen->GetFunction();
     }
 
@@ -218,7 +264,8 @@ bool Projection::NullColumnProjection(ExecutionContext *context, BaseVector *out
     return true;
 }
 
-template <typename T> void Projection::SetConstantValues(T &value, BaseVector *outVec)
+template <typename T>
+void Projection::SetConstantValues(T &value, BaseVector *outVec)
 {
     auto rowCount = outVec->GetSize();
     if constexpr (std::is_same_v<T, std::string_view>) {
@@ -259,6 +306,9 @@ bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector 
         case OMNI_DOUBLE:
             SetConstantValues<double>(literalVal.value.doubleVal, outVec);
             break;
+        case OMNI_FLOAT:
+            SetConstantValues<float>(literalVal.value.floatVal, outVec);
+            break;
         case OMNI_BOOLEAN:
             SetConstantValues<bool>(literalVal.value.boolVal, outVec);
             break;
@@ -267,6 +317,7 @@ bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector 
             break;
         case OMNI_VARCHAR:
         case OMNI_CHAR:
+        case OMNI_VARBINARY:
             SetConstantValues<std::string_view>(literalVal.value.stringVal, outVec);
             break;
         default:
@@ -328,6 +379,54 @@ BaseVector *Projection::ColumnProjectionFlatVectorSliceHelper(int32_t numSelecte
     return reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows);
 }
 
+BaseVector *Projection::ColumnProjectionStructVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+    int32_t numSelectedRows) const
+{
+    auto colVec = vecBatch->Get(this->columnProjectionIndex);
+    auto rowCnt = vecBatch->GetRowCount();
+    auto rowVector = dynamic_cast<RowVector *>(colVec);
+    if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
+        return rowVector->Slice(0, numSelectedRows);
+    }
+
+    if (selectedRows != nullptr && numSelectedRows != 0) {
+        return rowVector->CopyPositions(selectedRows, 0, numSelectedRows);
+    }
+    return nullptr;
+}
+
+BaseVector *Projection::ColumnProjectionMapVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+    int32_t numSelectedRows) const
+{
+    auto colVec = vecBatch->Get(this->columnProjectionIndex);
+    auto rowCnt = vecBatch->GetRowCount();
+    auto mapVector = dynamic_cast<MapVector *>(colVec);
+    if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
+        return mapVector->Slice(0, numSelectedRows);
+    }
+
+    if (selectedRows != nullptr && numSelectedRows != 0) {
+        return mapVector->CopyPositions(selectedRows, 0, numSelectedRows);
+    }
+    return nullptr;
+}
+
+BaseVector *Projection::ColumnProjectionArrayVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+    int32_t numSelectedRows) const
+{
+    auto colVec = vecBatch->Get(this->columnProjectionIndex);
+    auto rowCnt = vecBatch->GetRowCount();
+    auto arrayVector = dynamic_cast<ArrayVector *>(colVec);
+    if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
+        return arrayVector->Slice(0, numSelectedRows);
+    }
+
+    if (selectedRows != nullptr && numSelectedRows != 0) {
+        return arrayVector->CopyPositions(selectedRows, 0, numSelectedRows);
+    }
+    return nullptr;
+}
+
 template <typename T>
 BaseVector *Projection::ColumnProjectionDictionaryVectorSliceHelper(int32_t numSelectedRows, BaseVector *colVec) const
 {
@@ -354,6 +453,15 @@ void Projection::ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAd
         reinterpret_cast<int64_t>(context), dictionaryVectors);
 }
 
+BaseVector *Projection::ProjectVec(VectorBatch *vecBatch, ExecutionContext *context)
+{
+    context->SetResultRowSize(vecBatch->GetRowCount());
+    ExprEval e(vecBatch, context);
+    e.VisitExpr(*expr);
+    auto outCol = e.GetResult();
+    return outCol;
+}
+
 BaseVector *Projection::Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
     ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds)
 {
@@ -378,17 +486,25 @@ BaseVector *Projection::ColumnProjectionProxy(VectorBatch *vecBatch, int32_t sel
             return ColumnProjectionHelper<int64_t>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_DOUBLE:
             return ColumnProjectionHelper<double>(vecBatch, selectedRows, numSelectedRows);
+        case OMNI_FLOAT:
+            return ColumnProjectionHelper<float>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_BOOLEAN:
             return ColumnProjectionHelper<bool>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_DECIMAL128:
             return ColumnProjectionHelper<Decimal128>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_VARCHAR:
         case OMNI_CHAR:
+        case OMNI_VARBINARY:
             return ColumnProjectionVarCharVectorHelper<std::string_view>(vecBatch, selectedRows, numSelectedRows);
+        case OMNI_MAP:
+            return ColumnProjectionMapVectorSliceHelper(vecBatch, selectedRows, numSelectedRows);
+        case OMNI_ROW:
+            return ColumnProjectionStructVectorSliceHelper(vecBatch, selectedRows, numSelectedRows);
         case OMNI_TIMESTAMP_WITHOUT_TIME_ZONE:
             return ColumnProjectionHelper<int64_t>(vecBatch, selectedRows, numSelectedRows);
-        default:
-            LogError("Do not support such vector type %d", typeIds[columnProjectionIndex]);
+        case OMNI_ARRAY:
+            return ColumnProjectionArrayVectorSliceHelper(vecBatch, selectedRows, numSelectedRows);
+        default: LogError("Do not support such vector type %d", typeIds[columnProjectionIndex]);
             return nullptr;
     }
 }
@@ -444,13 +560,15 @@ BaseVector *Projection::ColumnProjectionVarCharVectorHelper(VectorBatch *vecBatc
     }
     return nullptr;
 }
+
 ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vector<Expr *> &projectionExprs,
-    const DataTypes &inputDataTypes, OverflowConfig *ofConfig)
-    : inputTypes(const_cast<DataTypes &>(inputDataTypes))
+    const DataTypes &inputDataTypes, OverflowConfig *ofConfig, bool preferVectorization)
+    : inputTypes(const_cast<DataTypes &>(inputDataTypes)), preferVectorization(preferVectorization)
 {
     hasFilter = true;
     filterExpr = filterExpression;
     for (auto &projectionExpr : projectionExprs) {
+        projectionExpr->isRoot = true;
         projExprs.emplace_back(projectionExpr);
     }
     overflowConfig = std::make_unique<OverflowConfig>(*ofConfig);
@@ -459,14 +577,25 @@ ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vect
     for (int i = 0; isSupportedExpr && i < projectVecCount; ++i) {
         outputTypes.emplace_back(projExprs[i]->GetReturnType());
     }
+
+    ExprVerifier verifier;
+    verifier.VisitExpr(*filterExpr);
+    for (auto &projExpr : projExprs) {
+        verifier.VisitExpr(*projExpr);
+    }
+
+    isSupportVectorization = verifier.IsSupportVectorization();
+    isSupportCodegen = verifier.IsSupportCodegen();
+    useCodegen = !(preferVectorization && isSupportVectorization) && isSupportCodegen;
 }
 
 ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionExprs, const DataTypes &inputDataTypes,
-    OverflowConfig *ofConfig)
-    : inputTypes(const_cast<DataTypes &>(inputDataTypes))
+    OverflowConfig *ofConfig, bool preferVectorization)
+    : inputTypes(const_cast<DataTypes &>(inputDataTypes)), preferVectorization(preferVectorization)
 {
     hasFilter = false;
     for (auto &projectionExpr : projectionExprs) {
+        projectionExpr->isRoot = true;
         projExprs.emplace_back(projectionExpr);
     }
     overflowConfig = std::make_unique<OverflowConfig>(*ofConfig);
@@ -475,6 +604,15 @@ ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionEx
     for (int i = 0; isSupportedExpr && i < projectVecCount; ++i) {
         outputTypes.emplace_back(projExprs[i]->GetReturnType());
     }
+
+    ExprVerifier verifier;
+    for (auto &projExpr : projExprs) {
+        verifier.VisitExpr(*projExpr);
+    }
+
+    isSupportVectorization = verifier.IsSupportVectorization();
+    isSupportCodegen = verifier.IsSupportCodegen();
+    useCodegen = !(preferVectorization && isSupportVectorization) && isSupportCodegen;
 }
 
 bool ExpressionEvaluator::IsSupportedExpr() const
@@ -485,12 +623,15 @@ bool ExpressionEvaluator::IsSupportedExpr() const
 VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionContext *context,
     AlignedBuffer<int32_t> *selectedRowsBuffer)
 {
-    const int vectorCount = vecBatch->GetVectorCount();
+    const int32_t vectorCount = vecBatch->GetVectorCount();
     intptr_t valueAddrs[vectorCount];
     intptr_t nullAddrs[vectorCount];
     intptr_t offsetAddrs[vectorCount];
     intptr_t dictionaries[vectorCount];
-    GetAddr(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries, this->inputTypes);
+
+    if (useCodegen) {
+        GetAddr(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries, this->inputTypes);
+    }
     if (hasFilter) {
         return ProcessFilterAndProject(vecBatch, context, selectedRowsBuffer, valueAddrs, nullAddrs, offsetAddrs,
             dictionaries);
@@ -501,6 +642,10 @@ VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionConte
 
 void ExpressionEvaluator::FilterFuncGeneration()
 {
+    if (!useCodegen) {
+        return;
+    }
+
     filter = std::make_unique<Filter>(*filterExpr, GetInputDataTypes(), overflowConfig.get());
     if (!this->filter->IsSupported()) {
         this->isSupportedExpr = false;
@@ -518,6 +663,10 @@ void ExpressionEvaluator::FilterFuncGeneration()
 
 void ExpressionEvaluator::ProjectFuncGeneration()
 {
+    if (!useCodegen) {
+        return;
+    }
+
     for (auto &projExpr : projExprs) {
         auto projection = std::make_unique<Projection>(*projExpr, false, projExpr->GetReturnType(), GetInputDataTypes(),
             overflowConfig.get());
@@ -534,9 +683,160 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
 {
     auto rowCount = vecBatch->GetRowCount();
     auto projectedVecs = std::make_unique<VectorBatch>(rowCount);
+
+    if (!useCodegen) {
+        for (int32_t i = 0; i < projectVecCount; i++) {
+            context->SetResultRowSize(vecBatch->GetRowCount());
+            ExprEval e(vecBatch, context);
+            e.VisitExpr(*projExprs[i]);
+            auto outCol = e.GetResult();
+            if (context->HasError()) {
+                context->GetArena()->Reset();
+                std::string errorMessage = context->GetError();
+                throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+            }
+            if (outCol->GetEncoding() == OMNI_ENCODING_CONST) {
+                projectedVecs->Append(VectorHelper::CastConstVectorToVector(outCol));
+            } else {
+                projectedVecs->Append(outCol);
+            }
+        }
+    } else {
+        for (int32_t i = 0; i < projectVecCount; i++) {
+            BaseVector *outCol = projections[i]->Project(vecBatch, valueAddrs, nullAddrs, offsetAddrs, context,
+                dictionaries, GetInputDataTypes().GetIds());
+            if (context->HasError()) {
+                context->GetArena()->Reset();
+                std::string errorMessage = context->GetError();
+                throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+            }
+            projectedVecs->Append(outCol);
+        }
+    }
+    context->GetArena()->Reset();
+    return projectedVecs.release();
+}
+
+template <typename T>
+BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    if (colVec->GetEncoding() == OMNI_DICTIONARY) {
+        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
+    } else {
+        return reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows);
+    }
+}
+
+BaseVector *ColumnProjectionStructVectorSliceHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    auto rowVector = dynamic_cast<RowVector *>(colVec);
+    return rowVector->Slice(0, numSelectedRows);
+}
+
+BaseVector *ColumnProjectionMapVectorSliceHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    auto rowVector = dynamic_cast<MapVector *>(colVec);
+    return rowVector->Slice(0, numSelectedRows);
+}
+
+BaseVector *ColumnProjectionArrayVectorSliceHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    auto rowVector = dynamic_cast<ArrayVector *>(colVec);
+    return rowVector->Slice(0, numSelectedRows);
+}
+
+template <typename T>
+BaseVector *ColumnProjectionVarCharVectorHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    if (colVec->GetEncoding() == OMNI_DICTIONARY) {
+        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
+    } else {
+        return reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows);
+    }
+}
+
+BaseVector *ColumnProjectionProxy(BaseVector *colVec, int32_t numSelectedRows, int32_t typeId)
+{
+    switch (typeId) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            return ColumnProjectionHelper<int32_t>(colVec, numSelectedRows);
+        case OMNI_SHORT:
+            return ColumnProjectionHelper<int16_t>(colVec, numSelectedRows);
+        case OMNI_BYTE:
+            return ColumnProjectionHelper<int8_t>(colVec, numSelectedRows);
+        case OMNI_LONG:
+        case OMNI_TIMESTAMP:
+        case OMNI_DECIMAL64:
+            return ColumnProjectionHelper<int64_t>(colVec, numSelectedRows);
+        case OMNI_DOUBLE:
+            return ColumnProjectionHelper<double>(colVec, numSelectedRows);
+        case OMNI_FLOAT:
+            return ColumnProjectionHelper<float>(colVec, numSelectedRows);
+        case OMNI_BOOLEAN:
+            return ColumnProjectionHelper<bool>(colVec, numSelectedRows);
+        case OMNI_DECIMAL128:
+            return ColumnProjectionHelper<Decimal128>(colVec, numSelectedRows);
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+        case OMNI_VARBINARY:
+            return ColumnProjectionVarCharVectorHelper<std::string_view>(colVec, numSelectedRows);
+        case OMNI_MAP:
+            return ColumnProjectionMapVectorSliceHelper(colVec, numSelectedRows);
+        case OMNI_ROW:
+            return ColumnProjectionStructVectorSliceHelper(colVec, numSelectedRows);
+        case OMNI_ARRAY:
+            return ColumnProjectionArrayVectorSliceHelper(colVec, numSelectedRows);
+        default: LogError("Do not support such vector type %d", typeId);
+            return nullptr;
+    }
+}
+
+VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context)
+{
+    context->hasFilter = false;
+    const int rowCount = vecBatch->GetRowCount();
+    int32_t numSelectedRows = 0;
+    context->SetResultRowSize(rowCount);
+    ExprEval e(vecBatch, context);
+    e.VisitExpr(*filterExpr);
+
+    auto selectVector = e.GetResult();
+    auto selectAddr = static_cast<bool *>(VectorHelper::UnsafeGetValues(selectVector));
+    // FIXME: The null value check here is a temporary workaround.
+    // The In expression relies on SimpleFunction.h which skips null value processing internally.
+    // This check ensures nulls are properly filtered, but can be removed once the null handling logic in SimpleFunction
+    // is updated to handle null values natively for In expressions.
+    auto* boolSelectVec = static_cast<vec::Vector<bool>*>(selectVector);
+    for (int i = 0; i < rowCount; i++) {
+        if (boolSelectVec->IsNull(i)) {
+            selectAddr[i] = false;
+        } else {
+            if (selectAddr[i]) {
+                ++numSelectedRows;
+            }
+        }
+    }
+    if (numSelectedRows == 0) {
+        return nullptr;
+    }
+    auto projectedVecs = std::make_unique<VectorBatch>(numSelectedRows);
+
+    context->hasFilter = true;
+    context->SetIsSelectRow(selectAddr);
     for (int32_t i = 0; i < projectVecCount; i++) {
-        BaseVector *outCol = projections[i]->Project(vecBatch, valueAddrs, nullAddrs, offsetAddrs, context,
-            dictionaries, GetInputDataTypes().GetIds());
+        if (projExprs[i]->GetType() == ExprType::FIELD_E && numSelectedRows != 0 && numSelectedRows == rowCount &&
+            dynamic_cast<FieldExpr *>(projExprs[i])->input == nullptr) {
+            auto colVal = dynamic_cast<FieldExpr *>(projExprs[i])->colVal;
+            auto typeId = GetInputDataTypes().GetIds()[colVal];
+            auto colVec = vecBatch->Get(colVal);
+            projectedVecs->Append(ColumnProjectionProxy(colVec, numSelectedRows, typeId));
+            continue;
+        }
+        context->SetResultRowSize(vecBatch->GetRowCount());
+        ExprEval e2(vecBatch, context);
+        e2.VisitExpr(*projExprs[i]);
+        auto outCol = e2.GetResult();
         if (context->HasError()) {
             context->GetArena()->Reset();
             std::string errorMessage = context->GetError();
@@ -544,7 +844,8 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
         }
         projectedVecs->Append(outCol);
     }
-    context->GetArena()->Reset();
+    context->hasFilter = false;
+    context->SetIsSelectRow(nullptr);
     return projectedVecs.release();
 }
 
@@ -552,6 +853,9 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
     AlignedBuffer<int32_t> *selectedRowsBuffer, intptr_t *valueAddrs, intptr_t *nullAddrs, intptr_t *offsetAddrs,
     intptr_t *dictionaries)
 {
+    if (!useCodegen) {
+        return ProcessFilterAndProject(vecBatch, context);
+    }
     const int rowCount = vecBatch->GetRowCount();
     auto selectedRows = selectedRowsBuffer->AllocateReuse(rowCount, false);
     int32_t numSelectedRows = filter->GetFilterFunc()(valueAddrs, rowCount, selectedRows, nullAddrs, offsetAddrs,

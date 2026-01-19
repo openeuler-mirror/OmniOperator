@@ -18,6 +18,17 @@ enum class RoundingRule {
 };
 
 /**
+ * Defines the differences in Decimal-to-Int/Long conversion between different engines.
+ */
+enum class IsComplexTypeWithCodegen {
+    // Round towards "nearest neighbor" unless both neighbors are equidistant, in which case round up.
+    TRUE = 0,
+
+    // Round towards zero.
+    FALSE
+};
+
+/**
  * Defines the differences in Decimal math function between different engines.
  */
 enum class CheckReScaleRule {
@@ -164,7 +175,7 @@ public:
         CastDecimalToDoubleRule::CONVERT_WITH_STRING, NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND,
         ZeroStartIndexSupportRule::IS_SUPPORT, SupportContainerVecRule::NOT_SUPPORT,
         StringToDateFormatRule::ALLOW_REDUCED_PRECISION, SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT,
-        StringToDecimalRule::OVERFLOW_AS_NULL, AggHashTableRule::NORMAL) {};
+        StringToDecimalRule::OVERFLOW_AS_NULL, AggHashTableRule::NORMAL, IsComplexTypeWithCodegen::FALSE) {};
 
     Policy(RoundingRule roundingRule, CheckReScaleRule checkReScaleRule,
         EmptySearchStrReplaceRule emptySearchStrReplaceRule, CastDecimalToDoubleRule castDecimalToDoubleRule,
@@ -172,7 +183,8 @@ public:
         ZeroStartIndexSupportRule zeroStartIndexSupportRule, SupportContainerVecRule supportContainerVecRule,
         StringToDateFormatRule stringToDateFormatRule,
         SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule,
-        StringToDecimalRule stringToDecimalRule, AggHashTableRule aggHashTableRule)
+        StringToDecimalRule stringToDecimalRule, AggHashTableRule aggHashTableRule,
+        IsComplexTypeWithCodegen isComplexTypeWithCodegen)
         : roundingRule(roundingRule),
           checkReScaleRule(checkReScaleRule),
           emptySearchStrReplaceRule(emptySearchStrReplaceRule),
@@ -182,8 +194,8 @@ public:
           supportContainerVecRule(supportContainerVecRule),
           stringToDateFormatRule(stringToDateFormatRule),
           supportDecimalPrecisionImprovementRule(supportDecimalPrecisionImprovementRule),
-          stringToDecimalRule(stringToDecimalRule),
-          aggHashTableRule(aggHashTableRule){};
+          stringToDecimalRule(stringToDecimalRule), aggHashTableRule(aggHashTableRule),
+          isComplexTypeWithCodegen(isComplexTypeWithCodegen) {};
 
     RoundingRule GetRoundingRule()
     {
@@ -198,6 +210,16 @@ public:
     CheckReScaleRule GetCheckReScaleRule()
     {
         return checkReScaleRule;
+    }
+
+    IsComplexTypeWithCodegen GetIsComplexTypeWithCodegen()
+    {
+        return isComplexTypeWithCodegen;
+    }
+
+    void SetIsComplexTypeWithCodegen(IsComplexTypeWithCodegen rule)
+    {
+        isComplexTypeWithCodegen = rule;
     }
 
     void SetCheckReScaleRule(CheckReScaleRule rule)
@@ -296,6 +318,7 @@ public:
     }
 
 protected:
+    IsComplexTypeWithCodegen isComplexTypeWithCodegen;
     RoundingRule roundingRule;
     CheckReScaleRule checkReScaleRule;
     EmptySearchStrReplaceRule emptySearchStrReplaceRule;

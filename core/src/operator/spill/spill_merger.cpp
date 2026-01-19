@@ -11,11 +11,15 @@ namespace op {
 using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
 
 static constexpr size_t NUMBER_OF_ELEMENTS = 1;
-
+using namespace omniSpark;
 SpillReader::~SpillReader()
 {
     // the spill file can be deleted if there is exception
     remove(filePath.c_str());
+    if (prevBuffer_ != nullptr) {
+        delete[] prevBuffer_;
+        prevBuffer_ = nullptr;
+    }
 }
 
 ErrorCode SpillReader::ReadVecBatch(std::unique_ptr<vec::VectorBatch> &vectorBatch, bool &isEnd)
@@ -173,15 +177,84 @@ template <typename T> ErrorCode SpillReader::ReadVector(BaseVector *vector, int3
     return ErrorCode::SUCCESS;
 }
 
+std::pair<size_t, bool> parseCompressionHeader(const char* header_buf) {
+    size_t compressedSize = 0;
+    bool is_original = false;
+
+    compressedSize |= (static_cast<uint8_t>(header_buf[0]) >> 1);
+    is_original = (static_cast<uint8_t>(header_buf[0]) & 0x01) == 1;
+
+    compressedSize |= (static_cast<uint8_t>(header_buf[1]) << 7);
+
+    compressedSize |= (static_cast<uint8_t>(header_buf[2]) << 15);
+
+    return {compressedSize, is_original};
+}
+
 ErrorCode SpillReader::Read(void *buf, size_t bufSize)
 {
-    if (fread(buf, bufSize, NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
-        auto errorNum = errno;
-        char errorBuf[ERROR_BUFFER_SIZE];
-        GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
-        LogError("Read from %s failed since %s.", filePath.c_str(), errorBuf);
-        return ErrorCode::READ_FAILED;
+    if (!isSpillCompressEnabled) {
+        if (fread(buf, bufSize, NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
+            auto errorNum = errno;
+            char errorBuf[ERROR_BUFFER_SIZE];
+            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+            LogError("Read from %s failed since %s.", filePath.c_str(), errorBuf);
+            return ErrorCode::READ_FAILED;
+        }
+        return ErrorCode::SUCCESS;
     }
+    return ReadWithCompress(buf, bufSize);
+}
+
+ErrorCode SpillReader::ReadWithCompress(void *buf, size_t bufSize)
+{
+
+    if (remainLength == 0) {
+        if (prevBuffer_ != nullptr) {
+            delete[] prevBuffer_;
+            prevBuffer_ = nullptr;
+        }
+        char* header_data = new char[3];
+        if (fread(header_data, 1, 3, file) != 3) {
+            delete[] header_data;
+            return ErrorCode::READ_FAILED;
+        }
+        std::pair<size_t, bool> header_info = parseCompressionHeader(header_data);
+        delete[] header_data;
+        size_t compressed_block_size = header_info.first;
+        bool is_original_data = header_info.second;
+        int32_t actual_decompress_len = 0;
+        char* compressed_data = new char[compressed_block_size];
+        if (fread(compressed_data, 1, compressed_block_size, file) != compressed_block_size) {
+            delete[] compressed_data;
+            return ErrorCode::READ_FAILED;
+        }
+        if (is_original_data) {
+            actual_decompress_len = static_cast<int32_t>(compressed_block_size);
+            prevBuffer_ = compressed_data;
+            currentBuffer_ = prevBuffer_;
+            remainLength = actual_decompress_len;
+        } else {
+            auto [decomp_data, decomp_len] = decompressLZ4(
+                    compressed_data, static_cast<int32_t>(compressed_block_size), 32 * 1024 * 1024
+            );
+            delete[] compressed_data;
+            if (decomp_data == nullptr || decomp_len <= 0) {
+                return ErrorCode::READ_FAILED;
+            }
+
+            prevBuffer_ = decomp_data;
+            currentBuffer_ = prevBuffer_;
+            remainLength = decomp_len;
+        }
+    }
+
+    size_t bytes_to_copy = remainLength <bufSize ? remainLength : bufSize;
+    memcpy(buf, currentBuffer_, bytes_to_copy);
+
+    currentBuffer_ += bytes_to_copy;
+    remainLength -= bytes_to_copy;
+
     return ErrorCode::SUCCESS;
 }
 

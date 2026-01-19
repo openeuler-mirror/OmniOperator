@@ -8,7 +8,7 @@ using namespace omniruntime::type;
 
 bool TypeUtil::IsStringType(omniruntime::type::DataTypeId id)
 {
-    return id == OMNI_CHAR || id == OMNI_VARCHAR;
+    return id == OMNI_CHAR || id == OMNI_VARCHAR || id == OMNI_VARBINARY;
 }
 
 bool TypeUtil::IsDecimalType(omniruntime::type::DataTypeId type)
@@ -23,6 +23,8 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Bool";
         case OMNI_DOUBLE:
             return "Double";
+        case OMNI_FLOAT:
+            return "Float";
         case OMNI_DATE32:
             return "Date32";
         case OMNI_TIME32:
@@ -43,6 +45,8 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Timestamp";
         case OMNI_VARCHAR:
             return "String";
+        case OMNI_VARBINARY:
+            return "Binary";
         case OMNI_CHAR:
             return "Char";
         case OMNI_DECIMAL64:
@@ -184,6 +188,11 @@ std::shared_ptr<DataType> DoubleType()
     return DoubleDataType::Instance();
 }
 
+std::shared_ptr<DataType> FloatType()
+{
+    return FloatDataType::Instance();
+}
+
 std::shared_ptr<DataType> BooleanType()
 {
     return BooleanDataType::Instance();
@@ -197,6 +206,16 @@ std::shared_ptr<DataType> VarcharType()
 std::shared_ptr<DataType> CharType()
 {
     return std::make_shared<CharDataType>(CHAR_MAX_WIDTH);
+}
+
+std::shared_ptr<DataType> VarBinaryType()
+{
+    return VarBinaryDataType::Instance();
+}
+
+std::shared_ptr<DataType> VarBinaryType(int32_t width)
+{
+    return std::make_shared<VarBinaryDataType>(width);
 }
 
 std::shared_ptr<DataType> VarcharType(int32_t width)
@@ -242,6 +261,21 @@ std::shared_ptr<ContainerDataType> ContainerType(std::vector<DataTypePtr> &field
 std::shared_ptr<ContainerDataType> ContainerType(std::vector<DataTypePtr> &&fieldTypes)
 {
     return std::make_shared<ContainerDataType>(fieldTypes);
+}
+
+std::shared_ptr<ArrayType> ArrayDataType(DataTypePtr child)
+{
+    return std::make_shared<ArrayType>(child);
+}
+
+std::shared_ptr<RowType> RowDataType(std::vector<DataTypePtr> &fieldTypes)
+{
+    return std::make_shared<RowType>(fieldTypes);
+}
+
+std::shared_ptr<omniruntime::type::MapType> MapDataType(std::shared_ptr<DataType> keyType, std::shared_ptr<DataType> valueType)
+{
+    return std::make_shared<MapType>(keyType, valueType);
 }
 
 }

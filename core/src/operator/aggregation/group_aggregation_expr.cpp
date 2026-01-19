@@ -18,8 +18,10 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys,
     std::vector<omniruntime::expressions::Expr *> &aggFilters, DataTypes &sourceDataTypes,
     std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColumns,
-    std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OperatorConfig &operatorConfig)
+    std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OperatorConfig &operatorConfig,
+    config::QueryConfig queryConfig)
 {
+    this->queryConfig = queryConfig;
     uint32_t aggColNum = 0;
     for (auto &aggKeys : aggsKeys) {
         aggColNum += aggKeys.size();
@@ -137,36 +139,36 @@ HashAggregationWithExprOperatorFactory *HashAggregationWithExprOperatorFactory::
                               : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     auto spillConfig = new SparkSpillConfig(queryConfig.aggregationSpillEnabled(), queryConfig.SpillDir(),
         queryConfig.SpillDirDiskReserveSize(), queryConfig.SpillHashAggRowThreshold(),
-        queryConfig.memFractionPct(), queryConfig.SpillWriteBufferSize());
+        queryConfig.memFractionPct(), queryConfig.SpillWriteBufferSize(), queryConfig.SpillEnableCompress());
     auto operatorConfig = std::make_shared<OperatorConfig>(spillConfig, overflowConfig);
 
     return new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggsKeys, aggFilters, *sourceDataTypes,
                                                       aggsOutputTypes,
                                                       aggFuncTypes, maskColsVector, inputRaws, outputPartial,
-                                                      *operatorConfig);
+                                                      *operatorConfig, queryConfig);
 }
 
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
     auto *op = new HashAggregationWithExprOperator(*originSourceTypes, *sourceTypes, projections, aggSimpleFilters,
-        hashAggOperator);
-    std::vector<type::DataTypeId> dataTypeIds;
-    for (int32_t i = 0; i < originSourceTypes->GetSize(); ++i) {
-        dataTypeIds.push_back(originSourceTypes->GetType(i)->GetId());
-    }
-    op->Init(dataTypeIds);
+        hashAggOperator, queryConfig);
+    op->Init();
     return op;
 }
 
 HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &originSourceTypes,
     const DataTypes &sourceTypes, std::vector<std::unique_ptr<Projection>> &projections,
-    std::vector<SimpleFilter *> &aggSimpleFilters, HashAggregationOperator *hashAggOperator)
+    std::vector<SimpleFilter *> &aggSimpleFilters, HashAggregationOperator *hashAggOperator,
+    config::QueryConfig queryConfig)
     : originTypes(originSourceTypes),
       sourceTypes(sourceTypes),
       projections(projections),
       hashAggOperator(hashAggOperator)
 {
+    adaptivePartialAgg = queryConfig.EnableAdaptivePartialAggregation();
+    adaptivePartialAggMinRows = queryConfig.AdaptivePartialAggregationMinRows();
+    adaptivePartialAggRatio = queryConfig.AdaptivePartialAggregationRatio();
     auto aggFilterNum = aggSimpleFilters.size();
     this->aggSimpleFilters.resize(aggFilterNum, nullptr);
     for (size_t i = 0; i < aggFilterNum; ++i) {
@@ -191,11 +193,20 @@ int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     if (inputVecBatch->GetRowCount() <= 0) {
         VectorHelper::FreeVecBatch(inputVecBatch);
         ResetInputVecBatch();
+        if (abandonedPartialAggregation) {
+            isActivateAdaptivePartial = true;
+            abandonedInputVecBatch = nullptr;
+        }
         return 0;
     }
-
-    VectorBatch *newInputVecBatch =
-        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext.get());
+    numInputRows += inputVecBatch->GetRowCount();
+    if (abandonedPartialAggregation) {
+        isActivateAdaptivePartial = true;
+        abandonedInputVecBatch = inputVecBatch;
+        return 0;
+    }
+    VectorBatch *newInputVecBatch = AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes,
+        projections, executionContext.get());
 
     // if hasAggFilter is false, then skip AddFilterColumn
     if (hasAggFilter) {
@@ -213,6 +224,13 @@ int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     VectorHelper::FreeVecBatch(inputVecBatch);
     ResetInputVecBatch();
     hashAggOperator->AddInput(newInputVecBatch);
+
+    if (adaptivePartialAgg && IsStepPartials() && numInputRows > adaptivePartialAggMinRows) {
+        long keyNums = GetHashMapUniqueKeys();
+        if (keyNums > adaptivePartialAggRatio * numInputRows) {
+            abandonedPartialAggregation = true;
+        }
+    }
     return 0;
 }
 
@@ -227,11 +245,39 @@ void HashAggregationWithExprOperator::ProcessRow(uintptr_t rowValues[], int32_t 
 
 int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
+    if (hashAggOperator->isFinished() && isActivateAdaptivePartial) {
+        if (abandonedInputVecBatch == nullptr) {
+            if (!noMoreInput_) {
+                SetStatus(OMNI_STATUS_NORMAL);
+                return 0;
+            }
+            UpdateSpilledMetrics(hashAggOperator);
+            SetStatus(OMNI_STATUS_FINISHED);
+            return 0;
+        }
+        *outputVecBatch = AlignSchema(abandonedInputVecBatch);
+        abandonedInputVecBatch = nullptr;
+        return 1;
+    }
+    if (abandonedPartialAggregation) {
+        if (hashAggOperator->isFinished()) {
+            if (!noMoreInput_) {
+                SetStatus(OMNI_STATUS_NORMAL);
+                return 0;
+            }
+            UpdateSpilledMetrics(hashAggOperator);
+            SetStatus(OMNI_STATUS_FINISHED);
+            return 0;
+        }
+        int32_t status = hashAggOperator->GetOutput(outputVecBatch);
+        return status;
+    }
     if (!noMoreInput_) {
         SetStatus(OMNI_STATUS_NORMAL);
         return 0;
     }
     if (isFinished() || hashAggOperator->isFinished()) {
+        UpdateSpilledMetrics(hashAggOperator);
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
     }
@@ -239,6 +285,10 @@ int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
     SetStatus(hashAggOperator->GetStatus());
     if (*outputVecBatch == nullptr) {
         SetStatus(OMNI_STATUS_FINISHED);
+    }
+
+    if (status == OMNI_STATUS_FINISHED) {
+        UpdateSpilledMetrics(hashAggOperator);
     }
     return status;
 }
@@ -299,9 +349,9 @@ VectorBatch *HashAggregationWithExprOperator::AlignSchema(VectorBatch *inputVecB
     return result;
 }
 
-OmniStatus HashAggregationWithExprOperator::Init(const std::vector<type::DataTypeId> &dataTypeIds)
+OmniStatus HashAggregationWithExprOperator::Init()
 {
-    oneRowAdaptor.Init(dataTypeIds);
+    oneRowAdaptor.Init(sourceTypes);
     return OMNI_STATUS_NORMAL;
 }
 }

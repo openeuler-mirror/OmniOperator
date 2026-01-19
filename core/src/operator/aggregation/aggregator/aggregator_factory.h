@@ -66,6 +66,9 @@ protected:
             case OMNI_CHAR:
                 return FromKnownOutput<OMNI_CHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
+            case OMNI_ARRAY:
+                return FromKnownOutput<OMNI_ARRAY>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                                                  outputPartial, isOverflowAsNull);
             default:
                 std::string omniExceptionInfo =
                     "In function CreateAggregatorInternal, no such input type " + std::to_string(outputTypeId);
@@ -116,6 +119,9 @@ protected:
                     inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_CHAR:
                 return T<OMNI_CHAR, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_ARRAY:
+                return T<OMNI_ARRAY, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
             case OMNI_NONE:
                 return T<OMNI_NONE, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,

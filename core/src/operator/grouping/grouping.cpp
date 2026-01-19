@@ -17,41 +17,6 @@ GroupingOperatorFactory *GroupingOperatorFactory::CreateGroupingOperatorFactory(
     return new GroupingOperatorFactory(groupingNode, queryConfig);
 }
 
-static std::vector<ExprPtr> BuildAggregateExpressions(
-    const std::shared_ptr<const AggregationNode>& aggPlanNode,
-    const std::vector<ExprPtr>& projection)
-{
-    auto size = aggPlanNode->OutputType()->GetSize();
-    auto groupByKeySize = aggPlanNode->GetGroupByKeys().size();
-    std::vector<ExprPtr> expressions(size);
-
-    for (int32_t i = 0; i < size; i++) {
-        // groupByKey field is on the head of agg output, followed by aggFunc field
-        // aggFunc field need to get aggOperator0 output
-        if (i >= groupByKeySize) {
-            expressions[i] = new FieldExpr(i, aggPlanNode->OutputType()->GetType(i));
-            continue;
-        }
-
-        // null or groupingId is LiteralExpr, need to get from expand project
-        auto fieldExpr = dynamic_cast<FieldExpr *>(aggPlanNode->GetGroupByKeys()[i]);
-        if (!fieldExpr) {
-            expressions[i] = new FieldExpr(i, aggPlanNode->OutputType()->GetType(i));
-            continue;
-        }
-
-        auto literalExpr = dynamic_cast<LiteralExpr *>(projection[fieldExpr->colVal]);
-        if (!literalExpr) {
-            expressions[i] = new FieldExpr(i, aggPlanNode->OutputType()->GetType(i));
-            continue;
-        }
-
-        expressions[i] = literalExpr->Copy();
-    }
-
-    return expressions;
-}
-
 GroupingOperator::GroupingOperator(const std::shared_ptr<const GroupingNode> &groupingNode,
     config::QueryConfig &queryConfig): queryConfig_(queryConfig)
 {
@@ -65,8 +30,10 @@ GroupingOperator::GroupingOperator(const std::shared_ptr<const GroupingNode> &gr
                           : std::make_shared<OverflowConfig>(OVERFLOW_CONFIG_EXCEPTION);
     aggFactor_ = CreateOperatorFactory(aggPlanNode_, queryConfig_);
     int32_t index = 0;
+    auto nullSizeEnd = aggPlanNode_->GetGroupByNum() - 1;
+    auto nullSizeFrond = nullSizeEnd - 1;
     aggOperators_.resize(projections.size());
-    residualAggFactor_ = CreateResidualOperatorFactory(aggPlanNode_, residualOutputType,  aggPlanNode_->GetGroupByNum(), queryConfig_);
+    residualAggFactor_ = CreateResidualOperatorFactory(aggPlanNode_, residualOutputType, nullSizeEnd + 1, queryConfig_);
     for (const auto &projection : projections) {
         if (index == 0) {
             auto exprEvaluator = std::make_shared<ExpressionEvaluator>(projection, sourceTypes, overflowConfig.get());
@@ -74,7 +41,21 @@ GroupingOperator::GroupingOperator(const std::shared_ptr<const GroupingNode> &gr
             expressionEvaluators_.push_back(exprEvaluator);
             aggOperators_[index] = std::shared_ptr<Operator>(aggFactor_->CreateOperator());
         } else {
-            std::vector <ExprPtr> expressions = BuildAggregateExpressions(aggPlanNode_, projection);
+            auto size = aggPlanNode_->OutputType()->GetSize();
+            std::vector<ExprPtr> expressions(size);
+            for (unsigned int i = 0; i < size; i++) {
+                if (i < nullSizeEnd && i >= nullSizeFrond) {
+                    expressions[i] = new LiteralExpr(0, aggPlanNode_->OutputType()->GetType(i), true);
+                    continue;
+                }
+                if (i == nullSizeEnd) {
+                    auto groupingId = dynamic_cast<LiteralExpr *>(projection.back());
+                    expressions[i] = new LiteralExpr(groupingId->longVal, groupingId->dataType);
+                    continue;
+                }
+                expressions[i] = new FieldExpr(i, aggPlanNode_->OutputType()->GetType(i));
+            }
+            nullSizeFrond--;
             auto exprEvaluator = std::make_shared<ExpressionEvaluator>(expressions, *residualOutputType.get(),
                 overflowConfig.get());
             exprEvaluator->ProjectFuncGeneration();
@@ -156,7 +137,7 @@ std::shared_ptr<OperatorFactory> GroupingOperator::CreateResidualOperatorFactory
     auto groupBySize = aggregationNode->GetGroupByKeys().size();
     groupByKeys_.resize(groupBySize);
     std::vector<bool> inputRaws(aggregationNode->GetInputRaws().size(), false);
-    for (int32_t i = 0; i < groupBySize; i++) {
+    for (unsigned int i = 0; i < groupBySize; i++) {
         groupByKeys_[i] = new FieldExpr(i, sourceTypes->GetType(i));
     }
 

@@ -66,6 +66,8 @@ public:
 private:
     void BuildOutput(VectorBatch **outputVecBatch);
 
+    void BuildNotMatchOutput(VectorBatch **outputVecBatch);
+
     void InitJoinedVectorBatch();
 
     void UpdateJoinedVectorBatch(int32_t probeRow);
@@ -95,6 +97,9 @@ private:
     DataTypes joinedTypes;
     bool firstVecBatch = true;
     int32_t *selectedRows;
+    // 0:not match, 1:matched
+    std::vector<char> buildMatchedRows;
+    std::vector<DataTypeId> probeOutputDataTypeIds;
 };
 } // namespace op
 } // namespace omniruntime

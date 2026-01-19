@@ -90,6 +90,10 @@ bool SelectivityVector::GetFlatBaseVectorsFromSelectivityVector(std::vector<Base
                 SetFlatVectorValue<Vector<int64_t>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
                 break;
             }
+            case OMNI_FLOAT: {
+                SetFlatVectorValue<Vector<float>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
+                break;
+            }
             case OMNI_DOUBLE: {
                 SetFlatVectorValue<Vector<double>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
                 break;

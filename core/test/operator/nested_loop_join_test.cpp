@@ -162,6 +162,30 @@ VectorBatch *CreateExpectVecBatchForAllTypesWithLeftJoin(VectorBatch *probeVecBa
     return expectVecBatch;
 }
 
+VectorBatch *CreateExpectVecBatchForAllTypesWithRightJoin(VectorBatch *probeVecBatch, VectorBatch *buildVecBatch,
+    int32_t probeOutputColsSize, int32_t buildOutputColsSize, int32_t *buildNotMatchRows, int32_t rowSize)
+{
+    auto expectVecBatch = new VectorBatch(rowSize);
+    // probe side set null
+    for (int32_t j = 0; j < probeOutputColsSize; j++) {
+        BaseVector *vector = probeVecBatch->Get(j);
+        DataTypeId vectorDateTypeId = vector->GetTypeId();
+        BaseVector *outputVector = VectorHelper::CreateVector(OMNI_FLAT, vectorDateTypeId, rowSize);
+        for (int32_t i = 0; i < rowSize; ++i) {
+            outputVector->SetNull(i);
+        }
+        expectVecBatch->Append(outputVector);
+    }
+
+    // build side copy origin rows
+    for (int32_t j = 0; j < buildOutputColsSize; j++) {
+        BaseVector *outputVector = VectorHelper::CopyPositionsVector(buildVecBatch->Get(j), buildNotMatchRows, 0, rowSize);
+        expectVecBatch->Append(outputVector);
+    }
+
+    return expectVecBatch;
+}
+
 omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
 {
     // create the filter expression
@@ -1004,5 +1028,177 @@ TEST(NestedLoopJoinTest, TestInnerJoinOperatorWithoutBuildInput)
     omniruntime::op::Operator::DeleteOperator(nestedLoopJoinBuildOperator);
     omniruntime::op::Operator::DeleteOperator(nestLoopJoinLookupOperator);
     DeleteNestedLoopJoinOperatorFactory(nestedLoopJoinBuildOperatorFactory, nestLoopJoinLookupOperatorFactory);
+}
+
+struct JoinTestSetup {
+    VectorBatch *buildVecBatch;
+    VectorBatch *probeVecBatch;
+    DataTypes buildDataTypes;
+    DataTypes probeDataTypes;
+    std::vector<int32_t> buildColumns;
+    std::vector<int32_t> probeColumns;
+    std::vector<int32_t> probeRows;
+    std::vector<int32_t> buildRows;
+    std::vector<int32_t> buildNotMatchRows;
+    std::vector<int32_t> nullPosition;
+};
+
+static JoinTestSetup CreateJoinTestData()
+{
+    // Build side
+    DataTypes buildTypes({IntType(), VarcharType(5)});
+    const int32_t buildDataSize = 4;
+    int32_t buildData0[buildDataSize] = {20, 16, 13, 5};
+    std::string buildData1[buildDataSize] = {"1000", "2000", "3000", "4000"};
+    auto buildVecBatch = CreateVectorBatch(buildTypes, buildDataSize, buildData0, buildData1);
+
+    // Probe side
+    DataTypes probeTypes({IntType(), VarcharType(5)});
+    const int32_t probeDataSize = 5;
+    int32_t probeData0[probeDataSize] = {20, 16, 13, 4, 22};
+    std::string probeData1[probeDataSize] = {"35709", "65709", "31904", "12477", "90419"};
+    auto probeVecBatch = CreateVectorBatch(probeTypes, probeDataSize, probeData0, probeData1);
+
+    return {
+        buildVecBatch,
+        probeVecBatch,
+        buildTypes,
+        probeTypes,
+        {0, 1},
+        {0, 1},
+        {0, 1, 2, 3, 4},
+        {0, 1, 2, 3, 1},
+        {3},
+        {3, 4}
+    };
+}
+
+TEST(NestedLoopJoinTest, TestRightBuildRightNoEqualityJoinOnChar)
+{
+    auto data = CreateJoinTestData();
+
+    auto expectVecBatch = CreateExpectVecBatchForAllTypesWithNoFilter(
+        data.probeVecBatch, data.buildVecBatch,
+        data.probeRows.data(), data.buildRows.data(), 3);
+
+    auto expectVecBatch2 = CreateExpectVecBatchForAllTypesWithRightJoin(
+        data.probeVecBatch, data.buildVecBatch, 2, 2,
+        data.buildNotMatchRows.data(), 1);
+
+    auto factory = new NestedLoopJoinBuildOperatorFactory(data.buildDataTypes, data.buildColumns.data(), 2);
+    auto buildOp = static_cast<NestedLoopJoinBuildOperator *>(factory->CreateOperator());
+    buildOp->AddInput(data.buildVecBatch);
+    VectorBatch *buildOutput = nullptr;
+    buildOp->GetOutput(&buildOutput);
+
+    int64_t factoryAddr = (int64_t) factory;
+    auto filter = CreateJoinFilterExprWithInt();
+    JoinType &&joinTypePtr = OMNI_JOIN_TYPE_RIGHT;
+    auto lookupFactory = NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(
+        joinTypePtr, data.probeDataTypes, data.probeColumns.data(), 2, filter, factoryAddr, nullptr);
+    auto lookupOp = dynamic_cast<NestLoopJoinLookupOperator *>(lookupFactory->CreateOperator());
+    lookupOp->AddInput(data.probeVecBatch);
+
+    VectorBatch *output1 = nullptr;
+    lookupOp->GetOutput(&output1);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(output1, expectVecBatch));
+    VectorHelper::FreeVecBatch(output1);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+
+    VectorBatch *output2 = nullptr;
+    lookupOp->GetOutput(&output2);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(output2, expectVecBatch2));
+    VectorHelper::FreeVecBatch(output2);
+    VectorHelper::FreeVecBatch(expectVecBatch2);
+
+    Expr::DeleteExprs({filter});
+    omniruntime::op::Operator::DeleteOperator(buildOp);
+    omniruntime::op::Operator::DeleteOperator(lookupOp);
+    DeleteNestedLoopJoinOperatorFactory(factory, lookupFactory);
+}
+
+TEST(NestedLoopJoinTest, TestRightBuildRightWithoutProbeInputNoEqualityJoinOnChar)
+{
+    auto data = CreateJoinTestData();
+    DataTypes probeTypes(std::vector<DataTypePtr>({IntType(), VarcharType(5)}));
+    const int32_t probeDataSize = 0;
+    int32_t probeData0[probeDataSize] = {};
+    std::string probeData1[probeDataSize] = {};
+    auto emptyProbeVecBatch = CreateVectorBatch(probeTypes, probeDataSize, probeData0, probeData1);
+    std::vector<int32_t> buildNotMatchRows = {0, 1, 2, 3};
+
+    auto expectVecBatch = CreateExpectVecBatchForAllTypesWithRightJoin(
+        data.probeVecBatch, data.buildVecBatch, 2, 2,
+        buildNotMatchRows.data(), 4);
+
+    auto factory = new NestedLoopJoinBuildOperatorFactory(data.buildDataTypes, data.buildColumns.data(), 2);
+    auto buildOp = static_cast<NestedLoopJoinBuildOperator *>(factory->CreateOperator());
+    buildOp->AddInput(data.buildVecBatch);
+    VectorBatch *buildOutput = nullptr;
+    buildOp->GetOutput(&buildOutput);
+
+    int64_t factoryAddr = (int64_t) factory;
+    auto filter = CreateJoinFilterExprWithInt();
+    JoinType &&joinTypePtr = OMNI_JOIN_TYPE_RIGHT;
+    auto lookupFactory = NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(
+        joinTypePtr, data.probeDataTypes, data.probeColumns.data(), 2, filter, factoryAddr, nullptr);
+    auto lookupOp = dynamic_cast<NestLoopJoinLookupOperator *>(lookupFactory->CreateOperator());
+    lookupOp->AddInput(emptyProbeVecBatch);
+
+    VectorBatch *output = nullptr;
+    lookupOp->GetOutput(&output);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(output, expectVecBatch));
+    VectorHelper::FreeVecBatch(output);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(data.probeVecBatch);
+
+    Expr::DeleteExprs({filter});
+    omniruntime::op::Operator::DeleteOperator(buildOp);
+    omniruntime::op::Operator::DeleteOperator(lookupOp);
+    DeleteNestedLoopJoinOperatorFactory(factory, lookupFactory);
+}
+
+TEST(NestedLoopJoinTest, TestFullBuildRightNoEqualityJoinOnChar)
+{
+    auto data = CreateJoinTestData();
+
+    auto expectVecBatch = CreateExpectVecBatchForAllTypesWithLeftJoin(
+        data.probeVecBatch, data.buildVecBatch,
+        data.probeRows.data(), data.buildRows.data(), 5, data.nullPosition.data(), 2);
+
+    auto expectVecBatch2 = CreateExpectVecBatchForAllTypesWithRightJoin(
+        data.probeVecBatch, data.buildVecBatch, 2, 2,
+        data.buildNotMatchRows.data(), 1);
+
+    auto factory = new NestedLoopJoinBuildOperatorFactory(data.buildDataTypes, data.buildColumns.data(), 2);
+    auto buildOp = static_cast<NestedLoopJoinBuildOperator *>(factory->CreateOperator());
+    buildOp->AddInput(data.buildVecBatch);
+    VectorBatch *buildOutput = nullptr;
+    buildOp->GetOutput(&buildOutput);
+
+    int64_t factoryAddr = (int64_t) factory;
+    auto filter = CreateJoinFilterExprWithInt();
+    JoinType &&joinTypePtr = OMNI_JOIN_TYPE_FULL;
+    auto lookupFactory = NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(
+        joinTypePtr, data.probeDataTypes, data.probeColumns.data(), 2, filter, factoryAddr, nullptr);
+    auto lookupOp = dynamic_cast<NestLoopJoinLookupOperator *>(lookupFactory->CreateOperator());
+    lookupOp->AddInput(data.probeVecBatch);
+
+    VectorBatch *output1 = nullptr;
+    lookupOp->GetOutput(&output1);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(output1, expectVecBatch));
+    VectorHelper::FreeVecBatch(output1);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+
+    VectorBatch *output2 = nullptr;
+    lookupOp->GetOutput(&output2);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(output2, expectVecBatch2));
+    VectorHelper::FreeVecBatch(output2);
+    VectorHelper::FreeVecBatch(expectVecBatch2);
+
+    Expr::DeleteExprs({filter});
+    omniruntime::op::Operator::DeleteOperator(buildOp);
+    omniruntime::op::Operator::DeleteOperator(lookupOp);
+    DeleteNestedLoopJoinOperatorFactory(factory, lookupFactory);
 }
 }

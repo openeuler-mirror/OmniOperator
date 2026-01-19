@@ -13,6 +13,7 @@ const std::string dictionaryGetShortStr = "DictionaryGetShort";
 const std::string dictionaryGetIntStr = "DictionaryGetInt";
 const std::string dictionaryGetLongStr = "DictionaryGetLong";
 const std::string dictionaryGetDoubleStr = "DictionaryGetDouble";
+const std::string dictionaryGetFloatStr = "DictionaryGetFloat";
 const std::string dictionaryGetBooleanStr = "DictionaryGetBoolean";
 const std::string dictionaryGetVarcharStr = "DictionaryGetVarchar";
 const std::string dictionaryGetDecimalStr = "DictionaryGetDecimal";

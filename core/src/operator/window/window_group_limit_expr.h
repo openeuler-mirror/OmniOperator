@@ -19,6 +19,9 @@ public:
 
     ~WindowGroupLimitWithExprOperatorFactory() override;
 
+    static WindowGroupLimitWithExprOperatorFactory *WindowGroupLimitWithExprOperatorFactory::CreateWindowGroupLimitWithExprOperatorFactory(
+        std::shared_ptr<const WindowGroupLimitNode> planNode, const config::QueryConfig &queryConfig);
+
     Operator *CreateOperator() override;
 
 private:
@@ -42,6 +45,19 @@ public:
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
+
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        windowGroupLimitOperator->noMoreInput();
+    }
+
+    void setNoMoreInput(bool noMoreInput) override
+    {
+        noMoreInput_ = noMoreInput;
+        windowGroupLimitOperator->setNoMoreInput(noMoreInput);
+    }
+
 
 private:
     omniruntime::type::DataTypes sourceTypes;

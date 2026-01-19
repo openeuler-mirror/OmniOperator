@@ -32,6 +32,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistr
     functionRegistries.push_back(make_unique<HiveUdfRegistry>());
     functionRegistries.push_back(make_unique<StringFunctionRegistry>());
     functionRegistries.push_back(make_unique<DateTimeFunctionRegistry>());
+    functionRegistries.push_back(make_unique<JsonFunctionRegistry>());
 
     auto policy = GetProperties().GetPolicy();
     if (policy->GetRoundingRule() == RoundingRule::HALF_UP) {
@@ -248,7 +249,9 @@ void FunctionRegistry::InitHiveUdfMap()
 const std::string &FunctionRegistry::LookupHiveUdf(const std::string &udfName)
 {
     std::call_once(initHiveUdfMap, InitHiveUdfMap);
-    auto result = hiveUdfMap->find(udfName);
+    string lowerStr = udfName;
+    transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), [](unsigned char c) { return tolower(c); });
+    auto result = hiveUdfMap->find(lowerStr);
     if (result == hiveUdfMap->end()) {
         return INVALID_HIVE_UDF;
     }

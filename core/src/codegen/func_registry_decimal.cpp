@@ -64,6 +64,12 @@ const std::string RoundNullFnStr()
     return roundNullFnStr;
 }
 
+const std::string DecimalFloorFnStr()
+{
+    const std::string decimalFloorFnStr = "floor";
+    return decimalFloorFnStr;
+}
+
 const std::string UnscaledValueFnStr()
 {
     const std::string unscaledValueFnStr = "UnscaledValue";
@@ -242,6 +248,12 @@ const std::string TryDivDecimal128FnStr()
     return "Try_div_decimal128";
 }
 
+const std::string DecimalNegativeFnStr()
+{
+    const std::string decimalNegativeFnStr = "negative";
+    return decimalNegativeFnStr;
+}
+
 std::vector<Function> DecimalFunctionRegistry::GetFunctions()
 {
     std::vector<DataTypeId> paramTypes128 = { OMNI_DECIMAL128, OMNI_DECIMAL128 };
@@ -296,6 +308,11 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
             retType128, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(RoundDecimal64WithoutRound), DecimalRoundFnStr(), {}, { OMNI_DECIMAL64 },
             retType64, INPUT_DATA, true),
+
+        Function(reinterpret_cast<void *>(FloorDecimal128), DecimalFloorFnStr(), {}, { OMNI_DECIMAL128 }, retType128,
+            INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(FloorDecimal64), DecimalFloorFnStr(), {}, { OMNI_DECIMAL64 }, retType64,
+            INPUT_DATA, true),
 
         Function(reinterpret_cast<void *>(Decimal64Compare), Decimal64CompareFnStr(), {}, paramTypes64, OMNI_INT),
         Function(reinterpret_cast<void *>(Decimal128Compare), Decimal128CompareFnStr(), {}, paramTypes128, OMNI_INT),
@@ -695,6 +712,10 @@ std::vector<Function> DecimalFunctionRegistryReScale::GetFunctions()
             retType64, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(ModDec64Dec128Dec128ReScale), ModDecimal64FnStr(), {}, paramTypes64Op128,
             retType128, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(NegativeDecimal64), DecimalNegativeFnStr(), {}, { OMNI_DECIMAL64 }, OMNI_DECIMAL64,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(NegativeDecimal128), DecimalNegativeFnStr(), {}, { OMNI_DECIMAL128 }, retType128,
+            INPUT_DATA)
     };
 
     return decimalFnRegistry;

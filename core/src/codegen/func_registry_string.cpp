@@ -165,6 +165,24 @@ const std::string StaticInvokeCharReadPaddingFnStr()
     return staticInvokeCharReadPaddingFnStr;
 }
 
+const std::string TrimFnStr()
+{
+    const std::string trimFnStr = "Trim";
+    return trimFnStr;
+}
+
+const std::string LTrimFnStr()
+{
+    const std::string trimFnStr = "LTrim";
+    return trimFnStr;
+}
+
+const std::string RTrimFnStr()
+{
+    const std::string trimFnStr = "RTrim";
+    return trimFnStr;
+}
+
 std::vector<Function> StringFunctionRegistry::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = { // concat functions
@@ -178,7 +196,13 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             INPUT_DATA, true),
         Function(reinterpret_cast<void *>(ConcatStrChar), ConcatFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR }, OMNI_CHAR,
             INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(ConcatWsStr), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+        Function(reinterpret_cast<void *>(ConcatWsStr), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatWs3Str), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatWs4Str), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatWs5Str), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
             OMNI_VARCHAR, INPUT_DATA, true),
 
         Function(reinterpret_cast<void *>(LikeStr), LikeFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_BOOLEAN,
@@ -215,6 +239,8 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastDateToString), CastFnStr(), {}, { OMNI_DATE32 }, OMNI_VARCHAR, INPUT_DATA,
             true),
 
+        Function(reinterpret_cast<void *>(CastStringToBinary), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_VARBINARY,
+            INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStringToByte), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_BYTE, INPUT_DATA,
             true),
         Function(reinterpret_cast<void *>(CastStringToShort), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_SHORT, INPUT_DATA,
@@ -227,6 +253,16 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStrWithDiffWidths), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
             INPUT_DATA, true),
+
+        // trim functions
+        Function(reinterpret_cast<void *>(TrimStr), TrimFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(Trim1Str), TrimFnStr(), {}, { OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(LeftTrimStr), LTrimFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(RightTrimStr), RTrimFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
 
         // length functions
         Function(reinterpret_cast<void *>(CountChar), CountCharFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR }, OMNI_LONG),
@@ -293,6 +329,8 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(Md5Str), Md5FnStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
             INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(Md5Str), Md5FnStr(), {}, { OMNI_VARBINARY }, OMNI_VARCHAR,
+            INPUT_DATA, true),
         Function(reinterpret_cast<void *>(ContainsStr), ContainsFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
             OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(GreatestStr), GreatestStrFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
@@ -305,7 +343,11 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(StaticInvokeCharReadPadding), StaticInvokeCharReadPaddingFnStr(), {},
             {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstringIndex), "substring_index", {},
-            {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true)
+            {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(Re2SearchAndExtract), "regexp_extract", {},
+            {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(RegexpReplace), "regexp_replace", {},
+            {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true)
     };
 
     return stringFnRegistry;

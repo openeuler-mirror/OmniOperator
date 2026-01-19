@@ -4267,7 +4267,7 @@ TEST(AggregatorTest, spark_avg_decimal128_normal_when_inputRaw_is_true_and_outpu
 TEST(AggregatorTest, spark_sum_short_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumShortAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(ShortType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
@@ -4306,7 +4306,7 @@ TEST(AggregatorTest, spark_sum_short_normal)
 TEST(AggregatorTest, spark_sum_int_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumIntAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
@@ -4345,7 +4345,7 @@ TEST(AggregatorTest, spark_sum_int_normal)
 TEST(AggregatorTest, spark_sum_long_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumLongAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
@@ -4384,7 +4384,7 @@ TEST(AggregatorTest, spark_sum_long_normal)
 TEST(AggregatorTest, spark_sum_long_overflow)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumLongAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
@@ -4425,7 +4425,7 @@ TEST(AggregatorTest, spark_sum_long_final_stage)
     // -9223372036854775807 + -256 = 9223372036854775553
     // overflow  but same with vanilla spark
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
 
     auto *longVec1 = new Vector<int64_t>(2);
     longVec1->SetValue(0, 851451);
@@ -4467,7 +4467,7 @@ TEST(AggregatorTest, spark_sum_long_final_stage)
 TEST(AggregatorTest, spark_sum_double_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0, 1 };
+    std::vector<int32_t> channal0 = { 0 };
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumDoubleAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, true, true);
@@ -5019,9 +5019,9 @@ TEST(AggregatorTest, typed_aggregator_test)
         };
 
         BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-            std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx)
+            std::shared_ptr<NullsHelper> *nullMap)
         {
-            return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap, channelIdx);
+            return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap);
         }
         void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) {}
 
@@ -5089,10 +5089,10 @@ TEST(AggregatorTest, typed_aggregator_test)
             isOverflowAsNull);
 
         std::shared_ptr<NullsHelper> nullMap = nullptr;
-        agg.GetVector(vectorBatch, 0, dataSize, &nullMap, 0);
-        agg.GetVector(rawVectorBatch, 0, dataSize, &nullMap, 0);
+        agg.GetVector(vectorBatch, 0, dataSize, &nullMap);
+        agg.GetVector(rawVectorBatch, 0, dataSize, &nullMap);
         rawVectorBatch->Get(0)->SetNull(1);
-        agg.GetVector(vectorBatch, 0, dataSize, &nullMap, 0);
+        agg.GetVector(vectorBatch, 0, dataSize, &nullMap);
     }
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(rawVectorBatch);
@@ -5566,5 +5566,82 @@ TEST(AggregatorTest, count_aggregator_exception)
     TestColumnAggregator(OMNI_CHAR, OMNI_LONG);
 
     TestColumnAggregator(OMNI_INVALID, OMNI_LONG);
+}
+
+void CreateGroupBySingleSpillData(
+    VectorBatch*& vecBatch0,
+    VectorBatch*& vecBatch1,
+    VectorBatch*& vecBatch2,
+    VectorBatch*& expectVecBatch)
+{
+    // 1 : 1+2+3+1+2+3+4+5=21
+    // null : 4+5+1+2+3+4+5=24
+    int64_t data01[] = {1, 1, 1, 0, 0};
+    int64_t data02[] = {1, 2, 3, 4, 5};
+    int64_t data11[] = {0, 0, 0, 0, 0};
+    int64_t data12[] = {1, 2, 3, 4, 5};
+    int64_t data21[] = {1, 1, 1, 1, 1};
+    int64_t data22[] = {1, 2, 3, 4, 5};
+
+    DataTypes dataTypes(std::vector<DataTypePtr>({LongType(), LongType()}));
+    vecBatch0 = CreateVectorBatch(dataTypes, 5, data01, data02);
+    vecBatch1 = CreateVectorBatch(dataTypes, 5, data11, data12);
+    vecBatch2 = CreateVectorBatch(dataTypes, 5, data21, data22);
+
+    vecBatch0->Get(0)->SetNull(3);
+    vecBatch0->Get(0)->SetNull(4);
+    vecBatch1->Get(0)->SetNulls(0, true, 5);
+
+    int64_t expectData01[] = {1, 0};
+    int64_t expectData02[] = {21, 24};
+    DataTypes expectDataTypes(std::vector<DataTypePtr>({LongType(), LongType()}));
+    expectVecBatch = CreateVectorBatch(expectDataTypes, 2, expectData01, expectData02);
+    expectVecBatch->Get(0)->SetNull(1);
+}
+
+TEST(HashAggregationOperatorTest, test_hashagg_groupbysingle_spill)
+{
+    VectorBatch *vecBatch0 = nullptr;
+    VectorBatch *vecBatch1 = nullptr;
+    VectorBatch *vecBatch2 = nullptr;
+    VectorBatch *expectVecBatch1 = nullptr;
+
+    CreateGroupBySingleSpillData(vecBatch0, vecBatch1, vecBatch2, expectVecBatch1);
+
+    std::vector<uint32_t> groupByCol({0});
+    DataTypes groupInputTypes(std::vector<DataTypePtr>({LongType()}));
+    std::vector<uint32_t> aggInputCols({1});
+    auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
+    DataTypes aggInputTypes(std::vector<DataTypePtr>({ LongType() }));
+    auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType() }));
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM };
+    std::vector<uint32_t> maskColsVector = { static_cast<uint32_t>(-1) };
+    auto inputRaws = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartials = std::vector<bool>(aggFuncTypes.size(), true);
+    SparkSpillConfig spillConfig(GenerateSpillPath(), INT32_MAX, 0);
+    OperatorConfig operatorConfig(spillConfig);
+    auto hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, groupInputTypes, aggInputColsWrap,
+                                                                     aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypes, maskColsVector, inputRaws, outputPartials, operatorConfig);
+    hashAggOperatorFactory->Init();
+    auto *hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
+    hashAggOperator->AddInput(vecBatch0);
+    hashAggOperator->AddInput(vecBatch1);
+    hashAggOperator->AddInput(vecBatch2);
+    std::vector<VectorBatch *> result;
+    while (hashAggOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        VectorBatch *outputVecBatch = nullptr;
+        hashAggOperator->GetOutput(&outputVecBatch);
+        result.emplace_back(outputVecBatch);
+    }
+
+    EXPECT_EQ(1, result.size());
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(result[0], expectVecBatch1));
+
+    omniruntime::op::Operator::DeleteOperator(hashAggOperator);
+    delete hashAggOperatorFactory;
+    VectorHelper::FreeVecBatches(result);
+    VectorHelper::FreeVecBatch(expectVecBatch1);
 }
 }

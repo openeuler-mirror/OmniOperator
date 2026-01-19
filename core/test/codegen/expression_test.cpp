@@ -12,6 +12,7 @@
 #include "operator/projection/projection.h"
 #include "util/test_util.h"
 #include "type/base_operations.h"
+#include "expression/expr_verifier.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -150,9 +151,13 @@ TEST(ExpressionTest, q1LongType)
     DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
+    ExprVerifier verifier;
     LiteralExpr *subLeft = new LiteralExpr(100L, LongType());
+    EXPECT_TRUE(verifier.VisitExpr(*subLeft));
     FieldExpr *subRight = new FieldExpr(1, LongType());
+    EXPECT_TRUE(verifier.VisitExpr(*subLeft));
     BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, LongType());
+    EXPECT_TRUE(verifier.VisitExpr(*subLeft));
     LiteralExpr *addLeft = new LiteralExpr(100L, LongType());
     FieldExpr *addRight = new FieldExpr(2, LongType());
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, LongType());
@@ -241,9 +246,13 @@ TEST(ExpressionTest, q1ByteType)
     DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
+    ExprVerifier verifier;
     LiteralExpr *subLeft = new LiteralExpr(static_cast<int8_t>(10), ByteType(), false);
+    EXPECT_TRUE(verifier.VisitExpr(*subLeft));
     FieldExpr *subRight = new FieldExpr(1, ByteType());
+    EXPECT_TRUE(verifier.VisitExpr(*subRight));
     BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, ByteType());
+    EXPECT_TRUE(verifier.VisitExpr(*subExpr));
     LiteralExpr *addLeft = new LiteralExpr(static_cast<int8_t>(10), ByteType());
     FieldExpr *addRight = new FieldExpr(2, ByteType());
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, ByteType());
@@ -332,9 +341,13 @@ TEST(ExpressionTest, q1ShortType)
     DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
+    ExprVerifier verifier;
     LiteralExpr *subLeft = new LiteralExpr(static_cast<int16_t>(100), ShortType(), false);
+    EXPECT_TRUE(verifier.VisitExpr(*subLeft));
     FieldExpr *subRight = new FieldExpr(1, ShortType());
+    EXPECT_TRUE(verifier.VisitExpr(*subRight));
     BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, ShortType());
+    EXPECT_TRUE(verifier.VisitExpr(*subExpr));
     LiteralExpr *addLeft = new LiteralExpr(static_cast<int16_t>(100), ShortType());
     FieldExpr *addRight = new FieldExpr(2, ShortType());
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, ShortType());
@@ -423,9 +436,13 @@ TEST(ExpressionTest, q1DoubleType)
     DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
+    ExprVerifier verifier;
     LiteralExpr *subLeft = new LiteralExpr(1.0, DoubleType());
+    EXPECT_TRUE(verifier.VisitExpr(*subLeft));
     FieldExpr *subRight = new FieldExpr(1, DoubleType());
+    EXPECT_TRUE(verifier.VisitExpr(*subRight));
     BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, DoubleType());
+    EXPECT_TRUE(verifier.VisitExpr(*subExpr));
     LiteralExpr *addLeft = new LiteralExpr(1.0, DoubleType());
     FieldExpr *addRight = new FieldExpr(2, DoubleType());
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, DoubleType());
@@ -605,10 +622,14 @@ TEST(ExpressionTest, q1Decimal64Type)
     DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
+    ExprVerifier verifier;
     LiteralExpr *subLeft = new LiteralExpr(100L, Decimal64Type(12, 2));
+    EXPECT_TRUE(verifier.VisitExpr(*subLeft));
     FieldExpr *subRight = new FieldExpr(1, Decimal64Type(12, 2));
+    EXPECT_TRUE(verifier.VisitExpr(*subRight));
     BinaryExpr *subExpr =
         new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, Decimal64Type(12, 2));
+    EXPECT_TRUE(verifier.VisitExpr(*subExpr));
     LiteralExpr *addLeft = new LiteralExpr(100L, Decimal64Type(12, 2));
     FieldExpr *addRight = new FieldExpr(2, Decimal64Type(12, 2));
     BinaryExpr *addExpr =
@@ -705,10 +726,14 @@ TEST(ExpressionTest, q1Decimal128Type)
     DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
+    ExprVerifier verifier;
     LiteralExpr *subLeft = new LiteralExpr(new std::string("100"), Decimal128Type(32, 2));
+    EXPECT_TRUE(verifier.VisitExpr(*subLeft));
     FieldExpr *subRight = new FieldExpr(1, Decimal128Type(32, 2));
+    EXPECT_TRUE(verifier.VisitExpr(*subRight));
     BinaryExpr *subExpr =
         new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, Decimal128Type(32, 2));
+    EXPECT_TRUE(verifier.VisitExpr(*subExpr));
     LiteralExpr *addLeft = new LiteralExpr(new std::string("100"), Decimal128Type(32, 2));
     FieldExpr *addRight = new FieldExpr(2, Decimal128Type(32, 2));
     BinaryExpr *addExpr =
@@ -1062,17 +1087,22 @@ TEST(ExpressionTest, q1Case1)
 
     // prepare expression
     // 2022-01-01 18993 2023-01-01 19358
+    ExprVerifier verifier;
     BinaryExpr *conditionLeft = new BinaryExpr(omniruntime::expressions::Operator::GTE, new FieldExpr(0, Date32Type()),
         new LiteralExpr(18993, Date32Type()), BooleanType());
+    EXPECT_TRUE(verifier.VisitExpr(*conditionLeft));
     BinaryExpr *conditionRight = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, Date32Type()),
         new LiteralExpr(19358, Date32Type()), BooleanType());
+    EXPECT_TRUE(verifier.VisitExpr(*conditionRight));
     BinaryExpr *condition =
         new BinaryExpr(omniruntime::expressions::Operator::AND, conditionLeft, conditionRight, BooleanType());
+    EXPECT_TRUE(verifier.VisitExpr(*condition));
     FieldExpr *divLeft = new FieldExpr(1, DoubleType());
     LiteralExpr *divRight = new LiteralExpr(10000.0, DoubleType());
     BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV, divLeft, divRight, DoubleType());
     LiteralExpr *falseExpr = new LiteralExpr(0.0, DoubleType());
     IfExpr *ifExpr = new IfExpr(condition, divExpr, falseExpr);
+    EXPECT_TRUE(verifier.VisitExpr(*ifExpr));
     std::vector<Expr *> exprs = { ifExpr };
 
     Timer timer;

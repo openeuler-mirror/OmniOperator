@@ -24,7 +24,7 @@ LookupOuterJoinWithExprOperatorFactory::CreateLookupOuterJoinWithExprOperatorFac
 }
 
 LookupOuterJoinWithExprOperatorFactory *LookupOuterJoinWithExprOperatorFactory::CreateLookupOuterJoinWithExprOperatorFactory(
-    std::shared_ptr<const HashJoinNode> planNode, HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig)
+    std::shared_ptr<const HashJoinNode> planNode, HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig)
 {
     auto buildOutputTypes = planNode->RightOutputType();
     auto buildOutputColsCount = buildOutputTypes->GetSize();
@@ -57,11 +57,8 @@ LookupOuterJoinWithExprOperatorFactory::LookupOuterJoinWithExprOperatorFactory(c
     OperatorUtil::CreateProjections(probeTypes, probeHashKeys, newProbeTypes, this->projections, this->probeHashCols,
         nullptr);
     this->probeTypes = std::make_unique<DataTypes>(DataTypes(newProbeTypes));
-    auto hashBuilderWithExprOperatorFactory =
-        reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
     this->operatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(*(this->probeTypes),
-        probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes,
-        (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()));
+        probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes, hashBuilderFactoryAddr);
 }
 
 LookupOuterJoinWithExprOperatorFactory::LookupOuterJoinWithExprOperatorFactory(const type::DataTypes &probeTypes,
@@ -73,11 +70,9 @@ LookupOuterJoinWithExprOperatorFactory::LookupOuterJoinWithExprOperatorFactory(c
     OperatorUtil::CreateProjections(probeTypes, probeHashKeys, newProbeTypes, this->projections, this->probeHashCols,
                                     nullptr);
     this->probeTypes = std::make_unique<DataTypes>(DataTypes(newProbeTypes));
-    auto hashBuilderWithExprOperatorFactory =
-            reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
     this->operatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(*(this->probeTypes),
         probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes,
-        (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()), buildSide);
+        hashBuilderFactoryAddr, buildSide);
 }
 
 LookupOuterJoinWithExprOperatorFactory::~LookupOuterJoinWithExprOperatorFactory()

@@ -33,6 +33,12 @@ void VectorBatch::Append(BaseVector *vector)
     vectors.emplace_back(vector);
 }
 
+void VectorBatch::AppendFlat(BaseVector *vector)
+{
+    vectors.emplace_back(vector);
+    ++flatSize;
+}
+
 BaseVector **VectorBatch::GetVectors()
 {
     return vectors.data();

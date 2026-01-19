@@ -421,6 +421,18 @@ extern "C" DLLEXPORT int64_t GreatestDecimal64RetNull(bool *isNull, int64_t xVal
 extern "C" DLLEXPORT void GreatestDecimal128RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
     int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
     bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT void FloorDecimal128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+     int32_t xScale, bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT int64_t FloorDecimal64(int64_t contextPtr, int64_t x, int32_t xPrecision, int32_t xScale,
+     bool isNull, int32_t outPrecision, int32_t outScale);
+
+extern "C" DLLEXPORT int64_t NegativeDecimal64(int64_t x, int32_t xPrecision, int32_t xScale, bool isNull,
+     int32_t outPrecision, int32_t outScale);
+
+extern "C" DLLEXPORT void NegativeDecimal128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale, bool isNull,
+     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 }
 
 #endif // OMNI_RUNTIME_DECIMAL_ARITHMETIC_FUNCTIONS_H

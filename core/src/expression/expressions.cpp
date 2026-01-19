@@ -6,22 +6,75 @@
 #include <string>
 #include <algorithm>
 #include <utility>
+#include "vectorization/functions/IsNull.h"
 #include "type/data_type.h"
+#include "vector/vector.h"
 #include "codegen/func_registry.h"
 #include "util/type_util.h"
 #include "expr_verifier.h"
 #include "expr_printer.h"
+#include "arm_neon.h"
 
 using namespace std;
 using namespace omniruntime::type;
 using namespace omniruntime::codegen;
+using namespace omniruntime::vec;
 
 namespace omniruntime {
 namespace expressions {
-
 // Prevent ExprVerifier from being optimized out by the compiler.
 static ExprVerifier globalExprVerifier;
 static ExprPrinter globalExprPrinter;
+const static int32_t NEON_BYTE_SIZE = 16;
+
+std::vector<BaseVector *> GetConstantInputs(const std::vector<Expr *> &arguments)
+{
+    std::vector<BaseVector *> constantInputs;
+    for (auto arg : arguments) {
+        auto literalExpr = dynamic_cast<LiteralExpr *>(arg);
+        if (literalExpr && !literalExpr->isNull) {
+            auto typeId = arg->dataType->GetId();
+            switch (typeId) {
+                case OMNI_INT:
+                case OMNI_DATE32:
+                    constantInputs.push_back(new ConstVector(literalExpr->intVal, typeId));
+                    break;
+                case OMNI_SHORT:
+                    constantInputs.push_back(new ConstVector(literalExpr->shortVal, typeId));
+                    break;
+                case OMNI_BYTE:
+                    constantInputs.push_back(new ConstVector(literalExpr->byteVal, typeId));
+                    break;
+                case OMNI_LONG:
+                case OMNI_TIMESTAMP:
+                case OMNI_DECIMAL64:
+                    constantInputs.push_back(new ConstVector(literalExpr->longVal, typeId));
+                    break;
+                case OMNI_DOUBLE:
+                    constantInputs.push_back(new ConstVector(literalExpr->doubleVal, typeId));
+                    break;
+                case OMNI_FLOAT:
+                    constantInputs.push_back(new ConstVector(literalExpr->floatVal, typeId));
+                    break;
+                case OMNI_BOOLEAN:
+                    constantInputs.push_back(new ConstVector(literalExpr->boolVal, typeId));
+                    break;
+                case OMNI_DECIMAL128:
+                    constantInputs.push_back(new ConstVector(literalExpr->stringVal, typeId));
+                    break;
+                case OMNI_VARCHAR:
+                case OMNI_CHAR:
+                case OMNI_VARBINARY:
+                    constantInputs.push_back(new ConstVector(std::string_view(*literalExpr->stringVal), typeId));
+                    break;
+                default: LogError("Do not support such vector type %d", typeId);
+            }
+        } else {
+            constantInputs.push_back(nullptr);
+        }
+    }
+    return constantInputs;
+}
 
 bool IsNullLiteral(const std::string &value)
 {
@@ -127,10 +180,11 @@ LiteralExpr::LiteralExpr(int32_t val, DataTypePtr dt, bool isNulls)
     isNull = isNulls;
 }
 
-LiteralExpr::LiteralExpr(int64_t val, DataTypePtr dt)
+LiteralExpr::LiteralExpr(int64_t val, DataTypePtr dt, bool isNulls)
 {
     dataType = std::move(dt);
     longVal = val;
+    isNull = isNulls;
 }
 
 LiteralExpr::LiteralExpr(double val, DataTypePtr dt)
@@ -139,16 +193,167 @@ LiteralExpr::LiteralExpr(double val, DataTypePtr dt)
     doubleVal = val;
 }
 
+LiteralExpr::LiteralExpr(float val, DataTypePtr dt)
+{
+    dataType = std::move(dt);
+    floatVal = val;
+}
+
 LiteralExpr::LiteralExpr(std::string *val, DataTypePtr dt)
 {
     dataType = std::move(dt);
     stringVal = val;
 }
 
+uint8_t* LiteralExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    if (dataType->GetId() != OMNI_BOOLEAN) {
+        throw omniruntime::exception::OmniException(
+            "OPERATOR_RUNTIME_ERROR", "LiteralExpr::compute Only Support Boolean.");
+    }
+    auto rowSize = vecBatch->GetRowCount();
+    if (boolVal) {
+        memset_s(bitMark, BitUtil::Nbytes(rowSize), 0xFF, BitUtil::Nbytes(rowSize));
+    } else {
+        memset_s(bitMark, BitUtil::Nbytes(rowSize), 0, BitUtil::Nbytes(rowSize));
+    }
+    return bitMark;
+}
+
+std::string GetBoolValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:bool:";
+    e.boolVal ? output += "true" : output += "false";
+    return output;
+}
+
+std::string GetIntValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.intVal);
+    return output;
+}
+
+std::string GetLongValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.longVal);
+    return output;
+}
+
+std::string GetDoubleValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.doubleVal);
+    return output;
+}
+
+std::string GetCharValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:";
+    if (e.GetReturnTypeId() == OMNI_CHAR) {
+        // meant to look like "%s[%d]:'%s'"
+        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + +"[" +
+                  to_string(static_cast<CharDataType *>(e.dataType.get())->GetWidth()) + "]" + ":'" + *(e.stringVal) + "'";
+    } else {
+        // meant to look like "%s:'%s'"
+        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + ":'" + *(e.stringVal) + "'";
+    }
+    return output;
+}
+
+std::string GetDecimal64ValOutput(const LiteralExpr &e)
+{
+    // meant to look like "Literal:%s(%d, %d):%ld"
+    string output = "Literal:";
+    output += TypeUtil::TypeToString(e.GetReturnTypeId());
+    output += "(";
+    output += to_string(static_cast<Decimal64DataType *>(e.dataType.get())->GetPrecision());
+    output += ", ";
+    output += to_string(static_cast<Decimal64DataType *>(e.dataType.get())->GetScale());
+    output += "):";
+    output += to_string(e.longVal);
+    return output;
+}
+
+std::string GetDecimal128ValOutput(const LiteralExpr &e)
+{
+    // meant to look like "%s(%d, %d):'%s'"
+    string output = "Literal:";
+    output += TypeUtil::TypeToString(e.GetReturnTypeId());
+    output += "(";
+    output += to_string(static_cast<Decimal128DataType *>(e.dataType.get())->GetPrecision());
+    output += ", ";
+    output += to_string(static_cast<Decimal128DataType *>(e.dataType.get())->GetScale());
+    output += "):";
+    output += "'";
+    output += *(e.stringVal);
+    output += "'";
+    return output;
+}
+
+std::string GetShortValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.shortVal);
+    return output;
+}
+
+std::string GetByteValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.byteVal);
+    return output;
+}
+
+std::string GetFloatValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.floatVal);
+    return output;
+}
+
+
+std::string LiteralExpr::toString() const
+{
+    string output = "";
+    switch (this->GetReturnTypeId()) {
+        case OMNI_BOOLEAN:
+            output += GetBoolValOutput(*this);
+            break;
+        case OMNI_INT:
+        case OMNI_DATE32:
+            output += GetIntValOutput(*this);
+            break;
+        case OMNI_TIMESTAMP:
+        case OMNI_LONG:
+            output += GetLongValOutput(*this);
+            break;
+        case OMNI_DOUBLE:
+            output += GetDoubleValOutput(*this);
+            break;
+        case OMNI_CHAR:
+            output += GetCharValOutput(*this);
+            break;
+        case OMNI_VARCHAR:
+            output += GetCharValOutput(*this);
+            break;
+        case OMNI_DECIMAL64:
+            output += GetDecimal64ValOutput(*this);
+            break;
+        case OMNI_DECIMAL128:
+            output += GetDecimal128ValOutput(*this);
+            break;
+        default:
+            output += "Literal:invalid DataType " + to_string(this->GetReturnTypeId());
+    }
+    return output;
+}
+
 // FieldExpr
 FieldExpr::FieldExpr() = default;
 
-FieldExpr::~FieldExpr() = default;
+FieldExpr::~FieldExpr()
+{
+    if (input != nullptr) {
+        delete input;
+        input = nullptr;
+    }
+}
 
 ExprType FieldExpr::GetType() const
 {
@@ -162,9 +367,93 @@ FieldExpr::FieldExpr(int32_t colIdx, DataTypePtr colType)
     colVal = colIdx;
 }
 
+omniruntime::vec::BaseVector *FieldExpr::GetFieldVector(omniruntime::vec::VectorBatch *vecBatch)
+{
+    if (!input) {
+        return vecBatch->Get(colVal);
+    }
+    // has parent
+    if (input->dataType->GetId() == OMNI_ROW) {
+        auto rowVec = static_cast<FieldExpr *>(input)->GetFieldVector(vecBatch);
+        auto resVec = (reinterpret_cast<omniruntime::vec::RowVector *>(rowVec))->ChildAt(this->ordinal);
+        return resVec.get();
+    } else {
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "EQ left Only Support Field.");
+    }
+}
+
+FieldExpr::FieldExpr(int32_t colIdx, DataTypePtr colType, int32_t oridinal)
+{
+    dataType = std::move(colType);
+    colVal = colIdx;
+    this->ordinal = oridinal;
+}
+
+int32_t GetColVec2(FieldExpr *expr)
+{
+    if (expr->input != nullptr) {
+        return GetColVec2(reinterpret_cast<FieldExpr *>(expr->input));
+    }
+    return expr->colVal;
+}
+
+FieldExpr::FieldExpr(int32_t colIdx, DataTypePtr colType, int32_t oridinal, Expr *input)
+{
+    dataType = std::move(colType);
+    colVal = colIdx;
+    this->ordinal = oridinal;
+    this->input = input;
+}
+
+bool FieldExpr::FieldIsArray()
+{
+    return (dataType->GetId() == DataTypeId::OMNI_ARRAY);
+}
+
+bool FieldExpr::FieldIsMap()
+{
+    return (dataType->GetId() == DataTypeId::OMNI_MAP);
+}
+
 BinaryExpr::BinaryExpr()
 {
     dataType = BooleanType();
+}
+
+std::string GetStringOp(Operator op)
+{
+    switch (op) {
+        case Operator::EQ:
+            return "equal";
+        case Operator::NEQ:
+            return "notEqual";
+        case Operator::LT:
+            return "lessThan";
+        case Operator::LTE:
+            return "lessThanEqual";
+        case Operator::GT:
+            return "greaterThan";
+        case Operator::GTE:
+            return "greaterThanEqual";
+        case Operator::AND:
+            return "and";
+        case Operator::OR:
+            return "or";
+        case Operator::ADD:
+            return "add";
+        case Operator::SUB:
+            return "subtract";
+        case Operator::MUL:
+            return "multiply";
+        case Operator::DIV:
+            return "divide";
+        case Operator::MOD:
+            return "modulus";
+        case Operator::NOT:
+            return "not";
+        default:
+            return "Invalid";
+    }
 }
 
 BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePtr dt)
@@ -173,6 +462,9 @@ BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePt
     left = leftExpr;
     right = rightExpr;
     dataType = std::move(dt);
+    std::vector<omniruntime::type::DataTypeId> args = {left->dataType->GetId(), right->dataType->GetId()};
+    auto signature = std::make_shared<FunctionSignature>(GetStringOp(bop), args, dataType->GetId());
+    vectorFunction = VectorFunction::Find(signature);
 }
 
 BinaryExpr::~BinaryExpr()
@@ -186,6 +478,243 @@ ExprType BinaryExpr::GetType() const
     return ExprType::BINARY_E;
 }
 
+uint8_t *BinaryExpr::computeAND(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    auto vectorSize = vecBatch->GetRowCount();
+
+    auto bitMarkBufLeft = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(BitUtil::Nbytes(vectorSize) + 8,
+        true);
+    uint8_t *leftResult = left->compute(vecBatch, bitMarkBufLeft->GetBuffer());
+
+    auto bitMarkBufRight = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(BitUtil::Nbytes(vectorSize) + 8,
+        true);
+    uint8_t *rightResult = right->compute(vecBatch, bitMarkBufRight->GetBuffer());
+
+    int32_t step = static_cast<int32_t>(NEON_BYTE_SIZE / sizeof(uint8_t));
+    int32_t byteLen = BitUtil::Nbytes(vectorSize);
+    int32_t index = 0;
+    for (; index + step <= byteLen; index += step) {
+        uint8x16_t leftBatch = vld1q_u8(leftResult + index);
+        uint8x16_t rightBatch = vld1q_u8(rightResult + index);
+        uint8x16_t result = leftBatch & rightBatch;
+        vst1q_u8(bitMark + index, result);
+    }
+    for (; index < byteLen; index++) {
+        bitMark[index] = leftResult[index] & rightResult[index];
+    }
+    return bitMark;
+}
+
+uint8_t *BinaryExpr::computeOR(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    auto vectorSize = vecBatch->GetRowCount();
+
+    auto bitMarkBufLeft = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(BitUtil::Nbytes(vectorSize) + 8,
+        true);
+    uint8_t *leftResult = left->compute(vecBatch, bitMarkBufLeft->GetBuffer());
+
+    auto bitMarkBufRight = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(BitUtil::Nbytes(vectorSize) + 8,
+        true);
+    uint8_t *rightResult = right->compute(vecBatch, bitMarkBufRight->GetBuffer());
+
+    int32_t step = static_cast<int32_t>(NEON_BYTE_SIZE / sizeof(uint8_t));
+    int32_t byteLen = BitUtil::Nbytes(vectorSize);
+    int32_t index = 0;
+    for (; index + step <= byteLen; index += step) {
+        uint8x16_t leftBatch = vld1q_u8(leftResult + index);
+        uint8x16_t rightBatch = vld1q_u8(rightResult + index);
+        uint8x16_t result = leftBatch | rightBatch;
+        vst1q_u8(bitMark + index, result);
+    }
+    for (; index < byteLen; index++) {
+        bitMark[index] = leftResult[index] | rightResult[index];
+    }
+    return bitMark;
+}
+
+bool ALWAYS_INLINE IsEqual(std::string_view src, std::string *target)
+{
+    return src == *target;
+}
+
+uint8_t *BinaryExpr::computeEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    auto field = dynamic_cast<FieldExpr *>(left);
+    if (!field) {
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "EQ left Only Support Field.");
+    }
+
+    auto literal = dynamic_cast<LiteralExpr *>(right);
+    if (!literal) {
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "EQ right Only Support literal.");
+    }
+
+    auto vector = field->GetFieldVector(vecBatch);
+    auto rows = vector->GetSize();
+    auto dataTypeId = vector->GetTypeId();
+    switch (dataTypeId) {
+        case OMNI_CHAR:
+        case OMNI_VARCHAR: {
+            auto target = literal->stringVal;
+            if (target == nullptr) {
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                    "EQ Not Support stringVal is null.");
+            }
+            if (vector->GetEncoding() == vec::OMNI_FLAT) {
+                auto varCharVector = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(
+                    vector);
+                for (int index = 0; index < rows; index++) {
+                    bool result = vector->IsNull(index) ? 0 : IsEqual(varCharVector->GetValue(index), target);
+                    BitUtil::SetBit(bitMark, index, result);
+                }
+            } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                auto dictVarchar = reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view,
+                    vec::LargeStringContainer>> *>(vector);
+                for (int index = 0; index < rows; index++) {
+                    bool result = vector->IsNull(index) ? 0 : IsEqual(dictVarchar->GetValue(index), target);
+                    BitUtil::SetBit(bitMark, index, result);
+                }
+            } else {
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                    "EQ Not Support ENCODING for varchar : " + std::to_string(static_cast<int>(dataTypeId)));
+            }
+            break;
+        }
+        default:
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                "EQ Not Support Type : " + std::to_string(static_cast<int>(dataTypeId)));
+    }
+
+    return bitMark;
+}
+
+uint8_t *BinaryExpr::computeNEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    auto field = dynamic_cast<FieldExpr *>(left);
+    if (!field) {
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "NEQ left Only Support Field.");
+    }
+
+    auto literal = dynamic_cast<LiteralExpr *>(right);
+    if (!literal) {
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "NEQ right Only Support literal.");
+    }
+
+    auto vector = field->GetFieldVector(vecBatch);
+    auto rows = vector->GetSize();
+    auto dataTypeId = vector->GetTypeId();
+    switch (dataTypeId) {
+        case OMNI_CHAR:
+        case OMNI_VARCHAR: {
+            auto target = literal->stringVal;
+            if (target == nullptr) {
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                    "NEQ Not Support stringVal is null.");
+            }
+            if (vector->GetEncoding() == vec::OMNI_FLAT) {
+                auto varCharVector = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(
+                    vector);
+                for (int index = 0; index < rows; index++) {
+                    bool result = vector->IsNull(index) ? 0 : IsEqual(varCharVector->GetValue(index), target);
+                    BitUtil::SetBit(bitMark, index, !result);
+                }
+            } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                auto dictVarchar = reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view,
+                    vec::LargeStringContainer>> *>(vector);
+                for (int index = 0; index < rows; index++) {
+                    bool result = vector->IsNull(index) ? 0 : IsEqual(dictVarchar->GetValue(index), target);
+                    BitUtil::SetBit(bitMark, index, !result);
+                }
+            } else {
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                    "NEQ Not Support ENCODING for varchar : " + std::to_string(static_cast<int>(dataTypeId)));
+            }
+            break;
+        }
+        default:
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                "NEQ Not Support Type : " + std::to_string(static_cast<int>(dataTypeId)));
+    }
+
+    return bitMark;
+}
+
+uint8_t *BinaryExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    switch (op) {
+        case Operator::EQ:
+            return computeEQ(vecBatch, bitMark);
+        case Operator::AND:
+            return computeAND(vecBatch, bitMark);
+        case Operator::OR:
+            return computeOR(vecBatch, bitMark);
+        case Operator::NEQ:
+            return computeNEQ(vecBatch, bitMark);
+        default:
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                "BinaryExpr Not Support: " + std::to_string(static_cast<int>(op)));
+    }
+}
+
+string BinaryExprPrinterHelper(const Operator &op, const DataType &type)
+{
+    string typeStr = TypeUtil::TypeToString(type.GetId());
+    if (TypeUtil::IsDecimalType(type.GetId())) {
+        typeStr += "(";
+        typeStr += to_string(static_cast<const DecimalDataType &>(type).GetPrecision());
+        typeStr += ", ";
+        typeStr += to_string(static_cast<const DecimalDataType &>(type).GetScale());
+        typeStr += ")";
+    }
+
+    switch (op) {
+        case Operator::EQ:
+            return "Cmp:" + typeStr + "(EQ ";
+        case Operator::NEQ:
+            return "Cmp:" + typeStr + "(NEQ ";
+        case Operator::LT:
+            return "Cmp:" + typeStr + "(LT ";
+        case Operator::LTE:
+            return "Cmp:" + typeStr + "(LTE ";
+        case Operator::GT:
+            return "Cmp:" + typeStr + "(GT ";
+        case Operator::GTE:
+            return "Cmp:" + typeStr + "(GTE ";
+        case Operator::AND:
+            return "Bin:" + typeStr + "(AND ";
+        case Operator::OR:
+            return "Bin:" + typeStr + "(OR ";
+        case Operator::ADD:
+            return "Arith:" + typeStr + "(ADD ";
+        case Operator::SUB:
+            return "Arith:" + typeStr + "(SUB ";
+        case Operator::MUL:
+            return "Arith:" + typeStr + "(MUL ";
+        case Operator::DIV:
+            return "Arith:" + typeStr + "(DIV ";
+        case Operator::MOD:
+            return "Arith:" + typeStr + "(MOD ";
+        default:
+            return "Invalid";
+    }
+}
+
+std::string BinaryExpr::toString() const
+{
+    std::string indent = "";
+    std::string message = BinaryExprPrinterHelper(this->op, *(this->GetReturnType()));
+    if (message == "Invalid") {
+        message = "InvalidBinaryOperator:" + std::to_string(static_cast<int32_t>(this->op)) + "(";
+    }
+    message = indent + message;
+
+    message += this->left->toString();
+
+    message += this->right->toString();
+    message += indent + ")";
+    return message;
+}
+
 UnaryExpr::UnaryExpr()
 {
     dataType = BooleanType();
@@ -196,6 +725,9 @@ UnaryExpr::UnaryExpr(Operator logOp, Expr *bodyExpr) : op(logOp), exp(bodyExpr) 
 UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataTypePtr dt) : op(uop), exp(expr)
 {
     dataType = std::move(dt);
+    std::vector<omniruntime::type::DataTypeId> args = {exp->dataType->GetId()};
+    auto signature = std::make_shared<FunctionSignature>(GetStringOp(op), args, dataType->GetId());
+    vectorFunction = VectorFunction::Find(signature);
 }
 
 UnaryExpr::~UnaryExpr()
@@ -206,6 +738,39 @@ UnaryExpr::~UnaryExpr()
 ExprType UnaryExpr::GetType() const
 {
     return ExprType::UNARY_E;
+}
+
+uint8_t *UnaryExpr::computeNOT(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    auto childExpr = dynamic_cast<IsNullExpr *>(this->exp);
+    if (!childExpr) {
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "Not Only Support isNullExpr.");
+    }
+    auto vectorSize = vecBatch->GetRowCount();
+    uint8_t *childResult = childExpr->compute(vecBatch, bitMark);
+    int32_t step = static_cast<int32_t>(NEON_BYTE_SIZE / sizeof(uint8_t));
+    int32_t byteLen = BitUtil::Nbytes(vectorSize);
+    int32_t index = 0;
+    for (; index + step <= byteLen; index += step) {
+        uint8x16_t valuesBatch = vld1q_u8(childResult + index);
+        uint8x16_t result = ~valuesBatch;
+        vst1q_u8(bitMark + index, result);
+    }
+    for (; index < byteLen; index++) {
+        bitMark[index] = ~childResult[index];
+    }
+    return bitMark;
+}
+
+uint8_t *UnaryExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    switch (op) {
+        case Operator::NOT:
+            return computeNOT(vecBatch, bitMark);
+        default:
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                "UnaryExpr Not Support: " + std::to_string(static_cast<int>(op)));
+    }
 }
 
 InExpr::InExpr()
@@ -222,6 +787,17 @@ InExpr::InExpr(std::vector<Expr *> args)
 {
     dataType = BooleanType();
     arguments = std::move(args);
+
+    std::vector<DataTypeId> argTypes(arguments.size());
+    std::transform(arguments.begin(), arguments.end(), argTypes.begin(), [](Expr *expr) -> DataTypeId {
+        return expr->GetReturnTypeId();
+    });
+    auto signature = std::make_shared<FunctionSignature>("in", argTypes, dataType->GetId());
+    std::vector<vec::BaseVector *> constantInputs = GetConstantInputs(arguments);
+    vectorFunction = VectorFunction::Find(signature, constantInputs);
+    if (vectorFunction == nullptr) {
+        vectorFunction = VectorFunction::Find(signature);
+    }
 }
 
 ExprType InExpr::GetType() const
@@ -292,6 +868,10 @@ IfExpr::IfExpr(Expr *cond, Expr *texp, Expr *fexp)
     condition = cond;
     trueExpr = texp;
     falseExpr = fexp;
+    std::vector<omniruntime::type::DataTypeId> args = {condition->dataType->GetId(),
+                                                       trueExpr->dataType->GetId(), falseExpr->dataType->GetId()};
+    auto signature = std::make_shared<FunctionSignature>("if", args, dataType->GetId());
+    vectorFunction = VectorFunction::Find(signature);
 }
 
 ExprType IfExpr::GetType() const
@@ -329,8 +909,30 @@ IsNullExpr::~IsNullExpr()
 IsNullExpr::IsNullExpr(Expr *value)
 {
     dataType = BooleanType();
-
+    std::vector<omniruntime::type::DataTypeId> args = {value->dataType->GetId()};
+    auto signature = std::make_shared<FunctionSignature>("isnull", args, dataType->GetId());
+    vectorFunction = VectorFunction::Find(signature);
     this->value = value;
+}
+
+uint8_t *IsNullExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    auto expr = dynamic_cast<FieldExpr *>(value);
+    if (!expr) {
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "IsNullExpr Only Support Field.");
+    }
+    auto vector = expr->GetFieldVector(vecBatch);
+    auto rowSize = vecBatch->GetRowCount();
+    if (vector->HasNull()) {
+        errno_t opIsNullRet = memcpy_s(bitMark, BitUtil::Nbytes(rowSize),
+            vec::unsafe::UnsafeBaseVector::GetNulls(vector), BitUtil::Nbytes(rowSize));
+        if (UNLIKELY(opIsNullRet != EOK)) {
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "IS_NULL memcpy_s fail.");
+        }
+    } else {
+        memset_s(bitMark, BitUtil::Nbytes(rowSize), 0, BitUtil::Nbytes(rowSize));
+    }
+    return bitMark;
 }
 
 ExprType IsNullExpr::GetType() const
@@ -351,10 +953,16 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     dataType = std::move(returnType);
 
     std::vector<DataTypeId> argTypes(arguments.size());
-    std::transform(arguments.begin(), arguments.end(), argTypes.begin(),
-        [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
-    auto signature = FunctionSignature(funcName, argTypes, dataType->GetId());
-    this->function = FunctionRegistry::LookupFunction(&signature);
+    std::transform(arguments.begin(), arguments.end(), argTypes.begin(), [](Expr *expr) -> DataTypeId {
+        return expr->GetReturnTypeId();
+    });
+    auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
+    this->function = FunctionRegistry::LookupFunction(signature.get());
+    std::vector<vec::BaseVector *> constantInputs = GetConstantInputs(arguments);
+    vectorFunction = VectorFunction::Find(signature, constantInputs);
+    if (vectorFunction == nullptr) {
+        vectorFunction = VectorFunction::Find(signature);
+    }
 }
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
@@ -362,6 +970,13 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     : funcName(fnName), arguments(args), function(function), functionType(BUILTIN)
 {
     dataType = std::move(returnType);
+    std::vector<DataTypeId> argTypes(arguments.size());
+    std::transform(arguments.begin(), arguments.end(), argTypes.begin(), [](Expr *expr) -> DataTypeId {
+        return expr->GetReturnTypeId();
+    });
+    auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
+    this->function = FunctionRegistry::LookupFunction(signature.get());
+    vectorFunction = VectorFunction::Find(signature);
 }
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
@@ -369,11 +984,71 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     : funcName(fnName), arguments(args), function(nullptr), functionType(functionType)
 {
     dataType = std::move(returnType);
+    std::vector<DataTypeId> argTypes(arguments.size());
+    std::transform(arguments.begin(), arguments.end(), argTypes.begin(), [](Expr *expr) -> DataTypeId {
+        return expr->GetReturnTypeId();
+    });
+    auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
+    this->function = FunctionRegistry::LookupFunction(signature.get());
+    vectorFunction = VectorFunction::Find(signature);
 }
 
 ExprType FuncExpr::GetType() const
 {
     return ExprType::FUNC_E;
+}
+
+bool ALWAYS_INLINE RLikeStr(std::string_view src, std::wregex re)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
+    return std::regex_search(convert.from_bytes(std::string(src)), re);
+}
+
+uint8_t *FuncExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    if (funcName == "RLike") {
+        auto expr = dynamic_cast<FieldExpr *>(arguments[0]);
+        auto pattern = dynamic_cast<LiteralExpr *>(arguments[1]);
+        if (!expr || !pattern || !pattern->stringVal) {
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "RLike args error");
+        }
+        auto vector = expr->GetFieldVector(vecBatch);
+        auto rows = vecBatch->GetRowCount();
+
+        auto dataTypeId = vector->GetTypeId();
+        switch (dataTypeId) {
+            case OMNI_CHAR:
+            case OMNI_VARCHAR: {
+                auto target = pattern->stringVal;
+                std::wregex re(convert.from_bytes(*target));
+                if (vector->GetEncoding() == vec::OMNI_FLAT) {
+                    auto varCharVector = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(
+                        vector);
+                    for (int index = 0; index < rows; index++) {
+                        bool result = vector->IsNull(index) ? 0 : RLikeStr(varCharVector->GetValue(index), re);
+                        BitUtil::SetBit(bitMark, index, result);
+                    }
+                } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                    auto dictVarchar = reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view,
+                        vec::LargeStringContainer>> *>(vector);
+                    for (int index = 0; index < rows; index++) {
+                        bool result = vector->IsNull(index) ? 0 : RLikeStr(dictVarchar->GetValue(index), re);
+                        BitUtil::SetBit(bitMark, index, result);
+                    }
+                } else {
+                    throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                        "RLike Not Support ENCODING for varchar : " + std::to_string(static_cast<int>(dataTypeId)));
+                }
+                break;
+            }
+            default:
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                    "RLike Not Support Type : " + std::to_string(static_cast<int>(dataTypeId)));
+        }
+        return bitMark;
+    } else {
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "FuncExpr Not Support: " + funcName);
+    }
 }
 }
 }

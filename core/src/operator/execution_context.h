@@ -41,7 +41,31 @@ public:
         hasError = false;
     }
 
+    void SetResultRowSize(const int32_t size)
+    {
+        resultRowSize = size;
+    }
+
+    int32_t GetResultRowSize() const
+    {
+        return resultRowSize;
+    }
+
+    bool hasFilter = false;
+
+    bool *GetIsSelectRow() const
+    {
+        return isSelectRow;
+    }
+
+    void SetIsSelectRow(bool *inIsSelectRow)
+    {
+        isSelectRow = inIsSelectRow;
+    }
+
 private:
+    bool *isSelectRow;
+    int32_t resultRowSize;
     mem::SimpleArenaAllocator arena;
     bool hasError = false;
     std::string errorMessage;

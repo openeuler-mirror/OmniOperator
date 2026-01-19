@@ -5,6 +5,7 @@
 #ifndef JNI_VECTOR_H
 #define JNI_VECTOR_H
 #include <jni.h>
+#include <mutex>
 
 #ifdef __cplusplus
 extern "C" {
@@ -121,6 +122,14 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getVa
     jlong);
 
 /*
+ * Class:     nova_hetu_omniruntime_vector_ArrayVec
+ * Method:    getValueOffsetsNative
+ * Signature: (J)J;
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_getValueOffsetsNative(JNIEnv *, jclass,
+    jlong);
+
+/*
  * Class:     Java_nova_hetu_omniruntime_memory_MemoryManager
  * Method:    setGlobalMemoryLimitNative
  * Signature: (J)V
@@ -200,6 +209,117 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_setNullFlagNative(J
  * Signature: (J)Z
  */
 JNIEXPORT jboolean JNICALL Java_nova_hetu_omniruntime_vector_Vec_hasNullNative(JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ComplexVec
+ * Method:    getComplexCapacityNative
+ * Signature: (JI)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComplexCapacityNative
+        (JNIEnv *, jclass, jlong, jint);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ComplexVec
+ * Method:    newComplexVectorNative
+ * Signature: (II[Lnova/hetu/omniruntime/type/DataType;)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexVectorNative
+        (JNIEnv *, jclass, jint, jint, jobjectArray);
+
+/*
+* Class:     nova_hetu_omniruntime_vector_StructVec
+* Method:    addVecNative
+* Signature: (JIJ)V
+*/
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_addVecNative
+        (JNIEnv *env, jclass jcls, jlong rowVecAddr, jint index, jlong addedVecAddr);
+
+/*
+* Class:     nova_hetu_omniruntime_vector_MapVec
+* Method:    AddKeysNative
+* Signature: (JJ)V
+*/
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_MapVec_AddKeysNative
+        (JNIEnv *env, jclass jcls, jlong mapVecAddr, jlong keysAddr);
+
+
+/*
+* Class:     nova_hetu_omniruntime_vector_MapVec
+* Method:    AddValuesNative
+* Signature: (JJ)V
+*/
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_MapVec_AddValuesNative
+        (JNIEnv *env, jclass jcls, jlong mapVecAddr, jlong valuesAddr);
+
+/*
+* Class:     nova_hetu_omniruntime_vector_MapVec
+* Method:    AddOffsetsNative
+* Signature: (J[I)V
+*/
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_MapVec_AddOffsetsNative
+        (JNIEnv *env, jclass jcls, jlong mapVecAddr, jintArray offsetsAddr);
+
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newEmptyComplexVectorNative
+        (JNIEnv *env, jclass jcls, jint jSize, jint jVectorEncodingId, jobjectArray jDataTypes);
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_StructVec_getChildAddrNative
+        (JNIEnv *env, jclass jcls, jlong jNativeVector, jint index);
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_appendVecNative
+    (JNIEnv *env, jclass jcls, jlong jNativeVector, jlong appendedVecAddr);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ComplexVec
+ * Method:    getComplexDataTypeNative
+ * Signature: (J)Lnova/hetu/omniruntime/type/DataType;
+ */
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComplexDataTypeNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_MapVec
+ * Method:    setSizeByIndexNative
+ * Signature: (JII)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_setSizeByIndexNative
+        (JNIEnv *, jclass, jlong, jint, jint);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ArrayVec
+ * Method:    setSizeByIndexNative
+ * Signature: (JII)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_setSizeByIndexNative
+        (JNIEnv *, jclass, jlong, jint, jint);
+
+static std::once_flag loadDataTypeClsFlag;
+
+static jclass dataTypeCls = nullptr;
+static jclass structDataTypeCls = nullptr;
+static jclass mapDataTypeCls = nullptr;
+static jclass arrayDataTypeCls = nullptr;
+
+static jmethodID createMethodId = nullptr;
+static jmethodID structDataTypeInitMethodId = nullptr;
+static jmethodID mapDataTypeInitMethodId = nullptr;
+static jmethodID arrayDataTypeInitMethodId = nullptr;
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ArrayVec
+ * Method:    addElementsNative
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_addElementsNative(JNIEnv *env, jclass jcls, jlong arrayVecAddr,
+    jlong elementsAddr);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ArrayVec
+ * Method:    addOffsetsNative
+ * Signature: (J[I)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_addOffsetsNative(JNIEnv *env, jclass jcls, jlong arrayVecAddr,
+    jintArray offsetsAddr);
 
 
 #ifdef __cplusplus

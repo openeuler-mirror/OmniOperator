@@ -37,7 +37,7 @@ TEST(SpillTest, TestWriteRead)
     VectorHelper::FreeVecBatch(vecBatch);
 
     auto spillFile = writer.GetSpillFileInfo();
-    SpillReader reader(sourceTypes, spillFile.filePath, spillFile.fileLength, spillFile.totalRowCount);
+    SpillReader reader(sourceTypes, spillFile.filePath, spillFile.fileLength, spillFile.totalRowCount, false);
     std::unique_ptr<VectorBatch> outputVecBatch = nullptr;
     bool isEnd = false;
     reader.ReadVecBatch(outputVecBatch, isEnd);
@@ -81,11 +81,47 @@ TEST(SpillTest, TestSpillNoneSinceExceededLimit)
     }
 
     Spiller spiller(sourceTypes, sortCols, sortOrders, path, 50);
-    auto status = spiller.Spill(&pagesIndex, false, false);
+    auto status = spiller.Spill(&pagesIndex, false, false, nullptr);
     ASSERT_EQ(status, ErrorCode::EXCEED_SPILL_THRESHOLD);
     ASSERT_EQ(spiller.GetSpilledBytes(), 0);
     auto spillTracker = spiller.GetSpillTracker();
     delete spillTracker;
+    rmdir(path.c_str());
+}
+
+TEST(SpillTest, TestWriteReadWithCompress)
+{
+    const int32_t dataSize = 5;
+    int32_t data1[dataSize] = {3, 5, 7, 9, 1};
+    int64_t data2[dataSize] = {8, 4, 0, 2, 6};
+    int16_t data3[dataSize] = {5, 4, 3, 2, 1};
+
+    std::vector<DataTypePtr> types = { IntType(), LongType(), ShortType() };
+    DataTypes sourceTypes(types);
+    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
+
+    std::string path = TestUtil::GenerateSpillPath();
+    mkdir(path.c_str(), 0750);
+    ChildSpillTracker spillTracker(&(GetRootSpillTracker()), UINT64_MAX);
+
+    SpillWriter writer(sourceTypes, path, 0, true);
+    writer.WriteVecBatch(vecBatch, 100);
+    writer.Close();
+    VectorHelper::FreeVecBatch(vecBatch);
+
+    auto spillFile = writer.GetSpillFileInfo();
+    SpillReader reader(sourceTypes, spillFile.filePath, spillFile.fileLength, spillFile.totalRowCount, true);
+    std::unique_ptr<VectorBatch> outputVecBatch = nullptr;
+    bool isEnd = false;
+    reader.ReadVecBatch(outputVecBatch, isEnd);
+    VectorHelper::PrintVecBatch(outputVecBatch.get());
+    TestUtil::AssertVecBatchEquals(outputVecBatch.get(), sourceTypes.GetSize(), dataSize, data1, data2, data3);
+    ASSERT_FALSE(isEnd);
+
+    reader.ReadVecBatch(outputVecBatch, isEnd);
+    ASSERT_TRUE(isEnd);
+    outputVecBatch = nullptr;
+
     rmdir(path.c_str());
 }
 }

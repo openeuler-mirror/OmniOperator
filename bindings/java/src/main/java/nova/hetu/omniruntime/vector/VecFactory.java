@@ -5,6 +5,9 @@
 package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.ArrayDataType;
+import nova.hetu.omniruntime.type.MapDataType;
+import nova.hetu.omniruntime.type.StructDataType;
 
 /**
  * vec factory.
@@ -32,6 +35,15 @@ public class VecFactory {
             case OMNI_VEC_ENCODING_CONTAINER:
                 vector = new ContainerVec(nativeVector);
                 break;
+            case OMNI_ENCODING_MAP:
+                vector = new MapVec(nativeVector, (MapDataType) dataType);
+                break;
+            case OMNI_ENCODING_STRUCT:
+                vector = new StructVec(nativeVector, (StructDataType) dataType);
+                break;
+            case OMNI_ENCODING_ARRAY:
+                vector = new ArrayVec(nativeVector, (ArrayDataType) dataType);
+                break;
             default:
                 throw new IllegalArgumentException("Not Support Vec Encoding " + encoding);
         }
@@ -50,6 +62,8 @@ public class VecFactory {
                 return new LongVec(nativeVector);
             case OMNI_DOUBLE:
                 return new DoubleVec(nativeVector);
+            case OMNI_FLOAT:
+                return new FloatVec(nativeVector);
             case OMNI_SHORT:
                 return new ShortVec(nativeVector);
             case OMNI_BYTE:
@@ -93,6 +107,18 @@ public class VecFactory {
             case OMNI_VEC_ENCODING_CONTAINER:
                 vector = new ContainerVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
                 break;
+            case OMNI_ENCODING_ARRAY:
+                ArrayDataType arrayType = (ArrayDataType) ComplexVec.getComplexDataTypeNative(nativeVector);
+                vector = new ArrayVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size, arrayType);
+                break;
+            case OMNI_ENCODING_MAP:
+                MapDataType mapType = (MapDataType) ComplexVec.getComplexDataTypeNative(nativeVector);
+                vector = new MapVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size, mapType);
+                break;
+            case OMNI_ENCODING_STRUCT:
+                StructDataType structDataType = (StructDataType) ComplexVec.getComplexDataTypeNative(nativeVector);
+                vector = new StructVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size, structDataType);
+                break;
             default:
                 throw new IllegalArgumentException("Not Support Vec Encoding " + encoding);
         }
@@ -110,6 +136,8 @@ public class VecFactory {
             case OMNI_DATE64:
             case OMNI_DECIMAL64:
                 return new LongVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
+            case OMNI_FLOAT:
+                return new FloatVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             case OMNI_DOUBLE:
                 return new DoubleVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             case OMNI_SHORT:
@@ -148,6 +176,8 @@ public class VecFactory {
                 return new LongVec(size);
             case OMNI_DOUBLE:
                 return new DoubleVec(size);
+            case OMNI_FLOAT:
+                return new FloatVec(size);
             case OMNI_SHORT:
                 return new ShortVec(size);
             case OMNI_BYTE:

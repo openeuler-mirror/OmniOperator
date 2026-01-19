@@ -1412,4 +1412,55 @@ extern "C" DLLEXPORT void GreatestDecimal128RetNull(bool *isNull, int64_t xHigh,
     *outHighPtr = x.HighBits();
     *outLowPtr = x.LowBits();
 }
+extern "C" DLLEXPORT void FloorDecimal128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+{
+    if (isNull) {
+        *outHighPtr = 0;
+        *outLowPtr = 0;
+        return;
+    }
+    Decimal128Wrapper input(xHigh, xLow);
+    input.SetScale(xScale);
+    DecimalOperations::Floor(input);
+    CHECK_OVERFLOW(input, outPrecision);
+    *outHighPtr = input.HighBits();
+    *outLowPtr = input.LowBits();
+}
+
+extern "C" DLLEXPORT int64_t FloorDecimal64(int64_t contextPtr, int64_t x, int32_t xPrecision, int32_t xScale,
+    bool isNull, int32_t outPrecision, int32_t outScale)
+{
+    if (isNull) {
+        return 0;
+    }
+    Decimal64 input(x);
+    input.SetScale(xScale);
+    DecimalOperations::Floor(input);
+    CHECK_OVERFLOW_RETURN(input, outPrecision);
+    return input.GetValue();
+}
+
+extern "C" DLLEXPORT int64_t NegativeDecimal64(int64_t x, int32_t xPrecision, int32_t xScale, bool isNull,
+                                          int32_t outPrecision, int32_t outScale)
+{
+    if (isNull) {
+        return 0;
+    }
+    return x == std::numeric_limits<int64_t>::min() ? x : -x;
+}
+
+extern "C" DLLEXPORT void NegativeDecimal128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale, bool isNull,
+                                        int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+{
+    if (isNull) {
+        *outHighPtr = 0;
+        *outLowPtr = 0;
+        return;
+    }
+    Decimal128Wrapper result(xHigh, xLow);
+    result.Negate();
+    *outHighPtr = result.HighBits();
+    *outLowPtr = result.LowBits();
+}
 }

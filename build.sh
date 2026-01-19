@@ -68,6 +68,7 @@ case "$1" in
     cd $CWD/core/src/udf/java && mvn clean install
     ;;
   coverage-java)
+    setup_dependencies release
     echo "-- Enable coverage for java"
     cd ${CWD} && build release:java 
 
@@ -75,14 +76,13 @@ case "$1" in
     cd $CWD/core/src/udf/java && mvn clean install
     ;;
   coverage-c++)
-    echo "-- Enable coverage for c++"
-    cd ${CWD} && build coverage:java 
-    $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
+    setup_dependencies release
 
-    lcov --d $CWD/build --c --output-file test.info --rc lcov_branch_coverage=1
-    lcov --remove test.info '*/opt/buildtools/include/*' '*/usr/include/*' '*/usr/lib/*' '*/usr/lib64/*' '*/usr/local/include/*' '*/usr/local/lib/*' '*/usr/local/lib64/*' '*/test/*' -o final.info --rc lcov_branch_coverage=1
-    genhtml final.info -o ${CWD}/core/build/test_coverage --branch-coverage --rc lcov_branch_coverage=1
+    echo "-- Only build"
+    cd ${CWD} && build release:java --exclude-test
 
+    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests
+    cd $CWD/core/src/udf/java && mvn clean install -DskipTests
     ;;
   coverage)
     setup_dependencies package

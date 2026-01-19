@@ -25,6 +25,8 @@ extern DLLEXPORT int64_t GetLongFromDictionaryVector(int64_t dictionaryVectorAdd
 
 extern DLLEXPORT double GetDoubleFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
 
+extern DLLEXPORT float GetFloatFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+
 extern DLLEXPORT bool GetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
 
 extern DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index,

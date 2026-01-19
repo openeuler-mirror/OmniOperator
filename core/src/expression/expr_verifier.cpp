@@ -4,28 +4,32 @@
  */
 #include "expr_verifier.h"
 #include "codegen/func_registry.h"
+#include "vectorization/registration/SimpleFunctionRegistry.h"
 
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
+using namespace omniruntime::vectorization;
 
 namespace omniruntime {
 namespace expressions {
-bool ExprVerifier::VisitExpr(const Expr &e)
+bool ExprVerifier::VisitExpr(Expr &e)
 {
     e.Accept(*this);
-    return this->supportedFlag;
+    e.isAllSupportVectorization_ = isSupportVectorization_;
+    return this->isSupportCodegen_ || this->isSupportVectorization_;
 }
 
-bool ExprVerifier::VisitExpr(const std::shared_ptr<const Expr> &e)
+bool ExprVerifier::VisitExpr(std::shared_ptr<Expr> &e)
 {
     e->Accept(*this);
-    return this->supportedFlag;
+    e->isAllSupportVectorization_ = isSupportVectorization_;
+    return this->isSupportCodegen_ || this->isSupportVectorization_;
 }
 
 bool ExprVerifier::AreInvalidDataTypes(DataTypeId type1, DataTypeId type2)
 {
-    return type1 != type2 && !(TypeUtil::IsStringType(type1) && TypeUtil::IsStringType(type2)) &&
-        !(TypeUtil::IsDecimalType(type1) && TypeUtil::IsDecimalType(type2));
+    return type1 != type2 && !(TypeUtil::IsStringType(type1) && TypeUtil::IsStringType(type2)) && !(
+        TypeUtil::IsDecimalType(type1) && TypeUtil::IsDecimalType(type2));
 }
 
 void ExprVerifier::Visit(const LiteralExpr &literalExpr)
@@ -43,10 +47,12 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
         case OMNI_BOOLEAN:
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128:
-            this->supportedFlag = true;
+        case OMNI_FLOAT:
+        case OMNI_ROW:
+        case OMNI_ARRAY:
             break;
         default:
-            this->supportedFlag = false;
+            this->isSupportCodegen_ = false;
             break;
     }
 }
@@ -65,11 +71,14 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_VARCHAR:
         case OMNI_BOOLEAN:
         case OMNI_DECIMAL64:
+        case OMNI_VARBINARY:
+        case OMNI_FLOAT:
         case OMNI_DECIMAL128:
-            this->supportedFlag = true;
+        case OMNI_ROW:
+        case OMNI_ARRAY:
+        case OMNI_MAP:
             break;
         default:
-            this->supportedFlag = false;
             this->unSupportedReason = "unSupported FieldExpr DataTypeId: "
                                       + std::to_string(static_cast<int>(fieldExpr.GetReturnTypeId()));
             break;
@@ -78,53 +87,60 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
 
 void ExprVerifier::Visit(const UnaryExpr &unaryExpr)
 {
+    if (unaryExpr.vectorFunction == nullptr) {
+        this->isSupportVectorization_ = false;
+    }
     if (!VisitExpr(*(unaryExpr.exp))) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
     switch (unaryExpr.op) {
         case omniruntime::expressions::Operator::NOT:
-            this->supportedFlag = true;
             break;
         default:
-            this->supportedFlag = false;
+            this->isSupportCodegen_ = false;
             break;
     }
 }
 
 void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
 {
+    if (binaryExpr.vectorFunction == nullptr) {
+        this->isSupportVectorization_ = false;
+    }
     const type::DataType &leftType = *(binaryExpr.left->GetReturnType());
     const type::DataType &rightType = *(binaryExpr.right->GetReturnType());
 
     if (AreInvalidDataTypes(leftType.GetId(), rightType.GetId())) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
 
     if (!VisitExpr(*(binaryExpr.left))) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
     if (!VisitExpr(*(binaryExpr.right))) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
 
-    if (binaryExpr.op == omniruntime::expressions::Operator::AND ||
-        binaryExpr.op == omniruntime::expressions::Operator::OR) {
-        this->supportedFlag = (binaryExpr.left->GetReturnTypeId() == binaryExpr.right->GetReturnTypeId() &&
-            binaryExpr.left->GetReturnTypeId() == DataTypeId::OMNI_BOOLEAN);
+    if (binaryExpr.op == omniruntime::expressions::Operator::AND || binaryExpr.op ==
+        omniruntime::expressions::Operator::OR) {
+        if (!(binaryExpr.left->GetReturnTypeId() == binaryExpr.right->GetReturnTypeId() && binaryExpr.left->
+            GetReturnTypeId() == DataTypeId::OMNI_BOOLEAN)) {
+            this->isSupportCodegen_ = false;
+        }
         return;
     }
 
-    if (binaryExpr.left->GetReturnTypeId() == OMNI_BYTE ||binaryExpr.left->GetReturnTypeId() == OMNI_SHORT ||
-        binaryExpr.left->GetReturnTypeId() == OMNI_INT || binaryExpr.left->GetReturnTypeId() == OMNI_LONG ||
-        binaryExpr.left->GetReturnTypeId() == OMNI_DATE32 || binaryExpr.left->GetReturnTypeId() == OMNI_DOUBLE) {
-        this->supportedFlag = true;
+    if (binaryExpr.left->GetReturnTypeId() == OMNI_BYTE || binaryExpr.left->GetReturnTypeId() == OMNI_SHORT ||
+        binaryExpr.left->GetReturnTypeId() == OMNI_INT || binaryExpr.left->GetReturnTypeId() == OMNI_LONG || binaryExpr.
+        left->GetReturnTypeId() == OMNI_DATE32 || binaryExpr.left->GetReturnTypeId() == OMNI_DOUBLE || binaryExpr.left->
+        GetReturnTypeId() == OMNI_FLOAT) {
         return;
-    } else if (TypeUtil::IsStringType(binaryExpr.left->GetReturnTypeId()) ||
-        binaryExpr.left->GetReturnTypeId() == OMNI_TIMESTAMP) {
+    } else if (TypeUtil::IsStringType(binaryExpr.left->GetReturnTypeId()) || binaryExpr.left->GetReturnTypeId() ==
+        OMNI_TIMESTAMP) {
         switch (binaryExpr.op) {
             case omniruntime::expressions::Operator::LT:
             case omniruntime::expressions::Operator::GT:
@@ -132,22 +148,23 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
             case omniruntime::expressions::Operator::GTE:
             case omniruntime::expressions::Operator::EQ:
             case omniruntime::expressions::Operator::NEQ:
-                this->supportedFlag = true;
                 break;
             default:
-                this->supportedFlag = false;
+                this->isSupportCodegen_ = false;
                 break;
         }
         return;
     } else if (TypeUtil::IsDecimalType(binaryExpr.left->GetReturnTypeId())) {
-        this->supportedFlag = true;
         return;
     }
-    this->supportedFlag = false;
+    this->isSupportCodegen_ = false;
 }
 
 void ExprVerifier::Visit(const InExpr &inExpr)
 {
+    if (inExpr.vectorFunction == nullptr) {
+        this->isSupportVectorization_ = false;
+    }
     Expr *toCompare = inExpr.arguments[0];
     switch (toCompare->GetReturnTypeId()) {
         case OMNI_BYTE:
@@ -161,150 +178,191 @@ void ExprVerifier::Visit(const InExpr &inExpr)
         case OMNI_VARCHAR:
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128:
+        case OMNI_ROW:
             break;
         default:
-            this->supportedFlag = false;
+            this->isSupportCodegen_ = false;
             return;
     }
 
     if (!VisitExpr(*toCompare)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
     for (size_t i = 1; i < inExpr.arguments.size(); i++) {
         if (AreInvalidDataTypes(toCompare->GetReturnTypeId(), inExpr.arguments[i]->GetReturnTypeId())) {
-            this->supportedFlag = false;
+            this->isSupportCodegen_ = false;
             return;
         }
         if (!VisitExpr(*(inExpr.arguments[i]))) {
-            this->supportedFlag = false;
+            this->isSupportCodegen_ = false;
             return;
         }
     }
-    this->supportedFlag = true;
 }
 
 void ExprVerifier::Visit(const BetweenExpr &betweenExpr)
 {
+    if (betweenExpr.vectorFunction == nullptr) {
+        this->isSupportVectorization_ = false;
+    }
     DataTypeId valueTypeId = betweenExpr.value->GetReturnTypeId();
-    if (AreInvalidDataTypes(valueTypeId, betweenExpr.lowerBound->GetReturnTypeId()) &&
-        AreInvalidDataTypes(valueTypeId, betweenExpr.upperBound->GetReturnTypeId())) {
-        this->supportedFlag = false;
+    if (AreInvalidDataTypes(valueTypeId, betweenExpr.lowerBound->GetReturnTypeId()) && AreInvalidDataTypes(valueTypeId,
+        betweenExpr.upperBound->GetReturnTypeId())) {
+        this->isSupportCodegen_ = false;
         return;
     }
 
     if (!VisitExpr(*betweenExpr.value)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
     if (!VisitExpr(*betweenExpr.lowerBound)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
     if (!VisitExpr(*betweenExpr.upperBound)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
-
-    this->supportedFlag = true;
 }
 
 void ExprVerifier::Visit(const IfExpr &ifExpr)
 {
+    if (ifExpr.vectorFunction == nullptr) {
+        this->isSupportVectorization_ = false;
+    }
     Expr *cond = ifExpr.condition;
     Expr *ifTrue = ifExpr.trueExpr;
     Expr *ifFalse = ifExpr.falseExpr;
 
     if (!VisitExpr(*cond)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
     if (!VisitExpr(*ifTrue)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
     if (!VisitExpr(*ifFalse)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
-    this->supportedFlag = true;
 }
 
 void ExprVerifier::Visit(const CoalesceExpr &coalesceExpr)
 {
+    if (coalesceExpr.vectorFunction == nullptr) {
+        this->isSupportVectorization_ = false;
+    }
     Expr *value1Expr = coalesceExpr.value1;
     Expr *value2Expr = coalesceExpr.value2;
     if (!VisitExpr(*value1Expr)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
     if (!VisitExpr(*value2Expr)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
 
-    this->supportedFlag = true;
 }
 
 void ExprVerifier::Visit(const IsNullExpr &isNullExpr)
 {
+    if (isNullExpr.vectorFunction == nullptr) {
+        this->isSupportVectorization_ = false;
+    }
     Expr *valueExpr = isNullExpr.value;
     if (!VisitExpr(*valueExpr)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
-    this->supportedFlag = true;
 }
 
 void ExprVerifier::Visit(const FuncExpr &funcExpr)
 {
-    if (funcExpr.funcName == "LIKE") {
-        this->supportedFlag = false;
+    if (funcExpr.vectorFunction == nullptr) {
+        this->isSupportVectorization_ = false;
+    }
+
+    if (funcExpr.functionType == HIVE_UDF) {
+        for (auto arg : funcExpr.arguments) {
+            switch (arg->dataType->GetId()) {
+                case OMNI_INT:
+                case OMNI_LONG:
+                case OMNI_SHORT:
+                case OMNI_BOOLEAN:
+                case OMNI_DOUBLE:
+                case OMNI_VARCHAR:
+                case OMNI_CHAR:
+                    break;
+                default:
+                    this->isSupportCodegen_ = false;
+                    break;
+            }
+        }
         return;
     }
+
+    if (funcExpr.funcName == "DateFormat") {
+        if (funcExpr.arguments.size() >= 2) {
+            auto literalArg = dynamic_cast<LiteralExpr *>(funcExpr.arguments[1]);
+            if (literalArg != nullptr) {
+                std::string fmtStr = *(literalArg->stringVal);
+                if (fmtStr != "yyyy-MM-dd") {
+                    this->isSupportCodegen_ = false;
+                    std::cout << "WARN : date_format fallback, due to unsupported formatStr, only support yyyy-MM-dd."
+                        << std::endl;
+                    return;
+                }
+            }
+        }
+    }
+
     int numArgs = funcExpr.arguments.size();
     std::vector<DataTypeId> params;
     for (int i = 0; i < numArgs; i++) {
         params.push_back(funcExpr.arguments[i]->GetReturnTypeId());
         if (!VisitExpr(*funcExpr.arguments[i])) {
-            this->supportedFlag = false;
+            this->isSupportCodegen_ = false;
             return;
         }
     }
-    auto signature = FunctionSignature(funcExpr.funcName, params, funcExpr.GetReturnTypeId());
-    auto function = codegen::FunctionRegistry::LookupFunction(&signature);
+    auto signature = std::make_shared<FunctionSignature>(funcExpr.funcName, params, funcExpr.GetReturnTypeId());
+    auto function = codegen::FunctionRegistry::LookupFunction(signature.get());
     if (function == nullptr) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
-    this->supportedFlag = true;
 }
 
 void ExprVerifier::Visit(const SwitchExpr &switchExpr)
 {
-    std::vector<std::pair<Expr*, Expr*>> whenClause = switchExpr.whenClause;
+    if (switchExpr.vectorFunction == nullptr) {
+        this->isSupportVectorization_ = false;
+    }
+    std::vector<std::pair<Expr *, Expr *>> whenClause = switchExpr.whenClause;
     auto size = whenClause.size();
 
     for (size_t i = 0; i < size; i++) {
         Expr *cond = whenClause[i].first;
         Expr *resExpr = whenClause[i].second;
         if (!VisitExpr(*cond)) {
-            this->supportedFlag = false;
+            this->isSupportCodegen_ = false;
             return;
         }
         if (!VisitExpr(*resExpr)) {
-            this->supportedFlag = false;
+            this->isSupportCodegen_ = false;
             return;
         }
     }
 
     Expr *elseExpr = switchExpr.falseExpr;
     if (!VisitExpr(*elseExpr)) {
-        this->supportedFlag = false;
+        this->isSupportCodegen_ = false;
         return;
     }
-
-    this->supportedFlag = true;
 }
 }
 }

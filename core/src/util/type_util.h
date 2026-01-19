@@ -80,11 +80,17 @@ std::shared_ptr<omniruntime::type::DataType> TimestampType();
 
 std::shared_ptr<omniruntime::type::DataType> DoubleType();
 
+std::shared_ptr<omniruntime::type::DataType> FloatType();
+
 std::shared_ptr<omniruntime::type::DataType> BooleanType();
 
 std::shared_ptr<omniruntime::type::DataType> VarcharType();
 
 std::shared_ptr<omniruntime::type::DataType> CharType();
+
+std::shared_ptr<omniruntime::type::DataType> VarBinaryType();
+
+std::shared_ptr<omniruntime::type::DataType> VarBinaryType(int32_t width);
 
 std::shared_ptr<omniruntime::type::DataType> VarcharType(int32_t width);
 
@@ -105,6 +111,12 @@ std::shared_ptr<omniruntime::type::ContainerDataType> ContainerType(
 
 std::shared_ptr<omniruntime::type::ContainerDataType> ContainerType(
     std::vector<omniruntime::type::DataTypePtr> &&fieldTypes);
+
+std::shared_ptr<omniruntime::type::ArrayType> ArrayDataType(std::shared_ptr<DataType> child);
+
+std::shared_ptr<omniruntime::type::RowType> RowDataType(std::vector<std::shared_ptr<DataType>> &fieldTypes);
+
+std::shared_ptr<omniruntime::type::MapType> MapDataType(std::shared_ptr<DataType> keyType, std::shared_ptr<DataType> valueType);
 
 template <typename...> struct CheckTypesContainsDecimal128 {
     static constexpr bool value = false;

@@ -22,6 +22,17 @@ extern "C" DLLEXPORT
         return reinterpret_cast<char *>(context->GetArena()->Allocate(size));
     }
 
+    char *ArenaAllocatorContinualMem(int64_t contextPtr, const uint8_t *continualBuf, int32_t size)
+    {
+        auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
+        return reinterpret_cast<char *>(context->GetArena()->AllocateContinue(size, continualBuf));
+    }
+
+    void ArenaAllocatorRollBackContinualMem(int64_t contextPtr) {
+        auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
+        context->GetArena()->RollBackContinualMem();
+    }
+
     bool ArenaAllocatorReset(int64_t contextPtr)
     {
         auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
@@ -71,6 +82,9 @@ extern "C" DLLEXPORT
                 break;
             case OMNI_DOUBLE:
                 errorMessage << "DOUBLE";
+                break;
+            case OMNI_FLOAT:
+                errorMessage << "FLOAT";
                 break;
             case OMNI_DECIMAL64:
             case OMNI_DECIMAL128:

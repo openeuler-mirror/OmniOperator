@@ -164,4 +164,125 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_V2_TESTCASE, testSmjInnerJoinExprGreaterThanCon
             streamedWithExprOperatorFactory, bufferedWithExprOperatorFactory,
             overflowConfig, streamedEqualKeyExprs, bufferedEqualKeyExprs);
 }
+
+void DeleteSMJOperatorFactory(StreamedTableWithExprOperatorFactoryV2 *streamedTableWithExprOperatorFactoryV2,
+                              BufferedTableWithExprOperatorFactoryV2 *bufferedTableWithExprOperatorFactoryV2)
+{
+    delete streamedTableWithExprOperatorFactoryV2;
+    delete bufferedTableWithExprOperatorFactoryV2;
+}
+
+std::tuple<std::shared_ptr<const MergeJoinNode>, FieldExpr *, FieldExpr *> ConstructSimpleJoinKeyJoinNode(JoinType joinType, bool nullAware, bool isShuffle, ExprPtr filter)
+{
+    std::vector<ExprPtr> leftKeys;
+    std::vector<ExprPtr> rightKeys;
+    leftKeys.reserve(1);
+    rightKeys.reserve(1);
+    auto leftKey = new FieldExpr(0, LongType());
+    auto rightKey = new FieldExpr(0, LongType());
+    leftKeys.emplace_back(leftKey);
+    rightKeys.emplace_back(rightKey);
+
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    std::vector<omniruntime::expressions::Expr*> partitionKeys;
+    int index = 0;
+    for (; index < probeTypes.GetSize(); index++) {
+        partitionKeys.push_back(new FieldExpr(index, probeTypes.GetType(index)));
+    }
+    for (; index < buildTypes.GetSize() + probeTypes.GetSize(); index++) {
+        partitionKeys.push_back(new FieldExpr(index, buildTypes.GetType(index - probeTypes.GetSize())));
+    }
+
+    return {std::make_shared<const MergeJoinNode>("0", joinType, BuildSide::OMNI_BUILD_LEFT, leftKeys, rightKeys, filter, nullptr, nullptr,
+        probeTypes.Instance(), buildTypes.Instance(), partitionKeys), leftKey, rightKey};
+}
+
+VectorBatch *ConstructSimpleStreamedVectorBatch()
+{
+    const int32_t dataSize = 10;
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    int64_t buildData0[dataSize] = {1, 1, 1, 2, 2, 3, 4, 5, 6, 7};
+    int64_t buildData1[dataSize] = {70, 70, 79, 79, 70, 70, 70, 70, 70, 70};
+    return CreateVectorBatch(buildTypes, dataSize, buildData0, buildData1);
+}
+
+VectorBatch *ConstructSimpleBufferedVectorBatch()
+{
+    const int32_t dataSize = 10;
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    int64_t probeData0[] = {1, 1, 1, 2, 2, 3, 3, 4, 5, 6};
+    int64_t probeData1[] = {78, 78, 82, 78, 82, 78, 65, 78, 78, 78};
+    return CreateVectorBatch(probeTypes, dataSize, probeData0, probeData1);
+}
+
+VectorBatch *ConstructSimpleExpectedVectorBatch()
+{
+    const uint32_t originalDataSize = 10;
+    const uint32_t expectedDataSize = 18;
+
+    int64_t expectedData0[originalDataSize] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
+    int64_t expectedData1[originalDataSize] = {78, 78, 78, 78, 78, 78, 78, 82, 82, 65};
+    int64_t expectedData2[expectedDataSize] = {1, 1, 1, 2, 2, 3, 4, 5, 6, 1, 1, 1, 1, 1, 1, 2, 2, 3};
+    int64_t expectedData3[expectedDataSize] = {79, 70, 70, 79, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 70, 79, 70, 70};
+
+    auto inputType = IntType();
+    auto expectedVec0 = CreateVector<int64_t>(originalDataSize, expectedData0);
+    auto expectedVec1 = CreateVector<int64_t>(originalDataSize, expectedData1);
+    int32_t ids[expectedDataSize] = {0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9};
+    auto expectedDictVec0 =
+        VectorHelper::CreateDictionary(ids, expectedDataSize, reinterpret_cast<Vector<int64_t> *>(expectedVec0));
+    auto expectedDictVec1 =
+        VectorHelper::CreateDictionary(ids, expectedDataSize, reinterpret_cast<Vector<int64_t> *>(expectedVec1));
+    auto expectedVec2 = CreateVector<int64_t>(expectedDataSize, expectedData2);
+    auto expectedVec3 = CreateVector<int64_t>(expectedDataSize, expectedData3);
+    delete expectedVec0;
+    delete expectedVec1;
+
+    auto *vectorBatch = new VectorBatch(expectedDataSize);
+    vectorBatch->Append(expectedDictVec0);
+    vectorBatch->Append(expectedDictVec1);
+    vectorBatch->Append(expectedVec2);
+    vectorBatch->Append(expectedVec3);
+    return vectorBatch;
+}
+
+TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_V2_TESTCASE, TestInnerEqualityJoinWithOneBuildOp)
+{
+    auto *queryConfig = new config::QueryConfig();
+    auto [joinNode, leftKey, rightKey] = ConstructSimpleJoinKeyJoinNode(OMNI_JOIN_TYPE_INNER, false, true, nullptr);
+    StreamedTableWithExprOperatorFactoryV2 *streamedTableWithExprOperatorFactoryV2 = StreamedTableWithExprOperatorFactoryV2::CreateStreamedTableWithExprOperatorFactoryV2(joinNode, *queryConfig);
+    auto *streamedTblWithExprOperator = dynamic_cast<StreamedTableWithExprOperatorV2 *>(streamedTableWithExprOperatorFactoryV2->CreateOperator());
+
+    BufferedTableWithExprOperatorFactoryV2 *bufferedTableWithExprOperatorFactoryV2 = BufferedTableWithExprOperatorFactoryV2::CreateBufferedTableWithExprOperatorFactoryV2(joinNode, reinterpret_cast<int64_t>(streamedTableWithExprOperatorFactoryV2), *queryConfig);
+    auto *bufferedTblWithExprOperator = dynamic_cast<BufferedTableWithExprOperatorV2 *>(bufferedTableWithExprOperatorFactoryV2->CreateOperator());
+
+
+    VectorBatch *bufferedVecBatch = ConstructSimpleBufferedVectorBatch();
+    bufferedTblWithExprOperator->AddInput(bufferedVecBatch);
+    VectorBatch *streamedVecBatch = ConstructSimpleStreamedVectorBatch();
+    streamedTblWithExprOperator->AddInput(streamedVecBatch);
+    bufferedTblWithExprOperator->noMoreInput();
+    streamedTblWithExprOperator->noMoreInput();
+    bufferedTblWithExprOperator->noMoreInput();
+    streamedTblWithExprOperator->noMoreInput();
+
+    VectorBatch *outputVecBatch = nullptr;
+    streamedTblWithExprOperator->GetOutput(&outputVecBatch);
+
+    VectorBatch *expectVecBatch = ConstructSimpleExpectedVectorBatch();
+    BaseVector **pVector = outputVecBatch->GetVectors();
+    std::rotate(pVector, pVector + 2, pVector + outputVecBatch->GetVectorCount());
+    EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    delete queryConfig;
+    delete leftKey;
+    delete rightKey;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
+    DeleteSMJOperatorFactory(streamedTableWithExprOperatorFactoryV2, bufferedTableWithExprOperatorFactoryV2);
+}
 }

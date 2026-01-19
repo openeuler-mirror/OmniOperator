@@ -87,6 +87,13 @@ extern "C" DLLEXPORT void BatchGetDoubleFromVector(double *vector, int32_t *rowI
     }
 }
 
+extern "C" DLLEXPORT void BatchGetFloatFromVector(float *vector, int32_t *rowIdxArray, int32_t rowCnt, float *output)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        output[i] = vector[rowIdxArray[i]];
+    }
+}
+
 extern "C" DLLEXPORT void BatchGetBooleanFromVector(bool *vector, int32_t *rowIdxArray, int32_t rowCnt, bool *output)
 {
     for (int i = 0; i < rowCnt; ++i) {
