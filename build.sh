@@ -68,6 +68,7 @@ case "$1" in
     cd $CWD/core/src/udf/java && mvn clean install
     ;;
   coverage-java)
+    setup_dependencies release
     echo "-- Enable coverage for java"
     cd ${CWD} && build release:java 
 
@@ -75,6 +76,7 @@ case "$1" in
     cd $CWD/core/src/udf/java && mvn clean install
     ;;
   coverage-c++)
+    setup_dependencies release
     echo "-- Enable coverage for c++"
     cd ${CWD} && build coverage:java 
     $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
