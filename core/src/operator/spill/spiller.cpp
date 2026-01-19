@@ -133,40 +133,68 @@ uint64_t Spiller::CollectVecBatchSize(vec::VectorBatch *vectorBatch)
     int32_t vecCount = vectorBatch->GetVectorCount();
     for (int32_t i = 0; i < vecCount; i++) {
         auto vector = vectorBatch->Get(i);
-        switch (dataTypes.GetType(i)->GetId()) {
-            case OMNI_BOOLEAN:
-                result += CollectVectorSize<bool>(vector);
-                break;
-            case OMNI_INT:
-            case OMNI_DATE32:
-                result += CollectVectorSize<int32_t>(vector);
-                break;
-            case OMNI_SHORT:
-                result += CollectVectorSize<int16_t>(vector);
-                break;
-            case OMNI_LONG:
-            case OMNI_DECIMAL64:
-            case OMNI_TIMESTAMP:
-                result += CollectVectorSize<int64_t>(vector);
-                break;
-            case OMNI_DOUBLE:
-                result += CollectVectorSize<double>(vector);
-                break;
-            case OMNI_DECIMAL128:
-                result += CollectVectorSize<Decimal128>(vector);
-                break;
-            case OMNI_VARCHAR:
-            case OMNI_CHAR:
-                result += CollectVectorSize<std::string_view>(vector);
-                break;
-            case OMNI_BYTE:
-                result += CollectVectorSize<int8_t>(vector);
-                break;
-            default: {
-                break;
-            }
-        }
+        auto dataType = dataTypes.GetType(i);
+        int32_t rowCount = vector->GetSize();
+        result += CollectComplexVectorSize(dataType, vector, rowCount);
     }
+    return result;
+}
+
+uint64_t Spiller::CollectComplexVectorSize(const DataTypePtr& dataType, vec::BaseVector* vector, int32_t rowCount)
+{
+    switch (dataType->GetId()) {
+    case OMNI_BOOLEAN:
+        return CollectVectorSize<bool>(vector);
+    case OMNI_INT:
+    case OMNI_DATE32:
+        return CollectVectorSize<int32_t>(vector);
+    case OMNI_SHORT:
+        return CollectVectorSize<int16_t>(vector);
+    case OMNI_LONG:
+    case OMNI_DECIMAL64:
+    case OMNI_TIMESTAMP:
+        return CollectVectorSize<int64_t>(vector);
+    case OMNI_DOUBLE:
+        return CollectVectorSize<double>(vector);
+    case OMNI_DECIMAL128:
+        return CollectVectorSize<Decimal128>(vector);
+    case OMNI_VARCHAR:
+    case OMNI_CHAR:
+        return CollectVectorSize<std::string_view>(vector);
+    case OMNI_BYTE:
+        return CollectVectorSize<int8_t>(vector);
+    case OMNI_ARRAY:
+        return CollectArrayVectorSize(dataType, vector, rowCount);
+    default:
+        std::string errStr = "Do not support the data type" + std::to_string(dataType->GetId()) +
+            " in CollectComplexVectorSize.";
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errStr);
+    }
+}
+
+uint64_t Spiller::CollectArrayVectorSize(const DataTypePtr &arrayType, vec::BaseVector *vector, int32_t rowCount)
+{
+    auto arrayVec = static_cast<omniruntime::vec::ArrayVector*>(vector);
+    // nulls
+    uint64_t result = BitUtil::Nbytes(rowCount);
+
+    // offsets
+    result += (rowCount + 1) * sizeof(int64_t);
+
+    // elementRowCount = last offset
+    int64_t* rawOffsets = arrayVec->GetOffsets();
+    int32_t elementRowCount = static_cast<int32_t>(rawOffsets[rowCount]);
+
+    // element vector
+    auto elementVec = arrayVec->GetElementVector();
+    if (!elementVec) {
+        LogError("ArrayVector has null element vector in size collection");
+        return result;
+    }
+
+    auto elementType = std::dynamic_pointer_cast<ArrayType>(arrayType)->ElementType();
+    result += CollectComplexVectorSize(elementType, elementVec.get(), elementRowCount);
+
     return result;
 }
 
@@ -287,41 +315,7 @@ ErrorCode SpillWriter::WriteVecBatchToBuffer(vec::VectorBatch *vectorBatch)
     int32_t vecCount = vectorBatch->GetVectorCount();
     for (int32_t i = 0; i < vecCount; i++) {
         auto vector = vectorBatch->Get(i);
-        auto result = ErrorCode::SUCCESS;
-        switch (dataTypes.GetType(i)->GetId()) {
-            case OMNI_BOOLEAN:
-                result = WriteVectorToBuffer<bool>(vector, rowCount, writeOffset);
-                break;
-            case OMNI_INT:
-            case OMNI_DATE32:
-                result = WriteVectorToBuffer<int32_t>(vector, rowCount, writeOffset);
-                break;
-            case OMNI_SHORT:
-                result = WriteVectorToBuffer<int16_t>(vector, rowCount, writeOffset);
-                break;
-            case OMNI_LONG:
-            case OMNI_DECIMAL64:
-            case OMNI_TIMESTAMP:
-                result = WriteVectorToBuffer<int64_t>(vector, rowCount, writeOffset);
-                break;
-            case OMNI_DOUBLE:
-                result = WriteVectorToBuffer<double>(vector, rowCount, writeOffset);
-                break;
-            case OMNI_DECIMAL128:
-                result = WriteVectorToBuffer<Decimal128>(vector, rowCount, writeOffset);
-                break;
-            case OMNI_VARCHAR:
-            case OMNI_CHAR:
-                result = WriteVectorToBuffer<std::string_view>(vector, rowCount, writeOffset);
-                break;
-            case OMNI_BYTE:
-                result = WriteVectorToBuffer<int8_t>(vector, rowCount, writeOffset);
-                break;
-            default: {
-                result = ErrorCode::WRITE_FAILED;
-                break;
-            }
-        }
+        auto result = WriteComplexVectorToBuffer(dataTypes.GetType(i), vector, rowCount, writeOffset);
         if (result != ErrorCode::SUCCESS) {
             return result;
         }
@@ -388,7 +382,87 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
     }
 }
 
-ErrorCode SpillWriter::WriteVecBatchToFile(vec::VectorBatch *vectorBatch)
+ErrorCode SpillWriter::WriteArrayVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset)
+{
+    auto arrayType = std::dynamic_pointer_cast<ArrayType>(dataType);
+    auto arrayVec = static_cast<omniruntime::vec::ArrayVector*>(vector);
+
+    // nulls
+    uint8_t* nulls = unsafe::UnsafeBaseVector::GetNulls(arrayVec);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+    if (auto ret = memcpy_s(writeBuffer + writeOffset, nullsSize, nulls, nullsSize); ret != EOK) {
+        LogError("array nulls", ret);
+        return ErrorCode::WRITE_FAILED;
+    }
+    writeOffset += nullsSize;
+
+    // offsets (int64_t[RowCount + 1])
+    int64_t* offsets = arrayVec->GetOffsets();
+    ssize_t offsetsSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int64_t));
+
+    if (auto ret = memcpy_s(writeBuffer + writeOffset, offsetsSize, offsets, offsetsSize); ret != EOK) {
+        LogError("array offsets", ret);
+        return ErrorCode::WRITE_FAILED;
+    }
+    writeOffset += offsetsSize;
+
+    // element vector
+    auto elementVec = arrayVec->GetElementVector();
+    if (!elementVec) {
+        LogError("ArrayVector has null element vector");
+        return ErrorCode::WRITE_FAILED;
+    }
+
+    int32_t elementRowCount = static_cast<int32_t>(offsets[rowCount]);
+    auto res = WriteComplexVectorToBuffer(arrayType->ElementType(), elementVec.get(), elementRowCount, writeOffset);
+    return res;
+}
+
+ErrorCode SpillWriter::WriteComplexVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset)
+{
+    auto result = ErrorCode::SUCCESS;
+    switch (dataType->GetId()) {
+        case OMNI_BOOLEAN:
+            result = WriteVectorToBuffer<bool>(vector, rowCount, writeOffset);
+            break;
+        case OMNI_INT:
+        case OMNI_DATE32:
+            result = WriteVectorToBuffer<int32_t>(vector, rowCount, writeOffset);
+            break;
+        case OMNI_SHORT:
+            result = WriteVectorToBuffer<int16_t>(vector, rowCount, writeOffset);
+            break;
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+        case OMNI_TIMESTAMP:
+            result = WriteVectorToBuffer<int64_t>(vector, rowCount, writeOffset);
+            break;
+        case OMNI_DOUBLE:
+            result = WriteVectorToBuffer<double>(vector, rowCount, writeOffset);
+            break;
+        case OMNI_DECIMAL128:
+            result = WriteVectorToBuffer<Decimal128>(vector, rowCount, writeOffset);
+            break;
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+            result = WriteVectorToBuffer<std::string_view>(vector, rowCount, writeOffset);
+            break;
+        case OMNI_BYTE:
+            result = WriteVectorToBuffer<int8_t>(vector, rowCount, writeOffset);
+            break;
+        case OMNI_ARRAY:
+            result = WriteArrayVectorToBuffer(dataType, vector, rowCount, writeOffset);
+            break;
+        default: {
+            std::string errStr = "Do not support the data type" + std::to_string(dataType->GetId()) +
+                " in WriteComplexVectorToBuffer.";
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errStr);
+        }
+    }
+    return result;
+}
+
+    ErrorCode SpillWriter::WriteVecBatchToFile(vec::VectorBatch *vectorBatch)
 {
     int32_t rowCount = vectorBatch->GetRowCount();
     if (Write(&rowCount, sizeof(rowCount)) != ErrorCode::SUCCESS) {
@@ -399,42 +473,7 @@ ErrorCode SpillWriter::WriteVecBatchToFile(vec::VectorBatch *vectorBatch)
     int32_t vecCount = vectorBatch->GetVectorCount();
     for (int32_t i = 0; i < vecCount; i++) {
         auto vector = vectorBatch->Get(i);
-        auto result = ErrorCode::SUCCESS;
-        switch (dataTypes.GetType(i)->GetId()) {
-            case OMNI_BOOLEAN:
-                result = WriteVector<bool>(vector, rowCount);
-                break;
-            case OMNI_INT:
-            case OMNI_DATE32:
-                result = WriteVector<int32_t>(vector, rowCount);
-                break;
-            case OMNI_SHORT:
-                result = WriteVector<int16_t>(vector, rowCount);
-                break;
-            case OMNI_LONG:
-            case OMNI_DECIMAL64:
-            case OMNI_TIMESTAMP:
-                result = WriteVector<int64_t>(vector, rowCount);
-                break;
-            case OMNI_DOUBLE:
-                result = WriteVector<double>(vector, rowCount);
-                break;
-            case OMNI_DECIMAL128:
-                result = WriteVector<Decimal128>(vector, rowCount);
-                break;
-            case OMNI_VARCHAR:
-            case OMNI_CHAR:
-                result = WriteVector<std::string_view>(vector, rowCount);
-                break;
-            case OMNI_BYTE:
-                result = WriteVector<int8_t>(vector, rowCount);
-                break;
-            default: {
-                result = ErrorCode::WRITE_FAILED;
-                break;
-            }
-        }
-
+        auto result = WriteComplexVector(dataTypes.GetType(i), vector, rowCount);
         if (result != ErrorCode::SUCCESS) {
             return result;
         }
@@ -560,6 +599,86 @@ template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseV
 
     return ErrorCode::SUCCESS;
 
+}
+
+ErrorCode SpillWriter::WriteArrayVector(const DataTypePtr& dataType, omniruntime::vec::BaseVector* vector, int32_t rowCount)
+{
+    auto arrayType = std::dynamic_pointer_cast<ArrayType>(dataType);
+    auto arrayVec = static_cast<omniruntime::vec::ArrayVector*>(vector);
+
+    uint8_t* nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+    if (Write(nulls, nullsSize) != ErrorCode::SUCCESS) {
+        LogError("Write value nulls to %s failed.", filePath.c_str());
+        return ErrorCode::WRITE_FAILED;
+    }
+
+    // write offsets
+    int64_t* offsets = arrayVec->GetOffsets();
+    ssize_t offsetsSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int64_t));
+    if (Write(offsets, offsetsSize) != ErrorCode::SUCCESS) {
+        LogError("Write value offsets to %s failed.", filePath.c_str());
+        return op::ErrorCode::WRITE_FAILED;
+    }
+
+    auto valueLength = static_cast<ssize_t>(offsets[rowCount] - offsets[0]);
+    if (valueLength > 0) {
+        // write values
+        auto elementVec = arrayVec->GetElementVector();
+        if (!elementVec) {
+            LogError("ArrayVector has null element vector");
+            return ErrorCode::WRITE_FAILED;
+        }
+        int32_t elementRowCount = static_cast<int32_t>(offsets[rowCount]);
+        auto res = WriteComplexVector(arrayType->ElementType(), elementVec.get(), elementRowCount);
+        return res;
+    }
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode SpillWriter::WriteComplexVector(const DataTypePtr &dataType, omniruntime::vec::BaseVector* vector, int32_t rowCount)
+{
+    auto result = ErrorCode::SUCCESS;
+    switch (dataType->GetId()) {
+    case OMNI_BOOLEAN:
+        result = WriteVector<bool>(vector, rowCount);
+        break;
+    case OMNI_INT:
+    case OMNI_DATE32:
+        result = WriteVector<int32_t>(vector, rowCount);
+        break;
+    case OMNI_SHORT:
+        result = WriteVector<int16_t>(vector, rowCount);
+        break;
+    case OMNI_LONG:
+    case OMNI_DECIMAL64:
+    case OMNI_TIMESTAMP:
+        result = WriteVector<int64_t>(vector, rowCount);
+        break;
+    case OMNI_DOUBLE:
+        result = WriteVector<double>(vector, rowCount);
+        break;
+    case OMNI_DECIMAL128:
+        result = WriteVector<Decimal128>(vector, rowCount);
+        break;
+    case OMNI_VARCHAR:
+    case OMNI_CHAR:
+        result = WriteVector<std::string_view>(vector, rowCount);
+        break;
+    case OMNI_BYTE:
+        result = WriteVector<int8_t>(vector, rowCount);
+        break;
+    case OMNI_ARRAY:
+        result = WriteArrayVector(dataType, vector, rowCount);
+        break;
+    default:
+        {
+            std::string errStr = "Do not support the data type" + std::to_string(dataType->GetId()) +
+                " in WriteVecBatchToFile.";
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errStr);
+        }
+    }
+    return result;
 }
 
 ErrorCode SpillWriter::Write(void *buf, size_t length)

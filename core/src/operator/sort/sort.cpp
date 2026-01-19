@@ -425,8 +425,12 @@ void SortOperator::SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t &
             case OMNI_BYTE:
                 SetSpillOutputVector<int8_t>(outputVector, offset, rowCount, outputCol);
                 break;
-            default:
+            case OMNI_ARRAY:
+                SetSpillOutputArrayVector(outputVector, offset, rowCount, outputCol);
                 break;
+            default:
+                std::string errStr = "Do not support the data type" + std::to_string(outputTypeId) + " in SetSpillOutputVecBatch.";
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errStr);
         }
     }
 
@@ -456,6 +460,22 @@ void SortOperator::SetSpillOutputVector(BaseVector *outputVector, int32_t output
             } else {
                 static_cast<Vector<T> *>(outputVector)->SetValue(outputRowIdx, inputVector->GetValue(inputRowIdx));
             }
+        }
+        outputRowIdx++;
+    }
+}
+
+void SortOperator::SetSpillOutputArrayVector(BaseVector *outputVector, int32_t outputRowIdx, int32_t outputRowCount,
+    int32_t outputCol)
+{
+    for (int32_t i = 0; i < outputRowCount; i++) {
+        auto batch = batches[i];
+        auto inputRowIdx = rowIdxes[i];
+        auto inputVector = static_cast<ArrayVector *>(batch->Get(outputCol));
+        if (inputVector->IsNull(inputRowIdx)) {
+            static_cast<ArrayVector *>(outputVector)->SetNull(outputRowIdx);
+        } else {
+            static_cast<ArrayVector *>(outputVector)->SetValue(outputRowIdx, inputVector->GetValue(inputRowIdx));
         }
         outputRowIdx++;
     }

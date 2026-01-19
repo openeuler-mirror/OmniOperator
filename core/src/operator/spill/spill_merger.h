@@ -20,9 +20,15 @@ static constexpr int32_t ERROR_BUFFER_SIZE = 128;
 
 static void GetErrorMsg(int32_t errorCode, char *buffer, int32_t bufferLen)
 {
-    if (strerror_r(errorCode, buffer, bufferLen) == nullptr) {
-        throw exception::OmniException("SPILL FAILED", "strerror failed.");
+    if (buffer == nullptr || bufferLen <= 0) return;
+
+    const char* msg = strerror(errorCode);
+    if (msg == nullptr) {
+        msg = "Unknown error";
     }
+
+    strncpy(buffer, msg, bufferLen - 1);
+    buffer[bufferLen - 1] = '\0';
 }
 
 class SortOrder {
@@ -78,6 +84,10 @@ public:
 
 private:
     template <typename T> ErrorCode ReadVector(vec::BaseVector *vector, int32_t rowCount);
+
+    ErrorCode ReadArrayVector(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
+
+    ErrorCode ReadComplexVector(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
 
     ErrorCode Read(void *buf, size_t bufSize);
 

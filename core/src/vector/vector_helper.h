@@ -279,6 +279,18 @@ public:
         }
     }
 
+    static void PrintVecVector(std::vector<BaseVector*> *vecVector, int32_t rowCount)
+    {
+        int32_t vectorCount = vecVector->size();
+        for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
+            for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
+                BaseVector* vector = (*vecVector)[colIdx];
+                PrintVectorValue(vector, rowIdx);
+            }
+            std::cout << std::endl;
+        }
+    }
+
     template <type::DataTypeId typeId> static void PrintArrayElement(BaseVector* elementVec, int32_t index) {
         using namespace omniruntime::type;
         using T = typename NativeType<typeId>::type;

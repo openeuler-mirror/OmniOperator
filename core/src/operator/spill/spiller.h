@@ -51,9 +51,17 @@ private:
     template <typename T>
     ErrorCode WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
 
+    ErrorCode WriteArrayVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
+
+    ErrorCode WriteComplexVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
+
     ErrorCode WriteVecBatchToFile(vec::VectorBatch *vectorBatch);
 
     template <typename T> ErrorCode WriteVector(omniruntime::vec::BaseVector *vector, int32_t rowCount);
+
+    ErrorCode WriteArrayVector(const DataTypePtr& dataType, omniruntime::vec::BaseVector* vector, int32_t rowCount);
+
+    ErrorCode WriteComplexVector(const DataTypePtr& dataType, omniruntime::vec::BaseVector* vector, int32_t rowCount);
 
     ErrorCode Write(void *buf, size_t length);
 
@@ -149,6 +157,10 @@ private:
     uint64_t CollectVecBatchSize(vec::VectorBatch *vectorBatch);
 
     template <typename T> uint64_t CollectVectorSize(vec::BaseVector *vector);
+
+    uint64_t CollectComplexVectorSize(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
+
+    uint64_t CollectArrayVectorSize(const DataTypePtr &arrayType, vec::BaseVector *vector, int32_t rowCount);
 
     DataTypes dataTypes;
     std::vector<int32_t> sortCols;

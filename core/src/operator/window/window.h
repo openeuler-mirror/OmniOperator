@@ -281,6 +281,7 @@ private:
     void Sort();
     void PaddingPartitionVecBatch(vec::VectorBatch *partitionVecBatch, int32_t rowIdx);
     template <typename T> void PaddingPartitionVector(vec::BaseVector *groupedVector, int32_t rowIdx, int32_t colIdx);
+    void WindowOperator::PaddingPartitionArrayVector(vec::BaseVector *groupedVector, int32_t rowIdx, int32_t colIdx);
     bool ProcessNextWindowPartition();
     bool IsSamePartition(VectorBatch *lastBatch, int32_t lastIdx);
 
