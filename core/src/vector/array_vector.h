@@ -220,7 +220,9 @@ public:
                 elements->Expand(elementVectorSize + 1);
                 elements->SetNull(elementVectorSize);
             } else {
-                SetValue(newIndex, otherArrayVector->GetValue(i));
+                auto tmp = otherArrayVector->GetValue(i);
+                SetValue(newIndex, tmp);
+                delete tmp;
             }
             newIndex++;
         }

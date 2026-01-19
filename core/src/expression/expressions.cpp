@@ -64,7 +64,6 @@ std::vector<BaseVector *> GetConstantInputs(const std::vector<Expr *> &arguments
                     break;
                 case OMNI_VARCHAR:
                 case OMNI_CHAR:
-                    constantInputs.push_back(new ConstVector(std::string_view(*literalExpr->stringVal), typeId));
                 case OMNI_VARBINARY:
                     constantInputs.push_back(new ConstVector(std::string_view(*literalExpr->stringVal), typeId));
                     break;

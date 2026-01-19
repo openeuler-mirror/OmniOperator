@@ -1895,6 +1895,7 @@ static NO_INLINE BaseVector *ConstructBuildArrayColumn(
         VectorHelper::AppendVector(elementVector, elementVectorSize, subElementVector.get(), subElementVectorLength);
 
         ret->SetSize(i, subElementVectorLength);
+        delete subVector;
     }
     ret->AddElements(elementVector);
     return ret;
