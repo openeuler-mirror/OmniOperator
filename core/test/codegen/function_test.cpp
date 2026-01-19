@@ -3520,6 +3520,8 @@ TEST(FunctionTest, DateFormat)
     result = DateFormat(contextPtr, 0, nullptr, 0, true, &outlen);
     EXPECT_EQ(result, nullptr);
     EXPECT_EQ(outlen, 0);
+
+    delete context;
 }
 
 TEST(FunctionTest, RegexMatch)
