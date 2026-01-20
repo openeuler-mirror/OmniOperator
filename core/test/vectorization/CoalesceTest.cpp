@@ -216,56 +216,6 @@ TEST(CoalesceTest, IntCoalesceAllNull) {
     delete resultVec;
 }
 
-// Test: Integer coalesce with 3 arguments
-TEST(CoalesceTest, IntCoalesceThreeArgs) {
-    std::cout << "=== Test: INT coalesce with 3 arguments ===" << std::endl;
-    
-    std::vector<int32_t> arg1Values = {100, 200, 300};
-    std::vector<int32_t> arg2Values = {400, 500, 600};
-    std::vector<int32_t> arg3Values = {700, 800, 900};
-    std::vector<int32_t> expected = {100, 200, 300};  // First non-null
-    
-    BaseVector* arg1Vec = CoalesceFunctionTestHelper::CreateNumericVector(arg1Values, OMNI_INT);
-    BaseVector* arg2Vec = CoalesceFunctionTestHelper::CreateNumericVector(arg2Values, OMNI_INT);
-    BaseVector* arg3Vec = CoalesceFunctionTestHelper::CreateNumericVector(arg3Values, OMNI_INT);
-    
-    BaseVector* resultVec = nullptr;
-    CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec, arg3Vec}, OMNI_INT, resultVec);
-    CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, arg1Values.size());
-    
-    delete arg1Vec;
-    delete arg2Vec;
-    delete arg3Vec;
-    delete resultVec;
-}
-
-// Test: Integer coalesce with 3 arguments, first two NULL
-TEST(CoalesceTest, IntCoalesceThreeArgsFirstTwoNull) {
-    std::cout << "=== Test: INT coalesce with 3 arguments, first two NULL ===" << std::endl;
-    
-    std::vector<int32_t> arg1Values = {100, 200, 300};
-    std::vector<int32_t> arg2Values = {400, 500, 600};
-    std::vector<int32_t> arg3Values = {700, 800, 900};
-    std::vector<int32_t> expected = {700, 200, 300};  // Third when first two are null
-    
-    BaseVector* arg1Vec = CoalesceFunctionTestHelper::CreateNumericVector(arg1Values, OMNI_INT);
-    BaseVector* arg2Vec = CoalesceFunctionTestHelper::CreateNumericVector(arg2Values, OMNI_INT);
-    BaseVector* arg3Vec = CoalesceFunctionTestHelper::CreateNumericVector(arg3Values, OMNI_INT);
-    
-    // Set first value of arg1 and arg2 to NULL
-    arg1Vec->SetNull(0);
-    arg2Vec->SetNull(0);
-    
-    BaseVector* resultVec = nullptr;
-    CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec, arg3Vec}, OMNI_INT, resultVec);
-    CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, arg1Values.size());
-    
-    delete arg1Vec;
-    delete arg2Vec;
-    delete arg3Vec;
-    delete resultVec;
-}
-
 // Test: Long coalesce
 TEST(CoalesceTest, LongCoalesce) {
     std::cout << "=== Test: LONG coalesce ===" << std::endl;

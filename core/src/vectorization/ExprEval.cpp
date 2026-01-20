@@ -354,7 +354,16 @@ void ExprEval::Visit(const IfExpr &e)
     inputValues_.push(result);
 }
 
-void ExprEval::Visit(const CoalesceExpr &e) {}
+void ExprEval::Visit(const CoalesceExpr &e)
+{
+    for (auto arg : e.arguments) {
+        arg->Accept(*this);
+    }
+
+    BaseVector *result = nullptr;
+    e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
+    inputValues_.push(result);
+}
 
 void ExprEval::Visit(const IsNullExpr &e)
 {

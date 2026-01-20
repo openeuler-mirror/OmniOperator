@@ -892,6 +892,13 @@ CoalesceExpr::CoalesceExpr(Expr *val1, Expr *val2)
     dataType = val1->GetReturnType();
     value1 = val1;
     value2 = val2;
+    arguments = {val1, val2};
+    std::vector<DataTypeId> argTypes(arguments.size());
+    std::transform(arguments.begin(), arguments.end(), argTypes.begin(), [](Expr *expr) -> DataTypeId {
+        return expr->GetReturnTypeId();
+    });
+    auto signature = std::make_shared<FunctionSignature>("coalesce", argTypes, dataType->GetId());
+    vectorFunction = VectorFunction::Find(signature);
 }
 
 ExprType CoalesceExpr::GetType() const
