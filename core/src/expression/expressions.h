@@ -373,6 +373,7 @@ public:
     Expr *condition = nullptr;
     Expr *trueExpr = nullptr;
     Expr *falseExpr = nullptr;
+    std::vector<Expr *> arguments;
 
     IfExpr();
     ~IfExpr() override;
@@ -380,6 +381,11 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    bool supportVectorized() override
+    {
+        return condition->supportVectorized() && trueExpr->supportVectorized() && falseExpr->supportVectorized();
+    }
 
     std::string toString() const override
     {
