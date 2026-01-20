@@ -1188,6 +1188,16 @@ public:
             }
         }
     }
+
+    static void EmptyArrayProjection(ArrayVector *dstArrVec, DataTypeId typeId)
+    {
+        if (dstArrVec == nullptr) {
+            return;
+        }
+        auto emptyElemVec = VectorHelper::CreateFlatVector(static_cast<int32_t>(typeId),0);
+        dstArrVec->SetElementVector(std::shared_ptr<BaseVector>(emptyElemVec));
+    }
+
 };
 }
 

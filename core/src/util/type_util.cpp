@@ -63,6 +63,10 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Interval_month";
         case OMNI_INTERVAL_DAY_TIME:
             return "Interval_day_time";
+        case OMNI_ARRAY:
+            return "Array";
+        case OMNI_MAP:
+            return "Map";
         default:
             return "UNKNOWN";
     }

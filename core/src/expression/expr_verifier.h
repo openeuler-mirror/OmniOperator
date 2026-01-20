@@ -21,6 +21,8 @@ public:
     void Visit(const omniruntime::expressions::IsNullExpr &isNullExpr) override;
     void Visit(const omniruntime::expressions::FuncExpr &funcExpr) override;
     void Visit(const omniruntime::expressions::SwitchExpr &switchExpr) override;
+    void Visit(const omniruntime::expressions::ParamRefExpr &paramRefExpr) override;
+    void Visit(const omniruntime::expressions::LambdaExpr &lambdaExpr) override;
     bool VisitExpr(omniruntime::expressions::Expr &e);
     bool VisitExpr(std::shared_ptr<Expr> &e);
     std::string& GetUnSupportedReason()

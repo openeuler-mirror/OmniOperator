@@ -364,5 +364,14 @@ void ExprVerifier::Visit(const SwitchExpr &switchExpr)
         return;
     }
 }
+
+void ExprVerifier::Visit(const ParamRefExpr &paramRefExpr) {
+    this->isSupportCodegen_ = false;
+}
+
+void ExprVerifier::Visit(const LambdaExpr &lambdaExpr) {
+    this->isSupportCodegen_ = false;
+    VisitExpr(*lambdaExpr.body_);
+}
 }
 }

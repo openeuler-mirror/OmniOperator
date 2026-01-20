@@ -11,6 +11,7 @@ namespace omniruntime::vectorization {
 class ExprEval : public ExprVisitor {
 public:
     ExprEval(vec::VectorBatch *vectorBatch, op::ExecutionContext *context);
+    ExprEval(op::ExecutionContext *context);
 
     ~ExprEval() override {}
 
@@ -36,11 +37,17 @@ public:
 
     void Visit(const expressions::SwitchExpr &e) override;
 
+    void Visit(const expressions::ParamRefExpr &e) override;
+
+    void Visit(const expressions::LambdaExpr &e) override;
+
     void VisitExpr(const expressions::Expr &e);
 
     vec::BaseVector *GetResult();
 
     int32_t GetRowCount() const;
+
+    std::vector<vec::BaseVector *> lambdaParams_;
 
 private:
     std::vector<type::DataTypeId> typeIds;

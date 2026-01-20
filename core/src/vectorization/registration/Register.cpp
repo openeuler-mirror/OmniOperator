@@ -33,6 +33,8 @@ extern void RegisterStringFunctions(const std::string &prefix);
 
 extern void RegisterUrlFunctions(const std::string &prefix);
 
+extern void RegisterLambdaFunctions(const std::string &prefix);
+
 int RegisterFunctions::Register()
 {
     RegisterAllFunctions();
@@ -47,6 +49,7 @@ void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
     RegisterMathFunctions(prefix);
     RegisterStringFunctions(prefix);
     RegisterBitwiseFunctions(prefix);
+    RegisterLambdaFunctions(prefix);
 }
 
 void link_register_functions() {}

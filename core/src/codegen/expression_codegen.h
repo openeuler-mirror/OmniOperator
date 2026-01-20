@@ -109,6 +109,10 @@ protected:
 
     void Visit(const SwitchExpr &e) override;
 
+    void Visit(const ParamRefExpr &e) override;
+
+    void Visit(const LambdaExpr &e) override;
+
     /**
      * Method to get LLVM value ptr of expression
      * @param e expression to visit

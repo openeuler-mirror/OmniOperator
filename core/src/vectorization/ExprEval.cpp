@@ -147,6 +147,9 @@ ExprEval::ExprEval(VectorBatch *vectorBatch, ExecutionContext *context): context
     rowSize = vectorBatch->GetRowCount();
 }
 
+ExprEval::ExprEval(ExecutionContext *context): context(context)
+{}
+
 void ExprEval::Visit(const LiteralExpr &e)
 {
     if (!e.isRoot) {
@@ -376,6 +379,16 @@ void ExprEval::Visit(const FuncExpr &e)
 }
 
 void ExprEval::Visit(const SwitchExpr &e) {}
+
+void ExprEval::Visit(const ParamRefExpr &e) {
+    int32_t paramIdx = e.paramIdx_;
+    vec::BaseVector *paramVec = lambdaParams_.at(paramIdx);
+    inputValues_.push(paramVec);
+}
+
+void ExprEval::Visit(const LambdaExpr &e) {
+    context->SetCurrentLambda(&e);
+}
 
 void ExprEval::VisitExpr(const Expr &e)
 {
