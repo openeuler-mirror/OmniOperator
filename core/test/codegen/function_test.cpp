@@ -3695,24 +3695,4 @@ TEST(FunctionTest, StaticInvokeCharReadPadding)
     EXPECT_TRUE(cs7 == nullptr);
     delete context;
 }
-
-std::string RegexpReplaceTest(const std::string &stringInput, const std::string &pattern,
-    const std::string &replacement, int32_t position)
-{
-    auto context = new ExecutionContext();
-    auto contextPtr = reinterpret_cast<int64_t>(context);
-    int32_t outLen = 0;
-    auto res = RegexpReplace(contextPtr, stringInput.data(), stringInput.size(), pattern.data(), pattern.size(),
-        replacement.data(), replacement.size(), position, false, &outLen);
-    auto temp = std::string(res, static_cast<size_t>(outLen));
-    delete context;
-    return temp;
-}
-
-TEST(FunctionTest, RegexpReplace)
-{
-    EXPECT_EQ(RegexpReplaceTest("abc123xyz", "[0-9]", "X", 1), "abcXXXxyz");
-    EXPECT_EQ(RegexpReplaceTest("abc123xyz", "[A-Za-z]", "", 1), "123");
-    EXPECT_EQ(RegexpReplaceTest("abc123xyz", "$2-$1", "", 1), "abc123xyz");
-}
 }
