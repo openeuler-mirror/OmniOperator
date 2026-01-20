@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <string>
+#include <optional>
 #include "codegen/context_helper.h"
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
