@@ -133,6 +133,11 @@ void ExprPrinter::Visit(const UnaryExpr &e)
 void ExprPrinter::Visit(const LiteralExpr &e)
 {
     string output = GenerateIndentation();
+    if(e.isNull){
+        output += "Literal:isnull " + to_string(e.GetReturnTypeId());
+        std::cout << output << '\n';
+        return;
+    }
     switch (e.GetReturnTypeId()) {
         case OMNI_BOOLEAN:
             output += GetBoolValOutput(e);
