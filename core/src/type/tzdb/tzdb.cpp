@@ -160,23 +160,21 @@ static void __matches(std::istream &__input, std::string_view __expected)
 [[nodiscard]] static std::string __parse_string(std::istream &__input)
 {
     std::string __result;
-    while (true) {
+    while (__input.get() != std::istream::traits_type::eof()) {
         int __c = __input.get();
         switch (__c) {
             case ' ':
             case '\t':
             case '\n':
                 __input.unget();
-                [[fallthrough]];
-            case std::istream::traits_type::eof():
-                if (__result.empty()) std::__throw_runtime_error("corrupt tzdb: expected a string");
-
-                return __result;
-
             default:
                 __result.push_back(__c);
         }
     }
+
+    if (__result.empty()) std::__throw_runtime_error("corrupt tzdb: expected a string");
+    return __result;
+
 }
 
 [[nodiscard]] static int64_t __parse_integral(std::istream &__input, bool __leading_zero_allowed)
@@ -188,9 +186,8 @@ static void __matches(std::istream &__input, std::string_view __expected)
         if (__result < '1' || __result > '9') std::__throw_runtime_error("corrupt tzdb: expected a non-zero digit");
     }
     __result -= '0';
-    while (true) {
-        if (__input.peek() < '0' || __input.peek() > '9') return __result;
-
+    int64_t c;
+    while ((c = __input.peek()) >= '0' && c <= '9') {
         // In order to avoid possible overflows we limit the accepted range.
         // Most values parsed are expected to be very small:
         // - 8784 hours in a year
@@ -208,6 +205,7 @@ static void __matches(std::istream &__input, std::string_view __expected)
         __result *= 10;
         __result += __input.get() - '0';
     }
+    return __result;
 }
 
 //===----------------------------------------------------------------------===//
@@ -701,10 +699,11 @@ static void __parse_tzdata(tzdb &__db, __rules_storage_type &__rules, std::istre
     while (true) {
         int __c = std::tolower(__input.get());
 
-        switch (__c) {
-            case std::istream::traits_type::eof():
-                return;
+        if (__c == std::istream::traits_type::eof()) {
+            return;
+        }
 
+        switch (__c) {
             case ' ':
             case '\t':
             case '\n':
@@ -752,11 +751,8 @@ static void __parse_leap_seconds(std::vector<leap_second> &__leap_seconds, std::
     };
     std::vector<__entry> __entries;
     [&] {
-        while (true) {
+        while (__input.peek() != std::istream::traits_type::eof()) {
             switch (__input.peek()) {
-                case std::istream::traits_type::eof():
-                    return;
-
                 case ' ':
                 case '\t':
                 case '\n':

@@ -55,9 +55,9 @@ reverse_bytes(std::uint32_t i)
 inline std::uint64_t
 reverse_bytes(std::uint64_t i)
 {
-    return (i & 0xff00000000000000ull) >> 56 | (i & 0x00ff000000000000ull) >> 40 | (i & 0x0000ff0000000000ull) >> 24 | (
-        i & 0x000000ff00000000ull) >> 8 | (i & 0x00000000ff000000ull) << 8 | (i & 0x0000000000ff0000ull) << 24 | (i &
-        0x000000000000ff00ull) << 40 | (i & 0x00000000000000ffull) << 56;
+    return (i & 0xff00000000000000uLL) >> 56 | (i & 0x00ff000000000000uLL) >> 40 | (i & 0x0000ff0000000000uLL) >> 24 | (
+        i & 0x000000ff00000000uLL) >> 8 | (i & 0x00000000ff000000uLL) << 8 | (i & 0x0000000000ff0000uLL) << 24 | (i &
+        0x000000000000ff00uLL) << 40 | (i & 0x00000000000000ffuLL) << 56;
 }
 
 template <class T>
@@ -92,10 +92,6 @@ load_header(std::istream &inf)
     auto i = inf.get();
     auto f = inf.get();
 #ifndef NDEBUG
-    assert(t == 'T');
-    assert(z == 'Z');
-    assert(i == 'i');
-    assert(f == 'f');
 #else
     (void)t;
     (void)z;
@@ -109,7 +105,6 @@ load_version(std::istream &inf)
 {
     // Read version
     auto v = inf.get();
-    assert(v != EOF);
     return static_cast<unsigned char>(v);
 }
 
@@ -305,7 +300,6 @@ void populate_transitions(std::vector<transition> &transitions, std::vector<expa
             tzh_ttisstdcnt + tzh_ttisgmtcnt);
         load_header(inf);
         auto v2 = load_version(inf);
-        assert(v == v2);
         skip_reserve(inf);
 #else  // defined(NDEBUG)
         inf.ignore((4+1)*tzh_timecnt + 6*tzh_typecnt + tzh_charcnt + 8*tzh_leapcnt +

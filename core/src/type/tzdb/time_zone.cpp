@@ -865,8 +865,6 @@ time_zone::load_sys_info(std::vector<date::transition>::const_iterator i) const
 {
     using namespace std::chrono;
     const auto &transitions = __impl_->transitions();
-    assert(!transitions.empty());
-    assert(i != transitions.begin());
 
     sys_info r;
     r.begin = i[-1].timepoint;

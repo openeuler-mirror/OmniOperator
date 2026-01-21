@@ -36,7 +36,7 @@ Timestamp Timestamp::now()
 
 namespace {
 constexpr int kTmYearBase = 1900;
-constexpr int64_t kLeapYearOffset = 4000000000ll;
+constexpr int64_t kLeapYearOffset = 4000000000LL;
 constexpr int64_t kSecondsPerHour = 3600;
 constexpr int64_t kSecondsPerDay = 24 * kSecondsPerHour;
 
@@ -81,13 +81,6 @@ void Timestamp::toGMT(const tz::TimeZone &zone)
 
     try {
         sysSeconds = zone.to_sys(std::chrono::seconds(seconds_));
-    } catch (const tzdb::ambiguous_local_time &) {
-        // If the time is ambiguous, pick the earlier possibility to be consistent
-        // with Presto.
-        sysSeconds = zone.to_sys(std::chrono::seconds(seconds_), tz::TimeZone::TChoose::kEarliest);
-    } catch (const tzdb::nonexistent_local_time &error) {
-        // If the time does not exist, fail the conversion.
-        OMNI_FAIL(error.what());
     } catch (const std::invalid_argument &e) {
         // Invalid argument means we hit a conversion not supported by
         // external/date. Need to throw a RuntimeError so that try() statements do
@@ -167,9 +160,9 @@ int64_t Timestamp::calendarUtcToEpoch(const std::tm &tm)
         month += 12 * yearsDiff;
     }
     // Getting number of days since beginning of the year.
-    auto dayOfYear = -1ll + daysBeforeFirstDayOfMonth[isLeap(year)][month] + tm.tm_mday;
+    auto dayOfYear = -1LL + daysBeforeFirstDayOfMonth[isLeap(year)][month] + tm.tm_mday;
     // Number of days since 1970-01-01.
     auto daysSinceEpoch = daysBetweenYears(1970, year) + dayOfYear;
-    return kSecondsPerDay * daysSinceEpoch + kSecondsPerHour * tm.tm_hour + 60ll * tm.tm_min + tm.tm_sec;
+    return kSecondsPerDay * daysSinceEpoch + kSecondsPerHour * tm.tm_hour + 60LL * tm.tm_min + tm.tm_sec;
 }
 }
