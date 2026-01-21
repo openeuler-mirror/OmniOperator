@@ -66,6 +66,8 @@ enum class ExprType {
     COALESCE_E,
     IS_NULL_E,
     FUNC_E,
+    LAMBDA_E,
+    PARAM_REF_E,
     INVALID_E,
 };
 
@@ -523,6 +525,44 @@ private:
     std::unique_ptr<mem::AlignedBuffer<int8_t>> bloomFilterBuf_;
     std::unique_ptr<op::BloomFilter> bloomFilter_;
 };
+
+class ParamRefExpr : public Expr {
+public:
+
+    int32_t paramIdx_;
+
+    ParamRefExpr();
+
+    ParamRefExpr(int32_t paramIdx, DataTypePtr dt);
+
+    ~ParamRefExpr() override = default;
+
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
+
+};
+
+
+class LambdaExpr : public Expr {
+public:
+    Expr *body_;
+    std::vector<type::DataTypePtr> paramTypes_;
+
+    LambdaExpr();
+
+    LambdaExpr(Expr *body, std::vector<DataTypePtr> paramTypes, DataTypePtr dt);
+
+    ~LambdaExpr() override = default;
+
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
+
+    size_t GetParamNum() const { return paramTypes_.size(); }
+
+    Expr *GetBody() const { return body_; }
+
+};
+
 } // namespace expressions
 } // namespace omniruntime
 #endif

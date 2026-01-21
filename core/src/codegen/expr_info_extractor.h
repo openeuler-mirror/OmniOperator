@@ -37,6 +37,10 @@ public:
 
     void Visit(const omniruntime::expressions::SwitchExpr &e) override;
 
+    void Visit(const omniruntime::expressions::ParamRefExpr &e) override;
+
+    void Visit(const omniruntime::expressions::LambdaExpr &e) override;
+
     std::set<int32_t> GetVectorIndexes();
 
 private:

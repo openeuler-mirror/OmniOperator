@@ -93,6 +93,10 @@ public:
 
     void Visit(const SwitchExpr &e) override;
 
+    void Visit(const ParamRefExpr &e) override;
+
+    void Visit(const LambdaExpr &e) override;
+
     CodeGenValuePtr VisitExpr(const Expr &e);
 
     std::vector<llvm::Value *> GetFunctionArgValues(const FuncExpr &fExpr, llvm::AllocaInst *isAnyNull,

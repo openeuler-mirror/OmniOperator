@@ -1108,6 +1108,14 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     this->value = std::make_shared<CodeGenValue>(ret, LoadNullFlag(fExpr, isNull), outputLen);
 }
 
+void ExpressionCodeGen::Visit(const ParamRefExpr &Expr) {
+
+}
+
+void ExpressionCodeGen::Visit(const LambdaExpr &Expr) {
+
+}
+
 static std::string ChangeFuncNameToNull(const FuncExpr &fExpr)
 {
     auto typeSize = static_cast<int32_t>(fExpr.arguments.size() + 1);

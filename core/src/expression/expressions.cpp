@@ -1050,5 +1050,31 @@ uint8_t *FuncExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bit
         throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "FuncExpr Not Support: " + funcName);
     }
 }
+
+ParamRefExpr::ParamRefExpr() {}
+
+ParamRefExpr::ParamRefExpr(int32_t paramIdx, DataTypePtr dt) {
+    paramIdx_ = paramIdx;
+    dataType = std::move(dt);
+}
+
+ExprType ParamRefExpr::GetType() const
+{
+    return ExprType::PARAM_REF_E;
+}
+
+LambdaExpr::LambdaExpr() {}
+
+LambdaExpr::LambdaExpr(omniruntime::expressions::Expr *body, std::vector<DataTypePtr> paramTypes,
+                       DataTypePtr dt) {
+    dataType = std::move(dt);
+    body_ = body;
+    paramTypes_ = std::move(paramTypes);
+}
+
+ExprType LambdaExpr::GetType() const
+{
+    return ExprType::LAMBDA_E;
+}
 }
 }

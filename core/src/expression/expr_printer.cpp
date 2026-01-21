@@ -390,3 +390,23 @@ void ExprPrinter::Visit(const FuncExpr &e)
     }
     this->indentationDepth--;
 }
+
+void ExprPrinter::Visit(const ParamRefExpr &e)
+{
+    string indent = GenerateIndentation();
+    string output = indent + "ParamRef:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
+    std::cout << output << '\n';
+    std::cout<< e.paramIdx_<<'\n';
+    std::cout << indent + ")" << '\n';
+}
+
+void ExprPrinter::Visit(const LambdaExpr &e)
+{
+    string indent = GenerateIndentation();
+    string output = indent + "Lambda:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
+    std::cout << output << '\n';
+    this->indentationDepth++;
+    e.GetBody()->Accept(*this);
+    std::cout << indent + ")" << '\n';
+    this->indentationDepth--;
+}

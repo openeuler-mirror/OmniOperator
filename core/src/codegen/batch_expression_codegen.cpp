@@ -1309,6 +1309,13 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
     }
 }
 
+void BatchExpressionCodeGen::Visit(const ParamRefExpr &paramRefExpr) {
+
+}
+
+void BatchExpressionCodeGen::Visit(const LambdaExpr &lambdaExpr) {
+
+}
 void BatchExpressionCodeGen::BatchBinaryExprIntLongHelper(const omniruntime::expressions::BinaryExpr *binaryExpr,
     llvm::Value *left, llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull)
 {

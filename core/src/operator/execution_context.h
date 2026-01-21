@@ -7,6 +7,9 @@
 #include "memory/simple_arena_allocator.h"
 
 namespace omniruntime {
+namespace expressions {
+    class LambdaExpr;
+}
 namespace op {
 // execution context during operator
 class ExecutionContext {
@@ -63,12 +66,16 @@ public:
         isSelectRow = inIsSelectRow;
     }
 
+    void SetCurrentLambda(const omniruntime::expressions::LambdaExpr *lambda) { currentLambda_ = lambda; }
+    const omniruntime::expressions::LambdaExpr* GetCurrentLambda() const { return currentLambda_; }
+
 private:
     bool *isSelectRow;
     int32_t resultRowSize;
     mem::SimpleArenaAllocator arena;
     bool hasError = false;
     std::string errorMessage;
+    const omniruntime::expressions::LambdaExpr *currentLambda_ = nullptr;
 };
 } // namespace op
 } // namespace omniruntime

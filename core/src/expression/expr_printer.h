@@ -22,6 +22,8 @@ public:
     void Visit(const omniruntime::expressions::IsNullExpr &e) override;
     void Visit(const omniruntime::expressions::FuncExpr &e) override;
     void Visit(const omniruntime::expressions::SwitchExpr &e) override;
+    void Visit(const omniruntime::expressions::ParamRefExpr &e) override;
+    void Visit(const omniruntime::expressions::LambdaExpr &e) override;
 
 private:
     std::string BinaryExprPrinterHelper(const omniruntime::expressions::Operator &op,

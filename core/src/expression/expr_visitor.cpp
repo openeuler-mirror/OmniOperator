@@ -60,3 +60,11 @@ void UnaryExpr::Accept(ExprVisitor &visitor) const
 {
     return visitor.Visit(*this);
 }
+
+void ParamRefExpr::Accept(ExprVisitor &visitor) const {
+    return visitor.Visit(*this);
+}
+
+void LambdaExpr::Accept(ExprVisitor &visitor) const {
+    return visitor.Visit(*this);
+}

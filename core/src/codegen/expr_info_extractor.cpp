@@ -73,6 +73,16 @@ void ExprInfoExtractor::Visit(const FuncExpr &e)
     }
 }
 
+void ExprInfoExtractor::Visit(const ParamRefExpr &e)
+{
+
+}
+
+void ExprInfoExtractor::Visit(const LambdaExpr &e)
+{
+
+}
+
 std::set<int32_t> ExprInfoExtractor::GetVectorIndexes()
 {
     return this->vectorIndexes;

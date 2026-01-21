@@ -21,6 +21,8 @@ public:
     virtual void Visit(const omniruntime::expressions::IsNullExpr &e) = 0;
     virtual void Visit(const omniruntime::expressions::FuncExpr &e) = 0;
     virtual void Visit(const omniruntime::expressions::SwitchExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::ParamRefExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::LambdaExpr &e) = 0;
 };
 
 #endif
