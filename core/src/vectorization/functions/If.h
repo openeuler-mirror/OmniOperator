@@ -102,12 +102,12 @@ public:
                     VectorHelper::SetValue(result, row, &res);
                     break;
                 }
-                case OMNI_ARRAY :
-                {
-                    auto res = static_cast<Vector<BaseVector*> *>(temp)->GetValue(row);
-                    VectorHelper::SetValue(result, row, &res);
-                    break;
-                }
+//                case OMNI_ARRAY :
+//                {
+//                    auto res = static_cast<Vector<BaseVector*> *>(temp)->GetValue(row);
+//                    VectorHelper::SetValue(result, row, &res);
+//                    break;
+//                }
                 default :
                     OMNI_THROW("If expr Error", "Unsupported output type Id:" + outputType->GetId());
             }
