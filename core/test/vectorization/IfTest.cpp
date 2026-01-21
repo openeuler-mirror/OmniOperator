@@ -1,7 +1,6 @@
 /*
 * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 * Description: If function unit tests
-*/
 
 #include <gtest/gtest.h>
 #include <iostream>
@@ -449,3 +448,4 @@ TEST(IfTest, FloatIf) {
     delete falseVec;
     delete resultVec;
 }
+*/

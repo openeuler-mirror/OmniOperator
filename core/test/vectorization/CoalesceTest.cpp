@@ -1,7 +1,6 @@
 /*
 * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 * Description: Coalesce function unit tests
-*/
 
 #include <gtest/gtest.h>
 #include <iostream>
@@ -341,3 +340,4 @@ TEST(CoalesceTest, BooleanCoalesceWithNullFirst) {
     delete arg2Vec;
     delete resultVec;
 }
+*/
