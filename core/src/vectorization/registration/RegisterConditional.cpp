@@ -25,7 +25,6 @@ void RegisterConditionalFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_DATE64, OMNI_DATE64}, OMNI_DATE64, ifFunction);
     VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_TIMESTAMP, OMNI_TIMESTAMP}, OMNI_TIMESTAMP, ifFunction);
     VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_DECIMAL64, OMNI_DECIMAL64}, OMNI_DECIMAL64, ifFunction);
-    VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY, ifFunction);
 
     // Register coalesce - 2 arguments
     auto coalesceFunction = std::make_shared<CoalesceFunction>();
@@ -37,5 +36,9 @@ void RegisterConditionalFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("coalesce", {OMNI_FLOAT, OMNI_FLOAT}, OMNI_FLOAT, coalesceFunction);
     VectorFunction::RegisterVectorFunction("coalesce", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE, coalesceFunction);
     VectorFunction::RegisterVectorFunction("coalesce", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, coalesceFunction);
+    VectorFunction::RegisterVectorFunction("coalesce", {OMNI_DATE32, OMNI_DATE32}, OMNI_DATE32, coalesceFunction);
+    VectorFunction::RegisterVectorFunction("coalesce", {OMNI_DATE64, OMNI_DATE64}, OMNI_DATE64, coalesceFunction);
+    VectorFunction::RegisterVectorFunction("coalesce", {OMNI_TIMESTAMP, OMNI_TIMESTAMP}, OMNI_TIMESTAMP, coalesceFunction);
+    VectorFunction::RegisterVectorFunction("coalesce", {OMNI_DECIMAL64, OMNI_DECIMAL64}, OMNI_DECIMAL64, coalesceFunction);
 }
 }
