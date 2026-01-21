@@ -202,9 +202,13 @@ AggregationWithExprOperatorFactory *AggregationWithExprOperatorFactory::CreateAg
     auto isStatisticalAggregate = planNode->GetIsStatisticalAggregate();
     auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                                                              : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
-    return new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggsKeys, *sourceDataTypes, aggsOutputTypes,
+    auto pOperatorFactory = new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggsKeys, *sourceDataTypes, aggsOutputTypes,
         aggFuncTypes, aggFilters, maskColsVector, inputRaws, outputPartial, overflowConfig,
         isStatisticalAggregate);
+
+    delete overflowConfig;
+    overflowConfig = nullptr;
+    return pOperatorFactory;
 }
 
 }

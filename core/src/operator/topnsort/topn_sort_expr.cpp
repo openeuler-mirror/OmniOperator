@@ -38,8 +38,12 @@ TopNSortWithExprOperatorFactory* TopNSortWithExprOperatorFactory::CreateTopNSort
     auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                                                                          : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
 
-    return new TopNSortWithExprOperatorFactory(*sourceTypes.get(), n, isStrictTopN, partitionKeys, sortKeys,
+    auto pOperatorFactory = new TopNSortWithExprOperatorFactory(*sourceTypes.get(), n, isStrictTopN, partitionKeys, sortKeys,
         sortAscendings, sortNullFirsts, overflowConfig);
+
+    delete overflowConfig;
+    overflowConfig = nullptr;
+    return pOperatorFactory;
 }
 
 TopNSortWithExprOperatorFactory::~TopNSortWithExprOperatorFactory() = default;

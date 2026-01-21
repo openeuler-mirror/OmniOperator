@@ -193,7 +193,7 @@ TEST(NativeOmniJoinWithPlanNodeTest, TestFullEqualityJoinWithOneBuildOp)
     VectorHelper::FreeVecBatch(appendOutput);
     omniruntime::op::Operator::DeleteOperator(lookupJoinWrapperOperator);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
-    delete hashBuilderFactory;
+    delete hashBuilderWithExprFactory;
     delete lookupJoinWrapperOperatorFactory;
 }
 }

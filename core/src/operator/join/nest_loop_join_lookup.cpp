@@ -49,8 +49,12 @@ NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNest
                 "change another filter");
         }
     }
-    return new NestLoopJoinLookupOperatorFactory(joinTypePtr, probeTypesPtr, probeOutputColsPtr, probeOutputColsCount,
+    auto pOperatorFactory = new NestLoopJoinLookupOperatorFactory(joinTypePtr, probeTypesPtr, probeOutputColsPtr, probeOutputColsCount,
         filterPtr, joinedDataTypes, buildOperatorFactoryAddr, overflowConfig);
+
+    delete overflowConfig;
+    overflowConfig = nullptr;
+    return pOperatorFactory;
 }
 
 NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(
