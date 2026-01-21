@@ -510,9 +510,8 @@ class BloomFilterFuncExpr : public FuncExpr
 {
 public:
     BloomFilterFuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
-        std::unique_ptr<mem::AlignedBuffer<int8_t>> bloomFilterBuf, std::unique_ptr<op::BloomFilter> bloomFilter)
+        std::unique_ptr<op::BloomFilter> bloomFilter)
      : FuncExpr(fnName, args, returnType),
-       bloomFilterBuf_(std::move(bloomFilterBuf)),
        bloomFilter_(std::move(bloomFilter)) {}
    ~BloomFilterFuncExpr() = default;
    BloomFilterFuncExpr(const BloomFilterFuncExpr &) = delete;
@@ -520,7 +519,6 @@ public:
    BloomFilterFuncExpr(BloomFilterFuncExpr &&) = delete;
    BloomFilterFuncExpr &operator=(BloomFilterFuncExpr &&) = delete;
 private:
-    std::unique_ptr<mem::AlignedBuffer<int8_t>> bloomFilterBuf_;
     std::unique_ptr<op::BloomFilter> bloomFilter_;
 };
 } // namespace expressions

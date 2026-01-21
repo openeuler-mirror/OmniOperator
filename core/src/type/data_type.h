@@ -187,6 +187,9 @@ template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
             case OMNI_VARCHAR: {                                                              \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_VARCHAR>(__VA_ARGS__);    \
             }                                                                                 \
+            case OMNI_VARBINARY: {                                                            \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_VARBINARY>(__VA_ARGS__);  \
+            }                                                                                 \
             case OMNI_TIMESTAMP: {                                                            \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_TIMESTAMP>(__VA_ARGS__);  \
             }                                                                                 \

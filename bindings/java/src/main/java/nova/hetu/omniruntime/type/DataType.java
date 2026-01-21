@@ -79,7 +79,8 @@ public class DataType implements Serializable {
         OMNI_UNKNOWN(33),
         OMNI_FUNCTION(34),
         OMNI_OPAQUE(35),
-        OMNI_INVALID(36);
+        OMNI_INVALID(36),
+        OMNI_VARBINARY(37);
 
         private final int value;
 

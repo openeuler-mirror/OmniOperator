@@ -89,6 +89,10 @@ template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_CHAR> {
     using type = uint8_t;
     using vector = Vector<LargeStringContainer<std::string_view>>;
 };
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_VARBINARY> {
+    using type = DecimalPartialResult;
+    using vector = Vector<LargeStringContainer<std::string_view>>;
+};
 template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_CONTAINER> {
     using type = double;
     using vector = Vector<type>;

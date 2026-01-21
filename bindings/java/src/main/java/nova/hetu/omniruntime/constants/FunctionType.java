@@ -85,6 +85,11 @@ public class FunctionType extends Constant {
      */
     public static final FunctionType OMNI_AGGREGATION_TYPE_TRY_AVG = new FunctionType(14);
 
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_BLOOM_FILTER.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_BLOOM_FILTER = new FunctionType(15);
+
     private static final long serialVersionUID = 5337378607473315604L;
 
     /**
