@@ -1194,10 +1194,9 @@ public:
         if (dstArrVec == nullptr) {
             return;
         }
-        auto emptyElemVec = VectorHelper::CreateFlatVector(static_cast<int32_t>(typeId),0);
+        auto emptyElemVec = VectorHelper::CreateFlatVector(static_cast<int32_t>(typeId), 0);
         dstArrVec->SetElementVector(std::shared_ptr<BaseVector>(emptyElemVec));
     }
-
 };
 }
 

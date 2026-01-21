@@ -398,7 +398,6 @@ void ExprPrinter::Visit(const ParamRefExpr &e)
     std::cout << output << '\n';
     std::cout<< e.paramIdx_<<'\n';
     std::cout << indent + ")" << '\n';
-
 }
 
 void ExprPrinter::Visit(const LambdaExpr &e)
