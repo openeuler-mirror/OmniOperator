@@ -107,6 +107,11 @@ template <> struct NativeAndVectorType<type::DataTypeId::OMNI_ARRAY> {
     using vector = vec::ArrayVector;
     using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
 };
+template <> struct NativeAndVectorType<type::DataTypeId::OMNI_VARBINARY> {
+    using type = std::string_view;
+    using vector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
+    using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
+};
 }
 }
 #endif // OMNI_RUNTIME_OMNI_ID_TYPE_VECTOR_TRAITS_H

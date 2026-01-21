@@ -78,6 +78,10 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 CreateAggregatorFactory<TryAverageSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
+            case OMNI_AGGREGATION_TYPE_BLOOM_FILTER: {
+                CreateAggregatorFactory<BloomFilterAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
             default: {
                 std::string omniExceptionInfo = "In function CreateAggregatorFactories, No such agg func type " +
                     std::to_string(funcTypesContext[i]);

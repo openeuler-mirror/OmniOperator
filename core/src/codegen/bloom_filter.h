@@ -14,6 +14,16 @@ class BloomFilter {
 public:
     explicit BloomFilter(int8_t *in, int32_t versionJava);
 
+    explicit BloomFilter(int32_t size, int32_t version);
+
+    explicit BloomFilter(char *serialized, bool isRelease = false);
+
+    void Serialize(char *serialized);
+
+    void Merge(char *in);
+
+    uint64_t GetSerializedSize();
+
     ~BloomFilter();
 
     bool PutLong(int64_t item);
@@ -27,8 +37,44 @@ public:
         return bits;
     }
 
+    std::unique_ptr<mem::AlignedBuffer<int8_t>> WriteData(char *serialized);
+
+
+    /**
+     * Write a 32-bit integer into the specified buffer using big-endian byte order.
+     *
+     * @param val: 32-bit integer to be written.
+     * @param buf: A pointer to the tartget buffer for storing the written bytes.
+     */
+    void WriteInt(int32_t val, int8_t *buf)
+    {
+        *buf = (val>>24) & 0xff;
+        *(buf+1) = (val>>16) & 0xff;
+        *(buf+2) = (val>>8) & 0xff;
+        *(buf+3) = val & 0xff;
+    }
+
+    /**
+     * Write a 64-bit integer into the specified buffer using big-endian byte order.
+     *
+     * @param val: 64-bit integer to be written.
+     * @param buf: A pointer to the tartget buffer for storing the written bytes.
+     */
+    void WriteLong(int64_t val, int8_t *buf)
+    {
+        *buf = (val>>56) & 0xff;
+        *(buf+1) = (val>>48) & 0xff;
+        *(buf+2) = (val>>40) & 0xff;
+        *(buf+3) = (val>>32) & 0xff;
+        *(buf+4) = (val>>24) & 0xff;
+        *(buf+5) = (val>>16) & 0xff;
+        *(buf+6) = (val>>8) & 0xff;
+        *(buf+7) = val & 0xff;
+    }
+
 private:
-    int32_t numHashFunctions;
+    // todo Most of the values of numHashFunctions calculated by Spark are 5 to 6. In this example, the value is 5 temporarily.
+    int32_t numHashFunctions = 5;
     BitArray *bits;
     int32_t version;
 };

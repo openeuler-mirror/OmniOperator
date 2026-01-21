@@ -66,6 +66,9 @@ protected:
             case OMNI_CHAR:
                 return FromKnownOutput<OMNI_CHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
+            case OMNI_VARBINARY:
+                return FromKnownOutput<OMNI_VARBINARY>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
             case OMNI_ARRAY:
                 return FromKnownOutput<OMNI_ARRAY>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                                                   outputPartial, isOverflowAsNull);
@@ -119,6 +122,9 @@ protected:
                     inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_CHAR:
                 return T<OMNI_CHAR, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_VARBINARY:
+                return T<OMNI_VARBINARY, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
             case OMNI_ARRAY:
                 return T<OMNI_ARRAY, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
@@ -253,6 +259,12 @@ class CountAllAggregatorFactory : public TypedAggregatorFactory<CountAllAggregat
 public:
     CountAllAggregatorFactory() : TypedAggregatorFactory<CountAllAggregator>() {}
     ~CountAllAggregatorFactory() override = default;
+};
+
+class BloomFilterAggregatorFactory : public TypedAggregatorFactory<BloomFilterAggregator> {
+public:
+    BloomFilterAggregatorFactory() : TypedAggregatorFactory<BloomFilterAggregator>() {}
+    ~BloomFilterAggregatorFactory() override = default;
 };
 
 template <class T> class MaskAggregatorFactory : public AggregatorFactory {

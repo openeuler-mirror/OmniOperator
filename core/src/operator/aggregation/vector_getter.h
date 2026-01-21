@@ -94,7 +94,7 @@ const std::vector<NewUniqueVectorFunction> newUniqueVectorFunctions {
     NewUniqueVector<OMNI_CONTAINER>,  // OMNI_CONTAINER
     NewUniqueVector<OMNI_BYTE>,       // OMNI_BYTE
     NewUniqueVector<OMNI_FLOAT>,      // OMNI_FLOAT
-    nullptr,                          // OMNI_VARBINARY
+    NewUniqueVector<OMNI_VARBINARY>,  // OMNI_VARBINARY
     nullptr,                          // OMNI_ARRAY
     nullptr,                          // OMNI_MAP
     nullptr,                          // OMNI_ROW
