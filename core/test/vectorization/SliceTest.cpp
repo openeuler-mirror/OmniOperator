@@ -65,6 +65,7 @@ TEST(SliceTest, SliceBasicTest)
 
     delete context;
     delete input;
+    delete result;  // Clean up result
 }
 
 TEST(SliceTest, SliceFromMiddleTest)
@@ -104,6 +105,7 @@ TEST(SliceTest, SliceFromMiddleTest)
 
     delete context;
     delete input;
+    delete result;  // Clean up result
 }
 
 TEST(SliceTest, SliceNegativeIndexTest)
@@ -143,6 +145,7 @@ TEST(SliceTest, SliceNegativeIndexTest)
 
     delete context;
     delete input;
+    delete result;  // Clean up result
 }
 
 TEST(SliceTest, SliceExceedsBoundsTest)
@@ -182,6 +185,7 @@ TEST(SliceTest, SliceExceedsBoundsTest)
 
     delete context;
     delete input;
+    delete result;  // Clean up result
 }
 
 TEST(SliceTest, SliceMultipleRowsTest)
@@ -237,6 +241,7 @@ TEST(SliceTest, SliceMultipleRowsTest)
 
     delete context;
     delete input;
+    delete result;  // Clean up result
 }
 
 TEST(SliceTest, SliceEmptyArrayTest)
@@ -266,9 +271,95 @@ TEST(SliceTest, SliceEmptyArrayTest)
     
     auto resultArray = dynamic_cast<ArrayVector *>(result);
     EXPECT_NE(resultArray, nullptr);
-    // Should return null or empty array for out of bounds
-    EXPECT_TRUE(resultArray->IsNull(0) || resultArray->GetSize(0) == 0);
+    // Should return empty array (not NULL) for out of bounds
+    EXPECT_FALSE(resultArray->IsNull(0));  // Should not be NULL
+    EXPECT_EQ(resultArray->GetSize(0), 0);  // Should be empty array
 
     delete context;
     delete input;
+    delete result;  // Clean up result
+}
+
+TEST(SliceTest, SliceOutOfBoundsTest)
+{
+    // Test case: slice([1, 2, 3], 11, 2) -> [] (empty array, not NULL)
+    int rowSize = 1;
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    auto intType = std::make_shared<DataType>(OMNI_INT);
+    auto types = DataTypes({arrayType});
+    
+    int32_t col[] = {1, 2, 3};
+    std::vector<int32_t> offset = {0, 3};
+    auto input = CreateArrayVectorBatch(types, offset, rowSize, 3, col);
+
+    auto expr = FuncExpr("slice", {
+        new FieldExpr(0, arrayType),
+        new LiteralExpr(11, intType),  // start = 11 (out of bounds)
+        new LiteralExpr(2, intType)    // length = 2
+    }, arrayType);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.VisitExpr(expr);
+    auto result = e.GetResult();
+    
+    auto resultArray = dynamic_cast<ArrayVector *>(result);
+    EXPECT_NE(resultArray, nullptr);
+    // Should return empty array (not NULL) for out of bounds
+    EXPECT_FALSE(resultArray->IsNull(0));
+    EXPECT_EQ(resultArray->GetSize(0), 0);
+
+    delete context;
+    delete input;
+    delete result;  // Clean up result
+}
+
+TEST(SliceTest, SliceZeroCopyTest)
+{
+    // Test case: Verify zero-copy implementation - elementVector should be shared
+    int rowSize = 1;
+    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
+    auto intType = std::make_shared<DataType>(OMNI_INT);
+    auto types = DataTypes({arrayType});
+    
+    int32_t col[] = {1, 2, 3, 4, 5};
+    std::vector<int32_t> offset = {0, 5};
+    auto input = CreateArrayVectorBatch(types, offset, rowSize, 5, col);
+
+    // Get original elementVector
+    auto inputArray = dynamic_cast<ArrayVector *>(input->Get(0));
+    auto originalElementVector = inputArray->GetElementVector();
+
+    auto expr = FuncExpr("slice", {
+        new FieldExpr(0, arrayType),
+        new LiteralExpr(2, intType),  // start = 2
+        new LiteralExpr(2, intType)   // length = 2
+    }, arrayType);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.VisitExpr(expr);
+    auto result = e.GetResult();
+    
+    auto resultArray = dynamic_cast<ArrayVector *>(result);
+    EXPECT_NE(resultArray, nullptr);
+    
+    // Verify zero-copy: result should share the same elementVector
+    auto resultElementVector = resultArray->GetElementVector();
+    EXPECT_EQ(resultElementVector.get(), originalElementVector.get());
+    
+    // Verify the values are correct
+    EXPECT_EQ(resultArray->GetSize(0), 2);
+    auto intVector = dynamic_cast<Vector<int32_t> *>(resultElementVector.get());
+    int32_t resultOffset = resultArray->GetOffset(0);
+    EXPECT_EQ(intVector->GetValue(resultOffset), 2);
+    EXPECT_EQ(intVector->GetValue(resultOffset + 1), 3);
+
+    delete context;
+    delete input;
+    delete result;  // Clean up result
 }

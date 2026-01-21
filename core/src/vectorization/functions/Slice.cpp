@@ -109,58 +109,48 @@ BaseVector *SliceImpl::applySliceTyped(const SelectivityVector &rows, BaseVector
         OMNI_THROW("Slice error:", "Length argument must be non-negative, got {}", lengthValue);
     }
 
-    // Collect element indices for dictionary vector
-    std::vector<int32_t> elementIndices;
-    int64_t currentOffset = 0;
-
-    // Process each row
+    // Zero-copy implementation: reuse the original elementVector and only adjust offsets
+    // This is similar to Velox's implementation which achieves zero-copy by reusing
+    // base vector and adjusting rawOffsets and rawSizes vectors
+    
     rows.applyToSelected([&](auto row) {
         // Get array size for this row
         int64_t arraySize = offsets[row + 1] - offsets[row];
-
+        
         // Adjust start index
         int64_t adjustedStart = adjustStart(startValue, arraySize);
-
+        
         // Calculate actual start and end positions in the element vector
         int64_t elementStart = offsets[row] + adjustedStart;
         int64_t elementEnd = offsets[row + 1];
-
+        
         // Calculate actual length (don't exceed array bounds)
         int64_t actualLength = std::min(static_cast<int64_t>(lengthValue), elementEnd - elementStart);
-
-        // Set offsets for the result array
-        resultOffsets[row] = currentOffset;
-
-        // If start is out of bounds or length is 0, return empty array
-        if (adjustedStart < 0 || adjustedStart >= arraySize || actualLength <= 0) {
-            resultOffsets[row + 1] = currentOffset;
-            result->SetNull(row);
-            return;
-        }
-
-        // Add element indices to dictionary
-        for (int64_t i = 0; i < actualLength; ++i) {
-            elementIndices.push_back(static_cast<int32_t>(elementStart + i));
-        }
-
-        currentOffset += actualLength;
-        resultOffsets[row + 1] = currentOffset;
-
+        
         // Copy null bits if the original array was null
         if (arrayVector->IsNull(row)) {
             result->SetNull(row);
+            resultOffsets[row] = elementStart;  // Use original position
+            resultOffsets[row + 1] = elementStart;  // Empty array (size = 0)
+            return;
         }
+        
+        // If start is out of bounds or length is 0, return empty array (not NULL)
+        if (adjustedStart < 0 || adjustedStart >= arraySize || actualLength <= 0) {
+            resultOffsets[row] = elementStart;  // Use original position
+            resultOffsets[row + 1] = elementStart;  // Empty array (size = 0)
+            return;
+        }
+        
+        // Set offsets to point to the sliced range in the original elementVector
+        // This achieves zero-copy by reusing the original elementVector
+        resultOffsets[row] = elementStart;
+        resultOffsets[row + 1] = elementStart + actualLength;
     });
-
-    // Create dictionary vector for elements
-    if (!elementIndices.empty()) {
-        auto slicedElementVector = VectorHelper::CreateDictionaryVector(
-            elementIndices.data(), elementIndices.size(), elementVector.get(), elementVector->GetTypeId());
-        result->SetElementVector(std::shared_ptr<BaseVector>(slicedElementVector));
-    } else {
-        // Empty result, use original element vector
-        result->SetElementVector(elementVector);
-    }
+    
+    // Reuse the original elementVector for zero-copy
+    // The offsets above point to the correct positions in the original elementVector
+    result->SetElementVector(elementVector);
 
     return result;
 }
