@@ -1,7 +1,7 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  * Description: ...
- */
+
 #include "gtest/gtest.h"
 #include "codegen/bloom_filter.h"
 #include "util/test_util.h"
@@ -223,3 +223,5 @@ TEST(BloomFilterTest, TestBloomFilterMightContain)
     delete[] in;
 }
 }
+
+*/
