@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2025. All rights reserved.
  * Description: registry  function  implementation
  */
 #include "stringfunctions.h"
@@ -195,19 +195,111 @@ extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *a
 }
 
 extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, const char *ap, int32_t apLen, const char *bp, int32_t bpLen, bool isNull, int32_t *outLen)
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, bool isNull, int32_t *outLen)
 {
     if (isNull) {
+        *outLen = 0;
         return nullptr;
     }
-    if (separatorIsNull) {
+    bool hasErr = false;
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *ConcatWs3Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, bool isNull,
+    int32_t *outLen)
+{
+    if (isNull) {
         *outLen = 0;
-        isNull = true;
         return nullptr;
     }
 
     bool hasErr = false;
-    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, ap, apLen, bp, bpLen, &hasErr, outLen);
+    int32_t tmpLen = 0;
+    const char *tmp = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, &tmpLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp, tmpLen, s3, s3Len,
+    &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *ConcatWs4Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, const char *s4,
+    int32_t s4Len, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+
+    bool hasErr = false;
+    int32_t tmp1Len = 0, tmp2Len = 0;
+    const char *tmp1 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, &tmp1Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *tmp2 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp1, tmp1Len, s3, s3Len,
+    &hasErr, &tmp2Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp2, tmp2Len, s4, s4Len,
+    &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *ConcatWs5Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, const char *s4,
+    int32_t s4Len, const char *s5, int32_t s5Len, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+
+    bool hasErr = false;
+    int32_t tmp1Len = 0, tmp2Len = 0, tmp3Len = 0;
+    const char *tmp1 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, &tmp1Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *tmp2 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp1, tmp1Len, s3, s3Len,
+    &hasErr, &tmp2Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *tmp3 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp2, tmp2Len, s4, s4Len,
+    &hasErr, &tmp3Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp3, tmp3Len, s5, s5Len,
+    &hasErr, outLen);
     if (hasErr) {
         SetError(contextPtr, CONCAT_ERR_MSG);
         return nullptr;
@@ -1104,8 +1196,8 @@ extern "C" DLLEXPORT bool ContainsStr(const char *srcStr, int32_t srcLen, const 
     return StringUtil::StrContainsStr(srcStr, srcLen, matchStr, matchLen);
 }
 
-extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
-    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
+inline const char *ExtremeStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
+    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen, bool pickGreater)
 {
     if (lIsNull && rIsNull) {
         *retIsNull = true;
@@ -1116,15 +1208,27 @@ extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, b
         *outLen = rLen;
         return rValue;
     }
-    if (!rIsNull) {
-        int32_t cmpRet = memcmp(lValue, rValue, std::min(lLen, rLen));
-        if (cmpRet < 0 || (cmpRet == 0 && rLen > lLen)) {
-            *outLen = rLen;
-            return rValue;
-        }
+    if (rIsNull) {
+        *outLen = lLen;
+        return lValue;
     }
-    *outLen = lLen;
-    return lValue;
+    int32_t cmpRet = memcmp(lValue, rValue, std::min(lLen, rLen));
+    bool pickRight = cmpRet == 0 ? (pickGreater ? rLen > lLen : rLen < lLen)
+                                 : (pickGreater ? cmpRet < 0 : cmpRet > 0);
+    *outLen  = pickRight ? rLen : lLen;
+    return pickRight ? rValue : lValue;
+}
+
+extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
+    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
+{
+    return ExtremeStr(lValue, lLen, lIsNull, rValue, rLen, rIsNull, retIsNull, outLen, true);
+}
+
+extern "C" DLLEXPORT const char *LeastStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
+    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
+{
+    return ExtremeStr(lValue, lLen, lIsNull, rValue, rLen, rIsNull, retIsNull, outLen, false);
 }
 
 extern "C" DLLEXPORT const char *EmptyToNull(const char *str, int32_t len, bool isNull, int32_t *outLen)
@@ -1161,6 +1265,60 @@ extern "C" DLLEXPORT const char *StaticInvokeVarcharTypeWriteSideCheck(int64_t c
     if (ssLen > limit) {
         std::ostringstream errorMessage;
         errorMessage << "Exceeds varchar type length limitation: " << limit;
+        SetError(contextPtr, errorMessage.str());
+        *outLen = 0;
+        return nullptr;
+    }
+
+    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+    errno_t res = memcpy_s(padded, outByteNum, str, outByteNum);
+    if (res != EOK) {
+        SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
+        *outLen = 0;
+        return nullptr;
+    }
+    padded[outByteNum] = '\0';
+    *outLen = outByteNum;
+    return padded;
+}
+
+extern "C" DLLEXPORT const char *StaticInvokeCharTypeWriteSideCheck(int64_t contextPtr, const char *str, int32_t len,
+    int32_t limit, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+    int32_t ssLen = StringUtil::NumChars(str, len);
+    if (ssLen == limit) {
+        *outLen = len;
+        return str;
+    }
+    if (ssLen < limit) {
+        int32_t numTailSpacesToAdd = limit - ssLen;
+        *outLen = len + numTailSpacesToAdd;
+        auto resStr = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        errno_t res = memcpy_s(resStr, len, str, len);
+        errno_t res1 = memset_s(resStr + len, numTailSpacesToAdd + 1, ' ', numTailSpacesToAdd);
+        if (res != EOK || res1 != EOK) {
+            SetError(contextPtr, "charTypeWriteSideCheck failed：memcpy_s error");
+            *outLen = 0;
+            return nullptr;
+        }
+        resStr[*outLen] = '\0';
+        return resStr;
+    }
+    int32_t numTailSpacesToTrim = ssLen - limit;
+    int32_t endIdx = len - 1;
+    int32_t trimTo = len - numTailSpacesToTrim;
+    while (endIdx >= trimTo && str[endIdx] == 0x20) {
+        endIdx--;
+    }
+    int32_t outByteNum = endIdx + 1;
+    ssLen = StringUtil::NumChars(str, outByteNum);
+    if (ssLen > limit) {
+        std::ostringstream errorMessage;
+        errorMessage << "Exceeds char type length limitation: " << limit;
         SetError(contextPtr, errorMessage.str());
         *outLen = 0;
         return nullptr;

@@ -1283,25 +1283,37 @@ extern "C" DLLEXPORT int64_t RoundDecimal64RetNull(bool *isNull, int64_t x, int3
     return input.GetValue();
 }
 
-extern "C" DLLEXPORT int64_t GreatestDecimal64(int64_t contextPtr, int64_t xValue, int32_t xPrecision, int32_t xScale,
+inline int64_t ExtremeDecimal64(int64_t contextPtr, int64_t xValue, int32_t xPrecision, int32_t xScale,
     bool xIsNull, int64_t yValue, int32_t yPrecision, int32_t yScale, bool yIsNull, bool *retIsNull,
-    int32_t newPrecision, int32_t newScale)
+    int32_t newPrecision, int32_t newScale, bool pickGreater)
 {
     if (xIsNull && yIsNull) {
         *retIsNull = true;
         return 0;
     }
+    bool pickRight;
     if (xPrecision == yPrecision && xScale == yScale) {
-        if (xIsNull || (!yIsNull && xValue < yValue)) {
+        if (xIsNull) {
             return yValue;
         }
-        return xValue;
+        if (yIsNull) {
+            return xValue;
+        }
+        pickRight = pickGreater ? xValue < yValue : xValue > yValue;
+        return pickRight ? yValue : xValue;
     }
     Decimal64 x(xValue);
     x.SetScale(xScale);
     Decimal64 y(yValue);
     y.SetScale(yScale);
-    if (xIsNull || (!yIsNull && x.Compare(y) < 0)) {
+    if (xIsNull) {
+        pickRight = true;
+    } else if (yIsNull) {
+        pickRight = false;
+    } else {
+        pickRight = pickGreater ? x.Compare(y) < 0 : x.Compare(y) > 0;
+    }
+    if (pickRight) {
         y.ReScale(newScale);
         CHECK_OVERFLOW_RETURN(y, newPrecision);
         return y.GetValue();
@@ -1311,9 +1323,25 @@ extern "C" DLLEXPORT int64_t GreatestDecimal64(int64_t contextPtr, int64_t xValu
     return x.GetValue();
 }
 
-extern "C" DLLEXPORT void GreatestDecimal128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+extern "C" DLLEXPORT int64_t GreatestDecimal64(int64_t contextPtr, int64_t xValue, int32_t xPrecision, int32_t xScale,
+    bool xIsNull, int64_t yValue, int32_t yPrecision, int32_t yScale, bool yIsNull, bool *retIsNull,
+    int32_t newPrecision, int32_t newScale)
+{
+    return ExtremeDecimal64(contextPtr, xValue, xPrecision, xScale, xIsNull,
+        yValue, yPrecision, yScale, yIsNull, retIsNull, newPrecision, newScale, true);
+}
+
+extern "C" DLLEXPORT int64_t LeastDecimal64(int64_t contextPtr, int64_t xValue, int32_t xPrecision, int32_t xScale,
+    bool xIsNull, int64_t yValue, int32_t yPrecision, int32_t yScale, bool yIsNull, bool *retIsNull,
+    int32_t newPrecision, int32_t newScale)
+{
+    return ExtremeDecimal64(contextPtr, xValue, xPrecision, xScale, xIsNull,
+        yValue, yPrecision, yScale, yIsNull, retIsNull, newPrecision, newScale, false);
+}
+
+inline void ExtremeDecimal128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
     int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
-    bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+    bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr, bool pickGreater)
 {
     if (xIsNull && yIsNull) {
         *retIsNull = true;
@@ -1321,8 +1349,17 @@ extern "C" DLLEXPORT void GreatestDecimal128(int64_t contextPtr, int64_t xHigh, 
         *outLowPtr = 0;
         return;
     }
+    bool pickRight;
     if (xPrecision == yPrecision && xScale == yScale) {
-        if (xIsNull || (!yIsNull && Decimal128(xHigh, xLow) < Decimal128(yHigh, yLow))) {
+        if (xIsNull) {
+            pickRight = true;
+        } else if (yIsNull) {
+            pickRight = false;
+        } else {
+            pickRight = pickGreater ? Decimal128(xHigh, xLow) < Decimal128(yHigh, yLow)
+                                    : Decimal128(xHigh, xLow) > Decimal128(yHigh, yLow);
+        }
+        if (pickRight) {
             *outHighPtr = yHigh;
             *outLowPtr = yLow;
             return;
@@ -1335,7 +1372,14 @@ extern "C" DLLEXPORT void GreatestDecimal128(int64_t contextPtr, int64_t xHigh, 
     x.SetScale(xScale);
     Decimal128Wrapper y(yHigh, yLow);
     y.SetScale(yScale);
-    if (xIsNull || (!yIsNull && x.Compare(y) < 0)) {
+    if (xIsNull) {
+        pickRight = true;
+    } else if (yIsNull) {
+        pickRight = false;
+    } else {
+        pickRight = pickGreater ? x.Compare(y) < 0 : x.Compare(y) > 0;
+    }
+    if (pickRight) {
         y.ReScale(newScale);
         CHECK_OVERFLOW(y, newPrecision);
         *outHighPtr = y.HighBits();
@@ -1348,25 +1392,53 @@ extern "C" DLLEXPORT void GreatestDecimal128(int64_t contextPtr, int64_t xHigh, 
     *outLowPtr = x.LowBits();
 }
 
-extern "C" DLLEXPORT int64_t GreatestDecimal64RetNull(bool *isNull, int64_t xValue, int32_t xPrecision, int32_t xScale,
+extern "C" DLLEXPORT void GreatestDecimal128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
+    bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+{
+    ExtremeDecimal128(contextPtr, xHigh, xLow, xPrecision, xScale, xIsNull, yHigh, yLow, yPrecision, yScale, yIsNull,
+        retIsNull, newPrecision, newScale, outHighPtr, outLowPtr, true);
+}
+
+extern "C" DLLEXPORT void LeastDecimal128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
+    bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+{
+    ExtremeDecimal128(contextPtr, xHigh, xLow, xPrecision, xScale, xIsNull, yHigh, yLow, yPrecision, yScale, yIsNull,
+        retIsNull, newPrecision, newScale, outHighPtr, outLowPtr, false);
+}
+
+inline int64_t ExtremeDecimal64RetNull(bool *isNull, int64_t xValue, int32_t xPrecision, int32_t xScale,
     bool xIsNull, int64_t yValue, int32_t yPrecision, int32_t yScale, bool yIsNull, bool *retIsNull,
-    int32_t newPrecision, int32_t newScale)
+    int32_t newPrecision, int32_t newScale, bool pickGreater)
 {
     if (xIsNull && yIsNull) {
         *retIsNull = true;
         return 0;
     }
+    bool pickRight;
     if (xPrecision == yPrecision && xScale == yScale) {
-        if (xIsNull || (!yIsNull && xValue < yValue)) {
+        if (xIsNull) {
             return yValue;
         }
-        return xValue;
+        if (yIsNull) {
+            return xValue;
+        }
+        pickRight = pickGreater ? xValue < yValue : xValue > yValue;
+        return pickRight ? yValue : xValue;
     }
     Decimal64 x(xValue);
     x.SetScale(xScale);
     Decimal64 y(yValue);
     y.SetScale(yScale);
-    if (xIsNull || (!yIsNull && x.Compare(y) < 0)) {
+    if (xIsNull) {
+        pickRight = true;
+    } else if (yIsNull) {
+        pickRight = false;
+    } else {
+        pickRight = pickGreater ? x.Compare(y) < 0 : x.Compare(y) > 0;
+    }
+    if (pickRight) {
         y.ReScale(newScale);
         CHECK_OVERFLOW_RETURN_NULL(y, newPrecision);
         return y.GetValue();
@@ -1376,9 +1448,25 @@ extern "C" DLLEXPORT int64_t GreatestDecimal64RetNull(bool *isNull, int64_t xVal
     return x.GetValue();
 }
 
-extern "C" DLLEXPORT void GreatestDecimal128RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+extern "C" DLLEXPORT int64_t GreatestDecimal64RetNull(bool *isNull, int64_t xValue, int32_t xPrecision, int32_t xScale,
+    bool xIsNull, int64_t yValue, int32_t yPrecision, int32_t yScale, bool yIsNull, bool *retIsNull,
+    int32_t newPrecision, int32_t newScale)
+{
+    return ExtremeDecimal64RetNull(isNull, xValue, xPrecision, xScale, xIsNull,
+        yValue, yPrecision, yScale, yIsNull, retIsNull, newPrecision, newScale, true);
+}
+
+extern "C" DLLEXPORT int64_t LeastDecimal64RetNull(bool *isNull, int64_t xValue, int32_t xPrecision, int32_t xScale,
+    bool xIsNull, int64_t yValue, int32_t yPrecision, int32_t yScale, bool yIsNull, bool *retIsNull,
+    int32_t newPrecision, int32_t newScale)
+{
+    return ExtremeDecimal64RetNull(isNull, xValue, xPrecision, xScale, xIsNull,
+        yValue, yPrecision, yScale, yIsNull, retIsNull, newPrecision, newScale, false);
+}
+
+inline void ExtremeDecimal128RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
     int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
-    bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+    bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr, bool pickGreater)
 {
     if (xIsNull && yIsNull) {
         *retIsNull = true;
@@ -1386,8 +1474,17 @@ extern "C" DLLEXPORT void GreatestDecimal128RetNull(bool *isNull, int64_t xHigh,
         *outLowPtr = 0;
         return;
     }
+    bool pickRight;
     if (xPrecision == yPrecision && xScale == yScale) {
-        if (xIsNull || (!yIsNull && Decimal128(xHigh, xLow) < Decimal128(yHigh, yLow))) {
+        if (xIsNull) {
+            pickRight = true;
+        } else if (yIsNull) {
+            pickRight = false;
+        } else {
+            pickRight = pickGreater ? Decimal128(xHigh, xLow) < Decimal128(yHigh, yLow)
+                                    : Decimal128(xHigh, xLow) > Decimal128(yHigh, yLow);
+        }
+        if (pickRight) {
             *outHighPtr = yHigh;
             *outLowPtr = yLow;
             return;
@@ -1400,7 +1497,14 @@ extern "C" DLLEXPORT void GreatestDecimal128RetNull(bool *isNull, int64_t xHigh,
     x.SetScale(xScale);
     Decimal128Wrapper y(yHigh, yLow);
     y.SetScale(yScale);
-    if (xIsNull || (!yIsNull && x.Compare(y) < 0)) {
+    if (xIsNull) {
+        pickRight = true;
+    } else if (yIsNull) {
+        pickRight = false;
+    } else {
+        pickRight = pickGreater ? x.Compare(y) < 0 : x.Compare(y) > 0;
+    }
+    if (pickRight) {
         y.ReScale(newScale);
         CHECK_OVERFLOW_VOID_RETURN_NULL(y, newPrecision);
         *outHighPtr = y.HighBits();
@@ -1411,5 +1515,21 @@ extern "C" DLLEXPORT void GreatestDecimal128RetNull(bool *isNull, int64_t xHigh,
     CHECK_OVERFLOW_VOID_RETURN_NULL(x, newPrecision);
     *outHighPtr = x.HighBits();
     *outLowPtr = x.LowBits();
+}
+
+extern "C" DLLEXPORT void GreatestDecimal128RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
+    bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+{
+    ExtremeDecimal128RetNull(isNull, xHigh, xLow, xPrecision, xScale, xIsNull, yHigh, yLow, yPrecision, yScale, yIsNull,
+        retIsNull, newPrecision, newScale, outHighPtr, outLowPtr, true);
+}
+
+extern "C" DLLEXPORT void LeastDecimal128RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, bool xIsNull, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool yIsNull,
+    bool *retIsNull, int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+{
+    ExtremeDecimal128RetNull(isNull, xHigh, xLow, xPrecision, xScale, xIsNull, yHigh, yLow, yPrecision, yScale, yIsNull,
+        retIsNull, newPrecision, newScale, outHighPtr, outLowPtr, false);
 }
 }

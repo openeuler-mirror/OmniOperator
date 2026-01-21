@@ -158,8 +158,6 @@ extern "C" DLLEXPORT bool EqualInt32(int32_t left, int32_t right);
 
 extern "C" DLLEXPORT bool NotEqualInt32(int32_t left, int32_t right);
 
-extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);
-
 extern "C" DLLEXPORT int64_t RoundLong(int64_t num, int32_t decimals);
 
 // short binary operations
@@ -220,6 +218,19 @@ extern "C" DLLEXPORT bool EqualInt8(int8_t left, int8_t right);
 
 extern "C" DLLEXPORT bool NotEqualInt8(int8_t left, int8_t right);
 
+template <typename T> extern DLLEXPORT T Pmod(T x, T y)
+{
+    if (y == 0) {
+        return 0;
+    }
+    T r = x % y;
+    if (r < 0) {
+        return (r + y) % y;
+    } else {
+        return r;
+    }
+}
+
 template <typename T> extern DLLEXPORT T Round(T num, int32_t decimals)
 {
     if (std::isnan(num) || std::isinf(num)) {
@@ -234,16 +245,30 @@ template <typename T> extern DLLEXPORT T Round(T num, int32_t decimals)
     return std::round(num * factor) / factor;
 }
 
-template <typename T> extern DLLEXPORT T Greatest(T lValue, bool lIsNull, T rValue, bool rIsNull, bool *retIsNull)
+template<typename T> T Extreme(T lValue, bool lIsNull, T rValue, bool rIsNull, bool *retIsNull, bool pickGreater)
 {
-    if (lIsNull && rIsNull) {
-        *retIsNull = true;
+    if (!lIsNull && !rIsNull) {
+        bool pickRight = pickGreater ? lValue <= rValue : lValue >= rValue;
+        return pickRight ? rValue : lValue;
+    }
+    if (!lIsNull) {
         return lValue;
     }
-    if (lIsNull || (!rIsNull && rValue > lValue)) {
+    if (!rIsNull) {
         return rValue;
     }
-    return lValue;
+    *retIsNull = true;
+    return 0;
+}
+
+template <typename T> extern DLLEXPORT T Greatest(T lValue, bool lIsNull, T rValue, bool rIsNull, bool *retIsNull)
+{
+    return Extreme(lValue, lIsNull, rValue, rIsNull, retIsNull, true);
+}
+
+template <typename T> extern DLLEXPORT T Least(T lValue, bool lIsNull, T rValue, bool rIsNull, bool *retIsNull)
+{
+    return Extreme(lValue, lIsNull, rValue, rIsNull, retIsNull, false);
 }
 
 template <typename T> extern DLLEXPORT T BitwiseAndFunction(T a, T b)

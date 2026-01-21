@@ -392,19 +392,6 @@ extern "C" DLLEXPORT bool NotEqualInt32(int32_t left, int32_t right)
     return left != right;
 }
 
-extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y)
-{
-    if (y == 0) {
-        return 0;
-    }
-    int32_t r = x % y;
-    if (r < 0) {
-        return (r + y) % y;
-    } else {
-        return r;
-    }
-}
-
 extern "C" DLLEXPORT int64_t RoundLong(int64_t num, int32_t decimals)
 {
     return RoundOperator(num, decimals);

@@ -153,9 +153,21 @@ const std::string GreatestStrFnStr()
     return greatestStrFnStr;
 }
 
+const std::string LeastStrFnStr()
+{
+    const std::string greatestStrFnStr = "Least";
+    return greatestStrFnStr;
+}
+
 const std::string StaticInvokeVarcharTypeWriteSideCheckFnStr()
 {
     const std::string staticInvokeVarcharTypeWriteSideCheckFnStr = "StaticInvokeVarcharTypeWriteSideCheck";
+    return staticInvokeVarcharTypeWriteSideCheckFnStr;
+}
+
+const std::string StaticInvokeCharTypeWriteSideCheckFnStr()
+{
+    const std::string staticInvokeVarcharTypeWriteSideCheckFnStr = "StaticInvokeCharTypeWriteSideCheck";
     return staticInvokeVarcharTypeWriteSideCheckFnStr;
 }
 
@@ -178,7 +190,13 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             INPUT_DATA, true),
         Function(reinterpret_cast<void *>(ConcatStrChar), ConcatFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR }, OMNI_CHAR,
             INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(ConcatWsStr), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+        Function(reinterpret_cast<void *>(ConcatWsStr), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatWs3Str), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatWs4Str), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatWs5Str), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
             OMNI_VARCHAR, INPUT_DATA, true),
 
         Function(reinterpret_cast<void *>(LikeStr), LikeFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_BOOLEAN,
@@ -297,10 +315,15 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(GreatestStr), GreatestStrFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
             OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(LeastStr), LeastStrFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
+            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(EmptyToNull), EmptyToNullStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
             INPUT_DATA, false),
         Function(reinterpret_cast<void *>(StaticInvokeVarcharTypeWriteSideCheck),
             StaticInvokeVarcharTypeWriteSideCheckFnStr(), {}, { OMNI_VARCHAR, OMNI_INT },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(StaticInvokeCharTypeWriteSideCheck),
+            StaticInvokeCharTypeWriteSideCheckFnStr(), {}, { OMNI_VARCHAR, OMNI_INT },
             OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(StaticInvokeCharReadPadding), StaticInvokeCharReadPaddingFnStr(), {},
             {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
