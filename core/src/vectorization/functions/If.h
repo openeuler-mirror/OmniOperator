@@ -29,50 +29,87 @@ public:
         args.pop();
         auto condVec = args.top();
         args.pop();
-
-        if (condVec->GetTypeId() != OMNI_BOOLEAN) {
-            OMNI_THROW("If expr Error", "condVec must be a BooleanVector");
-        }
-
-        auto *stringTrueVector = static_cast<ConstVector<std::string_view> *>(trueVec);
         auto *boolVec = static_cast<Vector<bool> *>(condVec);
-
         auto size = boolVec->GetSize();
-
         result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
-
         for (int32_t row = 0; row < size; ++row) {
-            if (condVec->IsNull(row)) {
+            BaseVector* temp = nullptr;
+            if (boolVec->IsNull(row)) {
+                temp = falseVec;
+            } else {
+                temp = boolVec->GetValue(row) ? trueVec : falseVec;
+            }
+            if (temp->IsNull(row)) {
                 result->SetNull(row);
                 continue;
             }
-            auto cond = boolVec->GetValue(row);
-            if (cond) {
-                if (trueVec->GetEncoding() == OMNI_ENCODING_CONST) {
-                    auto res = static_cast<ConstVector<std::string_view> *>(trueVec)->GetConstValue();
-                    std::string_view sv = res;
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, sv);
-                } else if (trueVec->GetEncoding() == OMNI_FLAT) {
-                    auto res = static_cast<Vector<LargeStringContainer<std::string_view>> *>(trueVec)->GetValue(row);
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, res);
-                } else {
-                    auto res = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(
-                        trueVec)->GetValue(row);
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, res);
+            switch (outputType->GetId()) {
+                case OMNI_BOOLEAN :
+                {
+                    auto res = static_cast<Vector<bool> *>(temp)->GetValue(row);
+                    VectorHelper::SetValue(result, row, &res);
+                    break;
                 }
-            } else {
-                if (falseVec->GetEncoding() == OMNI_ENCODING_CONST) {
-                    auto res = static_cast<ConstVector<std::string_view> *>(falseVec)->GetConstValue();
-                    std::string_view sv = res;
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, sv);
-                } else if (falseVec->GetEncoding() == OMNI_FLAT) {
-                    auto res = static_cast<Vector<LargeStringContainer<std::string_view>> *>(falseVec)->GetValue(row);
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, res);
-                } else {
-                    auto res = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(
-                        falseVec)->GetValue(row);
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, res);
+                case OMNI_BYTE :
+                {
+                    auto res = static_cast<Vector<int8_t> *>(temp)->GetValue(row);
+                    VectorHelper::SetValue(result, row, &res);
+                    break;
                 }
+                case OMNI_SHORT :
+                {
+                    auto res = static_cast<Vector<int16_t> *>(temp)->GetValue(row);
+                    VectorHelper::SetValue(result, row, &res);
+                    break;
+                }
+                case OMNI_INT :
+                case OMNI_DATE32 :
+                {
+                    auto res = static_cast<Vector<int32_t> *>(temp)->GetValue(row);
+                    VectorHelper::SetValue(result, row, &res);
+                    break;
+                }
+                case OMNI_LONG :
+                case OMNI_DATE64 :
+                case OMNI_TIMESTAMP :
+                case OMNI_DECIMAL64 :
+                {
+                    auto res = static_cast<Vector<int64_t> *>(temp)->GetValue(row);
+                    VectorHelper::SetValue(result, row, &res);
+                    break;
+                }
+                case OMNI_FLOAT :
+                {
+                    auto res = static_cast<Vector<float> *>(temp)->GetValue(row);
+                    VectorHelper::SetValue(result, row, &res);
+                    break;
+                }
+                case OMNI_DOUBLE :
+                {
+                    auto res = static_cast<Vector<double> *>(temp)->GetValue(row);
+                    VectorHelper::SetValue(result, row, &res);
+                    break;
+                }
+                case OMNI_VARCHAR :
+                {
+                    auto res = static_cast<Vector<LargeStringContainer<std::string_view>> *>(temp)->GetValue(row);
+                    VectorHelper::SetValue(result, row, &res);
+                    break;
+                }
+                case OMNI_DECIMAL128 :
+                {
+                    auto res = static_cast<Vector<Decimal128> *>(temp)->GetValue(row);
+                    VectorHelper::SetValue(result, row, &res);
+                    break;
+                }
+//                case OMNI_ARRAY :
+//                {
+//                    auto res = static_cast<Vector<BaseVector*> *>(temp)->GetValue(row);
+//                    VectorHelper::SetValue(result, row, &res);
+//                    break;
+//                }
+                default :
+                    OMNI_THROW("If expr Error", "Unsupported output type Id:" + outputType->GetId());
             }
         }
     }

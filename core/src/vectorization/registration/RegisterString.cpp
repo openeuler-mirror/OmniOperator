@@ -7,7 +7,7 @@
 #include "../functions/String.h"
 #include "../functions/SplitFunction.h"
 #include "../functions/Cast.h"
-#include "../functions/If.h"
+// #include "../functions/Switch.h"
 #include "../functions/EqualStringFunction.h"
 #include "RegistrationHelpers.h"
 
@@ -16,12 +16,9 @@ void RegisterStringFunctions(const std::string &prefix)
 {
     RegisterString<StartsWithFunction>({prefix + "startswith"});
     RegisterString<ContainsFunction>({prefix + "Contains"});
+    RegisterFunction<TrimFunction, std::string, std::string_view>(prefix + "Trim", {OMNI_VARCHAR}, OMNI_VARCHAR);
     VectorFunction::RegisterVectorFunction("split", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_ARRAY,
         std::make_shared<SplitFunction>());
-    //todo cast and if expr datatype need to be expanded
-    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_LONG, std::make_shared<CastFunction>());
-    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_INT, std::make_shared<CastFunction>());
-    VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, std::make_shared<IfFunction>());
     // VectorFunction::RegisterVectorFunction("equal", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, std::make_shared<EqualStringFunction>());
 }
 }

@@ -375,6 +375,7 @@ public:
     Expr *condition = nullptr;
     Expr *trueExpr = nullptr;
     Expr *falseExpr = nullptr;
+    std::vector<Expr *> arguments;
 
     IfExpr();
     ~IfExpr() override;
@@ -382,6 +383,11 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    bool supportVectorized() override
+    {
+        return condition->supportVectorized() && trueExpr->supportVectorized() && falseExpr->supportVectorized();
+    }
 
     std::string toString() const override
     {
@@ -402,13 +408,18 @@ class CoalesceExpr : public Expr {
 public:
     Expr *value1 = nullptr;
     Expr *value2 = nullptr;
-
+    std::vector<Expr *> arguments;
     CoalesceExpr();
     ~CoalesceExpr() override;
     CoalesceExpr(Expr *val1, Expr *val2);
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    bool supportVectorized() override
+    {
+        return value1->supportVectorized() && value2->supportVectorized();
+    }
 
     std::string toString() const override
     {

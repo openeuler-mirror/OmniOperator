@@ -41,4 +41,30 @@ struct ContainsFunction {
         return true;
     }
 };
+
+/// trim function
+/// trim(string) -> string
+/// Removes leading and trailing whitespace characters from the input string.
+/// Whitespace characters include space, tab, newline, carriage return, etc.
+template <typename T>
+struct TrimFunction {
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *str)
+    {
+        if (str == nullptr) {
+            return false;
+        }
+        // Find the first non-whitespace character from the beginning
+        auto start = str->find_first_not_of(" ");
+        if (start == std::string_view::npos) {
+            // All characters are whitespace
+            result.clear();
+            return true;
+        }
+        // Find the last non-whitespace character from the end
+        auto end = str->find_last_not_of(" ");
+        // Extract the trimmed substring
+        result = std::string(str->substr(start, end - start + 1));
+        return true;
+    }
+};
 }
