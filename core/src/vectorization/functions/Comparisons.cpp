@@ -171,6 +171,8 @@ std::shared_ptr<VectorFunction> MakeImpl(const std::string &functionName, const 
         OMNI_CHECK(args[i] == args[0], "Compare must have the same type!");
     }
     switch (args[0]) {
+        case OMNI_BOOLEAN:
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_BOOLEAN>>();
         case OMNI_BYTE:
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_BYTE>>();
         case OMNI_SHORT:
@@ -179,10 +181,20 @@ std::shared_ptr<VectorFunction> MakeImpl(const std::string &functionName, const 
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_INT>>();
         case OMNI_LONG:
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_LONG>>();
-        case OMNI_VARCHAR:
-            return std::make_shared<ComparisonFunction<StdCmp, OMNI_VARCHAR>>();
+        case OMNI_FLOAT:
+            return std::make_shared<ComparisonFunction<Cmp<double>, OMNI_FLOAT>>();
         case OMNI_DOUBLE:
             return std::make_shared<ComparisonFunction<Cmp<double>, OMNI_DOUBLE>>();
+        case OMNI_VARCHAR:
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_VARCHAR>>();
+        case OMNI_DATE32:
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_DATE32>>();
+        case OMNI_DATE64:
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_DATE64>>();
+        case OMNI_TIMESTAMP:
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_TIMESTAMP>>();
+        case OMNI_DECIMAL64:
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_DECIMAL64>>();
         default: OMNI_THROW("Compare error:", "{} Not support type!", functionName);
     }
 }
