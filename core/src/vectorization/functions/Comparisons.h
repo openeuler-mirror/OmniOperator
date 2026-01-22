@@ -107,11 +107,18 @@ inline std::vector<std::shared_ptr<codegen::FunctionSignature>> ComparisonSignat
 {
     std::vector<std::shared_ptr<codegen::FunctionSignature>> signatures;
     for (const auto &inputType : {
-             type::OMNI_BYTE,
-             type::OMNI_INT,
-             type::OMNI_LONG,
-             type::OMNI_VARCHAR,
-             type::OMNI_DOUBLE
+            type::OMNI_BOOLEAN,
+            type::OMNI_BYTE,
+            type::OMNI_SHORT,
+            type::OMNI_INT,
+            type::OMNI_LONG,
+            type::OMNI_FLOAT,
+            type::OMNI_DOUBLE,
+            type::OMNI_VARCHAR,
+            type::OMNI_DATE32,
+            type::OMNI_DATE64,
+            type::OMNI_TIMESTAMP,
+            type::OMNI_DECIMAL64
          }) {
         signatures.emplace_back(
             codegen::FunctionSignatureBuilder().FuncName(name).ReturnType(type::OMNI_BOOLEAN).ArgumentType(inputType).
