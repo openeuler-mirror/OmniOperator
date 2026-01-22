@@ -552,7 +552,7 @@ public:
 
     LambdaExpr(Expr *body, std::vector<DataTypePtr> paramTypes, DataTypePtr dt);
 
-    ~LambdaExpr() override = default;
+    ~LambdaExpr() override;
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;

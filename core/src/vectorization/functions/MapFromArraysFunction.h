@@ -69,6 +69,12 @@ namespace omniruntime::vectorization {
                     continue;
                 }
             }
+            if (keyVec != nullptr) {
+                delete keyVec;
+            }
+            if (valueVec != nullptr) {
+                delete valueVec;
+            }
         }
     };
 }
