@@ -12,6 +12,26 @@
 #include <algorithm>
 
 namespace omniruntime::codegen::function {
+namespace {
+    constexpr std::pair<const char*, const char*> kOmniTimeFormatMap[] = {
+        {"yyyy-MM-dd", "%Y-%m-%d"},
+        {"yyyy-MM-dd HH:mm:ss", "%Y-%m-%d %H:%M:%S"},
+        {"%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"},
+        {"%Y-%m-%d", "%Y-%m-%d"},
+    };
+
+    constexpr size_t kOmniTimeFormatMapSize = std::size(kOmniTimeFormatMap);
+
+    const char* FindOmniTimeFormat(std::string_view format) {
+        for (size_t i = 0; i < kOmniTimeFormatMapSize; ++i) {
+            if (format == kOmniTimeFormatMap[i].first) {
+                return kOmniTimeFormatMap[i].second;
+            }
+        }
+        return nullptr;
+    }
+} // anonymous namespace
+
 extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t timeLen, bool isNullTimeStr,
     const char *fmtStr, int32_t fmtLen, bool isNullFmtStr, const char *tzStr, int32_t tzLen, bool isNullTzStr,
     const char *policyStr, int32_t policyLen, bool isNullPolStr, bool *retIsNull)
@@ -89,9 +109,20 @@ extern "C" DLLEXPORT char *FromUnixTime(int64_t contextPtr, bool *isNull, int64_
     }
     int32_t resultLen = fmtLen + 3;
     auto result = ArenaAllocatorMalloc(contextPtr, resultLen);
-    std::string fmtStr1(fmtStr, fmtLen);
-    std::string fmtOmniTimeStr = toOmniTimeFormat(fmtStr1);
-    auto ret = strftime(result, resultLen, fmtOmniTimeStr.c_str(), &ltm);
+
+    std::string localFmt;
+    const char* finalFormat = nullptr;
+
+    std::string_view fmtView(fmtStr, fmtLen);
+    const char* cached = FindOmniTimeFormat(fmtView);
+    if (cached) {
+        finalFormat = cached;
+    } else {
+        localFmt = toOmniTimeFormat(std::string(fmtStr, fmtLen));
+        finalFormat = localFmt.c_str();
+    }
+
+    auto ret = strftime(result, resultLen, finalFormat, &ltm);
     *isNull = static_cast<int32_t>(ret) == 0;
     *outLen = ret;
     return result;
