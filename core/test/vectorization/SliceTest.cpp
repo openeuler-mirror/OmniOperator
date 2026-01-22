@@ -21,13 +21,14 @@ using namespace omniruntime::mem;
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
 using namespace omniruntime::TestUtil;
+using namespace omniruntime::type;
 
 TEST(SliceTest, SliceBasicTest)
 {
     // Test case: slice([1, 2, 3, 4, 5], 1, 3) -> [1, 2, 3]
     int rowSize = 1;
-    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
     auto intType = std::make_shared<DataType>(OMNI_INT);
+    auto arrayType = std::make_shared<ArrayType>(intType);  // Use ArrayType with element type
     auto types = DataTypes({arrayType});
     
     int32_t col[] = {1, 2, 3, 4, 5};
@@ -58,10 +59,10 @@ TEST(SliceTest, SliceBasicTest)
     auto elementVector = resultArray->GetElementVector();
     auto intVector = dynamic_cast<Vector<int32_t> *>(elementVector.get());
     EXPECT_NE(intVector, nullptr);
-    int32_t offset = resultArray->GetOffset(0);
-    EXPECT_EQ(intVector->GetValue(offset), 1);
-    EXPECT_EQ(intVector->GetValue(offset + 1), 2);
-    EXPECT_EQ(intVector->GetValue(offset + 2), 3);
+    int32_t resultOffset = resultArray->GetOffset(0);
+    EXPECT_EQ(intVector->GetValue(resultOffset), 1);
+    EXPECT_EQ(intVector->GetValue(resultOffset + 1), 2);
+    EXPECT_EQ(intVector->GetValue(resultOffset + 2), 3);
 
     delete context;
     delete input;
@@ -72,8 +73,8 @@ TEST(SliceTest, SliceFromMiddleTest)
 {
     // Test case: slice([1, 2, 3, 4, 5], 2, 2) -> [2, 3]
     int rowSize = 1;
-    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
     auto intType = std::make_shared<DataType>(OMNI_INT);
+    auto arrayType = std::make_shared<ArrayType>(intType);  // Use ArrayType with element type
     auto types = DataTypes({arrayType});
     
     int32_t col[] = {1, 2, 3, 4, 5};
@@ -99,9 +100,9 @@ TEST(SliceTest, SliceFromMiddleTest)
     
     auto elementVector = resultArray->GetElementVector();
     auto intVector = dynamic_cast<Vector<int32_t> *>(elementVector.get());
-    int32_t offset = resultArray->GetOffset(0);
-    EXPECT_EQ(intVector->GetValue(offset), 2);
-    EXPECT_EQ(intVector->GetValue(offset + 1), 3);
+    int32_t resultOffset = resultArray->GetOffset(0);
+    EXPECT_EQ(intVector->GetValue(resultOffset), 2);
+    EXPECT_EQ(intVector->GetValue(resultOffset + 1), 3);
 
     delete context;
     delete input;
@@ -112,8 +113,8 @@ TEST(SliceTest, SliceNegativeIndexTest)
 {
     // Test case: slice([1, 2, 3, 4, 5], -2, 2) -> [4, 5]
     int rowSize = 1;
-    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
     auto intType = std::make_shared<DataType>(OMNI_INT);
+    auto arrayType = std::make_shared<ArrayType>(intType);  // Use ArrayType with element type
     auto types = DataTypes({arrayType});
     
     int32_t col[] = {1, 2, 3, 4, 5};
@@ -139,9 +140,9 @@ TEST(SliceTest, SliceNegativeIndexTest)
     
     auto elementVector = resultArray->GetElementVector();
     auto intVector = dynamic_cast<Vector<int32_t> *>(elementVector.get());
-    int32_t offset = resultArray->GetOffset(0);
-    EXPECT_EQ(intVector->GetValue(offset), 4);
-    EXPECT_EQ(intVector->GetValue(offset + 1), 5);
+    int32_t resultOffset = resultArray->GetOffset(0);
+    EXPECT_EQ(intVector->GetValue(resultOffset), 4);
+    EXPECT_EQ(intVector->GetValue(resultOffset + 1), 5);
 
     delete context;
     delete input;
@@ -152,8 +153,8 @@ TEST(SliceTest, SliceExceedsBoundsTest)
 {
     // Test case: slice([1, 2, 3], 2, 5) -> [2, 3] (length exceeds array size)
     int rowSize = 1;
-    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
     auto intType = std::make_shared<DataType>(OMNI_INT);
+    auto arrayType = std::make_shared<ArrayType>(intType);  // Use ArrayType with element type
     auto types = DataTypes({arrayType});
     
     int32_t col[] = {1, 2, 3};
@@ -179,9 +180,9 @@ TEST(SliceTest, SliceExceedsBoundsTest)
     
     auto elementVector = resultArray->GetElementVector();
     auto intVector = dynamic_cast<Vector<int32_t> *>(elementVector.get());
-    int32_t offset = resultArray->GetOffset(0);
-    EXPECT_EQ(intVector->GetValue(offset), 2);
-    EXPECT_EQ(intVector->GetValue(offset + 1), 3);
+    int32_t resultOffset = resultArray->GetOffset(0);
+    EXPECT_EQ(intVector->GetValue(resultOffset), 2);
+    EXPECT_EQ(intVector->GetValue(resultOffset + 1), 3);
 
     delete context;
     delete input;
@@ -192,8 +193,8 @@ TEST(SliceTest, SliceMultipleRowsTest)
 {
     // Test case: Multiple rows with different slices
     int rowSize = 3;
-    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
     auto intType = std::make_shared<DataType>(OMNI_INT);
+    auto arrayType = std::make_shared<ArrayType>(intType);  // Use ArrayType with element type
     auto types = DataTypes({arrayType});
     
     // Row 0: [1, 2, 3, 4, 5]
@@ -248,8 +249,8 @@ TEST(SliceTest, SliceEmptyArrayTest)
 {
     // Test case: slice([], 1, 1) -> empty array
     int rowSize = 1;
-    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
     auto intType = std::make_shared<DataType>(OMNI_INT);
+    auto arrayType = std::make_shared<ArrayType>(intType);  // Use ArrayType with element type
     auto types = DataTypes({arrayType});
     
     int32_t col[] = {};
@@ -284,8 +285,8 @@ TEST(SliceTest, SliceOutOfBoundsTest)
 {
     // Test case: slice([1, 2, 3], 11, 2) -> [] (empty array, not NULL)
     int rowSize = 1;
-    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
     auto intType = std::make_shared<DataType>(OMNI_INT);
+    auto arrayType = std::make_shared<ArrayType>(intType);  // Use ArrayType with element type
     auto types = DataTypes({arrayType});
     
     int32_t col[] = {1, 2, 3};
@@ -320,8 +321,8 @@ TEST(SliceTest, SliceZeroCopyTest)
 {
     // Test case: Verify zero-copy implementation - elementVector should be shared
     int rowSize = 1;
-    auto arrayType = std::make_shared<DataType>(OMNI_ARRAY);
     auto intType = std::make_shared<DataType>(OMNI_INT);
+    auto arrayType = std::make_shared<ArrayType>(intType);  // Use ArrayType with element type
     auto types = DataTypes({arrayType});
     
     int32_t col[] = {1, 2, 3, 4, 5};
