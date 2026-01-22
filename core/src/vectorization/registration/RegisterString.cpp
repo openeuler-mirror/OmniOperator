@@ -8,6 +8,7 @@
 #include "../functions/SplitFunction.h"
 #include "../functions/Cast.h"
 // #include "../functions/Switch.h"
+#include "../functions/RegexpExtract.h"
 #include "../functions/EqualStringFunction.h"
 #include "RegistrationHelpers.h"
 
@@ -20,5 +21,7 @@ void RegisterStringFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("split", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_ARRAY,
         std::make_shared<SplitFunction>());
     // VectorFunction::RegisterVectorFunction("equal", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, std::make_shared<EqualStringFunction>());
+    VectorFunction::RegisterVectorFunction("regexp_extract", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT},
+        OMNI_VARCHAR, std::make_shared<RegexpExtractFunction>());
 }
 }
