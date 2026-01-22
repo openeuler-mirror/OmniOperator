@@ -38,6 +38,8 @@ extern "C" DLLEXPORT int32_t DateTruncRetNull(bool *isNull, int32_t days, const 
 
 extern "C" DLLEXPORT int32_t DateAdd(int32_t right, int32_t left);
 
+extern "C" DLLEXPORT int32_t HourFunction(int64_t timestamp);
+
 extern "C" DLLEXPORT char *DateFormat(int64_t contextPtr, int64_t timestamp, const char *fmtStr, int32_t fmtLen,
     bool isNull, int32_t *outLen);
 

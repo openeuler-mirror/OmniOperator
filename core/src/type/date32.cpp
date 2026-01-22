@@ -69,7 +69,7 @@ inline int64_t LeapThroughEndOf(int64_t y)
     return y / 4 - y / 100 + y / 400;
 }
 
-bool Timestamp::EpochToUtc(int64_t epoch, std::tm &tm)
+bool TimestampUtil::EpochToUtc(int64_t epoch, std::tm &tm)
 {
     static constexpr int secondsPerHour = 3600;
     static constexpr int secondsPerDay = 24 * secondsPerHour;
@@ -113,7 +113,7 @@ bool Timestamp::EpochToUtc(int64_t epoch, std::tm &tm)
     return true;
 }
 
-int64_t Timestamp::TmToStringView(const std::tm &tmValue, char *const startPosition)
+int64_t TimestampUtil::TmToStringView(const std::tm &tmValue, char *const startPosition)
 {
     const auto appendDigits = [](const int value,
         const std::optional<uint32_t> minWidth,
@@ -432,8 +432,8 @@ size_t Date32::ToString(char *res, int32_t len) const
 {
     int64_t daySeconds = value * static_cast<int64_t>(86400);
     std::tm tmValue{};
-    Timestamp::EpochToUtc(daySeconds, tmValue);
-    return Timestamp::TmToStringView(tmValue, res);
+    TimestampUtil::EpochToUtc(daySeconds, tmValue);
+    return TimestampUtil::TmToStringView(tmValue, res);
 }
 
 bool Date32::ValidDate(int64_t daysSinceEpoch)

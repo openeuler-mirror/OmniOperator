@@ -7,6 +7,8 @@
 #include "codegen/context_helper.h"
 #include "type/date32.h"
 #include "codegen/time_util.h"
+#include "util/TimeUtils.h"
+#include "type/tzdb/tzdb_list.h"
 #include <algorithm>
 
 namespace omniruntime::codegen::function {
@@ -154,6 +156,13 @@ extern "C" DLLEXPORT int32_t GetHourFromTimestamp(int64_t timestamp, bool isNull
 extern "C" DLLEXPORT int32_t DateAdd(int32_t right, int32_t left)
 {
     return right + left;
+}
+
+extern "C" DLLEXPORT int32_t HourFunction(int64_t timestamp)
+{
+    auto t = Timestamp::fromMicros(timestamp);
+    tz::TimeZone tz("Asia/Shanghai", 1980, tzdb::locate_zone("Asia/Shanghai"));
+    return util::GetDateTime(t, &tz).tm_hour;
 }
 
 extern "C" DLLEXPORT char *DateFormat(int64_t contextPtr, int64_t timestamp, const char *fmtStr, int32_t fmtLen,

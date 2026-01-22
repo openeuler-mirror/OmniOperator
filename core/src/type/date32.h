@@ -88,7 +88,7 @@ enum class DateTruncMode {
     TRUNC_TO_YEAR = 9,
 };
 
-struct Timestamp {
+struct TimestampUtil {
 public:
     static bool EpochToUtc(int64_t epoch, std::tm &tm);
 
