@@ -111,6 +111,20 @@ public:
         int32_t currentPositionIndex) override;
 };
 
+class PercentRankFunction : public RankingWindowFunction {
+public:
+    PercentRankFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType);
+    ~PercentRankFunction() override;
+    void Reset() override;
+    void RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+        int32_t currentPositionIndex) override;
+
+private:
+    long rank;
+    long count;
+    int32_t numPartitionRows;
+};
+
 class AggregateWindowFunction : public WindowFunction {
 public:
     AggregateWindowFunction(int32_t argumentChannel, int32_t aggregationType, DataTypePtr inputType,
