@@ -109,9 +109,10 @@ BaseVector *SliceImpl::applySliceTyped(const SelectivityVector &rows, BaseVector
         OMNI_THROW("Slice error:", "Length argument must be non-negative, got {}", lengthValue);
     }
 
-    // Zero-copy implementation: reuse the original elementVector and only adjust offsets
-    // This is similar to Velox's implementation which achieves zero-copy by reusing
-    // base vector and adjusting rawOffsets and rawSizes vectors
+    // Copy implementation: create a new element vector and copy sliced elements
+    // Collect all element positions that need to be copied
+    std::vector<int> elementPositions;
+    int64_t currentOffset = 0;
     
     rows.applyToSelected([&](auto row) {
         // Get array size for this row
@@ -130,27 +131,45 @@ BaseVector *SliceImpl::applySliceTyped(const SelectivityVector &rows, BaseVector
         // Copy null bits if the original array was null
         if (arrayVector->IsNull(row)) {
             result->SetNull(row);
-            resultOffsets[row] = elementStart;  // Use original position
-            resultOffsets[row + 1] = elementStart;  // Empty array (size = 0)
+            resultOffsets[row] = currentOffset;
+            resultOffsets[row + 1] = currentOffset;  // Empty array (size = 0)
+            // No elements to add for null arrays
             return;
         }
         
         // If start is out of bounds or length is 0, return empty array (not NULL)
         if (adjustedStart < 0 || adjustedStart >= arraySize || actualLength <= 0) {
-            resultOffsets[row] = elementStart;  // Use original position
-            resultOffsets[row + 1] = elementStart;  // Empty array (size = 0)
+            resultOffsets[row] = currentOffset;
+            resultOffsets[row + 1] = currentOffset;  // Empty array (size = 0)
+            // No elements to add for empty arrays
             return;
         }
         
-        // Set offsets to point to the sliced range in the original elementVector
-        // This achieves zero-copy by reusing the original elementVector
-        resultOffsets[row] = elementStart;
-        resultOffsets[row + 1] = elementStart + actualLength;
+        // Set offsets for the new element vector (starting from 0)
+        resultOffsets[row] = currentOffset;
+        resultOffsets[row + 1] = currentOffset + actualLength;
+        
+        // Collect element positions to copy from the original element vector
+        for (int64_t i = 0; i < actualLength; ++i) {
+            elementPositions.push_back(static_cast<int>(elementStart + i));
+        }
+        
+        currentOffset += actualLength;
     });
     
-    // Reuse the original elementVector for zero-copy
-    // The offsets above point to the correct positions in the original elementVector
-    result->SetElementVector(elementVector);
+    // Create new element vector by copying selected positions
+    int elementLength = static_cast<int>(elementPositions.size());
+    if (elementLength == 0) {
+        // Create empty element vector with the same type
+        auto elementDataType = VectorHelper::GetDataType(elementVector.get());
+        result->SetElementVector(std::shared_ptr<BaseVector>(
+            VectorHelper::CreateComplexVector(elementDataType.get(), 0)));
+    } else {
+        // Copy elements from original element vector
+        auto newElementVector = VectorHelper::CopyPositionsVector(
+            elementVector.get(), elementPositions.data(), 0, elementLength);
+        result->SetElementVector(std::shared_ptr<BaseVector>(newElementVector));
+    }
 
     return result;
 }
