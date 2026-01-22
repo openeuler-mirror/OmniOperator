@@ -103,4 +103,6 @@ TEST(PipelineTest, TestWindowGroupLimitRank2)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, expectedSize, expGroup, expVal1, expVal2);
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
 }

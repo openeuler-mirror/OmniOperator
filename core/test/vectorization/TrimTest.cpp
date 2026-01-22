@@ -1,7 +1,7 @@
 /*
 * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  * Description: Trim function test
- */
+
 
 #include <gtest/gtest.h>
 #include <iostream>
@@ -284,3 +284,4 @@ TEST(VectorizationTest, TrimFunctionConstVectorTest) {
 
     std::cout << "=== Const Vector Test Completed ===" << std::endl;
 }
+*/

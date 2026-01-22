@@ -32,6 +32,8 @@ TopNWithExprOperatorFactory *TopNWithExprOperatorFactory::CreateTopNWithExprOper
                                                                          : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     auto pOperatorFactory = new TopNWithExprOperatorFactory(*dataTypes.get(), cnt, 0, sortCols, sortAscending.data(),
                                                     sortNullFirsts.data(), sortColCnt, overflowConfig);
+    delete overflowConfig;
+    overflowConfig = nullptr;
     return pOperatorFactory;
 }
 

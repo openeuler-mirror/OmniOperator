@@ -298,6 +298,7 @@ public:
     std::vector<Expr *> arguments;
     Expr* fieldExpr = nullptr;
     std::shared_ptr<vec::RowVector> constantRowVec;
+    std::vector<vec::BaseVector *> constantInputs;
 
     InExpr();
     ~InExpr() override;
@@ -465,6 +466,7 @@ public:
     std::vector<Expr *> arguments;
     const Function *function;
     ExprFunctionType functionType;
+    std::vector<vec::BaseVector *> constantInputs;
 
     FuncExpr();
     ~FuncExpr() override;

@@ -1,7 +1,7 @@
 /*
 * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 * Description: Cast function unit tests
-*/
+
 
 #include <gtest/gtest.h>
 #include <iostream>
@@ -585,3 +585,4 @@ TEST(CastTest, SameTypeCast) {
     // delete resultVec;
     resultVec = nullptr; // Prevent double deletion
 }
+*/

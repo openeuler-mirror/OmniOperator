@@ -427,7 +427,19 @@ public:
       sortNullFirsts(sortNullFirsts),
       outputTypes(outputTypes) { }
 
-    ~WindowGroupLimitNode() override = default;
+    ~WindowGroupLimitNode() override {
+        for (auto *expr : partitionKeys){
+            if(expr != nullptr){
+                delete expr;
+            }
+        }
+
+        for (auto *expr : sortKeys){
+            if(expr != nullptr){
+                delete expr;
+            }
+        }
+    }
 
     const DataTypesPtr &GetSourceType() const { return sourceTypes; }
 

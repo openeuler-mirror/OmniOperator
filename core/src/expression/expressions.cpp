@@ -781,6 +781,12 @@ InExpr::InExpr()
 InExpr::~InExpr()
 {
     DeleteExprs(arguments);
+    for (auto *vec : constantInputs){
+        if(vec != nullptr){
+            delete vec;
+        }
+    }
+    constantInputs.clear();
 }
 
 InExpr::InExpr(std::vector<Expr *> args)
@@ -793,7 +799,7 @@ InExpr::InExpr(std::vector<Expr *> args)
         return expr->GetReturnTypeId();
     });
     auto signature = std::make_shared<FunctionSignature>("in", argTypes, dataType->GetId());
-    std::vector<vec::BaseVector *> constantInputs = GetConstantInputs(arguments);
+    constantInputs = GetConstantInputs(arguments);
     vectorFunction = VectorFunction::Find(signature, constantInputs);
     if (vectorFunction == nullptr) {
         vectorFunction = VectorFunction::Find(signature);
@@ -953,6 +959,12 @@ FuncExpr::FuncExpr() : function(nullptr) {}
 FuncExpr::~FuncExpr()
 {
     DeleteExprs(arguments);
+    for (auto *vec : constantInputs){
+        if(vec != nullptr){
+            delete vec;
+        }
+    }
+    constantInputs.clear();
 }
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType)
@@ -966,7 +978,7 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     });
     auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
     this->function = FunctionRegistry::LookupFunction(signature.get());
-    std::vector<vec::BaseVector *> constantInputs = GetConstantInputs(arguments);
+    constantInputs = GetConstantInputs(arguments);
     vectorFunction = VectorFunction::Find(signature, constantInputs);
     if (vectorFunction == nullptr) {
         vectorFunction = VectorFunction::Find(signature);

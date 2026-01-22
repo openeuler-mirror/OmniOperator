@@ -42,6 +42,9 @@ WindowGroupLimitWithExprOperatorFactory *WindowGroupLimitWithExprOperatorFactory
 
     auto operatorFactory = new WindowGroupLimitWithExprOperatorFactory(*sourceDataTypes.get(), n, funcName, partitionKeys,
         sortKeys, sortAscendings, sortNullFirsts, overflowConfig);
+
+    delete overflowConfig;
+    overflowConfig = nullptr;
     return operatorFactory;
 }
 

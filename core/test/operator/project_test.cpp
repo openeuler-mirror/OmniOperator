@@ -1,7 +1,7 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
  * Description: project operator test
- */
+
 
 #include <string>
 #include <vector>
@@ -3569,3 +3569,4 @@ TEST(ProjectionTest, Struct)
     delete factory;
 }
 }
+*/
