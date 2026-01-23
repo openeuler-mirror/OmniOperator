@@ -42,7 +42,8 @@ public:
         // Get input type
         const auto inputTypeId = inputArg->GetTypeId();
         
-        if (inputTypeId == OMNI_TIMESTAMP) {
+        // TIMESTAMP is represented as OMNI_LONG (int64_t) at runtime
+        if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
             // Extract minute from timestamp
             auto *inputVector = reinterpret_cast<Vector<int64_t> *>(inputArg);
             const auto *inputRaw = unsafe::UnsafeVector::GetRawValues(inputVector);
