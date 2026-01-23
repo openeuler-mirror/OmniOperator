@@ -42,8 +42,8 @@ namespace omniruntime::reader {
 
     class OmniRleDecoderV2 : public ::orc::RleDecoderV2 {
     public:
-        OmniRleDecoderV2(std::unique_ptr<::::orc::SeekableInputStream> input,
-                         bool isSigned, ::::orc::MemoryPool& pool) : ::::orc::RleDecoderV2(std::move(input), isSigned, pool){
+        OmniRleDecoderV2(std::unique_ptr<::orc::SeekableInputStream> input,
+                         bool isSigned, ::orc::MemoryPool& pool) : ::orc::RleDecoderV2(std::move(input), isSigned, pool){
         }
         /**
         * direct read VectorBatch in next

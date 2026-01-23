@@ -29,15 +29,15 @@ using omniruntime::vec::VectorBatch;
 using omniruntime::vec::BaseVector;
 using omniruntime::exception::OmniException;
 using omniruntime::vec::NullsBuffer;
-using ::::orc::ColumnReader;
-using ::::orc::ByteRleDecoder;
-using ::::orc::Type;
-using ::::orc::StripeStreams;
-using ::::orc::RleVersion;
-using ::::orc::SeekableInputStream;
-using ::::orc::RleDecoder;
-using ::::orc::MemoryPool;
-using ::::orc::PositionProvider;
+using ::orc::ColumnReader;
+using ::orc::ByteRleDecoder;
+using ::orc::Type;
+using ::orc::StripeStreams;
+using ::orc::RleVersion;
+using ::orc::SeekableInputStream;
+using ::orc::RleDecoder;
+using ::orc::MemoryPool;
+using ::orc::PositionProvider;
 
 namespace omniruntime::reader {
     /**

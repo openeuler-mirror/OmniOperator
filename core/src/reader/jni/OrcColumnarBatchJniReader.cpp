@@ -244,7 +244,7 @@ void ParseJson(nlohmann::json &jsonConfig,
     std::list<std::string>& includedColumnsList,
     std::shared_ptr<common::JulianGregorianRebase>& julianPtr,
     std::shared_ptr<common::PredicateCondition>& predicate,
-    std::unique_ptr<::::orc::SearchArgument>& searchArgument)
+    std::unique_ptr<::orc::SearchArgument>& searchArgument)
 {
     if (jsonConfig.contains("expressionTree") && jsonConfig.contains("leaves")) {
         const auto& exprTree = jsonConfig["expressionTree"];

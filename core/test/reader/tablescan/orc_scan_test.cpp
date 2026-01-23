@@ -52,14 +52,14 @@ protected:
         auto readerOpts = std::make_shared<omniruntime::reader::ReaderOptions>();
         readerOpts->ParseEnhanceJson("{}");
 
-        auto orcReaderOptions = std::make_shared<::::orc::ReaderOptions>();
+        auto orcReaderOptions = std::make_shared<::orc::ReaderOptions>();
         ::orc::MemoryPool *pool = ::orc::getDefaultPool();
         orcReaderOptions->setMemoryPool(*pool);
         orcReaderOptions->setTailLocation(std::numeric_limits<uint64_t>::max());
         const std::string SerializedFileTail = "";
         orcReaderOptions->setSerializedFileTail(SerializedFileTail);
         readerOpts->SetOrcReaderOptions(std::move(orcReaderOptions));
-        readerOpts->SetOrcRowReaderOptions(std::make_shared<::::orc::RowReaderOptions>());
+        readerOpts->SetOrcRowReaderOptions(std::make_shared<::orc::RowReaderOptions>());
 
         std::string filename = "/../resources/orc_data_all_type";
         filename = PROJECT_PATH + filename;
