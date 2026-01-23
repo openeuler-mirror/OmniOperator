@@ -65,10 +65,10 @@ enum class PredicateOperatorType {
     LESS_THAN_EQUALS, IN, BETWEEN, IS_NULL
 };
 
-int GetLiteral(orc::Literal &lit, int leafType, const std::string &value);
+int GetLiteral(::orc::Literal &lit, int leafType, const std::string &value);
 
-int BuildLeaves(PredicateOperatorType leafOp, std::vector<orc::Literal> &litList, orc::Literal &lit,
-    const std::string &leafNameString, orc::PredicateDataType leafType, orc::SearchArgumentBuilder &builder);
+int BuildLeaves(PredicateOperatorType leafOp, std::vector<::orc::Literal> &litList, ::orc::Literal &lit,
+    const std::string &leafNameString, ::orc::PredicateDataType leafType, ::orc::SearchArgumentBuilder &builder);
 
 bool StringToBool(const std::string &boolStr);
 

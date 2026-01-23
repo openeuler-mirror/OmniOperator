@@ -37,13 +37,13 @@ namespace omniruntime::reader {
     std::unique_ptr<omniruntime::vec::BaseVector> makeDecimalVector(uint64_t numValues,
         omniruntime::type::DataTypeId dataTypeId);
 
-    std::unique_ptr<omniruntime::vec::BaseVector> makeNewVector(uint64_t numValues, const orc::Type* baseTp,
+    std::unique_ptr<omniruntime::vec::BaseVector> makeNewVector(uint64_t numValues, const ::orc::Type* baseTp,
           omniruntime::type::DataTypeId dataTypeId);
 
-    class OmniRleDecoderV2 : public orc::RleDecoderV2 {
+    class OmniRleDecoderV2 : public ::orc::RleDecoderV2 {
     public:
-        OmniRleDecoderV2(std::unique_ptr<::orc::SeekableInputStream> input,
-                         bool isSigned, ::orc::MemoryPool& pool) : ::orc::RleDecoderV2(std::move(input), isSigned, pool){
+        OmniRleDecoderV2(std::unique_ptr<::::orc::SeekableInputStream> input,
+                         bool isSigned, ::::orc::MemoryPool& pool) : ::::orc::RleDecoderV2(std::move(input), isSigned, pool){
         }
         /**
         * direct read VectorBatch in next

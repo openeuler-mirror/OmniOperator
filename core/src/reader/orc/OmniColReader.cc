@@ -29,28 +29,28 @@ using omniruntime::vec::VectorBatch;
 using omniruntime::vec::BaseVector;
 using omniruntime::exception::OmniException;
 using omniruntime::vec::NullsBuffer;
-using orc::ColumnReader;
-using orc::ByteRleDecoder;
-using orc::Type;
-using orc::StripeStreams;
-using orc::RleVersion;
-using orc::SeekableInputStream;
-using orc::RleDecoder;
-using orc::MemoryPool;
-using orc::PositionProvider;
+using ::::orc::ColumnReader;
+using ::::orc::ByteRleDecoder;
+using ::::orc::Type;
+using ::::orc::StripeStreams;
+using ::::orc::RleVersion;
+using ::::orc::SeekableInputStream;
+using ::::orc::RleDecoder;
+using ::::orc::MemoryPool;
+using ::::orc::PositionProvider;
 
 namespace omniruntime::reader {
     /**
     * Global funcs To inline
     */
-    RleVersion omniConvertRleVersion(orc::proto::ColumnEncoding_Kind kind) {
+    RleVersion omniConvertRleVersion(::orc::proto::ColumnEncoding_Kind kind) {
         switch (static_cast<int64_t>(kind)) {
-            case orc::proto::ColumnEncoding_Kind_DIRECT:
-            case orc::proto::ColumnEncoding_Kind_DICTIONARY:
-                return orc::RleVersion_1;
-            case orc::proto::ColumnEncoding_Kind_DIRECT_V2:
-            case orc::proto::ColumnEncoding_Kind_DICTIONARY_V2:
-                return orc::RleVersion_2;
+            case ::orc::proto::ColumnEncoding_Kind_DIRECT:
+            case ::orc::proto::ColumnEncoding_Kind_DICTIONARY:
+                return ::orc::RleVersion_1;
+            case ::orc::proto::ColumnEncoding_Kind_DIRECT_V2:
+            case ::orc::proto::ColumnEncoding_Kind_DICTIONARY_V2:
+                return ::orc::RleVersion_2;
             default:
                 throw omniruntime::exception::OmniException(
                     "EXPRESSION_NOT_SUPPORT", "Unknown encoding in omniConvertRleVersion");
@@ -60,11 +60,11 @@ namespace omniruntime::reader {
     std::unique_ptr<OmniRleDecoderV2> createOmniRleDecoder(std::unique_ptr<SeekableInputStream> input, bool isSigned,
                                                         RleVersion version, MemoryPool& pool) {
         switch (static_cast<int64_t>(version)) {
-            case orc::RleVersion_1:
+            case ::orc::RleVersion_1:
                 // should not use
                 throw omniruntime::exception::OmniException(
                     "EXPRESSION_NOT_SUPPORT", "RleVersion_1 Not supported yet");
-            case orc::RleVersion_2:
+            case ::orc::RleVersion_2:
                 return std::unique_ptr<OmniRleDecoderV2>(new OmniRleDecoderV2(std::move(input), isSigned, pool));
             default:
                 throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT", "Not implemented yet");
@@ -82,7 +82,7 @@ namespace omniruntime::reader {
     
     OmniColumnReader::OmniColumnReader(const Type &type, StripeStreams &stripe)
         : ColumnReader(type, stripe) {
-        std::unique_ptr<SeekableInputStream> stream = stripe.getStream(columnId, orc::proto::Stream_Kind_PRESENT, true);
+        std::unique_ptr<SeekableInputStream> stream = stripe.getStream(columnId, ::orc::proto::Stream_Kind_PRESENT, true);
         if (stream.get()) {
             notNullDecoder = std::make_unique<OmniBooleanRleDecoder>(std::move(stream));
         }
@@ -125,43 +125,43 @@ namespace omniruntime::reader {
     std::unique_ptr<ColumnReader> omniBuildReader(const Type& type,
                                                  StripeStreams& stripe, common::JulianGregorianRebase *julianPtr) {
         switch (static_cast<int64_t>(type.getKind())) {
-            case orc::DATE:
-            case orc::INT:
-            case orc::LONG:
-            case orc::SHORT:
+            case ::orc::DATE:
+            case ::orc::INT:
+            case ::orc::LONG:
+            case ::orc::SHORT:
                 return std::make_unique<OmniIntegerColumnReader>(type, stripe);
-            case orc::BINARY:
-            case orc::CHAR:
-            case orc::STRING:
-            case orc::VARCHAR:
+            case ::orc::BINARY:
+            case ::orc::CHAR:
+            case ::orc::STRING:
+            case ::orc::VARCHAR:
                 switch (static_cast<int64_t>(stripe.getEncoding(type.getColumnId()).kind())) {
-                    case orc::proto::ColumnEncoding_Kind_DICTIONARY:
-                    case orc::proto::ColumnEncoding_Kind_DICTIONARY_V2:
+                    case ::orc::proto::ColumnEncoding_Kind_DICTIONARY:
+                    case ::orc::proto::ColumnEncoding_Kind_DICTIONARY_V2:
                         return std::make_unique<OmniStringDictionaryColumnReader>(type, stripe);
-                    case orc::proto::ColumnEncoding_Kind_DIRECT:
-                    case orc::proto::ColumnEncoding_Kind_DIRECT_V2:
+                    case ::orc::proto::ColumnEncoding_Kind_DIRECT:
+                    case ::orc::proto::ColumnEncoding_Kind_DIRECT_V2:
                         return std::make_unique<OmniStringDirectColumnReader>(type, stripe);
                     default:
                         throw omniruntime::exception::OmniException(
                             "EXPRESSION_NOT_SUPPORT", "omniBuildReader unhandled string encoding");
                 }
 
-            case orc::BOOLEAN:
+            case ::orc::BOOLEAN:
                 return std::make_unique<OmniBooleanColumnReader>(type, stripe);
 
-            case orc::BYTE:
+            case ::orc::BYTE:
                 return std::make_unique<OmniByteColumnReader>(type, stripe);
 
-            case orc::STRUCT:
+            case ::orc::STRUCT:
                 return std::make_unique<OmniStructColumnReader>(type, stripe, julianPtr);
 
-            case orc::TIMESTAMP:
+            case ::orc::TIMESTAMP:
                 return std::make_unique<OmniTimestampColumnReader>(type, stripe, false, julianPtr);
 
-            case orc::TIMESTAMP_INSTANT:
+            case ::orc::TIMESTAMP_INSTANT:
                 return std::make_unique<OmniTimestampColumnReader>(type, stripe, true, julianPtr);
 
-            case orc::DECIMAL:
+            case ::orc::DECIMAL:
                 // Is this a Hive 0.11 or 0.12 file?
                 if (type.getPrecision() == 0) {
                     return std::make_unique<OmniDecimalHive11ColumnReader>(type, stripe);
@@ -171,8 +171,8 @@ namespace omniruntime::reader {
                     return std::make_unique<OmniDecimal128ColumnReader>(type, stripe);
                 }
 
-            case orc::FLOAT:
-            case orc::DOUBLE:
+            case ::orc::FLOAT:
+            case ::orc::DOUBLE:
                 return std::make_unique<OmniDoubleColumnReader>(type, stripe);
 
             default:
@@ -194,7 +194,7 @@ namespace omniruntime::reader {
         }
     }
 
-    void scaleInt128(orc::Int128& value, uint32_t scale, uint32_t currentScale) {
+    void scaleInt128(::orc::Int128& value, uint32_t scale, uint32_t currentScale) {
         if (scale > currentScale) {
             while(scale > currentScale) {
                 uint32_t scaleAdjust =
@@ -204,7 +204,7 @@ namespace omniruntime::reader {
                 currentScale += scaleAdjust;
             }
         } else if (scale < currentScale) {
-            orc::Int128 remainder;
+            ::orc::Int128 remainder;
             while(currentScale > scale) {
                 uint32_t scaleAdjust =
                         std::min(OmniDecimal64ColumnReader::MAX_PRECISION_64,
@@ -216,7 +216,7 @@ namespace omniruntime::reader {
         }
     }
 
-    void omniUnZigZagInt128(orc::Int128& value) {
+    void omniUnZigZagInt128(::orc::Int128& value) {
         bool needsNegate = value.getLowBits() & 1;
         value >>= 1;
         if (needsNegate) {
@@ -238,10 +238,10 @@ namespace omniruntime::reader {
             const void* chunk;
             int length;
             if (!stream->Next(&chunk, &length)) {
-                throw orc::ParseError("bad read in omniReadFully");
+                throw ::orc::ParseError("bad read in omniReadFully");
             }
             if (posn + length > bufferSize) {
-                throw orc::ParseError("Corrupt dictionary blob in StringDictionaryColumn");
+                throw ::orc::ParseError("Corrupt dictionary blob in StringDictionaryColumn");
             }
             memcpy_s(buffer + posn, bufferSize - posn, chunk, static_cast<size_t>(length));
             posn += length;
@@ -256,7 +256,7 @@ namespace omniruntime::reader {
         // count the number of selected sub-columns
         const std::vector<bool> selectedColumns = stripe.getSelectedColumns();
         switch (static_cast<int64_t>(stripe.getEncoding(columnId).kind())) {
-            case orc::proto::ColumnEncoding_Kind_DIRECT:
+            case ::orc::proto::ColumnEncoding_Kind_DIRECT:
                 for(unsigned int i = 0; i < type.getSubtypeCount(); ++i) {
                     const Type& child = *type.getSubtype(i);
                     if (selectedColumns[static_cast<uint64_t>(child.getColumnId())]) {
@@ -264,9 +264,9 @@ namespace omniruntime::reader {
                     }
                 }
                 break;
-            case orc::proto::ColumnEncoding_Kind_DIRECT_V2:
-            case orc::proto::ColumnEncoding_Kind_DICTIONARY:
-            case orc::proto::ColumnEncoding_Kind_DICTIONARY_V2:
+            case ::orc::proto::ColumnEncoding_Kind_DIRECT_V2:
+            case ::orc::proto::ColumnEncoding_Kind_DICTIONARY:
+            case ::orc::proto::ColumnEncoding_Kind_DICTIONARY_V2:
             default:
                 throw omniruntime::exception::OmniException(
                     "EXPRESSION_NOT_SUPPORT", "Unknown encoding for OmniStructColumnReader");
@@ -282,7 +282,7 @@ namespace omniruntime::reader {
     }
 
     void OmniStructColumnReader::next(void *&batch, uint64_t numValues, char *notNull,
-        const orc::Type& baseTp, int* omniTypeId) {
+        const ::orc::Type& baseTp, int* omniTypeId) {
         auto vecs = reinterpret_cast<std::vector<omniruntime::vec::BaseVector*>*>(batch);
         nextInternal<false>(*vecs, numValues, nullptr, baseTp, omniTypeId);
     }
@@ -297,7 +297,7 @@ namespace omniruntime::reader {
 
     template<bool encoded>
     void OmniStructColumnReader::nextInternal(std::vector<omniruntime::vec::BaseVector*> &vecs, uint64_t numValues,
-        uint64_t *incomingNulls, const orc::Type& baseTp, int* omniTypeId) {
+        uint64_t *incomingNulls, const ::orc::Type& baseTp, int* omniTypeId) {
 
         if (encoded) {
             std::string message("OmniStructColumnReader::nextInternal encoded is not finished!");
@@ -326,27 +326,27 @@ namespace omniruntime::reader {
     omniruntime::type::DataTypeId OmniStructColumnReader::getDefaultOmniType(const Type* type) {
         constexpr int32_t OMNI_MAX_DECIMAL64_DIGITS = 18;
         switch (type->getKind()) {
-            case orc::TypeKind::BOOLEAN:
+            case ::orc::TypeKind::BOOLEAN:
                 return omniruntime::type::OMNI_BOOLEAN;
-            case orc::TypeKind::SHORT:
+            case ::orc::TypeKind::SHORT:
                 return omniruntime::type::OMNI_SHORT;
-            case orc::TypeKind::DATE:
+            case ::orc::TypeKind::DATE:
                 //To do check if  the DATE is DATE64 type
                 return omniruntime::type::OMNI_DATE32;
-            case orc::TypeKind::INT:
+            case ::orc::TypeKind::INT:
                 return omniruntime::type::OMNI_INT;
-            case orc::TypeKind::LONG:
+            case ::orc::TypeKind::LONG:
                 return omniruntime::type::OMNI_LONG;
-            case orc::TypeKind::TIMESTAMP:
-            case orc::TypeKind::TIMESTAMP_INSTANT:
+            case ::orc::TypeKind::TIMESTAMP:
+            case ::orc::TypeKind::TIMESTAMP_INSTANT:
                 return omniruntime::type::OMNI_TIMESTAMP;
-            case orc::TypeKind::DOUBLE:
+            case ::orc::TypeKind::DOUBLE:
                 return omniruntime::type::OMNI_DOUBLE;
-            case orc::TypeKind::CHAR:
-            case orc::TypeKind::STRING:
-            case orc::TypeKind::VARCHAR:
+            case ::orc::TypeKind::CHAR:
+            case ::orc::TypeKind::STRING:
+            case ::orc::TypeKind::VARCHAR:
                 return omniruntime::type::OMNI_VARCHAR;
-            case orc::TypeKind::DECIMAL:
+            case ::orc::TypeKind::DECIMAL:
                 if (type->getPrecision() > OMNI_MAX_DECIMAL64_DIGITS) {
                     return omniruntime::type::OMNI_DECIMAL128;
                 } else {
@@ -480,7 +480,7 @@ namespace omniruntime::reader {
 
     template <typename T>
     void OmniDoubleColumnReader::nextByType(T *data, uint64_t numValues, uint64_t *nulls) {
-        if (columnKind == orc::FLOAT) {
+        if (columnKind == ::orc::FLOAT) {
             if(nulls) {
                 for(size_t i = 0; i < numValues; ++i) {
                     if(!BitUtil::IsBitSet(nulls, i)) {
@@ -527,7 +527,7 @@ namespace omniruntime::reader {
                 if (!BitUtil::IsBitSet(nullsTrans, i)) {
                     int64_t entry = outputLengths[i];
                     if (entry < 0 || static_cast<uint64_t>(entry) >= dictionaryCount ) {
-                        throw orc::ParseError("Entry index out of range in StringDictionaryColumn");
+                        throw ::orc::ParseError("Entry index out of range in StringDictionaryColumn");
                     }
 
                     //求出长度，如果为char，则需要去除最后的空格
@@ -547,7 +547,7 @@ namespace omniruntime::reader {
             for(uint64_t i=0; i < numValues; ++i) {
                 int64_t entry = outputLengths[i];
                 if (entry < 0 || static_cast<uint64_t>(entry) >= dictionaryCount) {
-                    throw orc::ParseError("Entry index out of range in StringDictionaryColumn");
+                    throw ::orc::ParseError("Entry index out of range in StringDictionaryColumn");
                 }
 
                 //求出长度，如果为char，则需要去除最后的空格
@@ -587,7 +587,7 @@ namespace omniruntime::reader {
             const void* readBuffer;
             int readLength;
             if (!blobStream->Next(&readBuffer, &readLength)) {
-                throw orc::ParseError("failed to read in OmniStringDirectColumnReader.next");
+                throw ::orc::ParseError("failed to read in OmniStringDirectColumnReader.next");
             }
             lastBuffer = static_cast<const char*>(readBuffer);
             lastBufferLength = static_cast<size_t>(readLength);
@@ -688,7 +688,7 @@ namespace omniruntime::reader {
         if (hasNull) {
             for(size_t i = 0; i < numValues; ++i) {
                 if (!BitUtil::IsBitSet(nullsTrans, i)) {
-                    orc::Int128 value = 0;
+                    ::orc::Int128 value = 0;
                     readInt128(value, static_cast<int32_t>(scaleBuffer[i]));
                     __int128_t dst = value.getHighBits();
                     dst <<= 64;
@@ -698,7 +698,7 @@ namespace omniruntime::reader {
             }
         } else {
             for(size_t i = 0; i < numValues; ++i) {
-                orc::Int128 value = 0;
+                ::orc::Int128 value = 0;
                 readInt128(value, static_cast<int32_t>(scaleBuffer[i]));
                 __int128_t dst = value.getHighBits();
                 dst <<= 64;
@@ -722,10 +722,10 @@ namespace omniruntime::reader {
        	if (hasNull) {
        		for (size_t i = 0; i < numValues; ++i) {
        			if (!BitUtil::IsBitSet(nullsTrans, i)) {
-       				orc::Int128 value = 0;
+       				::orc::Int128 value = 0;
        				if (!readInt128(value, static_cast<int32_t>(scaleBuffer[i]))) {
        					if (throwOnOverflow) {
-       						throw orc::ParseError("Hive 0.11 decimal was more than 38 digits.");
+       						throw ::orc::ParseError("Hive 0.11 decimal was more than 38 digits.");
        					} else {
        						*errorStream << "Warning: "
        									 << "Hive 0.11 decimal with more than 38 digits "
@@ -742,10 +742,10 @@ namespace omniruntime::reader {
        		}
        	} else {
        		for (size_t i = 0; i < numValues; ++i) {
-       			orc::Int128 value = 0;
+       			::orc::Int128 value = 0;
        			if (!readInt128(value, static_cast<int32_t>(scaleBuffer[i]))) {
 					if (throwOnOverflow) {
-						throw orc::ParseError("Hive 0.11 decimal was more than 38 digits.");
+						throw ::orc::ParseError("Hive 0.11 decimal was more than 38 digits.");
 					} else {
 						*errorStream << "Warning: "
 									 << "Hive 0.11 decimal with more than 38 digits "
@@ -765,7 +765,7 @@ namespace omniruntime::reader {
     OmniIntegerColumnReader::OmniIntegerColumnReader(const Type& type,  StripeStreams& stripe)
         : OmniColumnReader(type, stripe) {
         RleVersion vers = omniConvertRleVersion(stripe.getEncoding(columnId).kind());
-        std::unique_ptr<SeekableInputStream> stream = stripe.getStream(columnId, orc::proto::Stream_Kind_DATA, true);
+        std::unique_ptr<SeekableInputStream> stream = stripe.getStream(columnId, ::orc::proto::Stream_Kind_DATA, true);
         if (stream == nullptr)
             throw OmniException("EXPRESSION_NOT_SUPPORT", "DATA stream not found in Integer column");
         rle = createOmniRleDecoder(std::move(stream), true, vers, memoryPool);
@@ -815,16 +815,16 @@ namespace omniruntime::reader {
     ): OmniColumnReader(type, stripe) {
         scale = static_cast<int32_t>(type.getScale());
         precision = static_cast<int32_t>(type.getPrecision());
-        valueStream = stripe.getStream(columnId, orc::proto::Stream_Kind_DATA, true);
+        valueStream = stripe.getStream(columnId, ::orc::proto::Stream_Kind_DATA, true);
         if (valueStream == nullptr)
-            throw orc::ParseError("DATA stream not found in Decimal64Column");
+            throw ::orc::ParseError("DATA stream not found in Decimal64Column");
         buffer = nullptr;
         bufferEnd = nullptr;
         RleVersion vers = omniConvertRleVersion(stripe.getEncoding(columnId).kind());
         std::unique_ptr<SeekableInputStream> stream =
-                stripe.getStream(columnId, orc::proto::Stream_Kind_SECONDARY, true);
+                stripe.getStream(columnId, ::orc::proto::Stream_Kind_SECONDARY, true);
         if (stream == nullptr)
-            throw orc::ParseError("SECONDARY stream not found in Decimal64Column");
+            throw ::orc::ParseError("SECONDARY stream not found in Decimal64Column");
         scaleDecoder = createOmniRleDecoder(std::move(stream), true, vers, memoryPool);
     }
 
@@ -866,9 +866,9 @@ namespace omniruntime::reader {
         // PASS
     }
 
-    void OmniDecimal128ColumnReader::readInt128(orc::Int128& value, int32_t currentScale) {
+    void OmniDecimal128ColumnReader::readInt128(::orc::Int128& value, int32_t currentScale) {
         value = 0;
-        orc::Int128 work;
+        ::orc::Int128 work;
         uint32_t offset = 0;
         while (true) {
             readBuffer();
@@ -897,13 +897,13 @@ namespace omniruntime::reader {
     	// PASS
     }
 
-	bool OmniDecimalHive11ColumnReader::readInt128(orc::Int128& value, int32_t currentScale) {
+	bool OmniDecimalHive11ColumnReader::readInt128(::orc::Int128& value, int32_t currentScale) {
 		// -/+ 99999999999999999999999999999999999999
-		static const orc::Int128 MIN_VALUE(-0x4b3b4ca85a86c47b, 0xf675ddc000000001);
-		static const orc::Int128 MAX_VALUE( 0x4b3b4ca85a86c47a, 0x098a223fffffffff);
+		static const ::orc::Int128 MIN_VALUE(-0x4b3b4ca85a86c47b, 0xf675ddc000000001);
+		static const ::orc::Int128 MAX_VALUE( 0x4b3b4ca85a86c47a, 0x098a223fffffffff);
 
 		value = 0;
-		orc::Int128 work;
+		::orc::Int128 work;
 		uint32_t offset = 0;
 		bool result = true;
 		while (true) {
@@ -936,23 +936,23 @@ namespace omniruntime::reader {
                                                          common::JulianGregorianRebase *julianPtr
     ): OmniColumnReader(type, stripe),
         writerTimezone(isInstantType ?
-                       orc::getTimezoneByName("GMT") :
+                       ::orc::getTimezoneByName("GMT") :
                        stripe.getWriterTimezone()),
         readerTimezone(isInstantType ?
-                       orc::getTimezoneByName("GMT") :
-                       (julianPtr == nullptr ? orc::getLocalTimezone() : orc::getTimezoneByName(julianPtr->GetTz()))),
+                       ::orc::getTimezoneByName("GMT") :
+                       (julianPtr == nullptr ? ::orc::getLocalTimezone() : ::orc::getTimezoneByName(julianPtr->GetTz()))),
         epochOffset(writerTimezone.getEpoch()),
         sameTimezone(writerTimezone.getEpoch() == readerTimezone.getEpoch()),
         julianPtr(julianPtr) {
         RleVersion vers = omniConvertRleVersion(stripe.getEncoding(columnId).kind());
         std::unique_ptr<SeekableInputStream> stream =
-                stripe.getStream(columnId, orc::proto::Stream_Kind_DATA, true);
+                stripe.getStream(columnId, ::orc::proto::Stream_Kind_DATA, true);
         if (stream == nullptr)
-            throw orc::ParseError("DATA stream not found in Timestamp column");
+            throw ::orc::ParseError("DATA stream not found in Timestamp column");
         secondsRle = createOmniRleDecoder(std::move(stream), true, vers, memoryPool);
-        stream = stripe.getStream(columnId, orc::proto::Stream_Kind_SECONDARY, true);
+        stream = stripe.getStream(columnId, ::orc::proto::Stream_Kind_SECONDARY, true);
         if (stream == nullptr)
-            throw orc::ParseError("SECONDARY stream not found in Timestamp column");
+            throw ::orc::ParseError("SECONDARY stream not found in Timestamp column");
         nanoRle = createOmniRleDecoder(std::move(stream), false, vers, memoryPool);
     }
 
@@ -978,17 +978,17 @@ namespace omniruntime::reader {
                                                                 : OmniColumnReader(type, stripe) {
         RleVersion rleVersion = omniConvertRleVersion(stripe.getEncoding(columnId).kind());
         std::unique_ptr<SeekableInputStream> stream =
-                stripe.getStream(columnId, orc::proto::Stream_Kind_LENGTH, true);
+                stripe.getStream(columnId, ::orc::proto::Stream_Kind_LENGTH, true);
         if (stream == nullptr)
-            throw orc::ParseError("LENGTH stream not found in StringDirectColumn");
+            throw ::orc::ParseError("LENGTH stream not found in StringDirectColumn");
         lengthRle = createOmniRleDecoder(
                 std::move(stream), false, rleVersion, memoryPool);
-        blobStream = stripe.getStream(columnId, orc::proto::Stream_Kind_DATA, true);
+        blobStream = stripe.getStream(columnId, ::orc::proto::Stream_Kind_DATA, true);
         if (blobStream == nullptr)
-            throw orc::ParseError("DATA stream not found in StringDirectColumn");
+            throw ::orc::ParseError("DATA stream not found in StringDirectColumn");
         lastBuffer = nullptr;
         lastBufferLength = 0;
-        if (type.getKind() == orc::TypeKind::CHAR) {
+        if (type.getKind() == ::orc::TypeKind::CHAR) {
             isChar = true;
         }
     }
@@ -1058,19 +1058,19 @@ namespace omniruntime::reader {
     }
 
     OmniStringDictionaryColumnReader::OmniStringDictionaryColumnReader(const Type& type, StripeStreams& stripe)
-        : OmniColumnReader(type, stripe), dictionary(new orc::StringDictionary(stripe.getMemoryPool())) {
+        : OmniColumnReader(type, stripe), dictionary(new ::orc::StringDictionary(stripe.getMemoryPool())) {
         RleVersion rleVersion = omniConvertRleVersion(stripe.getEncoding(columnId)
                                                             .kind());
         uint32_t dictSize = stripe.getEncoding(columnId).dictionarysize();
         std::unique_ptr<SeekableInputStream> stream =
-                stripe.getStream(columnId, orc::proto::Stream_Kind_DATA, true);
+                stripe.getStream(columnId, ::orc::proto::Stream_Kind_DATA, true);
         if (stream == nullptr) {
-            throw orc::ParseError("DATA stream not found in StringDictionaryColumn");
+            throw ::orc::ParseError("DATA stream not found in StringDictionaryColumn");
         }
         rle = createOmniRleDecoder(std::move(stream), false, rleVersion, memoryPool);
-        stream = stripe.getStream(columnId, orc::proto::Stream_Kind_LENGTH, false);
+        stream = stripe.getStream(columnId, ::orc::proto::Stream_Kind_LENGTH, false);
         if (dictSize > 0 && stream == nullptr) {
-            throw orc::ParseError("LENGTH stream not found in StringDictionaryColumn");
+            throw ::orc::ParseError("LENGTH stream not found in StringDictionaryColumn");
         }
         std::unique_ptr<OmniRleDecoderV2> lengthDecoder =
                 createOmniRleDecoder(std::move(stream), false, rleVersion, memoryPool);
@@ -1080,20 +1080,20 @@ namespace omniruntime::reader {
         lengthArray[0] = 0;
         for(uint32_t i = 1; i < dictSize + 1; ++i) {
             if (lengthArray[i] < 0) {
-                throw orc::ParseError("Negative dictionary entry length");
+                throw ::orc::ParseError("Negative dictionary entry length");
             }
             lengthArray[i] += lengthArray[i - 1];
         }
         int64_t blobSize = lengthArray[dictSize];
         dictionary->dictionaryBlob.resize(static_cast<uint64_t>(blobSize));
         std::unique_ptr<SeekableInputStream> blobStream =
-                stripe.getStream(columnId, orc::proto::Stream_Kind_DICTIONARY_DATA, false);
+                stripe.getStream(columnId, ::orc::proto::Stream_Kind_DICTIONARY_DATA, false);
         if (blobSize > 0 && blobStream == nullptr) {
-            throw orc::ParseError(
+            throw ::orc::ParseError(
                     "DICTIONARY_DATA stream not found in StringDictionaryColumn");
         }
         omniReadFully(dictionary->dictionaryBlob.data(), blobSize, blobStream.get());
-        if (type.getKind() == orc::TypeKind::CHAR) {
+        if (type.getKind() == ::orc::TypeKind::CHAR) {
             isChar = true;
         }
     }
@@ -1114,12 +1114,12 @@ namespace omniruntime::reader {
         rle->seek(positions.at(columnId));
     }
 
-    OmniBooleanColumnReader::OmniBooleanColumnReader(const orc::Type& type, orc::StripeStreams& stripe)
+    OmniBooleanColumnReader::OmniBooleanColumnReader(const ::orc::Type& type, ::orc::StripeStreams& stripe)
         : OmniColumnReader(type, stripe){
         std::unique_ptr<SeekableInputStream> stream =
-            stripe.getStream(columnId, orc::proto::Stream_Kind_DATA, true);
+            stripe.getStream(columnId, ::orc::proto::Stream_Kind_DATA, true);
         if (stream == nullptr)
-            throw orc::ParseError("DATA stream not found in Boolean column");
+            throw ::orc::ParseError("DATA stream not found in Boolean column");
         rle = createOmniBooleanRleDecoder(std::move(stream));
     }
 
@@ -1144,9 +1144,9 @@ namespace omniruntime::reader {
     OmniByteColumnReader::OmniByteColumnReader(const Type& type, StripeStreams& stripe)
         : OmniColumnReader(type, stripe){
         std::unique_ptr<SeekableInputStream> stream =
-            stripe.getStream(columnId, orc::proto::Stream_Kind_DATA, true);
+            stripe.getStream(columnId, ::orc::proto::Stream_Kind_DATA, true);
         if (stream == nullptr)
-            throw orc::ParseError("DATA stream not found in Byte column");
+            throw ::orc::ParseError("DATA stream not found in Byte column");
         rle = createOmniByteRleDecoder(std::move(stream));
     }
 
@@ -1172,12 +1172,12 @@ namespace omniruntime::reader {
                                         ): OmniColumnReader(type, stripe),
                                            columnKind(type.getKind()),
                                            bytesPerValue((type.getKind() ==
-                                                          orc::FLOAT) ? 4 : 8),
+                                                          ::orc::FLOAT) ? 4 : 8),
                                            bufferPointer(nullptr),
                                            bufferEnd(nullptr) {
-        inputStream = stripe.getStream(columnId, orc::proto::Stream_Kind_DATA, true);
+        inputStream = stripe.getStream(columnId, ::orc::proto::Stream_Kind_DATA, true);
         if (inputStream == nullptr)
-            throw orc::ParseError("DATA stream not found in Double column");
+            throw ::orc::ParseError("DATA stream not found in Double column");
     }
 
     OmniDoubleColumnReader::~OmniDoubleColumnReader() {
@@ -1207,7 +1207,7 @@ namespace omniruntime::reader {
     }
 
     void OmniDoubleColumnReader::seekToRowGroup(
-        std::unordered_map<uint64_t, orc::PositionProvider>& positions) {
+        std::unordered_map<uint64_t, ::orc::PositionProvider>& positions) {
         OmniColumnReader::seekToRowGroup(positions);
         inputStream->seek(positions.at(columnId));
         // clear buffer state after seek

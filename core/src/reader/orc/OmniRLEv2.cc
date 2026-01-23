@@ -76,24 +76,24 @@ namespace omniruntime::reader {
         }
     }
 
-    std::unique_ptr<omniruntime::vec::BaseVector> makeNewVector(uint64_t numValues, const orc::Type* baseTp,
+    std::unique_ptr<omniruntime::vec::BaseVector> makeNewVector(uint64_t numValues, const ::orc::Type* baseTp,
         omniruntime::type::DataTypeId dataTypeId) {
         switch (baseTp->getKind()) {
-            case ::orc::TypeKind::BOOLEAN:
-            case ::orc::TypeKind::SHORT:
-            case ::orc::TypeKind::DATE:
-            case ::orc::TypeKind::INT:
-            case ::orc::TypeKind::TIMESTAMP:
-            case ::orc::TypeKind::TIMESTAMP_INSTANT:
-            case ::orc::TypeKind::LONG:
+            case ::::orc::TypeKind::BOOLEAN:
+            case ::::orc::TypeKind::SHORT:
+            case ::::orc::TypeKind::DATE:
+            case ::::orc::TypeKind::INT:
+            case ::::orc::TypeKind::TIMESTAMP:
+            case ::::orc::TypeKind::TIMESTAMP_INSTANT:
+            case ::::orc::TypeKind::LONG:
                 return makeFixedLengthVector(numValues, dataTypeId);
-            case ::orc::TypeKind::DOUBLE:
+            case ::::orc::TypeKind::DOUBLE:
                 return makeDoubleVector(numValues, dataTypeId);
-            case ::orc::TypeKind::CHAR:
-            case ::orc::TypeKind::STRING:
-            case ::orc::TypeKind::VARCHAR:
+            case ::::orc::TypeKind::CHAR:
+            case ::::orc::TypeKind::STRING:
+            case ::::orc::TypeKind::VARCHAR:
                 return makeVarcharVector(numValues, dataTypeId);
-            case ::orc::TypeKind::DECIMAL:
+            case ::::orc::TypeKind::DECIMAL:
                 return makeDecimalVector(numValues, dataTypeId);
             default: {
                 throw std::runtime_error("Not support For This ORC Type: " + baseTp->getKind());
@@ -166,22 +166,22 @@ namespace omniruntime::reader {
 
             uint64_t offset = nRead, length = numValues - nRead;
 
-            ::orc::EncodingType enc = static_cast<orc::EncodingType>((firstByte >> 6) & 0x03);
+            ::::orc::EncodingType enc = static_cast<::orc::EncodingType>((firstByte >> 6) & 0x03);
             switch (static_cast<int64_t>(enc)) {
-                case ::orc::SHORT_REPEAT:
+                case ::::orc::SHORT_REPEAT:
                     nRead += nextShortRepeats(data, offset, length, nulls);
                     break;
-                case ::orc::DIRECT:
+                case ::::orc::DIRECT:
                     nRead += nextDirect(data, offset, length, nulls);
                     break;
-                case ::orc::PATCHED_BASE:
+                case ::::orc::PATCHED_BASE:
                     nRead += nextPatched(data, offset, length, nulls);
                     break;
-                case ::orc::DELTA:
+                case ::::orc::DELTA:
                     nRead += nextDelta(data, offset, length, nulls);
                     break;
                 default:
-                    throw orc::ParseError("unknown encoding");
+                    throw ::orc::ParseError("unknown encoding");
             }
         }
     }
@@ -192,7 +192,7 @@ namespace omniruntime::reader {
         if (runRead == runLength) {
             // extract the number of fixed bits
             unsigned char fbo = (firstByte >> 1) & 0x1f;
-            uint32_t bitSize = ::orc::decodeBitWidth(fbo);
+            uint32_t bitSize = ::::orc::decodeBitWidth(fbo);
 
             // extract the run length
             runLength = static_cast<uint64_t>(firstByte & 0x01) << 8;
@@ -228,7 +228,7 @@ namespace omniruntime::reader {
             literals[0] = readLongBE(byteSize);
 
             if (isSigned) {
-                literals[0] = ::orc::unZigZag(static_cast<uint64_t>(literals[0]));
+                literals[0] = ::::orc::unZigZag(static_cast<uint64_t>(literals[0]));
             }
         }
 
@@ -328,7 +328,7 @@ namespace omniruntime::reader {
         if (runRead == runLength) {
             // extract the number of fixed bits
             unsigned char fbo = (firstByte >> 1) & 0x1f;
-            uint32_t bitSize = ::orc::decodeBitWidth(fbo);
+            uint32_t bitSize = ::::orc::decodeBitWidth(fbo);
 
             // extract the run length
             runLength = static_cast<uint64_t>(firstByte & 0x01) << 8;
@@ -345,7 +345,7 @@ namespace omniruntime::reader {
 
             // extract patch width
             uint32_t pwo = thirdByte & 0x1f;
-            uint32_t patchBitSize = ::orc::decodeBitWidth(pwo);
+            uint32_t patchBitSize = ::::orc::decodeBitWidth(pwo);
 
             // read fourth byte and extract patch gap width
             uint64_t fourthByte = readByte();
@@ -356,7 +356,7 @@ namespace omniruntime::reader {
             // extract the length of the patch list
             size_t pl = fourthByte & 0x1f;
             if (pl == 0) {
-                throw ::orc::ParseError("Corrupt PATCHED_BASE encoded data (pl==0)!");
+                throw ::::orc::ParseError("Corrupt PATCHED_BASE encoded data (pl==0)!");
             }
 
             // read the next base width number of bytes to extract base value
@@ -377,10 +377,10 @@ namespace omniruntime::reader {
             // TODO: Skip corrupt?
             //    if ((patchBitSize + pgw) > 64 && !skipCorrupt) {
             if ((patchBitSize + pgw) > 64) {
-                throw ::orc::ParseError("Corrupt PATCHED_BASE encoded data "
+                throw ::::orc::ParseError("Corrupt PATCHED_BASE encoded data "
                                  "(patchBitSize + pgw > 64)!");
             }
-            uint32_t cfb = ::orc::getClosestFixedBits(patchBitSize + pgw);
+            uint32_t cfb = ::::orc::getClosestFixedBits(patchBitSize + pgw);
             readLongs(unpackedPatch.data(), 0, pl, cfb);
             // any remaining bits are thrown out
             resetReadLongs();
@@ -429,7 +429,7 @@ namespace omniruntime::reader {
             unsigned char fbo = (firstByte >> 1) &0x1f;
             uint32_t bitSize;
             if (fbo != 0) {
-                bitSize = ::orc::decodeBitWidth(fbo);
+                bitSize = ::::orc::decodeBitWidth(fbo);
             } else {
                 bitSize = 0;
             }
@@ -464,7 +464,7 @@ namespace omniruntime::reader {
                 if (runLength < 2) {
                     std::stringstream ss;
                     ss << "Illegal run length for delta encoding: " << runLength;
-                    throw ::orc::ParseError(ss.str());
+                    throw ::::orc::ParseError(ss.str());
                 }
                 // write the unpacked values, add it to previous value and store final
                 // value to result buffer. if the delta base value is negative then it

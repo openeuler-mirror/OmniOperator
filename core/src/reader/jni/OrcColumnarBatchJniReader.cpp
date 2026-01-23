@@ -28,7 +28,6 @@
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
 using namespace std;
-using namespace orc;
 
 static constexpr int32_t MAX_DECIMAL64_DIGITS = 18;
 uint64_t batchLen = 0;
@@ -44,36 +43,36 @@ bool StringToBool(const std::string &boolStr)
     }
 }
 
-int GetLiteral(orc::Literal &lit, int leafType, const std::string &value)
+int GetLiteral(::orc::Literal &lit, int leafType, const std::string &value)
 {
-    switch ((orc::PredicateDataType)leafType) {
-        case orc::PredicateDataType::LONG: {
-            lit = orc::Literal(static_cast<int64_t>(std::stol(value)));
+    switch ((::orc::PredicateDataType)leafType) {
+        case ::orc::PredicateDataType::LONG: {
+            lit = ::orc::Literal(static_cast<int64_t>(std::stol(value)));
             break;
         }
-        case orc::PredicateDataType::FLOAT: {
-            lit = orc::Literal(static_cast<double>(std::stod(value)));
+        case ::orc::PredicateDataType::FLOAT: {
+            lit = ::orc::Literal(static_cast<double>(std::stod(value)));
             break;
         }
-        case orc::PredicateDataType::STRING: {
-            lit = orc::Literal(value.c_str(), value.size());
+        case ::orc::PredicateDataType::STRING: {
+            lit = ::orc::Literal(value.c_str(), value.size());
             break;
         }
-        case orc::PredicateDataType::DATE: {
-            lit = orc::Literal(PredicateDataType::DATE, static_cast<int64_t>(std::stol(value)));
+        case ::orc::PredicateDataType::DATE: {
+            lit = ::orc::Literal(PredicateDataType::DATE, static_cast<int64_t>(std::stol(value)));
             break;
         }
-        case orc::PredicateDataType::TIMESTAMP: {
+        case ::orc::PredicateDataType::TIMESTAMP: {
             vector<std::string> valList;
             istringstream timestampStr(value);
             string tmpStr;
             while (timestampStr >> tmpStr) {
                 valList.push_back(tmpStr);
             }
-            lit = orc::Literal(std::stoll(valList[0]), std::stoi(valList[1]));
+            lit = ::orc::Literal(std::stoll(valList[0]), std::stoi(valList[1]));
             break;
         }
-        case orc::PredicateDataType::DECIMAL: {
+        case ::orc::PredicateDataType::DECIMAL: {
             vector<std::string> valList;
             // Decimal(22, 6) eg: value ("19999999999998,998000 22 6")
             istringstream tmpAllStr(value);
@@ -82,12 +81,12 @@ int GetLiteral(orc::Literal &lit, int leafType, const std::string &value)
                 valList.push_back(tmpStr);
             }
             Decimal decimalVal(valList[0]);
-            lit = orc::Literal(decimalVal.value, static_cast<int32_t>(std::stoi(valList[1])),
+            lit = ::orc::Literal(decimalVal.value, static_cast<int32_t>(std::stoi(valList[1])),
                 static_cast<int32_t>(std::stoi(valList[2])));
             break;
         }
-        case orc::PredicateDataType::BOOLEAN: {
-            lit = orc::Literal(static_cast<bool>(StringToBool(value)));
+        case ::orc::PredicateDataType::BOOLEAN: {
+            lit = ::orc::Literal(static_cast<bool>(StringToBool(value)));
             break;
         }
         default: {
@@ -245,7 +244,7 @@ void ParseJson(nlohmann::json &jsonConfig,
     std::list<std::string>& includedColumnsList,
     std::shared_ptr<common::JulianGregorianRebase>& julianPtr,
     std::shared_ptr<common::PredicateCondition>& predicate,
-    std::unique_ptr<::orc::SearchArgument>& searchArgument)
+    std::unique_ptr<::::orc::SearchArgument>& searchArgument)
 {
     if (jsonConfig.contains("expressionTree") && jsonConfig.contains("leaves")) {
         const auto& exprTree = jsonConfig["expressionTree"];

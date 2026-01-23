@@ -52,14 +52,14 @@ protected:
         auto readerOpts = std::make_shared<omniruntime::reader::ReaderOptions>();
         readerOpts->ParseEnhanceJson("{}");
 
-        auto orcReaderOptions = std::make_shared<::orc::ReaderOptions>();
-        orc::MemoryPool *pool = orc::getDefaultPool();
+        auto orcReaderOptions = std::make_shared<::::orc::ReaderOptions>();
+        ::orc::MemoryPool *pool = ::orc::getDefaultPool();
         orcReaderOptions->setMemoryPool(*pool);
         orcReaderOptions->setTailLocation(std::numeric_limits<uint64_t>::max());
         const std::string SerializedFileTail = "";
         orcReaderOptions->setSerializedFileTail(SerializedFileTail);
         readerOpts->SetOrcReaderOptions(std::move(orcReaderOptions));
-        readerOpts->SetOrcRowReaderOptions(std::make_shared<::orc::RowReaderOptions>());
+        readerOpts->SetOrcRowReaderOptions(std::make_shared<::::orc::RowReaderOptions>());
 
         std::string filename = "/../resources/orc_data_all_type";
         filename = PROJECT_PATH + filename;
@@ -103,83 +103,83 @@ protected:
 
 TEST_F(ScanTest, test_literal_get_long)
 {
-    orc::Literal tmpLit(0L);
+    ::orc::Literal tmpLit(0L);
 
     // test get long
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::LONG), "655361");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::LONG), "655361");
     ASSERT_EQ(tmpLit.getLong(), 655361);
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::LONG), "-655361");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::LONG), "-655361");
     ASSERT_EQ(tmpLit.getLong(), -655361);
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::LONG), "0");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::LONG), "0");
     ASSERT_EQ(tmpLit.getLong(), 0);
 }
 
 TEST_F(ScanTest, test_literal_get_float)
 {
-    orc::Literal tmpLit(0L);
+    ::orc::Literal tmpLit(0L);
 
     // test get float
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::FLOAT), "12345.6789");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::FLOAT), "12345.6789");
     ASSERT_EQ(tmpLit.getFloat(), 12345.6789);
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::FLOAT), "-12345.6789");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::FLOAT), "-12345.6789");
     ASSERT_EQ(tmpLit.getFloat(), -12345.6789);
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::FLOAT), "0");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::FLOAT), "0");
     ASSERT_EQ(tmpLit.getFloat(), 0);
 }
 
 TEST_F(ScanTest, test_literal_get_string)
 {
-    orc::Literal tmpLit(0L);
+    ::orc::Literal tmpLit(0L);
 
     // test get string
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::STRING), "testStringForLit");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::STRING), "testStringForLit");
     ASSERT_EQ(tmpLit.getString(), "testStringForLit");
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::STRING), "");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::STRING), "");
     ASSERT_EQ(tmpLit.getString(), "");
 }
 
 TEST_F(ScanTest, test_literal_get_date)
 {
-    orc::Literal tmpLit(0L);
+    ::orc::Literal tmpLit(0L);
 
     // test get date
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::DATE), "987654321");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::DATE), "987654321");
     ASSERT_EQ(tmpLit.getDate(), 987654321);
 }
 
 TEST_F(ScanTest, test_literal_get_decimal)
 {
-    orc::Literal tmpLit(0L);
+    ::orc::Literal tmpLit(0L);
 
     // test get decimal
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::DECIMAL), "199999999999998.998000 22 6");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::DECIMAL), "199999999999998.998000 22 6");
     ASSERT_EQ(tmpLit.getDecimal().toString(), "199999999999998.998000");
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::DECIMAL), "10.998000 10 6");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::DECIMAL), "10.998000 10 6");
     ASSERT_EQ(tmpLit.getDecimal().toString(), "10.998000");
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::DECIMAL), "-10.998000 10 6");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::DECIMAL), "-10.998000 10 6");
     ASSERT_EQ(tmpLit.getDecimal().toString(), "-10.998000");
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::DECIMAL), "9999.999999 10 6");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::DECIMAL), "9999.999999 10 6");
     ASSERT_EQ(tmpLit.getDecimal().toString(), "9999.999999");
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::DECIMAL), "-0.000000 10 6");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::DECIMAL), "-0.000000 10 6");
     ASSERT_EQ(tmpLit.getDecimal().toString(), "0.000000");
 }
 
 TEST_F(ScanTest, test_literal_get_bool)
 {
-    orc::Literal tmpLit(0L);
+    ::orc::Literal tmpLit(0L);
 
     // test get bool
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::BOOLEAN), "true");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::BOOLEAN), "true");
     ASSERT_EQ(tmpLit.getBool(), true);
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::BOOLEAN), "True");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::BOOLEAN), "True");
     ASSERT_EQ(tmpLit.getBool(), true);
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::BOOLEAN), "false");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::BOOLEAN), "false");
     ASSERT_EQ(tmpLit.getBool(), false);
-    GetLiteral(tmpLit, (int)(orc::PredicateDataType::BOOLEAN), "False");
+    GetLiteral(tmpLit, (int)(::orc::PredicateDataType::BOOLEAN), "False");
     ASSERT_EQ(tmpLit.getBool(), false);
     std::string tmpStr = "";
     try {
-        GetLiteral(tmpLit, (int)(orc::PredicateDataType::BOOLEAN), "exception");
+        GetLiteral(tmpLit, (int)(::orc::PredicateDataType::BOOLEAN), "exception");
     } catch (std::exception &e) {
         tmpStr = e.what();
     }
@@ -250,33 +250,33 @@ TEST_F(ScanTest, test_correctness_shortVec)
 
 TEST_F(ScanTest, test_build_leafs)
 {
-    std::vector<orc::Literal> litList;
+    std::vector<::orc::Literal> litList;
     std::string leafNameString;
-    std::unique_ptr<orc::SearchArgumentBuilder> builder = orc::SearchArgumentFactory::newBuilder();
+    std::unique_ptr<::orc::SearchArgumentBuilder> builder = ::orc::SearchArgumentFactory::newBuilder();
     (*builder).startAnd();
-    orc::Literal lit(100L);
+    ::orc::Literal lit(100L);
 
     // test EQUALS
-    BuildLeaves(PredicateOperatorType::EQUALS, litList, lit, "leaf-0", orc::PredicateDataType::LONG, *builder);
+    BuildLeaves(PredicateOperatorType::EQUALS, litList, lit, "leaf-0", ::orc::PredicateDataType::LONG, *builder);
 
     // test LESS_THAN
-    BuildLeaves(PredicateOperatorType::LESS_THAN, litList, lit, "leaf-1", orc::PredicateDataType::LONG, *builder);
+    BuildLeaves(PredicateOperatorType::LESS_THAN, litList, lit, "leaf-1", ::orc::PredicateDataType::LONG, *builder);
 
     // test LESS_THAN_EQUALS
-    BuildLeaves(PredicateOperatorType::LESS_THAN_EQUALS, litList, lit, "leaf-1", orc::PredicateDataType::LONG,
+    BuildLeaves(PredicateOperatorType::LESS_THAN_EQUALS, litList, lit, "leaf-1", ::orc::PredicateDataType::LONG,
         *builder);
 
     // test NULL_SAFE_EQUALS
-    BuildLeaves(PredicateOperatorType::NULL_SAFE_EQUALS, litList, lit, "leaf-1", orc::PredicateDataType::LONG,
+    BuildLeaves(PredicateOperatorType::NULL_SAFE_EQUALS, litList, lit, "leaf-1", ::orc::PredicateDataType::LONG,
         *builder);
 
     // test IS_NULL
-    BuildLeaves(PredicateOperatorType::IS_NULL, litList, lit, "leaf-1", orc::PredicateDataType::LONG, *builder);
+    BuildLeaves(PredicateOperatorType::IS_NULL, litList, lit, "leaf-1", ::orc::PredicateDataType::LONG, *builder);
 
     // test BETWEEN
     std::string tmpStr = "";
     try {
-        BuildLeaves(PredicateOperatorType::BETWEEN, litList, lit, "leaf-1", orc::PredicateDataType::LONG, *builder);
+        BuildLeaves(PredicateOperatorType::BETWEEN, litList, lit, "leaf-1", ::orc::PredicateDataType::LONG, *builder);
     } catch (std::exception &e) {
         tmpStr = e.what();
     }

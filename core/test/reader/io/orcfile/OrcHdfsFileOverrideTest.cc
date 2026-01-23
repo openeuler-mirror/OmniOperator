@@ -25,16 +25,16 @@ TEST(OrcReader, createLocalFileReader) {
     std::string filename = "/../../resources/orc_data_all_type";
     filename =  PROJECT_PATH + filename;
 
-    std::unique_ptr<orc::Reader> reader;
-    std::unique_ptr<orc::RowReader> rowReader;
-    std::unique_ptr<orc::ColumnVectorBatch> batch;
-    orc::ReaderOptions readerOpts;
-    orc::RowReaderOptions rowReaderOpts;
+    std::unique_ptr<::orc::Reader> reader;
+    std::unique_ptr<::orc::RowReader> rowReader;
+    std::unique_ptr<::orc::ColumnVectorBatch> batch;
+    ::orc::ReaderOptions readerOpts;
+    ::orc::RowReaderOptions rowReaderOpts;
     std::list<uint64_t> cols;
 
     cols.push_back(1);
     rowReaderOpts.include(cols);
     UriInfo uriInfo("file", filename, "", "");
-    reader = orc::createReader(omniruntime::reader::readFileOverride(uriInfo), readerOpts);
+    reader = ::orc::createReader(omniruntime::reader::readFileOverride(uriInfo), readerOpts);
     EXPECT_NE(nullptr, reader);
 }
