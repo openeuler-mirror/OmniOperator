@@ -16,7 +16,7 @@ namespace omniruntime {
 namespace op {
 class WindowIndex {
 public:
-    WindowIndex(omniruntime::op::PagesIndex *pagesIndex, int32_t start, int32_t size);
+    WindowIndex(omniruntime::op::PagesIndex *pagesIndex, int32_t start, int32_t end);
     ~WindowIndex();
 
     omniruntime::op::PagesIndex *GetPagesIndex() const
