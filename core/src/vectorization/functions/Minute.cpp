@@ -10,7 +10,10 @@
 #include "type/date32.h"
 #include "type/Timestamp.h"
 #include "vector/vector_helper.h"
+#include "util/bit_util.h"
 #include <ctime>
+#include <cstring>
+#include "libboundscheck/include/securec.h"
 
 namespace omniruntime::vectorization {
 using namespace omniruntime::vec;
@@ -49,25 +52,27 @@ public:
             const auto *inputRaw = unsafe::UnsafeVector::GetRawValues(inputVector);
             const auto *inputNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(inputArg));
             
+            // Copy NULL bits from input to result (so NULL rows are already set to NULL)
+            auto *resultNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
+            auto nullsSize = BitUtil::Nbytes(size);
+            memcpy_s(resultNulls, nullsSize, inputNulls, nullsSize);
+            
+            // Process only non-NULL rows using SelectivityVector
             SelectivityVector rows(size);
             rows.setFromBitsNegate(inputNulls, size);
             
             rows.applyToSelected([&](vector_size_t i) {
-                if (!inputArg->IsNull(i)) {
-                    // Convert timestamp (microseconds) to seconds
-                    int64_t microseconds = inputRaw[i];
-                    int64_t seconds = microseconds / 1000000;
-                    
-                    // Extract minute using Timestamp::epochToCalendarUtc (static method)
-                    std::tm tmValue;
-                    if (Timestamp::epochToCalendarUtc(seconds, tmValue)) {
-                        resultRaw[i] = static_cast<int32_t>(tmValue.tm_min);
-                        result->SetNotNull(i);
-                    } else {
-                        // If conversion fails, set to null
-                        result->SetNull(i);
-                    }
+                // Convert timestamp (microseconds) to seconds
+                int64_t microseconds = inputRaw[i];
+                int64_t seconds = microseconds / 1000000;
+                
+                // Extract minute using Timestamp::epochToCalendarUtc (static method)
+                std::tm tmValue;
+                if (Timestamp::epochToCalendarUtc(seconds, tmValue)) {
+                    resultRaw[i] = static_cast<int32_t>(tmValue.tm_min);
+                    result->SetNotNull(i);
                 } else {
+                    // If conversion fails, set to null
                     result->SetNull(i);
                 }
             });
@@ -75,16 +80,18 @@ public:
             // For DATE32, minute is always 0 (date has no time component)
             const auto *inputNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(inputArg));
             
+            // Copy NULL bits from input to result (so NULL rows are already set to NULL)
+            auto *resultNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
+            auto nullsSize = BitUtil::Nbytes(size);
+            memcpy_s(resultNulls, nullsSize, inputNulls, nullsSize);
+            
+            // Process only non-NULL rows using SelectivityVector
             SelectivityVector rows(size);
             rows.setFromBitsNegate(inputNulls, size);
             
             rows.applyToSelected([&](vector_size_t i) {
-                if (!inputArg->IsNull(i)) {
-                    resultRaw[i] = 0;
-                    result->SetNotNull(i);
-                } else {
-                    result->SetNull(i);
-                }
+                resultRaw[i] = 0;
+                result->SetNotNull(i);
             });
         }
     }
