@@ -40,7 +40,7 @@ public:
         auto *resultRaw = unsafe::UnsafeVector::GetRawValues(resultVector);
         
         // Get input type
-        const auto inputTypeId = inputArg->GetType()->GetTypeId();
+        const auto inputTypeId = inputArg->GetTypeId();
         
         if (inputTypeId == OMNI_TIMESTAMP) {
             // Extract minute from timestamp
@@ -49,8 +49,7 @@ public:
             const auto *inputNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(inputArg));
             
             SelectivityVector rows(size);
-            rows.setFromBits(inputNulls, size);
-            rows.flip();
+            rows.setFromBitsNegate(inputNulls, size);
             
             rows.applyToSelected([&](vector_size_t i) {
                 if (!inputArg->IsNull(i)) {
@@ -62,30 +61,28 @@ public:
                     std::tm tmValue;
                     if (Timestamp::epochToCalendarUtc(seconds, tmValue)) {
                         resultRaw[i] = static_cast<int32_t>(tmValue.tm_min);
-                        result->SetNull(i, false);
+                        result->SetNotNull(i);
                     } else {
                         // If conversion fails, set to null
-                        result->SetNull(i, true);
+                        result->SetNull(i);
                     }
                 } else {
-                    result->SetNull(i, true);
+                    result->SetNull(i);
                 }
             });
         } else if (inputTypeId == OMNI_DATE32) {
             // For DATE32, minute is always 0 (date has no time component)
-            auto *inputVector = reinterpret_cast<Vector<int32_t> *>(inputArg);
             const auto *inputNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(inputArg));
             
             SelectivityVector rows(size);
-            rows.setFromBits(inputNulls, size);
-            rows.flip();
+            rows.setFromBitsNegate(inputNulls, size);
             
             rows.applyToSelected([&](vector_size_t i) {
                 if (!inputArg->IsNull(i)) {
                     resultRaw[i] = 0;
-                    result->SetNull(i, false);
+                    result->SetNotNull(i);
                 } else {
-                    result->SetNull(i, true);
+                    result->SetNull(i);
                 }
             });
         }
