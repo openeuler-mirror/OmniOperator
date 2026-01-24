@@ -34,7 +34,6 @@ import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
-import nova.hetu.omniruntime.vector.VarBinaryVec;
 import nova.hetu.omniruntime.vector.ArrayVec;
 import nova.hetu.omniruntime.vector.StructVec;
 import nova.hetu.omniruntime.vector.Vec;
