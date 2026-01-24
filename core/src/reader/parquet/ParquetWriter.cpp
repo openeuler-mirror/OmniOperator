@@ -33,7 +33,6 @@
 #include "reader/arrowadapter/FileSystemAdapter.h"
 #include "reader/common/UriInfo.h"
 #include "reader/common/Directories.h"
-#include "reader/jni/jni_common.h"
 #include "parquet/arrow/reader.h"
 #include "parquet/exception.h"
 #include "parquet/properties.h"

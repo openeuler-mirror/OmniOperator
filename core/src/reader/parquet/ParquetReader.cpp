@@ -18,7 +18,6 @@
  */
 
 #include <unordered_map>
-#include "reader/jni/jni_common.h"
 #include "ParquetReader.h"
 #include "reader/common/UriInfo.h"
 #include "reader/arrowadapter/FileSystemAdapter.h"

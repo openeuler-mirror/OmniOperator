@@ -17,6 +17,22 @@
 using omniruntime::codegen::FileFormat;
 
 namespace omniruntime::reader {
+
+enum class Operator {
+    OR,
+    AND,
+    NOT,
+    LEAF,
+    CONSTANT
+};
+
+enum class PredicateOperatorType {
+    EQUALS = 0,
+    NULL_SAFE_EQUALS,
+    LESS_THAN,
+    LESS_THAN_EQUALS, IN, BETWEEN, IS_NULL
+};
+
 class ReaderOptions {
 public:
     virtual ~ReaderOptions() = default;

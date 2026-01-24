@@ -6,19 +6,7 @@
 #include <string>
 #include <vector>
 #include <list>
-#include <type/data_type.h>
-#include "memory/memory_pool.h"
-#include "vector/vector.h"
-#include "vector/vector_common.h"
-#include "vector/vector_helper.h"
-#include "codegen/Options.h"
-#include "orc/RowReader/Reader.hh"
-#include "orc/MemoryPool.hh"
 #include "orc/Adaptor.hh"
-#include "orc/StripeStream.hh"
-#include "orc/Reader.hh"
-#include "reader/common/JulianGregorianRebase.h"
-#include "reader/common/PredicateUtil.h"
 #include "ReaderOptions.h"
 #include "type/data_type.h"
 #include <iostream>
@@ -27,9 +15,7 @@
 #include <iomanip>
 #include <stdexcept>
 
-using omniruntime::codegen::FileFormat;
 using omniruntime::reader::ReaderOptions;
-using ::orc::FileContents;
 
 
 namespace omniruntime::reader {

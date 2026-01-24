@@ -18,7 +18,6 @@
  */
 
 #include "JulianGregorianRebase.h"
-#include "reader/jni/jni_common.h"
 #include <stdexcept>
 #include <sstream>
 #include <algorithm>

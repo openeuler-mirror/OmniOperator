@@ -19,7 +19,6 @@
 
 #include <parquet/exception.h>
 #include "TimeRebaseInfo.h"
-#include "reader/jni/jni_common.h"
 
 namespace common {
     int64_t TimeRebaseInfo::timestampRebaseFunc(int64_t micros)

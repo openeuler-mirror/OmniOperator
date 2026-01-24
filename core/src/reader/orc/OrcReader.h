@@ -10,6 +10,8 @@
 #include "reader/ReaderFactory.h"
 #include "orc/RowReader/Reader.hh"
 #include "codegen/Options.h"
+#include "reader/common/PredicateUtil.h"
+#include "orc/StripeStream.hh"
 
 using ::orc::InputStream;
 using ::orc::FileContents;
@@ -73,4 +75,4 @@ private:
 };
 
 }
-#endif // OMNIOPERATORJIT_ORCREADER_H
+#endif

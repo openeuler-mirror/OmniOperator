@@ -9,9 +9,9 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "HiveDataSource.h"
 #include "HiveConnector.h"
 #include "HiveConfig.h"
-#include "HiveDataSource.h"
 
 #include <memory>
 #include <random>

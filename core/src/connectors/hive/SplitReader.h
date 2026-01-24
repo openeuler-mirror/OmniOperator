@@ -21,7 +21,6 @@
 #include "memory/memory_pool.h"
 #include <type/data_type.h>
 #include "reader/Reader.h"
-#include "reader/jni/OrcColumnarBatchJniReader.h"
 #include <iostream>
 #include <chrono>
 #include <sstream>

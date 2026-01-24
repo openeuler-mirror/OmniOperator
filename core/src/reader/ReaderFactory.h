@@ -5,6 +5,7 @@
 #include "Reader.h"
 #include "ReaderOptions.h"
 #include "BufferInput.h"
+#include "codegen/Options.h"
 
 using omniruntime::codegen::FileFormat;
 

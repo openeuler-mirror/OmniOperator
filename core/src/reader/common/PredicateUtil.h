@@ -21,7 +21,6 @@
 #define PREDICATEUTIL_H
 
 #include "PredicateCondition.h"
-#include "reader/jni/jni_common.h"
 #include <set>
 #include "../common/TimeRebaseInfo.h"
 

@@ -31,9 +31,8 @@ target_include_directories(${READER_TARGET} PUBLIC $ENV{JAVA_HOME}/include/linux
 target_link_libraries(${READER_TARGET} PUBLIC ${JAVA_JVM_LIBRARY})
 
 # from command 'llvm-config-15 --cxxflags --ldflags --libs'
-target_include_directories(${READER_TARGET} PUBLIC /usr/lib/llvm-15/include)
 target_compile_options(${READER_TARGET} PRIVATE -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
-target_link_libraries(${READER_TARGET} PRIVATE LLVM-15 boundscheck)
+target_link_libraries(${READER_TARGET} PRIVATE boundscheck)
 target_link_libraries(${READER_TARGET} PUBLIC
         Arrow::arrow_shared
         ArrowDataset::arrow_dataset_shared
@@ -52,4 +51,3 @@ file(GLOB READER_FILE_HEAD_FILES  ${SOURCE_ROOT}/src/filesystem/*.h)
 install(FILES ${READER_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader)
 install(FILES ${READER_ORC_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/orc)
 install(FILES ${READER_FILE_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/filesystem)
-

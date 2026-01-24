@@ -29,6 +29,7 @@
 #include "reader/Reader.h"
 #include "reader/common/TimeRebaseInfo.h"
 #include <set>
+#include "reader/common/PredicateUtil.h"
 
 using namespace arrow::internal;
 

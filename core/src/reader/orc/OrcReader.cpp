@@ -1,7 +1,5 @@
 #include "OrcReader.h"
-#include "reader/Reader.h"
 #include "OmniColReader.hh"
-#include "reader/jni/OrcColumnarBatchJniReader.h"
 
 namespace omniruntime::reader {
 

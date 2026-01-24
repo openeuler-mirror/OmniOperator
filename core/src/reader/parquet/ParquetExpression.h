@@ -24,7 +24,6 @@
 #include <sstream>
 #include <cstdio>
 #include <nlohmann/json.hpp>
-#include "reader/jni/jni_common.h"
 #include "arrow/compute/exec/expression.h"
 
 using namespace arrow::compute;

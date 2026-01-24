@@ -21,7 +21,6 @@
 #include <orc/sargs/SearchArgument.hh>
 #include "scan_test.h"
 #include <vector/vector_common.h>
-#include "reader/jni/OrcColumnarBatchJniReader.h"
 #include "reader/Reader.h"
 #include "reader/ReaderFactory.h"
 #include "reader/common/UriInfo.h"
