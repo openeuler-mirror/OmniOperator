@@ -65,7 +65,8 @@ BaseVector *SliceImpl::applySliceTyped(const SelectivityVector &rows, BaseVector
 {
     auto arrayVector = dynamic_cast<ArrayVector *>(arrayArg);
     if (arrayVector == nullptr) {
-        OMNI_THROW("Slice error:", "First argument must be an array");
+        OMNI_THROW("Slice error:", "First argument to slice must be ARRAY, but got type id: {}",
+            arrayArg ? arrayArg->GetTypeId() : -1);
     }
 
     auto rowSize = arrayVector->GetSize();
@@ -100,13 +101,15 @@ BaseVector *SliceImpl::applySliceTyped(const SelectivityVector &rows, BaseVector
     if (auto startConst = dynamic_cast<ConstVector<I> *>(startArg)) {
         startValue = startConst->GetConstValue();
     } else {
-        OMNI_THROW("Slice error:", "Start argument must be constant");
+        OMNI_THROW("Slice error:", "Start argument must be constant, but got type id: {}",
+            startArg ? startArg->GetTypeId() : -1);
     }
 
     if (auto lengthConst = dynamic_cast<ConstVector<I> *>(lengthArg)) {
         lengthValue = lengthConst->GetConstValue();
     } else {
-        OMNI_THROW("Slice error:", "Length argument must be constant");
+        OMNI_THROW("Slice error:", "Length argument must be constant, but got type id: {}",
+            lengthArg ? lengthArg->GetTypeId() : -1);
     }
 
     // Validate length
