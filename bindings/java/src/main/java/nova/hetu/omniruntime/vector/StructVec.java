@@ -51,7 +51,7 @@ public class StructVec extends ComplexVec {
 
     private StructVec(StructVec vector, int offset, int length) {
         super(vector, offset, length, getComplexCapacityNative(vector.getNativeVector(), OMNI_ENCODING_STRUCT.ordinal()));
-        children = new Vec[type.getFieldTypes().length];
+        children = new Vec[((StructDataType) getType()).getFieldTypes().length];
         initChildren((StructDataType) getType());
     }
 
