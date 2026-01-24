@@ -5,7 +5,9 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <vector>
 #include <orc/Reader.hh>
+#include <orc/sargs/SearchArgument.hh>
 #include "reader/common/UriInfo.h"
 #include "reader/common/JulianGregorianRebase.h"
 #include "reader/common/PredicateCondition.h"
@@ -241,5 +243,11 @@ public:
     }
 
 };
+
+// Helper functions for ORC predicate building
+int GetLiteral(::orc::Literal &lit, int leafType, const std::string &value);
+int BuildLeaves(PredicateOperatorType leafOp, std::vector<::orc::Literal> &litList, ::orc::Literal &lit, 
+                const std::string &leafNameString, ::orc::PredicateDataType leafType, ::orc::SearchArgumentBuilder &builder);
+
 } // namespace omniruntime::reader
 #endif //READEROPTIONS_H_H

@@ -25,6 +25,11 @@
 #include "reader/ReaderFactory.h"
 #include "reader/common/UriInfo.h"
 #include "reader/orc/OrcFileOverride.hh"
+#include "reader/ReaderOptions.h"
+
+using omniruntime::reader::GetLiteral;
+using omniruntime::reader::BuildLeaves;
+using omniruntime::reader::PredicateOperatorType;
 
 /* 
  * CREATE TABLE `orc_test` ( `c1` int, `c2` varChar(60), `c3` string, `c4` bigint,
