@@ -17,40 +17,45 @@ using namespace omniruntime::op;
 void SliceImpl::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
     ExecutionContext *context) const
 {
-    std::vector<BaseVector *> inputs;
-    inputs.push_back(args.top());  // length
+    // Extract arguments from stack: length, start, array
+    auto* lengthArg = args.top(); 
     args.pop();
-    inputs.push_back(args.top());  // start
+    auto* startArg = args.top(); 
     args.pop();
-    inputs.push_back(args.top());  // array
+    auto* arrayArg = args.top(); 
     args.pop();
 
-    auto size = inputs[2]->GetSize();
-    auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(inputs[2]));
+    auto size = arrayArg->GetSize();
+    auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(arrayArg));
     auto rows = SelectivityVector(size);
     rows.setFromBitsNegate(nullBits, size);
 
     // Check if start and length arguments are the same type
-    if (inputs[1]->GetTypeId() != inputs[0]->GetTypeId()) {
+    if (startArg->GetTypeId() != lengthArg->GetTypeId()) {
         OMNI_THROW("Slice error:", "Start and length arguments must have the same type");
     }
 
-    switch (inputs[1]->GetTypeId()) {
+    switch (startArg->GetTypeId()) {
         case OMNI_INT:
-            result = applySliceTyped<int32_t>(rows, inputs[2], inputs[1], inputs[0], context);
+            result = applySliceTyped<int32_t>(rows, arrayArg, startArg, lengthArg, context);
             break;
         case OMNI_LONG:
-            result = applySliceTyped<int64_t>(rows, inputs[2], inputs[1], inputs[0], context);
+            result = applySliceTyped<int64_t>(rows, arrayArg, startArg, lengthArg, context);
             break;
         default:
             OMNI_THROW("Slice error:", "Unsupported type for start/length arguments: {}", 
-                std::to_string(inputs[1]->GetTypeId()));
+                std::to_string(startArg->GetTypeId()));
     }
 
-    for (auto input : inputs) {
-        if (input != nullptr) {
-            delete input;
-        }
+    // Clean up arguments
+    if (lengthArg != nullptr) {
+        delete lengthArg;
+    }
+    if (startArg != nullptr) {
+        delete startArg;
+    }
+    if (arrayArg != nullptr) {
+        delete arrayArg;
     }
 }
 
