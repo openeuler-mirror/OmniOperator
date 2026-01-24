@@ -21,7 +21,9 @@ import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.ShortDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.VarBinaryDataType;
 import nova.hetu.omniruntime.type.ArrayDataType;
+import nova.hetu.omniruntime.type.StructDataType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.BooleanVec;
 import nova.hetu.omniruntime.vector.ContainerVec;
@@ -32,7 +34,9 @@ import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.VarBinaryVec;
 import nova.hetu.omniruntime.vector.ArrayVec;
+import nova.hetu.omniruntime.vector.StructVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecUtil;
@@ -713,6 +717,86 @@ public class VecBatchSerializerTest {
         assertEquals(rowSize, checkResultVec.getSize());
         assertEquals(elementVec.getSize(), deElementVec.getSize());
         assertEquals(new String(elementVec.get(2)), new String(deElementVec.get(2)));
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
+    }
+
+    @Test
+    public void testSerializeStructVec() {
+        DataType[] fieldTypes = new DataType[]{new VarcharDataType(16)};
+
+        int size = 10;
+        StructDataType structDataType = new StructDataType(fieldTypes);
+        StructVec structVec = new StructVec(structDataType, size);
+        VarcharVec originalVec = (VarcharVec) (structVec.getChild(0));
+        String tmpStr = "testvarchar";
+        for (int i = 0; i < size; i++) {
+            String str = tmpStr.substring(0, i) + i;
+            originalVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+
+        VecBatch vecBatch = new VecBatch(new Vec[]{structVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        StructVec checkResultVec = (StructVec) checkVecBatch.getVector(0);
+        VarcharVec checkOriginalVec = (VarcharVec) (checkResultVec.getChild(0));
+        assertEquals(checkOriginalVec.getRealValueBufCapacityInBytes(), 55);
+        assertEquals(checkOriginalVec.getSize(), 10);
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
+    }
+
+    @Test
+    public void testSerializeStructVecWithNull() {
+        DataType[] fieldTypes = new DataType[]{new VarcharDataType(16)};
+
+        // 10 row
+        // index: 0,null,2,null,4,null,6,null,8,null
+        int size = 10;
+        StructDataType structDataType = new StructDataType(fieldTypes);
+        StructVec structVec = new StructVec(structDataType, size);
+        VarcharVec originalVec = new VarcharVec(10);
+        String tmpStr = "testvarchar";
+        for (int i = 0; i < size; i++) {
+            if (i % 2 == 0) {
+                String str = tmpStr.substring(0, i) + i;
+                originalVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+            } else {
+                originalVec.setNull(i);
+                structVec.setNull(i);
+            }
+        }
+        structVec.setChild(0, originalVec);
+
+        VecBatch vecBatch = new VecBatch(new Vec[]{structVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        StructVec checkResultVec = (StructVec) checkVecBatch.getVector(0);
+        VarcharVec checkOriginalVec = (VarcharVec) (checkResultVec.getChild(0));
+        for (int i = 0; i < checkOriginalVec.getSize(); i++) {
+            byte[] actualValue = checkOriginalVec.get(i);
+            byte[] expectedValue = originalVec.get(i);
+            assertEquals(actualValue, expectedValue);
+            if (i % 2 != 0) {
+                assertTrue(checkResultVec.isNull(i));
+            }
+        }
 
         freeVecBatch(vecBatch);
         freeVecBatch(checkVecBatch);

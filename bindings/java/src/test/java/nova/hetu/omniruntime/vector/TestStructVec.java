@@ -36,7 +36,7 @@ public class TestStructVec {
         fieldTypes[2] = new StructDataType(new DataType[]{new VarcharDataType(16), new MapDataType(new VarcharDataType(16), new VarcharDataType(16)), new IntDataType()});
 
         StructDataType structDataType = new StructDataType(fieldTypes);
-        StructVec vec = new StructVec(structDataType, 256);
+        StructVec vec = new StructVec(structDataType, 256, true);
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getType(), StructDataType.STRUCT);
         vec.close();
@@ -97,7 +97,7 @@ public class TestStructVec {
         // index: 0,null,2,null,4,null,6,null,8,null
         int size = 10;
         StructDataType structDataType = new StructDataType(fieldTypes);
-        StructVec structVec = new StructVec(structDataType, size, true);
+        StructVec structVec = new StructVec(structDataType, size);
         VarcharVec originalVec = new VarcharVec(10);
         String tmpStr = "testvarchar";
         for (int i = 0; i < size; i++) {
@@ -109,7 +109,7 @@ public class TestStructVec {
                 structVec.setNull(i);
             }
         }
-        structVec.append(originalVec);
+        structVec.setChild(0, originalVec);
 
         int offset = 4;
         StructVec sliceStructVec1 = structVec.slice(offset, 4);

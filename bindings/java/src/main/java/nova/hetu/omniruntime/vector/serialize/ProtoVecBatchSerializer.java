@@ -13,7 +13,9 @@ import nova.hetu.omniruntime.type.Date32DataType;
 import nova.hetu.omniruntime.type.Date64DataType;
 import nova.hetu.omniruntime.type.DecimalDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.VarBinaryDataType;
 import nova.hetu.omniruntime.type.ArrayDataType;
+import nova.hetu.omniruntime.type.StructDataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.BooleanVec;
@@ -31,6 +33,7 @@ import nova.hetu.omniruntime.vector.ByteVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.FloatVec;
 import nova.hetu.omniruntime.vector.ArrayVec;
+import nova.hetu.omniruntime.vector.StructVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecEncoding;
@@ -100,6 +103,16 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 protoVecBuilder.addSubVectors(elementProtoVec);
                 break;
             }
+            case OMNI_ENCODING_STRUCT: {
+                StructVec structVec = (StructVec) vec;
+                for (int i = 0; i < structVec.getChildren().length; i++) {
+                    Vec childVec = structVec.getChild(i);
+                    VecBatchSerde.Vec childProtoVec = buildProtoVec(childVec, null);
+                    protoVecBuilder.addSubVectors(childProtoVec);
+                    protoDataTypeExtBuild.addChildren(childProtoVec.getTypeExt());
+                }
+                break;
+            }
             default:
                 throw new IllegalStateException("Unexpected encoding: " + encoding);
         }
@@ -161,6 +174,9 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 break;
             case OMNI_CHAR:
                 protoDataTypeExtBuild.setWidth(((CharDataType) dataType).getWidth());
+                break;
+            case OMNI_VARBINARY:
+                protoDataTypeExtBuild.setWidth(((VarBinaryDataType) dataType).getWidth());
                 break;
             case OMNI_INTERVAL_DAY_TIME:
                 protoDataTypeExtBuild.setDateUnit(VecBatchSerde.DataTypeExt.DateUnit.DAY);
@@ -294,6 +310,24 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 arrayVec.setNullsBuf(protoVec.getNulls().toByteArray());
                 arrayVec.setOffsetsBuf(protoVec.getOffsets().toByteArray());
                 return arrayVec;
+            case OMNI_ENCODING_STRUCT:
+                int fieldCount = protoVec.getSubVectorsCount();
+                Vec[] fieldVectors = new Vec[fieldCount];
+                DataType[] fieldTypes = new DataType[fieldCount];
+
+                for (int i = 0; i < fieldCount; i++) {
+                    fieldVectors[i] = buildVec(protoVec.getSubVectors(i));
+                    fieldTypes[i] = fieldVectors[i].getType();
+                }
+
+                StructDataType structDataType = new StructDataType(fieldTypes);
+                StructVec structVec = new StructVec(structDataType, vecSize);
+
+                for (int i = 0; i < fieldCount; i++) {
+                    structVec.setChild(i, fieldVectors[i]);
+                }
+                structVec.setNullsBuf(protoVec.getNulls().toByteArray());
+                return structVec;
             default:
                 throw new IllegalStateException("Unexpected encoding: " + vecEncoding);
         }
@@ -328,6 +362,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             case OMNI_DOUBLE:
                 vec = new DoubleVec(vecSize);
                 break;
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 VarcharVec varcharVec = new VarcharVec(protoVec.getValues().size(), vecSize);

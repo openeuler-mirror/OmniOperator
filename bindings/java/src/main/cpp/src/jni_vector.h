@@ -228,11 +228,11 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexV
 
 /*
 * Class:     nova_hetu_omniruntime_vector_StructVec
-* Method:    addVecNative
+* Method:    setChildNative
 * Signature: (JIJ)V
 */
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_addVecNative
-        (JNIEnv *env, jclass jcls, jlong rowVecAddr, jint index, jlong addedVecAddr);
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_setChildNative
+        (JNIEnv *env, jclass jcls, jlong rowVecAddr, jint index, jlong vecAddr);
 
 /*
 * Class:     nova_hetu_omniruntime_vector_MapVec
@@ -266,8 +266,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newEmptyCom
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_StructVec_getChildAddrNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector, jint index);
 
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_appendVecNative
-    (JNIEnv *env, jclass jcls, jlong jNativeVector, jlong appendedVecAddr);
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_addChildNative
+    (JNIEnv *env, jclass jcls, jlong jNativeVector, jlong addedVecAddr);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_ComplexVec

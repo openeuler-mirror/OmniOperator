@@ -1604,6 +1604,7 @@ void ALWAYS_INLINE LookupJoinOperator::PopulateProbeHashes()
             case omniruntime::type::OMNI_DECIMAL128:
                 CalculateColDec128Hashes(hashCol, rowCount, hashes, curProbeNulls);
                 break;
+            case omniruntime::type::OMNI_VARBINARY:
             case omniruntime::type::OMNI_VARCHAR:
             case omniruntime::type::OMNI_CHAR:
                 CalculateColVarcharHashes(hashCol, rowCount, hashes, curProbeNulls);
@@ -1901,6 +1902,60 @@ static NO_INLINE BaseVector *ConstructBuildArrayColumn(
     return ret;
 }
 
+template <bool isInnerJoin>
+static NO_INLINE BaseVector *ConstructBuildStructColumn(
+    const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp, uint32_t outputCol, int32_t numRows, RowType* structType)
+{
+    auto *ret = new RowVector(numRows);
+
+    const auto& childrenTypes = structType->Children();
+    size_t childrenSize = structType->Size();
+
+    for(size_t childIdx = 0; childIdx < childrenSize; ++childIdx) {
+        auto childType = childrenTypes[childIdx].get();
+        // create an empty vector for each child type
+        BaseVector *childVector = vec::VectorHelper::CreateComplexVector(childType, numRows);
+        ret->AddChild(childVector);
+    }
+
+    for (int32_t i = 0; i < numRows; i++) {
+        BaseVector ***array = std::get<1>(buildTemp[i]);
+        if constexpr (!isInnerJoin) {
+            if (array == nullptr) {
+                ret->SetNull(i);
+                for (size_t childIdx = 0; childIdx < childrenSize; ++childIdx) {
+                    ret->ChildAt(childIdx)->SetNull(i);
+                }
+                continue;
+            }
+        }
+        auto vecBatchIndex = std::get<2>(buildTemp[i]);
+        auto buildRowIdx = std::get<3>(buildTemp[i]);
+        auto buildVector = array[outputCol][vecBatchIndex];
+        if (buildVector->IsNull(buildRowIdx)) {
+            ret->SetNull(i);
+            for (size_t childIdx = 0; childIdx < childrenSize; ++childIdx) {
+                ret->ChildAt(childIdx)->SetNull(i);
+            }
+            continue;
+        }
+        auto srcVector = buildVector->Slice(buildRowIdx, 1, false);
+        RowVector *srcStructVector = dynamic_cast<RowVector *>(srcVector);
+        for(size_t childIdx = 0; childIdx < childrenSize; ++childIdx) {
+            // extract the childVector at index 'childIdx' from the 'srcStructVector' of the current row
+            // append it to the 'childVector' at index 'childIdx' of 'ret'
+            BaseVector *srcChildVector = srcStructVector->ChildAt(childIdx).get();
+            if (srcChildVector == nullptr) {
+                ret->ChildAt(childIdx)->SetNull(i);
+            } else {
+                BaseVector *destChildVector = ret->ChildAt(childIdx).get();
+                VectorHelper::AppendVector(destChildVector, i, srcChildVector, srcChildVector->GetSize());
+            }
+        }
+    }
+    return ret;
+}
+
 void NO_INLINE LookupJoinOutputBuilder::ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeOutputColumns,
     int32_t rowCount)
 {
@@ -1946,6 +2001,7 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
             case OMNI_DATE32:
                 buildColumn = ConstructBuildColumn<int32_t, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount, OMNI_LANES(int32_t));
                 break;
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 buildColumn = ConstructBuildVarcharColumn<isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
@@ -1974,6 +2030,11 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
                 std::shared_ptr<DataType> elementType = arrayType->ElementType();
                 buildColumn = ConstructBuildArrayColumn<isInnerJoin>(buildTemp, outputCol, rowCount, elementType);
                 break;
+            }
+            case OMNI_ROW: {
+                DataTypePtr dataType = buildOutputTypes.GetType(j);
+                auto structType = dynamic_cast<RowType*>(dataType.get());
+                buildColumn = ConstructBuildStructColumn<isInnerJoin>(buildTemp, outputCol, rowCount, structType);
             }
             default:
                 break;

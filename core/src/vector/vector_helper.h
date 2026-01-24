@@ -116,14 +116,14 @@ public:
             std::vector<std::shared_ptr<BaseVector>> children;
             auto mapType = static_cast<MapType*>(dataType);
             for (int i = 0; i < mapType->Size(); i++) {
-                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(mapType->Children()[i].get(), size)));
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(mapType->Children()[i].get(), 0)));
             }
             return new MapVector(size, children[0], children[1]);
         } else if (fieldType == OMNI_ARRAY) {
             std::vector<std::shared_ptr<BaseVector>> children;
             auto arrayType = static_cast<ArrayType*>(dataType);
             for (int i = 0; i < arrayType->Size(); i++) {
-                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(arrayType->ElementType().get(), size)));
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(arrayType->ElementType().get(), 0)));
             }
             return new ArrayVector(size, children[0]);
         } else {
@@ -240,6 +240,29 @@ public:
         }
     }
 
+    static void PrintStructVectorValue(BaseVector* vector, int32_t rowIndex) {
+        auto* structVec = dynamic_cast<RowVector*>(vector);
+        if (!structVec) {
+            std::cout << "[Invalid StructVector]";
+            return;
+        }
+        if (structVec->IsNull(rowIndex)) {
+            std::cout << "NULL\t";
+            return;
+        }
+
+        std::cout << "{";
+        int32_t childSize = structVec->ChildSize();
+        for (int32_t i = 0; i < childSize; i++) {
+            if (i > 0) {
+                std::cout << ", ";
+            }
+            auto childVec = structVec->ChildAt(i);
+            PrintVectorValue(childVec.get(), rowIndex);
+        }
+        std::cout << "}";
+    }
+
     static void PrintArrayVectorValue(BaseVector* vector, int32_t rowIndex) {
         auto* arrayVec = dynamic_cast<ArrayVector*>(vector);
         if (!arrayVec) {
@@ -254,7 +277,7 @@ public:
             return;
         }
         const auto elementType = elementVec->GetTypeId();
-        std::cout << " [ ";
+        std::cout << "[";
         for (int i = 0; i < size; i++) {
             if (i > 0)
                 std::cout << ", ";
@@ -282,7 +305,7 @@ public:
                     break;
             }
         }
-        std::cout << " ] ";
+        std::cout << "]";
     }
 
     template <type::DataTypeId typeId> static void PrintDictionaryVectorValue(BaseVector *vector, int32_t rowIndex)
@@ -346,6 +369,8 @@ public:
             }
         } else if (encoding == vec::OMNI_ENCODING_ARRAY) {
             PrintArrayVectorValue(vector, rowIndex);
+        } else if (encoding == vec::OMNI_ENCODING_STRUCT) {
+            PrintStructVectorValue(vector, rowIndex);
         } else {
             DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, vector->GetTypeId(), vector, rowIndex);
         }
@@ -380,6 +405,7 @@ public:
             case type::OMNI_BOOLEAN: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<bool> *>(vector));
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return CreateStringDictionary(values, valueSize,
@@ -913,6 +939,9 @@ public:
                 break;
             case type::OMNI_ARRAY:
                 reinterpret_cast<ArrayVector *>(destVector)->Append(srcVector, offset, length);
+                break;
+            case type::OMNI_ROW:
+                reinterpret_cast<RowVector *>(destVector)->Append(srcVector, offset, length);
                 break;
             default: {
                 std::string omniExceptionInfo =

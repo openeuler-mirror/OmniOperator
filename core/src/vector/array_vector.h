@@ -200,18 +200,17 @@ public:
         auto *otherArrayVector = static_cast<ArrayVector *>(other);
 
         if (length <= 0) {
-            return; // 表示没有数据需要追加
+            return;
         }
-        if (positionOffset < 0 || positionOffset != GetSize()) {
+        if (positionOffset < 0) {
             std::string message = "Invalid append position";
             throw OmniException("ARRAYVECTOR_APPEND_ERROR", message);
         }
 
-        int64_t oldSize = size;
-        int64_t newSize = size + length;
+        int64_t newSize = positionOffset + length;
         Expand(newSize);
 
-        int newIndex = oldSize;
+        int newIndex = positionOffset;
         for (int i = 0; i < length; i++) {
             if (otherArrayVector->IsNull(i)) {
                 SetNull(newIndex);

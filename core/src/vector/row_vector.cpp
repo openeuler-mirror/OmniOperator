@@ -1,0 +1,52 @@
+/*
+* Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Description: MapVector  implementation
+ */
+
+#include "row_vector.h"
+#include "vector_helper.h"
+
+namespace omniruntime::vec {
+
+    void RowVector::Append(BaseVector *other, int positionOffset, int length) {
+        if (UNLIKELY(other == nullptr || positionOffset < 0 || length <= 0)) {
+            std::string message = "Invalid input for RowVector::Append";
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+
+        auto *otherRowVector = static_cast<RowVector *>(other);
+        if (UNLIKELY(otherRowVector == nullptr)) {
+            std::string message = "RowVector::Append expects another RowVector";
+            throw OmniException("TYPE_MISMATCH_ERROR", message);
+        }
+        if (UNLIKELY(children_.size() != otherRowVector->ChildSize())) {
+            std::string message = "RowVector child count mismatch: " +
+                                  std::to_string(children_.size()) + " vs " +
+                                  std::to_string(otherRowVector->ChildSize());
+            throw OmniException("TYPE_MISMATCH_ERROR", message);
+        }
+
+        int64_t newSize = positionOffset + length;
+        Expand(newSize);
+
+        for (int i = 0; i < length; i++) {
+            int srcIndex = i;
+            int destIndex = positionOffset + i;
+            if (otherRowVector->IsNull(srcIndex)) {
+                SetNull(destIndex);
+            }
+        }
+
+        for (int i = 0 ; i < children_.size(); i++) {
+            BaseVector* child = children_[i].get();
+            BaseVector* otherChild = otherRowVector->ChildAt(i).get();
+            if (UNLIKELY(child->GetTypeId() != otherChild->GetTypeId())) {
+                std::string message = "RowVector child type mismatch at index " + std::to_string(i);
+                throw OmniException("TYPE_MISMATCH_ERROR", message);
+            }
+
+            child->Expand(newSize);
+            VectorHelper::AppendVector(child, positionOffset, otherChild, length);
+        }
+    }
+}

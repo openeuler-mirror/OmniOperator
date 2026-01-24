@@ -811,6 +811,129 @@ TEST(vector, append_array_with_null)
     delete srcArrayVec;
 }
 
+TEST(vector, append_struct)
+{
+    int rowSize = 11;
+
+    auto* dstKeys = new vec::Vector<double>(rowSize);
+    auto* dstValues = new vec::Vector<int32_t>(rowSize);
+    auto* srcKeys = new vec::Vector<double>(rowSize);
+    auto* srcValues = new vec::Vector<int32_t>(rowSize);
+
+    for (int i = 0; i < rowSize; i++) {
+    dstKeys->SetValue(i, 0.1 * i);
+    dstValues->SetValue(i, i);
+    srcKeys->SetValue(i, 0.2 * i);
+    srcValues->SetValue(i, i + 1);
+    }
+
+    auto* dstRowVec = new RowVector(rowSize);
+    auto* srcRowVec = new RowVector(rowSize);
+
+    dstRowVec->AddChild(dstKeys);
+    dstRowVec->AddChild(dstValues);
+    srcRowVec->AddChild(srcKeys);
+    srcRowVec->AddChild(srcValues);
+
+    dstRowVec->Append(srcRowVec, rowSize, 2);
+    EXPECT_EQ(dstRowVec->GetSize(), 13);
+    EXPECT_EQ(dstKeys->GetSize(), 13);
+    EXPECT_EQ(dstValues->GetSize(), 13);
+    EXPECT_EQ(dstKeys->GetValue(11), 0);
+    EXPECT_EQ(dstKeys->GetValue(12), 0.2);
+    EXPECT_EQ(dstValues->GetValue(11), 1);
+    EXPECT_EQ(dstValues->GetValue(12), 2);
+
+    delete dstRowVec;
+    delete srcRowVec;
+}
+
+TEST(vector, append_struct_empty)
+{
+    int rowSize = 11;
+
+    auto* dstKeys = new vec::Vector<double>(rowSize);
+    auto* dstValues = new vec::Vector<int32_t>(rowSize);
+    auto* srcKeys = new vec::Vector<double>(rowSize);
+    auto* srcValues = new vec::Vector<int32_t>(rowSize);
+
+    for (int i = 0; i < rowSize; i++) {
+    srcKeys->SetValue(i, 0.2 * i);
+    srcValues->SetValue(i, i + 1);
+    }
+
+    auto* dstRowVec = new RowVector(rowSize);
+    auto* srcRowVec = new RowVector(rowSize);
+
+    dstRowVec->AddChild(dstKeys);
+    dstRowVec->AddChild(dstValues);
+    srcRowVec->AddChild(srcKeys);
+    srcRowVec->AddChild(srcValues);
+
+    dstRowVec->Append(srcRowVec, 0, 11);
+    EXPECT_EQ(dstRowVec->GetSize(), 11);
+    EXPECT_EQ(dstKeys->GetSize(), 11);
+    EXPECT_EQ(dstValues->GetSize(), 11);
+    EXPECT_EQ(dstKeys->GetValue(0), 0);
+    EXPECT_EQ(dstKeys->GetValue(1), 0.2);
+    EXPECT_EQ(dstKeys->GetValue(2), 0.4);
+    EXPECT_EQ(dstKeys->GetValue(4), 0.8);
+    EXPECT_EQ(dstKeys->GetValue(5), 1.0);
+    EXPECT_EQ(dstKeys->GetValue(10),2.0);
+    EXPECT_EQ(dstValues->GetValue(0), 1);
+    EXPECT_EQ(dstValues->GetValue(10), 11);
+
+    delete dstRowVec;
+    delete srcRowVec;
+}
+
+TEST(vector, append_struct_with_null)
+{
+    int rowSize = 11;
+
+    auto* dstKeys = new vec::Vector<double>(rowSize);
+    auto* dstValues = new vec::Vector<int32_t>(rowSize);
+    auto* srcKeys = new vec::Vector<double>(rowSize);
+    auto* srcValues = new vec::Vector<int32_t>(rowSize);
+
+    for (int i = 0; i < rowSize; i++) {
+    dstKeys->SetValue(i, 0.1 * i);
+    dstValues->SetValue(i, i);
+
+    if (i == 1) {
+    srcKeys->SetNull(i);
+    srcValues->SetNull(i);
+    } else {
+    srcKeys->SetValue(i, 0.2 * i);
+    srcValues->SetValue(i, i + 1);
+    }
+    }
+
+    auto* dstRowVec = new RowVector(rowSize);
+    auto* srcRowVec = new RowVector(rowSize);
+
+    dstRowVec->AddChild(dstKeys);
+    dstRowVec->AddChild(dstValues);
+    srcRowVec->AddChild(srcKeys);
+    srcRowVec->AddChild(srcValues);
+    srcRowVec->SetNull(1);
+
+    dstRowVec->Append(srcRowVec, rowSize, 3);
+    EXPECT_EQ(dstRowVec->GetSize(), 14);
+    EXPECT_EQ(dstRowVec->IsNull(12), true);
+    EXPECT_EQ(dstKeys->GetSize(), 14);
+    EXPECT_EQ(dstValues->GetSize(), 14);
+    EXPECT_EQ(dstKeys->GetValue(11), 0);
+    EXPECT_EQ(dstKeys->IsNull(12), true);
+    EXPECT_EQ(dstKeys->GetValue(13), 0.4);
+    EXPECT_EQ(dstValues->GetValue(11), 1);
+    EXPECT_EQ(dstValues->IsNull(12), true);
+    EXPECT_EQ(dstValues->GetValue(13), 3);
+
+    delete dstRowVec;
+    delete srcRowVec;
+}
+
 TEST(vector, copy_positions_map)
 {
     int mapSize = 4;
@@ -870,21 +993,20 @@ TEST(vector, copy_positions_map)
 
 TEST(vector, copy_positions_row)
 {
-    int rowSize = 2;
-    int childSize = 11;
+    int rowSize = 11;
 
-    auto* keys = new vec::Vector<double>(childSize);
-    auto* values = new vec::Vector<int32_t>(childSize);
+    auto* keys = new vec::Vector<double>(rowSize);
+    auto* values = new vec::Vector<int32_t>(rowSize);
 
-    for (int i = 0; i < childSize; i++) {
+    for (int i = 0; i < rowSize; i++) {
         keys->SetValue(i, 0.1 * i);
         values->SetValue(i, i);
     }
 
     auto* rowVec = new RowVector(rowSize);
 
-    rowVec->Append(keys);
-    rowVec->Append(values);
+    rowVec->AddChild(keys);
+    rowVec->AddChild(values);
 
     auto child = rowVec->ChildAt(0);
 
