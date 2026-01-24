@@ -406,7 +406,6 @@ TEST(NativeOmniWindowOperatorTest, testPercentRank)
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -469,7 +468,6 @@ TEST(NativeOmniWindowOperatorTest, testPercentRankPartition)
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -1280,7 +1278,6 @@ TEST(NativeOmniWindowOperatorTest, testPercentRankWithAllDataTypes)
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
