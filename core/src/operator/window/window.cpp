@@ -183,6 +183,10 @@ OmniStatus WindowOperator::Init()
                 windowFunctions.push_back(std::move(make_unique<RankFunction>(std::move(windowFrame),
                     NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
                 break;
+            case OMNI_WINDOW_TYPE_PERCENT_RANK:
+                windowFunctions.push_back(std::move(make_unique<PercentRankFunction>(std::move(windowFrame),
+                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
+                break;
             // for aggregate function we use AggregateType
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_COUNT_COLUMN:

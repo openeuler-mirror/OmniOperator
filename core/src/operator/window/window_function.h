@@ -16,7 +16,7 @@ namespace omniruntime {
 namespace op {
 class WindowIndex {
 public:
-    WindowIndex(omniruntime::op::PagesIndex *pagesIndex, int32_t start, int32_t size);
+    WindowIndex(omniruntime::op::PagesIndex *pagesIndex, int32_t start, int32_t end);
     ~WindowIndex();
 
     omniruntime::op::PagesIndex *GetPagesIndex() const
@@ -109,6 +109,20 @@ public:
     ~RowNumberFunction() override = default;
     void RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPositionIndex) override;
+};
+
+class PercentRankFunction : public RankingWindowFunction {
+public:
+    PercentRankFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType);
+    ~PercentRankFunction() override;
+    void Reset() override;
+    void RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+        int32_t currentPositionIndex) override;
+
+private:
+    long rank;
+    long count;
+    int32_t numPartitionRows;
 };
 
 class AggregateWindowFunction : public WindowFunction {

@@ -346,6 +346,132 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
+TEST(NativeOmniWindowOperatorTest, testPercentRank)
+{
+    // construct the input data
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), FloatType() }));
+    int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
+    int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
+    double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int16_t data3[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
+    float data4[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4);
+
+    int32_t outputCols[5] = {1, 2, 0, 3, 4};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {false};
+    int32_t nullFirsts[1] = {false};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_PERCENT_RANK};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
+    int32_t partitionCols[0] = {};
+    int32_t preGroupedCols[0] = {};
+
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), FloatType(), DoubleType() }));
+    int32_t argumentChannels[0] = {};
+
+    // dealing data with the operator
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
+        5, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    // construct the output data
+    // percent_rank = (rank - 1) / (n - 1), where n = 6
+    // sorted by data1 descending: 8, 8, 5, 4, 2, 1
+    // ranks: 1, 1, 3, 4, 5, 6
+    // percent_ranks: 0.0, 0.0, 0.4, 0.6, 0.8, 1.0
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), DoubleType(), IntType(), ShortType(), FloatType(), DoubleType() }));
+    int64_t expectData1[DATA_SIZE] = {8, 8, 5, 4, 2, 1};
+    double expectData2[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
+    int32_t expectData3[DATA_SIZE] = {0, 0, 2, 1, 2, 1};
+    int16_t expectData4[DATA_SIZE] = {5, 2, 0, 1, 3, 4};
+    float expectData5[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
+    double expectData6[DATA_SIZE] = {0.0, 0.0, 0.4, 0.6, 0.8, 1.0};
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5, expectData6);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
+TEST(NativeOmniWindowOperatorTest, testPercentRankPartition)
+{
+    // construct the input data
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType() }));
+    int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
+    int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
+    double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int16_t data3[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3);
+
+    int32_t outputCols[4] = {0, 1, 2, 3};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {false};
+    int32_t nullFirsts[1] = {false};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_PERCENT_RANK};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), DoubleType() }));
+    int32_t argumentChannels[0] = {};
+
+    // dealing data with the operator
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
+        4, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    // construct the output data
+    // partition by data0: partition 0 has 2 rows, partition 1 has 2 rows, partition 2 has 2 rows
+    // For partition 0 (n=2): sorted by data1 descending: 8, 8 -> ranks: 1, 1 -> percent_ranks: 0.0, 0.0
+    // For partition 1 (n=2): sorted by data1 descending: 4, 1 -> ranks: 1, 2 -> percent_ranks: 0.0, 1.0
+    // For partition 2 (n=2): sorted by data1 descending: 5, 2 -> ranks: 1, 2 -> percent_ranks: 0.0, 1.0
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), DoubleType() }));
+    int32_t expectData0[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
+    int64_t expectData1[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
+    double expectData2[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
+    int16_t expectData3[DATA_SIZE] = {5, 2, 1, 4, 0, 3};
+    double expectData4[DATA_SIZE] = {0.0, 0.0, 0.0, 1.0, 0.0, 1.0};
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2, expectData3, expectData4);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
 {
     // construct the input data
@@ -986,6 +1112,163 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
     int64_t expectData19[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
     int64_t expectData20[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
     int64_t expectData21[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
+
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
+        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
+        expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18,
+        expectData19, expectData20, expectData21);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
+TEST(NativeOmniWindowOperatorTest, testPercentRankWithAllDataTypes)
+{
+    // construct the input data
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3), ShortType() }));
+    int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
+    int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
+    int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
+    int64_t data3[DATA_SIZE] = {1111, 1111, 2222, 2222, 3333, 3333};
+    int64_t data4[DATA_SIZE] = {11111, 11111, 22222, 22222, 33333, 33333};
+    double data5[DATA_SIZE] = {1.1, 1.1, 2.2, 2.2, 3.3, 3.3};
+    bool data6[DATA_SIZE] = {false, false, true, true, false, false};
+    std::string data7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
+    Decimal128 data8[DATA_SIZE] = {111111, 111111, 222222, 222222, 333333, 333333};
+    std::string data9[DATA_SIZE] = {"c1", "c1", "c2", "c2", "c3", "c3"};
+    int16_t data10[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
+
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6,
+        data7, data8, data9, data10);
+
+    const int32_t colCount = 11;
+    int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {false};
+    int32_t nullFirsts[1] = {false};
+    int32_t windowFunctionTypes[colCount] = {OMNI_WINDOW_TYPE_PERCENT_RANK, OMNI_WINDOW_TYPE_PERCENT_RANK,
+        OMNI_WINDOW_TYPE_PERCENT_RANK, OMNI_WINDOW_TYPE_PERCENT_RANK, OMNI_WINDOW_TYPE_PERCENT_RANK,
+        OMNI_WINDOW_TYPE_PERCENT_RANK, OMNI_WINDOW_TYPE_PERCENT_RANK, OMNI_WINDOW_TYPE_PERCENT_RANK,
+        OMNI_WINDOW_TYPE_PERCENT_RANK, OMNI_WINDOW_TYPE_PERCENT_RANK, OMNI_WINDOW_TYPE_PERCENT_RANK};
+    int32_t windowFrameTypes[colCount] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                      OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                      OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                      OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[colCount] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[colCount] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[colCount] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[colCount] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(),
+        Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI),
+        LongType(),
+        Decimal64Type(1, 1),
+        DoubleType(),
+        BooleanType(),
+        VarcharType(3),
+        Decimal128Type(2, 2),
+        CharType(3),
+        ShortType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType() }));
+    int32_t argumentChannels[0] = {};
+
+    // dealing data with the operator
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
+        colCount, windowFunctionTypes, colCount, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts,
+        1, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    // construct the output data
+    // partition by data0: each partition has 2 rows
+    // percent_rank = (rank - 1) / (n - 1), where n = 2
+    // For partition 1: ranks are 1, 1 -> percent_ranks: 0.0, 0.0
+    // For partition 2: ranks are 1, 1 -> percent_ranks: 0.0, 0.0
+    // For partition 3: ranks are 1, 1 -> percent_ranks: 0.0, 0.0
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(),
+        Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI),
+        LongType(),
+        Decimal64Type(1, 1),
+        DoubleType(),
+        BooleanType(),
+        VarcharType(3),
+        Decimal128Type(2, 2),
+        CharType(3),
+        ShortType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType(),
+        DoubleType() }));
+    int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
+    int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
+    int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
+    int64_t expectData3[DATA_SIZE] = {1111, 1111, 2222, 2222, 3333, 3333};
+    int64_t expectData4[DATA_SIZE] = {11111, 11111, 22222, 22222, 33333, 33333};
+    double expectData5[DATA_SIZE] = {1.1, 1.1, 2.2, 2.2, 3.3, 3.3};
+    bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
+    std::string expectData7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
+    Decimal128 expectData8[DATA_SIZE] = {111111, 111111, 222222, 222222, 333333, 333333};
+    std::string expectData9[DATA_SIZE] = {"c1", "c1", "c2", "c2", "c3", "c3"};
+    int16_t expectData10[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
+    double expectData11[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double expectData12[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double expectData13[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double expectData14[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double expectData15[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double expectData16[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double expectData17[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double expectData18[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double expectData19[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double expectData20[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double expectData21[DATA_SIZE] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,

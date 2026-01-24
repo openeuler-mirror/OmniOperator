@@ -81,6 +81,44 @@ void RowNumberFunction::RankingProcessRow(BaseVector *column, int32_t index, boo
     VectorHelper::SetValue(column, index, &value);
 }
 
+PercentRankFunction::PercentRankFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType,
+    DataTypePtr outputType)
+    : RankingWindowFunction(std::move(frame), std::move(inputType), std::move(outputType)), rank(0), count(1),
+      numPartitionRows(1)
+{}
+
+PercentRankFunction::~PercentRankFunction() = default;
+
+void PercentRankFunction::Reset()
+{
+    rank = 0;
+    count = 1;
+    if (windowIndex != nullptr) {
+        numPartitionRows = windowIndex->GetSize();
+    } else {
+        numPartitionRows = 1;
+    }
+}
+
+void PercentRankFunction::RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+    int32_t currentPositionIndex)
+{
+    if (newPeerGroup) {
+        rank += count;
+        count = 1;
+    } else {
+        count++;
+    }
+    
+    double percentRankValue;
+    if (numPartitionRows == 1) {
+        percentRankValue = 0.0;
+    } else {
+        percentRankValue = static_cast<double>(rank - 1) / static_cast<double>(numPartitionRows - 1);
+    }
+    VectorHelper::SetValue(column, index, &percentRankValue);
+}
+
 AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannel, int32_t aggregationType,
