@@ -1,12 +1,13 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
- * Description: Minute function implementation
+ * Description: Quarter function implementation
  */
 
-#include "Minute.h"
+#include "Quarter.h"
 #include "vector/vector.h"
 #include "../VectorFunction.h"
 #include "vectorization/SelectivityVector.h"
+#include "type/date32.h"
 #include "type/Timestamp.h"
 #include "vector/vector_helper.h"
 #include "util/bit_util.h"
@@ -19,7 +20,7 @@ using namespace omniruntime::vec;
 using namespace omniruntime::type;
 
 namespace {
-class MinuteFunction : public VectorFunction {
+class QuarterFunction : public VectorFunction {
 public:
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         op::ExecutionContext *context) const override
@@ -46,7 +47,7 @@ public:
         
         // TIMESTAMP is represented as OMNI_LONG (int64_t) at runtime
         if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
-            // Extract minute from timestamp
+            // Extract quarter from timestamp
             auto *inputVector = reinterpret_cast<Vector<int64_t> *>(inputArg);
             const auto *inputRaw = unsafe::UnsafeVector::GetRawValues(inputVector);
             const auto *inputNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(inputArg));
@@ -65,10 +66,42 @@ public:
                 int64_t microseconds = inputRaw[i];
                 int64_t seconds = microseconds / 1000000;
                 
-                // Extract minute using Timestamp::epochToCalendarUtc (static method)
+                // Extract quarter using Timestamp::epochToCalendarUtc (static method)
                 std::tm tmValue;
                 if (Timestamp::epochToCalendarUtc(seconds, tmValue)) {
-                    resultRaw[i] = static_cast<int32_t>(tmValue.tm_min);
+                    // tm_mon is 0-11, quarter is (tm_mon / 3) + 1, which gives 1-4
+                    resultRaw[i] = static_cast<int32_t>((tmValue.tm_mon / 3) + 1);
+                    result->SetNotNull(i);
+                } else {
+                    // If conversion fails, set to null
+                    result->SetNull(i);
+                }
+            });
+        } else if (inputTypeId == OMNI_DATE32) {
+            // Extract quarter from date
+            auto *inputVector = reinterpret_cast<Vector<int32_t> *>(inputArg);
+            const auto *inputRaw = unsafe::UnsafeVector::GetRawValues(inputVector);
+            const auto *inputNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(inputArg));
+            
+            // Copy NULL bits from input to result (so NULL rows are already set to NULL)
+            auto *resultNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
+            auto nullsSize = BitUtil::Nbytes(size);
+            memcpy_s(resultNulls, nullsSize, inputNulls, nullsSize);
+            
+            // Process only non-NULL rows using SelectivityVector
+            SelectivityVector rows(size);
+            rows.setFromBitsNegate(inputNulls, size);
+            
+            rows.applyToSelected([&](vector_size_t i) {
+                // Convert date (days since epoch) to seconds
+                int32_t daysSinceEpoch = inputRaw[i];
+                int64_t seconds = static_cast<int64_t>(daysSinceEpoch) * 86400LL;
+                
+                // Extract quarter using Timestamp::epochToCalendarUtc (static method)
+                std::tm tmValue;
+                if (Timestamp::epochToCalendarUtc(seconds, tmValue)) {
+                    // tm_mon is 0-11, quarter is (tm_mon / 3) + 1, which gives 1-4
+                    resultRaw[i] = static_cast<int32_t>((tmValue.tm_mon / 3) + 1);
                     result->SetNotNull(i);
                 } else {
                     // If conversion fails, set to null
@@ -80,10 +113,12 @@ public:
 };
 } // namespace
 
-void RegisterMinuteFunction(const std::string &name)
+void RegisterQuarterFunction(const std::string &name)
 {
-    // Minute takes TIMESTAMP and returns INT (minute of hour)
+    // Quarter takes TIMESTAMP or DATE32 and returns INT (quarter of year, 1-4)
     VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP}, OMNI_INT,
-        std::make_shared<MinuteFunction>());
+        std::make_shared<QuarterFunction>());
+    VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32}, OMNI_INT,
+        std::make_shared<QuarterFunction>());
 }
 }

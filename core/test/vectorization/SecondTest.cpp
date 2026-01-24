@@ -1,6 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
- * Description: Minute function unit tests
+ * Description: Second function unit tests
  */
 
 #include <gtest/gtest.h>
@@ -10,7 +10,7 @@
 
 #include "test/util/test_util.h"
 #include "vectorization/registration/Register.h"
-#include "vectorization/functions/Minute.h"
+#include "vectorization/functions/Second.h"
 #include "vectorization/VectorFunction.h"
 #include "codegen/func_signature.h"
 #include "vector/vector_helper.h"
@@ -26,16 +26,16 @@ using namespace omniruntime::codegen;
 using namespace omniruntime::TestUtil;
 
 // Initialize function registration before running tests
-class MinuteTestEnvironment : public ::testing::Environment {
+class SecondTestEnvironment : public ::testing::Environment {
 public:
     void SetUp() override {
         RegisterFunctions::RegisterAllFunctions("");
     }
 };
 
-::testing::Environment* const minute_test_env = ::testing::AddGlobalTestEnvironment(new MinuteTestEnvironment);
+::testing::Environment* const second_test_env = ::testing::AddGlobalTestEnvironment(new SecondTestEnvironment);
 
-class MinuteFunctionTestHelper {
+class SecondFunctionTestHelper {
 public:
     static void ValidateResult(BaseVector* result, const std::vector<int32_t>& expected, int rowSize) {
         auto* resultVec = dynamic_cast<Vector<int32_t>*>(result);
@@ -62,11 +62,11 @@ public:
         return vec;
     }
     
-    static void ExecuteMinute(BaseVector* inputVec, DataTypeId inputTypeId, BaseVector*& result) {
-        auto signature = std::make_shared<FunctionSignature>("minute", 
+    static void ExecuteSecond(BaseVector* inputVec, DataTypeId inputTypeId, BaseVector*& result) {
+        auto signature = std::make_shared<FunctionSignature>("second", 
             std::vector<DataTypeId>{inputTypeId}, OMNI_INT);
         auto function = VectorFunction::Find(signature);
-        ASSERT_NE(function, nullptr) << "Minute function not found for signature";
+        ASSERT_NE(function, nullptr) << "Second function not found for signature";
         
         auto outputType = std::make_shared<DataType>(OMNI_INT);
         ExecutionContext context;
@@ -75,7 +75,7 @@ public:
         args.push(inputVec);
         
         ASSERT_NO_THROW(function->Apply(args, outputType, result, &context))
-            << "Minute function threw an exception";
+            << "Second function threw an exception";
     }
     
     // Helper to convert timestamp components to microseconds since epoch
@@ -97,64 +97,64 @@ public:
     }
 };
 
-// Test: Minute from timestamp - basic cases
-TEST(MinuteTest, TimestampBasic) {
-    std::cout << "=== Test: Minute from TIMESTAMP - basic cases ===" << std::endl;
+// Test: Second from timestamp - basic cases
+TEST(SecondTest, TimestampBasic) {
+    std::cout << "=== Test: Second from TIMESTAMP - basic cases ===" << std::endl;
     
     // Create timestamps: 2024-01-01 12:30:45, 2024-01-01 15:45:20, 2024-01-01 00:00:00
     std::vector<int64_t> timestampValues = {
-        MinuteFunctionTestHelper::TimestampToMicros(2024, 1, 1, 12, 30, 45),
-        MinuteFunctionTestHelper::TimestampToMicros(2024, 1, 1, 15, 45, 20),
-        MinuteFunctionTestHelper::TimestampToMicros(2024, 1, 1, 0, 0, 0)
+        SecondFunctionTestHelper::TimestampToMicros(2024, 1, 1, 12, 30, 45),
+        SecondFunctionTestHelper::TimestampToMicros(2024, 1, 1, 15, 45, 20),
+        SecondFunctionTestHelper::TimestampToMicros(2024, 1, 1, 0, 0, 0)
     };
-    std::vector<int32_t> expected = {30, 45, 0};
+    std::vector<int32_t> expected = {45, 20, 0};
     
-    BaseVector* inputVec = MinuteFunctionTestHelper::CreateTimestampVector(timestampValues);
+    BaseVector* inputVec = SecondFunctionTestHelper::CreateTimestampVector(timestampValues);
     BaseVector* resultVec = nullptr;
-    MinuteFunctionTestHelper::ExecuteMinute(inputVec, OMNI_TIMESTAMP, resultVec);
-    MinuteFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
+    SecondFunctionTestHelper::ExecuteSecond(inputVec, OMNI_TIMESTAMP, resultVec);
+    SecondFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
     
     delete inputVec;
     delete resultVec;
 }
 
-// Test: Minute from timestamp - edge cases (59 minutes)
-TEST(MinuteTest, TimestampEdgeCases) {
-    std::cout << "=== Test: Minute from TIMESTAMP - edge cases ===" << std::endl;
+// Test: Second from timestamp - edge cases (59 seconds)
+TEST(SecondTest, TimestampEdgeCases) {
+    std::cout << "=== Test: Second from TIMESTAMP - edge cases ===" << std::endl;
     
-    // Create timestamps with 59 minutes
+    // Create timestamps with 59 seconds
     std::vector<int64_t> timestampValues = {
-        MinuteFunctionTestHelper::TimestampToMicros(2024, 1, 1, 10, 59, 0),
-        MinuteFunctionTestHelper::TimestampToMicros(2024, 1, 1, 23, 59, 59),
-        MinuteFunctionTestHelper::TimestampToMicros(2024, 1, 1, 0, 1, 0)
+        SecondFunctionTestHelper::TimestampToMicros(2024, 1, 1, 10, 30, 59),
+        SecondFunctionTestHelper::TimestampToMicros(2024, 1, 1, 23, 59, 59),
+        SecondFunctionTestHelper::TimestampToMicros(2024, 1, 1, 0, 0, 1)
     };
     std::vector<int32_t> expected = {59, 59, 1};
     
-    BaseVector* inputVec = MinuteFunctionTestHelper::CreateTimestampVector(timestampValues);
+    BaseVector* inputVec = SecondFunctionTestHelper::CreateTimestampVector(timestampValues);
     BaseVector* resultVec = nullptr;
-    MinuteFunctionTestHelper::ExecuteMinute(inputVec, OMNI_TIMESTAMP, resultVec);
-    MinuteFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
+    SecondFunctionTestHelper::ExecuteSecond(inputVec, OMNI_TIMESTAMP, resultVec);
+    SecondFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
     
     delete inputVec;
     delete resultVec;
 }
 
-// Test: Minute from timestamp with NULL values
-TEST(MinuteTest, TimestampWithNull) {
-    std::cout << "=== Test: Minute from TIMESTAMP with NULL values ===" << std::endl;
+// Test: Second from timestamp with NULL values
+TEST(SecondTest, TimestampWithNull) {
+    std::cout << "=== Test: Second from TIMESTAMP with NULL values ===" << std::endl;
     
     std::vector<int64_t> timestampValues = {
-        MinuteFunctionTestHelper::TimestampToMicros(2024, 1, 1, 12, 30, 45),
-        MinuteFunctionTestHelper::TimestampToMicros(2024, 1, 1, 15, 45, 20),
-        MinuteFunctionTestHelper::TimestampToMicros(2024, 1, 1, 0, 0, 0)
+        SecondFunctionTestHelper::TimestampToMicros(2024, 1, 1, 12, 30, 45),
+        SecondFunctionTestHelper::TimestampToMicros(2024, 1, 1, 15, 45, 20),
+        SecondFunctionTestHelper::TimestampToMicros(2024, 1, 1, 0, 0, 0)
     };
     
-    BaseVector* inputVec = MinuteFunctionTestHelper::CreateTimestampVector(timestampValues);
+    BaseVector* inputVec = SecondFunctionTestHelper::CreateTimestampVector(timestampValues);
     // Set middle value to NULL
     inputVec->SetNull(1);
     
     BaseVector* resultVec = nullptr;
-    MinuteFunctionTestHelper::ExecuteMinute(inputVec, OMNI_TIMESTAMP, resultVec);
+    SecondFunctionTestHelper::ExecuteSecond(inputVec, OMNI_TIMESTAMP, resultVec);
     
     // First and third should have values, second should be NULL
     EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
@@ -163,29 +163,29 @@ TEST(MinuteTest, TimestampWithNull) {
     
     // Validate non-null values
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
-    EXPECT_EQ(resultVecTyped->GetValue(0), 30) << "Row 0 minute should be 30";
-    EXPECT_EQ(resultVecTyped->GetValue(2), 0) << "Row 2 minute should be 0";
+    EXPECT_EQ(resultVecTyped->GetValue(0), 45) << "Row 0 second should be 45";
+    EXPECT_EQ(resultVecTyped->GetValue(2), 0) << "Row 2 second should be 0";
     
     delete inputVec;
     delete resultVec;
 }
 
-// Test: Minute from timestamp - all minutes (0-59)
-TEST(MinuteTest, TimestampAllMinutes) {
-    std::cout << "=== Test: Minute from TIMESTAMP - all minutes (0-59) ===" << std::endl;
+// Test: Second from timestamp - all seconds (0-59)
+TEST(SecondTest, TimestampAllSeconds) {
+    std::cout << "=== Test: Second from TIMESTAMP - all seconds (0-59) ===" << std::endl;
     
     std::vector<int64_t> timestampValues;
     std::vector<int32_t> expected;
     
-    for (int m = 0; m < 60; ++m) {
-        timestampValues.push_back(MinuteFunctionTestHelper::TimestampToMicros(2024, 1, 1, 12, m, 0));
-        expected.push_back(m);
+    for (int s = 0; s < 60; ++s) {
+        timestampValues.push_back(SecondFunctionTestHelper::TimestampToMicros(2024, 1, 1, 12, 30, s));
+        expected.push_back(s);
     }
     
-    BaseVector* inputVec = MinuteFunctionTestHelper::CreateTimestampVector(timestampValues);
+    BaseVector* inputVec = SecondFunctionTestHelper::CreateTimestampVector(timestampValues);
     BaseVector* resultVec = nullptr;
-    MinuteFunctionTestHelper::ExecuteMinute(inputVec, OMNI_TIMESTAMP, resultVec);
-    MinuteFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
+    SecondFunctionTestHelper::ExecuteSecond(inputVec, OMNI_TIMESTAMP, resultVec);
+    SecondFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
     
     delete inputVec;
     delete resultVec;

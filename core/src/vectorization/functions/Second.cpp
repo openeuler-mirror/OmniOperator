@@ -1,9 +1,9 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
- * Description: Minute function implementation
+ * Description: Second function implementation
  */
 
-#include "Minute.h"
+#include "Second.h"
 #include "vector/vector.h"
 #include "../VectorFunction.h"
 #include "vectorization/SelectivityVector.h"
@@ -19,7 +19,7 @@ using namespace omniruntime::vec;
 using namespace omniruntime::type;
 
 namespace {
-class MinuteFunction : public VectorFunction {
+class SecondFunction : public VectorFunction {
 public:
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         op::ExecutionContext *context) const override
@@ -46,7 +46,7 @@ public:
         
         // TIMESTAMP is represented as OMNI_LONG (int64_t) at runtime
         if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
-            // Extract minute from timestamp
+            // Extract second from timestamp
             auto *inputVector = reinterpret_cast<Vector<int64_t> *>(inputArg);
             const auto *inputRaw = unsafe::UnsafeVector::GetRawValues(inputVector);
             const auto *inputNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(inputArg));
@@ -65,10 +65,10 @@ public:
                 int64_t microseconds = inputRaw[i];
                 int64_t seconds = microseconds / 1000000;
                 
-                // Extract minute using Timestamp::epochToCalendarUtc (static method)
+                // Extract second using Timestamp::epochToCalendarUtc (static method)
                 std::tm tmValue;
                 if (Timestamp::epochToCalendarUtc(seconds, tmValue)) {
-                    resultRaw[i] = static_cast<int32_t>(tmValue.tm_min);
+                    resultRaw[i] = static_cast<int32_t>(tmValue.tm_sec);
                     result->SetNotNull(i);
                 } else {
                     // If conversion fails, set to null
@@ -80,10 +80,10 @@ public:
 };
 } // namespace
 
-void RegisterMinuteFunction(const std::string &name)
+void RegisterSecondFunction(const std::string &name)
 {
-    // Minute takes TIMESTAMP and returns INT (minute of hour)
+    // Second takes TIMESTAMP and returns INT (second of minute)
     VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP}, OMNI_INT,
-        std::make_shared<MinuteFunction>());
+        std::make_shared<SecondFunction>());
 }
 }
