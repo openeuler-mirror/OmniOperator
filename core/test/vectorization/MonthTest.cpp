@@ -15,7 +15,6 @@
 #include "codegen/func_signature.h"
 #include "vector/vector_helper.h"
 #include "vector/vector.h"
-#include "type/Timestamp.h"
 
 using namespace omniruntime;
 using namespace omniruntime::vec;
@@ -53,17 +52,17 @@ public:
         }
     }
     
-    static BaseVector* CreateTimestampVector(const std::vector<int64_t>& values) {
-        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_TIMESTAMP, values.size());
-        auto* typedVec = static_cast<Vector<int64_t>*>(vec);
+    static BaseVector* CreateDate32Vector(const std::vector<int32_t>& values) {
+        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_DATE32, values.size());
+        auto* typedVec = static_cast<Vector<int32_t>*>(vec);
         for (size_t i = 0; i < values.size(); ++i) {
             typedVec->SetValue(i, values[i]);
         }
         return vec;
     }
     
-    static BaseVector* CreateDate32Vector(const std::vector<int32_t>& values) {
-        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_DATE32, values.size());
+    static BaseVector* CreateIntVector(const std::vector<int32_t>& values) {
+        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_INT, values.size());
         auto* typedVec = static_cast<Vector<int32_t>*>(vec);
         for (size_t i = 0; i < values.size(); ++i) {
             typedVec->SetValue(i, values[i]);
@@ -87,24 +86,6 @@ public:
             << "Month function threw an exception";
     }
     
-    // Helper to convert timestamp components to microseconds since epoch
-    static int64_t TimestampToMicros(int year, int month, int day, int hour, int minute, int second) {
-        std::tm tm = {};
-        tm.tm_year = year - 1900;
-        tm.tm_mon = month - 1;
-        tm.tm_mday = day;
-        tm.tm_hour = hour;
-        tm.tm_min = minute;
-        tm.tm_sec = second;
-        tm.tm_isdst = -1;
-        
-        std::time_t time = std::mktime(&tm);
-        if (time == -1) {
-            return 0;
-        }
-        return static_cast<int64_t>(time) * 1000000;
-    }
-    
     // Helper to convert date components to days since epoch
     static int32_t DateToDays(int year, int month, int day) {
         std::tm tm = {};
@@ -124,27 +105,6 @@ public:
         return static_cast<int32_t>(time / 86400);
     }
 };
-
-// Test: Month from timestamp - basic cases
-TEST(MonthTest, TimestampBasic) {
-    std::cout << "=== Test: Month from TIMESTAMP - basic cases ===" << std::endl;
-    
-    // Create timestamps: 2024-01-15, 2024-06-20, 2024-12-31
-    std::vector<int64_t> timestampValues = {
-        MonthFunctionTestHelper::TimestampToMicros(2024, 1, 15, 12, 30, 45),
-        MonthFunctionTestHelper::TimestampToMicros(2024, 6, 20, 15, 45, 20),
-        MonthFunctionTestHelper::TimestampToMicros(2024, 12, 31, 0, 0, 0)
-    };
-    std::vector<int32_t> expected = {1, 6, 12};
-    
-    BaseVector* inputVec = MonthFunctionTestHelper::CreateTimestampVector(timestampValues);
-    BaseVector* resultVec = nullptr;
-    MonthFunctionTestHelper::ExecuteMonth(inputVec, OMNI_TIMESTAMP, resultVec);
-    MonthFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
-    
-    delete inputVec;
-    delete resultVec;
-}
 
 // Test: Month from DATE32 - basic cases
 TEST(MonthTest, Date32Basic) {
@@ -167,53 +127,22 @@ TEST(MonthTest, Date32Basic) {
     delete resultVec;
 }
 
-// Test: Month from timestamp - all months (1-12)
-TEST(MonthTest, TimestampAllMonths) {
-    std::cout << "=== Test: Month from TIMESTAMP - all months (1-12) ===" << std::endl;
+// Test: Month from INT - basic cases
+TEST(MonthTest, IntBasic) {
+    std::cout << "=== Test: Month from INT - basic cases ===" << std::endl;
     
-    std::vector<int64_t> timestampValues;
-    std::vector<int32_t> expected;
-    
-    for (int m = 1; m <= 12; ++m) {
-        timestampValues.push_back(MonthFunctionTestHelper::TimestampToMicros(2024, m, 15, 12, 30, 45));
-        expected.push_back(m);
-    }
-    
-    BaseVector* inputVec = MonthFunctionTestHelper::CreateTimestampVector(timestampValues);
-    BaseVector* resultVec = nullptr;
-    MonthFunctionTestHelper::ExecuteMonth(inputVec, OMNI_TIMESTAMP, resultVec);
-    MonthFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
-    
-    delete inputVec;
-    delete resultVec;
-}
-
-// Test: Month from timestamp with NULL values
-TEST(MonthTest, TimestampWithNull) {
-    std::cout << "=== Test: Month from TIMESTAMP with NULL values ===" << std::endl;
-    
-    std::vector<int64_t> timestampValues = {
-        MonthFunctionTestHelper::TimestampToMicros(2024, 1, 15, 12, 30, 45),
-        MonthFunctionTestHelper::TimestampToMicros(2024, 6, 20, 15, 45, 20),
-        MonthFunctionTestHelper::TimestampToMicros(2024, 12, 31, 0, 0, 0)
+    // Create dates as days since epoch: 2024-01-15, 2024-06-20, 2024-12-31
+    std::vector<int32_t> intValues = {
+        MonthFunctionTestHelper::DateToDays(2024, 1, 15),
+        MonthFunctionTestHelper::DateToDays(2024, 6, 20),
+        MonthFunctionTestHelper::DateToDays(2024, 12, 31)
     };
+    std::vector<int32_t> expected = {1, 6, 12};
     
-    BaseVector* inputVec = MonthFunctionTestHelper::CreateTimestampVector(timestampValues);
-    // Set middle value to NULL
-    inputVec->SetNull(1);
-    
+    BaseVector* inputVec = MonthFunctionTestHelper::CreateIntVector(intValues);
     BaseVector* resultVec = nullptr;
-    MonthFunctionTestHelper::ExecuteMonth(inputVec, OMNI_TIMESTAMP, resultVec);
-    
-    // First and third should have values, second should be NULL
-    EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
-    EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
-    EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
-    
-    // Validate non-null values
-    auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
-    EXPECT_EQ(resultVecTyped->GetValue(0), 1) << "Row 0 month should be 1";
-    EXPECT_EQ(resultVecTyped->GetValue(2), 12) << "Row 2 month should be 12";
+    MonthFunctionTestHelper::ExecuteMonth(inputVec, OMNI_INT, resultVec);
+    MonthFunctionTestHelper::ValidateResult(resultVec, expected, intValues.size());
     
     delete inputVec;
     delete resultVec;
@@ -235,6 +164,37 @@ TEST(MonthTest, Date32WithNull) {
     
     BaseVector* resultVec = nullptr;
     MonthFunctionTestHelper::ExecuteMonth(inputVec, OMNI_DATE32, resultVec);
+    
+    // First and third should have values, second should be NULL
+    EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
+    EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
+    EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
+    
+    // Validate non-null values
+    auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
+    EXPECT_EQ(resultVecTyped->GetValue(0), 1) << "Row 0 month should be 1";
+    EXPECT_EQ(resultVecTyped->GetValue(2), 12) << "Row 2 month should be 12";
+    
+    delete inputVec;
+    delete resultVec;
+}
+
+// Test: Month from INT with NULL values
+TEST(MonthTest, IntWithNull) {
+    std::cout << "=== Test: Month from INT with NULL values ===" << std::endl;
+    
+    std::vector<int32_t> intValues = {
+        MonthFunctionTestHelper::DateToDays(2024, 1, 15),
+        MonthFunctionTestHelper::DateToDays(2024, 6, 20),
+        MonthFunctionTestHelper::DateToDays(2024, 12, 31)
+    };
+    
+    BaseVector* inputVec = MonthFunctionTestHelper::CreateIntVector(intValues);
+    // Set middle value to NULL
+    inputVec->SetNull(1);
+    
+    BaseVector* resultVec = nullptr;
+    MonthFunctionTestHelper::ExecuteMonth(inputVec, OMNI_INT, resultVec);
     
     // First and third should have values, second should be NULL
     EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
