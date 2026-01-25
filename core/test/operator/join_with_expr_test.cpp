@@ -596,7 +596,7 @@ TEST(JoinWithExprTest, TestLeftJoinOnKeyWithoutExprWithStructVectorWithVarchar)
 
     std::vector<std::shared_ptr<omniruntime::type::DataType>> fieldTypes;
     fieldTypes.push_back(omniruntime::type::LongType());
-    fieldTypes.push_back(omniruntime::type::LongType());
+    fieldTypes.push_back(omniruntime::type::VarcharType(500));
     auto StructColType = std::make_shared<omniruntime::type::RowType>(fieldTypes);
 
     DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType(), StructColType }));
