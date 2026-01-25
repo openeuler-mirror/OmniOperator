@@ -1952,6 +1952,7 @@ static NO_INLINE BaseVector *ConstructBuildStructColumn(
                 VectorHelper::AppendVector(destChildVector, i, srcChildVector, srcChildVector->GetSize());
             }
         }
+        delete srcVector;
     }
     return ret;
 }
