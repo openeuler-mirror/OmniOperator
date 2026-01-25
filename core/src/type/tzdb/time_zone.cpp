@@ -434,9 +434,6 @@ __next_rule(date::sys_seconds __time, std::chrono::seconds __stdoff, std::chrono
             date::sys_seconds __t = __rule_to_sys_seconds(__stdoff, __save, *__it, __y);
             if (__t <= __time) continue;
 
-            if (__candidates.count(__t) > 0) {
-                throw std::runtime_error("duplicated rule");
-            }
             __candidates[__t] = __it;
             break;
         }

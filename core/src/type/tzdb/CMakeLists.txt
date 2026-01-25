@@ -1,0 +1,2 @@
+file(GLOB TZDB_HEAD_FILES ${SOURCE_ROOT}/src/type/tzdb/*.h)
+install(FILES ${TZDB_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/type/tzdb)
