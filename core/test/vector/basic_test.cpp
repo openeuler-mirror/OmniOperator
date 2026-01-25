@@ -1011,7 +1011,7 @@ TEST(vector, copy_positions_row)
     auto child = rowVec->ChildAt(0);
 
     EXPECT_EQ(rowVec->ChildSize(), 2);
-    EXPECT_ANY_THROW(rowVec->Slice(0, 10));
+    EXPECT_ANY_THROW(rowVec->Slice(0, 12));
 
     int positions[] = {0};
     auto* newRowVector = rowVec->CopyPositions((const int*)positions, 0, 1);
