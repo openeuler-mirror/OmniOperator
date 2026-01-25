@@ -96,7 +96,7 @@ public class StructVec extends ComplexVec {
     }
 
     public void addChild(Vec addedVec) {
-        addChildNative(this.nativeVector,addedVec.nativeVector);
+        addChildNative(this.nativeVector, addedVec.nativeVector);
     }
 
     protected static native void setChildNative(long nativeVector, int index, long vec);

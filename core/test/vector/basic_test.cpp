@@ -821,10 +821,10 @@ TEST(vector, append_struct)
     auto* srcValues = new vec::Vector<int32_t>(rowSize);
 
     for (int i = 0; i < rowSize; i++) {
-    dstKeys->SetValue(i, 0.1 * i);
-    dstValues->SetValue(i, i);
-    srcKeys->SetValue(i, 0.2 * i);
-    srcValues->SetValue(i, i + 1);
+        dstKeys->SetValue(i, 0.1 * i);
+        dstValues->SetValue(i, i);
+        srcKeys->SetValue(i, 0.2 * i);
+        srcValues->SetValue(i, i + 1);
     }
 
     auto* dstRowVec = new RowVector(rowSize);
@@ -858,8 +858,8 @@ TEST(vector, append_struct_empty)
     auto* srcValues = new vec::Vector<int32_t>(rowSize);
 
     for (int i = 0; i < rowSize; i++) {
-    srcKeys->SetValue(i, 0.2 * i);
-    srcValues->SetValue(i, i + 1);
+        srcKeys->SetValue(i, 0.2 * i);
+        srcValues->SetValue(i, i + 1);
     }
 
     auto* dstRowVec = new RowVector(rowSize);
@@ -897,16 +897,16 @@ TEST(vector, append_struct_with_null)
     auto* srcValues = new vec::Vector<int32_t>(rowSize);
 
     for (int i = 0; i < rowSize; i++) {
-    dstKeys->SetValue(i, 0.1 * i);
-    dstValues->SetValue(i, i);
+        dstKeys->SetValue(i, 0.1 * i);
+        dstValues->SetValue(i, i);
 
-    if (i == 1) {
-    srcKeys->SetNull(i);
-    srcValues->SetNull(i);
-    } else {
-    srcKeys->SetValue(i, 0.2 * i);
-    srcValues->SetValue(i, i + 1);
-    }
+        if (i == 1) {
+            srcKeys->SetNull(i);
+            srcValues->SetNull(i);
+        } else {
+            srcKeys->SetValue(i, 0.2 * i);
+            srcValues->SetValue(i, i + 1);
+        }
     }
 
     auto* dstRowVec = new RowVector(rowSize);

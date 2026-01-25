@@ -30,9 +30,8 @@ namespace omniruntime::vec {
         Expand(newSize);
 
         for (int i = 0; i < length; i++) {
-            int srcIndex = i;
             int destIndex = positionOffset + i;
-            if (otherRowVector->IsNull(srcIndex)) {
+            if (otherRowVector->IsNull(i)) {
                 SetNull(destIndex);
             }
         }

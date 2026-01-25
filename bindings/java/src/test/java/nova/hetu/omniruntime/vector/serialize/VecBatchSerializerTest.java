@@ -747,6 +747,11 @@ public class VecBatchSerializerTest {
         // check result
         StructVec checkResultVec = (StructVec) checkVecBatch.getVector(0);
         VarcharVec checkOriginalVec = (VarcharVec) (checkResultVec.getChild(0));
+        for (int i = 0; i < checkOriginalVec.getSize(); i++) {
+            byte[] actualValue = checkOriginalVec.get(i);
+            byte[] expectedValue = originalVec.get(i);
+            assertEquals(actualValue, expectedValue);
+        }
         assertEquals(checkOriginalVec.getRealValueBufCapacityInBytes(), 55);
         assertEquals(checkOriginalVec.getSize(), 10);
 

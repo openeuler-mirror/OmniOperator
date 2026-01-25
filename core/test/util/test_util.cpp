@@ -754,21 +754,17 @@ bool CompareStructUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const do
     auto expectedVec = dynamic_cast<RowVector *>(dstVec);
     if (!resultVec || !expectedVec) {
         throw omniruntime::exception::OmniException("RUNTIME_ERROR", "StructVector dynamic_cast failed!");
-        return false;
     }
     if (resultVec->vec::BaseVector::GetSize() != expectedVec->vec::BaseVector::GetSize()) {
         throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Vector size does not match!");
-        return false;
     }
     if (resultVec->ChildSize() != expectedVec->ChildSize()) {
         throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Children size does not match!");
-        return false;
     }
 
     for (int row = 0; row < resultVec->vec::BaseVector::GetSize(); row++) {
         if (resultVec->IsNull(row) != expectedVec->IsNull(row)) {
             throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Null status does not match!");
-            return false;
         }
     }
 
@@ -778,7 +774,6 @@ bool CompareStructUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const do
 
         if (resultChild->GetTypeId() != expectedChild->GetTypeId()) {
             throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Child type does not match!");
-            return false;
         }
 
         if (!ColumnMatchIgnoreOrder(resultChild, expectedChild, error)) {
@@ -793,11 +788,9 @@ bool CompareArrayUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const dou
     auto expectedVec = dynamic_cast<ArrayVector *>(dstVec);
     if (!resultVec || !expectedVec) {
         throw omniruntime::exception::OmniException("RUNTIME_ERROR", "ArrayVector dynamic_cast failed!");
-        return false;
     }
     if (resultVec->vec::BaseVector::GetSize() != expectedVec->vec::BaseVector::GetSize()) {
         throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Vector size does not match!");
-        return false;
     }
 
     for (int row = 0; row < resultVec->vec::BaseVector::GetSize(); row++) {
