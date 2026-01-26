@@ -3,7 +3,6 @@
  * Description: String Function Registry
  */
 #include "json_functions.h"
-using json = nlohmann::json;
 
 namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT const char *GetJsonObject(int64_t contextPtr, const char *jsonStr, int32_t jsonLen,
@@ -27,7 +26,7 @@ extern "C" DLLEXPORT const char *GetJsonObject(int64_t contextPtr, const char *j
         if (!resultOpt.has_value()) {
             return nullptr;
         }
-    } catch (const json::exception& e) {
+    } catch (const rapidjson::ParseErrorCode& e) {
         // WARN: Here return null if parsing failed, as the Spark does.
         // std::ostringstream errorMessage;
         // errorMessage << "ERROR ! nlohmann json exception id : " << e.id << " for " << e.what();

@@ -60,6 +60,29 @@ setup_build() {
   rm -rf  $OMNI_HOME/lib/libboostkit*.so $OMNI_HOME/*-binding
 }
 
+install_rapidjson() {
+  echo "Start build rapidjson"
+  local rapidjson_tag="v1.1.0"
+  local rapidjson_repo="https://gitee.com/Tencent/RapidJSON.git"
+  local rapidjson_source_dir="${workspace}/${open_source_dir}/rapidjson"
+  local rapidjson_default_home="/usr/local/"
+
+  # Check if RAPIDJSON_HOME exists, skip build if true
+  if [ -n "$RAPIDJSON_HOME" ] && [ -d "$RAPIDJSON_HOME" ]; then
+    echo "RAPIDJSON_HOME=$RAPIDJSON_HOME exists, skip rapidjson build process."
+  else
+    echo "Start to clone rapidjson-${rapidjson_tag} source code and build..."
+    rm -rf ${rapidjson_source_dir} && mkdir -p ${rapidjson_source_dir}
+    git clone --branch ${rapidjson_tag} --depth=1 ${rapidjson_repo} ${rapidjson_source_dir}
+    cd ${rapidjson_source_dir}
+    sudo cp -r include ${rapidjson_default_home}
+    echo "rapidjson-${rapidjson_tag} build and install completed successfully."
+    export RAPIDJSON_HOME=${rapidjson_default_home}
+    echo "Set RAPIDJSON_HOME=$RAPIDJSON_HOME automatically after rapidjson install."
+    cd ${workspace}
+  fi
+}
+
 # the current solution is to build from source manually
 # the future plan is to use conan to manage all the dependencies
 setup_dependencies() {
@@ -146,6 +169,8 @@ setup_dependencies() {
     echo "Set FOLLY_HOME=$FOLLY_HOME automatically after folly install."
     cd ${workspace}
   fi
+
+  install_rapidjson
 
   echo "Start build open source code for libboundscheck, json and gtest"
   cd ${workspace}/${open_source_dir}/libboundscheck
