@@ -36,6 +36,9 @@ vec::VectorBatch *CreateVectorBatch(const type::DataTypes &types, int32_t rowCou
 vec::VectorBatch *CreateArrayVectorBatch(const DataTypes &types, std::vector<int32_t> &offsets,
     int32_t dataSize, int32_t elementSize, ...);
 
+vec::VectorBatch *CreateMapVectorBatch(const DataTypes &types, std::vector<int32_t> &offsets,
+    int32_t dataSize, int32_t entrySize, ...);
+
 omniruntime::vec::BaseVector *CreateVector(type::DataType &dataType, int32_t rowCount, va_list &args);
 
 template <typename T> vec::BaseVector *CreateVector(int32_t length, T *values)
