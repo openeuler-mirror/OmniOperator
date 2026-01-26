@@ -222,7 +222,15 @@ VectorBatch *CreateArrayVectorBatch(const DataTypes &types, std::vector<int32_t>
     va_start(args, elementSize);
     for (int32_t i = 0; i < typesCount; i++) {
         auto &type = types.GetType(i);
-        auto elementVector = std::shared_ptr<BaseVector>(CreateVector(*type, elementSize, args));
+        // Extract element type from ArrayType if it's an ArrayType
+        DataType *elementType = &(*type);
+        if (type->GetId() == OMNI_ARRAY) {
+            auto arrayType = dynamic_cast<ArrayType *>(type.get());
+            if (arrayType != nullptr) {
+                elementType = arrayType->ElementType().get();
+            }
+        }
+        auto elementVector = std::shared_ptr<BaseVector>(CreateVector(*elementType, elementSize, args));
         auto *arrayVector = new ArrayVector(dataSize, elementVector);
         for (size_t j = 0; j < offsets.size(); j++) {
             arrayVector->SetOffset(j, offsets[j]);
