@@ -137,17 +137,19 @@ void ALWAYS_INLINE ArrayVectorSerializer(ArrayVector &arrayVector, int32_t rowId
 
 inline const char *DeserializeElementByType(type::DataTypeId elementTypeId, BaseVector *elementVector, int32_t rowIdx, const char *begin) {
     if (elementTypeId < 0 || elementTypeId >= vectorDeSerializerCenter.size()) {
-        throw OmniException("HashAgg DESERIALIZED FAILED : Invalid elementTypeId", std::to_string(elementTypeId));
+        throw OmniException("ArrayVector's ElementVec Deserializer failed : Invalid elementTypeId", std::to_string(elementTypeId));
     }
     auto deser = vectorDeSerializerCenter[elementTypeId];
     if (deser == nullptr) {
-        throw OmniException("HashAgg DESERIALIZED FAILED : Unsupport elementTypeId", std::to_string(elementTypeId));
+        throw OmniException("ArrayVector's ElementVec Deserializer failed : Unsupport elementTypeId", std::to_string(elementTypeId));
     }
     return deser(elementVector, rowIdx, begin);
 }
 
 const char *ArrayVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, const char * begin) {
     auto arrayVector = dynamic_cast<ArrayVector *>(baseVector);
+    arrayVector->Expand(rowIdx + 1);
+
     uint8_t sizeLenSize = *reinterpret_cast<const uint8_t *>(begin);
     begin += sizeof(uint8_t);
 
@@ -169,14 +171,10 @@ const char *ArrayVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, cons
         case BYTE_4:
             size = *reinterpret_cast<const int32_t *>(begin);
             break;
-        case BYTE_8:
-            size = *reinterpret_cast<const int64_t *>(begin);
-            break;
         default:
-            throw OmniException("HashAgg DESERIALIZED FAILED : ", "Invalid Array Size");
+            throw OmniException("ArrayVector Deserializer failed: ", "Invalid Array Size");
     }
     begin += sizeLenSize;
-    arrayVector->Expand(rowIdx + 1);
     arrayVector->SetNotNull(rowIdx);
     auto elementVecShared = arrayVector->GetElementVector();
     BaseVector *elementVec = elementVecShared.get();
