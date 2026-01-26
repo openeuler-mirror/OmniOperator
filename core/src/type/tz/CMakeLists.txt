@@ -1,0 +1,2 @@
+file(GLOB TZ_HEAD_FILES ${SOURCE_ROOT}/src/type/tz/*.h)
+install(FILES ${TZ_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/type/tz)
