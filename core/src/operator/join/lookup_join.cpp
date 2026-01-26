@@ -2038,7 +2038,7 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
                 buildColumn = ConstructBuildColumn<int64_t, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount, OMNI_LANES(int64_t));
-                break;wo
+                break;
             case OMNI_INT:
             case OMNI_DATE32:
                 buildColumn = ConstructBuildColumn<int32_t, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount, OMNI_LANES(int32_t));
