@@ -749,16 +749,48 @@ int32_t DecodeFetchFlag(int32_t resultCode)
     return resultCode & SHRT_MAX;
 }
 
+bool CompareStructUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const double error) {
+    auto resultVec = dynamic_cast<RowVector *>(resVec);
+    auto expectedVec = dynamic_cast<RowVector *>(dstVec);
+    if (!resultVec || !expectedVec) {
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "StructVector dynamic_cast failed!");
+    }
+    if (resultVec->vec::BaseVector::GetSize() != expectedVec->vec::BaseVector::GetSize()) {
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Vector size does not match!");
+    }
+    if (resultVec->ChildSize() != expectedVec->ChildSize()) {
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Children size does not match!");
+    }
+
+    for (int row = 0; row < resultVec->vec::BaseVector::GetSize(); row++) {
+        if (resultVec->IsNull(row) != expectedVec->IsNull(row)) {
+            throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Null status does not match!");
+        }
+    }
+
+    for (int childIndex = 0; childIndex < resultVec->ChildSize(); childIndex++) {
+        auto resultChild = resultVec->ChildAt(childIndex).get();
+        auto expectedChild = expectedVec->ChildAt(childIndex).get();
+
+        if (resultChild->GetTypeId() != expectedChild->GetTypeId()) {
+            throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Child type does not match!");
+        }
+
+        if (!ColumnMatchIgnoreOrder(resultChild, expectedChild, error)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool CompareArrayUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const double error) {
     auto resultVec = dynamic_cast<ArrayVector *>(resVec);
     auto expectedVec = dynamic_cast<ArrayVector *>(dstVec);
     if (!resultVec || !expectedVec) {
         throw omniruntime::exception::OmniException("RUNTIME_ERROR", "ArrayVector dynamic_cast failed!");
-        return false;
     }
     if (resultVec->vec::BaseVector::GetSize() != expectedVec->vec::BaseVector::GetSize()) {
         throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Vector size does not match!");
-        return false;
     }
 
     for (int row = 0; row < resultVec->vec::BaseVector::GetSize(); row++) {
@@ -972,6 +1004,10 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
         }
         case OMNI_ARRAY: {
             isMatched = CompareArrayUnorderedRows(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_ROW: {
+            isMatched = CompareStructUnorderedRows(resultVector, expectedVector, error);
             break;
         }
         default: {

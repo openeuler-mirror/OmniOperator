@@ -24,7 +24,7 @@ public class VarBinaryDataType extends DataType {
      */
     public static final VarBinaryDataType VARCHAR = new VarBinaryDataType(MAX_WIDTH);
 
-    private static final long serialVersionUID = -4778484134512020833L;
+    private static final long serialVersionUID = -6723847562938475629L;
 
     /**
      * average length of a varchar.
@@ -38,7 +38,7 @@ public class VarBinaryDataType extends DataType {
      * @param width the width of varchar
      */
     public VarBinaryDataType(@JsonProperty("width") int width) {
-        super(DataTypeId.OMNI_VARCHAR);
+        super(DataTypeId.OMNI_VARBINARY);
         this.width = Math.min(MAX_WIDTH, width);
     }
 

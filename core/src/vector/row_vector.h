@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <memory>
+#include "vector.h"
 
 namespace omniruntime::vec {
     class RowVector : public BaseVector {
@@ -16,15 +17,15 @@ namespace omniruntime::vec {
         RowVector& operator=(const RowVector&) = delete;
 
         RowVector(int32_t size)
-            : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW) {}
+            : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW), capacity(size) {}
 
         RowVector(int32_t size, std::vector<std::shared_ptr<BaseVector>> children)
             : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW),
-              children_(std::move(children)) {}
+              children_(std::move(children)), capacity(size) {}
 
         RowVector(int32_t size, std::vector<BaseVector*> children)
             : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW),
-            rawChildren_(std::move(children)) {}
+            rawChildren_(std::move(children)), capacity(size) {}
 
         ~RowVector() override = default;
 
@@ -53,14 +54,14 @@ namespace omniruntime::vec {
             return children_.size();
         }
 
-        void Add(int32_t index, BaseVector* addedVec)
+        void Set(int32_t index, BaseVector* setVec)
         {
-            children_[index] = std::shared_ptr<BaseVector>(addedVec);
+            children_[index] = std::shared_ptr<BaseVector>(setVec);
         }
 
-        void Append(BaseVector* appendedVec)
+        void AddChild(BaseVector* addedVec)
         {
-            children_.emplace_back(std::shared_ptr<BaseVector>(appendedVec));
+            children_.emplace_back(std::shared_ptr<BaseVector>(addedVec));
         }
 
         RowVector *Slice(int positionOffset, int length, bool isCopy = false) override
@@ -101,15 +102,44 @@ namespace omniruntime::vec {
             }
 
             for (int i = 0; i < children_.size(); i++) {
-                newRowVector->Append(children_[i]->CopyPositions(positions, positionOffset, length));
+                newRowVector->AddChild(children_[i]->CopyPositions(positions, positionOffset, length));
             }
             return newRowVector;
         }
+
+        void Expand(int64_t needCapacity)
+        {
+            if (needCapacity <= size) {
+                return;
+            }
+
+            if (needCapacity <= capacity) {
+                size = needCapacity;
+                return;
+            }
+
+            int64_t newCapacity = std::max(capacity * 2, needCapacity);
+            int64_t oldSize = size;
+
+            auto oldNullsBuffer = nullsBuffer;
+            nullsBuffer = std::make_shared<NullsBuffer>(newCapacity);
+            if (oldNullsBuffer != nullptr) {
+                nullsBuffer->SetNulls(0, oldNullsBuffer.get(), oldSize);
+            } else {
+                nullsBuffer->SetNulls(0, false, newCapacity);
+            }
+
+            capacity = newCapacity;
+            size = needCapacity;
+        }
+
+        void Append(BaseVector *other, int positionOffset, int length);
 
     private:
         std::vector<std::shared_ptr<BaseVector>> children_;
         // rawChildren_ elements no needs to release, this only use for immutable view, like string and string_view
         std::vector<BaseVector *> rawChildren_;
+        int64_t capacity;
     };
 }
 

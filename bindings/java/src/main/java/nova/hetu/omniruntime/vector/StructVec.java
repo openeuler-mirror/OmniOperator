@@ -33,6 +33,7 @@ public class StructVec extends ComplexVec {
     public StructVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size, StructDataType type) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress,
             getComplexCapacityNative(nativeVector, OMNI_ENCODING_STRUCT.ordinal()), size, type);
+        children = new Vec[type.getFieldTypes().length];
         initChildren(type);
     }
 
@@ -42,6 +43,7 @@ public class StructVec extends ComplexVec {
 
     public StructVec(long nativeVector, StructDataType type, int size, boolean isEmpty) {
         super(nativeVector, getComplexCapacityNative(nativeVector, OMNI_ENCODING_STRUCT.ordinal()), size, type);
+        children = new Vec[type.getFieldTypes().length];
         if (!isEmpty) {
             initChildren(type);
         }
@@ -49,6 +51,7 @@ public class StructVec extends ComplexVec {
 
     private StructVec(StructVec vector, int offset, int length) {
         super(vector, offset, length, getComplexCapacityNative(vector.getNativeVector(), OMNI_ENCODING_STRUCT.ordinal()));
+        children = new Vec[((StructDataType) getType()).getFieldTypes().length];
         initChildren((StructDataType) getType());
     }
 
@@ -79,21 +82,26 @@ public class StructVec extends ComplexVec {
         return 0;
     }
 
-    public void add(int index, Vec addedVec) {
-        addVecNative(this.nativeVector, index, addedVec.nativeVector);
+    public Vec[] getChildren() {
+        return children;
     }
-
-    public void append(Vec appendedVec) {
-        appendVecNative(this.nativeVector,appendedVec.nativeVector);
-    }
-
-    protected static native void addVecNative(long nativeVector, int index, long addedVec);
-
-    protected static native void appendVecNative(long nativeVector, long appendedVec);
-
-    protected static native long getChildAddrNative(long nativeVector, long addedVec);
 
     public Vec getChild(int index) {
         return children[index];
     }
+
+    public void setChild(int index, Vec vec) {
+        children[index] = vec;
+        setChildNative(this.nativeVector, index, vec.nativeVector);
+    }
+
+    public void addChild(Vec addedVec) {
+        addChildNative(this.nativeVector, addedVec.nativeVector);
+    }
+
+    protected static native void setChildNative(long nativeVector, int index, long vec);
+
+    protected static native void addChildNative(long nativeVector, long addedVec);
+
+    protected static native long getChildAddrNative(long nativeVector, long vec);
 }
