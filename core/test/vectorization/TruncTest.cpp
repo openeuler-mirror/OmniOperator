@@ -72,7 +72,7 @@ public:
     }
     
     static void ExecuteTrunc(BaseVector* dateVec, BaseVector* formatVec, BaseVector*& result) {
-        auto signature = std::make_shared<FunctionSignature>("trunc", 
+        auto signature = std::make_shared<FunctionSignature>("trunc_date", 
             std::vector<DataTypeId>{OMNI_DATE32, OMNI_VARCHAR}, OMNI_DATE32);
         auto function = VectorFunction::Find(signature);
         ASSERT_NE(function, nullptr) << "Trunc function not found for signature";
