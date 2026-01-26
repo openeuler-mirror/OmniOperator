@@ -8,6 +8,7 @@
 #include "../functions/Second.h"
 #include "../functions/Month.h"
 #include "../functions/Quarter.h"
+#include "../functions/Trunc.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -17,5 +18,6 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterSecondFunction(prefix + "second");
     RegisterMonthFunction(prefix + "month");
     RegisterQuarterFunction(prefix + "quarter");
+    RegisterTruncFunction(prefix + "trunc");
 }
 }
