@@ -49,6 +49,37 @@ void RegisterUnaryIntegral(const std::string &aliases)
 }
 
 template <template <class> typename T>
+void RegisterUnaryIntegralNumeric(const std::string &aliases)
+{
+    RegisterFunction<T, int8_t, int8_t>(aliases, {OMNI_BYTE}, OMNI_BYTE);
+    RegisterFunction<T, int16_t, int16_t>(aliases, {OMNI_SHORT}, OMNI_SHORT);
+    RegisterFunction<T, int32_t, int32_t>(aliases, {OMNI_INT}, OMNI_INT);
+    RegisterFunction<T, int64_t, int64_t>(aliases, {OMNI_LONG}, OMNI_LONG);
+}
+
+template <template <class> typename T>
+void RegisterUnaryFloatingPoint(const std::string &aliases)
+{
+    RegisterFunction<T, double, double>(aliases, {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<T, float, float>(aliases, {OMNI_FLOAT}, OMNI_FLOAT);
+}
+
+template <template <class> typename T>
+void RegisterUnaryDecimal(const std::string &aliases)
+{
+    RegisterFunction<T, int64_t, int64_t>(aliases, {OMNI_DECIMAL64}, OMNI_DECIMAL64);
+    RegisterFunction<T, Decimal128, Decimal128>(aliases, {OMNI_DECIMAL128}, OMNI_DECIMAL128);
+}
+
+template <template <class> typename T>
+void RegisterUnaryNumeric(const std::string &aliases)
+{
+    RegisterUnaryIntegralNumeric<T>(aliases);
+    RegisterUnaryFloatingPoint<T>(aliases);
+    RegisterUnaryDecimal<T>(aliases);
+}
+
+template <template <class> typename T>
 void RegisterBinaryLogical(const std::string &aliases)
 {
     RegisterFunction<T, bool, bool, bool>(aliases, {OMNI_BOOLEAN, OMNI_BOOLEAN}, OMNI_BOOLEAN);

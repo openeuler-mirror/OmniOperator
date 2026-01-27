@@ -73,6 +73,8 @@ public:
 
     Decimal128 &operator=(const Decimal128 &rhs) = default;
 
+    const Decimal128 operator-() const;
+
     constexpr int128_t ToInt128() const
     {
         return static_cast<int128_t>(highBits) << SIGN_LONG_BYTE | lowBits;
