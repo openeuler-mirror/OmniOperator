@@ -27,16 +27,6 @@ namespace omniruntime::vectorization {
         {
             BaseVector* inputVec = args.top();
             args.pop();
-
-            if (inputVec == nullptr) {
-                OMNI_THROW("MapKeysAndValues Error:", "MapKeysAndValues received null vector argument");
-            }
-
-            auto* srcMapVec = dynamic_cast<MapVector*>(inputVec);
-            if (srcMapVec == nullptr) {
-                OMNI_THROW("MapKeysAndValues Error:", "MapKeysAndValues arguments must be Map type");
-            }
-
             auto keyElements = srcMapVec->GetKeyVector();
             auto valueElements = srcMapVec->GetValueVector();
 
