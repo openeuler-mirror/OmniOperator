@@ -8,6 +8,7 @@
 #include "RegistrationHelpers.h"
 #include "vectorization/functions/Size.h"
 #include "vectorization/functions/MapFromArraysFunction.h"
+#include "vectorization/functions/MapKeysAndValues.h"
 
 namespace omniruntime::vectorization {
 void RegisterMapFunctions(const std::string &prefix)
@@ -19,5 +20,9 @@ void RegisterMapFunctions(const std::string &prefix)
     registerSize(prefix + "size");
     VectorFunction::RegisterVectorFunction("map_from_arrays", {OMNI_ARRAY, OMNI_ARRAY}, OMNI_MAP,
         std::make_shared<MapFromArraysFunction>());
+    VectorFunction::RegisterVectorFunction("map_keys", {OMNI_MAP}, OMNI_ARRAY,
+        std::make_shared<MapKeysAndValuesFunction<true>>());
+    VectorFunction::RegisterVectorFunction("map_values", {OMNI_MAP}, OMNI_ARRAY,
+        std::make_shared<MapKeysAndValuesFunction<false>>());
 }
 }

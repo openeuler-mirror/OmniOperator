@@ -241,6 +241,39 @@ VectorBatch *CreateArrayVectorBatch(const DataTypes &types, std::vector<int32_t>
     return vectorBatch;
 }
 
+VectorBatch *CreateMapVectorBatch(const DataTypes &types, std::vector<int32_t> &offsets,
+    int32_t dataSize, int32_t entrySize, ...)
+{
+    int32_t typesCount = types.GetSize();
+    if (typesCount % 2 != 0) {
+        return nullptr;
+    }
+    int32_t mapColumnCount = typesCount / 2;
+
+    auto *vectorBatch = new VectorBatch(dataSize);
+
+    va_list args;
+    va_start(args, entrySize);
+
+    for (int32_t i = 0; i < mapColumnCount; i++) {
+        int32_t typeIdx = i * 2;
+        auto &keyType = types.GetType(typeIdx);
+        auto &valueType = types.GetType(typeIdx + 1);
+
+        auto keyVector = std::shared_ptr<BaseVector>(CreateVector(*keyType, entrySize, args));
+        auto valueVector = std::shared_ptr<BaseVector>(CreateVector(*valueType, entrySize, args));
+
+        auto *mapVector = new MapVector(dataSize, keyVector, valueVector);
+
+        for (int32_t j = 0; j < offsets.size(); j++) {
+            mapVector->SetOffset(j, offsets[j]);
+        }
+        vectorBatch->Append(mapVector);
+    }
+    va_end(args);
+    return vectorBatch;
+}
+
 void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t *> &result,
     std::vector<int32_t> &outLen)
 {
