@@ -27,6 +27,7 @@ namespace omniruntime::vectorization {
         {
             BaseVector* inputVec = args.top();
             args.pop();
+            auto* srcMapVec = dynamic_cast<MapVector*>(inputVec);
             auto keyElements = srcMapVec->GetKeyVector();
             auto valueElements = srcMapVec->GetValueVector();
 
