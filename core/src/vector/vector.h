@@ -43,6 +43,12 @@ enum Encoding {
     OMNI_ENCODING_INVALID
 };
 
+template <typename T>
+using tsan_atomic = T;
+
+class BaseVector;
+using VectorPtr = std::shared_ptr<BaseVector>;
+
 class BaseVector {
 public:
     BaseVector() = default;
@@ -185,6 +191,34 @@ public:
         return nullsBuffer.get();
     }
 
+    /// @return the number of bytes required to hold this vector in memory
+    int32_t inMemoryBytes() const
+    {
+        return inMemoryBytes_;
+    }
+
+    template <typename T>
+    T* asUnchecked()
+    {
+        static_assert(std::is_base_of_v<BaseVector, T>);
+        return static_cast<T*>(this);
+    }
+
+    template <typename T = BaseVector>
+    static std::shared_ptr<T> create(
+        const RowTypePtr& type,
+        int32_t size,
+        mem::MemoryPool* pool)
+    {
+        return std::static_pointer_cast<T>(createInternal(type, size, pool));
+    }
+
+    /// @return the number of rows of data in this vector
+    int32_t size_() const
+    {
+        return length_;
+    }
+
 protected:
     bool isField_ = false;
     friend class unsafe::UnsafeBaseVector;
@@ -194,6 +228,14 @@ protected:
     std::shared_ptr<NullsBuffer> nullsBuffer;
     bool isSliced;
     DataTypeId dataTypeId;
+    int32_t inMemoryBytes_ = 0;
+    tsan_atomic<int32_t> length_{0};
+
+private:
+    static VectorPtr createInternal(
+            const RowTypePtr& type,
+            int32_t size,
+            mem::MemoryPool* pool);
 };
 
 template <typename RAW_DATA_TYPE>

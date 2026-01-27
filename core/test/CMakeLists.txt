@@ -15,6 +15,10 @@ else ()
     add_subdirectory(memory)
     add_subdirectory(vectorization)
     add_subdirectory(io)
+    add_subdirectory(reader/tablescan)
+    add_subdirectory(reader/filesystem)
+    add_subdirectory(reader/io/arrowadapter)
+    add_subdirectory(reader/io/orcfile)
 if (DEFINED ENABLE_BENCHMARK AND ENABLE_BENCHMARK STREQUAL "ON")
     find_package(benchmark REQUIRED)
     add_subdirectory(benchmark)
@@ -37,6 +41,10 @@ endif ()
             computeTest
             vectorizationTest
             ioTest
+            tablescantest
+            filesystemtest
+            arrowadaptertest
+            orcfiletest
             )
 
     # find gtest package

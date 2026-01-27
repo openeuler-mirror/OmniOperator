@@ -1,0 +1,75 @@
+/**
+ * Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OMNI_RUNTIME_PARQUETEXPRESSION_H
+#define OMNI_RUNTIME_PARQUETEXPRESSION_H
+
+#include <iostream>
+#include <sstream>
+#include <cstdio>
+#include <nlohmann/json.hpp>
+#include "arrow/compute/exec/expression.h"
+
+using namespace arrow::compute;
+using json = nlohmann::json;
+
+namespace omniruntime::reader {
+    enum ParquetPredicateOperator {
+        And,
+        Or,
+        Not,
+        Eq,
+        Gt,
+        GtEq,
+        Lt,
+        LtEq,
+        IsNotNull,
+        IsNull,
+        IN,
+        True,
+        False
+    };
+
+    enum PredicateDataType {
+        Null = 0,
+        Int,
+        Long,
+        String,
+        Date32,
+        Decimal,
+        Bool,
+        Short,
+        Double,
+        Timestamp
+    };
+
+    arrow::Result<Expression> GetSubExpr(const nlohmann::json& json, const std::string& sub);
+
+    arrow::Result<Expression> GetFieldExpr(const nlohmann::json& json);
+
+    arrow::Result<Expression> GetLiteralExpr(const nlohmann::json& json);
+
+    arrow::Result<std::shared_ptr<arrow::Array>> GetSetLiteralExpr(const nlohmann::json& json);
+
+    arrow::Result<Expression> ParseToArrowExpression(const nlohmann::json& json);
+
+    std::vector<std::string> GetFieldNames(const nlohmann::json& json);
+}
+
+#endif //OMNI_RUNTIME_PARQUETEXPRESSION_H

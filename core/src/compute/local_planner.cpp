@@ -1,5 +1,11 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *          http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 
 #include "local_planner.h"
@@ -23,6 +29,8 @@
 #include "operator/expand/expand.h"
 #include "operator/grouping/grouping.h"
 #include "operator/unnest/unnest.h"
+#include "operator/tablescan/TableScan.h"
+#include "compute/task.h"
 
 namespace omniruntime::compute {
 
@@ -56,7 +64,8 @@ std::shared_ptr<omniruntime::op::Operator> createUnionBuildOperator(
 
 OperatorFactory* createOperatorFactory(
     const std::shared_ptr<const PlanNode>& planNode,
-    const config::QueryConfig& queryConfig)
+    const config::QueryConfig& queryConfig,
+    std::shared_ptr<SplitsStore> splitsStore)
 {
     if (auto orderByNode = std::dynamic_pointer_cast<const OrderByNode>(planNode)) {
         return SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(orderByNode, queryConfig);
@@ -92,6 +101,8 @@ OperatorFactory* createOperatorFactory(
         return GroupingOperatorFactory::CreateGroupingOperatorFactory(groupingNode, queryConfig);
     } else if (auto unnestNode = std::dynamic_pointer_cast<const UnnestNode>(planNode)) {
         return UnnestOperatorFactory::CreateUnnestOperatorFactory(unnestNode);
+    } else if (auto tableScanNode = std::dynamic_pointer_cast<const TableScanNode>(planNode)) {
+        return TableScanOperatorFactory::CreateTableScanOperatorFactory(tableScanNode, queryConfig, splitsStore);
     } else {
         throw omniruntime::exception::OmniException(
             "PLANNODE_NOT_SUPPORT", "The plannode is not supported yet." + planNode->Id());
@@ -128,7 +139,8 @@ void planDetail(
     std::vector<std::shared_ptr<omniruntime::op::Operator>>* currentOperators,
     std::vector<std::shared_ptr<OmniDriver>>* drivers,
     std::vector<OperatorFactory*>* factories,
-    const config::QueryConfig& queryConfig)
+    const config::QueryConfig& queryConfig,
+    std::shared_ptr<SplitsStore> splitsStore)
 {
     OperatorFactory* factory = nullptr;
     if (!currentOperators) {
@@ -143,7 +155,7 @@ void planDetail(
     } else {
         for (int32_t i = 0; i < sources.size(); ++i) {
             planDetail(sources[i], MustStartNewPipeline(i) ? nullptr : currentOperators,
-                MustStartNewPipeline(i) ? &builderDrivers[i] : drivers, factories, queryConfig);
+                MustStartNewPipeline(i) ? &builderDrivers[i] : drivers, factories, queryConfig, splitsStore);
         }
     }
 
@@ -183,7 +195,7 @@ void planDetail(
         factories->emplace_back(nestedLoopJoinBuilderOperatorFactory);
         factory = nestedLoopJoinLookupWrapperOperatorFactory;
     } else {
-        factory = createOperatorFactory(planNode, queryConfig);
+        factory = createOperatorFactory(planNode, queryConfig, splitsStore);
     }
 
     auto currentOperator = createOperator(factory, planNode);
@@ -231,13 +243,15 @@ void LocalPlanner::plan(
     const PlanFragment& fragment,
     std::vector<std::shared_ptr<OmniDriver>>* drivers,
     std::vector<OperatorFactory*>* factories,
-    const config::QueryConfig& queryConfig)
+    const config::QueryConfig& queryConfig,
+    std::shared_ptr<SplitsStore> splitsStore)
 {
     planDetail(fragment.planNode,
         nullptr,
         drivers,
         factories,
-        queryConfig);
+        queryConfig,
+        splitsStore);
     (*drivers)[0]->outputDriver = true;
 
     buildOperatorStats(drivers);

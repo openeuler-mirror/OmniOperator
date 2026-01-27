@@ -132,21 +132,17 @@ template <class T> auto CreateVector(int vecSize)
     auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
     threadMemoryManager->Clear();
 
-    // mem 581 = vector, nullsBuffer, valuesBuffer size(152) + null size(21) + value size(400) + inMemoryBytes_(4) + length_(4). Take null as
-    // an example, 100 indicates the overhead of new bool[100].
     auto int32Vector = CreateVector<int32_t>(100);
     int64_t threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 581);
+    EXPECT_EQ(threadUntracked, 589);
 
-    // mem 981 = vector, nullsBuffer, valuesBuffer size(152) + null size(21) + value size(800) + inMemoryBytes_(4) + length_(4)
     auto int64Vector = CreateVector<int64_t>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 1562); // int64Vector + int32Vector
+    EXPECT_EQ(threadUntracked, 1578); // int64Vector + int32Vector
 
-    // mem 981 = vector, nullsBuffer, valuesBuffer size(152) + null size(21) + value size(800) + inMemoryBytes_(4) + length_(4)
     auto doubleVector = CreateVector<double>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 2543); // doubleVector + int64Vector + int32Vector
+    EXPECT_EQ(threadUntracked, 2567); // doubleVector + int64Vector + int32Vector
 
     int32Vector.reset();
     int64Vector.reset();

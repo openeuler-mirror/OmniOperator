@@ -1,7 +1,14 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
- * Description: Expression evaluator
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *          http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
+
 #ifndef OMNI_RUNTIME_EXPR_EVALUATOR_H
 #define OMNI_RUNTIME_EXPR_EVALUATOR_H
 
@@ -20,6 +27,8 @@ using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
 using namespace omniruntime::exception;
+
+class ExprSet;
 
 using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
 using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t, int64_t const *, int64_t const *,
@@ -284,5 +293,30 @@ private:
     VectorBatch *ProcessProject(VectorBatch *vecBatch, ExecutionContext *context, intptr_t *valueAddrs,
         intptr_t *nullAddrs, intptr_t *offsetAddrs, intptr_t *dictionaries);
 };
+
+class ExprSet {
+public:
+    explicit ExprSet(
+            const std::vector<TypedExprPtrNew>& source,
+            bool enableConstantFolding = true);
+
+    virtual ~ExprSet();
+
+    void clear();
+
+    const std::vector<std::shared_ptr<Expr>>& exprs() const
+    {
+        return exprs_;
+    }
+
+    const std::shared_ptr<Expr>& expr(int32_t index) const
+    {
+        return exprs_[index];
+    }
+
+protected:
+    std::vector<std::shared_ptr<Expr>> exprs_;
+};
+
 }
 #endif // OMNI_RUNTIME_EXPR_EVALUATOR_H

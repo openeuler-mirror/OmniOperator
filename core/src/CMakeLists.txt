@@ -19,5 +19,7 @@ add_subdirectory(udf/cplusplus)
 add_subdirectory(compute)
 add_subdirectory(vectorization)
 add_subdirectory(io)
+add_subdirectory(reader)
+add_subdirectory(connectors)
 
 include_directories(/usr/lib/llvm-15/include)
