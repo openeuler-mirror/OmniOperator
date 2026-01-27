@@ -29,4 +29,14 @@ namespace omniruntime::vectorization {
             return Status::OK();
         }
     };
+
+    template <typename T>
+        struct NegativeFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = -a;
+            return Status::OK();
+        }
+    };
 }

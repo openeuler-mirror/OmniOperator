@@ -171,3 +171,95 @@ TEST(MathFunctionsTest, AcosDouble) {
     TestUnaryMathOperation<double, OMNI_DOUBLE>("acos", inputData, expectedResults);
 }
 
+// Test negative function for double
+TEST(MathFunctionsTest, NegativeDouble) {
+    std::vector<double> inputData = {1.0, -1.0, 0.0, 3.14, -3.14, 100.5, -100.5};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(-x);
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE>("negative", inputData, expectedResults, 1e-9);
+}
+
+// Test negative function for float
+TEST(MathFunctionsTest, NegativeFloat) {
+    std::vector<float> inputData = {1.0f, -1.0f, 0.0f, 3.14f, -3.14f, 100.5f, -100.5f};
+    std::vector<float> expectedResults;
+    for (float x : inputData) {
+        expectedResults.push_back(-x);
+    }
+    TestUnaryMathOperation<float, OMNI_FLOAT>("negative", inputData, expectedResults, 1e-6);
+}
+
+// Test negative function for int32
+TEST(MathFunctionsTest, NegativeInt) {
+    std::vector<int32_t> inputData = {1, -1, 0, 100, -100, 2147483647, -2147483648};
+    std::vector<int32_t> expectedResults;
+    for (int32_t x : inputData) {
+        expectedResults.push_back(-x);
+    }
+    TestUnaryMathOperation<int32_t, OMNI_INT>("negative", inputData, expectedResults, 0);
+}
+
+// Test negative function for int64
+TEST(MathFunctionsTest, NegativeLong) {
+    std::vector<int64_t> inputData = {1LL, -1LL, 0LL, 100LL, -100LL, 9223372036854775807LL, -9223372036854775807LL};
+    std::vector<int64_t> expectedResults;
+    for (int64_t x : inputData) {
+        expectedResults.push_back(-x);
+    }
+    TestUnaryMathOperation<int64_t, OMNI_LONG>("negative", inputData, expectedResults, 0);
+}
+
+// Test negative function for int16
+TEST(MathFunctionsTest, NegativeShort) {
+    std::vector<int16_t> inputData = {1, -1, 0, 100, -100, 32767, -32768};
+    std::vector<int16_t> expectedResults;
+    for (int16_t x : inputData) {
+        expectedResults.push_back(-x);
+    }
+    TestUnaryMathOperation<int16_t, OMNI_SHORT>("negative", inputData, expectedResults, 0);
+}
+
+// Test negative function for int8
+TEST(MathFunctionsTest, NegativeByte) {
+    std::vector<int8_t> inputData = {1, -1, 0, 100, -100, 127, -128};
+    std::vector<int8_t> expectedResults;
+    for (int8_t x : inputData) {
+        expectedResults.push_back(-x);
+    }
+    TestUnaryMathOperation<int8_t, OMNI_BYTE>("negative", inputData, expectedResults, 0);
+}
+
+// Test negative function with edge cases
+TEST(MathFunctionsTest, NegativeEdgeCases) {
+    // Test with zero
+    std::vector<double> zeroInput = {0.0};
+    std::vector<double> zeroExpected = {0.0};
+    TestUnaryMathOperation<double, OMNI_DOUBLE>("negative", zeroInput, zeroExpected, 1e-9);
+
+    // Test with very small numbers
+    std::vector<double> smallInput = {1e-10, -1e-10};
+    std::vector<double> smallExpected = {-1e-10, 1e-10};
+    TestUnaryMathOperation<double, OMNI_DOUBLE>("negative", smallInput, smallExpected, 1e-15);
+
+    // Test with very large numbers
+    std::vector<double> largeInput = {1e10, -1e10};
+    std::vector<double> largeExpected = {-1e10, 1e10};
+    TestUnaryMathOperation<double, OMNI_DOUBLE>("negative", largeInput, largeExpected, 1e-9);
+}
+
+// Test negative function for OMNI_DECIMAL64
+TEST(MathFunctionsTest, NegativeDecimal64) {
+    std::vector<int64_t> inputData = {123LL, -456LL, 0L, 999999999999999999LL};
+    std::vector<int64_t> expectedResults = {-123LL, 456LL, 0L, -999999999999999999LL};
+    TestUnaryMathOperation<int64_t, OMNI_DECIMAL64>("negative", inputData, expectedResults, 0);
+}
+
+// Test negative function for OMNI_DECIMAL128
+// Decimal128's MAX_LONG_PRECISION is 38, use 99999999999999999999999999999999999999 as Max
+TEST(MathFunctionsTest, NegativeDecimal128) {
+    std::vector<Decimal128> inputData = {Decimal128("1234567890"), Decimal128("-1234567890"), Decimal128("0"), Decimal128("99999999999999999999999999999999999999")};
+    std::vector<Decimal128> expectedResults = {Decimal128("-1234567890"), Decimal128("1234567890"), Decimal128("0"), Decimal128("-99999999999999999999999999999999999999")};
+    TestUnaryMathOperation<Decimal128, OMNI_DECIMAL128>("negative", inputData, expectedResults, 0);
+}
