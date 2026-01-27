@@ -19,4 +19,14 @@ namespace omniruntime::vectorization {
             return Status::OK();
         }
     };
+
+    template <typename T>
+    struct AcosFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = std::acos(a);
+            return Status::OK();
+        }
+    };
 }

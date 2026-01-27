@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <limits>
 
 #include "test/util/test_util.h"
 #include "vectorization/registration/Register.h"
@@ -34,6 +35,71 @@ protected:
     }
 };
 
+// Helper function to test unary mathematical operations
+template<typename T, DataTypeId typeId>
+void TestUnaryMathOperation(
+         const std::string& functionName,
+         const std::vector<T>& inputData,
+         const std::vector<T>& expectedResults,
+         double tolerance = 1e-6) {
+ 
+     int32_t rowSize = static_cast<int32_t>(inputData.size());
+ 
+     BaseVector* rawInput = VectorHelper::CreateFlatVector(typeId, rowSize);
+     auto* inputVector = static_cast<Vector<T>*>(rawInput);
+     for (int32_t i = 0; i < rowSize; ++i) {
+         inputVector->SetValue(i, inputData[i]);
+         inputVector->SetNotNull(i);
+     }
+ 
+     std::vector<DataTypeId> argTypes = {typeId};
+     auto signature = std::make_shared<FunctionSignature>(functionName, argTypes, typeId);
+     auto vectorFunction = VectorFunction::Find(signature);
+     ASSERT_NE(vectorFunction, nullptr);
+ 
+     ExecutionContext context;
+     context.SetResultRowSize(rowSize);
+ 
+     std::stack<BaseVector*> args;
+     args.push(rawInput); // Apply() will delete it
+ 
+     BaseVector* rawResult = nullptr;
+     auto resultType = std::make_shared<DataType>(typeId);
+     vectorFunction->Apply(args, resultType, rawResult, &context);
+     ASSERT_NE(rawResult, nullptr);
+ 
+     auto* resultVector = static_cast<Vector<T>*>(rawResult);
+     ASSERT_NE(resultVector, nullptr);
+ 
+     for (int32_t i = 0; i < rowSize; ++i) {
+         T actual = resultVector->GetValue(i);
+         T expected = expectedResults[i];
+ 
+         if constexpr (std::is_floating_point_v<T>) {
+             if (std::isnan(expected)) {
+                 EXPECT_TRUE(std::isnan(actual))
+                     << "NaN mismatch at index " << i << " for " << functionName
+                     << " with input=" << inputData[i];
+             } else if (std::isinf(expected)) {
+                 EXPECT_TRUE(std::isinf(actual) &&
+                             std::signbit(actual) == std::signbit(expected))
+                     << "Infinity mismatch at index " << i << " for " << functionName
+                     << " with input=" << inputData[i];
+             } else {
+                 EXPECT_NEAR(actual, expected, tolerance)
+                     << "Value mismatch at index " << i << " for " << functionName
+                     << " with input=" << inputData[i]
+                     << ", expected=" << expected << ", actual=" << actual;
+             }
+         } else {
+             EXPECT_EQ(actual, expected)
+                 << "Value mismatch at index " << i << " for " << functionName
+                 << " with input=" << inputData[i];
+         }
+     }
+ 
+     delete rawResult;
+}
 
 // Test acosh function
 TEST(MathFunctionsTest, AcoshDouble) {
@@ -94,3 +160,14 @@ TEST(MathFunctionsTest, AcoshDouble) {
     delete funcExpr;
     delete context;
 }
+
+// Test acos function
+TEST(MathFunctionsTest, AcosDouble) {
+    std::vector<double> inputData = {1.0, 0.5, 0.0, -0.5, -1.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::acos(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE>("acos", inputData, expectedResults);
+}
+

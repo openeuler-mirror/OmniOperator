@@ -22,5 +22,6 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterBinaryNumeric<DivideFunction>({prefix + "divide"});
     RegisterBinaryNumeric<RemainderFunction>({prefix + "modulus"});
     RegisterFunction<AcoshFunction, double, double>(prefix + "acosh", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<AcosFunction, double, double>(prefix + "acos", {OMNI_DOUBLE}, OMNI_DOUBLE);
 }
 }
