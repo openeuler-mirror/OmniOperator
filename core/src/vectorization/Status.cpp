@@ -5,6 +5,12 @@
 #include "Status.h"
 
 namespace omniruntime::vectorization {
+Status::Status(StatusCode code)
+{
+    state_ = new State;
+    state_->code = code;
+}
+
 Status::Status(StatusCode code, std::string msg)
 {
     if (UNLIKELY(code == StatusCode::kOK)) {

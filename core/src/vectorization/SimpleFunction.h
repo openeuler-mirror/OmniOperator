@@ -72,7 +72,7 @@ class SimpleFunction final : public VectorFunction {
         }
 
         SelectivityVector *rows;
-        VectorPtr result;
+        std::shared_ptr<BaseVector> result;
         op::ExecutionContext *context;
         bool mayHaveNullsRecursive{false};
     };

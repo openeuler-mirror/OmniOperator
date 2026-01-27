@@ -5,8 +5,13 @@
 #pragma once
 #include <optional>
 #include "Timestamp.h"
+#include "vectorization/Status.h"
+#include "string_ref.h"
 
-namespace omniruntime::util {
+namespace omniruntime::type::util {
+using namespace vectorization;
+using namespace type;
+
 constexpr const int32_t kHoursPerDay{24};
 constexpr const int32_t kMinsPerHour{60};
 constexpr const int32_t kSecsPerMinute{60};
@@ -47,6 +52,35 @@ struct ParsedTimestampWithTimeZone {
 
 /// Parses a timestamp string using specified TimestampParseMode.
 ///
+/// This function does not accept any timezone information in the string (e.g.
+/// UTC, Z, or a timezone offsets). This is because the returned timestamp does
+/// not contain timezone information; therefore, it would either be required for
+/// this function to convert the parsed timestamp (but we don't know the
+/// original timezone), or ignore the timezone information, which would be
+/// incorecct.
+///
+/// For a timezone-aware version of this function, check
+/// `fromTimestampWithTimezoneString()` below.
+Expected<int64_t> FromTimestampString(const char *buf, size_t len);
+
+inline Expected<Timestamp> FromTimestampString(const std::string_view &str)
+{
+    return FromTimestampString(str.data(), str.size());
+}
+
+/// Cast string to date. Supported date formats vary, depending on input
+/// ParseMode. Refer to ParseMode enum for further info.
+///
+/// Returns Unexpected with UserError status if the format or date is invalid.
+Expected<int32_t> fromDateString(const char *buf, size_t len);
+
+inline Expected<int32_t> fromDateString(const std::string_view &str)
+{
+    return fromDateString(str.data(), str.size());
+}
+
+/// Parses a timestamp string using specified TimestampParseMode.
+///
 /// This is a timezone-aware version of the function above
 /// `fromTimestampString()` which returns both the parsed timestamp and the
 /// TimeZone pointer. It is up to the client to do the expected conversion based
@@ -62,10 +96,16 @@ struct ParsedTimestampWithTimeZone {
 /// timezone offset if an offset was found but was not a valid timezone.
 ///
 /// Returns Unexpected with UserError status in case of parsing errors.
-std::optional<ParsedTimestampWithTimeZone> fromTimestampWithTimezoneString(const char *buf, size_t len);
+Expected<ParsedTimestampWithTimeZone> fromTimestampWithTimezoneString(const char *buf, size_t len);
 
 /// Converts ParsedTimestampWithTimeZone to Timestamp according to the
 /// timezone-based adjustment. If no timezone information is available
 /// in the first argument, respects the session timezone if configured.
 Timestamp fromParsedTimestampWithTimeZone(ParsedTimestampWithTimeZone parsed, const tz::TimeZone *sessionTimeZone);
+
+std::string ToIso8601(int32_t days);
+
+int32_t toDate(const Timestamp& timestamp, const tz::TimeZone* timeZone_);
+
+std::string valueToString(int64_t value);
 }

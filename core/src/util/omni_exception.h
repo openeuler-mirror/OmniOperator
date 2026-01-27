@@ -29,6 +29,11 @@ public:
         return elaborateMessage.c_str();
     }
 
+    bool isUserError() const
+    {
+        return errorCode == "USER_ERROR";
+    }
+
 private:
     void FillMessage() const
     {
@@ -41,6 +46,17 @@ private:
     std::string message;
     mutable std::string elaborateMessage;
 };
+
+inline std::exception_ptr toOmniException(const std::exception_ptr& exceptionPtr) {
+    try {
+        std::rethrow_exception(exceptionPtr);
+    } catch (const OmniException&) {
+        return exceptionPtr;
+    } catch (const std::exception& e) {
+        return std::make_exception_ptr(
+            OmniException("USER_ERROR", e.what()));
+    }
+}
 }
 
 #define OMNI_THROW(errorCode, ...)                                                                \
@@ -58,6 +74,11 @@ private:
 #define OMNI_FAIL(...)                                                                                   \
     do {                                                                                                 \
         throw omniruntime::exception::OmniException("Runtime error:", omniruntime::Format(__VA_ARGS__)); \
+    } while (0)
+
+#define OMNI_USER_FAIL(...)                                                                          \
+    do {                                                                                             \
+        throw omniruntime::exception::OmniException("USER_ERROR", omniruntime::Format(__VA_ARGS__)); \
     } while (0)
 
 #endif // OMNI_RUNTIME_OMNI_EXCEPTION_H

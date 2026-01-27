@@ -12,6 +12,7 @@
 #include <optional>
 #include "decimal128.h"
 #include "util/debug.h"
+#include "util/omni_exception.h"
 
 namespace omniruntime {
 namespace vec {
@@ -82,73 +83,127 @@ template <DataTypeId dataTypeId> struct NativeType {};
 
 template <> struct NativeType<DataTypeId::OMNI_INT> {
     using type = int32_t;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_LONG> {
     using type = int64_t;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DOUBLE> {
     using type = double;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_FLOAT> {
     using type = float;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_BOOLEAN> {
     using type = bool;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_SHORT> {
     using type = int16_t;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_BYTE> {
     using type = int8_t;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DECIMAL64> {
     using type = int64_t;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DECIMAL128> {
     using type = Decimal128;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DATE32> {
     using type = int32_t;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DATE64> {
     using type = int64_t;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_TIME64> {
     using type = int64_t;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 template <> struct NativeType<DataTypeId::OMNI_VARCHAR> {
     using type = std::string_view;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = false;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_CHAR> {
     using type = std::string_view;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = false;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_VARBINARY> {
     using type = std::string_view;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = false;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
     using type = int64_t;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
     using type = int64_t;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
     using type = vec::BaseVector*;
+    static constexpr const char* name = "OMNI_INT";
+    static constexpr bool isPrimitiveType = false;
+    static constexpr bool isFixedWidth = false;
 };
 
 #define DYNAMIC_TYPE_DISPATCH(CALLBACK, typeId, ...)                                          \
@@ -227,6 +282,10 @@ enum TimeUnit {
     NANOSEC = 3
 };
 
+class MapType;
+class ArrayType;
+class RowType;
+
 class DataType {
 public:
     DataType(const DataType &type) : DataType(type.id) {}
@@ -256,6 +315,26 @@ public:
         dataType->Serialize(nlohmannJson);
     }
 
+    virtual std::string toString() const
+    {
+        return "None";
+    }
+
+    const MapType &asMap() const
+    {
+        return reinterpret_cast<const MapType&>(*this);
+    }
+
+    const ArrayType &asArray() const
+    {
+        return reinterpret_cast<const ArrayType&>(*this);
+    }
+
+    const RowType &asRow() const
+    {
+        return reinterpret_cast<const RowType&>(*this);
+    }
+
     bool operator != (const DataType &right) const
     {
         return !operator == (right);
@@ -272,6 +351,11 @@ public:
         return *this;
     }
 
+    bool isDecimal() const
+    {
+        return id == OMNI_DECIMAL128 || id == OMNI_DECIMAL64;
+    }
+
 protected:
     DataTypeId id;
 };
@@ -285,6 +369,11 @@ public:
     static DataTypePtr Instance()
     {
         return std::make_shared<FixedWidthDataType<typeId>>();
+    }
+
+    std::string toString() const override
+    {
+        return "FixedWidthDataType";
     }
 };
 
@@ -342,6 +431,11 @@ public:
         nlohmannJson[ELEMENT_TYPE] = childJson;
     }
 
+    std::string toString() const override
+    {
+        return "Array";
+    }
+
 protected:
     std::shared_ptr<DataType> child;
     size_t elementSize;
@@ -395,6 +489,11 @@ public:
     void Serialize(nlohmann::json &nlohmannJson) const override
     {
         nlohmannJson = nlohmann::json{{ID, id}, {WIDTH, width}};
+    }
+
+    std::string toString() const override
+    {
+        return "VarBinaryDataType";
     }
 
 protected:
@@ -489,6 +588,11 @@ public:
         return names_;
     }
 
+    std::string toString() const override
+    {
+        return "RowType";
+    }
+
 protected:
     const std::vector<std::shared_ptr<DataType>> children;
     const std::vector<std::string> names_;
@@ -547,6 +651,11 @@ public:
         nlohmannJson = nlohmann::json { { ID, id }, { SCALE, scale }, { PRECISION, precision } };
     }
 
+    std::string toString() const override
+    {
+        return "DecimalDataType";
+    }
+
 protected:
     DecimalDataType(DataTypeId id, int32_t precision, int32_t scale) : DataType(id), precision(precision), scale(scale)
     {}
@@ -594,6 +703,11 @@ public:
     }
 
     void Serialize(nlohmann::json &nlohmannJson) const override {}
+
+    std::string toString() const override
+    {
+        return "MapType";
+    }
 
 protected:
     std::shared_ptr<DataType> keyType;
@@ -668,6 +782,11 @@ public:
         nlohmannJson = nlohmann::json { { ID, id }, { DATE_UNIT, dateUnit } };
     }
 
+    std::string toString() const override
+    {
+        return "DateDataType";
+    }
+
 protected:
     DateDataType(DataTypeId id, DateUnit dateUnit) : DataType(id), dateUnit(dateUnit) {}
 
@@ -738,11 +857,25 @@ public:
         nlohmannJson = nlohmann::json { { ID, id }, { TIME_UNIT, timeUnit } };
     }
 
+    std::string toString() const override
+    {
+        return "TimeDataType";
+    }
+
 protected:
     TimeDataType(DataTypeId id, TimeUnit timeUnit) : DataType(id), timeUnit(timeUnit) {}
 
     TimeUnit timeUnit;
 };
+
+inline std::pair<uint8_t, uint8_t> GetDecimalPrecisionScale(const DataType &type)
+{
+    if (type.isDecimal()) {
+        const auto &decimalType = static_cast<const DecimalDataType &>(type);
+        return {decimalType.GetPrecision(), decimalType.GetScale()};
+    }
+    OMNI_FAIL("Type is not Decimal");
+}
 
 class Time32DataType : public TimeDataType {
 public:
@@ -851,6 +984,11 @@ public:
         }
     }
 
+    std::string toString() const override
+    {
+        return "ContainerDataType";
+    }
+
 private:
     std::vector<DataTypePtr> fieldTypes;
 };
@@ -902,6 +1040,11 @@ public:
     void Serialize(nlohmann::json &nlohmannJson) const override
     {
         nlohmannJson = nlohmann::json { { ID, id }, { WIDTH, width } };
+    }
+
+    std::string toString() const override
+    {
+        return "VarcharDataType";
     }
 
 protected:

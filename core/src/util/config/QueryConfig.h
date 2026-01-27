@@ -30,19 +30,22 @@ namespace omniruntime::config {
 class QueryConfig {
 public:
     explicit QueryConfig(): config_{
-        std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>())}
+        std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>())
+    }
     {
         ValidateConfig();
     }
 
     explicit QueryConfig(const std::unordered_map<std::string, std::string> &values): config_{
-        std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>(values))}
+        std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>(values))
+    }
     {
         ValidateConfig();
     }
 
     explicit QueryConfig(std::unordered_map<std::string, std::string> &&values): config_{
-        std::make_unique<config::ConfigBase>(std::move(values))}
+        std::make_unique<config::ConfigBase>(std::move(values))
+    }
     {
         ValidateConfig();
     }
@@ -138,6 +141,22 @@ public:
     /// Specifies the shuffle compression kind which is defined by
     /// CompressionKind. If it is CompressionKind_NONE, then no compression.
     static constexpr const char *kShuffleCompressionKind = "shuffle_compression_codec";
+
+    /// User provided session timezone. Stores a string with the actual timezone
+    /// name, e.g: "America/Los_Angeles".
+    static constexpr const char *kSessionTimezone = "session_timezone";
+
+    /// If true, timezone-less timestamp conversions (e.g. string to timestamp,
+    /// when the string does not specify a timezone) will be adjusted to the user
+    /// provided session timezone (if any).
+    ///
+    /// For instance:
+    ///
+    ///  if this option is true and user supplied "America/Los_Angeles",
+    ///  "1970-01-01" will be converted to -28800 instead of 0.
+    ///
+    /// False by default.
+    static constexpr const char *kAdjustTimestampToTimezone = "adjust_timestamp_to_session_timezone";
 
     static constexpr const char *KRowShuffleEnabled = "rowShuffle_enabled";
     static constexpr const char *KMaxBatchSizeInBytes = "maxBatchSizeInBytes";
@@ -385,6 +404,16 @@ public:
     {
         constexpr double kDefaultValue = 0.8;
         return get<double>(KAdaptivePartialAggregationRatio, kDefaultValue);
+    }
+
+    std::string SessionTimezone() const
+    {
+        return get<std::string>(kSessionTimezone, "");
+    }
+
+    bool AdjustTimestampToTimezone() const
+    {
+        return get<bool>(kAdjustTimestampToTimezone, false);
     }
 
     bool PreferVectorizationExpression() const

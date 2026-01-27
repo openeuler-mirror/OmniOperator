@@ -120,7 +120,7 @@ public:
                 int32_t daysSinceEpoch = dateRaw[i];
                 int32_t truncatedDays = 0;
                 
-                if (Date32::TruncDate(daysSinceEpoch, level, truncatedDays) == Status::CONVERT_SUCCESS) {
+                if (Date32::TruncDate(daysSinceEpoch, level, truncatedDays) == CONVERT_SUCCESS) {
                     resultRaw[i] = truncatedDays;
                     result->SetNotNull(i);
                 } else {

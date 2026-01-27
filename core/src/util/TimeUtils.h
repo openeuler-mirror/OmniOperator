@@ -9,7 +9,7 @@
 #include "type/Timestamp.h"
 
 namespace omniruntime::util {
-ALWAYS_INLINE int64_t GetSeconds(Timestamp timestamp, const tz::TimeZone *timeZone)
+inline int64_t GetSeconds(Timestamp timestamp, const tz::TimeZone *timeZone)
 {
     if (timeZone != nullptr) {
         timestamp.toTimezone(*timeZone);
@@ -19,7 +19,7 @@ ALWAYS_INLINE int64_t GetSeconds(Timestamp timestamp, const tz::TimeZone *timeZo
     }
 }
 
-ALWAYS_INLINE std::tm GetDateTime(Timestamp timestamp, const tz::TimeZone *timeZone)
+inline std::tm GetDateTime(Timestamp timestamp, const tz::TimeZone *timeZone)
 {
     int64_t seconds = GetSeconds(timestamp, timeZone);
     std::tm dateTime;
