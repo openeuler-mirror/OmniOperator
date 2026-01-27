@@ -6,7 +6,6 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <vector>
-#include <ctime>
 
 #include "test/util/test_util.h"
 #include "vectorization/registration/Register.h"
@@ -15,6 +14,7 @@
 #include "codegen/func_signature.h"
 #include "vector/vector_helper.h"
 #include "vector/vector.h"
+#include "type/date_time_utils.h"
 
 using namespace omniruntime;
 using namespace omniruntime::vec;
@@ -81,30 +81,19 @@ public:
         ExecutionContext context;
         context.SetResultRowSize(dateVec->GetSize());
         std::stack<BaseVector*> args;
-        args.push(formatVec);
+
         args.push(dateVec);
+        args.push(formatVec);
         
         ASSERT_NO_THROW(function->Apply(args, outputType, result, &context))
             << "Trunc function threw an exception";
     }
     
     // Helper to convert date components to days since epoch
+    // Uses LocalDate to match the implementation's date calculation
     static int32_t DateToDays(int year, int month, int day) {
-        std::tm tm = {};
-        tm.tm_year = year - 1900;
-        tm.tm_mon = month - 1;
-        tm.tm_mday = day;
-        tm.tm_hour = 0;
-        tm.tm_min = 0;
-        tm.tm_sec = 0;
-        tm.tm_isdst = -1;
-        
-        std::time_t time = std::mktime(&tm);
-        if (time == -1) {
-            return 0;
-        }
-        // Convert to days since epoch (1970-01-01)
-        return static_cast<int32_t>(time / 86400);
+        LocalDate date(static_cast<int32_t>(year), static_cast<int16_t>(month), static_cast<int16_t>(day));
+        return date.ToDays();
     }
 };
 
