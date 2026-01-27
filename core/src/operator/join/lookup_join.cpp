@@ -1975,25 +1975,23 @@ static NO_INLINE BaseVector *ConstructBuildMapColumn(
         if constexpr (!isInnerJoin) {
             if (array == nullptr) {
                 ret->SetNull(i);
-                ret->SetOffset(i+1,offset);
-                keyVector->SetNull(offset);
-                valueVector->SetNull(offset);
+                ret->SetOffset(i + 1, offset);
                 continue;
             }
         }
         BaseVector *buildVector = array[outputCol][vecBatchIndex];
         if (buildVector->IsNull(buildRowIdx)) {
             ret->SetNull(i);
-            ret->SetOffset(i+1,offset);
-            keyVector->SetNull(offset);
-            valueVector->SetNull(offset);
+            ret->SetOffset(i + 1, offset);
             continue;
         }
-        auto mapSubVector = static_cast<MapVector *>(buildVector)->Slice(buildRowIdx,1,true);
+        auto subVector = buildVector->Slice(buildRowIdx, 1, true);
+        MapVector* mapSubVector = dynamic_cast<MapVector *>(subVector);
         int64_t keyLength = mapSubVector->GetSize(0);
         ret->Append(mapSubVector, offset);
         offset += keyLength;
-        ret->SetOffset(i+1, offset);
+        ret->SetOffset(i + 1, offset);
+        delete subVector;
     }
     return ret;
 }
