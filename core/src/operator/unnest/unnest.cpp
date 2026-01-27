@@ -435,6 +435,11 @@ omniruntime::vec::BaseVector* UnnestOperator::generateUnrepeatedValuesForType(om
                                      dynamic_cast<omniruntime::vec::Vector<bool>*>(elementVector),
                                      dynamic_cast<omniruntime::vec::Vector<bool>*>(outputVector));
             break;
+        case OMNI_FLOAT:
+            generateUnrepeatedValues(inputVector,
+                                     dynamic_cast<omniruntime::vec::Vector<float>*>(elementVector),
+                                     dynamic_cast<omniruntime::vec::Vector<float>*>(outputVector));
+            break;
         default:
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
     }
