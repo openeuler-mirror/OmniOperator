@@ -115,10 +115,33 @@ public:
             const auto *dateRaw = unsafe::UnsafeVector::GetRawValues(dateVector);
             const auto *dateNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(dateArg));
             
-            // Extract numMonths values
-            auto *numMonthsVector = reinterpret_cast<Vector<int32_t> *>(numMonthsArg);
-            const auto *numMonthsRaw = unsafe::UnsafeVector::GetRawValues(numMonthsVector);
-            const auto *numMonthsNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(numMonthsArg));
+            // Check if numMonths is constant
+            bool numMonthsIsConst = (numMonthsArg->GetEncoding() == OMNI_ENCODING_CONST);
+            int32_t constNumMonths = 0;
+            const int32_t *numMonthsRaw = nullptr;
+            const uint64_t *numMonthsNulls = nullptr;
+            
+            if (numMonthsIsConst) {
+                // Handle constant numMonths
+                auto *constNumMonthsVec = reinterpret_cast<ConstVector<int32_t> *>(numMonthsArg);
+                constNumMonths = constNumMonthsVec->GetConstValue();
+                // For const vector, check if it's null
+                if (numMonthsArg->IsNull(0)) {
+                    // If constant is NULL, set all results to NULL
+                    auto *resultNulls = unsafe::UnsafeBaseVector::GetNulls(result);
+                    auto nullsSize = BitUtil::Nbytes(size);
+                    auto result_code = memset_s(resultNulls, nullsSize, 0xFF, nullsSize);
+                    if (result_code != EOK) {
+                        OMNI_THROW("AddMonths error:", "Failed to set null bits, error code: {}", result_code);
+                    }
+                    return;
+                }
+            } else {
+                // Handle non-const numMonths
+                auto *numMonthsVector = reinterpret_cast<Vector<int32_t> *>(numMonthsArg);
+                numMonthsRaw = unsafe::UnsafeVector::GetRawValues(numMonthsVector);
+                numMonthsNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(numMonthsArg));
+            }
             
             // Copy NULL bits from date input to result (so NULL rows are already set to NULL)
             auto *resultNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
@@ -130,15 +153,17 @@ public:
             rows.setFromBitsNegate(dateNulls, size);
             
             rows.applyToSelected([&](vector_size_t i) {
-                // Check if numMonths is NULL
-                if (numMonthsNulls && BitUtil::IsBitSet(numMonthsNulls, i)) {
-                    result->SetNull(i);
-                    return;
+                // Check if numMonths is NULL (for non-const case)
+                if (!numMonthsIsConst) {
+                    if (numMonthsNulls && BitUtil::IsBitSet(numMonthsNulls, i)) {
+                        result->SetNull(i);
+                        return;
+                    }
                 }
                 
                 // Perform add_months operation
                 int32_t daysSinceEpoch = dateRaw[i];
-                int32_t numMonths = numMonthsRaw[i];
+                int32_t numMonths = numMonthsIsConst ? constNumMonths : numMonthsRaw[i];
                 int32_t resultDays = 0;
                 
                 if (AddMonthsToDate(daysSinceEpoch, numMonths, resultDays)) {
