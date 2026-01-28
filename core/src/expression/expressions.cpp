@@ -1092,6 +1092,10 @@ LambdaExpr::LambdaExpr(omniruntime::expressions::Expr *body, std::vector<DataTyp
     paramTypes_ = std::move(paramTypes);
 }
 
+LambdaExpr::~LambdaExpr() {
+    delete body_;
+}
+
 ExprType LambdaExpr::GetType() const
 {
     return ExprType::LAMBDA_E;

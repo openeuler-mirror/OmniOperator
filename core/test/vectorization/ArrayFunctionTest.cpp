@@ -53,3 +53,74 @@ TEST(ArrayFunctionTest, GetArrayItemTest)
     delete context;
     delete input;
 }
+
+TEST(ArrayFunctionTest, TransformTest)
+{
+    int rowSize = 3;
+    auto type = std::make_shared<DataType>(OMNI_INT);
+    auto types = DataTypes({type});
+    std::vector vecOfTypes = {IntType(), IntType()};
+    DataTypes inputTypes(vecOfTypes);
+    int32_t col[] = {1, 2, 3, 4, 5};
+    std::vector<int32_t> offset = {0,3,4,5};
+    auto input = CreateArrayVectorBatch(types, offset, rowSize, 5, col);
+    std::vector<DataTypePtr> paramTypes;
+    paramTypes.push_back(IntType());
+    ParamRefExpr *addLeft = new ParamRefExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(5, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
+    auto expr = FuncExpr("transform", {
+            new FieldExpr(0, std::make_shared<DataType>(OMNI_ARRAY)),
+            new LambdaExpr(addExpr, paramTypes, IntType())
+    }, std::make_shared<DataType>(OMNI_ARRAY));
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+    ExprEval e(input, context);
+    e.VisitExpr(expr);
+    auto result = e.GetResult();
+
+    ArrayVector *arrVec = dynamic_cast<ArrayVector*>(result);
+    int32_t expect[] = {6, 7, 8, 9 , 10};
+    auto element = dynamic_cast<Vector<int32_t>*>(arrVec->GetElementVector().get());
+    for (int i = 0; i < 5; ++i) {
+        ASSERT_EQ(element->GetValue(i),expect[i]);
+    }
+    delete context;
+    delete input;
+    delete result;
+}
+
+TEST(ArrayFunctionTest, MapFromArraysTest)
+{
+    int rowSize = 3;
+    auto type = std::make_shared<DataType>(OMNI_INT);
+    auto types = DataTypes({type, type});
+    int32_t keyCol[] = {1, 2, 3, 4, 5};
+    int32_t valueCol[] = {10, 20, 30, 40, 50};
+    std::vector<int32_t> offset = {0,3,4,5};
+    auto input = CreateArrayVectorBatch(types, offset, rowSize, 5, keyCol, valueCol);
+    auto expr = FuncExpr("map_from_arrays", {
+            new FieldExpr(0, std::make_shared<DataType>(OMNI_ARRAY)),
+            new FieldExpr(1, std::make_shared<DataType>(OMNI_ARRAY))
+    }, std::make_shared<DataType>(OMNI_MAP));
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+    ExprEval e(input, context);
+    e.VisitExpr(expr);
+    auto result = e.GetResult();
+
+    MapVector *mapVec = dynamic_cast<MapVector*>(result);
+    int32_t expectKeys[] = {1, 2, 3, 4, 5};
+    int32_t expectValues[] = {10, 20, 30, 40, 50};
+    auto Keys = dynamic_cast<Vector<int32_t>*>(mapVec->GetKeyVector().get());
+    auto Values = dynamic_cast<Vector<int32_t>*>(mapVec->GetValueVector().get());
+    for (int i = 0; i < 5; ++i) {
+        ASSERT_EQ(Keys->GetValue(i),expectKeys[i]);
+        ASSERT_EQ(Values->GetValue(i),expectValues[i]);
+    }
+    delete context;
+    delete input;
+    delete result;
+}
