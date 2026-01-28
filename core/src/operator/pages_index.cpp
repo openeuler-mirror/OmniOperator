@@ -1613,6 +1613,8 @@ static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, 
         if (UNLIKELY(inputVector->IsNull(inputIndex))) {
             if constexpr (dataTypeId == OMNI_VARCHAR) {
                 static_cast<VarcharVector *>(outputVector)->SetNull(outputIndex);
+            } else if constexpr (dataTypeId == OMNI_ARRAY) {
+                static_cast<ArrayVector *>(outputVector)->SetNull(outputIndex);
             } else {
                 outputVector->SetNull(outputIndex);
             }
@@ -1645,6 +1647,7 @@ static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, 
             if constexpr (dataTypeId == OMNI_ARRAY) {
                 value = static_cast<ArrayVector *>(inputVector)->GetValue(inputIndex);
                 static_cast<ArrayVector *>(outputVector)->SetValue(outputIndex, value);
+                delete value;
             } else {
                 value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
                 static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);

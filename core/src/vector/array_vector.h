@@ -214,10 +214,6 @@ public:
         for (int i = 0; i < length; i++) {
             if (otherArrayVector->IsNull(i)) {
                 SetNull(newIndex);
-                SetSize(newIndex, 1);
-                int elementVectorSize = elements->GetSize();
-                elements->Expand(elementVectorSize + 1);
-                elements->SetNull(elementVectorSize);
             } else {
                 auto tmp = otherArrayVector->GetValue(i);
                 SetValue(newIndex, tmp);
@@ -230,6 +226,12 @@ public:
     void SetValue(int index, BaseVector* elements);
 
     BaseVector* GetValue(int index);
+
+    void ALWAYS_INLINE SetNull(int64_t index)
+    {
+        BaseVector::SetNull(index);
+        SetSize(index, 0);
+    }
 
 protected:
     int64_t* offsets;

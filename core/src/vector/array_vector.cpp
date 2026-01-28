@@ -12,10 +12,6 @@ void ArrayVector::SetValue(int index, BaseVector *value)
 {
     if (value == nullptr) {
         SetNull(index);
-        SetSize(index, 1);
-        int elementVectorSize = elements->GetSize();
-        elements->Expand(elementVectorSize + 1);
-        elements->SetNull(elementVectorSize);
         return;
     }
 
@@ -64,9 +60,6 @@ ArrayVector *ArrayVector::CopyPositions(const int *positions, int positionOffset
         // position == -1 means that this position in newArrayVector should be set to NULL.
         if (UNLIKELY(position == -1)) {
             newArrayVector->SetNull(i);
-            elementPositions.push_back(-1);
-            elementLength += 1;
-            newArrayVector->SetSize(i, 1);
             continue;
         }
         if (UNLIKELY(IsNull(position))) {

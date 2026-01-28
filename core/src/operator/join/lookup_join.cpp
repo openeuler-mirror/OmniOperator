@@ -1866,11 +1866,6 @@ static NO_INLINE BaseVector *ConstructBuildArrayColumn(
         if constexpr (!isInnerJoin) {
             if (array == nullptr) {
                 ret->SetNull(i);
-                ret->SetSize(i, 1);
-
-                int elementVectorSize = elementVector->GetSize();
-                elementVector->Expand(elementVectorSize + 1);
-                elementVector->SetNull(elementVectorSize);
                 continue;
             }
         }
@@ -1879,11 +1874,6 @@ static NO_INLINE BaseVector *ConstructBuildArrayColumn(
         auto buildVector = array[outputCol][vecBatchIndex];
         if (buildVector->IsNull(buildRowIdx)) {
             ret->SetNull(i);
-            ret->SetSize(i, 1);
-
-            int elementVectorSize = elementVector->GetSize();
-            elementVector->Expand(elementVectorSize + 1);
-            elementVector->SetNull(elementVectorSize);
             continue;
         }
 
