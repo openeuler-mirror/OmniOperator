@@ -59,6 +59,9 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
 
 void ExprVerifier::Visit(const FieldExpr &fieldExpr)
 {
+    if (fieldExpr.input != nullptr){
+        this->isSupportCodegen_ = false;
+    }
     switch (fieldExpr.GetReturnTypeId()) {
         case OMNI_BYTE:
         case OMNI_SHORT:
@@ -74,9 +77,11 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_VARBINARY:
         case OMNI_FLOAT:
         case OMNI_DECIMAL128:
+            break;
         case OMNI_ROW:
         case OMNI_ARRAY:
         case OMNI_MAP:
+            this->isSupportCodegen_ = false;
             break;
         default:
             this->unSupportedReason = "unSupported FieldExpr DataTypeId: "
