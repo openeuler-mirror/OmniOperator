@@ -144,6 +144,33 @@ bool ColumnMatch(BaseVector *actualColumn, BaseVector *expectColumn)
 
     bool result = true;
     DataTypeId typeId = expectColumn->GetTypeId();
+    
+    // Handle Row type separately as it has a different structure
+    if (typeId == OMNI_ROW) {
+        auto actualRowVector = static_cast<RowVector *>(actualColumn);
+        auto expectRowVector = static_cast<RowVector *>(expectColumn);
+        auto childCount = expectRowVector->ChildSize();
+        if (actualRowVector->ChildSize() != childCount) {
+            return false;
+        }
+        // Check null flags for each row
+        for (int32_t rowIndex = 0; rowIndex < actualColumn->GetSize(); rowIndex++) {
+            if (actualColumn->IsNull(rowIndex) != expectColumn->IsNull(rowIndex)) {
+                return false;
+            }
+        }
+        // Compare each child vector
+        for (int32_t childIdx = 0; childIdx < childCount; childIdx++) {
+            auto actualChild = actualRowVector->ChildAt(childIdx).get();
+            auto expectChild = expectRowVector->ChildAt(childIdx).get();
+            result = ColumnMatch(actualChild, expectChild);
+            if (!result) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
     for (int32_t rowIndex = 0; rowIndex < actualColumn->GetSize(); rowIndex++) {
         if (actualColumn->IsNull(rowIndex) != expectColumn->IsNull(rowIndex)) {
             return false;
