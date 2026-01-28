@@ -218,6 +218,70 @@ extern "C" DLLEXPORT double PowerDouble(double base, double exponent)
     return pow(base, exponent);
 }
 
+// float functions
+    extern "C" DLLEXPORT float AddFloat(float left, float right)
+{
+    return left + right;
+}
+
+    extern "C" DLLEXPORT float SubtractFloat(float left, float right)
+{
+    return left - right;
+}
+
+    extern "C" DLLEXPORT float MultiplyFloat(float left, float right)
+{
+    return left * right;
+}
+
+    extern "C" DLLEXPORT float DivideFloat(bool *isNull, float divident, float divisor)
+{
+    if (divisor == 0) {
+        *isNull = true;
+        return 0;
+    }
+    return divident / divisor;
+}
+
+    extern "C" DLLEXPORT float ModulusFloat(bool *isNull, float divident, float divisor)
+{
+    if (divisor == 0) {
+        *isNull = true;
+        return 0;
+    }
+    return std::fmod(divident, divisor);
+}
+
+    extern "C" DLLEXPORT bool LessThanFloat(float left, float right)
+{
+    return left < right;
+}
+
+    extern "C" DLLEXPORT bool LessThanEqualFloat(float left, float right)
+{
+    return left <= right;
+}
+
+    extern "C" DLLEXPORT bool GreaterThanFloat(float left, float right)
+{
+    return left > right;
+}
+
+    extern "C" DLLEXPORT bool GreaterThanEqualFloat(float left, float right)
+{
+    return left >= right;
+}
+
+    extern "C" DLLEXPORT bool EqualFloat(float left, float right)
+{
+    return std::fabs(left - right) < FLT_EPSILON;
+}
+
+    extern "C" DLLEXPORT bool NotEqualFloat(float left, float right)
+{
+    return std::fabs(left - right) >= FLT_EPSILON;
+}
+
 // long functions
 
 extern "C" DLLEXPORT int64_t AddInt64(int64_t left, int64_t right)
