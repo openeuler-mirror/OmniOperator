@@ -490,6 +490,7 @@ public:
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
                     reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)));
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
@@ -558,6 +559,7 @@ public:
                 delete vector;
                 return col;
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 auto *col = new Vector<LargeStringContainer<std::string_view>>(1);
@@ -616,6 +618,7 @@ public:
                 return reinterpret_cast<void *>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<bool> *>(vector)));
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return reinterpret_cast<void *>(unsafe::UnsafeStringVector::GetValues(
@@ -682,6 +685,7 @@ public:
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)->Slice(positionOffset, length);
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector)->Slice(positionOffset,
@@ -741,6 +745,7 @@ public:
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<bool> *>(vector)->Slice(positionOffset, length);
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->Slice(positionOffset,
@@ -803,6 +808,7 @@ public:
                 return reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)->CopyPositions(positions, offset,
                     length);
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vector)
@@ -848,6 +854,7 @@ public:
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<bool> *>(vector)->CopyPositions(positions, offset, length);
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->CopyPositions(
@@ -906,6 +913,7 @@ public:
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
                     static_cast<Vector<DictionaryContainer<bool>> *>(vector)));
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetVarCharDictionary(
@@ -960,6 +968,7 @@ public:
                 reinterpret_cast<Vector<bool> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(destVector)
@@ -985,13 +994,32 @@ public:
 
     static void ExpandElementVector(BaseVector *elementVec, type::DataTypeId typeId, int32_t newSize) {
         switch (typeId) {
-            case type::OMNI_INT: {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
                 auto *vec = dynamic_cast<Vector<int32_t> *>(elementVec);
                 vec->Expand(newSize);
                 break;
             }
-            case type::OMNI_LONG: {
+            case type::OMNI_SHORT: {
+                auto *vec = dynamic_cast<Vector<int16_t> *>(elementVec);
+                vec->Expand(newSize);
+                break;
+            }
+            case type::OMNI_BYTE: {
+                auto *vec = dynamic_cast<Vector<int8_t> *>(elementVec);
+                vec->Expand(newSize);
+                break;
+            }
+            case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
                 auto *vec = dynamic_cast<Vector<int64_t> *>(elementVec);
+                vec->Expand(newSize);
+                break;
+            }
+            case type::OMNI_DECIMAL128: {
+                auto *vec = dynamic_cast<Vector<type::Decimal128> *>(elementVec);
                 vec->Expand(newSize);
                 break;
             }
@@ -1000,11 +1028,17 @@ public:
                 vec->Expand(newSize);
                 break;
             }
+            case type::OMNI_FLOAT: {
+                auto *vec = dynamic_cast<Vector<float> *>(elementVec);
+                vec->Expand(newSize);
+                break;
+            }
             case type::OMNI_BOOLEAN: {
                 auto *vec = dynamic_cast<Vector<bool> *>(elementVec);
                 vec->Expand(newSize);
                 break;
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_CHAR:
             case type::OMNI_VARCHAR: {
                 auto *vec = dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(elementVec);
@@ -1107,6 +1141,7 @@ public:
             case type::OMNI_BOOLEAN: {
                 return DecodeFlatDictionaryVector<bool>(vector);
             }
+            case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return DecodeVarcharDictionaryVector(vector);
@@ -1248,6 +1283,9 @@ public:
             }
             case type::OMNI_BOOLEAN: {
                 return BooleanType();
+            }
+            case type::OMNI_VARBINARY: {
+                return VarBinaryType();
             }
             case type::OMNI_VARCHAR: {
                 return VarcharType();
