@@ -722,6 +722,106 @@ public class VecBatchSerializerTest {
     }
 
     @Test
+    public void testSerializeMapVec() {
+        // 2,3,5
+        int kvSize = 10;
+        int rowSize = 3;
+        MapDataType mapDataType = new MapDataType(new VarcharDataType(16), new VarcharDataType(16));
+        MapVec mapVec = new MapVec(mapDataType, rowSize, true);
+        VarcharVec originalVec = new VarcharVec(kvSize);
+        String tmpStr = "testvarchar";
+        for (int i = 0; i < kvSize; i++) {
+            String str = tmpStr.substring(0, i) + i;
+            originalVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+
+        VarcharVec valueVec = new VarcharVec(kvSize);
+        String tmpValStr = "testvarcharVal";
+        for (int i = 0; i < kvSize; i++) {
+            String str = tmpValStr.substring(0, i) + i;
+            valueVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+
+        int[] offsets = new int[]{0, 2, 5, 10};
+        mapVec.AddKeys(originalVec);
+        mapVec.AddValues(valueVec);
+        mapVec.AddOffsets(offsets);
+
+        VecBatch vecBatch = new VecBatch(new Vec[]{mapVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        MapVec checkResultVec = (MapVec) checkVecBatch.getVector(0);
+        VarcharVec checkOriginalVec = (VarcharVec) (checkResultVec.getKeyVec());
+        for (int i = 0; i < checkOriginalVec.getSize(); i++) {
+            byte[] actualValue = checkOriginalVec.get(i);
+            byte[] expectedValue = originalVec.get(i);
+            assertEquals(actualValue, expectedValue);
+        }
+        assertEquals(checkOriginalVec.getSize(), 10);
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
+    }
+
+    @Test
+    public void testSerializeMapVecWithNull() {
+        // 2,null,8
+        int kvSize = 10;
+        int rowSize = 3;
+        MapDataType mapDataType = new MapDataType(new VarcharDataType(16), new VarcharDataType(16));
+        MapVec mapVec = new MapVec(mapDataType, rowSize, true);
+        VarcharVec originalVec = new VarcharVec(kvSize);
+        String tmpStr = "testvarchar";
+        for (int i = 0; i < kvSize; i++) {
+            String str = tmpStr.substring(0, i) + i;
+            originalVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+
+        VarcharVec valueVec = new VarcharVec(kvSize);
+        String tmpValStr = "testvarcharVal";
+        for (int i = 0; i < kvSize; i++) {
+            String str = tmpValStr.substring(0, i) + i;
+            valueVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+        mapVec.setNull(1);
+
+        int[] offsets = new int[]{0, 2, 2, 10};
+        mapVec.AddKeys(originalVec);
+        mapVec.AddValues(valueVec);
+        mapVec.AddOffsets(offsets);
+
+        VecBatch vecBatch = new VecBatch(new Vec[]{mapVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        MapVec checkResultVec = (MapVec) checkVecBatch.getVector(0);
+        assertTrue(checkResultVec.isNull(1));
+        VarcharVec checkOriginalVec = (VarcharVec) (checkResultVec.getKeyVec());
+        for (int i = 0; i < checkOriginalVec.getSize(); i++) {
+            byte[] actualValue = checkOriginalVec.get(i);
+            byte[] expectedValue = originalVec.get(i);
+            assertEquals(actualValue, expectedValue);
+        }
+        assertEquals(checkOriginalVec.getSize(), 10);
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
+    }
+
+    @Test
     public void testSerializeStructVec() {
         DataType[] fieldTypes = new DataType[]{new VarcharDataType(16)};
 
