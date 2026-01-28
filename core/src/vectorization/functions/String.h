@@ -119,13 +119,6 @@ struct LocateFunction {
     ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *subString,
         const std::string_view *string, const int32_t *start)
     {
-        if (start == nullptr) {
-            result = 0;
-            return true;
-        }
-        if (subString == nullptr || string == nullptr) {
-            return false;
-        }
         // Call the non-nullable version for better code reuse
         return call(result, *subString, *string, *start);
     }

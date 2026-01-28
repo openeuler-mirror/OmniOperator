@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: Locate function unit tests
  *   locate(substring, string, start) -> int32
  *   Returns 1-based position; 0 if not found or invalid start.
@@ -54,7 +54,7 @@ public:
 
     static BaseVector* CreateStringVector(const std::vector<std::string>& values) {
         BaseVector* vec = VectorHelper::CreateStringVector(values.size());
-        vec->SetIsField(true);  // 測試擁有所有權，避免 VectorReader 解構時 delete
+        vec->SetIsField(true);
         auto* typed = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(vec);
         EXPECT_NE(typed, nullptr);
         for (size_t i = 0; i < values.size(); ++i) {
@@ -67,7 +67,7 @@ public:
     template <typename T>
     static BaseVector* CreateNumericVector(const std::vector<T>& values, DataTypeId typeId) {
         BaseVector* vec = VectorHelper::CreateFlatVector(typeId, values.size());
-        vec->SetIsField(true);  // 測試擁有所有權，避免 FlatVectorReader 解構時 delete
+        vec->SetIsField(true);
         auto* typed = static_cast<Vector<T>*>(vec);
         for (size_t i = 0; i < values.size(); ++i) {
             typed->SetValue(i, values[i]);
@@ -182,9 +182,9 @@ TEST(LocateTest, SubstringLongerThanStringReturnsZero) {
     delete result;
 }
 
-// Null 傳播：在 SimpleFunction 框架下，任一參數為 NULL 的列會從計算中排除，
-// 結果該列被標為 NULL。故 sub/str/start 任一為 NULL 時，該列結果均為 NULL。
-// 與 Spark「start 為 NULL 時回傳 0」語義不同，受限于現有 null 傳播邏輯。
+// 空值传播：在 SimpleFunction 框架下，任一参数为 NULL 的列会从计算中排除，  
+// 该列结果被标记为 NULL。因此当 sub/str/start 中任意一个为 NULL 时，该列结果均为 NULL。  
+// 与 Spark「start 为 NULL 时返回 0」的语义不同，受限于现有的空值传播逻辑。
 TEST(LocateTest, NullHandling) {
     std::vector<std::string> subStrings = {"aa", "aa", "aa"};
     std::vector<std::string> strings = {"aaads", "aaads", "aaads"};
@@ -199,7 +199,7 @@ TEST(LocateTest, NullHandling) {
     LocateFunctionTestHelper::ExecuteLocate(subVec, strVec, startVec, OMNI_INT, result);
     EXPECT_TRUE(result->IsNull(0));  // substring NULL → result NULL
     EXPECT_TRUE(result->IsNull(1));  // string NULL → result NULL
-    EXPECT_TRUE(result->IsNull(2));  // start NULL → result NULL（框架預設，非 Spark 的 0）
+    EXPECT_TRUE(result->IsNull(2));  // start NULL → result NULL（框架预设，非 Spark 的 0）
     delete subVec;
     delete strVec;
     delete startVec;
