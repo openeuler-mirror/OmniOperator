@@ -50,6 +50,7 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
         case OMNI_FLOAT:
         case OMNI_ROW:
         case OMNI_ARRAY:
+        case OMNI_MAP:
             break;
         default:
             this->isSupportCodegen_ = false;

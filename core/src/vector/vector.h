@@ -478,7 +478,7 @@ public:
 
         if (oldValues != nullptr) {
             error_t res = memcpy_s(values, newCapacity * sizeof(RAW_DATA_TYPE),
-                                   oldValues, oldSize * sizeof(RAW_DATA_TYPE));
+                oldValues, oldSize * sizeof(RAW_DATA_TYPE));
             if (res != EOK) {
                 throw OmniException("ERROR : Vector Expand memcpy_s failed ", std::to_string(res));
             }

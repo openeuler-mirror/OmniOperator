@@ -93,6 +93,8 @@ private:
                 probeColumn = column->CopyPositions(probePositions, 0, rowCount);
             } else if (column->GetEncoding() == vec::OMNI_DICTIONARY) {
                 probeColumn = VectorHelper::CopyPositionsVector(column, probePositions, 0, rowCount);
+            } else if (column->GetEncoding() == vec::OMNI_ENCODING_MAP) {
+                probeColumn = column->CopyPositions(probePositions, 0, rowCount);
             } else {
                 probeColumn = VectorHelper::CreateDictionaryVector(probePositions, rowCount, column, type);
             }
