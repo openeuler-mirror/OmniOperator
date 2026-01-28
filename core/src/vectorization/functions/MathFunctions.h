@@ -145,4 +145,52 @@ namespace omniruntime::vectorization {
             return Status::OK();
         }
     };
+
+    template <typename T>
+    struct SignFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            if constexpr (std::is_floating_point<TInput>::value) {
+               if (std::isnan(a)) {
+                   result = std::numeric_limits<TInput>::quiet_NaN();
+               } else {
+                   result = (a == 0.0) ? 0.0 : (a > 0.0) ? 1.0 : -1.0;
+               }
+            } else {
+               result = (a == 0) ? 0 : (a > 0) ? 1 : -1;
+            }
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct SinhFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = std::sinh(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct SqrtFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = std::sqrt(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct SecFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = 1 / std::cos(a);
+            return Status::OK();
+        }
+    };
 }

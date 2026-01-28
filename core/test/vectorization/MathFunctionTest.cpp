@@ -433,3 +433,81 @@ TEST(MathFunctionsTest, CeilLong) {
     }
     TestUnaryMathOperation<int64_t, OMNI_LONG, OMNI_LONG>("ceil", inputData, expectedResults);
 }
+
+// Test sign function
+TEST(MathFunctionsTest, SignDouble) {
+    std::vector<double> inputData = {0.0, -0.0, 10.1, -10.1, 0.5, -0.5};
+    std::vector<double> expectedResults = {0.0, 0.0, 1.0, -1.0, 1.0, -1.0};
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sign", inputData, expectedResults);
+}
+
+// Test sign function with edge cases (NULL, NaN, Infinity, zero)
+TEST(MathFunctionsTest, SignDoubleEdgeCases) {
+    constexpr double kInf = std::numeric_limits<double>::infinity();
+    constexpr double kNan = std::numeric_limits<double>::quiet_NaN();
+
+    // Test cases: 0, NaN, infinity, -infinity, positive, negative
+    std::vector<double> inputData = {0.0, kNan, kInf, -kInf, 100.0, -100.0};
+    // sign(0) = 0, sign(NaN) = NaN, sign(inf) = 1, sign(-inf) = -1, sign(100) = 1, sign(-100) = -1
+    std::vector<double> expectedResults = {0.0, kNan, 1.0, -1.0, 1.0, -1.0};
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sign", inputData, expectedResults);
+}
+
+// Test sinh function
+TEST(MathFunctionsTest, SinhDouble) {
+    std::vector<double> inputData = {0.0, 1.0, -1.0, 2.0, -2.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::sinh(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sinh", inputData, expectedResults);
+}
+
+// Test sinh function with edge cases (NULL, NaN, Infinity)
+TEST(MathFunctionsTest, SinhDoubleEdgeCases) {
+    constexpr double kInf = std::numeric_limits<double>::infinity();
+    constexpr double kNan = std::numeric_limits<double>::quiet_NaN();
+
+    // Test cases: 0, NaN, infinity, -infinity
+    std::vector<double> inputData = {0.0, kNan, kInf, -kInf};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::sinh(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sinh", inputData, expectedResults);
+}
+
+// Test sqrt function
+TEST(MathFunctionsTest, SqrtDouble) {
+    std::vector<double> inputData = {0.0, 4.0, 9.0, 16.0, 25.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::sqrt(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sqrt", inputData, expectedResults);
+}
+
+// Test sqrt function with edge cases (NULL, NaN, Infinity, negative numbers)
+TEST(MathFunctionsTest, SqrtDoubleEdgeCases) {
+    constexpr double kInf = std::numeric_limits<double>::infinity();
+    constexpr double kNan = std::numeric_limits<double>::quiet_NaN();
+
+    // Test cases: 0, 4, NaN, infinity, -1 (should be NaN)
+    std::vector<double> inputData = {0.0, 4.0, kNan, kInf, -1.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::sqrt(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sqrt", inputData, expectedResults);
+}
+
+// Test sec function
+TEST(MathFunctionsTest, SecDouble) {
+    // Test normal values
+    std::vector<double> inputData = {0.0, M_PI / 4.0, M_PI / 3.0, M_PI / 6.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(1.0 / std::cos(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sec", inputData, expectedResults);
+}
