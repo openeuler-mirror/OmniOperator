@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include "vectorization/Status.h"
+#include "type/string_Impl.h"
 
 namespace omniruntime::vectorization {
 template <typename T>
@@ -65,6 +66,61 @@ struct TrimFunction {
         // Extract the trimmed substring
         result = std::string(str->substr(start, end - start + 1));
         return true;
+    }
+};
+
+/// locate function
+/// locate(substring, string, start) -> integer
+/// Returns the position of the first occurrence of substring in string starting from position start.
+/// Returns 1-based position (first character is at position 1).
+/// Returns 0 if substring is not found, start < 1, or start > string length.
+/// Returns 1 if substring is empty.
+/// Note: Under SimpleFunction null propagation, any NULL argument (substring/string/start) yields
+/// result NULL; Spark's "start NULL -> 0" semantics are not supported by the current framework.
+template <typename T>
+struct LocateFunction {
+    // Non-nullable version for better performance when all arguments are non-null
+    ALWAYS_INLINE bool call(int32_t &result, const std::string_view &subString,
+        const std::string_view &string, const int32_t &start)
+    {
+        if (start < 1) {
+            result = 0;
+            return true;
+        }
+        if (subString.empty()) {
+            result = 1;
+            return true;
+        }
+        
+        // Calculate string length in characters (Unicode-aware)
+        int64_t stringLength = stringImpl::length<false /*isAscii*/>(string);
+        if (start > static_cast<int32_t>(stringLength)) {
+            result = 0;
+            return true;
+        }
+
+        // Find the start byte index of the start character for Unicode strings
+        int64_t startByteIndex = stringImpl::cappedByteLengthUnicode(
+            string.data(), string.size(), start - 1);
+
+        // Search from start position
+        std::string_view searchString(string.data() + startByteIndex, string.size() - startByteIndex);
+        auto position = stringImpl::StringPosition<false /*isAscii*/, true /*lpos*/>(
+            searchString, subString, 1 /*instance*/);
+        if (position > 0) {
+            result = position + start - 1;
+        } else {
+            result = 0;
+        }
+        return true;
+    }
+
+    // Nullable version supporting both ASCII and Unicode
+    ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *subString,
+        const std::string_view *string, const int32_t *start)
+    {
+        // Call the non-nullable version for better code reuse
+        return call(result, *subString, *string, *start);
     }
 };
 }
