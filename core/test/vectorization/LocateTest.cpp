@@ -54,6 +54,7 @@ public:
 
     static BaseVector* CreateStringVector(const std::vector<std::string>& values) {
         BaseVector* vec = VectorHelper::CreateStringVector(values.size());
+        vec->SetIsField(true);  // 測試擁有所有權，避免 VectorReader 解構時 delete
         auto* typed = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(vec);
         EXPECT_NE(typed, nullptr);
         for (size_t i = 0; i < values.size(); ++i) {
@@ -66,6 +67,7 @@ public:
     template <typename T>
     static BaseVector* CreateNumericVector(const std::vector<T>& values, DataTypeId typeId) {
         BaseVector* vec = VectorHelper::CreateFlatVector(typeId, values.size());
+        vec->SetIsField(true);  // 測試擁有所有權，避免 FlatVectorReader 解構時 delete
         auto* typed = static_cast<Vector<T>*>(vec);
         for (size_t i = 0; i < values.size(); ++i) {
             typed->SetValue(i, values[i]);
