@@ -130,4 +130,27 @@ struct LocateFunction {
         return call(result, *subString, *string, *start);
     }
 };
+
+/// position function
+/// position(substring, string) -> integer
+/// Returns the 1-based position of the first occurrence of substring in string.
+/// Equivalent to locate(substring, string, 1). Returns 0 if not found, 1 if substring is empty.
+/// Under SimpleFunction null propagation, any NULL argument yields result NULL.
+template <typename T>
+struct PositionFunction {
+    ALWAYS_INLINE bool call(int32_t &result, const std::string_view &subString, const std::string_view &string)
+    {
+        auto pos = stringImpl::StringPosition<false /*isAscii*/, true /*lpos*/>(string, subString, 1 /*instance*/);
+        result = static_cast<int32_t>(pos);
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *subString, const std::string_view *string)
+    {
+        if (subString == nullptr || string == nullptr) {
+            return false;
+        }
+        return call(result, *subString, *string);
+    }
+};
 }
