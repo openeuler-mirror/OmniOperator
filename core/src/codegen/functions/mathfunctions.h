@@ -156,6 +156,35 @@ extern "C" DLLEXPORT double NormalizeNaNAndZero(double value);
 
 extern "C" DLLEXPORT double PowerDouble(double base, double exponent);
 
+// float binary operations
+extern "C" DLLEXPORT float AddFloat(float left, float right);
+
+extern "C" DLLEXPORT float SubtractFloat(float left, float right);
+
+extern "C" DLLEXPORT float MultiplyFloat(float left, float right);
+
+extern "C" DLLEXPORT float DivideFloat(bool *isNull, float divident, float divisor);
+
+extern "C" DLLEXPORT float ModulusFloat(bool *isNull, float divident, float divisor);
+
+extern "C" DLLEXPORT bool LessThanFloat(float left, float right);
+
+extern "C" DLLEXPORT bool LessThanEqualFloat(float left, float right);
+
+extern "C" DLLEXPORT bool GreaterThanFloat(float left, float right);
+
+extern "C" DLLEXPORT bool GreaterThanEqualFloat(float left, float right);
+
+extern "C" DLLEXPORT bool EqualFloat(float left, float right);
+
+extern "C" DLLEXPORT bool NotEqualFloat(float left, float right);
+
+extern "C" DLLEXPORT float AddFloatRetNull(bool *isNull, float left, float right);
+
+extern "C" DLLEXPORT float SubtractFloatRetNull(bool *isNull, float left, float right);
+
+extern "C" DLLEXPORT float MultiplyFloatRetNull(bool *isNull, float left, float right);
+
 // long binary operations
 extern "C" DLLEXPORT int64_t AddInt64(int64_t left, int64_t right);
 
