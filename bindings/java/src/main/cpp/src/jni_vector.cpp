@@ -547,14 +547,6 @@ static jobject GetDataType(JNIEnv *env, BaseVector *vec)
             BaseVector* elementVec = arrayVec->GetElementVector().get();
             jobject elementType = GetDataType(env, elementVec);
 
-            static jclass arrayDataTypeCls = nullptr;
-            static jmethodID arrayDataTypeInitMethodId = nullptr;
-            if (arrayDataTypeCls == nullptr) {
-                arrayDataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/ArrayDataType");
-                arrayDataTypeInitMethodId = env->GetMethodID(arrayDataTypeCls, "<init>",
-                    "(Lnova/hetu/omniruntime/type/DataType;)V");
-            }
-
             jobject arrayType = env->NewObject(arrayDataTypeCls, arrayDataTypeInitMethodId, elementType);
             env->DeleteLocalRef(elementType);
             return arrayType;
