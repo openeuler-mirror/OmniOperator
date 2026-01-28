@@ -953,12 +953,10 @@ bool CompareMapUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const doubl
     auto resultVec = dynamic_cast<MapVector *>(resVec);
     auto expectedVec = dynamic_cast<MapVector *>(dstVec);
     if (!resultVec || !expectedVec) {
-        std::cout << "ERROR: MapVector dynamic_cast failed !" << std::endl;
-        return false;
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "MapVector dynamic_cast failed!");
     }
     if (resultVec->vec::BaseVector::GetSize() != expectedVec->vec::BaseVector::GetSize()) {
-        std::cout << "WARN: Vector size does not match !" << std::endl;
-        return false;
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "MapVector dynamic_cast failed!");
     }
 
     for (int row = 0; row < resultVec->vec::BaseVector::GetSize(); row++) {

@@ -367,10 +367,10 @@ public:
         auto keysVec = mapVec->GetKeyVector();
         auto valuesVec = mapVec->GetValueVector();
 
+        const char* sep = "";
         for (uint32_t i = start; i < end; ++i) {
-            if (i > start) {
-                std::cout << ",";
-            }
+            std::cout << sep;
+            sep = ",";
             PrintVectorValue(keysVec.get(), static_cast<int32_t>(i));
             std::cout << ":";
             PrintVectorValue(valuesVec.get(), static_cast<int32_t>(i));
