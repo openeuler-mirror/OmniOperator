@@ -1965,14 +1965,12 @@ static NO_INLINE BaseVector *ConstructBuildMapColumn(
         if constexpr (!isInnerJoin) {
             if (array == nullptr) {
                 ret->SetNull(i);
-                ret->SetOffset(i + 1, offset);
                 continue;
             }
         }
         BaseVector *buildVector = array[outputCol][vecBatchIndex];
         if (buildVector->IsNull(buildRowIdx)) {
             ret->SetNull(i);
-            ret->SetOffset(i + 1, offset);
             continue;
         }
         auto subVector = buildVector->Slice(buildRowIdx, 1, true);

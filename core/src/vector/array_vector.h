@@ -84,12 +84,16 @@ public:
      * @param copy If true, return a copy instead of a view
      * @return std::shared_ptr<BaseVector> GetArrayAt(int64_t index, bool copy)
      */
-    std::shared_ptr<BaseVector> GetArrayAt(int64_t index, bool copy)
+    std::shared_ptr<BaseVector> GetArrayAt(int64_t index, bool copy = false)
     {
         if (UNLIKELY(index < 0 || index >= size)) {
-            std::string message("slice vector out of range(needed size:%d, real size:%d).", index,
+            std::string message("index out of range(needed size:%d, real size:%d).", index,
                 size);
             throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+
+        if (IsNull(index)) {
+            return nullptr;
         }
 
         int64_t startOffset = GetOffset(index);

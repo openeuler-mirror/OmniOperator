@@ -1100,16 +1100,12 @@ TEST(JoinWithExprTest, TestLeftJoinOnKeyWithoutExprWithArrayVectorWithNull)
     auto expectedBuildElementVector = std::make_shared<Vector<int64_t>>(6, OMNI_LONG);
     expectedBuildElementVector->SetValue(0, 3);
     expectedBuildElementVector->SetValue(1, 4);
-    expectedBuildElementVector->SetNull(2);
-    expectedBuildElementVector->SetValue(3, 7);
-    expectedBuildElementVector->SetValue(4, 8);
-    expectedBuildElementVector->SetNull(5);
+    expectedBuildElementVector->SetValue(2, 7);
+    expectedBuildElementVector->SetValue(3, 8);
     auto expectedBuildArrayVec =  new ArrayVector(expectedDataSize, expectedBuildElementVector);
     expectedBuildArrayVec->SetSize(0, 2);
-    expectedBuildArrayVec->SetSize(1, 1);
     expectedBuildArrayVec->SetNull(1);
     expectedBuildArrayVec->SetSize(2, 2);
-    expectedBuildArrayVec->SetSize(3, 1);
     expectedBuildArrayVec->SetNull(3);
 
     auto *expectedVecBatch = new VectorBatch(expectedDataSize);
