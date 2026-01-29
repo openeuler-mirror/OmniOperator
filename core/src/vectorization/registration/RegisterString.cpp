@@ -23,5 +23,35 @@ void RegisterStringFunctions(const std::string &prefix)
     // VectorFunction::RegisterVectorFunction("equal", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, std::make_shared<EqualStringFunction>());
     VectorFunction::RegisterVectorFunction("regexp_extract", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT},
         OMNI_VARCHAR, std::make_shared<RegexpExtractFunction>());
+    
+    // Register locate function with full type support
+    // locate(substring, string, start) -> integer
+    // Support all combinations of VARCHAR/CHAR string types and INT32/INT64 integer types
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int32_t>(
+        prefix + "locate", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_INT);
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>(
+        prefix + "locate", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_LONG}, OMNI_INT);
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int32_t>(
+        prefix + "locate", {OMNI_VARCHAR, OMNI_CHAR, OMNI_INT}, OMNI_INT);
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>(
+        prefix + "locate", {OMNI_VARCHAR, OMNI_CHAR, OMNI_LONG}, OMNI_INT);
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int32_t>(
+        prefix + "locate", {OMNI_CHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_INT);
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>(
+        prefix + "locate", {OMNI_CHAR, OMNI_VARCHAR, OMNI_LONG}, OMNI_INT);
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int32_t>(
+        prefix + "locate", {OMNI_CHAR, OMNI_CHAR, OMNI_INT}, OMNI_INT);
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>(
+        prefix + "locate", {OMNI_CHAR, OMNI_CHAR, OMNI_LONG}, OMNI_INT);
+
+    // position(substring, string) -> integer, equivalent to locate(substring, string, 1)
+    RegisterFunction<PositionFunction, int32_t, std::string_view, std::string_view>(
+        prefix + "position", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_INT);
+    RegisterFunction<PositionFunction, int32_t, std::string_view, std::string_view>(
+        prefix + "position", {OMNI_VARCHAR, OMNI_CHAR}, OMNI_INT);
+    RegisterFunction<PositionFunction, int32_t, std::string_view, std::string_view>(
+        prefix + "position", {OMNI_CHAR, OMNI_VARCHAR}, OMNI_INT);
+    RegisterFunction<PositionFunction, int32_t, std::string_view, std::string_view>(
+        prefix + "position", {OMNI_CHAR, OMNI_CHAR}, OMNI_INT);
 }
 }

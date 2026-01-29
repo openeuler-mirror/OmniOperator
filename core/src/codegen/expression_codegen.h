@@ -181,6 +181,9 @@ private:
     Value *BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
         Value *rightIsNull, Value *nullFlag = nullptr);
 
+    Value *BinaryExprFloatHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+                                  Value *rightIsNull, Value *nullFlag = nullptr);
+
     Value *BinaryExprStringHelper(const BinaryExpr *binaryExpr, Value *leftVal, Value *leftLen, Value *rightVal,
         Value *rightLen, Value *leftIsNull, Value *rightIsNull);
 

@@ -1957,6 +1957,45 @@ static NO_INLINE BaseVector *ConstructBuildStructColumn(
     return ret;
 }
 
+template<bool isInnerJoin>
+static NO_INLINE BaseVector *ConstructBuildMapColumn(
+    const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp, uint32_t outputCol, int32_t numRows,
+    std::shared_ptr<DataType> keyType, std::shared_ptr<DataType> valueType)
+{
+    auto ret = new MapVector(numRows);
+    int32_t offset = 0;
+    DataTypeId keyTypeId = keyType->GetId();
+    DataTypeId valueTypeId = valueType->GetId();
+    BaseVector *keyVector = vec::VectorHelper::CreateFlatVector(static_cast<int32_t>(keyTypeId), 1);
+    BaseVector *valueVector = vec::VectorHelper::CreateFlatVector(static_cast<int32_t>(valueTypeId), 1);
+    ret->AddKeys(keyVector);
+    ret->AddValues(valueVector);
+    for (int32_t i = 0; i < numRows; ++i) {
+        auto [_, array, vecBatchIndex, buildRowIdx] = buildTemp[i];
+        if constexpr (!isInnerJoin) {
+            if (array == nullptr) {
+                ret->SetNull(i);
+                ret->SetOffset(i + 1, offset);
+                continue;
+            }
+        }
+        BaseVector *buildVector = array[outputCol][vecBatchIndex];
+        if (buildVector->IsNull(buildRowIdx)) {
+            ret->SetNull(i);
+            ret->SetOffset(i + 1, offset);
+            continue;
+        }
+        auto subVector = buildVector->Slice(buildRowIdx, 1, true);
+        MapVector* mapSubVector = dynamic_cast<MapVector *>(subVector);
+        int64_t keyLength = mapSubVector->GetSize(0);
+        ret->Append(mapSubVector, offset);
+        offset += keyLength;
+        ret->SetOffset(i + 1, offset);
+        delete subVector;
+    }
+    return ret;
+}
+
 void NO_INLINE LookupJoinOutputBuilder::ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeOutputColumns,
     int32_t rowCount)
 {
@@ -2036,6 +2075,16 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
                 DataTypePtr dataType = buildOutputTypes.GetType(j);
                 auto structType = dynamic_cast<RowType*>(dataType.get());
                 buildColumn = ConstructBuildStructColumn<isInnerJoin>(buildTemp, outputCol, rowCount, structType);
+                break;
+            }
+            case OMNI_MAP: {
+                DataTypePtr mdataType = buildOutputTypes.GetType(j);
+                auto mapType = dynamic_cast<MapType *>(mdataType.get());
+                std::shared_ptr<DataType> keyType = mapType->Key();
+                std::shared_ptr<DataType> valueType = mapType->Value();
+                buildColumn = ConstructBuildMapColumn<isInnerJoin>(buildTemp, outputCol,
+                    rowCount, keyType, valueType);
+                break;
             }
             default:
                 break;

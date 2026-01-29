@@ -61,6 +61,8 @@ public:
         return values;
     }
 
+    void Append(MapVector* other, int32_t offset);
+
     std::vector<DataTypeId> ALWAYS_INLINE GetTypeIds() const override
     {
         return {keys->GetTypeId(), values->GetTypeId()};

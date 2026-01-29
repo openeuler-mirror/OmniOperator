@@ -313,6 +313,14 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
                 builder->CreateOr(builder->CreateOr(left->isNull, right->isNull),
                                   builder->CreateLoad(llvmTypes->I1Type(), nullFlag)));
         return;
+    } else if (bExpr->left->GetReturnTypeId() == OMNI_FLOAT) {
+        Value *nullFlag = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "null_flag");
+        builder->CreateStore(ConstantInt::get(IntegerType::getInt1Ty(*context), 0), nullFlag);
+        this->value = make_shared<CodeGenValue>(
+                this->BinaryExprFloatHelper(bExpr, left->data, right->data, left->isNull, right->isNull, nullFlag),
+                builder->CreateOr(builder->CreateOr(left->isNull, right->isNull),
+                                  builder->CreateLoad(llvmTypes->I1Type(), nullFlag)));
+        return;
     } else if (TypeUtil::IsStringType(bExpr->left->GetReturnTypeId())) {
         this->value = make_shared<CodeGenValue>(this->BinaryExprStringHelper(bExpr, left->data, left->length,
             right->data, right->length, left->isNull, right->isNull),
@@ -1820,6 +1828,67 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
     }
 }
 
+Value *ExpressionCodeGen::BinaryExprFloatHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
+                                                 Value *leftIsNull, Value *rightIsNull, Value *nullFlag)
+{
+    PHINode *leftPhi;
+    PHINode *rightPhi;
+    Value *isNeitherNull = builder->CreateNot(builder->CreateOr(leftIsNull, rightIsNull));
+    std::vector<omniruntime::type::DataTypeId> floatParams = { OMNI_FLOAT, OMNI_FLOAT };
+    BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi);
+    switch (binaryExpr->op) {
+        case omniruntime::expressions::Operator::LT:
+            return builder->CreateAnd(isNeitherNull,
+                                      CallExternFunction("lessThan", floatParams, OMNI_BOOLEAN, { left, right }, nullptr, "frelational_lt"));
+        case omniruntime::expressions::Operator::LTE:
+            return builder->CreateAnd(isNeitherNull, CallExternFunction("lessThanEqual", floatParams, OMNI_BOOLEAN,
+                                                                        { left, right }, nullptr, "frelational_le"));
+        case omniruntime::expressions::Operator::GT:
+            return builder->CreateAnd(isNeitherNull, CallExternFunction("greaterThan", floatParams, OMNI_BOOLEAN,
+                                                                        { left, right }, nullptr, "frelational_gt"));
+        case omniruntime::expressions::Operator::GTE:
+            return builder->CreateAnd(isNeitherNull, CallExternFunction("greaterThanEqual", floatParams, OMNI_BOOLEAN,
+                                                                        { left, right }, nullptr, "frelational_ge"));
+        case omniruntime::expressions::Operator::EQ:
+            return builder->CreateAnd(isNeitherNull,
+                                      CallExternFunction("equal", floatParams, OMNI_BOOLEAN, { left, right }, nullptr, "farithmetic_eq"));
+        case omniruntime::expressions::Operator::NEQ:
+            return builder->CreateAnd(isNeitherNull, CallExternFunction("notEqual", floatParams, OMNI_BOOLEAN,
+                                                                        { left, right }, nullptr, "farithmetic_neq"));
+        case omniruntime::expressions::Operator::ADD:
+            return CallExternFunction("add", floatParams, OMNI_FLOAT, { leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_add");
+        case omniruntime::expressions::Operator::SUB:
+            return CallExternFunction("subtract", floatParams, OMNI_FLOAT, { leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_sub");
+        case omniruntime::expressions::Operator::MUL:
+            return CallExternFunction("multiply", floatParams, OMNI_FLOAT, { leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_mul");
+        case omniruntime::expressions::Operator::DIV:
+            return CallExternFunction("divide", floatParams, OMNI_FLOAT, { nullFlag, leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_divide");
+        case omniruntime::expressions::Operator::MOD:
+            return CallExternFunction("modulus", floatParams, OMNI_FLOAT, { nullFlag, leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_mod");
+        case omniruntime::expressions::Operator::TRY_ADD:
+            return CallExternFunction("add", floatParams, OMNI_FLOAT, { leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_add");
+        case omniruntime::expressions::Operator::TRY_SUB:
+            return CallExternFunction("subtract", floatParams, OMNI_FLOAT, { leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_sub");
+        case omniruntime::expressions::Operator::TRY_MUL:
+            return CallExternFunction("multiply", floatParams, OMNI_FLOAT, { leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_mul");
+        case omniruntime::expressions::Operator::TRY_DIV:
+            return CallExternFunction("divide", floatParams, OMNI_FLOAT, { nullFlag, leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_divide");
+        default: {
+            LogWarn("Unsupported float binary operator %u", static_cast<uint32_t>(binaryExpr->op));
+            return nullptr;
+        }
+    }
+}
+
 Value *ExpressionCodeGen::BinaryExprStringHelper(const BinaryExpr *binaryExpr, Value *leftVal, Value *leftLen,
     Value *rightVal, Value *rightLen, Value *leftIsNull, Value *rightIsNull)
 {
@@ -2024,7 +2093,7 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
             break;
         }
         case OMNI_FLOAT: {
-            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantDouble(lExpr.floatVal),
+            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantFloat(lExpr.floatVal),
                 llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }

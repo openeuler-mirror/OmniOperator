@@ -130,6 +130,14 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_getValueOffse
     jlong);
 
 /*
+ * Class:     nova_hetu_omniruntime_vector_MapVec
+ * Method:    getValueOffsetsNative
+ * Signature: (J)J;
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getValueOffsetsNative(JNIEnv *, jclass,
+    jlong);
+
+/*
  * Class:     Java_nova_hetu_omniruntime_memory_MemoryManager
  * Method:    setGlobalMemoryLimitNative
  * Signature: (J)V

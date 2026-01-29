@@ -210,7 +210,12 @@ struct ConstVectorReader {
         value = reinterpret_cast<ConstVector<T> *>(vector)->GetConstValue();
     }
 
-    ~ConstVectorReader() {}
+    ~ConstVectorReader()
+    {
+        if (!vector->GetIsField()) {
+            delete vector;
+        }
+    }
 
     T operator[](int32_t offset) const
     {

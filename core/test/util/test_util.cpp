@@ -144,6 +144,33 @@ bool ColumnMatch(BaseVector *actualColumn, BaseVector *expectColumn)
 
     bool result = true;
     DataTypeId typeId = expectColumn->GetTypeId();
+    
+    // Handle Row type separately as it has a different structure
+    if (typeId == OMNI_ROW) {
+        auto actualRowVector = static_cast<RowVector *>(actualColumn);
+        auto expectRowVector = static_cast<RowVector *>(expectColumn);
+        auto childCount = expectRowVector->ChildSize();
+        if (actualRowVector->ChildSize() != childCount) {
+            return false;
+        }
+        // Check null flags for each row
+        for (int32_t rowIndex = 0; rowIndex < actualColumn->GetSize(); rowIndex++) {
+            if (actualColumn->IsNull(rowIndex) != expectColumn->IsNull(rowIndex)) {
+                return false;
+            }
+        }
+        // Compare each child vector
+        for (int32_t childIdx = 0; childIdx < childCount; childIdx++) {
+            auto actualChild = actualRowVector->ChildAt(childIdx).get();
+            auto expectChild = expectRowVector->ChildAt(childIdx).get();
+            result = ColumnMatch(actualChild, expectChild);
+            if (!result) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
     for (int32_t rowIndex = 0; rowIndex < actualColumn->GetSize(); rowIndex++) {
         if (actualColumn->IsNull(rowIndex) != expectColumn->IsNull(rowIndex)) {
             return false;
@@ -236,6 +263,39 @@ VectorBatch *CreateArrayVectorBatch(const DataTypes &types, std::vector<int32_t>
             arrayVector->SetOffset(j, offsets[j]);
         }
         vectorBatch->Append(arrayVector);
+    }
+    va_end(args);
+    return vectorBatch;
+}
+
+VectorBatch *CreateMapVectorBatch(const DataTypes &types, std::vector<int32_t> &offsets,
+    int32_t dataSize, int32_t entrySize, ...)
+{
+    int32_t typesCount = types.GetSize();
+    if (typesCount % 2 != 0) {
+        return nullptr;
+    }
+    int32_t mapColumnCount = typesCount / 2;
+
+    auto *vectorBatch = new VectorBatch(dataSize);
+
+    va_list args;
+    va_start(args, entrySize);
+
+    for (int32_t i = 0; i < mapColumnCount; i++) {
+        int32_t typeIdx = i * 2;
+        auto &keyType = types.GetType(typeIdx);
+        auto &valueType = types.GetType(typeIdx + 1);
+
+        auto keyVector = std::shared_ptr<BaseVector>(CreateVector(*keyType, entrySize, args));
+        auto valueVector = std::shared_ptr<BaseVector>(CreateVector(*valueType, entrySize, args));
+
+        auto *mapVector = new MapVector(dataSize, keyVector, valueVector);
+
+        for (int32_t j = 0; j < offsets.size(); j++) {
+            mapVector->SetOffset(j, offsets[j]);
+        }
+        vectorBatch->Append(mapVector);
     }
     va_end(args);
     return vectorBatch;
@@ -889,6 +949,55 @@ bool CompareVarcharUnorderedRows(BaseVector *resultVector, BaseVector *expectedV
     return true;
 }
 
+bool CompareMapUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const double error) {
+    auto resultVec = dynamic_cast<MapVector *>(resVec);
+    auto expectedVec = dynamic_cast<MapVector *>(dstVec);
+    if (!resultVec || !expectedVec) {
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "MapVector dynamic_cast failed!");
+    }
+    if (resultVec->vec::BaseVector::GetSize() != expectedVec->vec::BaseVector::GetSize()) {
+        throw omniruntime::exception::OmniException("RUNTIME_ERROR", "MapVector dynamic_cast failed!");
+    }
+
+    for (int row = 0; row < resultVec->vec::BaseVector::GetSize(); row++) {
+        if (resultVec->IsNull(row) != expectedVec->IsNull(row)) {
+            return false;
+        }
+        if (resultVec->IsNull(row)) {
+            continue;
+        }
+
+        int32_t resSize = resultVec->GetSize(row);
+        int32_t expSize = expectedVec->GetSize(row);
+        if (resSize != expSize) {
+            return false;
+        }
+
+        int32_t resOffset = resultVec->GetOffset(row);
+        int32_t expOffset = expectedVec->GetOffset(row);
+        auto resMapKey = resultVec->GetKeyVector()->Slice(resOffset, resSize, false);
+        auto expMapKey = expectedVec->GetKeyVector()->Slice(expOffset, expSize, false);
+        bool match = ColumnMatchIgnoreOrder(resMapKey, expMapKey, error);
+
+        delete resMapKey;
+        delete expMapKey;
+        if (!match) {
+            return false;
+        }
+
+        auto resMapValue = resultVec->GetValueVector()->Slice(resOffset, resSize, false);
+        auto expMapValue = expectedVec->GetValueVector()->Slice(expOffset, expSize, false);
+        match = ColumnMatchIgnoreOrder(resMapValue, expMapValue, error);
+
+        delete resMapValue;
+        delete expMapValue;
+        if (!match) {
+            return false;
+        }
+    }
+    return true;
+}
+
 template <typename D, typename V>
 bool CompareUnorderedRows(BaseVector *resultVector, BaseVector *expectedVector, const double error)
 {
@@ -1016,6 +1125,10 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
         }
         case OMNI_ROW: {
             isMatched = CompareStructUnorderedRows(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_MAP: {
+            isMatched = CompareMapUnorderedRows(resultVector, expectedVector, error);
             break;
         }
         default: {

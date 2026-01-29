@@ -99,7 +99,7 @@ public class FunctionType extends Constant {
      * The constant OMNI_AGGREGATION_TYPE_MIN_BY.
      */
     public static final FunctionType OMNI_AGGREGATION_TYPE_MIN_BY = new FunctionType(17);
-    
+
     /**
      * The constant OMNI_AGGREGATION_TYPE_MAX_BY.
      */

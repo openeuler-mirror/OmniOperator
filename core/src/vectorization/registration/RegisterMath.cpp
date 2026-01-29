@@ -22,5 +22,16 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterBinaryNumeric<DivideFunction>({prefix + "divide"});
     RegisterBinaryNumeric<RemainderFunction>({prefix + "modulus"});
     RegisterFunction<AcoshFunction, double, double>(prefix + "acosh", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<AcosFunction, double, double>(prefix + "acos", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterUnaryNumeric<NegativeFunction>({prefix + "negative"});
+	RegisterFunction<AsinFunction, double, double>(prefix + "asin", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<AsinhFunction, double, double>(prefix + "asinh", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<AtanFunction, double, double>(prefix + "atan", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<Atan2Function, double, double, double>(prefix + "atan2", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<CosFunction, double, double>(prefix + "cos", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<CoshFunction, double, double>(prefix + "cosh", {OMNI_DOUBLE}, OMNI_DOUBLE);
+	RegisterFunction<CbrtFunction, double, double>(prefix + "cbrt", {OMNI_DOUBLE}, OMNI_DOUBLE);
+	RegisterFunction<CeilFunction, int64_t, int64_t>(prefix + "ceil", {OMNI_LONG}, OMNI_LONG);
+	RegisterFunction<CeilFunction, int64_t, double>(prefix + "ceil", {OMNI_DOUBLE}, OMNI_LONG);
 }
 }

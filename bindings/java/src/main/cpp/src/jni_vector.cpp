@@ -220,6 +220,18 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_getValueOffse
     return reinterpret_cast<uintptr_t>(offsetsAddr);
 }
 
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getValueOffsetsNative(JNIEnv *env,
+    jclass jcls, jlong jNativeVector)
+{
+    MapVector *nativeVector = reinterpret_cast<MapVector *>(jNativeVector);
+    auto offsetsAddr = nativeVector->GetOffsets();
+    if (UNLIKELY(offsetsAddr == nullptr)) {
+        throw omniruntime::exception::OmniException("GET_OFFSETS_FAILED",
+        "return a null pointer when getting offsets address");
+    }
+    return reinterpret_cast<uintptr_t>(offsetsAddr);
+}
+
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_setGlobalMemoryLimitNative(JNIEnv *env,
     jclass jcls, jlong jLimit)
 {

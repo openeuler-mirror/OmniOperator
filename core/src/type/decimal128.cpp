@@ -41,6 +41,20 @@ bool Decimal128::operator >= (const Decimal128 &right) const
     return !operator < (right);
 }
 
+const Decimal128 Decimal128::operator - () const {
+    // -x = (~x) + 1
+    uint64_t notLow = ~lowBits;
+    uint64_t notHigh = ~highBits;
+
+    uint64_t newLow = notLow  + 1;
+    int64_t newHigh = notHigh;
+    // overflow to hign bit + 1
+    if (newLow == 0) {
+        newHigh += 1;
+    }
+    return Decimal128(newHigh, newLow);
+}
+
 std::ostream &operator << (std::ostream &os, const Decimal128 &decimal128)
 {
     os << std::hex << "0x" << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << decimal128.HighBits() <<

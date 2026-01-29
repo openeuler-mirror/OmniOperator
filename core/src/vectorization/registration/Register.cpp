@@ -51,6 +51,7 @@ void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
     RegisterCompareFunctions(prefix);
     RegisterConditionalFunctions(prefix);
     RegisterConversionFunctions(prefix);
+    RegisterDatetimeFunctions(prefix);
     RegisterMapFunctions(prefix);
     RegisterMathFunctions(prefix);
     RegisterStringFunctions(prefix);

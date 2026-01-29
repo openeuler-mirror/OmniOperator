@@ -1,0 +1,161 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Description: Trunc function implementation
+ */
+
+#include "Trunc.h"
+#include "vector/vector.h"
+#include "../VectorFunction.h"
+#include "vectorization/SelectivityVector.h"
+#include "type/date32.h"
+#include "vector/vector_helper.h"
+#include "util/bit_util.h"
+#include <ctime>
+#include <cstring>
+#include <string>
+#include <string_view>
+#include "libboundscheck/include/securec.h"
+
+namespace omniruntime::vectorization {
+using namespace omniruntime::vec;
+using namespace omniruntime::type;
+
+namespace {
+class TruncFunction : public VectorFunction {
+public:
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
+        op::ExecutionContext *context) const override
+    {
+        if (args.size() < 2) {
+            return;
+        }
+        
+        // Extract arguments from stack: format (VARCHAR), date (DATE32)
+        const auto formatArg = args.top();
+        args.pop();
+        const auto dateArg = args.top();
+        args.pop();
+        
+        const auto size = dateArg->GetSize();
+        
+        // Create result vector if it doesn't exist
+        if (result == nullptr) {
+            result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
+        }
+        
+        auto *resultVector = reinterpret_cast<Vector<int32_t> *>(result);
+        auto *resultRaw = unsafe::UnsafeVector::GetRawValues(resultVector);
+        
+        // Get input type
+        const auto dateTypeId = dateArg->GetTypeId();
+        
+        if (dateTypeId == OMNI_DATE32 || dateTypeId == OMNI_INT) {
+            // Extract date values
+            auto *dateVector = reinterpret_cast<Vector<int32_t> *>(dateArg);
+            const auto *dateRaw = unsafe::UnsafeVector::GetRawValues(dateVector);
+            const auto *dateNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(dateArg));
+            
+            // Get format vector (may be null if const)
+            Vector<LargeStringContainer<std::string_view>> *formatVector = nullptr;
+            if (formatArg->GetEncoding() != OMNI_ENCODING_CONST) {
+                formatVector = dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(formatArg);
+            }
+            const auto *formatNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(formatArg));
+            
+            // Copy NULL bits from date input to result (so NULL rows are already set to NULL)
+            auto *resultNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
+            auto nullsSize = BitUtil::Nbytes(size);
+            memcpy_s(resultNulls, nullsSize, dateNulls, nullsSize);
+            
+            // Process only non-NULL rows using SelectivityVector
+            SelectivityVector rows(size);
+            rows.setFromBitsNegate(dateNulls, size);
+            
+            // Check if format is constant
+            bool formatIsConst = (formatArg->GetEncoding() == OMNI_ENCODING_CONST);
+            std::string constFormat;
+            DateTruncMode constLevel = DateTruncMode::TRUNC_INVALID;
+            
+            if (formatIsConst) {
+                auto *constFormatVec = reinterpret_cast<ConstVector<std::string_view> *>(formatArg);
+                std::string_view formatView = constFormatVec->GetConstValue();
+                constFormat = std::string(formatView);
+                constLevel = Date32::ParseTruncLevel(constFormat);
+            }
+            
+            rows.applyToSelected([&](vector_size_t i) {
+                // Check if format is NULL (for non-const format)
+                if (!formatIsConst) {
+                    if (formatNulls && BitUtil::IsBitSet(formatNulls, i)) {
+                        result->SetNull(i);
+                        return;
+                    }
+                }
+                
+                // Get format string
+                std::string formatStr;
+                DateTruncMode level;
+                
+                if (formatIsConst) {
+                    level = constLevel;
+                } else {
+                    std::string_view formatView = formatVector->GetValue(i);
+                    formatStr = std::string(formatView);
+                    level = Date32::ParseTruncLevel(formatStr);
+                }
+                
+                // Check if format is invalid
+                if (level == DateTruncMode::TRUNC_INVALID) {
+                    result->SetNull(i);
+                    return;
+                }
+                
+                // Check if level is valid for date truncation (must be >= WEEK)
+                if (level < DateTruncMode::TRUNC_TO_WEEK) {
+                    result->SetNull(i);
+                    return;
+                }
+                
+                // Perform truncation
+                int32_t daysSinceEpoch = dateRaw[i];
+                int32_t truncatedDays = 0;
+                
+                if (Date32::TruncDate(daysSinceEpoch, level, truncatedDays) == Status::CONVERT_SUCCESS) {
+                    resultRaw[i] = truncatedDays;
+                    result->SetNotNull(i);
+                } else {
+                    // If truncation fails, set to null
+                    result->SetNull(i);
+                }
+            });
+        }
+    }
+    
+private:
+    // Helper: Get string value from vector with different encodings
+    std::string_view GetStringValueFromVector(BaseVector *vec, int32_t row) const {
+        Encoding encoding = vec->GetEncoding();
+        
+        if (encoding == OMNI_ENCODING_CONST) {
+            auto *constVec = static_cast<ConstVector<std::string_view> *>(vec);
+            return constVec->GetConstValue();
+        } else if (encoding == OMNI_FLAT) {
+            auto *flatVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
+            return flatVec->GetValue(row);
+        } else if (encoding == OMNI_DICTIONARY) {
+            auto *dictVec = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vec);
+            return dictVec->GetValue(row);
+        } else {
+            return std::string_view();
+        }
+    }
+};
+} // namespace
+
+void RegisterTruncFunction(const std::string &name)
+{
+    // Trunc takes DATE32 and VARCHAR(format) and returns DATE32
+    VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32, OMNI_VARCHAR}, OMNI_DATE32,
+        std::make_shared<TruncFunction>());
+}
+}

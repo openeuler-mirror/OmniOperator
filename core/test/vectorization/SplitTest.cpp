@@ -137,7 +137,6 @@ TEST(VectorizationTest, SplitFunctionTest) {
 
     delete inputVec;
     delete delimiterVec;
-    delete limitVec;
 
     std::cout << "=== Direct Test Completed ===" << std::endl;
 }
@@ -160,7 +159,6 @@ TEST(VectorizationTest, SplitFunctionLimitTest) {
 
     delete inputVec;
     delete delimiterVec;
-    delete limitVec;
 
     std::cout << "=== Multi-Row Test Completed ===" << std::endl;
 }

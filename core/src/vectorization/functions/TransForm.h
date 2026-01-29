@@ -58,6 +58,7 @@ namespace omniruntime::vectorization {
             }
 
             BaseVector *flatElementVec = srcArrVec->GetElementVector().get();
+            flatElementVec->SetIsField(true);
             if (flatElementVec == nullptr || flatElementVec->GetSize() == 0) {
                 VectorHelper::EmptyArrayProjection(dstArrVec, srcEleTypeId);
                 return;
@@ -85,6 +86,7 @@ namespace omniruntime::vectorization {
             }
 
             dstArrVec->AddElements(flatResultVec);
+            delete srcArrVec;
         }
     };
 }

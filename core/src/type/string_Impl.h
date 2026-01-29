@@ -21,6 +21,7 @@
 #include <string>
 #include <re2/re2.h>
 #include "util/compiler_util.h"
+#include "util/format.h"
 
 namespace omniruntime::stringImpl {
 #define utf_cont(ch) (((ch)&0xc0) == 0x80)
@@ -30,7 +31,7 @@ namespace omniruntime::stringImpl {
  * @param bufferLength size of input buffer
  * @return the number of characters represented by the input utf8 string
  */
-ALWAYS_INLINE int64_t lengthUnicode(const char *inputBuffer, size_t bufferLength)
+static ALWAYS_INLINE int64_t lengthUnicode(const char *inputBuffer, size_t bufferLength)
 {
     // First address after the last byte in the buffer
     auto buffEndAddress = inputBuffer + bufferLength;
@@ -164,7 +165,7 @@ inline int utf8proc_char_length(const char *u_input)
     return -1;
 }
 
-ALWAYS_INLINE int64_t cappedByteLengthUnicode(const char *input, int64_t size, int64_t maxChars)
+static ALWAYS_INLINE int64_t cappedByteLengthUnicode(const char *input, int64_t size, int64_t maxChars)
 {
     int64_t utf8Position = 0;
     int64_t numCharacters = 0;
@@ -217,7 +218,7 @@ inline bool performChecks(std::string &result, const std::string &stringInput, c
 /// 3. Replacement in RE2 only supports '\' followed by a digit or another '\',
 /// while java.util.regex will ignore '\' in replacements, so we need to
 /// unescape it.
-ALWAYS_INLINE std::string PrepareRegexpReplaceReplacement(const RE2 &re, const std::string &replacement)
+static ALWAYS_INLINE std::string PrepareRegexpReplaceReplacement(const RE2 &re, const std::string &replacement)
 {
     if (replacement.size() == 0) {
         return std::string{};

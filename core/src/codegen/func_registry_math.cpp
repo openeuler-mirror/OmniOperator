@@ -179,6 +179,7 @@ const std::string NegativeFnStr()
 std::vector<Function> MathFunctionRegistry::GetFunctions()
 {
     const std::vector<omniruntime::type::DataTypeId> doubleParams = { OMNI_DOUBLE, OMNI_DOUBLE };
+    const std::vector<omniruntime::type::DataTypeId> floatParams = { OMNI_FLOAT, OMNI_FLOAT };
     const std::vector<omniruntime::type::DataTypeId> longParams = { OMNI_LONG, OMNI_LONG };
     const std::vector<omniruntime::type::DataTypeId> intParams = { OMNI_INT, OMNI_INT };
     const std::vector<omniruntime::type::DataTypeId> shortParams = { OMNI_SHORT, OMNI_SHORT };
@@ -228,6 +229,19 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(NormalizeNaNAndZero), NormalizeNaNAndZeroFnStr(), {}, { OMNI_DOUBLE },
             OMNI_DOUBLE, INPUT_DATA),
         Function(reinterpret_cast<void *>(PowerDouble), PowerFnStr(), {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
+
+        // insert native function for each float operations
+        Function(reinterpret_cast<void *>(AddFloat), AddFnStr(), {}, floatParams, OMNI_FLOAT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(SubtractFloat), SubtractFnStr(), {}, floatParams, OMNI_FLOAT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(MultiplyFloat), MultiplyFnStr(), {}, floatParams, OMNI_FLOAT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(DivideFloat), DivideFnStr(), {}, floatParams, OMNI_FLOAT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(ModulusFloat), ModulusFnStr(), {}, floatParams, OMNI_FLOAT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(LessThanFloat), LessThanFnStr(), {}, floatParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(LessThanEqualFloat), LessThanEqualFnStr(), {}, floatParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(GreaterThanFloat), GreaterThanFnStr(), {}, floatParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(GreaterThanEqualFloat), GreaterThanEqualFnStr(), {}, floatParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(EqualFloat), EqualFnStr(), {}, floatParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(NotEqualFloat), NotEqualFnStr(), {}, floatParams, OMNI_BOOLEAN, INPUT_DATA),
 
         // insert native function for each long operations
         Function(reinterpret_cast<void *>(AddInt64), AddFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),

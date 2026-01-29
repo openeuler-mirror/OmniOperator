@@ -18,6 +18,7 @@ public class MapVec extends ComplexVec {
 
     private Vec keyVec;
     private Vec valueVec;
+    protected OmniBuffer offsetsBuf;
 
     public MapVec(MapDataType type, int size) {
         this(type, size, false);
@@ -41,6 +42,7 @@ public class MapVec extends ComplexVec {
             getComplexCapacityNative(nativeVector, OMNI_ENCODING_MAP.ordinal()), size, type);
         this.keyVec = createVec(getKeysAddrNative(nativeVector), type.getKeyType());
         this.valueVec = createVec(getValuesAddrNative(nativeVector), type.getValueType());
+        this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Long.BYTES);
     }
 
     public MapVec(long nativeVector, MapDataType type, int size, boolean isEmpty) {
@@ -49,12 +51,14 @@ public class MapVec extends ComplexVec {
             this.keyVec = createVec(getKeysAddrNative(nativeVector), type.getKeyType());
             this.valueVec = createVec(getValuesAddrNative(nativeVector), type.getValueType());
         }
+        this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Long.BYTES);
     }
 
     private MapVec(MapVec vector, int offset, int length) {
         super(vector, offset, length, getComplexCapacityNative(vector.getNativeVector(), OMNI_ENCODING_MAP.ordinal()));
         this.keyVec = createVec(getKeysAddrNative(nativeVector), ((MapDataType) getType()).getKeyType());
         this.valueVec = createVec(getValuesAddrNative(nativeVector), ((MapDataType) getType()).getValueType());
+        this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()), (length + 1) * Long.BYTES);
     }
 
     @Override
@@ -77,6 +81,11 @@ public class MapVec extends ComplexVec {
         return 0;
     }
 
+    @Override
+    public int getRealOffsetBufCapacityInBytes() {
+        return (size + 1) * Long.BYTES;
+    }
+
     public long getOffset(long rowId) {
         return getOffsetNative(nativeVector, rowId);
     }
@@ -86,10 +95,12 @@ public class MapVec extends ComplexVec {
     }
 
     public void AddKeys(Vec keys){
+        this.keyVec = keys;
         AddKeysNative(this.nativeVector, keys.nativeVector);
     }
 
     public void AddValues(Vec values){
+        this.valueVec = values;
         AddValuesNative(this.nativeVector, values.nativeVector);
     }
 
@@ -117,11 +128,21 @@ public class MapVec extends ComplexVec {
 
     protected static native void AddOffsetsNative(long nativeVector, int[] offsets);
 
+    protected static native long getValueOffsetsNative(long nativeVector);
+
     public Vec getKeyVec() {
         return keyVec;
     }
 
     public Vec getValueVec() {
         return valueVec;
+    }
+
+    public OmniBuffer getOffsetsBuf() {
+        return offsetsBuf;
+    }
+
+    public void setOffsetsBuf(byte[] buf) {
+        offsetsBuf.setBytes(0, buf, 0, buf.length);
     }
 }
