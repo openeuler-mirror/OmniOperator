@@ -352,5 +352,405 @@ namespace omniruntime::reader {
         }
     }
 
+    void OmniByteRleDecoder::nextBatch(char *data, uint64_t numValues, uint64_t *nulls) {
+        uint64_t position = 0;
+        // skip over null values
+        while (nulls && position < numValues && BitUtil::IsBitSet(nulls, position)) {
+            position += 1;
+        }
+        while (position < numValues) {
+            // if we are out of values, read more
+            if (remainingValues == 0) {
+                readHeader();
+            }
+            // how many do we read out of this block?
+            size_t count = std::min(static_cast<size_t>(numValues - position),
+                                    remainingValues);
+            uint64_t consumed = 0;
+            if (repeating) {
+                if (nulls) {
+                    for(uint64_t i=0; i < count; ++i) {
+                        if (!BitUtil::IsBitSet(nulls, position + i)) {
+                            data[position + i] = value;
+                            consumed += 1;
+                        }
+                    }
+                } else {
+                    memset_s(data + position, count, value, count);
+                    consumed = count;
+                }
+            } else {
+                if (nulls) {
+                    for(uint64_t i=0; i < count; ++i) {
+                        if (!BitUtil::IsBitSet(nulls, position + i)) {
+                            data[position + i] = readByte();
+                            consumed += 1;
+                        }
+                    }
+                } else {
+                    uint64_t i = 0;
+                    while (i < count) {
+                        if (bufferStart == bufferEnd) {
+                            nextBuffer();
+                        }
+                        uint64_t copyBytes =
+                                std::min(static_cast<uint64_t>(count - i),
+                                         static_cast<uint64_t>(bufferEnd - bufferStart));
+                        memcpy_s(data + position + i, copyBytes, bufferStart, copyBytes);
+                        bufferStart += copyBytes;
+                        i += copyBytes;
+                    }
+                    consumed = count;
+                }
+            }
+            remainingValues -= consumed;
+            position += count;
+            // skip over any null values
+            while (nulls && position < numValues && BitUtil::IsBitSet(nulls, position)) {
+                position += 1;
+            }
+        }
+    }
    //OmniByteRleDecoder end
+}
+
+namespace omniruntime::writer {
+    const int BYTE_RLE_MINIMUM_REPEAT = 3;
+    const int BYTE_RLE_MAXIMUM_REPEAT = 127 + BYTE_RLE_MINIMUM_REPEAT;
+    const int BYTE_RLE_MAX_LITERAL_SIZE = 128;
+
+    OmniByteRleEncoder::OmniByteRleEncoder(std::unique_ptr<orc::BufferedOutputStream> output)
+            : outputStream(std::move(output)) {
+        literals = new char[BYTE_RLE_MAX_LITERAL_SIZE ];
+        numLiterals = 0;
+        tailRunLength = 0;
+        repeat = false;
+        bufferPosition = 0;
+        bufferLength = 0;
+        buffer = nullptr;
+    }
+
+    OmniByteRleEncoder::~OmniByteRleEncoder() {
+        // PASS
+        delete [] literals;
+    }
+
+
+    void OmniByteRleEncoder::writeByte(char c) {
+        if (bufferPosition == bufferLength) {
+            int addedSize = 0;
+            if (!outputStream->Next(reinterpret_cast<void **>(&buffer), &addedSize)) {
+                throw std::bad_alloc();
+            }
+            bufferPosition = 0;
+            bufferLength = addedSize;
+        }
+        buffer[bufferPosition++] = c;
+    }
+
+    void OmniByteRleEncoder::add(const char* data, uint64_t numValues, const char* notNull) {
+        for (uint64_t i = 0; i < numValues; ++i) {
+            if (!notNull || notNull[i]) {
+                write(data[i]);
+            }
+        }
+    }
+
+    // this function writes byte vector's value stream
+    void OmniByteRleEncoder::add(const int8_t* data,
+                                 uint64_t offset,
+                                 uint64_t numValues,
+                                 omniruntime::vec::NullsBuffer* nullsBuffer) {
+        for (uint64_t i = 0; i < numValues; ++i) {
+            if (!nullsBuffer || !nullsBuffer->IsNull(offset + i)) {
+                write(static_cast<char>(data[i]));
+            }
+        }
+    }
+
+    void OmniByteRleEncoder::add(ByteDictVector* data,
+                                 uint64_t offset,
+                                 uint64_t numValues) {
+        for (uint64_t i = 0; i < numValues; ++i) {
+            uint64_t rowIdx = offset + i;
+            if (!data->IsNull(rowIdx)) {
+                write(static_cast<char>(data->GetValue(rowIdx)));
+            }
+        }
+    }
+
+    void OmniByteRleEncoder::writeValues() {
+        if (numLiterals != 0) {
+            if (repeat) {
+                writeByte(
+                        static_cast<char>(numLiterals - static_cast<int>(BYTE_RLE_MINIMUM_REPEAT)));
+                writeByte(literals[0]);
+            } else {
+                writeByte(static_cast<char>(-numLiterals));
+                for (int i = 0; i < numLiterals; ++i) {
+                    writeByte(literals[i]);
+                }
+            }
+            repeat = false;
+            tailRunLength = 0;
+            numLiterals = 0;
+        }
+    }
+
+    uint64_t OmniByteRleEncoder::flush() {
+        writeValues();
+        outputStream->BackUp(bufferLength - bufferPosition);
+        uint64_t dataSize = outputStream->flush();
+        bufferLength = bufferPosition = 0;
+        return dataSize;
+    }
+
+    void OmniByteRleEncoder::write(char value) {
+        if (numLiterals == 0) {
+            literals[numLiterals++] = value;
+            tailRunLength = 1;
+        } else if (repeat) {
+            if (value == literals[0]) {
+                numLiterals += 1;
+                if (numLiterals == BYTE_RLE_MAXIMUM_REPEAT) {
+                    writeValues();
+                }
+            } else {
+                writeValues();
+                literals[numLiterals++] = value;
+                tailRunLength = 1;
+            }
+        } else {
+            if (value == literals[numLiterals - 1]) {
+                tailRunLength += 1;
+            } else {
+                tailRunLength = 1;
+            }
+            if (tailRunLength == BYTE_RLE_MINIMUM_REPEAT ) {
+                if (numLiterals + 1 == BYTE_RLE_MINIMUM_REPEAT ) {
+                    repeat = true;
+                    numLiterals += 1;
+                } else {
+                    numLiterals -= static_cast<int>(BYTE_RLE_MINIMUM_REPEAT  - 1);
+                    writeValues();
+                    literals[0] = value;
+                    repeat = true;
+                    numLiterals = BYTE_RLE_MINIMUM_REPEAT ;
+                }
+            } else {
+                literals[numLiterals++] = value;
+                if (numLiterals == BYTE_RLE_MAX_LITERAL_SIZE ) {
+                    writeValues();
+                }
+            }
+        }
+    }
+
+    uint64_t OmniByteRleEncoder::getBufferSize() const {
+        return outputStream->getSize();
+    }
+
+    void OmniByteRleEncoder::recordPosition(orc::PositionRecorder *recorder) const {
+        uint64_t flushedSize = outputStream->getSize();
+        uint64_t unflushedSize = static_cast<uint64_t>(bufferPosition);
+        if (outputStream->isCompressed()) {
+            // start of the compression chunk in the stream
+            recorder->add(flushedSize);
+            // number of decompressed bytes that need to be consumed
+            recorder->add(unflushedSize);
+        } else {
+            flushedSize -= static_cast<uint64_t>(bufferLength);
+            // byte offset of the RLE run’s start location
+            recorder->add(flushedSize + unflushedSize);
+        }
+        recorder->add(static_cast<uint64_t>(numLiterals));
+    }
+
+    std::unique_ptr<orc::ByteRleEncoder> createOmniByteRleEncoder
+            (std::unique_ptr<orc::BufferedOutputStream> output) {
+        return std::unique_ptr<orc::ByteRleEncoder>(new OmniByteRleEncoder(std::move(output)));
+    }
+    //OmniByteRleEncoder end
+
+    //OmniBooleanRleEncoder start
+    OmniBooleanRleEncoder::OmniBooleanRleEncoder(std::unique_ptr<orc::BufferedOutputStream> output)
+            : OmniByteRleEncoder(std::move(output)) {
+        bitsRemained = 8;
+        current = static_cast<char>(0);
+    }
+
+    void OmniBooleanRleEncoder::add(BoolDictVector *vec,
+                                    uint64_t offset,
+                                    uint64_t numValues) {
+        bool hasNull = vec->HasNull();
+        uint64_t curPos  = offset;
+        for (uint64_t i = 0; i < numValues; ++i, ++curPos) {
+            if (bitsRemained == 0) {
+                write(current);
+                current = static_cast<char>(0);
+                bitsRemained = 8;
+            }
+            if (!hasNull || !vec->IsNull(curPos)) {
+                if (vec->GetValue(curPos)) {
+                    current =
+                            static_cast<char>(current | (0x80 >> (8 - bitsRemained)));
+                }
+                --bitsRemained;
+            }
+        }
+        if (bitsRemained == 0) {
+            write(current);
+            current = static_cast<char>(0);
+            bitsRemained = 8;
+        }
+    }
+
+    /**
+     * @brief this function writes every omniVector's present stream
+     * @param nullsBuffer current omniVector's nullsBuffer
+     * @param pNullsBuffer current omniVector's parent' nullsBuffer
+     * @param offset current chunk for first stripe's offset
+     * @param numValues count of rows for one write action
+     */
+    void OmniBooleanRleEncoder::add(
+            omniruntime::vec::NullsBuffer *nullsBuffer,
+            omniruntime::vec::NullsBuffer *pNullsBuffer,
+            uint64_t offset,
+            uint64_t numValues) {
+        if (numValues == 0) return;
+
+        const bool pHasNull = (pNullsBuffer != nullptr && pNullsBuffer->HasNull());
+        const bool cHasNull = (nullsBuffer != nullptr && nullsBuffer->HasNull());
+
+        if (!pHasNull) {
+            // path 1: pNullsBuffer doesn't have null, nullsBuffer doesn't have null
+            if (!cHasNull) {
+                for (uint64_t i = 0; i < numValues; ++i) {
+                    if (bitsRemained == 0) {
+                        write(current);
+                        current = 0;
+                        bitsRemained = 8;
+                    }
+                    current = static_cast<char>(current | (0x80 >> (8 - bitsRemained)));
+                    --bitsRemained;
+                }
+            } else {
+                // path 2: pNullsBuffer doesn't have null, nullsBuffer has null
+                for (uint64_t i = 0; i < numValues; ++i) {
+                    if (bitsRemained == 0) {
+                        write(current);
+                        current = 0;
+                        bitsRemained = 8;
+                    }
+                    if (!nullsBuffer->IsNull(offset + i)) {
+                        current = static_cast<char>(current | (0x80 >> (8 - bitsRemained)));
+                    }
+                    --bitsRemained;
+                }
+            }
+        } else {
+            // path 3: pNullsBuffer has null, nullsBuffer doesn't have null
+            if (!cHasNull) {
+                for (uint64_t i = 0; i < numValues; ++i) {
+                    if (bitsRemained == 0) {
+                        write(current);
+                        current = 0;
+                        bitsRemained = 8;
+                    }
+                    if (!pNullsBuffer->IsNull(offset + i)) {
+                        current = static_cast<char>(current | (0x80 >> (8 - bitsRemained)));
+                    }
+                    --bitsRemained;
+                }
+            } else {
+                // path 4: pNullsBuffer has null, nullsBuffer has nulls
+                for (uint64_t i = 0; i < numValues; ++i) {
+                    if (bitsRemained == 0) {
+                        write(current);
+                        current = 0;
+                        bitsRemained = 8;
+                    }
+                    if (!pNullsBuffer->IsNull(offset + i) && !nullsBuffer->IsNull(offset + i)) {
+                        current = static_cast<char>(current | (0x80 >> (8 - bitsRemained)));
+                    }
+                    --bitsRemained;
+                }
+            }
+        }
+
+        if (bitsRemained == 0) {
+            write(current);
+            current = static_cast<char>(0);
+            bitsRemained = 8;
+        }
+    }
+
+    // this function writes Vector<bool> 's value stream to orc file
+    void OmniBooleanRleEncoder::add(
+            const bool* data,
+            uint64_t offset,
+            uint64_t numValues,
+            omniruntime::vec::NullsBuffer* nullsBuffer) {
+        if (numValues == 0) return;
+
+        const bool hasNull = (nullsBuffer != nullptr && nullsBuffer->HasNull());
+
+        if (!hasNull) {
+            for (uint64_t i = 0; i < numValues; ++i) {
+                if (bitsRemained == 0) {
+                    write(current);
+                    current = 0;
+                    bitsRemained = 8;
+                }
+                if (data[i]) {
+                    current = static_cast<char>(current | (0x80 >> (8 - bitsRemained)));
+                }
+                --bitsRemained;
+            }
+        } else {
+            for (uint64_t i = 0; i < numValues; ++i) {
+                if (bitsRemained == 0) {
+                    write(current);
+                    current = 0;
+                    bitsRemained = 8;
+                }
+                if (!nullsBuffer->IsNull(offset + i)) {
+                    if (data[i]) {
+                        current = static_cast<char>(current | (0x80 >> (8 - bitsRemained)));
+                    }
+                    --bitsRemained;
+                }
+            }
+        }
+
+        if (bitsRemained == 0) {
+            write(current);
+            current = static_cast<char>(0);
+            bitsRemained = 8;
+        }
+    }
+
+    uint64_t OmniBooleanRleEncoder::flush() {
+        if (bitsRemained != 8) {
+            write(current);
+        }
+        bitsRemained = 8;
+        current = static_cast<char>(0);
+        return OmniByteRleEncoder::flush();
+    }
+
+    void OmniBooleanRleEncoder::recordPosition(orc::PositionRecorder* recorder) const {
+        OmniByteRleEncoder::recordPosition(recorder);
+        recorder->add(static_cast<uint64_t>(8 - bitsRemained));
+    }
+
+
+    std::unique_ptr<orc::ByteRleEncoder> createOmniBooleanRleEncoder
+            (std::unique_ptr<orc::BufferedOutputStream> output)
+    {
+        orc::ByteRleEncoder* encoder =
+                new OmniBooleanRleEncoder(std::move(output)) ;
+        return std::unique_ptr<orc::ByteRleEncoder>(encoder);
+    }
+    //OmniBooleanRleDecoder end
 }

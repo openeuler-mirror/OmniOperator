@@ -45,9 +45,13 @@ install(TARGETS ${READER_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
 file(GLOB READER_HEAD_FILES  ${SOURCE_ROOT}/src/reader/*.h)
 file(GLOB READER_ORC_HEAD_FILES
         ${SOURCE_ROOT}/src/reader/orc/*.h
-        ${SOURCE_ROOT}/src/reader/orc/*.hh
-)
+        ${SOURCE_ROOT}/src/reader/orc/*.hh)
+file(GLOB READER_COMMON_HEAD_FILES
+        ${SOURCE_ROOT}/src/reader/common/*.h
+        ${SOURCE_ROOT}/src/reader/common/*.hh)
+
 file(GLOB READER_FILE_HEAD_FILES  ${SOURCE_ROOT}/src/filesystem/*.h)
 install(FILES ${READER_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader)
 install(FILES ${READER_ORC_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/orc)
 install(FILES ${READER_FILE_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/filesystem)
+install(FILES ${READER_COMMON_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/common)

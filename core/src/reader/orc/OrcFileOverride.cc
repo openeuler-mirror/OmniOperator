@@ -33,17 +33,17 @@ namespace omniruntime::reader
         }
     }
 
-//    std::unique_ptr<OutputStream> writeFileOverride(const UriInfo &uri)
-//    {
-//        if (uri.Scheme() == "hdfs") {
-//            return orc::createHdfsFileOutputStream(uri);
-//        }
-//        else {
-//            auto res = common::createDirectories(common::getParentPath(uri.Path()));
-//            if (res != 0) {
-//                throw std::runtime_error("Create local directories fail");
-//            }
-//            return orc::writeLocalFile(std::string(uri.Path()));
-//        }
-//    }
+    std::unique_ptr<::orc::OutputStream> writeFileOverride(const UriInfo &uri)
+    {
+        if (uri.Scheme() == "hdfs") {
+            return createHdfsFileOutputStream(uri);
+        }
+        else {
+            auto res = common::createDirectories(common::getParentPath(uri.Path()));
+            if (res != 0) {
+                throw std::runtime_error("Create local directories fail");
+            }
+            return orc::writeLocalFile(std::string(uri.Path()));
+        }
+    }
 }
