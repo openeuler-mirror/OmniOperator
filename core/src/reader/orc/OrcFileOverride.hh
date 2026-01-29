@@ -40,7 +40,7 @@ namespace omniruntime::reader {
    * Create a output stream to a local file or HDFS file if path begins with "hdfs://"
    * @param uri the UriInfo of HDFS
    */
-//  ORC_UNIQUE_PTR<OutputStream> writeFileOverride(const UriInfo &uri);
+  ORC_UNIQUE_PTR<::orc::OutputStream> writeFileOverride(const UriInfo &uri);
 
   /**
    * Create a input stream to an HDFS file.

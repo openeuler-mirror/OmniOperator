@@ -7,7 +7,7 @@
 
 namespace omniruntime::codegen {
 using namespace llvm;
-using namespace orc;
+using namespace llvm::orc;
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 using namespace omniruntime;
