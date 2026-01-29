@@ -93,7 +93,17 @@ public class FunctionType extends Constant {
     /**
      * The constant OMNI_AGGREGATION_TYPE_BLOOM_FILTER.
      */
-    public static final FunctionType OMNI_AGGREGATION_TYPE_BLOOM_FILTER = new FunctionType(15);
+    public static final FunctionType OMNI_AGGREGATION_TYPE_BLOOM_FILTER = new FunctionType(16);
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_MIN_BY.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_MIN_BY = new FunctionType(17);
+    
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_MAX_BY.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_MAX_BY = new FunctionType(18);
 
     private static final long serialVersionUID = 5337378607473315604L;
 
