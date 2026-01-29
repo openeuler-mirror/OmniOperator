@@ -193,4 +193,40 @@ namespace omniruntime::vectorization {
             return Status::OK();
         }
     };
+
+    template <typename T>
+    struct Log10Function {
+         template <typename TInput>
+         ALWAYS_INLINE Status call(TInput &result, const TInput &a) {
+             result = std::log10(a);
+             return Status::OK();
+         }
+     };
+
+    template <typename T>
+    struct Log1pFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a) {
+            result = std::log1p(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct Log2Function {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a) {
+            result = std::log2(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct LogarithmFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a, const TInput &b) {
+            result = std::log(b) / std::log(a);
+            return Status::OK();
+        }
+    };
 }

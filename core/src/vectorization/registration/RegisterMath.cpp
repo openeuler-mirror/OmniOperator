@@ -37,5 +37,9 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<SinhFunction, double, double>(prefix + "sinh", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SqrtFunction, double, double>(prefix + "sqrt", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SecFunction, double, double>(prefix + "sec", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<Log1pFunction, double, double>(prefix + "log1p", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<Log10Function, double, double>(prefix + "log10", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<Log2Function, double, double>(prefix + "log2", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<LogarithmFunction, double, double, double>(prefix + "log", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE);
 }
 }
