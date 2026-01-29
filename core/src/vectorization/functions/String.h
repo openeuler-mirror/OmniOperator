@@ -140,10 +140,25 @@ struct PositionFunction {
 
     ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *subString, const std::string_view *string)
     {
-        if (subString == nullptr || string == nullptr) {
-            return false;
-        }
         return call(result, *subString, *string);
+    }
+};
+
+/// char_length / character_length / length function
+/// length(string) -> integer
+/// Returns the number of characters in the input string (Unicode code points).
+/// Empty string returns 0. Supports CHAR and VARCHAR. NULL input yields NULL output.
+template <typename T>
+struct CharLengthFunction {
+    ALWAYS_INLINE bool call(int32_t &result, const std::string_view &str)
+    {
+        result = static_cast<int32_t>(stringImpl::length<false /*isAscii*/>(str));
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *str)
+    {
+        return call(result, *str);
     }
 };
 }
