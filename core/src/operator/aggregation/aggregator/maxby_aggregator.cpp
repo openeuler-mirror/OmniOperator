@@ -17,7 +17,7 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ExtractValues(const AggregateState *stat
         auto *maxByState = MaxByState<targetValueType, sortKeyType>::ConstCastState(state + aggStateOffset);
 
         if (maxByState->isEmpty) {
-            // 无中间结果
+            // no partial result
             return;
         }
 
@@ -31,7 +31,7 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ExtractValues(const AggregateState *stat
         auto *maxByState = MaxByState<targetValueType, sortKeyType>::ConstCastState(state + aggStateOffset);
         auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
         if (maxByState->isEmpty) {
-            // max_by 空表，最终结果为null
+            // max_by empty table，final result is null
             targetValueVector->SetNull(rowIndex);
             return;
         }
@@ -134,7 +134,8 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
     int col2Size = col2Vector->GetSize();
 
     if (col1Size != col2Size) {
-        throw std::runtime_error("Error in MaxByAggregator::ProcessSingleInternal(): col1Size != col2Size: " + std::to_string(col1Size) + " != " + std::to_string(col2Size));
+        std::string omniExceptionInfo = "col1Size != col2Size: " + std::to_string(col1Size) + " != " + std::to_string(col2Size);
+        throw omniruntime::exception::OmniException("Error in MaxByAggregator::ProcessSingleInternal():", omniExceptionInfo);
     }
 
     for (int i = 0; i < col2Size; i++) {
@@ -162,11 +163,12 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
 
     const size_t rowCount = rowStates.size();
     if (rowCount != col1Vector->GetSize() || rowCount != col2Vector->GetSize()) {
-        throw std::runtime_error("Error in MaxByAggregator::ProcessGroupInternal(): rowStates count must be equal to base vec size");
+        std::string omniExceptionInfo = "rowStates count must be equal to base vec size";
+        throw omniruntime::exception::OmniException("Error in MaxByAggregator::ProcessGroupInternal():", omniExceptionInfo);
     }
 
     if (rowCount <= 0) {
-        // 空表, 无结果
+        // empty table, no result
         return;
     }
 
@@ -216,7 +218,8 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID>
 void MaxByAggregator<COL1_ID, COL2_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
     const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
 {
-    throw std::runtime_error("Error in MaxByAggregator::ProcessAlignAggSchema: currently not support skipping partial agg");
+    std::string omniExceptionInfo = "currently not support skipping partial agg";
+    throw omniruntime::exception::OmniException("Error in MaxByAggregator::ProcessAlignAggSchema:", omniExceptionInfo);
 }
 
 template <DataTypeId COL1_ID, DataTypeId COL2_ID>
@@ -224,7 +227,8 @@ template<typename T>
 void MaxByAggregator<COL1_ID, COL2_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
     const std::shared_ptr<NullsHelper> nullMap)
 {
-    throw std::runtime_error("Error in MaxByAggregator::ProcessAlignAggSchemaInternal: currently not support skipping partial agg");
+    std::string omniExceptionInfo = "currently not support skipping partial agg";
+    throw omniruntime::exception::OmniException("Error in MaxByAggregator::ProcessAlignAggSchemaInternal:", omniExceptionInfo);
 }
 
 template <DataTypeId COL1_ID, DataTypeId COL2_ID>

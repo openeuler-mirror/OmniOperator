@@ -71,16 +71,36 @@ public:
     {
         return sizeof(MaxByState<targetValueType, sortKeyType>);
     }
+
+    static constexpr bool IsSupportedMaxByType(DataTypeId type_id)
+    {
+        switch (type_id) {
+            case OMNI_SHORT:
+            case OMNI_INT:
+            case OMNI_LONG:
+            case OMNI_DOUBLE:
+            case OMNI_DECIMAL128:
+            case OMNI_DECIMAL64:
+            case OMNI_BOOLEAN:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
         if (inputTypes.GetType(0)->GetId() != outputTypes.GetType(0)->GetId()) {
-            throw std::runtime_error("Error in maxby aggregator: output col type not match input");
+            std::string omniExceptionInfo = "output col type not match input";
+            throw omniruntime::exception::OmniException("Error in maxby aggregator:", omniExceptionInfo);
         }
 
-        if constexpr (!(COL1_ID == OMNI_SHORT || COL1_ID == OMNI_INT || COL1_ID == OMNI_LONG || COL1_ID == OMNI_DOUBLE || COL1_ID == OMNI_DECIMAL128 || COL1_ID == OMNI_DECIMAL64 || COL1_ID == OMNI_BOOLEAN)) {
-            throw std::runtime_error("Error in maxby aggregator: unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID));
-        } else if constexpr (!(COL2_ID == OMNI_SHORT || COL2_ID == OMNI_INT || COL2_ID == OMNI_LONG || COL2_ID == OMNI_DOUBLE || COL2_ID == OMNI_DECIMAL128 || COL2_ID == OMNI_DECIMAL64 || COL2_ID == OMNI_BOOLEAN)) {
-            throw std::runtime_error("Error in maxby aggregator: unsupported sort key type " + TypeUtil::TypeToStringLog(COL2_ID));
+        if constexpr (!IsSupportedMaxByType(COL1_ID)) {
+            std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID);
+            throw omniruntime::exception::OmniException("Error in maxby aggregator:", omniExceptionInfo);
+        } else if constexpr (!IsSupportedMaxByType(COL2_ID)) {
+            std::string omniExceptionInfo = "unsupported sort key type " + TypeUtil::TypeToStringLog(COL2_ID);
+            throw omniruntime::exception::OmniException("Error in maxby aggregator: ", omniExceptionInfo);
         } else {
             return std::unique_ptr<MaxByAggregator<COL1_ID, COL2_ID>>(new MaxByAggregator<COL1_ID, COL2_ID>(inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
         }

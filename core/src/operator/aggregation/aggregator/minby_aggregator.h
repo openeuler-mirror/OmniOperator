@@ -42,7 +42,7 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByAggregator : public
 
     // inner class for aggregate state, the member depends on targetValueType, sortKeyType of Aggregator
 #pragma pack(push, 1)
-    template <typename targetValueType, typename sortKeyType> // 两个模板参数，对应两个成员变量
+    template <typename targetValueType, typename sortKeyType>
     struct MinByState {
         targetValueType targetValue;
         sortKeyType sortKey;
@@ -71,16 +71,36 @@ public:
     {
         return sizeof(MinByState<targetValueType, sortKeyType>);
     }
+
+    static constexpr bool IsSupportedMinByType(DataTypeId type_id)
+    {
+        switch (type_id) {
+            case OMNI_SHORT:
+            case OMNI_INT:
+            case OMNI_LONG:
+            case OMNI_DOUBLE:
+            case OMNI_DECIMAL128:
+            case OMNI_DECIMAL64:
+            case OMNI_BOOLEAN:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
         if (inputTypes.GetType(0)->GetId() != outputTypes.GetType(0)->GetId()) {
-            throw std::runtime_error("Error in minby aggregator: output col type not match input");
+            std::string omniExceptionInfo = "output col type not match input";
+            throw omniruntime::exception::OmniException("Error in minby aggregator: ", omniExceptionInfo);
         }
 
-        if constexpr (!(COL1_ID == OMNI_SHORT || COL1_ID == OMNI_INT || COL1_ID == OMNI_LONG || COL1_ID == OMNI_DOUBLE || COL1_ID == OMNI_DECIMAL128 || COL1_ID == OMNI_DECIMAL64 || COL1_ID == OMNI_BOOLEAN)) {
-            throw std::runtime_error("Error in minby aggregator: unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID));
-        } else if constexpr (!(COL2_ID == OMNI_SHORT || COL2_ID == OMNI_INT || COL2_ID == OMNI_LONG || COL2_ID == OMNI_DOUBLE || COL2_ID == OMNI_DECIMAL128 || COL2_ID == OMNI_DECIMAL64 || COL2_ID == OMNI_BOOLEAN)) {
-            throw std::runtime_error("Error in minby aggregator: unsupported sort key type " + TypeUtil::TypeToStringLog(COL2_ID));
+        if constexpr (!IsSupportedMinByType(COL1_ID)) {
+            std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID);
+            throw omniruntime::exception::OmniException("Error in minby aggregator: : ", omniExceptionInfo);
+        } else if constexpr (!IsSupportedMinByType(COL2_ID)) {
+            std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL2_ID);
+            throw omniruntime::exception::OmniException("Error in minby aggregator: : ", omniExceptionInfo);
         } else {
             return std::unique_ptr<MinByAggregator<COL1_ID, COL2_ID>>(new MinByAggregator<COL1_ID, COL2_ID>(inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
         }

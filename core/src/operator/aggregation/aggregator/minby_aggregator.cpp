@@ -49,7 +49,7 @@ void MinByAggregator<COL1_ID, COL2_ID>::ExtractValuesBatch(std::vector<Aggregate
         for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
             auto *minByState = MinByState<targetValueType, sortKeyType>::ConstCastState(groupStates[rowIndex] + aggStateOffset);
             if (minByState->isEmpty) {
-                // 无中间结果
+                // no partial result
                 continue;
             }
             targetValueVector->SetValue(rowIndex, minByState->targetValue);
@@ -134,7 +134,8 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
     int col2Size = col2Vector->GetSize();
 
     if (col1Size != col2Size) {
-        throw std::runtime_error("Error in MinByAggregator::ProcessSingleInternal(): col1Size != col2Size: " + std::to_string(col1Size) + " != " + std::to_string(col2Size));
+        std::string omniExceptionInfo = "col1Size != col2Size: " + std::to_string(col1Size) + " != " + std::to_string(col2Size);
+        throw omniruntime::exception::OmniException("Error in MinByAggregator::ProcessSingleInternal(): ", omniExceptionInfo);
     }
 
     for (int i = 0; i < col2Size; i++) {
@@ -162,11 +163,12 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
 
     const size_t rowCount = rowStates.size();
     if (rowCount != col1Vector->GetSize() || rowCount != col2Vector->GetSize()) {
-        throw std::runtime_error("Error in MinByAggregator::ProcessGroupInternal(): rowStates count must be equal to base vec size");
+        std::string omniExceptionInfo = "rowStates count must be equal to base vec size";
+        throw omniruntime::exception::OmniException("Error in MinByAggregator::ProcessGroupInternal(): ", omniExceptionInfo);
     }
 
     if (rowCount <= 0) {
-        // 空表, 无结果
+        // empty table, no result
         return;
     }
 
@@ -192,16 +194,16 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessGroupUnspill(std::vector<UnspillR
         auto index = row.rowIdx;
         auto targetValueVector = static_cast<targetValueTypeVec *>(batch->Get(targetValueVecIdx));
         if (!targetValueVector->IsNull(index)) {
-            // 取出当前state的value
+            // take value from state
             auto targetValue = targetValueVector->GetValue(index);
             auto sortKeyVector = static_cast<sortKeyTypeVec *>(batch->Get(sortKeyVecIdx));
 
-            // 取出当前state的key
+            // take key from state
             auto sortKey = sortKeyVector->GetValue(index);
 
             auto *state = MinByState<targetValueType, sortKeyType>::CastState(row.state + aggStateOffset);
 
-            // 满足条件则构造state
+            // construct state
             if (sortKey <= state->sortKey) {
                 state->isEmpty = false;
                 state->sortKey = sortKey;
@@ -215,7 +217,8 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID>
 void MinByAggregator<COL1_ID, COL2_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
     const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
 {
-    throw std::runtime_error("Error in MinByAggregator::ProcessAlignAggSchema: currently not support skipping partial agg");
+    std::string omniExceptionInfo = "currently not support skipping partial agg";
+    throw omniruntime::exception::OmniException("Error in MinByAggregator::ProcessAlignAggSchema: ", omniExceptionInfo);
 }
 
 template <DataTypeId COL1_ID, DataTypeId COL2_ID>
@@ -223,7 +226,8 @@ template<typename T>
 void MinByAggregator<COL1_ID, COL2_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
     const std::shared_ptr<NullsHelper> nullMap)
 {
-    throw std::runtime_error("Error in MinByAggregator::ProcessAlignAggSchemaInternal: currently not support skipping partial agg");
+    std::string omniExceptionInfo = "currently not support skipping partial agg";
+    throw omniruntime::exception::OmniException("EError in MinByAggregator::ProcessAlignAggSchemaInternal: ", omniExceptionInfo);
 }
 
 template <DataTypeId COL1_ID, DataTypeId COL2_ID>
