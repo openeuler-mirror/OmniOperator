@@ -249,6 +249,192 @@ public:
     ~MaxAggregatorFactory() override = default;
 };
 
+class MinByAggregatorFactory : public AggregatorFactory {
+public:
+    MinByAggregatorFactory() : AggregatorFactory() {}
+    ~MinByAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override
+    {
+        if (inputTypes.GetSize() != 2) {
+            throw std::runtime_error("Input data types must have exactly two inputs");
+        }
+        return CreateAggregatorInternal(inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+    }
+
+protected:
+    std::unique_ptr<Aggregator> CreateAggregatorInternal(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull)
+    {
+        auto col2Id = inputTypes.GetType(1)->GetId();
+        switch (col2Id) {
+            case OMNI_BOOLEAN:
+                return FromKnownOutput<OMNI_BOOLEAN>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_BYTE:
+                return FromKnownOutput<OMNI_BYTE>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_SHORT:
+                return FromKnownOutput<OMNI_SHORT>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+            case OMNI_INT:
+                return FromKnownOutput<OMNI_INT>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+            case OMNI_TIMESTAMP:
+                return FromKnownOutput<OMNI_LONG>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_FLOAT:
+            case OMNI_DOUBLE:
+                return FromKnownOutput<OMNI_DOUBLE>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DECIMAL64:
+                return FromKnownOutput<OMNI_DECIMAL64>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DECIMAL128:
+                return FromKnownOutput<OMNI_DECIMAL128>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARCHAR:
+                return FromKnownOutput<OMNI_VARCHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_CHAR:
+                return FromKnownOutput<OMNI_CHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            default:
+                std::string omniExceptionInfo = "In MinByAggretator function FromKnownOutput, no such input col2 type " + std::to_string(col2Id);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+        }
+    }
+
+    template <DataTypeId COL2_ID>
+    std::unique_ptr<Aggregator> FromKnownOutput(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull)
+    {
+        auto col1Id = inputTypes.GetType(0)->GetId();
+        switch (col1Id) {
+            case OMNI_BOOLEAN:
+                return MinByAggregator<OMNI_BOOLEAN, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_BYTE:
+                return MinByAggregator<OMNI_BYTE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_SHORT:
+                return MinByAggregator<OMNI_SHORT, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+            case OMNI_INT:
+                return MinByAggregator<OMNI_INT, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+            case OMNI_TIMESTAMP:
+                return MinByAggregator<OMNI_LONG, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_FLOAT:
+            case OMNI_DOUBLE:
+                return MinByAggregator<OMNI_DOUBLE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DECIMAL64:
+                return MinByAggregator<OMNI_DECIMAL64, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DECIMAL128:
+                return MinByAggregator<OMNI_DECIMAL128, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_CONTAINER:
+                return MinByAggregator<OMNI_CONTAINER, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARCHAR:
+                return MinByAggregator<OMNI_VARCHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_CHAR:
+                return MinByAggregator<OMNI_CHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_ARRAY:
+                return MinByAggregator<OMNI_ARRAY, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_NONE:
+                return MinByAggregator<OMNI_NONE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            default:
+                std::string omniExceptionInfo = "In MinByAggretator function FromKnownOutput, no such input col1 type " + std::to_string(col1Id);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+        }
+    }
+};
+
+class MaxByAggregatorFactory : public AggregatorFactory {
+public:
+    MaxByAggregatorFactory() : AggregatorFactory() {}
+    ~MaxByAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override
+    {
+        if (inputTypes.GetSize() != 2) {
+            throw std::runtime_error("Input data types must have exactly two inputs");
+        }
+        return CreateAggregatorInternal(inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+    }
+
+protected:
+    std::unique_ptr<Aggregator> CreateAggregatorInternal(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull)
+    {
+        auto col2Id = inputTypes.GetType(1)->GetId();
+        switch (col2Id) {
+            case OMNI_BOOLEAN:
+                return FromKnownOutput<OMNI_BOOLEAN>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_BYTE:
+                return FromKnownOutput<OMNI_BYTE>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_SHORT:
+                return FromKnownOutput<OMNI_SHORT>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+            case OMNI_INT:
+                return FromKnownOutput<OMNI_INT>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+            case OMNI_TIMESTAMP:
+                return FromKnownOutput<OMNI_LONG>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_FLOAT:
+            case OMNI_DOUBLE:
+                return FromKnownOutput<OMNI_DOUBLE>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DECIMAL64:
+                return FromKnownOutput<OMNI_DECIMAL64>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DECIMAL128:
+                return FromKnownOutput<OMNI_DECIMAL128>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARCHAR:
+                return FromKnownOutput<OMNI_VARCHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_CHAR:
+                return FromKnownOutput<OMNI_CHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            default:
+                std::string omniExceptionInfo = "In MaxByAggretator function FromKnownOutput, no such input col2 type " + std::to_string(col2Id);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+        }
+    }
+
+    template <DataTypeId COL2_ID>
+    std::unique_ptr<Aggregator> FromKnownOutput(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull)
+    {
+        auto col1Id = inputTypes.GetType(0)->GetId();
+        switch (col1Id) {
+            case OMNI_BOOLEAN:
+                return MaxByAggregator<OMNI_BOOLEAN, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_BYTE:
+                return MaxByAggregator<OMNI_BYTE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_SHORT:
+                return MaxByAggregator<OMNI_SHORT, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+            case OMNI_INT:
+                return MaxByAggregator<OMNI_INT, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+            case OMNI_TIMESTAMP:
+                return MaxByAggregator<OMNI_LONG, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_FLOAT:
+            case OMNI_DOUBLE:
+                return MaxByAggregator<OMNI_DOUBLE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DECIMAL64:
+                return MaxByAggregator<OMNI_DECIMAL64, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DECIMAL128:
+                return MaxByAggregator<OMNI_DECIMAL128, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_CONTAINER:
+                return MaxByAggregator<OMNI_CONTAINER, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARCHAR:
+                return MaxByAggregator<OMNI_VARCHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_CHAR:
+                return MaxByAggregator<OMNI_CHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_ARRAY:
+                return MaxByAggregator<OMNI_ARRAY, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_NONE:
+                return MaxByAggregator<OMNI_NONE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            default:
+                std::string omniExceptionInfo = "In MaxByAggretator function FromKnownOutput, no such input col1 type " + std::to_string(col1Id);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+        }
+    }
+};
+
 class CountColumnAggregatorFactory : public TypedAggregatorFactory<CountColumnAggregator> {
 public:
     CountColumnAggregatorFactory() : TypedAggregatorFactory<CountColumnAggregator>() {}

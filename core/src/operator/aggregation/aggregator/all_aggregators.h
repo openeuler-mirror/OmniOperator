@@ -23,4 +23,6 @@
 #include "operator/aggregation/aggregator/first_aggregator.h"
 #include "operator/aggregation/aggregator/try_sum_flatim_aggregator.h"
 #include "operator/aggregation/aggregator/bloom_filter_aggregator.h"
+#include "operator/aggregation/aggregator/minby_aggregator.h"
+#include "operator/aggregation/aggregator/maxby_aggregator.h"
 #endif // OMNI_RUNTIME_ALL_AGGREGATORS_H

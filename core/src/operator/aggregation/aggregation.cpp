@@ -50,6 +50,14 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 CreateAggregatorFactory<MinAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
+            case OMNI_AGGREGATION_TYPE_MIN_BY: {
+                CreateAggregatorFactory<MinByAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_MAX_BY: {
+                CreateAggregatorFactory<MaxByAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
             case OMNI_AGGREGATION_TYPE_AVG: {
                 if (ConfigUtil::GetSupportContainerVecRule() == SupportContainerVecRule::NOT_SUPPORT) {
                     CreateAggregatorFactory<AverageSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);

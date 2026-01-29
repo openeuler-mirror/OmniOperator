@@ -44,6 +44,12 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
         case OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL: {
             return std::make_unique<FirstIncludeNullAggregatorFactory>();
         }
+        case OMNI_AGGREGATION_TYPE_MIN_BY: {
+            return std::make_unique<MinByAggregatorFactory>();
+        }
+        case OMNI_AGGREGATION_TYPE_MAX_BY: {
+            return std::make_unique<MaxByAggregatorFactory>();
+        }
         default: {
             std::string omniExceptionInfo =
                 "In function CreateAggregatorFactory, no such aggregate type " + std::to_string(aggType);
