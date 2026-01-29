@@ -511,3 +511,55 @@ TEST(MathFunctionsTest, SecDouble) {
     }
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sec", inputData, expectedResults);
 }
+
+TEST(MathFunctionsTest, Log10Double) {
+    std::vector<double> inputData = {1.0, 10.0, 100.0, 0.1, 0.01, 2.5, 7.389};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::log10(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("log10", inputData, expectedResults);
+}
+
+
+// Test log2 function
+TEST(MathFunctionsTest, Log2Double) {
+    std::vector<double> inputData = {1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 3.14};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::log2(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("log2", inputData, expectedResults);
+}
+
+
+// Test log1p function
+TEST(MathFunctionsTest, Log1pDouble) {
+    std::vector<double> inputData = {0.0, 1.0, 9.0, -0.5, -0.9, 0.001, 100.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::log1p(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("log1p", inputData, expectedResults);
+}
+
+
+// Test generic log(base, x) function
+TEST(MathFunctionsTest, LogBaseXDouble) {
+    std::vector<double> bases   = {2.0, 10.0, 3.0, 5.0, 2.718281828459045}; // e
+    std::vector<double> xs      = {4.0, 100.0, 9.0, 25.0, 7.38905609893};
+
+    std::vector<double> leftData;   // base
+    std::vector<double> rightData;  // x
+    std::vector<double> expectedResults;
+
+    for (size_t i = 0; i < bases.size(); ++i) {
+        double base = bases[i];
+        double x = xs[i];
+        leftData.push_back(base);
+        rightData.push_back(x);
+        expectedResults.push_back(std::log(x) / std::log(base)); // change of base formula
+    }
+
+    TestBinaryMathOperation<double, OMNI_DOUBLE>("log", leftData, rightData, expectedResults);
+}
