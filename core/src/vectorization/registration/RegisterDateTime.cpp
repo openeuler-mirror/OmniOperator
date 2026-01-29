@@ -8,7 +8,9 @@
 #include "../functions/Second.h"
 #include "../functions/Month.h"
 #include "../functions/Quarter.h"
+#include "../functions/Year.h"
 #include "../functions/Trunc.h"
+#include "../functions/AddMonths.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -18,8 +20,10 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterSecondFunction(prefix + "second");
     RegisterMonthFunction(prefix + "month");
     RegisterQuarterFunction(prefix + "quarter");
+    RegisterYearFunction(prefix + "year");
     // Register as "trunc_date" to match Gluten mapping (Substrait "trunc" -> "trunc_date")
     // and codegen layer registration
     RegisterTruncFunction(prefix + "trunc_date");
+    RegisterAddMonthsFunction(prefix + "add_months");
 }
 }
