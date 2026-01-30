@@ -26,6 +26,15 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
         case OMNI_AGGREGATION_TYPE_SAMP: {
             return std::make_unique<StddevSampSparkAggregatorFactory>();
         }
+        case OMNI_AGGREGATION_TYPE_BIT_AND: {
+            return std::make_unique<BitAndAggregatorFactory>();
+        }
+        case OMNI_AGGREGATION_TYPE_BIT_OR: {
+            return std::make_unique<BitOrAggregatorFactory>();
+        }
+        case OMNI_AGGREGATION_TYPE_BIT_XOR: {
+            return std::make_unique<BitXorAggregatorFactory>();
+        }
         case OMNI_AGGREGATION_TYPE_MIN: {
             return std::make_unique<MinAggregatorFactory>();
         }

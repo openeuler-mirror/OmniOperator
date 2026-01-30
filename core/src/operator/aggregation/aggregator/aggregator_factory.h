@@ -237,6 +237,24 @@ public:
     ~SumAggregatorFactory() override = default;
 };
 
+class BitAndAggregatorFactory : public TypedAggregatorFactory<BitAndAggregator> {
+public:
+    BitAndAggregatorFactory() : TypedAggregatorFactory<BitAndAggregator>() {}
+    ~BitAndAggregatorFactory() override = default;
+};
+
+class BitOrAggregatorFactory : public TypedAggregatorFactory<BitOrAggregator> {
+public:
+    BitOrAggregatorFactory() : TypedAggregatorFactory<BitOrAggregator>() {}
+    ~BitOrAggregatorFactory() override = default;
+};
+
+class BitXorAggregatorFactory : public TypedAggregatorFactory<BitXorAggregator> {
+public:
+    BitXorAggregatorFactory() : TypedAggregatorFactory<BitXorAggregator>() {}
+    ~BitXorAggregatorFactory() override = default;
+};
+
 class MinAggregatorFactory : public TypedAggregatorFactory<MinAggregator> {
 public:
     MinAggregatorFactory() : TypedAggregatorFactory<MinAggregator>() {}
