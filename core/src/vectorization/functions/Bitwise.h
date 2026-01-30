@@ -39,6 +39,20 @@ struct BitwiseXorFunction {
     }
 };
 
+/// Bitwise NOT function
+/// bitwise_not(a) -> ~a
+/// Returns the bitwise NOT (complement) of the input integer.
+/// Flips all bits: 0 becomes 1, and 1 becomes 0.
+template <typename T>
+struct BitwiseNotFunction {
+    template <typename TInput>
+    ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+    {
+        result = ~a;
+        return Status::OK();
+    }
+};
+
 template <typename T>
 struct ShiftLeftFunction {
     template <typename TInput1, typename TInput2>
@@ -93,6 +107,32 @@ struct ShiftRightFunction {
         }
 
         result = a >> shift;
+        return Status::OK();
+    }
+};
+
+/// Bit Get function
+/// bit_get(num, pos) -> int8_t (0 or 1)
+/// Returns the value of the bit at the specified position.
+/// Position 0 is the least significant bit.
+/// The result is 0 or 1.
+template <typename T>
+struct BitGetFunction {
+    template <typename TInput>
+    ALWAYS_INLINE Status call(int8_t &result, const TInput &num, const int32_t &pos)
+    {
+        static_assert(std::is_integral_v<TInput>, "BitGet only supports integral types");
+        constexpr int kMaxBits = sizeof(TInput) * 8;
+        
+        // Validate position is within valid range
+        if (pos < 0 || pos >= kMaxBits) {
+            // For out-of-range positions, return 0 (following Spark behavior)
+            // Alternatively, could throw an error
+            result = 0;
+            return Status::OK();
+        }
+        
+        result = static_cast<int8_t>((num >> pos) & 1);
         return Status::OK();
     }
 };
