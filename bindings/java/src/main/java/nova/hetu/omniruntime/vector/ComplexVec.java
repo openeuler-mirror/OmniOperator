@@ -54,6 +54,9 @@ public abstract class ComplexVec extends Vec {
             case OMNI_SHORT: {
                 return new ShortVec(nativeVector);
             }
+            case OMNI_BYTE: {
+                return new ByteVec(nativeVector);
+            }
             case OMNI_DATE32:
             case OMNI_INT: {
                 return new IntVec(nativeVector);
