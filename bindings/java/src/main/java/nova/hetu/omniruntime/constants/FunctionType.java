@@ -105,6 +105,21 @@ public class FunctionType extends Constant {
      */
     public static final FunctionType OMNI_AGGREGATION_TYPE_MAX_BY = new FunctionType(18);
 
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_BIT_AND.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_BIT_AND = new FunctionType(19);
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_BIT_OR.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_BIT_OR = new FunctionType(20);
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_BIT_XOR.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_BIT_XOR = new FunctionType(21);
+
     private static final long serialVersionUID = 5337378607473315604L;
 
     /**

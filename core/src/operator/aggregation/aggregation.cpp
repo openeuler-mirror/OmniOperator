@@ -58,6 +58,18 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 CreateAggregatorFactory<MaxByAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
+            case OMNI_AGGREGATION_TYPE_BIT_AND: {
+                CreateAggregatorFactory<BitAndAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_BIT_OR: {
+                CreateAggregatorFactory<BitOrAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_BIT_XOR: {
+                CreateAggregatorFactory<BitXorAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
             case OMNI_AGGREGATION_TYPE_AVG: {
                 if (ConfigUtil::GetSupportContainerVecRule() == SupportContainerVecRule::NOT_SUPPORT) {
                     CreateAggregatorFactory<AverageSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
