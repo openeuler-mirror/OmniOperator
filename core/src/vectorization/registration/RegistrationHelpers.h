@@ -48,6 +48,17 @@ void RegisterUnaryIntegral(const std::string &aliases)
     RegisterFunction<T, bool, bool>(aliases, {OMNI_BOOLEAN}, OMNI_BOOLEAN);
 }
 
+/// Register unary integral function that returns the same type as input
+/// Used for bitwise NOT and similar operations
+template <template <class> typename T>
+void RegisterUnaryIntegralSameType(const std::string &aliases)
+{
+    RegisterFunction<T, int8_t, int8_t>(aliases, {OMNI_BYTE}, OMNI_BYTE);
+    RegisterFunction<T, int16_t, int16_t>(aliases, {OMNI_SHORT}, OMNI_SHORT);
+    RegisterFunction<T, int32_t, int32_t>(aliases, {OMNI_INT}, OMNI_INT);
+    RegisterFunction<T, int64_t, int64_t>(aliases, {OMNI_LONG}, OMNI_LONG);
+}
+
 template <template <class> typename T>
 void RegisterUnaryIntegralNumeric(const std::string &aliases)
 {
