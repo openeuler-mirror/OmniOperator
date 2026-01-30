@@ -674,6 +674,7 @@ TEST(vector, copy_positions_array_with_null)
 
     auto* arrayVec = new ArrayVector(arraySize);
 
+    // [11, 12, 13] [14] [15, 16]
     arrayVec->SetOffset(0, 0);
     arrayVec->SetOffset(1, 3);
     arrayVec->SetOffset(2, 4);
@@ -685,27 +686,22 @@ TEST(vector, copy_positions_array_with_null)
     auto* newArrayVector = arrayVec->CopyPositions((const int*)positions, 0, 9);
     EXPECT_EQ(newArrayVector->GetOffset(0), 0);
     EXPECT_EQ(newArrayVector->GetOffset(1), 3);
-    EXPECT_EQ(newArrayVector->GetOffset(2), 4);
-    EXPECT_EQ(newArrayVector->GetOffset(3), 5);
-    EXPECT_EQ(newArrayVector->GetOffset(4), 6);
-    EXPECT_EQ(newArrayVector->GetOffset(5), 7);
-    EXPECT_EQ(newArrayVector->GetOffset(6), 8);
-    EXPECT_EQ(newArrayVector->GetOffset(7), 9);
-    EXPECT_EQ(newArrayVector->GetOffset(8), 10);
-    EXPECT_EQ(newArrayVector->GetOffset(9), 11);
+    EXPECT_EQ(newArrayVector->GetOffset(2), 3);
+    EXPECT_EQ(newArrayVector->GetOffset(3), 4);
+    EXPECT_EQ(newArrayVector->GetOffset(4), 4);
+    EXPECT_EQ(newArrayVector->GetOffset(5), 4);
+    EXPECT_EQ(newArrayVector->GetOffset(6), 4);
+    EXPECT_EQ(newArrayVector->GetOffset(7), 5);
+    EXPECT_EQ(newArrayVector->GetOffset(8), 5);
+    EXPECT_EQ(newArrayVector->GetOffset(9), 6);
 
     auto newElements = std::dynamic_pointer_cast<vec::Vector<int32_t>>(newArrayVector->GetElementVector());
     EXPECT_EQ(newElements->GetValue(0), 11);
     EXPECT_EQ(newElements->GetValue(1), 12);
     EXPECT_EQ(newElements->GetValue(2), 13);
-    EXPECT_EQ(newElements->IsNull(3), true);
+    EXPECT_EQ(newElements->GetValue(3), 14);
     EXPECT_EQ(newElements->GetValue(4), 14);
-    EXPECT_EQ(newElements->IsNull(5), true);
-    EXPECT_EQ(newElements->IsNull(6), true);
-    EXPECT_EQ(newElements->IsNull(7), true);
-    EXPECT_EQ(newElements->GetValue(8), 14);
-    EXPECT_EQ(newElements->IsNull(9), true);
-    EXPECT_EQ(newElements->GetValue(10), 14);
+    EXPECT_EQ(newElements->GetValue(5), 14);
 
     delete newArrayVector;
     delete arrayVec;
@@ -770,18 +766,19 @@ TEST(vector, append_array_with_null)
     auto* dstArrayVec = new ArrayVector(arraySize);
     auto* srcArrayVec = new ArrayVector(arraySize + 1);
 
+    // [0, 1, 2] [3, 4] [5, 6, 7, 8] [9, 10]
     dstArrayVec->SetOffset(0, 0);
     dstArrayVec->SetOffset(1, 3);
     dstArrayVec->SetOffset(2, 5);
     dstArrayVec->SetOffset(3, 9);
     dstArrayVec->SetOffset(4, 11);
 
+    // [1, 2, 3] [4, 5] [6, 7, 8, 9] [10, 11] NULL
     srcArrayVec->SetOffset(0, 0);
     srcArrayVec->SetOffset(1, 3);
     srcArrayVec->SetOffset(2, 5);
     srcArrayVec->SetOffset(3, 9);
     srcArrayVec->SetOffset(4, 11);
-    srcArrayVec->SetOffset(5, 12);
     srcArrayVec->SetNull(4);
 
     for (int i = 0; i < arraySize + 1; i++) {
@@ -805,6 +802,7 @@ TEST(vector, append_array_with_null)
     EXPECT_EQ(dstArrayVec->GetOffset(5), 14);
     EXPECT_EQ(dstArrayVec->GetOffset(6), 16);
     EXPECT_EQ(dstArrayVec->GetOffset(7), 20);
+    EXPECT_EQ(dstArrayVec->GetOffset(8), 22);
     EXPECT_EQ(dstArrayVec->IsNull(8), true);
 
     delete dstArrayVec;

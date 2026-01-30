@@ -138,6 +138,12 @@ public:
         }
     }
 
+    void ALWAYS_INLINE SetNull(int64_t index)
+    {
+        BaseVector::SetNull(index);
+        SetSize(index, 0);
+    }
+
 protected:
     int64_t* offsets;
     std::shared_ptr<AlignedBuffer<int64_t>> offsetsBuffer;
