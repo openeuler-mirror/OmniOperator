@@ -239,6 +239,7 @@ ErrorCode SpillReader::ReadComplexVector(const DataTypePtr &dataType, BaseVector
             break;
         default:
             result = ErrorCode::READ_FAILED;
+            LogError("ReadComplexVector failed for unsupported typeId=%s", std::to_string(typeId));
             break;
     }
     return result;
@@ -338,7 +339,7 @@ int32_t SpillMergeStream::CompareTo(const SpillMergeStream &other)
 }
 
 void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
-    const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs)
+    const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp)
 {
     auto dataTypeIds = dataTypes.GetIds();
     auto sortColSize = sortCols.size();
@@ -367,7 +368,7 @@ void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const st
                 break;
             case OMNI_CHAR:
             case OMNI_VARCHAR:
-                SetCompareFunction<std::string_view>(isAscending, isNullsFirst, sortCompareFuncs);
+                SetCompareFunction<std::string_view>(isAscending, isNullsFirst, sortCompareFuncs, isAggOp);
                 break;
             case OMNI_DECIMAL128:
                 SetCompareFunction<Decimal128>(isAscending, isNullsFirst, sortCompareFuncs);
@@ -385,9 +386,19 @@ void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const st
 
 template <typename T>
 void SpillMerger::SetCompareFunction(bool isAscending, bool isNullsFirst,
-    std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs)
+    std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp)
 {
-    if (isAscending && isNullsFirst) {
+    if (isAggOp) {
+        if (isAscending && isNullsFirst) {
+            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, true, true, true>);
+        } else if (isAscending && !isNullsFirst) {
+            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, true, true, false>);
+        } else if (!isAscending && isNullsFirst) {
+            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, false, true, true>);
+        } else {
+            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, false, true, false>);
+        }
+    } else if (isAscending && isNullsFirst) {
         sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplate<T, true, true, true>);
     } else if (isAscending && !isNullsFirst) {
         sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplate<T, true, true, false>);

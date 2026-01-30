@@ -17,9 +17,9 @@ namespace op {
 class SpillWriter {
 public:
     SpillWriter(const type::DataTypes &dataTypes, const std::string &dirPath, uint64_t writeBufferSize = 0,
-                bool IsSpillCompressEnabled = false)
+                bool enableSpillCompression = false)
         : dataTypes(dataTypes), dirPath(dirPath), writeBufferSize(writeBufferSize), writeBufferOffset(0),
-          IsSpillCompressEnabled(IsSpillCompressEnabled)
+          IsSpillCompressEnabled(enableSpillCompression)
     {
         if (writeBufferSize != 0) {
             writeBuffer = new char[writeBufferSize];
@@ -91,9 +91,9 @@ class Spiller {
 public:
     Spiller(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
         const std::vector<SortOrder> &sortOrders, const std::string &spillPath, uint64_t maxSpillBytes,
-        uint64_t writeBufferSize = 0, bool isSpillCompressEnabled = false)
+        uint64_t writeBufferSize = 0, bool enableSpillCompression = false)
         : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders), writeBufferSize(writeBufferSize),
-          isSpillCompressEnabled(isSpillCompressEnabled)
+          isSpillCompressEnabled(enableSpillCompression)
     {
         dirPaths.emplace_back(spillPath);
         int32_t dataTypeCount = dataTypes.GetSize();
@@ -126,9 +126,15 @@ public:
         return spillFiles;
     }
 
-    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled)
+    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool enableSpillCompression)
     {
-        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, isSpillCompressEnabled);
+        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, enableSpillCompression);
+        return merger;
+    }
+
+    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool enableSpillCompression, bool isAggOp)
+    {
+        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, enableSpillCompression, isAggOp);
         return merger;
     }
 

@@ -1503,7 +1503,7 @@ void HashAggregationOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         spilledBytes = spiller->GetSpilledBytes();
         auto spillFiles = spiller->FinishSpill();
         UpdateSpillFileInfo(spillFiles.size());
-        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnable());
+        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnable(), true);
         delete spiller;
         spiller = nullptr;
         if (spillMerger == nullptr) {

@@ -206,10 +206,10 @@ class SpillMerger {
 public:
     static SpillMerger *Create(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
         const std::vector<SortOrder> &sortOrders, SpillTracker *spillTracker,
-        const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled)
+        const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled, bool isAggOp = false)
     {
         std::vector<OperatorUtil::CompareFunc> sortCompareFuncs;
-        SetCompareFunctions(dataTypes, sortCols, sortOrders, sortCompareFuncs);
+        SetCompareFunctions(dataTypes, sortCols, sortOrders, sortCompareFuncs, isAggOp);
 
         std::vector<SpillMergeStream *> streams;
         uint64_t totalRowCount = 0;
@@ -271,11 +271,11 @@ public:
 
 private:
     static void SetCompareFunctions(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
-        const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs);
+        const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp = false);
 
     template <typename T>
     static void SetCompareFunction(bool isAscending, bool isNullsFirst,
-        std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs);
+        std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp = false);
 
     SpillMerger(const std::vector<SpillMergeStream *> &streams, uint64_t totalRowCount, SpillTracker *spillTracker)
         : mergeStreams(new LoserTree<SpillMergeStream>(streams)),
