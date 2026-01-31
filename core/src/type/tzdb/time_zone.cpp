@@ -293,8 +293,10 @@ private:
     const std::string &__rule_name)
 {
     auto __result = __binary_find(__rules_db, __rule_name);
-    if (__result == std::end(__rules_db))
-        std::__throw_runtime_error(("corrupt tzdb: rule '" + __rule_name + " 'does not exist").c_str());
+    if (__result == std::end(__rules_db)) {
+        static const std::vector<__rule> empty;
+        return empty;
+    }
 
     return __result->second;
 }
@@ -481,6 +483,10 @@ __next_rule(date::sys_seconds __time, std::chrono::seconds __stdoff, std::chrono
     date::sys_seconds __continuation_begin, const omniruntime::tzdb::__continuation &__continuation,
     const std::vector<__rule> &__rules)
 {
+    if (__rules.empty()) {
+        return {};
+    }
+
     auto __rule = __first_rule(__continuation.__stdoff, __rules);
     if (__rule == __rules.end()) {
         throw std::runtime_error("the set of rules has no first rule");

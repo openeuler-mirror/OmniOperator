@@ -539,40 +539,6 @@ static void __matches(std::istream &__input, std::string_view __expected)
     __result.__format = __parse_string(__input);
     __skip_optional_whitespace(__input);
 
-    if (std::holds_alternative<std::string>(__result.__rules)) {
-        const auto &rule_name = std::get<std::string>(__result.__rules);
-        const auto rules = __binary_find(__rules, rule_name);
-        if (rules == std::end(__rules))
-            std::__throw_runtime_error((fmt::format("corrupt tzdb: rule '{}' does not exist", rule_name)).c_str());
-        size_t numForeverRules = 0;
-        std::pair<std::vector<__rule>::const_iterator, std::vector<__rule>::const_iterator> &foreverRules = __result.
-            __forever_rules;
-        for (auto iter = rules->second.cbegin(); iter < rules->second.cend(); ++iter) {
-            if (iter->__to == date::year::max()) {
-                // We found a forever rule that started to apply prior to year.
-                numForeverRules++;
-                if (numForeverRules == 1) {
-                    std::get<0>(foreverRules) = iter;
-                } else if (numForeverRules == 2) {
-                    std::get<1>(foreverRules) = iter;
-                } else {
-                    // If we find more than 2 forever rules we have to go
-                    // through the loop (currently this is impossible).
-                    break;
-                }
-            }
-        }
-
-        if (numForeverRules > 0) {
-            if (numForeverRules != 2) {
-                throw std::runtime_error(fmt::format("Found {} forever rules for time zone rule {}, expected 2",
-                    numForeverRules, rule_name));
-            }
-
-            __result.__has_forever_rules = true;
-        }
-    }
-
     if (__is_eol(__input.peek())) return __result;
     __result.__year = __parse_year(__input);
     __skip_optional_whitespace(__input);
@@ -802,6 +768,7 @@ void __init_tzdb(tzdb &__tzdb, __rules_storage_type &__rules)
     std::sort(__rules.begin(), __rules.end(), [](const auto &__left, const auto &__right) {
         return __left.first < __right.first;
     });
+
 
     // There are two files with the leap second information
     // - leapseconds as specified by zic
