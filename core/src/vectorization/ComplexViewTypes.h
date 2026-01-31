@@ -182,10 +182,6 @@ protected:
 
     inline void validateBounds(index_t index) const
     {
-        VELOX_DCHECK_LT(index, containerEndIndex_, "Iterator has index {} beyond the length of the container {}.",
-            index, containerEndIndex_);
-        VELOX_DCHECK_GE(index, containerStartIndex_, "Iterator has index {} before the start of the container {}.",
-            index, containerStartIndex_);
     }
 };
 
@@ -394,7 +390,7 @@ auto materializeElement(const T &element)
 template <bool returnsOptionalValues, typename V>
 class ArrayView {
 public:
-    using reader_t = FlatVectorReader<V>;
+    using reader_t = VectorReader<V>;
     using element_t = V;
 
     ArrayView(const reader_t *reader, int32_t offset, int32_t size)

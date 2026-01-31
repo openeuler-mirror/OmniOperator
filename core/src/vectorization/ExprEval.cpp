@@ -339,8 +339,15 @@ void ExprEval::Visit(const BinaryExpr &e)
 
 void ExprEval::Visit(const InExpr &e)
 {
-    e.fieldExpr->Accept(*this);
-    BaseVector *result = VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowSize);
+    e.arguments[0]->Accept(*this);
+    BaseVector *result = nullptr;
+    const auto inputDataType = e.arguments[0]->dataType;
+    ArrayType arrayType(inputDataType);
+    auto searchArray = VectorHelper::CreateComplexVectorShared(&arrayType, 1);
+    auto vector = VectorHelper::CreateFlatVectorShared(inputDataType->GetId(), e.arguments.size() - 1);
+    dynamic_cast<ArrayVector *>(searchArray.get())->SetValue(0, vector.get());
+    inputValues_.push(searchArray.get());
+    auto temp = inputValues_;
     e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }

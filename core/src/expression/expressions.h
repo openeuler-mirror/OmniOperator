@@ -303,7 +303,6 @@ class InExpr : public Expr {
 public:
     // first element of arguments is the value to be compared to every other argument
     std::vector<Expr *> arguments;
-    Expr* fieldExpr = nullptr;
     std::shared_ptr<vec::RowVector> constantRowVec;
     std::vector<vec::BaseVector *> constantInputs;
 
@@ -313,6 +312,8 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    bool supportVectorized() override { return arguments[0]->supportVectorized(); }
 
     std::string toString() const override
     {
