@@ -8,6 +8,10 @@
 #include "util/compiler_util.h"
 #include "vectorization/Status.h"
 #include <cmath>
+#include <utility>
+#include "type/decimal128.h"
+#include "type/data_type.h"
+#include "vectorization/functions/Arithmetic.h"
 
 namespace omniruntime::vectorization {
     template <typename T>
@@ -229,4 +233,104 @@ namespace omniruntime::vectorization {
             return Status::OK();
         }
     };
+
+    template <typename T>
+    struct PModIntFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput& result, const TInput a, const TInput n) {
+            TInput r;
+            Status status = RemainderFunction<T>().call(r, a, n);
+            if (!status.ok()) {
+                return status;
+            }
+            bool keepR = (r > 0 && n > 0) || (r <= 0 && n < 0);
+            result = keepR ? r : (r + n) % n;
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct PModFloatFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput& result, const TInput a, const TInput n) {
+            if (n == (TInput)0) {
+                return Status::UserError("Division by zero");
+            }
+            TInput r = std::fmod(a, n);
+            bool keepR = (r > 0 && n > 0) || (r <= 0 && n < 0);
+            result = keepR ? r : std::fmod(r + n, n);
+            return Status::OK();
+        }
+    };
+
+    // Positive function: returns the input value unchanged (identity function)
+    // Supports: byte, short, int, long, float, double, decimal64, decimal128
+    template <typename T>
+    struct PositiveFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = a;
+            return Status::OK();
+        }
+    };
+
+    // Specialization for Decimal128
+    template <>
+    struct PositiveFunction<type::Decimal128> {
+		template <typename R, typename A>
+		ALWAYS_INLINE Status call(R &&result, A &&a)
+        {
+            result = a;
+            return Status::OK();
+        }
+    };
+
+
+    // Power function: returns x raised to the power of y
+    // Supports: double
+    template <typename T>
+    struct PowerFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &x, const TInput &y)
+        {
+            result = std::pow(x, y);
+            return Status::OK();
+        }
+    };
+
+    // Rint function: rounds to nearest integer using current rounding mode
+    // Supports: double
+    template <typename T>
+    struct RintFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = std::rint(a);
+            return Status::OK();
+        }
+    };
+
+    // Round function: round(expr) default scale=0; round(expr, scale). byte/short/int/long/float/double only.
+    template <typename T>
+    struct RoundFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            return call(result, a, 0);
+        }
+
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a, const int32_t &scale)
+        {
+            if constexpr (std::is_integral_v<TInput>) {
+                result = a;
+            } else {
+                const double factor = std::pow(10, scale);
+                result = static_cast<TInput>(std::round(a * factor) / factor);
+            }
+            return Status::OK();
+        }
+    };
+
 }

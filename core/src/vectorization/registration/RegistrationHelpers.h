@@ -90,6 +90,18 @@ void RegisterUnaryNumeric(const std::string &aliases)
     RegisterUnaryDecimal<T>(aliases);
 }
 
+// round(expr, scale): byte, short, int, long, float, double only
+template <template <class> typename T>
+void RegisterRoundNumericWithScale(const std::string &aliases)
+{
+    RegisterFunction<T, int8_t, int8_t, int32_t>(aliases, {OMNI_BYTE, OMNI_INT}, OMNI_BYTE);
+    RegisterFunction<T, int16_t, int16_t, int32_t>(aliases, {OMNI_SHORT, OMNI_INT}, OMNI_SHORT);
+    RegisterFunction<T, int32_t, int32_t, int32_t>(aliases, {OMNI_INT, OMNI_INT}, OMNI_INT);
+    RegisterFunction<T, int64_t, int64_t, int32_t>(aliases, {OMNI_LONG, OMNI_INT}, OMNI_LONG);
+    RegisterFunction<T, float, float, int32_t>(aliases, {OMNI_FLOAT, OMNI_INT}, OMNI_FLOAT);
+    RegisterFunction<T, double, double, int32_t>(aliases, {OMNI_DOUBLE, OMNI_INT}, OMNI_DOUBLE);
+}
+
 template <template <class> typename T>
 void RegisterBinaryLogical(const std::string &aliases)
 {
