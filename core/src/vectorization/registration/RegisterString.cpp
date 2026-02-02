@@ -27,7 +27,11 @@ void RegisterStringFunctions(const std::string &prefix)
     // VectorFunction::RegisterVectorFunction("equal", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, std::make_shared<EqualStringFunction>());
     VectorFunction::RegisterVectorFunction("regexp_extract", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT},
         OMNI_VARCHAR, std::make_shared<RegexpExtractFunction>());
-    
+    // Spark + Gluten: substr(string, start), substr(string, start, length); Gluten maps "substring" -> "substr"
+    RegisterFunction<SubstrFunction, std::string, std::string_view, int32_t>(
+        prefix + "substr", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<SubstrFunction, std::string, std::string_view, int32_t, int32_t>(
+        prefix + "substr", {OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
     // Register locate function with full type support
     // locate(substring, string, start) -> integer
     // Support all combinations of VARCHAR/CHAR string types and INT32/INT64 integer types
