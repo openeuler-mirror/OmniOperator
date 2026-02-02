@@ -9,6 +9,7 @@
 #include "../functions/Cast.h"
 // #include "../functions/Switch.h"
 #include "../functions/RegexpExtract.h"
+#include "../functions/Like.h"
 #include "../functions/EqualStringFunction.h"
 #include "RegistrationHelpers.h"
 
@@ -27,6 +28,8 @@ void RegisterStringFunctions(const std::string &prefix)
     // VectorFunction::RegisterVectorFunction("equal", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, std::make_shared<EqualStringFunction>());
     VectorFunction::RegisterVectorFunction("regexp_extract", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT},
         OMNI_VARCHAR, std::make_shared<RegexpExtractFunction>());
+    VectorFunction::RegisterVectorFunction("LIKE", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+        std::make_shared<LikeFunction>());
     // Spark + Gluten: substr(string, start), substr(string, start, length); Gluten maps "substring" -> "substr"
     RegisterFunction<SubstrFunction, std::string, std::string_view, int32_t>(
         prefix + "substr", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
