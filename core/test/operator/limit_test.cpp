@@ -363,7 +363,7 @@ TEST(NativeOmniLimitOperator, TestLimitWithArray)
     arrayVector->SetOffset(2, 4);
     arrayVector->SetOffset(3, 6);
     arrayVector->SetOffset(4, 8);
-    arrayVector->AddElements(elements);
+    arrayVector->SetElementVectorFromRaw(elements);
 
     auto *vecBatch = new VectorBatch(dataSize);
     vecBatch->Append(arrayVector);
@@ -386,7 +386,7 @@ TEST(NativeOmniLimitOperator, TestLimitWithArray)
     expArrayVector->SetOffset(1, 2);
     expArrayVector->SetOffset(2, 4);
     expArrayVector->SetOffset(3, 6);
-    expArrayVector->AddElements(expElements);
+    expArrayVector->SetElementVectorFromRaw(expElements);
 
     auto *expVecBatch = new VectorBatch(limitCount);
     expVecBatch->Append(expArrayVector);
@@ -588,7 +588,7 @@ TEST(NativeOmniLimitOperator, TestLimitWithComplexTypes)
     arrayVector->SetOffset(2, 4);
     arrayVector->SetOffset(3, 6);
     arrayVector->SetOffset(4, 8);
-    arrayVector->AddElements(elements);
+    arrayVector->SetElementVectorFromRaw(elements);
 
     auto *vecBatch = new VectorBatch(dataSize);
     vecBatch->Append(CreateVector(dataSize, byteData));
@@ -615,7 +615,7 @@ TEST(NativeOmniLimitOperator, TestLimitWithComplexTypes)
     expArrayVector->SetOffset(1, 2);
     expArrayVector->SetOffset(2, 4);
     expArrayVector->SetOffset(3, 6);
-    expArrayVector->AddElements(expElements);
+    expArrayVector->SetElementVectorFromRaw(expElements);
 
     auto *expVecBatch = new VectorBatch(resultDataSize);
     expVecBatch->Append(CreateVector(resultDataSize, expByteData));

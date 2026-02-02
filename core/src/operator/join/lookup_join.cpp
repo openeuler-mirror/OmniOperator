@@ -1888,7 +1888,7 @@ static NO_INLINE BaseVector *ConstructBuildArrayColumn(
         ret->SetSize(i, subElementVectorLength);
         delete subVector;
     }
-    ret->AddElements(elementVector);
+    ret->SetElementVectorFromRaw(elementVector);
     return ret;
 }
 

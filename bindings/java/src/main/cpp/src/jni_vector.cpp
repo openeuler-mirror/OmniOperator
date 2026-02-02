@@ -626,7 +626,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_addElementsNat
 {
     auto arrayVec = reinterpret_cast<ArrayVector *>(arrayVecAddr);
     auto elements = reinterpret_cast<BaseVector *>(elementsAddr);
-    arrayVec->AddElements(elements);
+    arrayVec->SetElementVectorFromRaw(elements);
 }
 
 extern "C"

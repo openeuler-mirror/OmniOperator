@@ -85,7 +85,7 @@ namespace omniruntime::vectorization {
                 throw OmniException("TRANSFORM_ERROR", "Lambda execute return null result");
             }
 
-            dstArrVec->AddElements(flatResultVec);
+            dstArrVec->SetElementVectorFromRaw(flatResultVec);
             delete srcArrVec;
         }
     };
