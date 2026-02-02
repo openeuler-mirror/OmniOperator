@@ -1073,8 +1073,8 @@ uint8_t *FuncExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bit
 
 ParamRefExpr::ParamRefExpr() {}
 
-ParamRefExpr::ParamRefExpr(int32_t paramIdx, DataTypePtr dt) {
-    paramIdx_ = paramIdx;
+ParamRefExpr::ParamRefExpr(std::string paramName, DataTypePtr dt) {
+    paramName_ = std::move(paramName);
     dataType = std::move(dt);
 }
 
@@ -1086,10 +1086,11 @@ ExprType ParamRefExpr::GetType() const
 LambdaExpr::LambdaExpr() {}
 
 LambdaExpr::LambdaExpr(omniruntime::expressions::Expr *body, std::vector<DataTypePtr> paramTypes,
-                       DataTypePtr dt) {
+                       const std::unordered_map<std::string, int32_t>& map, DataTypePtr dt) {
     dataType = std::move(dt);
     body_ = body;
     paramTypes_ = std::move(paramTypes);
+    paramNameToIdxMap_ = map;
 }
 
 LambdaExpr::~LambdaExpr() {

@@ -401,7 +401,7 @@ void ExprPrinter::Visit(const ParamRefExpr &e)
     string indent = GenerateIndentation();
     string output = indent + "ParamRef:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
     std::cout << output << '\n';
-    std::cout<< e.paramIdx_<<'\n';
+    std::cout<< e.paramName_<<'\n';
     std::cout << indent + ")" << '\n';
 }
 
