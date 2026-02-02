@@ -6,6 +6,7 @@
 #pragma once
 #include "util/compiler_util.h"
 #include <algorithm>
+#include <limits>
 #include <stdexcept>
 #include "vectorization/Status.h"
 #include "type/string_Impl.h"
@@ -121,6 +122,64 @@ struct LocateFunction {
     {
         // Call the non-nullable version for better code reuse
         return call(result, *subString, *string, *start);
+    }
+};
+
+/// substr(string, start) -> varchar
+/// substr(string, start, length) -> varchar
+/// Spark semantics (velox/functions/sparksql/String.h). Spark + Gluten: int32_t only.
+/// start=0 -> first char; start<=0 after adjustment -> start=1; length<=0 -> empty.
+/// Note: SimpleFunction passes args as (last_arg, ..., first_arg); call signatures match that order.
+template <typename T>
+struct SubstrFunction {
+    /// 2-arg: framework passes (start, string)
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input, int32_t start)
+    {
+        return doCall(result, input, start, std::numeric_limits<int32_t>::max());
+    }
+
+    /// 3-arg: framework passes (length, start, string)
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input, int32_t start, int32_t length)
+    {
+        return doCall(result, input, start, length);
+    }
+
+private:
+    ALWAYS_INLINE bool doCall(std::string &result, const std::string_view &input, int32_t start, int32_t length)
+    {
+        if (length <= 0) {
+            result.clear();
+            return true;
+        }
+        if (start == 0) {
+            start = 1;
+        }
+        int32_t numCharacters = static_cast<int32_t>(std::min(
+            stringImpl::length<false>(input), static_cast<int64_t>(std::numeric_limits<int32_t>::max())));
+        if (start < 0) {
+            start = numCharacters + start + 1;
+        }
+        int32_t last;
+        if (numCharacters - start + 1 < length) {
+            last = numCharacters;
+        } else {
+            last = start + length - 1;
+        }
+        if (start <= 0) {
+            start = 1;
+        }
+        length = last - start + 1;
+        if (length <= 0) {
+            result.clear();
+            return true;
+        }
+        size_t startByte = static_cast<size_t>(stringImpl::cappedByteLengthUnicode(
+            input.data(), static_cast<int64_t>(input.size()), static_cast<int64_t>(start - 1)));
+        size_t segmentByteLen = static_cast<size_t>(stringImpl::cappedByteLengthUnicode(
+            input.data() + startByte, static_cast<int64_t>(input.size()) - static_cast<int64_t>(startByte),
+            static_cast<int64_t>(length)));
+        result.assign(input.data() + startByte, segmentByteLen);
+        return true;
     }
 };
 
