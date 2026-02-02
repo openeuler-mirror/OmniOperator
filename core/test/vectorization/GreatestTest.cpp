@@ -41,39 +41,42 @@ public:
 class GreatestFunctionTestHelper {
 public:
     template<typename T>
-    static void ValidateNumericResult(BaseVector* result, const std::vector<T>& expected, 
-                                      const std::vector<bool>& expectedNull, int rowSize) {
+    static void ValidateNumericResult(BaseVector* result, const std::vector<T>& expected,
+                                    const std::vector<bool>& expectedNull, int rowSize) {
         auto* resultVec = dynamic_cast<Vector<T>*>(result);
         ASSERT_NE(resultVec, nullptr) << "Result vector type mismatch";
-        
+
         for (int i = 0; i < rowSize; ++i) {
             if (expectedNull[i]) {
                 EXPECT_TRUE(result->IsNull(i)) << "Row " << i << " should be NULL";
                 std::cout << "Row " << i << ": NULL (expected)" << std::endl;
                 continue;
             }
-            
+
             EXPECT_FALSE(result->IsNull(i)) << "Row " << i << " should not be NULL";
             T actualValue = resultVec->GetValue(i);
             T expectedValue = expected[i];
             std::cout << "Row " << i << ": Expected=" << expectedValue << ", Actual=" << actualValue << std::endl;
-            
+
             if constexpr (std::is_floating_point_v<T>) {
                 if (std::isnan(expectedValue)) {
                     EXPECT_TRUE(std::isnan(actualValue)) << "Row " << i << " should be NaN";
+                } else if (std::isinf(expectedValue)) {
+                    // Infinity use EXPECT_EQ，not EXPECT_NEAR
+                    EXPECT_EQ(actualValue, expectedValue) << "Row " << i << " infinity mismatch";
                 } else {
-                    EXPECT_NEAR(actualValue, expectedValue, 1e-6) 
-                        << "Row " << i << " value mismatch";
+                    EXPECT_NEAR(actualValue, expectedValue, 1e-6)
+                                        << "Row " << i << " value mismatch";
                 }
             } else {
-                EXPECT_EQ(actualValue, expectedValue) 
-                    << "Row " << i << " value mismatch";
+                EXPECT_EQ(actualValue, expectedValue)
+                                    << "Row " << i << " value mismatch";
             }
         }
     }
     
     static void ValidateStringResult(BaseVector* result, const std::vector<std::string>& expected, 
-                                     const std::vector<bool>& expectedNull, int rowSize) {
+                                    const std::vector<bool>& expectedNull, int rowSize) {
         auto* resultVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(result);
         ASSERT_NE(resultVec, nullptr) << "Result vector is not string type";
         
@@ -94,7 +97,7 @@ public:
     }
     
     static void ValidateBooleanResult(BaseVector* result, const std::vector<bool>& expected, 
-                                      const std::vector<bool>& expectedNull, int rowSize) {
+                                    const std::vector<bool>& expectedNull, int rowSize) {
         auto* resultVec = dynamic_cast<Vector<bool>*>(result);
         ASSERT_NE(resultVec, nullptr) << "Result vector is not boolean type";
         
@@ -435,7 +438,8 @@ TEST(GreatestTest, StringGreatest) {
     BaseVector* arg2Vec = GreatestFunctionTestHelper::CreateStringVector(arg2Values);
     
     BaseVector* resultVec = nullptr;
-    GreatestFunctionTestHelper::ExecuteGreatest({arg1Vec, arg2Vec}, OMNI_VARCHAR, resultVec);
+    // String vectors are created as OMNI_CHAR internally, so the output type should match OMNI_CHAR
+    GreatestFunctionTestHelper::ExecuteGreatest({arg1Vec, arg2Vec}, OMNI_CHAR, resultVec);
     GreatestFunctionTestHelper::ValidateStringResult(resultVec, expected, expectedNull, arg1Values.size());
     
     delete arg1Vec;
@@ -458,7 +462,8 @@ TEST(GreatestTest, StringGreatestWithNull) {
     arg1Vec->SetNull(0);
     
     BaseVector* resultVec = nullptr;
-    GreatestFunctionTestHelper::ExecuteGreatest({arg1Vec, arg2Vec}, OMNI_VARCHAR, resultVec);
+    // String vectors are created as OMNI_CHAR internally, so the output type should match OMNI_CHAR
+    GreatestFunctionTestHelper::ExecuteGreatest({arg1Vec, arg2Vec}, OMNI_CHAR, resultVec);
     GreatestFunctionTestHelper::ValidateStringResult(resultVec, expected, expectedNull, arg1Values.size());
     
     delete arg1Vec;
@@ -479,7 +484,8 @@ TEST(GreatestTest, StringGreatestVaryingLengths) {
     BaseVector* arg2Vec = GreatestFunctionTestHelper::CreateStringVector(arg2Values);
     
     BaseVector* resultVec = nullptr;
-    GreatestFunctionTestHelper::ExecuteGreatest({arg1Vec, arg2Vec}, OMNI_VARCHAR, resultVec);
+    // String vectors are created as OMNI_CHAR internally, so the output type should match OMNI_CHAR
+    GreatestFunctionTestHelper::ExecuteGreatest({arg1Vec, arg2Vec}, OMNI_CHAR, resultVec);
     GreatestFunctionTestHelper::ValidateStringResult(resultVec, expected, expectedNull, arg1Values.size());
     
     delete arg1Vec;

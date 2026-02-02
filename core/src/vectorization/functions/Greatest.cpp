@@ -17,9 +17,6 @@ namespace omniruntime::vectorization {
 
 void GreatestFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, 
                             BaseVector *&result, ExecutionContext *context) const {
-    // Debug log to confirm expression is being executed
-    std::cout << "[DEBUG] GreatestFunction::Apply - Entering greatest expression" << std::endl;
-    
     if (args.empty()) {
         OMNI_THROW("Greatest function Error", "No input arguments");
     }
@@ -46,12 +43,7 @@ void GreatestFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &
         }
     }
     
-    std::cout << "[DEBUG] GreatestFunction::Apply - Processing " << argVectors.size() 
-              << " arguments with " << size << " rows" << std::endl;
-    
     DispatchGreatest(argVectors, outputType, result);
-    
-    std::cout << "[DEBUG] GreatestFunction::Apply - Completed successfully" << std::endl;
 }
 
 void GreatestFunction::DispatchGreatest(const std::vector<BaseVector *> &argVectors, 
@@ -90,6 +82,8 @@ void GreatestFunction::DispatchGreatest(const std::vector<BaseVector *> &argVect
                 GreatestNumeric<int128_t>(argVectors, result, outputType);
                 break;
             case OMNI_VARBINARY:
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
                 GreatestString(argVectors, result, outputType);
                 break;
             default:
@@ -117,7 +111,7 @@ static bool isGreater(const T &a, const T &b) {
 
 template<typename T>
 void GreatestFunction::GreatestNumeric(const std::vector<BaseVector *> &argVectors, 
-                                       BaseVector *&result, const DataTypePtr &outputType) const {
+                                    BaseVector *&result, const DataTypePtr &outputType) const {
     auto size = argVectors[0]->GetSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
     
@@ -147,7 +141,7 @@ void GreatestFunction::GreatestNumeric(const std::vector<BaseVector *> &argVecto
 }
 
 void GreatestFunction::GreatestString(const std::vector<BaseVector *> &argVectors, 
-                                     BaseVector *&result, const DataTypePtr &outputType) const {
+                                    BaseVector *&result, const DataTypePtr &outputType) const {
     auto size = argVectors[0]->GetSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
     
@@ -177,7 +171,7 @@ void GreatestFunction::GreatestString(const std::vector<BaseVector *> &argVector
 }
 
 void GreatestFunction::GreatestBoolean(const std::vector<BaseVector *> &argVectors, 
-                                      BaseVector *&result, const DataTypePtr &outputType) const {
+                                    BaseVector *&result, const DataTypePtr &outputType) const {
     auto size = argVectors[0]->GetSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
     
@@ -249,7 +243,7 @@ void GreatestFunction::SetValueToVector(BaseVector *vec, int32_t row, const T &v
 }
 
 void GreatestFunction::SetStringValueToVector(BaseVector *vec, int32_t row, 
-                                             std::string_view &value) const {
+                                            std::string_view &value) const {
     auto *resultVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
     resultVec->SetValue(row, value);
 }
@@ -261,10 +255,10 @@ std::shared_ptr<VectorFunction> makeGreatest(const std::string &name,
 }
 
 // Generate function signatures for all supported types
+// Uses variadic signatures to support any number of arguments (minimum 2)
 std::vector<std::shared_ptr<codegen::FunctionSignature>> GreatestSignatures() {
     std::vector<std::shared_ptr<codegen::FunctionSignature>> signatures;
     
-    // Supported types: BOOLEAN, BYTE, SHORT, INT, LONG, FLOAT, DOUBLE, VARCHAR, DATE, TIMESTAMP, DECIMAL64, DECIMAL128, VARBINARY
     std::vector<DataTypeId> supportedTypes = {
         OMNI_BOOLEAN,
         OMNI_BYTE,
@@ -274,6 +268,7 @@ std::vector<std::shared_ptr<codegen::FunctionSignature>> GreatestSignatures() {
         OMNI_FLOAT,
         OMNI_DOUBLE,
         OMNI_VARCHAR,
+        OMNI_CHAR,
         OMNI_DATE32,
         OMNI_TIMESTAMP,
         OMNI_DECIMAL64,
@@ -281,37 +276,9 @@ std::vector<std::shared_ptr<codegen::FunctionSignature>> GreatestSignatures() {
         OMNI_VARBINARY
     };
     
-    // Register for 2, 3, and 4 arguments (variable arity)
     for (const auto &typeId : supportedTypes) {
-        // 2 arguments
         signatures.emplace_back(
-            codegen::FunctionSignatureBuilder()
-                .FuncName("Greatest")
-                .ReturnType(typeId)
-                .ArgumentType(typeId)
-                .ArgumentType(typeId)
-                .Build());
-        
-        // 3 arguments
-        signatures.emplace_back(
-            codegen::FunctionSignatureBuilder()
-                .FuncName("Greatest")
-                .ReturnType(typeId)
-                .ArgumentType(typeId)
-                .ArgumentType(typeId)
-                .ArgumentType(typeId)
-                .Build());
-        
-        // 4 arguments
-        signatures.emplace_back(
-            codegen::FunctionSignatureBuilder()
-                .FuncName("Greatest")
-                .ReturnType(typeId)
-                .ArgumentType(typeId)
-                .ArgumentType(typeId)
-                .ArgumentType(typeId)
-                .ArgumentType(typeId)
-                .Build());
+        codegen::FunctionSignature::Variadic("Greatest", typeId, typeId, 2));
     }
     
     return signatures;
