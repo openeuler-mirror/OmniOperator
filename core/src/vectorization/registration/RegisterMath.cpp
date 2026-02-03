@@ -41,5 +41,14 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<Log10Function, double, double>(prefix + "log10", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Log2Function, double, double>(prefix + "log2", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<LogarithmFunction, double, double, double>(prefix + "log", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterBinaryIntegral<PModIntFunction>({prefix + "pmod"});
+    RegisterBinaryFloatingPoint<PModFloatFunction>({prefix + "pmod"});
+    RegisterUnaryNumeric<PositiveFunction>(prefix + "positive");
+    RegisterFunction<PowerFunction, double, double, double>(prefix + "power", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<RintFunction, double, double>(prefix + "rint", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    // Register round: round(expr) default scale=0, round(expr, scale)
+    RegisterUnaryIntegralNumeric<RoundFunction>(prefix + "round");
+    RegisterUnaryFloatingPoint<RoundFunction>(prefix + "round");
+    RegisterRoundNumericWithScale<RoundFunction>(prefix + "round");
 }
 }
