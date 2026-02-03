@@ -624,7 +624,7 @@ TEST(vector, copy_positions_array)
     arrayVec->SetOffset(3, 9);
     arrayVec->SetOffset(4, 11);
 
-    arrayVec->AddElements(elements);
+    arrayVec->SetElementVectorFromRaw(elements);
 
     int positions[] = {1, 3};
     auto* newArrayVector = arrayVec->CopyPositions((const int*)positions, 0, 2);
@@ -680,7 +680,7 @@ TEST(vector, copy_positions_array_with_null)
     arrayVec->SetOffset(2, 4);
     arrayVec->SetOffset(3, 6);
 
-    arrayVec->AddElements(elements);
+    arrayVec->SetElementVectorFromRaw(elements);
 
     int positions[] = {0, -1, 1, -1, -1, -1, 1, -1, 1};
     auto* newArrayVector = arrayVec->CopyPositions((const int*)positions, 0, 9);
@@ -734,8 +734,8 @@ TEST(vector, append_array)
     srcArrayVec->SetOffset(3, 9);
     srcArrayVec->SetOffset(4, 11);
 
-    dstArrayVec->AddElements(dstElements);
-    srcArrayVec->AddElements(srcElements);
+    dstArrayVec->SetElementVectorFromRaw(dstElements);
+    srcArrayVec->SetElementVectorFromRaw(srcElements);
 
     dstArrayVec->Append(srcArrayVec, arraySize, 1);
     EXPECT_EQ(dstArrayVec->GetOffset(0), 0);
@@ -790,8 +790,8 @@ TEST(vector, append_array_with_null)
         omniruntime::vec::VectorHelper::PrintVectorValue(srcElements, i);
     }
 
-    dstArrayVec->AddElements(dstElements);
-    srcArrayVec->AddElements(srcElements);
+    dstArrayVec->SetElementVectorFromRaw(dstElements);
+    srcArrayVec->SetElementVectorFromRaw(srcElements);
 
     dstArrayVec->Append(srcArrayVec, arraySize, 5);
     EXPECT_EQ(dstArrayVec->GetOffset(0), 0);
@@ -1042,7 +1042,7 @@ TEST(vector, copy_positions_array_0length)
     arrayVec->SetNull(1);
     arrayVec->SetOffset(3, 6);
 
-    arrayVec->AddElements(elements);
+    arrayVec->SetElementVectorFromRaw(elements);
 
     int positions[] = {0, 1};
     auto* newArrayVector = arrayVec->CopyPositions((const int*)positions, 0, 2);

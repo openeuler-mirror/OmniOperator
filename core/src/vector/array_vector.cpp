@@ -77,10 +77,10 @@ ArrayVector *ArrayVector::CopyPositions(const int *positions, int positionOffset
     if (UNLIKELY(elementLength == 0)) {
         // need create concreate vector, not BaseVector
         auto elementDataType = VectorHelper::GetDataType(elementVector.get());
-        newArrayVector->AddElements(VectorHelper::CreateComplexVector(elementDataType.get(), elementLength));
+        newArrayVector->SetElementVectorFromRaw(VectorHelper::CreateComplexVector(elementDataType.get(), elementLength));
     } else {
         auto newElementVector = elementVector->CopyPositions(elementPositions.data(), 0, elementLength);
-        newArrayVector->AddElements(newElementVector);
+        newArrayVector->SetElementVectorFromRaw(newElementVector);
     }
 
     return newArrayVector;
