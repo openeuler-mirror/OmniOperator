@@ -1329,6 +1329,17 @@ public:
         auto emptyElemVec = VectorHelper::CreateFlatVector(static_cast<int32_t>(typeId), 0);
         dstArrVec->SetElementVector(std::shared_ptr<BaseVector>(emptyElemVec));
     }
+
+    static void EmptyMapProjection(MapVector *dstArrVec, DataTypeId keyTypeId, DataTypeId valueTypeId)
+    {
+        if (dstArrVec == nullptr) {
+            return;
+        }
+        auto emptyKeyElemVec = VectorHelper::CreateFlatVector(static_cast<int32_t>(keyTypeId),0);
+        auto emptyValueElemVec = VectorHelper::CreateFlatVector(static_cast<int32_t>(valueTypeId),0);
+        dstArrVec->SetKeyVector(std::shared_ptr<BaseVector>(emptyKeyElemVec));
+        dstArrVec->SetValueVector(std::shared_ptr<BaseVector>(emptyValueElemVec));
+    }
 };
 }
 

@@ -578,11 +578,11 @@ private:
 class ParamRefExpr : public Expr {
 public:
 
-    int32_t paramIdx_;
+    std::string paramName_;
 
     ParamRefExpr();
 
-    ParamRefExpr(int32_t paramIdx, DataTypePtr dt);
+    ParamRefExpr(std::string paramName, DataTypePtr dt);
 
     ~ParamRefExpr() override = default;
 
@@ -596,10 +596,11 @@ class LambdaExpr : public Expr {
 public:
     Expr *body_;
     std::vector<type::DataTypePtr> paramTypes_;
+    std::unordered_map<std::string, int32_t> paramNameToIdxMap_;
 
     LambdaExpr();
 
-    LambdaExpr(Expr *body, std::vector<DataTypePtr> paramTypes, DataTypePtr dt);
+    LambdaExpr(Expr *body, std::vector<DataTypePtr> paramTypes, const std::unordered_map<std::string, int32_t>& map, DataTypePtr dt);
 
     ~LambdaExpr() override;
 

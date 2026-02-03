@@ -66,12 +66,14 @@ TEST(ArrayFunctionTest, TransformTest)
     auto input = CreateArrayVectorBatch(types, offset, rowSize, 5, col);
     std::vector<DataTypePtr> paramTypes;
     paramTypes.push_back(IntType());
-    ParamRefExpr *addLeft = new ParamRefExpr(0, IntType());
+    ParamRefExpr *addLeft = new ParamRefExpr("x", IntType());
     LiteralExpr *addRight = new LiteralExpr(5, IntType());
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
+    std::unordered_map<std::string, int32_t> paramNameToIdxMap;
+    paramNameToIdxMap.emplace("x",0);
     auto expr = FuncExpr("transform", {
             new FieldExpr(0, std::make_shared<DataType>(OMNI_ARRAY)),
-            new LambdaExpr(addExpr, paramTypes, IntType())
+            new LambdaExpr(addExpr, paramTypes, paramNameToIdxMap, IntType())
     }, std::make_shared<DataType>(OMNI_ARRAY));
 
     auto context = new ExecutionContext();

@@ -48,6 +48,7 @@ public:
     int32_t GetRowCount() const;
 
     std::vector<vec::BaseVector *> lambdaParams_;
+    std::unordered_map<std::string, int32_t> paramNameToIdxMap;
 
 private:
     std::vector<type::DataTypeId> typeIds;

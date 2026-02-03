@@ -27,6 +27,19 @@ namespace omniruntime::vectorization {
             BaseVector *arrBaseVec = args.top();
             args.pop();
 
+            const expressions::LambdaExpr *lambdaExpr = context->GetCurrentLambda();
+            if (lambdaExpr == nullptr) {
+                throw OmniException("TRANSFORM_ERROR", "Lambda expression is null for transform function");
+            }
+            if (lambdaExpr->GetParamNum() != 1) {
+                throw OmniException("TRANSFORM_ERROR", "Transform only support lambda with single parameter");
+            }
+            expressions::Expr *lambdaBody = lambdaExpr->GetBody();
+            if (lambdaBody->GetType() == expressions::ExprType::PARAM_REF_E) {
+                result = arrBaseVec;
+                return;
+            }
+
             if (arrBaseVec == nullptr) {
                 OMNI_THROW("Transform Error:", "transform received null vector argument");
             }
@@ -64,17 +77,8 @@ namespace omniruntime::vectorization {
                 return;
             }
 
-            const expressions::LambdaExpr *lambdaExpr = context->GetCurrentLambda();
-            if (lambdaExpr == nullptr) {
-                throw OmniException("TRANSFORM_ERROR", "Lambda expression is null for transform function");
-            }
-            if (lambdaExpr->GetParamNum() != 1) {
-                throw OmniException("TRANSFORM_ERROR", "Transform only support lambda with single parameter");
-            }
-            expressions::Expr *lambdaBody = lambdaExpr->GetBody();
-
             ExprEval lambdaEval(context);
-
+            lambdaEval.paramNameToIdxMap = lambdaExpr->paramNameToIdxMap_;
             lambdaEval.lambdaParams_.push_back(flatElementVec);
 
             context->SetResultRowSize(flatElementVec->GetSize());
