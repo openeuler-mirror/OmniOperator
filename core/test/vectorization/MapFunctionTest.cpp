@@ -118,7 +118,7 @@ TEST(MapFunctionTest, TransformKeysTest)
     auto keyElement = dynamic_cast<Vector<int32_t>*>(mapVec->GetKeyVector().get());
     auto ValueElement = dynamic_cast<Vector<int32_t>*>(mapVec->GetValueVector().get());
     int32_t expectKey[] = {11, 22, 33, 44 , 55};
-    int32_t expectValue[] = {10, 20, 30, 40, 55};
+    int32_t expectValue[] = {10, 20, 30, 40, 50};
     for (int i = 0; i < 5; ++i) {
         ASSERT_EQ(keyElement->GetValue(i),expectKey[i]);
         ASSERT_EQ(ValueElement->GetValue(i),expectValue[i]);
