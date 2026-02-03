@@ -209,6 +209,25 @@ public:
         return DYNAMIC_TYPE_DISPATCH(VectorSetValue, vector->GetTypeId(), vector, index, value);
     }
 
+    template <type::DataTypeId typeId>
+    static void VectorCopyValue(vec::BaseVector *srcVector, int32_t srcIndex, vec::BaseVector *dstVector, int32_t dstIndex)
+    {
+        using T = typename type::NativeType<typeId>::type;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            auto value = static_cast<Vector<LargeStringContainer<T>> *>(srcVector)->GetValue(srcIndex);
+            static_cast<Vector<LargeStringContainer<T>> *>(dstVector)->SetValue(dstIndex, value);
+        } else {
+            auto value = static_cast<Vector<T> *>(srcVector)->GetValue(srcIndex);
+            static_cast<Vector<T> *>(dstVector)->SetValue(dstIndex, value);
+        }
+    }
+
+    static void CopyValue(vec::BaseVector *srcVector, int32_t srcIndex, vec::BaseVector *dstVector, int32_t dstIndex)
+    {
+        using namespace omniruntime::type;
+        return DYNAMIC_TYPE_DISPATCH(VectorCopyValue, srcVector->GetTypeId(), srcVector, srcIndex, dstVector, dstIndex);
+    }
+
     static void PrintVecBatch(VectorBatch *vecBatch)
     {
         int32_t vectorCount = vecBatch->GetVectorCount();

@@ -6,6 +6,8 @@
 #include "RegistrationHelpers.h"
 #include "vectorization/functions/SubscriptUtil.h"
 #include "vectorization/functions/Slice.h"
+#include "vectorization/functions/SizeFunction.h"
+#include "vectorization/functions/ReverseFunction.h"
 
 namespace omniruntime::vectorization {
 void RegisterArrayFunctions(const std::string &prefix)
@@ -18,5 +20,15 @@ void RegisterArrayFunctions(const std::string &prefix)
         std::make_shared<SliceImpl>());
     VectorFunction::RegisterVectorFunction("slice", {OMNI_ARRAY, OMNI_LONG, OMNI_LONG}, OMNI_ARRAY,
         std::make_shared<SliceImpl>());
+
+    // Register size function for Array type (Collection Functions)
+    // Note: SizeFunction handles both Array and Map types with proper legacySizeOfNull support
+    VectorFunction::RegisterVectorFunction("size", {OMNI_ARRAY, OMNI_BOOLEAN}, OMNI_INT,
+        std::make_shared<SizeFunction>());
+
+    // Register reverse function for Array type
+    // reverse(array<T>) -> array<T>: Returns the array with elements in reverse order
+    VectorFunction::RegisterVectorFunction("reverse", {OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ReverseFunction>());
 }
 }

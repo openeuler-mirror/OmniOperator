@@ -10,6 +10,8 @@
 // #include "../functions/Switch.h"
 #include "../functions/RegexpExtract.h"
 #include "../functions/EqualStringFunction.h"
+#include "../functions/ConcatFunction.h"
+#include "../functions/ReverseFunction.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -32,6 +34,24 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "substr", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
     RegisterFunction<SubstrFunction, std::string, std::string_view, int32_t, int32_t>(
         prefix + "substr", {OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
+
+    // Register concat function with variable arity support
+    // Register multiple signatures for different argument counts (2 to 10 arguments)
+    auto concatFunction = std::make_shared<ConcatFunction>();
+    VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
+    VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
+    VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
+    VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
+    VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
+    VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
+    VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
+    VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
+    VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
+
+    // Register reverse function: reverses a string character by character
+    VectorFunction::RegisterVectorFunction("reverse", {OMNI_VARCHAR}, OMNI_VARCHAR,
+        std::make_shared<ReverseFunction>());
+
     // Register locate function with full type support
     // locate(substring, string, start) -> integer
     // Support all combinations of VARCHAR/CHAR string types and INT32/INT64 integer types

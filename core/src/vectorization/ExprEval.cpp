@@ -154,41 +154,47 @@ void ExprEval::Visit(const LiteralExpr &e)
 {
     if (!e.isRoot) {
         auto typeId = e.dataType->GetId();
+        BaseVector *constVec = nullptr;
         switch (e.dataType->GetId()) {
             case OMNI_INT:
             case OMNI_DATE32:
-                inputValues_.push(new ConstVector(e.intVal, typeId));
+                constVec = new ConstVector(e.intVal, typeId);
                 break;
             case OMNI_SHORT:
-                inputValues_.push(new ConstVector(e.shortVal, typeId));
+                constVec = new ConstVector(e.shortVal, typeId);
                 break;
             case OMNI_BYTE:
-                inputValues_.push(new ConstVector(e.byteVal, typeId));
+                constVec = new ConstVector(e.byteVal, typeId);
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
-                inputValues_.push(new ConstVector(e.longVal, typeId));
+                constVec = new ConstVector(e.longVal, typeId);
                 break;
             case OMNI_DOUBLE:
-                inputValues_.push(new ConstVector(e.doubleVal, typeId));
+                constVec = new ConstVector(e.doubleVal, typeId);
                 break;
             case OMNI_FLOAT:
-                inputValues_.push(new ConstVector(e.floatVal, typeId));
+                constVec = new ConstVector(e.floatVal, typeId);
                 break;
             case OMNI_BOOLEAN:
-                inputValues_.push(new ConstVector(e.boolVal, typeId));
+                constVec = new ConstVector(e.boolVal, typeId);
                 break;
             case OMNI_DECIMAL128:
-                inputValues_.push(new ConstVector(e.stringVal, typeId));
+                constVec = new ConstVector(e.stringVal, typeId);
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
             case OMNI_VARBINARY:
-                inputValues_.push(new ConstVector(std::string_view(*e.stringVal), typeId));
+                constVec = new ConstVector(std::string_view(*e.stringVal), typeId);
                 break;
             default: LogError("Do not support such vector type %d", typeIds[e.dataType->GetId()]);
         }
+        // Handle NULL literal by setting the null flag on the ConstVector
+        if (constVec != nullptr && e.isNull) {
+            constVec->SetNull(0);
+        }
+        inputValues_.push(constVec);
         return;
     }
     BaseVector *outVec = VectorHelper::CreateFlatVector(e.dataType->GetId(), rowSize);
