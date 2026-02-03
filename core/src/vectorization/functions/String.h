@@ -324,4 +324,112 @@ struct UnBase64Function {
         return Status::OK();
     }
 };
+
+/// Pad functions base template
+/// pad(string, size, padString) -> varchar
+/// Pads string to size characters with padString. If size is less than the length
+/// of string, the result is truncated to size characters. size must not be negative
+/// and padString must be non-empty.
+/// Supports both ASCII and Unicode strings.
+/// @tparam lpad If true, left pads the string (padding at beginning).
+///              If false, right pads the string (padding at end).
+/// @tparam T Type parameter for function registration.
+template <bool lpad, typename T>
+struct PadFunctionBase {
+    static constexpr size_t kPadMaxSize = 1024 * 1024; // 1MB max size
+
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &string,
+        const int64_t &size, const std::string_view &padString)
+    {
+        // Validate size
+        if (size < 0 || static_cast<size_t>(size) > kPadMaxSize) {
+            result.clear();
+            return true;
+        }
+
+        // Validate padString
+        if (padString.empty()) {
+            result.clear();
+            return true;
+        }
+
+        int64_t padStringCharLength = stringImpl::length<false /*isAscii*/>(padString);
+        if (padStringCharLength <= 0) {
+            result.clear();
+            return true;
+        }
+
+        int64_t stringCharLength = stringImpl::length<false /*isAscii*/>(string);
+
+        // If string has at least size characters, truncate it if necessary
+        if (stringCharLength >= size) {
+            size_t prefixByteSize = static_cast<size_t>(
+                stringImpl::cappedByteLengthUnicode(string.data(), string.size(), size));
+            result.assign(string.data(), prefixByteSize);
+            return true;
+        }
+
+        // Calculate padding needed
+        int64_t fullPaddingCharLength = size - stringCharLength;
+        int64_t fullPadCopies = fullPaddingCharLength / padStringCharLength;
+        int64_t remainingPadChars = fullPaddingCharLength % padStringCharLength;
+
+        // Calculate byte length of the partial pad prefix
+        size_t padPrefixByteLength = static_cast<size_t>(
+            stringImpl::cappedByteLengthUnicode(padString.data(), padString.size(), remainingPadChars));
+
+        // Calculate total byte length
+        int64_t fullPaddingByteLength = static_cast<int64_t>(padString.size()) * fullPadCopies +
+            static_cast<int64_t>(padPrefixByteLength);
+        int64_t outputByteLength = static_cast<int64_t>(string.size()) + fullPaddingByteLength;
+
+        result.resize(static_cast<size_t>(outputByteLength));
+
+        size_t paddingOffset;
+        if constexpr (lpad) {
+            // For lpad: padding comes first, then the string
+            paddingOffset = 0;
+            // Copy original string after the padding
+            std::memcpy(result.data() + fullPaddingByteLength, string.data(), string.size());
+        } else {
+            // For rpad: string comes first, then the padding
+            paddingOffset = string.size();
+            // Copy original string at the beginning
+            std::memcpy(result.data(), string.data(), string.size());
+        }
+
+        // Copy full pad strings
+        for (int64_t i = 0; i < fullPadCopies; i++) {
+            std::memcpy(result.data() + paddingOffset + i * padString.size(),
+                padString.data(), padString.size());
+        }
+
+        // Copy partial pad prefix
+        std::memcpy(result.data() + paddingOffset + fullPadCopies * padString.size(),
+            padString.data(), padPrefixByteLength);
+
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *string,
+        const int64_t *size, const std::string_view *padString)
+    {
+        if (string == nullptr || size == nullptr || padString == nullptr) {
+            return false;
+        }
+        return call(result, *string, *size, *padString);
+    }
+};
+
+/// lpad function
+/// lpad(string, size, padString) -> varchar
+/// Left pads string to size characters with padString.
+template <typename T>
+struct LPadFunction : public PadFunctionBase<true, T> {};
+
+/// rpad function
+/// rpad(string, size, padString) -> varchar
+/// Right pads string to size characters with padString.
+template <typename T>
+struct RPadFunction : public PadFunctionBase<false, T> {};
 }
