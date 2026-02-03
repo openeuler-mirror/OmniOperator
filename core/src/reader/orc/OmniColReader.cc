@@ -256,7 +256,7 @@ namespace omniruntime::reader {
     * OmniStructColumnReader funcs
     */
     OmniStructColumnReader::OmniStructColumnReader(const Type& type, StripeStreams& stripe,
-        common::JulianGregorianRebase *julianPtr): OmniColumnReader(type, stripe) {
+        common::JulianGregorianRebase *julianPtr): OmniColumnReader(type, stripe), type_(&type) {
         // count the number of selected sub-columns
         const std::vector<bool> selectedColumns = stripe.getSelectedColumns();
         switch (static_cast<int64_t>(stripe.getEncoding(columnId).kind())) {
@@ -289,6 +289,25 @@ namespace omniruntime::reader {
         const ::orc::Type& baseTp, int* omniTypeId) {
         auto vecs = reinterpret_cast<std::vector<omniruntime::vec::BaseVector*>*>(batch);
         nextInternal<false>(*vecs, numValues, nullptr, baseTp, omniTypeId);
+    }
+
+    void OmniStructColumnReader::next(omniruntime::vec::BaseVector *vec, uint64_t numValues,
+                                      uint64_t *incomingNulls, int omniTypeId) {
+        auto nulls = omniruntime::vec::unsafe::UnsafeBaseVector::GetNulls(vec);
+        readNulls(this, numValues, incomingNulls, nulls);
+        bool hasNull = vec->HasNull();
+
+        auto rowVector = reinterpret_cast<omniruntime::vec::RowVector*>(vec);
+
+        uint64_t i = 0;
+        for(auto iter = children.begin(); iter != children.end(); ++iter, ++i) {
+            const orc::Type *child = type_->getSubtype(i);
+            auto dataTypeId = getDefaultOmniType(child);
+            auto childVec = std::shared_ptr<omniruntime::vec::BaseVector>(makeNewVector(numValues, child, dataTypeId).release());
+            reinterpret_cast<OmniColumnReader*>(&(*iter->get()))->next(childVec.get(), numValues,
+                                                                       hasNull ? reinterpret_cast<uint64_t*>(nulls) : nullptr, dataTypeId);
+            rowVector->AddChild(childVec);
+        }
     }
 
     void OmniStructColumnReader::seekToRowGroup(std::unordered_map<uint64_t, PositionProvider>& positions) {
@@ -553,6 +572,8 @@ namespace omniruntime::reader {
         switch (type->getKind()) {
             case ::orc::TypeKind::BOOLEAN:
                 return omniruntime::type::OMNI_BOOLEAN;
+            case ::orc::TypeKind::BYTE:
+                return omniruntime::type::OMNI_BYTE;
             case ::orc::TypeKind::SHORT:
                 return omniruntime::type::OMNI_SHORT;
             case ::orc::TypeKind::DATE:
@@ -567,6 +588,10 @@ namespace omniruntime::reader {
                 return omniruntime::type::OMNI_TIMESTAMP;
             case ::orc::TypeKind::DOUBLE:
                 return omniruntime::type::OMNI_DOUBLE;
+            case ::orc::TypeKind::FLOAT:
+                return omniruntime::type::OMNI_FLOAT;
+            case ::orc::TypeKind::BINARY:
+                return omniruntime::type::OMNI_VARBINARY;
             case ::orc::TypeKind::CHAR:
             case ::orc::TypeKind::STRING:
             case ::orc::TypeKind::VARCHAR:
@@ -577,9 +602,16 @@ namespace omniruntime::reader {
                 } else {
                     return omniruntime::type::OMNI_DECIMAL64;
                 }
+            case ::orc::TypeKind::LIST:
+                return omniruntime::type::OMNI_ARRAY;
+            case ::orc::TypeKind::MAP:
+                return omniruntime::type::OMNI_MAP;
+            case ::orc::TypeKind::STRUCT:
+                return omniruntime::type::OMNI_ROW;
             default:
                 throw omniruntime::exception::OmniException(
-                    "EXPRESSION_NOT_SUPPORT", "Not Supported Type: " + type->getKind());
+                    "EXPRESSION_NOT_SUPPORT",
+                    "Not Supported ORC TypeKind: " + std::to_string(static_cast<int>(type->getKind())));
         }
     }
 

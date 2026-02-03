@@ -67,6 +67,7 @@ namespace omniruntime::reader {
     class OmniStructColumnReader: public OmniColumnReader {
     private:
         std::vector<std::unique_ptr<ColumnReader>> children;
+        const ::orc::Type *type_;
 
     public:
         OmniStructColumnReader(const ::orc::Type& type, ::orc::StripeStreams& stipe,
@@ -84,6 +85,16 @@ namespace omniruntime::reader {
          */
         void next(void *&omniVecBatch, uint64_t numValues, char *notNull, const ::orc::Type& baseTp,
                   int* omniTypeId) override;
+
+        /**
+        * direct read VectorBatch in next
+        * @param vec the vec to push
+        * @param numValues the numValues of VectorBatch
+        * @param incomingNulls the notNull array indicates value not null
+        * @param omniTypeId the omniTypeId to push
+        */
+        void next(omniruntime::vec::BaseVector *vec, uint64_t numValues,
+                  uint64_t *incomingNulls, int omniTypeId) override;
 
         void seekToRowGroup(
                 std::unordered_map<uint64_t, ::orc::PositionProvider>& positions) override;

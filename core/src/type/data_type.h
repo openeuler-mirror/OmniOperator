@@ -29,6 +29,7 @@ const std::string SCALE = "scale";
 const std::string DATE_UNIT = "dateUnit";
 const std::string TIME_UNIT = "timeUnit";
 const std::string FIELD_TYPES = "fieldTypes";
+const std::string FIELD_NAMES = "fieldNames";
 const std::string ELEMENT_TYPE = "elementType";
 const std::string ELEMENT_SIZE = "elementSize";
 const static uint32_t CHAR_MAX_WIDTH = 65536;

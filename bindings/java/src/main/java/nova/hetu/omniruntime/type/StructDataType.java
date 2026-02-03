@@ -18,6 +18,9 @@ public class StructDataType extends DataType {
     private static final long serialVersionUID = -6904326102609779407L;
 
     private DataType[] fieldTypes;
+    // Optional field names for this struct. If not provided, downstream may
+    // treat fields as ordinal-based.
+    private String[] fieldNames;
 
     /**
      * The construct of STRUCT data type.
@@ -27,6 +30,18 @@ public class StructDataType extends DataType {
     public StructDataType(DataType[] fieldTypes) {
         super(DataTypeId.OMNI_ROW);
         this.fieldTypes = fieldTypes;
+    }
+
+    /**
+     * The construct of STRUCT data type with field names.
+     *
+     * @param fieldTypes the types of fields
+     * @param fieldNames the names of fields (same length as fieldTypes)
+     */
+    public StructDataType(DataType[] fieldTypes, String[] fieldNames) {
+        super(DataTypeId.OMNI_ROW);
+        this.fieldTypes = fieldTypes;
+        this.fieldNames = fieldNames;
     }
 
     /**
@@ -52,6 +67,15 @@ public class StructDataType extends DataType {
      */
     public DataType[] getFieldTypes() {
         return fieldTypes;
+    }
+
+    /**
+     * get field names.
+     *
+     * @return field names, may be null if not provided
+     */
+    public String[] getFieldNames() {
+        return fieldNames;
     }
 
     public DataType getFieldType(int index) {

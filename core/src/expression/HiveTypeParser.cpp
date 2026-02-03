@@ -125,7 +125,7 @@ Result HiveTypeParser::parseType()
         ResultList resultList = parseTypeList(OMNI_ROW == nt.typeKind());
         switch (nt.typeKind()) {
             case OMNI_ROW:
-                return Result{std::make_shared<RowType>(resultList.typelist)};
+                return Result{std::make_shared<RowType>(resultList.typelist, resultList.names)};
             case OMNI_MAP: {
                 OMNI_CHECK(resultList.typelist.size() == 2, "wrong param count for map type def");
                 return Result{std::make_shared<MapType>(resultList.typelist.at(0), resultList.typelist.at(1))};

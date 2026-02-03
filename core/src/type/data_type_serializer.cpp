@@ -93,7 +93,23 @@ DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
             for (const auto &fieldJson: dataTypeJson[FIELD_TYPES]) {
                 fieldTypes.push_back(DataTypeJsonParser(fieldJson));
             }
-            return std::make_shared<RowType>(fieldTypes);
+            std::vector<std::string> fieldNames;
+            if (dataTypeJson.contains(FIELD_NAMES) && dataTypeJson[FIELD_NAMES].is_array()) {
+                for (const auto& nameJson : dataTypeJson[FIELD_NAMES]) {
+                    if (nameJson.is_string()) {
+                        fieldNames.push_back(nameJson.get<std::string>());
+                    }
+                }
+            }
+            // If upstream doesn't provide names (e.g. some plan/type sources),
+            // fall back to ordinal-based names to avoid crashing scan-spec building.
+            if (fieldNames.empty() && !fieldTypes.empty()) {
+                fieldNames.reserve(fieldTypes.size());
+                for (size_t i = 0; i < fieldTypes.size(); ++i) {
+                    fieldNames.push_back("field" + std::to_string(i));
+                }
+            }
+            return std::make_shared<RowType>(fieldTypes, fieldNames);
         }
         case OMNI_ARRAY: {
             DataTypePtr child = DataTypeJsonParser(dataTypeJson[ELEMENT_TYPE]);
