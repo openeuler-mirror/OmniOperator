@@ -8,10 +8,60 @@
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
+#include <string_view>
 #include "vectorization/Status.h"
+#include "vectorization/functions/Base64Util.h"
 #include "type/string_Impl.h"
 
 namespace omniruntime::vectorization {
+
+/// Returns the Unicode code point of the first character in UTF-8 string (aligned with
+/// Velox utf8proc_codepoint). Returns 0 if empty, -1 on invalid/incomplete UTF-8.
+inline int32_t Utf8FirstCodepoint(const char* data, size_t size, int& byteLen) {
+    if (size == 0) {
+        byteLen = 0;
+        return 0;
+    }
+    const unsigned char* u = reinterpret_cast<const unsigned char*>(data);
+    unsigned char u0 = u[0];
+    if (u0 <= 127) {
+        byteLen = 1;
+        return u0;
+    }
+    if (size < 2) {
+        byteLen = 1;
+        return -1;
+    }
+    unsigned char u1 = u[1];
+    if (u0 >= 192 && u0 <= 223) {
+        byteLen = 2;
+        return (u0 - 192) * 64 + (u1 - 128);
+    }
+    if (u0 == 0xed && (u1 & 0xa0) == 0xa0) {
+        byteLen = 1;
+        return -1;  // surrogate U+D800..U+DFFF invalid in UTF-8
+    }
+    if (size < 3) {
+        byteLen = 1;
+        return -1;
+    }
+    unsigned char u2 = u[2];
+    if (u0 >= 224 && u0 <= 239) {
+        byteLen = 3;
+        return (u0 - 224) * 4096 + (u1 - 128) * 64 + (u2 - 128);
+    }
+    if (size < 4) {
+        byteLen = 1;
+        return -1;
+    }
+    unsigned char u3 = u[3];
+    if (u0 >= 240 && u0 <= 247) {
+        byteLen = 4;
+        return (u0 - 240) * 262144 + (u1 - 128) * 4096 + (u2 - 128) * 64 + (u3 - 128);
+    }
+    byteLen = 1;
+    return -1;  // invalid lead byte
+}
 template <typename T>
 struct StartsWithFunction {
     ALWAYS_INLINE Status call(bool &result, const std::string_view &str, const std::string_view &pattern)
@@ -218,6 +268,60 @@ struct CharLengthFunction {
     ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *str)
     {
         return call(result, *str);
+    }
+};
+
+/// ascii(string) -> int32
+/// Returns the ASCII/Unicode code point of the first character; 0 for empty string.
+template <typename T>
+struct AsciiFunction {
+    ALWAYS_INLINE void call(int32_t& result, const std::string_view& s) {
+        if (s.empty()) {
+            result = 0;
+            return;
+        }
+        int byteLen = 0;
+        result = Utf8FirstCodepoint(s.data(), s.size(), byteLen);
+    }
+};
+
+/// chr(n) / char(n) -> string
+/// Returns the Unicode code point n as a single character string.
+/// If n < 0, returns empty string. If n >= 256, equivalent to chr(n % 256).
+/// Supports all integer types (byte/short/int/long).
+template <typename T>
+struct ChrFunction {
+    ALWAYS_INLINE void call(std::string& result, const int64_t& n) {
+        if (n < 0) {
+            result.clear();
+            return;
+        }
+        int64_t codePoint = n & 0xFF;
+        result.resize(codePoint < 0x80 ? 1 : 2);
+        char* p = &result[0];
+        if (codePoint < 0x80) {
+            p[0] = static_cast<char>(codePoint);
+        } else {
+            p[0] = static_cast<char>(0xC0 + (codePoint >> 6));
+            p[1] = static_cast<char>(0x80 + (codePoint & 0x3F));
+        }
+    }
+};
+
+/// unbase64(string) -> varbinary (as string)
+/// Decodes Base64-encoded string to binary. Returns Status on decode error (row becomes NULL).
+template <typename T>
+struct UnBase64Function {
+    ALWAYS_INLINE Status call(std::string& result, const std::string_view& input) {
+        size_t maxDecodedSize = (input.size() / 4) * 3 + 3;
+        result.resize(maxDecodedSize);
+        size_t actualSize = 0;
+        Status st = Base64Decode(input.data(), input.size(), &result[0], maxDecodedSize, &actualSize);
+        if (!st.ok()) {
+            return st;
+        }
+        result.resize(actualSize);
+        return Status::OK();
     }
 };
 }
