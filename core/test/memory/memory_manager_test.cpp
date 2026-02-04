@@ -136,17 +136,17 @@ TEST(MemoryManager, testStatisticsFunction)
     // an example, 100 indicates the overhead of new bool[100].
     auto int32Vector = CreateVector<int32_t>(100);
     int64_t threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 573);
+    EXPECT_EQ(threadUntracked, 581);
 
     // mem 973 = vector, nullsBuffer, valuesBuffer size(152) + null size(21) + value size(800)
     auto int64Vector = CreateVector<int64_t>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 1546); // int64Vector + int32Vector
+    EXPECT_EQ(threadUntracked, 1562); // int64Vector + int32Vector
 
     // mem 973 = vector, nullsBuffer, valuesBuffer size(152) + null size(21) + value size(800)
     auto doubleVector = CreateVector<double>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 2519); // doubleVector + int64Vector + int32Vector
+    EXPECT_EQ(threadUntracked, 2543); // doubleVector + int64Vector + int32Vector
 
     int32Vector.reset();
     int64Vector.reset();

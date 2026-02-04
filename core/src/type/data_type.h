@@ -13,8 +13,14 @@
 #include "util/debug.h"
 
 namespace omniruntime {
+namespace vec {
+class BaseVector;
+}
+}
+
+namespace omniruntime {
 namespace type {
-constexpr int32_t DATA_TYPE_MAX_COUNT = 20;
+constexpr int32_t DATA_TYPE_MAX_COUNT = 28;
 const std::string ID = "id";
 const std::string WIDTH = "width";
 const std::string PRECISION = "precision";
@@ -22,6 +28,8 @@ const std::string SCALE = "scale";
 const std::string DATE_UNIT = "dateUnit";
 const std::string TIME_UNIT = "timeUnit";
 const std::string FIELD_TYPES = "fieldTypes";
+const std::string ELEMENT_TYPE = "elementType";
+const std::string ELEMENT_SIZE = "elementSize";
 const static uint32_t CHAR_MAX_WIDTH = 65536;
 const static int32_t DECIMAL128_DEFAULT_PRECISION = 38;
 const static int32_t DECIMAL64_DEFAULT_PRECISION = 18;
@@ -47,9 +55,9 @@ enum DataTypeId {
     OMNI_VARCHAR = 15,
     OMNI_CHAR = 16,
     OMNI_CONTAINER = 17,
-    OMNI_INVALID = 18,
-    OMNI_BYTE = 19,
-    OMNI_FLOAT = 20,
+    OMNI_BYTE = 18,
+    OMNI_FLOAT = 19,
+    OMNI_VARBINARY = 20,
     OMNI_TIME_WITHOUT_TIME_ZONE = 21,
     OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22,
     OMNI_TIMESTAMP_WITH_TIME_ZONE = 23,
@@ -60,7 +68,8 @@ enum DataTypeId {
     OMNI_ROW = 32,
     OMNI_UNKNOWN = 33,
     OMNI_FUNCTION = 34,
-    OMNI_OPAQUE = 35
+    OMNI_OPAQUE = 35,
+    OMNI_INVALID
 };
 
 template <DataTypeId dataTypeId> struct NativeType {};
@@ -122,6 +131,10 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
 
 template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
     using type = int64_t;
+};
+
+template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
+    using type = vec::BaseVector*;
 };
 
 #define DYNAMIC_TYPE_DISPATCH(CALLBACK, typeId, ...)                                          \
@@ -264,6 +277,54 @@ using TimestampDataType = FixedWidthDataType<OMNI_TIMESTAMP>;
 using InvalidDataType = FixedWidthDataType<OMNI_INVALID>;
 using NoneDataType = FixedWidthDataType<OMNI_NONE>;
 
+class ArrayType : public DataType {
+public:
+    explicit ArrayType(std::shared_ptr<DataType> type): DataType(OMNI_ARRAY), child(std::move(type)) {}
+
+    bool operator ==(const DataType &right) const override
+    {
+        if (&right == this) {
+            return true;
+        }
+        if (right.GetId() != DataTypeId::OMNI_ARRAY) {
+            return false;
+        }
+        auto otherTyped = reinterpret_cast<const ArrayType*>(&right);
+        return *child == *(otherTyped->child);
+    }
+
+    const std::shared_ptr<DataType> ElementType() const
+    {
+        return child;
+    }
+
+    size_t Size() const
+    {
+        return 1;
+    }
+
+    size_t GetElementSize() const
+    {
+        return elementSize;
+    }
+
+    void SetElementSize(size_t size)
+    {
+        elementSize = size;
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override {
+        nlohmannJson = nlohmann::json { {ID, id}, {ELEMENT_SIZE, elementSize} };
+        nlohmann::json childJson;
+        child->Serialize(childJson);
+        nlohmannJson[ELEMENT_TYPE] = childJson;
+    }
+
+protected:
+    std::shared_ptr<DataType> child;
+    size_t elementSize;
+};
+
 class RowType : public DataType {
 public:
     RowType(std::vector<std::shared_ptr<DataType>> &types): DataType(OMNI_ROW), children(std::move(types)) {}
@@ -293,6 +354,11 @@ public:
     const std::vector<std::shared_ptr<DataType>> &Children() const
     {
         return children;
+    }
+
+    std::shared_ptr<DataType> Type(int index) const
+    {
+        return children[index];
     }
 
     void Serialize(nlohmann::json &nlohmannJson) const override {}

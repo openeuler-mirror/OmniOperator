@@ -11,6 +11,9 @@
 #include "vector_batch.h"
 #include "operator/aggregation/container_vector.h"
 #include "omni_row.h"
+#include "row_vector.h"
+#include "array_vector.h"
+#include "util/type_util.h"
 
 namespace omniruntime::vec {
 class VectorHelper {
@@ -97,6 +100,34 @@ public:
         }
     }
 
+    static BaseVector *CreateComplexVector(DataType* dataType, int32_t size)
+    {
+        using namespace omniruntime::type;
+        auto fieldType = dataType->GetId();
+        if (fieldType == OMNI_ARRAY) {
+            std::vector<std::shared_ptr<BaseVector>> children;
+            auto arrayType = static_cast<ArrayType*>(dataType);
+            for (int i = 0; i < arrayType->Size(); i++) {
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(arrayType->ElementType().get(), size)));
+            }
+            return new ArrayVector(size, children[0]);
+        } else {
+            return CreateFlatVector(fieldType, size);
+        }
+    }
+
+    static BaseVector *CreateEmptyComplexVector(DataType* dataType, int32_t size)
+    {
+        using namespace omniruntime::type;
+        auto fieldType = dataType->GetId();
+        if (fieldType == OMNI_ARRAY) {
+            auto arrayType = static_cast<ArrayType*>(dataType);
+            return new ArrayVector(size);
+        } else {
+            return CreateFlatVector(fieldType, size);
+        }
+    }
+
     static BaseVector *CreateFlatVector(int32_t dataTypeId, int32_t size, int32_t capacityInBytes = INITIAL_STRING_SIZE)
     {
         using namespace omniruntime::type;
@@ -111,6 +142,24 @@ public:
             return new Vector<LargeStringContainer<std::string_view>>(size, capacityInBytes);
         }
         return new Vector<T>(size, typeId);
+    }
+
+    static std::shared_ptr<BaseVector> CreateFlatVectorShared(int32_t dataTypeId, int32_t size,
+        int32_t capacityInBytes = INITIAL_STRING_SIZE)
+    {
+        using namespace omniruntime::type;
+        return DYNAMIC_TYPE_DISPATCH(CreateFlatVectorShared, dataTypeId, size, capacityInBytes);
+    }
+
+    template <type::DataTypeId typeId>
+    static std::shared_ptr<BaseVector> CreateFlatVectorShared(int32_t size,
+        int32_t capacityInBytes = INITIAL_STRING_SIZE)
+    {
+        using T = typename type::NativeType<typeId>::type;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            return std::make_shared<Vector<LargeStringContainer<std::string_view>>>(size, capacityInBytes);
+        }
+        return std::make_shared<Vector<T>>(size, typeId);
     }
 
     template <type::DataTypeId typeId> static void VectorSetValue(vec::BaseVector *vector, int32_t index, void *value)
@@ -154,6 +203,81 @@ public:
         }
     }
 
+    static void PrintVec(BaseVector *vector, int32_t rowCount)
+    {
+        for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
+            PrintVectorValue(vector, rowIdx);
+            std::cout << std::endl;
+        }
+    }
+
+    static void PrintVecVector(std::vector<BaseVector*> *vecVector, int32_t rowCount)
+    {
+        int32_t vectorCount = vecVector->size();
+        for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
+            for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
+                BaseVector* vector = (*vecVector)[colIdx];
+                PrintVectorValue(vector, rowIdx);
+            }
+            std::cout << std::endl;
+        }
+    }
+
+    template <type::DataTypeId typeId> static void PrintArrayElement(BaseVector* elementVec, int32_t index) {
+        using namespace omniruntime::type;
+        using T = typename NativeType<typeId>::type;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            std::cout << std::dec << static_cast<Vector<LargeStringContainer<T>> *>(elementVec)->GetValue(index) << "\t";
+        } else {
+            std::cout << std::dec << static_cast<Vector<T> *>(elementVec)->GetValue(index) << "\t";
+        }
+    }
+
+    static void PrintArrayVectorValueDetail(BaseVector* vector, int32_t rowIndex) {
+        auto* arrayVec = dynamic_cast<ArrayVector*>(vector);
+        if (!arrayVec) {
+            std::cout << "[Invalid ArrayVector]";
+            return;
+        }
+        int32_t offset = arrayVec->GetOffset(rowIndex);
+        int32_t size = arrayVec->GetSize(rowIndex);
+        auto elementVec = arrayVec->GetElementVector();
+        if (!elementVec) {
+            std::cout << "[No Element Vector]";
+            return;
+        }
+        const auto elementType = elementVec->GetTypeId();
+        std::cout << " [ ";
+        for (int i = 0; i < size; i++) {
+            if (i > 0)
+                std::cout << ", ";
+            switch (elementType) {
+                case OMNI_INT:
+                    PrintArrayElement<OMNI_INT>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_LONG:
+                    PrintArrayElement<OMNI_LONG>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_VARCHAR:
+                    PrintArrayElement<OMNI_VARCHAR>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_CHAR:
+                    PrintArrayElement<OMNI_CHAR>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_BOOLEAN:
+                    PrintArrayElement<OMNI_BOOLEAN>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_DOUBLE:
+                    PrintArrayElement<OMNI_DOUBLE>(elementVec.get(), offset + i);
+                    break;
+                default:
+                    std::cout << "?";
+                    break;
+            }
+        }
+        std::cout << " ] ";
+    }
+
     template <type::DataTypeId typeId> static void PrintDictionaryVectorValue(BaseVector *vector, int32_t rowIndex)
     {
         using namespace omniruntime::type;
@@ -164,6 +288,17 @@ public:
         } else {
             std::cout << std::dec << static_cast<Vector<DictionaryContainer<T>> *>(vector)->GetValue(rowIndex) << "\t";
         }
+    }
+
+    static void PrintArrayVectorOffsetsAndNulls(BaseVector* vector, int32_t rowIndex)
+    {
+        auto* arrayVec = dynamic_cast<ArrayVector*>(vector);
+        if (!arrayVec) {
+            throw omniruntime::exception::OmniException("RUNTIME_ERROR", "ArrayVector is null!");
+        }
+        int32_t offset = arrayVec->GetOffset(rowIndex);
+        int32_t size = arrayVec->GetSize(rowIndex);
+        std::cout << rowIndex << "--- offset: " << offset << "; size: " << size << "; isNull: " << arrayVec->IsNull(rowIndex) << std::endl;
     }
 
     template <type::DataTypeId typeId> static void PrintFlatVectorValue(BaseVector *vector, int32_t rowIndex)
@@ -181,6 +316,35 @@ public:
         } else {
             std::cout << std::dec << static_cast<Vector<T> *>(vector)->GetValue(rowIndex) << "\t";
         }
+    }
+
+    static void PrintArrayVectorValue(ArrayVector *arrayVec, int32_t rowIndex)
+    {
+        if (arrayVec->IsNull(rowIndex)) {
+            std::cout << "NULL\t";
+            return;
+        }
+
+        auto offsets = arrayVec->GetOffsets();
+        int64_t start = offsets[rowIndex];
+        int64_t end = offsets[rowIndex + 1];
+
+        if (start == end) {
+            std::cout << "[]\t";
+            return;
+        }
+
+        std::cout << "[";
+        auto elementVec = arrayVec->GetElementVector();  // shared_ptr<BaseVector>
+
+        for (int64_t i = start; i < end; ++i) {
+            if (i > start) {
+                std::cout << ",";
+            }
+            // 注意：elementVec 是 shared_ptr，需 get() 或直接解引用
+            PrintVectorValue(elementVec.get(), static_cast<int32_t>(i));
+        }
+        std::cout << "]\t";
     }
 
     static void PrintVectorValue(BaseVector *vector, int32_t rowIndex)
@@ -202,6 +366,8 @@ public:
                 auto valueVec = reinterpret_cast<BaseVector *>(value);
                 DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, valueVec->GetTypeId(), valueVec, rowIndex);
             }
+        } else if (encoding == vec::OMNI_ENCODING_ARRAY) {
+            PrintArrayVectorValue(static_cast<ArrayVector *>(vector), rowIndex);
         } else {
             DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, vector->GetTypeId(), vector, rowIndex);
         }
@@ -341,6 +507,8 @@ public:
             case type::OMNI_CONTAINER:
                 return reinterpret_cast<void *>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<ContainerVector *>(vector)));
+            case type::OMNI_ARRAY:
+                return 0;
             default: {
                 std::string omniExceptionInfo =
                     "In function UnsafeGetValues, no such data type " + std::to_string(dataTypeId);
@@ -452,6 +620,9 @@ public:
             case type::OMNI_CHAR: {
                 return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->Slice(positionOffset,
                     length);
+            }
+            case type::OMNI_ARRAY: {
+                return reinterpret_cast<ArrayVector *>(vector)->Slice(positionOffset, length);
             }
             default: {
                 std::string omniExceptionInfo =
@@ -652,6 +823,9 @@ public:
             case type::OMNI_CONTAINER:
                 reinterpret_cast<ContainerVector *>(destVector)->Append(srcVector, offset, length);
                 break;
+            case type::OMNI_ARRAY:
+                reinterpret_cast<ArrayVector *>(destVector)->Append(srcVector, offset, length);
+                break;
             default: {
                 std::string omniExceptionInfo =
                     "In function AppendVector, no such data type " + std::to_string(dataTypeId);
@@ -665,7 +839,7 @@ public:
     {
         const std::vector<omniruntime::type::DataTypePtr> &types = sourceTypes.Get();
         for (int i = 0; i < sourceTypes.GetSize(); i++) {
-            vectorBatch->Append(CreateVector(OMNI_FLAT, types[i]->GetId(), positionCount));
+            vectorBatch->Append(CreateComplexVector(types[i].get(), positionCount));
         }
     }
 
@@ -845,6 +1019,74 @@ public:
             }
         }
     }
+
+    static DataTypePtr GetDataType(BaseVector *srcVector)
+    {
+        DataTypeId dataTypeId = srcVector->GetTypeId();
+        switch (dataTypeId) {
+            case type::OMNI_INT: {
+                return IntType();
+            }
+            case type::OMNI_DATE32: {
+                return Date32Type();
+            }
+            case type::OMNI_SHORT: {
+                return ShortType();
+            }
+            case type::OMNI_BYTE: {
+                return ByteType();
+            }
+            case type::OMNI_LONG: {
+                return LongType();
+            }
+            case type::OMNI_TIMESTAMP: {
+                return TimestampType();
+            }
+            case type::OMNI_DATE64: {
+                return Date64Type();
+            }
+            case type::OMNI_DECIMAL64: {
+                return Decimal64Type();
+            }
+            case type::OMNI_DECIMAL128: {
+                return Decimal128Type();
+            }
+            case type::OMNI_DOUBLE: {
+                return DoubleType();
+            }
+            case type::OMNI_BOOLEAN: {
+                return BooleanType();
+            }
+            case type::OMNI_VARCHAR: {
+                return VarcharType();
+            }
+            case type::OMNI_CHAR: {
+                return CharType();
+            }
+            case type::OMNI_CONTAINER: {
+                return ContainerType();
+            }
+            case type::OMNI_ARRAY: {
+                auto arrayVector = static_cast<ArrayVector *>(srcVector);
+                return ArrayDataType(GetDataType(arrayVector->GetElementVector().get()));
+            }
+            default: {
+                std::string omniExceptionInfo =
+                    "In function GetDataType, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+            }
+        }
+    }
+
+    static void EmptyArrayProjection(ArrayVector *dstArrVec, DataTypeId typeId)
+    {
+        if (dstArrVec == nullptr) {
+            return;
+        }
+        auto emptyElemVec = VectorHelper::CreateFlatVector(static_cast<int32_t>(typeId),0);
+        dstArrVec->SetElementVector(std::shared_ptr<BaseVector>(emptyElemVec));
+    }
+
 };
 }
 

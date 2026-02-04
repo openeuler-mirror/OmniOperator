@@ -160,8 +160,8 @@ template <typename CONTAINER> void string_vector_copy_positions()
     int offset1 = 0;
     int offset2 = 1;
     int copySize = 4;
-    auto vectorOffsetZero = vector->CopyPositions(index, offset1, copySize);
-    auto vectorOffsetNotZero = vector->CopyPositions(index, offset2, copySize);
+    auto vectorOffsetZero = reinterpret_cast<Vector<CONTAINER> *>(vector->CopyPositions(index, offset1, copySize));
+    auto vectorOffsetNotZero = reinterpret_cast<Vector<CONTAINER> *>(vector->CopyPositions(index, offset2, copySize));
 
     for (int32_t i = 0; i < copySize; i++) {
         if (i % 2 == 0) {
@@ -177,7 +177,7 @@ template <typename CONTAINER> void string_vector_copy_positions()
         EXPECT_EQ(offsetZeroValue, originValue);
     }
 
-    auto vectorEmpty = vector->CopyPositions(index, offset2, 0);
+    auto vectorEmpty = reinterpret_cast<Vector<CONTAINER> *>(vector->CopyPositions(index, offset2, 0));
     EXPECT_EQ(vectorEmpty->GetSize(), 0);
     EXPECT_ANY_THROW(vector->CopyPositions(index, offset1, -1));
     delete vectorOffsetZero;
@@ -205,7 +205,7 @@ template <typename CONTAINER> void string_vector_slice()
         parent->SetValue(i, input);
     }
 
-    auto vector = parent->Slice(offset, len);
+    auto vector = (Vector<CONTAINER> *)(parent->Slice(offset, len));
     EXPECT_EQ(vector->GetTypeId(), parent->GetTypeId());
 
     // WARNING:
