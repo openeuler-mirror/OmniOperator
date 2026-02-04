@@ -357,6 +357,8 @@ template class SumAggregator<OMNI_SHORT, OMNI_INT>;
 
 template class SumAggregator<OMNI_SHORT, OMNI_LONG>;
 
+template class SumAggregator<OMNI_SHORT, OMNI_FLOAT>;
+
 template class SumAggregator<OMNI_SHORT, OMNI_DOUBLE>;
 
 template class SumAggregator<OMNI_SHORT, OMNI_DECIMAL128>;
@@ -375,6 +377,8 @@ template class SumAggregator<OMNI_INT, OMNI_LONG>;
 
 template class SumAggregator<OMNI_INT, OMNI_DOUBLE>;
 
+template class SumAggregator<OMNI_INT, OMNI_FLOAT>;
+
 template class SumAggregator<OMNI_INT, OMNI_DECIMAL128>;
 
 template class SumAggregator<OMNI_INT, OMNI_DECIMAL64>;
@@ -389,6 +393,8 @@ template class SumAggregator<OMNI_LONG, OMNI_INT>;
 
 template class SumAggregator<OMNI_LONG, OMNI_LONG>;
 
+template class SumAggregator<OMNI_LONG, OMNI_FLOAT>;
+
 template class SumAggregator<OMNI_LONG, OMNI_DOUBLE>;
 
 template class SumAggregator<OMNI_LONG, OMNI_DECIMAL128>;
@@ -399,11 +405,31 @@ template class SumAggregator<OMNI_LONG, OMNI_VARCHAR>;
 
 template class SumAggregator<OMNI_LONG, OMNI_CONTAINER>;
 
+template class SumAggregator<OMNI_FLOAT, OMNI_SHORT>;
+
+template class SumAggregator<OMNI_FLOAT, OMNI_INT>;
+
+template class SumAggregator<OMNI_FLOAT, OMNI_LONG>;
+
+template class SumAggregator<OMNI_FLOAT, OMNI_FLOAT>;
+
+template class SumAggregator<OMNI_FLOAT, OMNI_DOUBLE>;
+
+template class SumAggregator<OMNI_FLOAT, OMNI_DECIMAL128>;
+
+template class SumAggregator<OMNI_FLOAT, OMNI_DECIMAL64>;
+
+template class SumAggregator<OMNI_FLOAT, OMNI_VARCHAR>;
+
+template class SumAggregator<OMNI_FLOAT, OMNI_CONTAINER>;
+
 template class SumAggregator<OMNI_DOUBLE, OMNI_SHORT>;
 
 template class SumAggregator<OMNI_DOUBLE, OMNI_INT>;
 
 template class SumAggregator<OMNI_DOUBLE, OMNI_LONG>;
+
+template class SumAggregator<OMNI_DOUBLE, OMNI_FLOAT>;
 
 template class SumAggregator<OMNI_DOUBLE, OMNI_DOUBLE>;
 
@@ -421,6 +447,8 @@ template class SumAggregator<OMNI_DECIMAL128, OMNI_INT>;
 
 template class SumAggregator<OMNI_DECIMAL128, OMNI_LONG>;
 
+template class SumAggregator<OMNI_DECIMAL128, OMNI_FLOAT>;
+
 template class SumAggregator<OMNI_DECIMAL128, OMNI_DOUBLE>;
 
 template class SumAggregator<OMNI_DECIMAL128, OMNI_DECIMAL128>;
@@ -436,6 +464,8 @@ template class SumAggregator<OMNI_DECIMAL64, OMNI_SHORT>;
 template class SumAggregator<OMNI_DECIMAL64, OMNI_INT>;
 
 template class SumAggregator<OMNI_DECIMAL64, OMNI_LONG>;
+
+template class SumAggregator<OMNI_DECIMAL64, OMNI_FLOAT>;
 
 template class SumAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>;
 
@@ -453,6 +483,8 @@ template class SumAggregator<OMNI_VARCHAR, OMNI_INT>;
 
 template class SumAggregator<OMNI_VARCHAR, OMNI_LONG>;
 
+template class SumAggregator<OMNI_VARCHAR, OMNI_FLOAT>;
+
 template class SumAggregator<OMNI_VARCHAR, OMNI_DOUBLE>;
 
 template class SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL128>;
@@ -468,6 +500,8 @@ template class SumAggregator<OMNI_CONTAINER, OMNI_SHORT>;
 template class SumAggregator<OMNI_CONTAINER, OMNI_INT>;
 
 template class SumAggregator<OMNI_CONTAINER, OMNI_LONG>;
+
+template class SumAggregator<OMNI_CONTAINER, OMNI_FLOAT>;
 
 template class SumAggregator<OMNI_CONTAINER, OMNI_DOUBLE>;
 

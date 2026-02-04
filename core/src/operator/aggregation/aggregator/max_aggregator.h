@@ -116,11 +116,12 @@ public:
             return MaxVarcharAggregator<IN_ID, OUT_ID>::Create(inputTypes, outputTypes, channels, rawIn, partialOut,
                 isOverflowAsNull);
         } else if constexpr (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE ||
-            IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_BOOLEAN)) {
+            IN_ID == OMNI_FLOAT || IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_BOOLEAN)) {
             LogError("Error in max aggregator: Unsupported input type %s", TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
         } else if constexpr (!(OUT_ID == OMNI_SHORT || OUT_ID == OMNI_INT || OUT_ID == OMNI_LONG ||
-            OUT_ID == OMNI_DOUBLE || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 || OUT_ID == OMNI_BOOLEAN)) {
+            OUT_ID == OMNI_DOUBLE || OUT_ID == OMNI_FLOAT || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 ||
+            OUT_ID == OMNI_BOOLEAN)) {
             LogError("Error in max aggregator: Unsupported output type %s", TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else {

@@ -11,7 +11,11 @@ SIMD_ALWAYS_INLINE void StdDevSampPartialOp(double &mean, double &m2, double &cn
 {
     cnt++;
     double delta = in - mean;
-    mean += delta / cnt;
+    if (cnt != 0) {
+        mean += delta / cnt;
+    } else {
+        mean = in;
+    }
     m2 += delta * (in - mean);
 }
 
@@ -41,18 +45,20 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID = OMNI_DOUBLE> class StddevSampAgg
         {
             return reinterpret_cast<StddevSampAggregator<IN_ID, OUT_ID>::StdDevState *>(state);
         }
-
-        static void UpdateState(AggregateState *state, const double &in)
+        template <typename T>
+        static void UpdateState(AggregateState *state, const T &in)
         {
             StdDevState *stdDevState = CastState(state);
-            StdDevSampPartialOp(stdDevState->mean, stdDevState->m2, stdDevState->count, in);
+            double val = static_cast<double>(in);
+            StdDevSampPartialOp(stdDevState->mean, stdDevState->m2, stdDevState->count, val);
         }
 
-        template <bool addIf>
-        static void UpdateStateWithCondition(AggregateState *state, const double &in, const uint8_t &condition)
+        template <bool addIf, typename T>
+        static void UpdateStateWithCondition(AggregateState *state, const T &in, const uint8_t &condition)
         {
             if (condition == addIf) {
-                UpdateState(state, in);
+                double val = static_cast<double>(in);
+                UpdateState(state, val);
             }
         }
     };
@@ -82,19 +88,19 @@ public:
                 auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
-                    AddSamp<StdDevSampPartialOp>(sampState->mean, sampState->m2, sampState->count, ptr, rowCount);
+                    AddMomentStats<StdDevSampPartialOp, RawInputType>(sampState->mean, sampState->m2, sampState->count, ptr, rowCount);
                 } else {
-                    AddSampConditional<StdDevSampPartialOp>(sampState->mean, sampState->m2, sampState->count, ptr,
+                    AddMomentStatsConditional<StdDevSampPartialOp, RawInputType>(sampState->mean, sampState->m2, sampState->count, ptr,
                         rowCount, *nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromDict<IN_ID>(vector));
                 auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
-                    AddSampDict<StdDevSampPartialOp>(sampState->mean, sampState->m2, sampState->count, ptr, rowCount,
+                    AddMomentStatsDict<StdDevSampPartialOp, RawInputType>(sampState->mean, sampState->m2, sampState->count, ptr, rowCount,
                         indexMap);
                 } else {
-                    AddSampDictConditional<StdDevSampPartialOp>(sampState->mean, sampState->m2, sampState->count, ptr,
+                    AddMomentStatsDictConditional<StdDevSampPartialOp, RawInputType>(sampState->mean, sampState->m2, sampState->count, ptr,
                         rowCount, *nullMap, indexMap);
                 }
             }

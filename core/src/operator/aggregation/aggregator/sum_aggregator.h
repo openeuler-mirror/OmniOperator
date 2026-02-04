@@ -160,7 +160,7 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class SumAggregator : public Type
     using OutVector = typename AggNativeAndVectorType<OUT_ID>::vector;
     using OutType = typename AggNativeAndVectorType<OUT_ID>::type;
     using ResultType = typename std::conditional_t<IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG,
-        int64_t, std::conditional_t<IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER, double, Decimal128>>;
+        int64_t, std::conditional_t<IN_ID == OMNI_DOUBLE || IN_ID == OMNI_FLOAT || IN_ID == OMNI_CONTAINER, double, Decimal128>>;
 
 public:
 #pragma pack(push, 1)
@@ -209,12 +209,13 @@ public:
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
         if constexpr (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE ||
-            IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CONTAINER)) {
+            IN_ID == OMNI_FLOAT || IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_VARCHAR
+            || IN_ID == OMNI_CONTAINER)) {
             LogError("Error in sum aggregator: Unsupported input type %s", TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
         } else if constexpr (!(OUT_ID == OMNI_SHORT || OUT_ID == OMNI_INT || OUT_ID == OMNI_LONG ||
-            OUT_ID == OMNI_DOUBLE || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 || OUT_ID == OMNI_VARCHAR ||
-            OUT_ID == OMNI_CONTAINER)) {
+            OUT_ID == OMNI_DOUBLE || OUT_ID == OMNI_FLOAT || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 ||
+            OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_CONTAINER)) {
             LogError("Error in sum aggregator: Unsupported output type %s", TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         }

@@ -232,9 +232,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictConditionalAvg(OUT *res_, int64_t
     }
 }
 
-template<void (*OP)(double &, double &, double &, const double &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSamp(double &__restrict mean_, double &__restrict m2, double &cnt_,
-    const double *__restrict ptr, const size_t rowCount)
+template<void (*OP)(double &, double &, double &, const double &), typename T>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddMomentStats(double &__restrict mean_, double &__restrict m2, double &cnt_,
+    const T *__restrict ptr, const size_t rowCount)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -242,36 +242,51 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSamp(double &__restrict mean_, double
             LogWarn("[add]: Data pointer NOT aligned");
         }
 #endif
-        ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-        for (size_t i = 0; i < rowCount; ++i) {
-            OP(mean_, m2, cnt_, ptr[i]);
-        }
-    }
-}
-
-template<void (*OP)(double &, double &, double &, const double &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSampConditional(double &__restrict mean_, double &__restrict m2,
-    double &cnt_, const double *__restrict ptr, const size_t rowCount, const NullsHelper &condition)
-{
-    if (rowCount > 0) {
-#ifdef DEBUG
-        if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[add]: Data pointer NOT aligned");
-        }
-#endif
-        ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-
-        for (size_t i = 0; i < rowCount; ++i) {
-            if (condition[i] == false) {
+        ptr = (const T *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        if constexpr (std::is_same_v<T, double>) {
+            for (size_t i = 0; i < rowCount; ++i) {
                 OP(mean_, m2, cnt_, ptr[i]);
+            }
+        } else {
+            for (size_t i = 0; i < rowCount; ++i) {
+                double val = static_cast<double>(ptr[i]);
+                OP(mean_, m2, cnt_, val);
             }
         }
     }
 }
 
-template<void (*OP)(double &, double &, double &, const double &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSampDict(double &__restrict mean_, double &__restrict m2, double &cnt_,
-    const double *__restrict ptr, const size_t rowCount, const int32_t *__restrict indexMap)
+template<void (*OP)(double &, double &, double &, const double &), typename T>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddMomentStatsConditional(double &__restrict mean_, double &__restrict m2,
+    double &cnt_, const T *__restrict ptr, const size_t rowCount, const NullsHelper &condition)
+{
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[add]: Data pointer NOT aligned");
+        }
+#endif
+        ptr = (const T *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        if constexpr (std::is_same_v<T, double>) {
+            for (size_t i = 0; i < rowCount; ++i) {
+                if (condition[i] == false) {
+                    OP(mean_, m2, cnt_, ptr[i]);
+                }
+            }
+        } else {
+            for (size_t i = 0; i < rowCount; ++i) {
+                if (condition[i] == false) {
+                    double val = static_cast<double>(ptr[i]);
+                    OP(mean_, m2, cnt_, val);
+                }
+            }
+        }
+    }
+}
+
+template<void (*OP)(double &, double &, double &, const double &), typename T>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddMomentStatsDict(double &__restrict mean_, double &__restrict m2, double &cnt_,
+    const T *__restrict ptr, const size_t rowCount, const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -282,23 +297,26 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSampDict(double &__restrict mean_, do
             LogWarn("[addDict]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
-        ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        ptr = (const T *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
         indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
-
-        auto inputArr = std::make_unique<double[]>(rowCount);
-        for (size_t i = 0; i < rowCount; ++i) {
-            inputArr[i] = ptr[indexMap[i]];
-        }
-
-        for (size_t i = 0; i < rowCount; ++i) {
-            OP(mean_, m2, cnt_, inputArr[i]);
+        if constexpr (std::is_same_v<T, double>) {
+            auto inputArr = std::make_unique<double[]>(rowCount);
+            for (size_t i = 0; i < rowCount; ++i) {
+                OP(mean_, m2, cnt_, ptr[indexMap[i]]);
+            }
+        } else {
+            auto inputArr = std::make_unique<double[]>(rowCount);
+            for (size_t i = 0; i < rowCount; ++i) {
+                double val = static_cast<double>(ptr[indexMap[i]]);
+                OP(mean_, m2, cnt_, val);
+            }
         }
     }
 }
 
-template<void (*OP)(double &, double &, double &, const double &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSampDictConditional(double &__restrict mean_, double &__restrict m2,
-    double &cnt_, const double *__restrict ptr, const size_t rowCount, const NullsHelper &condition,
+template<void (*OP)(double &, double &, double &, const double &), typename T>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddMomentStatsDictConditional(double &__restrict mean_, double &__restrict m2,
+    double &cnt_, const T *__restrict ptr, const size_t rowCount, const NullsHelper &condition,
     const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
@@ -310,12 +328,22 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSampDictConditional(double &__restric
             LogWarn("[addDictConditional]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
-        ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        ptr = (const T *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
         indexMap = (const int32_t *) __builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
-
-        for (size_t i = 0; i < rowCount; ++i) {
-            if (condition[i] == false) {
-                OP(mean_, m2, cnt_, ptr[indexMap[i]]);
+        if constexpr (std::is_same_v<T, double>) {
+            auto inputArr = std::make_unique<double[]>(rowCount);
+            for (size_t i = 0; i < rowCount; ++i) {
+                if (condition[i] == false) {
+                    OP(mean_, m2, cnt_, ptr[indexMap[i]]);
+                }
+            }
+        } else {
+            auto inputArr = std::make_unique<double[]>(rowCount);
+            for (size_t i = 0; i < rowCount; ++i) {
+                if (condition[i] == false) {
+                    double val = static_cast<double>(ptr[indexMap[i]]);
+                    OP(mean_, m2, cnt_, val);
+                }
             }
         }
     }

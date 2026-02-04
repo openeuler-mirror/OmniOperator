@@ -203,6 +203,9 @@ private:
     void InExprDoubleHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData,
         Value *&tmpCmpNull);
 
+    void InExprFloatHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData,
+        Value *&tmpCmpNull);
+
     void InExprStringHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData,
         Value *&tmpCmpNull);
 

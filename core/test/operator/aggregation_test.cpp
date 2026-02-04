@@ -137,6 +137,15 @@ BaseVector *BuildHashInput(const DataTypePtr groupType, int32_t rowPerVecBatch, 
             }
             return col;
         }
+        case OMNI_FLOAT: {
+            Vector<float> *col = new Vector<float>(rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                if (cardinality != 0) {
+                    col->SetValue(j, j % cardinality);
+                }
+            }
+            return col;
+        }
         case OMNI_DOUBLE: {
             Vector<double> *col = new Vector<double>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
@@ -206,6 +215,13 @@ BaseVector *BuildAggregateInput(const DataTypePtr aggType, int32_t rowPerVecBatc
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
             Vector<int64_t> *col = new Vector<int64_t>(rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                col->SetValue(j, 1);
+            }
+            return col;
+        }
+        case OMNI_FLOAT: {
+            Vector<float> *col = new Vector<float>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, 1);
             }
@@ -642,7 +658,6 @@ void TestGroupArrayMapRegular(std::shared_ptr<DataType> groupType)
     std::vector<DataTypePtr> groupTypes = {groupType};
     std::vector<DataTypePtr> aggTypes = {LongType(), LongType(), LongType(), LongType(), LongType()};
     VectorBatch **input = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 5, groupTypes, aggTypes);
-    // set group vector null
     input[0]->Get(0)->SetNull(0);
     input[0]->Get(0)->SetNull(11);
 
@@ -706,7 +721,21 @@ void TestGroupArrayMapRegular(std::shared_ptr<DataType> groupType)
     omniruntime::op::Operator::DeleteOperator(groupByNULL);
 
     static constexpr int64_t expectedSize = 4;
-    T expectData1[expectedSize] = {-1, 0, 1, 2};
+
+    T expectData1[expectedSize];
+    if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
+        expectData1[0] = std::numeric_limits<T>::quiet_NaN();  // 空值
+        expectData1[1] = static_cast<T>(0);
+        expectData1[2] = static_cast<T>(1);
+        expectData1[3] = static_cast<T>(2);
+    } else {
+        // 对于整数类型，使用-1
+        expectData1[0] = -1;
+        expectData1[1] = 0;
+        expectData1[2] = 1;
+        expectData1[3] = 2;
+    }
+
     int64_t expectData2[expectedSize] = {5, 12, 14, 11};
     double expectData3[expectedSize] = {1, 1, 1, 1};
     int64_t expectData4[expectedSize] = {3, 12, 12, 11};
@@ -737,6 +766,8 @@ TEST(HashAggregationOperatorTest, verify_group_colum_array_map_regular)
     TestGroupArrayMapRegular<int64_t>(LongType());
     TestGroupArrayMapRegular<int64_t>(TimestampType());
     TestGroupArrayMapRegular<int64_t>(Decimal64Type());
+    TestGroupArrayMapRegular<float>(FloatType());
+    TestGroupArrayMapRegular<double>(DoubleType());
 }
 
 template<typename T>
@@ -807,6 +838,8 @@ TEST(HashAggregationOperatorTest, verify_group_colum_array_map_regular_without_a
     TestGroupArrayMapWithoutAgg<int64_t>(LongType());
     TestGroupArrayMapWithoutAgg<int64_t>(TimestampType());
     TestGroupArrayMapWithoutAgg<int64_t>(Decimal64Type());
+    TestGroupArrayMapRegular<float>(FloatType());
+    TestGroupArrayMapRegular<double>(DoubleType());
 }
 
 template<typename T>
@@ -994,6 +1027,8 @@ TEST(HashAggregationOperatorTest, verify_group_colum_array_map_resize_without_ag
     TestGroupArrayMapResizeWithoutAgg<int64_t>(LongType());
     TestGroupArrayMapResizeWithoutAgg<int64_t>(TimestampType());
     TestGroupArrayMapResizeWithoutAgg<int64_t>(Decimal64Type());
+    TestGroupArrayMapRegular<float>(FloatType());
+    TestGroupArrayMapRegular<double>(DoubleType());
 }
 
 template<typename T>

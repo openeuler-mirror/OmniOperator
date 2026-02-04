@@ -112,6 +112,10 @@ std::unique_ptr<Aggregator> SumSparkAggregatorFactory::CreateAggregator(const Da
             return std::make_unique<SumFlatIMAggregator<OMNI_LONG, OMNI_LONG>>(inputTypes, outputTypes, channels,
                 inputRaw, outputPartial, isOverflowAsNull);
         }
+        case OMNI_FLOAT: {
+            return std::make_unique<SumFlatIMAggregator<OMNI_FLOAT, OMNI_DOUBLE>>(inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull);
+        }
         case OMNI_DOUBLE: {
             return std::make_unique<SumFlatIMAggregator<OMNI_DOUBLE, OMNI_DOUBLE>>(inputTypes, outputTypes, channels,
                 inputRaw, outputPartial, isOverflowAsNull);
@@ -215,6 +219,10 @@ std::unique_ptr<Aggregator> AverageSparkAggregatorFactory::CreateAggregator(cons
             return std::make_unique<AverageFlatIMAggregator<OMNI_LONG>>(inputTypes, outputTypes, channels, inputRaw,
                 outputPartial, isOverflowAsNull);
         }
+        case OMNI_FLOAT: {
+            return std::make_unique<AverageFlatIMAggregator<OMNI_FLOAT>>(inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
         case OMNI_DOUBLE: {
             return std::make_unique<AverageFlatIMAggregator<OMNI_DOUBLE>>(inputTypes, outputTypes, channels, inputRaw,
                 outputPartial, isOverflowAsNull);
@@ -307,6 +315,10 @@ std::unique_ptr<Aggregator> StddevSampSparkAggregatorFactory::CreateAggregator(c
 {
     auto inputTypeId = inputTypes.GetIds()[0];
     switch (inputTypeId) {
+        case OMNI_FLOAT: {
+            return std::make_unique<StddevSampAggregator<OMNI_FLOAT>>(inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
         case OMNI_DOUBLE: {
             return std::make_unique<StddevSampAggregator<OMNI_DOUBLE>>(inputTypes, outputTypes, channels, inputRaw,
                 outputPartial, isOverflowAsNull);
@@ -392,6 +404,10 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateAggregator(const DataT
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
             return CreateFirstAggregatorHelper<int64_t>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_FLOAT: {
+            return CreateFirstAggregatorHelper<float>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
                 outputPartial, isOverflowAsNull);
         }
         case OMNI_DOUBLE: {

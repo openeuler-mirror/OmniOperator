@@ -125,6 +125,9 @@ OUT ReduceWithNulls(const IN *OMNI_RESTRICT array, const uint8_t *OMNI_RESTRICT 
         if constexpr (std::is_same_v<OUT, double>) {
             ScalableTag<uint64_t> dt;
             nullVec = BitCast(d, PromoteTo(dt, LoadU(du, nulls + i)));
+        } else if constexpr (std::is_same_v<OUT, float>) {
+            ScalableTag<uint32_t> dt;
+            nullVec = BitCast(d, PromoteTo(dt, LoadU(du, nulls + i)));
         } else {
             nullVec = PromoteTo(d, LoadU(du, nulls + i));
         }
@@ -151,6 +154,9 @@ OUT ReduceWithNulls(const IN *OMNI_RESTRICT array, const uint8_t *OMNI_RESTRICT 
     if constexpr (std::is_same_v<OUT, double>) {
         ScalableTag<uint64_t> dt;
         nullVec = BitCast(d, PromoteTo(dt, LoadU(du, nullBuf)));
+    } else if constexpr (std::is_same_v<OUT, float>) {
+        ScalableTag<uint32_t> dt;
+        nullVec = BitCast(d, PromoteTo(dt, LoadU(du, nulls + i)));
     } else {
         nullVec = PromoteTo(d, LoadU(du, nullBuf));
     }
@@ -216,6 +222,9 @@ OUT ReduceWithDicAndNulls(const IN *OMNI_RESTRICT array, const int32_t *OMNI_RES
         auto nullVec = Zero(d);
         if constexpr (std::is_same_v<OUT, double>) {
             ScalableTag<uint64_t> dt;
+            nullVec = BitCast(d, PromoteTo(dt, LoadU(du, nulls + i)));
+        } else if constexpr (std::is_same_v<OUT, float>) {
+            ScalableTag<uint32_t> dt;
             nullVec = BitCast(d, PromoteTo(dt, LoadU(du, nulls + i)));
         } else {
             nullVec = PromoteTo(d, LoadU(du, nulls + i));
