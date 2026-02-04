@@ -131,6 +131,36 @@ public:
         }
     }
 
+    static std::shared_ptr<BaseVector> CreateComplexVectorShared(DataType* dataType, int32_t size)
+    {
+        using namespace omniruntime::type;
+        auto fieldType = dataType->GetId();
+        if (fieldType == OMNI_ROW) {
+            std::vector<std::shared_ptr<BaseVector>> children;
+            auto rowType = static_cast<RowType*>(dataType);
+            for (int i = 0; i < rowType->Size(); i++) {
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(rowType->Type(i).get(), size)));
+            }
+            return std::make_shared<RowVector>(size, children);
+        } else if (fieldType == OMNI_MAP) {
+            std::vector<std::shared_ptr<BaseVector>> children;
+            auto mapType = static_cast<MapType*>(dataType);
+            for (int i = 0; i < mapType->Size(); i++) {
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(mapType->Children()[i].get(), 0)));
+            }
+            return std::make_shared<MapVector>(size, children[0], children[1]);
+        } else if (fieldType == OMNI_ARRAY) {
+            std::vector<std::shared_ptr<BaseVector>> children;
+            auto arrayType = static_cast<ArrayType*>(dataType);
+            for (int i = 0; i < arrayType->Size(); i++) {
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(arrayType->ElementType().get(), 0)));
+            }
+            return std::make_shared<ArrayVector>(size, children[0]);
+        } else {
+            return CreateFlatVectorShared(fieldType, size);
+        }
+    }
+
     static BaseVector *CreateEmptyComplexVector(DataType* dataType, int32_t size)
     {
         using namespace omniruntime::type;

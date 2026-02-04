@@ -30,10 +30,16 @@ struct VectorReader {
     exec_in_t operator[](size_t offset) const
     {
         if (decoded_->GetEncoding() == OMNI_FLAT) {
-            return static_cast<Vector<exec_in_t> *>(decoded_)->GetValue(offset);
+            using VectorType = std::conditional_t<std::is_same_v<exec_in_t, std::string_view>,
+                Vector<LargeStringContainer<std::string_view>>, Vector<exec_in_t>>;
+            return static_cast<VectorType *>(decoded_)->GetValue(offset);
         } else {
             OMNI_THROW("Runtime error:", "VectorReader error!");
         }
+    }
+
+    bool isSet(size_t offset) const {
+        return !decoded_->IsNull(offset);
     }
 
     bool mayHaveNulls() const
@@ -137,10 +143,8 @@ struct StringVectorReader;
 template <typename V>
 struct VectorReader<Array<V>> {
     using exec_in_t = ArrayView<true, V>;
-    using child_reader_t = std::conditional_t<std::is_same_v<V, std::string_view>, StringVectorReader, FlatVectorReader<
-        V>>;
+    using child_reader_t = VectorReader<V>;
 
-    // TODO:
     explicit VectorReader(BaseVector *decoded)
         : vector_(dynamic_cast<ArrayVector *>(decoded)), childReader_(child_reader_t(vector_->GetElementVector().get()))
     {
@@ -149,7 +153,8 @@ struct VectorReader<Array<V>> {
 
     exec_in_t operator[](size_t offset) const
     {
-        return {&childReader_, offsets_[offset], offsets_[offset + 1] - offsets_[offset]};
+        auto index = std::min(vector_->GetSize() -1, static_cast<int>(offset));
+        return {&childReader_, offsets_[index], vector_->GetSize(index)};
     }
 
     void setChildrenMayHaveNulls()
@@ -251,6 +256,13 @@ struct StringVectorReader {
         vector = dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
         if (vector == nullptr) {
             throw std::invalid_argument("StringVectorReader: Input BaseVector pointer type does not match.");
+        }
+    }
+
+    ~StringVectorReader()
+    {
+        if (!vector->GetIsField()) {
+            delete vector;
         }
     }
 

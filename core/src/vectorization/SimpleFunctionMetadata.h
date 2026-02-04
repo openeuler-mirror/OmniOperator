@@ -123,7 +123,11 @@ public:
         if constexpr (std::is_same_v<decltype(instance_.callNullable(out, args...)), Status>) {
             notNull = true;
             return instance_.callNullable(out, args...);
-        } else {
+        } else if (std::is_same_v<decltype(instance_.callNullable(out, args...)), bool>) {
+            notNull = instance_.callNullable(out, args...);
+            return Status::OK();
+        }
+        else {
             notNull = true;
             instance_.callNullable(out, args...);
             return Status::OK();

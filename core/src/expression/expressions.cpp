@@ -794,12 +794,55 @@ InExpr::InExpr(std::vector<Expr *> args)
     dataType = BooleanType();
     arguments = std::move(args);
 
-    std::vector<DataTypeId> argTypes(arguments.size());
-    std::transform(arguments.begin(), arguments.end(), argTypes.begin(), [](Expr *expr) -> DataTypeId {
-        return expr->GetReturnTypeId();
-    });
+    auto inputDataType = arguments[0]->dataType;
+    auto vector = VectorHelper::CreateFlatVectorShared(inputDataType->GetId(), arguments.size()-1);
+    for (int i = 1; i < arguments.size(); i++)
+    {
+        auto literalExpr = dynamic_cast<LiteralExpr *>(arguments[i]);
+        if (literalExpr && !literalExpr->isNull) {
+            auto typeId = arguments[i]->dataType->GetId();
+            switch (typeId) {
+                case OMNI_BOOLEAN:
+                    dynamic_cast<Vector<bool> *>(vector.get())->SetValue(i-1, literalExpr->boolVal);
+                    break;
+                case OMNI_BYTE:
+                    dynamic_cast<Vector<int8_t> *>(vector.get())->SetValue(i-1, literalExpr->byteVal);
+                    break;
+                case OMNI_SHORT:
+                    dynamic_cast<Vector<int16_t> *>(vector.get())->SetValue(i-1, literalExpr->shortVal);
+                    break;
+                case OMNI_INT:
+                case OMNI_DATE32:
+                    dynamic_cast<Vector<int32_t> *>(vector.get())->SetValue(i-1, literalExpr->intVal);
+                    break;
+                case OMNI_LONG:
+                case OMNI_TIMESTAMP:
+                case OMNI_DECIMAL64:
+                    dynamic_cast<Vector<int64_t> *>(vector.get())->SetValue(i-1, literalExpr->longVal);
+                    break;
+                case OMNI_FLOAT:
+                    dynamic_cast<Vector<float> *>(vector.get())->SetValue(i-1, literalExpr->floatVal);
+                    break;
+                case OMNI_DOUBLE:
+                    dynamic_cast<Vector<double> *>(vector.get())->SetValue(i-1, literalExpr->doubleVal);
+                    break;
+                case OMNI_VARCHAR: {
+                    std::string_view str = *literalExpr->stringVal;
+                    dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(vector.get())->SetValue(i-1, str);
+                    break;
+                }
+                default: LogError("Do not support such vector type %d", typeId);
+            }
+        } else {
+            vector-> SetNull(i-1);
+        }
+    }
+    ArrayType arrayType(inputDataType);
+    auto arrayVector = VectorHelper::CreateComplexVector(&arrayType, 1);
+    dynamic_cast<ArrayVector *>(arrayVector)->SetValue(0, vector.get());
+    std::vector<DataTypeId> argTypes = {inputDataType->GetId(), OMNI_ARRAY};
     auto signature = std::make_shared<FunctionSignature>("in", argTypes, dataType->GetId());
-    constantInputs = GetConstantInputs(arguments);
+    constantInputs = {nullptr, arrayVector};
     vectorFunction = VectorFunction::Find(signature, constantInputs);
     if (vectorFunction == nullptr) {
         vectorFunction = VectorFunction::Find(signature);

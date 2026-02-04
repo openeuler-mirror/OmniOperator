@@ -1,6 +1,6 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
- * Description: In expression implementation for SimpleFunction framework (无空值版)
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
+ * Description: In expression implementation for SimpleFunction framework
  */
 
 #include "vectorization/SimpleFunction.h"
@@ -16,12 +16,11 @@ struct InFunctionOuter {
     template <typename TExecCtx>
     struct InFunctionInner {
         ALWAYS_INLINE void initialize(const std::vector<type::DataTypeId> & /*inputTypes*/, const config::QueryConfig &,
-            const TInput * /*searchTerm*/, const Array<TInput> *searchElements)
+            const TInput * /*searchTerm*/, const ArrayView<true, TInput> *searchElements)
         {
             if (searchElements == nullptr) {
                 return;
             }
-            elements_.reserve(searchElements->size());
 
             for (const auto &entry : *searchElements) {
                 if (!entry.has_value()) {
@@ -32,13 +31,13 @@ struct InFunctionOuter {
             }
         }
 
-        ALWAYS_INLINE bool callNullable(bool &result, const TInput *searchTerm, const Array<TInput> * /*array*/)
+        ALWAYS_INLINE bool callNullable(bool &result, const TInput *searchTerm, const ArrayView<true, TInput> * /*array*/)
         {
             if (searchTerm == nullptr) {
                 return false;
             }
 
-            result = elements_.find(*searchTerm);
+            result = elements_.find(*searchTerm) != elements_.end();
             if (hasNull_ && !result) {
                 return false;
             }
@@ -55,22 +54,24 @@ struct InFunctionOuter {
 };
 
 template <typename T>
-void registerInFn(const std::string &prefix)
+void registerInFn(const std::string &prefix, const DataTypeId &typeId)
 {
-    DataTypeId typeId = TYPE_ID<T>;
-    RegisterFunction<InFunctionOuter<T>::template Inner, bool, T, ArrayView<true, T>>(prefix,
+    RegisterFunction<InFunctionOuter<T>::template Inner, bool, T, ArrayView<true, T>>(prefix + "in",
         {typeId, OMNI_ARRAY}, OMNI_BOOLEAN);
 }
 } // namespace
 
 void registerIn(const std::string &prefix)
 {
-    registerInFn<int8_t>(prefix);
-    registerInFn<int16_t>(prefix);
-    registerInFn<int32_t>(prefix);
-    registerInFn<int64_t>(prefix);
-    registerInFn<float>(prefix);
-    registerInFn<double>(prefix);
-    registerInFn<bool>(prefix);
+    registerInFn<bool>(prefix, OMNI_BOOLEAN);
+    registerInFn<int8_t>(prefix, OMNI_BYTE);
+    registerInFn<int16_t>(prefix, OMNI_SHORT);
+    registerInFn<int32_t>(prefix, OMNI_INT);
+    registerInFn<int32_t>(prefix, OMNI_DATE32);
+    registerInFn<int64_t>(prefix, OMNI_LONG);
+    registerInFn<int64_t>(prefix, OMNI_TIMESTAMP);
+    registerInFn<float>(prefix, OMNI_FLOAT);
+    registerInFn<double>(prefix, OMNI_DOUBLE);
+    registerInFn<std::string_view>(prefix, OMNI_VARCHAR);
 }
 }
