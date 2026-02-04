@@ -806,3 +806,29 @@ TEST(MathFunctionsExtendedTest, RoundDoubleWithScale) {
     };
     TestBinaryRoundOperation<double, OMNI_DOUBLE>("round", leftData, rightData, expectedResults, 1e-10);
 }
+
+// Test exp function - Returns e raised to the power of the input
+TEST(MathFunctionsExtendedTest, ExpDouble) {
+    const double kE = std::exp(1.0);  // Euler's number e ≈ 2.71828
+    std::vector<double> inputData = {0.0, 1.0, -1.0, 2.0, -2.0, 0.5};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::exp(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("exp", inputData, expectedResults, 1e-10);
+}
+
+// Test exp function with edge cases (NaN, Infinity, large values)
+TEST(MathFunctionsExtendedTest, ExpDoubleEdgeCases) {
+    constexpr double kInf = std::numeric_limits<double>::infinity();
+    constexpr double kNan = std::numeric_limits<double>::quiet_NaN();
+
+    // Test cases: 0, NaN, infinity, -infinity, large positive (may overflow), large negative
+    std::vector<double> inputData = {0.0, kNan, kInf, -kInf, 100.0, -100.0};
+    // exp(0) = 1, exp(NaN) = NaN, exp(inf) = inf, exp(-inf) = 0, exp(100) ≈ 2.688e43, exp(-100) ≈ 0
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::exp(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("exp", inputData, expectedResults, 1e-6);
+}

@@ -189,6 +189,16 @@ namespace omniruntime::vectorization {
     };
 
     template <typename T>
+    struct ExpFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = std::exp(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
     struct SecFunction {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput &result, const TInput &a)
