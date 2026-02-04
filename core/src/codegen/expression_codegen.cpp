@@ -629,6 +629,10 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                 InExprDoubleHelper(valueToCompare, argiValue, tmpCmpData, tmpCmpNull);
                 break;
             }
+            case OMNI_FLOAT: {
+                InExprFloatHelper(valueToCompare, argiValue, tmpCmpData, tmpCmpNull);
+                break;
+            }
             case OMNI_CHAR:
             case OMNI_VARCHAR: {
                 InExprStringHelper(valueToCompare, argiValue, tmpCmpData, tmpCmpNull);
@@ -2207,6 +2211,13 @@ void ExpressionCodeGen::InExprDoubleHelper(CodeGenValuePtr &valueToCompare, Code
     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
 }
 
+void ExpressionCodeGen::InExprFloatHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue,
+    Value *&tmpCmpData, Value *&tmpCmpNull)
+{
+    tmpCmpData = builder->CreateFCmpOEQ(valueToCompare->data, argiValue->data);
+    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+}
+
 bool ExpressionCodeGen::VisitBetweenExprHelper(BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue> &val,
     const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
     std::pair<Value **, Value **> cmpPair)
@@ -2219,7 +2230,7 @@ bool ExpressionCodeGen::VisitBetweenExprHelper(BetweenExpr &bExpr, const std::sh
         *cmpLeft = builder->CreateICmpSLE(lowerVal->data, val->data, "between_cmpleft");
         *cmpRight = builder->CreateICmpSLE(val->data, upperVal->data, "between_cmpright");
         return true;
-    } else if (bExpr.value->GetReturnTypeId() == OMNI_DOUBLE) {
+    } else if (bExpr.value->GetReturnTypeId() == OMNI_DOUBLE || bExpr.value->GetReturnTypeId() == OMNI_FLOAT) {
         *cmpLeft = builder->CreateFCmpULE(lowerVal->data, val->data, "between_cmpleft");
         *cmpRight = builder->CreateFCmpULE(val->data, upperVal->data, "between_cmpright");
         return true;

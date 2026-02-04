@@ -231,6 +231,8 @@ template class CountColumnAggregator<OMNI_TIME64, OMNI_LONG>;
 
 template class CountColumnAggregator<OMNI_TIMESTAMP, OMNI_LONG>;
 
+template class CountColumnAggregator<OMNI_FLOAT, OMNI_LONG>;
+
 template class CountColumnAggregator<OMNI_DOUBLE, OMNI_LONG>;
 
 template class CountColumnAggregator<OMNI_DECIMAL64, OMNI_LONG>;

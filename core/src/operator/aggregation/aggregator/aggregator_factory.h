@@ -48,6 +48,9 @@ protected:
             case OMNI_TIMESTAMP:
                 return FromKnownOutput<OMNI_LONG>(std::move(inputTypes), std::move(outputTypes), channels,
                     inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_FLOAT:
+                return FromKnownOutput<OMNI_FLOAT>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
             case OMNI_DOUBLE:
                 return FromKnownOutput<OMNI_DOUBLE>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
@@ -104,6 +107,9 @@ protected:
             case OMNI_TIME64:
             case OMNI_TIMESTAMP:
                 return T<OMNI_LONG, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_FLOAT:
+                return T<OMNI_FLOAT, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
             case OMNI_DOUBLE:
                 return T<OMNI_DOUBLE, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
@@ -300,6 +306,7 @@ protected:
             case OMNI_TIMESTAMP:
                 return FromKnownOutput<OMNI_LONG>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_FLOAT:
+                return FromKnownOutput<OMNI_FLOAT>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_DOUBLE:
                 return FromKnownOutput<OMNI_DOUBLE>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_DECIMAL64:
@@ -393,6 +400,7 @@ protected:
             case OMNI_TIMESTAMP:
                 return FromKnownOutput<OMNI_LONG>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_FLOAT:
+                return FromKnownOutput<OMNI_FLOAT>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_DOUBLE:
                 return FromKnownOutput<OMNI_DOUBLE>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_DECIMAL64:

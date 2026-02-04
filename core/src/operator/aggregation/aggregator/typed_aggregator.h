@@ -69,6 +69,10 @@ template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_TIMESTAMP> {
     using type = int64_t;
     using vector = Vector<type>;
 };
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_FLOAT> {
+    using type = float;
+    using vector = Vector<type>;
+};
 template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_DOUBLE> {
     using type = double;
     using vector = Vector<type>;

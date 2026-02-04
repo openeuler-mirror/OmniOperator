@@ -263,6 +263,8 @@ template class MaxAggregator<OMNI_BOOLEAN, OMNI_INT>;
 
 template class MaxAggregator<OMNI_BOOLEAN, OMNI_LONG>;
 
+template class MaxAggregator<OMNI_BOOLEAN, OMNI_FLOAT>;
+
 template class MaxAggregator<OMNI_BOOLEAN, OMNI_DOUBLE>;
 
 template class MaxAggregator<OMNI_BOOLEAN, OMNI_DECIMAL128>;
@@ -276,6 +278,8 @@ template class MaxAggregator<OMNI_SHORT, OMNI_SHORT>;
 template class MaxAggregator<OMNI_SHORT, OMNI_INT>;
 
 template class MaxAggregator<OMNI_SHORT, OMNI_LONG>;
+
+template class MaxAggregator<OMNI_SHORT, OMNI_FLOAT>;
 
 template class MaxAggregator<OMNI_SHORT, OMNI_DOUBLE>;
 
@@ -291,11 +295,29 @@ template class MaxAggregator<OMNI_INT, OMNI_INT>;
 
 template class MaxAggregator<OMNI_INT, OMNI_LONG>;
 
+template class MaxAggregator<OMNI_INT, OMNI_FLOAT>;
+
 template class MaxAggregator<OMNI_INT, OMNI_DOUBLE>;
 
 template class MaxAggregator<OMNI_INT, OMNI_DECIMAL128>;
 
 template class MaxAggregator<OMNI_INT, OMNI_DECIMAL64>;
+
+template class MaxAggregator<OMNI_FLOAT, OMNI_BOOLEAN>;
+
+template class MaxAggregator<OMNI_FLOAT, OMNI_SHORT>;
+
+template class MaxAggregator<OMNI_FLOAT, OMNI_INT>;
+
+template class MaxAggregator<OMNI_FLOAT, OMNI_LONG>;
+
+template class MaxAggregator<OMNI_FLOAT, OMNI_FLOAT>;
+
+template class MaxAggregator<OMNI_FLOAT, OMNI_DOUBLE>;
+
+template class MaxAggregator<OMNI_FLOAT, OMNI_DECIMAL128>;
+
+template class MaxAggregator<OMNI_FLOAT, OMNI_DECIMAL64>;
 
 template class MaxAggregator<OMNI_LONG, OMNI_BOOLEAN>;
 
@@ -304,6 +326,8 @@ template class MaxAggregator<OMNI_LONG, OMNI_SHORT>;
 template class MaxAggregator<OMNI_LONG, OMNI_INT>;
 
 template class MaxAggregator<OMNI_LONG, OMNI_LONG>;
+
+template class MaxAggregator<OMNI_LONG, OMNI_FLOAT>;
 
 template class MaxAggregator<OMNI_LONG, OMNI_DOUBLE>;
 
@@ -319,6 +343,8 @@ template class MaxAggregator<OMNI_DOUBLE, OMNI_INT>;
 
 template class MaxAggregator<OMNI_DOUBLE, OMNI_LONG>;
 
+template class MaxAggregator<OMNI_DOUBLE, OMNI_FLOAT>;
+
 template class MaxAggregator<OMNI_DOUBLE, OMNI_DOUBLE>;
 
 template class MaxAggregator<OMNI_DOUBLE, OMNI_DECIMAL128>;
@@ -333,6 +359,8 @@ template class MaxAggregator<OMNI_DECIMAL128, OMNI_INT>;
 
 template class MaxAggregator<OMNI_DECIMAL128, OMNI_LONG>;
 
+template class MaxAggregator<OMNI_DECIMAL128, OMNI_FLOAT>;
+
 template class MaxAggregator<OMNI_DECIMAL128, OMNI_DOUBLE>;
 
 template class MaxAggregator<OMNI_DECIMAL128, OMNI_DECIMAL128>;
@@ -346,6 +374,8 @@ template class MaxAggregator<OMNI_DECIMAL64, OMNI_SHORT>;
 template class MaxAggregator<OMNI_DECIMAL64, OMNI_INT>;
 
 template class MaxAggregator<OMNI_DECIMAL64, OMNI_LONG>;
+
+template class MaxAggregator<OMNI_DECIMAL64, OMNI_FLOAT>;
 
 template class MaxAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>;
 
