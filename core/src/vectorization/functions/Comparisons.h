@@ -25,6 +25,14 @@ struct And {
 };
 
 template <typename T>
+struct Or {
+    ALWAYS_INLINE void call(bool &result, const bool &a, const bool &b)
+    {
+        result = a || b;
+    }
+};
+
+template <typename T>
 static ALWAYS_INLINE bool isNan(const T &value)
 {
     if constexpr (std::is_floating_point_v<T>) {
