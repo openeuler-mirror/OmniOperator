@@ -232,11 +232,17 @@ public:
         }
     }
 
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
-        int32_t rowOffset, int32_t rowCount) override
-    {
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates,
+                            std::vector<BaseVector *> &vectors,
+                            int32_t rowOffset,
+                            int32_t rowCount) override {
+        auto v = static_cast<Vector<ResultType> *>(vectors[0]);
         for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-            ExtractValues(groupStates[rowIndex] + aggStateOffset, vectors, rowIndex);
+            const TrySumFlatState *s =
+                TrySumFlatState::ConstCastState(groupStates[rowIndex] + aggStateOffset);
+
+            if (s->count < 0 || s->count == 0) v->SetNull(rowIndex);
+            else v->SetValue(rowIndex, static_cast<ResultType>(s->value));
         }
     }
 
