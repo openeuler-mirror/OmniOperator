@@ -164,6 +164,9 @@ public:
     static constexpr const char *KAdaptivePartialAggregationRatio = "adaptive_partial_aggregation_ratio";
     static constexpr const char *KPreferVectorizationExpression = "prefer_vectorization_expression";
 
+    /// Spark partition id for deterministic per-partition behavior (e.g. rand(seed)). Aligned with Velox "spark.partition_id".
+    static constexpr const char *kSparkPartitionId = "spark.partition_id";
+
     uint64_t maxRowCount() const
     {
         static constexpr uint64_t kDefault = 12UL << 20;
@@ -391,6 +394,13 @@ public:
     {
         constexpr bool kDefaultValue = false;
         return get<bool>(KPreferVectorizationExpression, kDefaultValue);
+    }
+
+    /// Spark partition id (aligned with Velox). Default 0 when not set so rand(seed) etc. work without Spark context.
+    int32_t sparkPartitionId() const
+    {
+        constexpr int32_t kDefault = 0;
+        return get<int32_t>(kSparkPartitionId, kDefault);
     }
 
     /// Test-only method to override the current query config properties.
