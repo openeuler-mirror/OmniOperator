@@ -30,259 +30,265 @@ void CastFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outp
         return;
     }
     
-    DispatchCast(inputArg, inputTypeId, outputType, result);
+    DispatchCast(inputArg, inputTypeId, outputType, result, context);
+}
+
+bool CastFunction::IsNullAt(BaseVector *vec, int32_t row) const {
+    // For ConstVector, null flag is stored at index 0
+    int32_t nullCheckIdx = (vec->GetEncoding() == OMNI_ENCODING_CONST) ? 0 : row;
+    return vec->IsNull(nullCheckIdx);
 }
 
 DataTypeId CastFunction::GetInputTypeId(BaseVector *input) const {
     return input->GetTypeId();
 }
 
-void CastFunction::DispatchCast(BaseVector *input, DataTypeId inputTypeId, 
-                                const DataTypePtr &outputType, BaseVector *&result) const {
+void CastFunction::DispatchCast(BaseVector *input, DataTypeId inputTypeId,
+                                const DataTypePtr &outputType, BaseVector *&result,
+                                ExecutionContext *context) const {
     DataTypeId outputTypeId = outputType->GetId();
-    
+
     // Handle string output types
     if (TypeUtil::IsStringType(outputTypeId)) {
-        CastToString(input, inputTypeId, result, outputType);
+        CastToString(input, inputTypeId, result, outputType, context);
         return;
     }
-    
+
     // Handle boolean output type
     if (outputTypeId == OMNI_BOOLEAN) {
-        CastToBoolean(input, inputTypeId, result, outputType);
+        CastToBoolean(input, inputTypeId, result, outputType, context);
         return;
     }
-    
+
     // Handle string input types
     if (TypeUtil::IsStringType(inputTypeId)) {
         switch (outputTypeId) {
             case OMNI_BOOLEAN:
-                CastToBoolean(input, inputTypeId, result, outputType);
+                CastToBoolean(input, inputTypeId, result, outputType, context);
                 break;
             case OMNI_BYTE:
-                CastStringToNumeric<int8_t>(input, result, outputType);
+                CastStringToNumeric<int8_t>(input, result, outputType, context);
                 break;
             case OMNI_SHORT:
-                CastStringToNumeric<int16_t>(input, result, outputType);
+                CastStringToNumeric<int16_t>(input, result, outputType, context);
                 break;
             case OMNI_INT:
             case OMNI_DATE32:
-                CastStringToNumeric<int32_t>(input, result, outputType);
+                CastStringToNumeric<int32_t>(input, result, outputType, context);
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
-                CastStringToNumeric<int64_t>(input, result, outputType);
+                CastStringToNumeric<int64_t>(input, result, outputType, context);
                 break;
             case OMNI_FLOAT:
-                CastStringToNumeric<float>(input, result, outputType);
+                CastStringToNumeric<float>(input, result, outputType, context);
                 break;
             case OMNI_DOUBLE:
-                CastStringToNumeric<double>(input, result, outputType);
+                CastStringToNumeric<double>(input, result, outputType, context);
                 break;
             default:
-                OMNI_THROW("Cast function Error", 
+                OMNI_THROW("Cast function Error",
                         "Unsupported cast from string to " + TypeUtil::TypeToString(outputTypeId));
         }
         return;
     }
-    
+
     // Handle boolean input type
     if (inputTypeId == OMNI_BOOLEAN) {
-        CastFromBoolean(input, result, outputType);
+        CastFromBoolean(input, result, outputType, context);
         return;
     }
-    
+
     // Handle numeric to numeric conversions
     switch (outputTypeId) {
         case OMNI_BYTE:
             switch (inputTypeId) {
                 case OMNI_SHORT:
-                    CastNumericToNumeric<int16_t, int8_t>(input, result, outputType);
+                    CastNumericToNumeric<int16_t, int8_t>(input, result, outputType, context);
                     break;
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    CastNumericToNumeric<int32_t, int8_t>(input, result, outputType);
+                    CastNumericToNumeric<int32_t, int8_t>(input, result, outputType, context);
                     break;
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
-                    CastNumericToNumeric<int64_t, int8_t>(input, result, outputType);
+                    CastNumericToNumeric<int64_t, int8_t>(input, result, outputType, context);
                     break;
                 case OMNI_FLOAT:
-                    CastNumericToNumeric<float, int8_t>(input, result, outputType);
+                    CastNumericToNumeric<float, int8_t>(input, result, outputType, context);
                     break;
                 case OMNI_DOUBLE:
-                    CastNumericToNumeric<double, int8_t>(input, result, outputType);
+                    CastNumericToNumeric<double, int8_t>(input, result, outputType, context);
                     break;
                 default:
-                    OMNI_THROW("Cast function Error", 
+                    OMNI_THROW("Cast function Error",
                             "Unsupported cast to BYTE from " + TypeUtil::TypeToString(inputTypeId));
             }
             break;
-            
+
         case OMNI_SHORT:
             switch (inputTypeId) {
                 case OMNI_BYTE:
-                    CastNumericToNumeric<int8_t, int16_t>(input, result, outputType);
+                    CastNumericToNumeric<int8_t, int16_t>(input, result, outputType, context);
                     break;
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    CastNumericToNumeric<int32_t, int16_t>(input, result, outputType);
+                    CastNumericToNumeric<int32_t, int16_t>(input, result, outputType, context);
                     break;
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
-                    CastNumericToNumeric<int64_t, int16_t>(input, result, outputType);
+                    CastNumericToNumeric<int64_t, int16_t>(input, result, outputType, context);
                     break;
                 case OMNI_FLOAT:
-                    CastNumericToNumeric<float, int16_t>(input, result, outputType);
+                    CastNumericToNumeric<float, int16_t>(input, result, outputType, context);
                     break;
                 case OMNI_DOUBLE:
-                    CastNumericToNumeric<double, int16_t>(input, result, outputType);
+                    CastNumericToNumeric<double, int16_t>(input, result, outputType, context);
                     break;
                 default:
-                    OMNI_THROW("Cast function Error", 
+                    OMNI_THROW("Cast function Error",
                             "Unsupported cast to SHORT from " + TypeUtil::TypeToString(inputTypeId));
             }
             break;
-            
+
         case OMNI_INT:
         case OMNI_DATE32:
             switch (inputTypeId) {
                 case OMNI_BYTE:
-                    CastNumericToNumeric<int8_t, int32_t>(input, result, outputType);
+                    CastNumericToNumeric<int8_t, int32_t>(input, result, outputType, context);
                     break;
                 case OMNI_SHORT:
-                    CastNumericToNumeric<int16_t, int32_t>(input, result, outputType);
+                    CastNumericToNumeric<int16_t, int32_t>(input, result, outputType, context);
                     break;
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
-                    CastNumericToNumeric<int64_t, int32_t>(input, result, outputType);
+                    CastNumericToNumeric<int64_t, int32_t>(input, result, outputType, context);
                     break;
                 case OMNI_FLOAT:
-                    CastNumericToNumeric<float, int32_t>(input, result, outputType);
+                    CastNumericToNumeric<float, int32_t>(input, result, outputType, context);
                     break;
                 case OMNI_DOUBLE:
-                    CastNumericToNumeric<double, int32_t>(input, result, outputType);
+                    CastNumericToNumeric<double, int32_t>(input, result, outputType, context);
                     break;
                 default:
-                    OMNI_THROW("Cast function Error", 
+                    OMNI_THROW("Cast function Error",
                             "Unsupported cast to INT from " + TypeUtil::TypeToString(inputTypeId));
             }
             break;
-            
+
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             switch (inputTypeId) {
                 case OMNI_BYTE:
-                    CastNumericToNumeric<int8_t, int64_t>(input, result, outputType);
+                    CastNumericToNumeric<int8_t, int64_t>(input, result, outputType, context);
                     break;
                 case OMNI_SHORT:
-                    CastNumericToNumeric<int16_t, int64_t>(input, result, outputType);
+                    CastNumericToNumeric<int16_t, int64_t>(input, result, outputType, context);
                     break;
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    CastNumericToNumeric<int32_t, int64_t>(input, result, outputType);
+                    CastNumericToNumeric<int32_t, int64_t>(input, result, outputType, context);
                     break;
                 case OMNI_FLOAT:
-                    CastNumericToNumeric<float, int64_t>(input, result, outputType);
+                    CastNumericToNumeric<float, int64_t>(input, result, outputType, context);
                     break;
                 case OMNI_DOUBLE:
-                    CastNumericToNumeric<double, int64_t>(input, result, outputType);
+                    CastNumericToNumeric<double, int64_t>(input, result, outputType, context);
                     break;
                 default:
-                    OMNI_THROW("Cast function Error", 
+                    OMNI_THROW("Cast function Error",
                             "Unsupported cast to LONG from " + TypeUtil::TypeToString(inputTypeId));
             }
             break;
-            
+
         case OMNI_FLOAT:
             switch (inputTypeId) {
                 case OMNI_BYTE:
-                    CastNumericToNumeric<int8_t, float>(input, result, outputType);
+                    CastNumericToNumeric<int8_t, float>(input, result, outputType, context);
                     break;
                 case OMNI_SHORT:
-                    CastNumericToNumeric<int16_t, float>(input, result, outputType);
+                    CastNumericToNumeric<int16_t, float>(input, result, outputType, context);
                     break;
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    CastNumericToNumeric<int32_t, float>(input, result, outputType);
+                    CastNumericToNumeric<int32_t, float>(input, result, outputType, context);
                     break;
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
-                    CastNumericToNumeric<int64_t, float>(input, result, outputType);
+                    CastNumericToNumeric<int64_t, float>(input, result, outputType, context);
                     break;
                 case OMNI_DOUBLE:
-                    CastNumericToNumeric<double, float>(input, result, outputType);
+                    CastNumericToNumeric<double, float>(input, result, outputType, context);
                     break;
                 default:
-                    OMNI_THROW("Cast function Error", 
+                    OMNI_THROW("Cast function Error",
                             "Unsupported cast to FLOAT from " + TypeUtil::TypeToString(inputTypeId));
             }
             break;
-            
+
         case OMNI_DOUBLE:
             switch (inputTypeId) {
                 case OMNI_BYTE:
-                    CastNumericToNumeric<int8_t, double>(input, result, outputType);
+                    CastNumericToNumeric<int8_t, double>(input, result, outputType, context);
                     break;
                 case OMNI_SHORT:
-                    CastNumericToNumeric<int16_t, double>(input, result, outputType);
+                    CastNumericToNumeric<int16_t, double>(input, result, outputType, context);
                     break;
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    CastNumericToNumeric<int32_t, double>(input, result, outputType);
+                    CastNumericToNumeric<int32_t, double>(input, result, outputType, context);
                     break;
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
-                    CastNumericToNumeric<int64_t, double>(input, result, outputType);
+                    CastNumericToNumeric<int64_t, double>(input, result, outputType, context);
                     break;
                 case OMNI_FLOAT:
-                    CastNumericToNumeric<float, double>(input, result, outputType);
+                    CastNumericToNumeric<float, double>(input, result, outputType, context);
                     break;
                 default:
-                    OMNI_THROW("Cast function Error", 
+                    OMNI_THROW("Cast function Error",
                             "Unsupported cast to DOUBLE from " + TypeUtil::TypeToString(inputTypeId));
             }
             break;
-            
+
         default:
-            OMNI_THROW("Cast function Error", 
+            OMNI_THROW("Cast function Error",
                     "Unsupported output type: " + TypeUtil::TypeToString(outputTypeId));
     }
 }
 
 template<typename T>
-void CastFunction::CastStringToNumeric(BaseVector *input, BaseVector *&result, 
-                                    const DataTypePtr &outputType) const {
-    auto size = input->GetSize();
+void CastFunction::CastStringToNumeric(BaseVector *input, BaseVector *&result,
+                                    const DataTypePtr &outputType,
+                                    ExecutionContext *context) const {
+    // Use context to get row size (handles ConstVector correctly)
+    auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
-    
+
     for (int32_t row = 0; row < size; ++row) {
-        if (input->IsNull(row)) {
+        if (IsNullAt(input, row)) {
             result->SetNull(row);
             continue;
         }
-        
+
         std::string_view inputStr = GetStringValueFromVector(input, row);
-        
+
         if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
             // Floating point conversion
-            // T res;
-            // type::Status status = ConvertStringToDouble(res, inputStr.data(), 
-	    double doubleRes;
-	    type::Status status = ConvertStringToDouble(doubleRes, inputStr.data(),
+            double doubleRes;
+            type::Status status = ConvertStringToDouble(doubleRes, inputStr.data(),
                                                     static_cast<int32_t>(inputStr.size()));
             if (status == type::Status::CONVERT_SUCCESS) {
-		T res;
+                T res;
                 if constexpr (std::is_same_v<T, float>) {
-                    // res = static_cast<float>(res);
-		    res = static_cast<float>(doubleRes);
+                    res = static_cast<float>(doubleRes);
                 } else {
                     res = doubleRes;
                 }
@@ -293,7 +299,7 @@ void CastFunction::CastStringToNumeric(BaseVector *input, BaseVector *&result,
         } else {
             // Integer conversion
             T res;
-            type::Status status = ConvertStringToInteger<T>(res, inputStr.data(), 
+            type::Status status = ConvertStringToInteger<T>(res, inputStr.data(),
                                                         static_cast<int>(inputStr.size()));
             if (status == type::Status::CONVERT_SUCCESS) {
                 SetValueToVector(result, row, res);
@@ -305,66 +311,71 @@ void CastFunction::CastStringToNumeric(BaseVector *input, BaseVector *&result,
 }
 
 template<typename T>
-void CastFunction::CastNumericToString(BaseVector *input, BaseVector *&result, 
-                                    const DataTypePtr &outputType) const {
-    auto size = input->GetSize();
+void CastFunction::CastNumericToString(BaseVector *input, BaseVector *&result,
+                                    const DataTypePtr &outputType,
+                                    ExecutionContext *context) const {
+    // Use context to get row size (handles ConstVector correctly)
+    auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
-    
+
     for (int32_t row = 0; row < size; ++row) {
-        if (input->IsNull(row)) {
+        if (IsNullAt(input, row)) {
             result->SetNull(row);
             continue;
         }
-        
+
         T value = GetValueFromVector<T>(input, row);
         std::string strValue = NumericToString(value);
-        // SetStringValueToVector(result, row, std::string_view(strValue));
-	std::string_view strView(strValue);
+        std::string_view strView(strValue);
         SetStringValueToVector(result, row, strView);
     }
 }
 
 template<typename TInput, typename TOutput>
-void CastFunction::CastNumericToNumeric(BaseVector *input, BaseVector *&result, 
-                                    const DataTypePtr &outputType) const {
-    auto size = input->GetSize();
+void CastFunction::CastNumericToNumeric(BaseVector *input, BaseVector *&result,
+                                    const DataTypePtr &outputType,
+                                    ExecutionContext *context) const {
+    // Use context to get row size (handles ConstVector correctly)
+    auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
-    
+
     for (int32_t row = 0; row < size; ++row) {
-        if (input->IsNull(row)) {
+        if (IsNullAt(input, row)) {
             result->SetNull(row);
             continue;
         }
-        
+
         TInput inputValue = GetValueFromVector<TInput>(input, row);
         TOutput outputValue = static_cast<TOutput>(inputValue);
-        
+
         // Check for overflow/underflow for integer types
         if constexpr (std::is_integral_v<TInput> && std::is_integral_v<TOutput>) {
-            if (inputValue < std::numeric_limits<TOutput>::min() || 
+            if (inputValue < std::numeric_limits<TOutput>::min() ||
                 inputValue > std::numeric_limits<TOutput>::max()) {
                 result->SetNull(row);
                 continue;
             }
         }
-        
+
         SetValueToVector(result, row, outputValue);
     }
 }
 
-void CastFunction::CastToBoolean(BaseVector *input, DataTypeId inputTypeId, 
-                                BaseVector *&result, const DataTypePtr &outputType) const {
-    auto size = input->GetSize();
+void CastFunction::CastToBoolean(BaseVector *input, DataTypeId inputTypeId,
+                                BaseVector *&result, const DataTypePtr &outputType,
+                                ExecutionContext *context) const {
+    // Use context to get row size (handles ConstVector correctly)
+    auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
-    
+
     for (int32_t row = 0; row < size; ++row) {
-        if (input->IsNull(row)) {
+        if (IsNullAt(input, row)) {
             result->SetNull(row);
             continue;
         }
-        
+
         bool boolValue = false;
-        
+
         if (TypeUtil::IsStringType(inputTypeId)) {
             std::string_view strValue = GetStringValueFromVector(input, row);
             // Convert string to boolean: "true", "1" -> true, others -> false
@@ -402,25 +413,27 @@ void CastFunction::CastToBoolean(BaseVector *input, DataTypeId inputTypeId,
                     continue;
             }
         }
-        
+
         SetValueToVector(result, row, boolValue);
     }
 }
 
-void CastFunction::CastFromBoolean(BaseVector *input, BaseVector *&result, 
-                                const DataTypePtr &outputType) const {
+void CastFunction::CastFromBoolean(BaseVector *input, BaseVector *&result,
+                                const DataTypePtr &outputType,
+                                ExecutionContext *context) const {
     DataTypeId outputTypeId = outputType->GetId();
-    auto size = input->GetSize();
+    // Use context to get row size (handles ConstVector correctly)
+    auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(outputTypeId, size);
-    
+
     for (int32_t row = 0; row < size; ++row) {
-        if (input->IsNull(row)) {
+        if (IsNullAt(input, row)) {
             result->SetNull(row);
             continue;
         }
-        
+
         bool boolValue = GetValueFromVector<bool>(input, row);
-        
+
         switch (outputTypeId) {
             case OMNI_BYTE:
                 SetValueToVector(result, row, static_cast<int8_t>(boolValue ? 1 : 0));
@@ -447,32 +460,33 @@ void CastFunction::CastFromBoolean(BaseVector *input, BaseVector *&result,
     }
 }
 
-void CastFunction::CastToString(BaseVector *input, DataTypeId inputTypeId, 
-                                BaseVector *&result, const DataTypePtr &outputType) const {
+void CastFunction::CastToString(BaseVector *input, DataTypeId inputTypeId,
+                                BaseVector *&result, const DataTypePtr &outputType,
+                                ExecutionContext *context) const {
     switch (inputTypeId) {
         case OMNI_BOOLEAN:
-            CastNumericToString<bool>(input, result, outputType);
+            CastNumericToString<bool>(input, result, outputType, context);
             break;
         case OMNI_BYTE:
-            CastNumericToString<int8_t>(input, result, outputType);
+            CastNumericToString<int8_t>(input, result, outputType, context);
             break;
         case OMNI_SHORT:
-            CastNumericToString<int16_t>(input, result, outputType);
+            CastNumericToString<int16_t>(input, result, outputType, context);
             break;
         case OMNI_INT:
         case OMNI_DATE32:
-            CastNumericToString<int32_t>(input, result, outputType);
+            CastNumericToString<int32_t>(input, result, outputType, context);
             break;
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
-            CastNumericToString<int64_t>(input, result, outputType);
+            CastNumericToString<int64_t>(input, result, outputType, context);
             break;
         case OMNI_FLOAT:
-            CastNumericToString<float>(input, result, outputType);
+            CastNumericToString<float>(input, result, outputType, context);
             break;
         case OMNI_DOUBLE:
-            CastNumericToString<double>(input, result, outputType);
+            CastNumericToString<double>(input, result, outputType, context);
             break;
         case OMNI_VARCHAR:
         case OMNI_CHAR:
@@ -481,7 +495,7 @@ void CastFunction::CastToString(BaseVector *input, DataTypeId inputTypeId,
             result = input;
             break;
         default:
-            OMNI_THROW("Cast function Error", 
+            OMNI_THROW("Cast function Error",
                     "Unsupported cast to string from " + TypeUtil::TypeToString(inputTypeId));
     }
 }
@@ -489,7 +503,7 @@ void CastFunction::CastToString(BaseVector *input, DataTypeId inputTypeId,
 template<typename T>
 T CastFunction::GetValueFromVector(BaseVector *vec, int32_t row) const {
     Encoding encoding = vec->GetEncoding();
-    
+
     if (encoding == OMNI_ENCODING_CONST) {
         auto *constVec = static_cast<ConstVector<T> *>(vec);
         return constVec->GetConstValue();
@@ -506,7 +520,7 @@ T CastFunction::GetValueFromVector(BaseVector *vec, int32_t row) const {
 
 std::string_view CastFunction::GetStringValueFromVector(BaseVector *vec, int32_t row) const {
     Encoding encoding = vec->GetEncoding();
-    
+
     if (encoding == OMNI_ENCODING_CONST) {
         auto *constVec = static_cast<ConstVector<std::string_view> *>(vec);
         return constVec->GetConstValue();
@@ -527,7 +541,7 @@ void CastFunction::SetValueToVector(BaseVector *vec, int32_t row, const T &value
     resultVec->SetValue(row, value);
 }
 
-void CastFunction::SetStringValueToVector(BaseVector *vec, int32_t row, 
+void CastFunction::SetStringValueToVector(BaseVector *vec, int32_t row,
                                         std::string_view &value) const {
     auto *resultVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
     resultVec->SetValue(row, value);
@@ -549,56 +563,56 @@ std::string CastFunction::NumericToString(T value) const {
 }
 
 // Explicit template instantiations
-template void CastFunction::CastStringToNumeric<int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastStringToNumeric<int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastStringToNumeric<int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastStringToNumeric<int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastStringToNumeric<float>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastStringToNumeric<double>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
+template void CastFunction::CastStringToNumeric<int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastStringToNumeric<int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastStringToNumeric<int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastStringToNumeric<int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastStringToNumeric<float>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastStringToNumeric<double>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
 
-template void CastFunction::CastNumericToString<bool>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToString<int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToString<int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToString<int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToString<int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToString<float>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToString<double>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
+template void CastFunction::CastNumericToString<bool>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToString<int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToString<int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToString<int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToString<int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToString<float>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToString<double>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
 
-template void CastFunction::CastNumericToNumeric<int8_t, int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int8_t, int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int8_t, int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int8_t, float>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int8_t, double>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
+template void CastFunction::CastNumericToNumeric<int8_t, int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int8_t, int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int8_t, int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int8_t, float>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int8_t, double>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
 
-template void CastFunction::CastNumericToNumeric<int16_t, int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int16_t, int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int16_t, int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int16_t, float>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int16_t, double>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
+template void CastFunction::CastNumericToNumeric<int16_t, int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int16_t, int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int16_t, int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int16_t, float>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int16_t, double>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
 
-template void CastFunction::CastNumericToNumeric<int32_t, int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int32_t, int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int32_t, int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int32_t, float>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int32_t, double>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
+template void CastFunction::CastNumericToNumeric<int32_t, int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int32_t, int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int32_t, int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int32_t, float>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int32_t, double>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
 
-template void CastFunction::CastNumericToNumeric<int64_t, int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int64_t, int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int64_t, int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int64_t, float>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<int64_t, double>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
+template void CastFunction::CastNumericToNumeric<int64_t, int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int64_t, int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int64_t, int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int64_t, float>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<int64_t, double>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
 
-template void CastFunction::CastNumericToNumeric<float, int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<float, int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<float, int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<float, int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<float, double>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
+template void CastFunction::CastNumericToNumeric<float, int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<float, int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<float, int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<float, int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<float, double>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
 
-template void CastFunction::CastNumericToNumeric<double, int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<double, int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<double, int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<double, int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
-template void CastFunction::CastNumericToNumeric<double, float>(BaseVector *, BaseVector *&, const DataTypePtr &) const;
+template void CastFunction::CastNumericToNumeric<double, int8_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<double, int16_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<double, int32_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<double, int64_t>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void CastFunction::CastNumericToNumeric<double, float>(BaseVector *, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
 
 template int8_t CastFunction::GetValueFromVector<int8_t>(BaseVector *, int32_t) const;
 template int16_t CastFunction::GetValueFromVector<int16_t>(BaseVector *, int32_t) const;

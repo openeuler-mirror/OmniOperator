@@ -57,4 +57,4 @@ void registerSize(const std::string &prefix)
     RegisterFunction<Size, int32_t, ArrayView<true, double>, bool>(prefix, {OMNI_ARRAY, OMNI_BOOLEAN}, OMNI_INT);
     RegisterFunction<Size, int32_t, ArrayView<true, Decimal128>, bool>(prefix, {OMNI_ARRAY, OMNI_BOOLEAN}, OMNI_INT);
 }
-} // namespace facebook::velox::functions::sparksql
+} // namespace omniruntime::vectorization

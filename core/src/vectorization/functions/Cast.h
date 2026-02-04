@@ -34,45 +34,52 @@
      
      // Main dispatch function
      void DispatchCast(BaseVector *input, DataTypeId inputTypeId, const DataTypePtr &outputType, 
-                       BaseVector *&result) const;
-     
+                       BaseVector *&result, ExecutionContext *context) const;
+
      // String to numeric conversions
      template<typename T>
-     void CastStringToNumeric(BaseVector *input, BaseVector *&result, const DataTypePtr &outputType) const;
-     
+     void CastStringToNumeric(BaseVector *input, BaseVector *&result, const DataTypePtr &outputType,
+                              ExecutionContext *context) const;
+
      // Numeric to string conversions
      template<typename T>
-     void CastNumericToString(BaseVector *input, BaseVector *&result, const DataTypePtr &outputType) const;
-     
+     void CastNumericToString(BaseVector *input, BaseVector *&result, const DataTypePtr &outputType,
+                              ExecutionContext *context) const;
+
      // Numeric to numeric conversions
      template<typename TInput, typename TOutput>
-     void CastNumericToNumeric(BaseVector *input, BaseVector *&result, const DataTypePtr &outputType) const;
-     
+     void CastNumericToNumeric(BaseVector *input, BaseVector *&result, const DataTypePtr &outputType,
+                               ExecutionContext *context) const;
+
      // Boolean conversions
-     void CastToBoolean(BaseVector *input, DataTypeId inputTypeId, BaseVector *&result, 
-                        const DataTypePtr &outputType) const;
-     void CastFromBoolean(BaseVector *input, BaseVector *&result, const DataTypePtr &outputType) const;
-     
+     void CastToBoolean(BaseVector *input, DataTypeId inputTypeId, BaseVector *&result,
+                        const DataTypePtr &outputType, ExecutionContext *context) const;
+     void CastFromBoolean(BaseVector *input, BaseVector *&result, const DataTypePtr &outputType,
+                          ExecutionContext *context) const;
+
      // String conversions
-     void CastToString(BaseVector *input, DataTypeId inputTypeId, BaseVector *&result, 
-                       const DataTypePtr &outputType) const;
-     
+     void CastToString(BaseVector *input, DataTypeId inputTypeId, BaseVector *&result,
+                       const DataTypePtr &outputType, ExecutionContext *context) const;
+
      // Helper: Get value from vector with different encodings
      template<typename T>
      T GetValueFromVector(BaseVector *vec, int32_t row) const;
-     
+
      // Helper: Get string value from vector
      std::string_view GetStringValueFromVector(BaseVector *vec, int32_t row) const;
-     
+
      // Helper: Set value to vector
      template<typename T>
      void SetValueToVector(BaseVector *vec, int32_t row, const T &value) const;
-     
+
      // Helper: Set string value to vector
      void SetStringValueToVector(BaseVector *vec, int32_t row, std::string_view &value) const;
-     
+
      // Convert numeric to string
      template<typename T>
      std::string NumericToString(T value) const;
+
+     // Helper: Check if vector element is null (handles ConstVector correctly)
+     bool IsNullAt(BaseVector *vec, int32_t row) const;
  };
  }
