@@ -17,6 +17,7 @@
 namespace omniruntime::codegen::function {
 static std::string REPLACE_ERR_MSG = "Replace failed";
 static std::string CONCAT_ERR_MSG = "Concat failed";
+static std::string CONCAT_WS_ERR_MSG = "ConcatWs failed";
 static constexpr uint8_t EMPTY[] = "";
 static int32_t STEP = static_cast<int>('a') - static_cast<int>('A');
 static uint8_t BytesOfCodePointInUTF8[] = {
@@ -132,6 +133,25 @@ public:
             return nullptr;
         }
         return ret;
+    }
+
+    static inline bool ConcatWsAppend(int64_t contextPtr, const char *separator, int32_t separatorLen,
+        const char *&tmp, int32_t &tmpLen, bool &tmpSet, const char *s, int32_t sLen, bool *hasErr, int32_t *outLen)
+    {
+        if (!tmpSet) {
+            tmp = s;
+            tmpLen = sLen;
+            tmpSet = true;
+            *outLen = tmpLen;
+            return true;
+        }
+        const char *next = ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp, tmpLen, s, sLen, hasErr, outLen);
+        if (*hasErr) {
+            return false;
+        }
+        tmp = next;
+        tmpLen = *outLen;
+        return true;
     }
 
     static inline const char *ReplaceWithSearchNotEmpty(int64_t contextPtr, const char *str, int32_t strLen,
