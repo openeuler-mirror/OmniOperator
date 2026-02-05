@@ -138,14 +138,7 @@ setup_dependencies() {
     git clone --branch ${folly_tag} --depth=1 ${folly_repo} ${folly_source_dir}
     cd ${folly_source_dir}
     mkdir -p build && cd build
-    cmake .. -DFOLLY_NO_EXCEPTION_TRACER=ON -DCMAKE_DISABLE_FIND_PACKAGE_LibDwarf=OFF \
-                     -DCMAKE_DISABLE_FIND_PACKAGE_Libiberty=ON \
-                     -DCMAKE_DISABLE_FIND_PACKAGE_LibAIO=ON \
-                     -DLIBAIO_FOUND=OFF \
-                     -DFOLLY_HAVE_INT128_T=ON \
-                     -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-                     -DBUILD_SHARED_LIBS=OFF \
-                     -DBUILD_TESTS=OFF
+    cmake .. -DBUILD_TESTS=OFF -DFOLLY_HAVE_INT128_T=ON
     make -j$(nproc)
     sudo make install
     echo "folly-${folly_tag} build and install completed successfully."
