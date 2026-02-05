@@ -145,17 +145,17 @@ public:
 
 void RegisterDateAddFunction(const std::string &name)
 {
-    // DateAdd takes DATE32 and TINYINT/SMALLINT/INT(numDays) and returns DATE32
-    // Support TINYINT (int8_t)
-    VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32, OMNI_TINYINT}, OMNI_DATE32,
+    // DateAdd takes DATE32 and BYTE/SHORT/INT(numDays) and returns DATE32
+    // Support BYTE (int8_t, equivalent to TINYINT)
+    VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32, OMNI_BYTE}, OMNI_DATE32,
         std::make_shared<DateAddFunctionImpl<int8_t>>());
-    VectorFunction::RegisterVectorFunction(name, {OMNI_INT, OMNI_TINYINT}, OMNI_DATE32,
+    VectorFunction::RegisterVectorFunction(name, {OMNI_INT, OMNI_BYTE}, OMNI_DATE32,
         std::make_shared<DateAddFunctionImpl<int8_t>>());
     
-    // Support SMALLINT (int16_t)
-    VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32, OMNI_SMALLINT}, OMNI_DATE32,
+    // Support SHORT (int16_t, equivalent to SMALLINT)
+    VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32, OMNI_SHORT}, OMNI_DATE32,
         std::make_shared<DateAddFunctionImpl<int16_t>>());
-    VectorFunction::RegisterVectorFunction(name, {OMNI_INT, OMNI_SMALLINT}, OMNI_DATE32,
+    VectorFunction::RegisterVectorFunction(name, {OMNI_INT, OMNI_SHORT}, OMNI_DATE32,
         std::make_shared<DateAddFunctionImpl<int16_t>>());
     
     // Support INT (int32_t)
