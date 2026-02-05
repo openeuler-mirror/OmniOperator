@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cfloat>
 #include "typed_aggregator.h"
+#include "minby_varchar_aggregator.h"
 
 namespace omniruntime {
 namespace op {
@@ -72,7 +73,7 @@ public:
         return sizeof(MinByState<targetValueType, sortKeyType>);
     }
 
-    static constexpr bool IsSupportedMinByType(DataTypeId type_id)
+    static constexpr bool IsSupportedBasicMinByType(DataTypeId type_id)
     {
         switch (type_id) {
             case OMNI_SHORT:
@@ -95,10 +96,15 @@ public:
             throw omniruntime::exception::OmniException("Error in minby aggregator: ", omniExceptionInfo);
         }
 
-        if constexpr (!IsSupportedMinByType(COL1_ID)) {
+        if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR) {
+            return MinByVarcharAggregator<COL1_ID, COL2_ID>::Create(inputTypes, outputTypes, channels, rawIn, partialOut,
+                isOverflowAsNull);
+        }
+
+        if constexpr (!IsSupportedBasicMinByType(COL1_ID)) {
             std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID);
             throw omniruntime::exception::OmniException("Error in minby aggregator: : ", omniExceptionInfo);
-        } else if constexpr (!IsSupportedMinByType(COL2_ID)) {
+        } else if constexpr (!IsSupportedBasicMinByType(COL2_ID)) {
             std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL2_ID);
             throw omniruntime::exception::OmniException("Error in minby aggregator: : ", omniExceptionInfo);
         } else {

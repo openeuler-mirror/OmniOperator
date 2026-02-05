@@ -72,7 +72,7 @@ public:
         return sizeof(MaxByState<targetValueType, sortKeyType>);
     }
 
-    static constexpr bool IsSupportedMaxByType(DataTypeId type_id)
+    static constexpr bool IsSupportedBasicMaxByType(DataTypeId type_id)
     {
         switch (type_id) {
             case OMNI_SHORT:
@@ -95,10 +95,10 @@ public:
             throw omniruntime::exception::OmniException("Error in maxby aggregator:", omniExceptionInfo);
         }
 
-        if constexpr (!IsSupportedMaxByType(COL1_ID)) {
+        if constexpr (!IsSupportedBasicMaxByType(COL1_ID)) {
             std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID);
             throw omniruntime::exception::OmniException("Error in maxby aggregator:", omniExceptionInfo);
-        } else if constexpr (!IsSupportedMaxByType(COL2_ID)) {
+        } else if constexpr (!IsSupportedBasicMaxByType(COL2_ID)) {
             std::string omniExceptionInfo = "unsupported sort key type " + TypeUtil::TypeToStringLog(COL2_ID);
             throw omniruntime::exception::OmniException("Error in maxby aggregator: ", omniExceptionInfo);
         } else {
