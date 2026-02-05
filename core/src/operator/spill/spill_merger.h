@@ -63,9 +63,9 @@ struct SpillFileInfo {
 class SpillReader {
 public:
     SpillReader(const type::DataTypes &dataTypes, const std::string &filePath, uint64_t fileLength,
-        uint64_t totalRowCount, bool isSpillCompressEnabled)
+        uint64_t totalRowCount, bool isSpillCompressEnabled, bool compareWithHashVal = false)
         : dataTypes(dataTypes), filePath(filePath), fileLength(fileLength), totalRowCount(totalRowCount),
-          isSpillCompressEnabled(isSpillCompressEnabled)
+          isSpillCompressEnabled(isSpillCompressEnabled), compareWithHashVal(compareWithHashVal)
     {}
 
     ~SpillReader();
@@ -105,6 +105,7 @@ private:
     char* prevBuffer_ = nullptr;
     int32_t remainLength = 0;
     bool isSpillCompressEnabled = false;
+    bool compareWithHashVal = false;
 };
 
 class SpillMergeStream {
@@ -114,6 +115,19 @@ public:
         SpillTracker *spillTracker, bool isSpillCompressEnabled)
     {
         auto *stream = new SpillMergeStream(dataTypes, fileInfo, sortCols, sortCompareFuncs, spillTracker, isSpillCompressEnabled);
+        auto result = stream->GetNextBatch();
+        if (result != ErrorCode::SUCCESS) {
+            delete stream;
+            return nullptr;
+        }
+        return stream;
+    }
+
+    static SpillMergeStream *Create(const type::DataTypes &dataTypes, const SpillFileInfo &fileInfo,
+        const std::vector<int32_t> &sortCols, std::vector<OperatorUtil::CompareFuncWithHashVal> &sortCompareFuncs,
+        SpillTracker *tracker, bool spillCompressEnabled, bool isCompareWithHashVal = false)
+    {
+        auto *stream = new SpillMergeStream(dataTypes, fileInfo, sortCols, sortCompareFuncs, tracker, spillCompressEnabled, isCompareWithHashVal);
         auto result = stream->GetNextBatch();
         if (result != ErrorCode::SUCCESS) {
             delete stream;
@@ -191,8 +205,17 @@ private:
         reader = new SpillReader(dataTypes, fileInfo.filePath, fileInfo.fileLength, fileInfo.totalRowCount, isSpillCompressEnabled);
     }
 
+    SpillMergeStream(const type::DataTypes &dataTypes, const SpillFileInfo &fileInfo,
+        const std::vector<int32_t> &sortCols, std::vector<OperatorUtil::CompareFuncWithHashVal> &sortCompareFuncs,
+        SpillTracker *spillTracker, bool isSpillCompressEnabled, bool isCompareWithHashVal)
+        : sortCols(sortCols), sortCompareFuncsWithHashVal(sortCompareFuncs), spillTracker(spillTracker), compareWithHashVal(isCompareWithHashVal)
+    {
+        reader = new SpillReader(dataTypes, fileInfo.filePath, fileInfo.fileLength, fileInfo.totalRowCount, isSpillCompressEnabled, compareWithHashVal);
+    }
+
     std::vector<int32_t> sortCols; // which columns in currentBatch will be used to sort ?
     std::vector<OperatorUtil::CompareFunc> sortCompareFuncs;
+    std::vector<OperatorUtil::CompareFuncWithHashVal> sortCompareFuncsWithHashVal;
     SpillTracker *spillTracker = nullptr;
     SpillReader *reader = nullptr;
     std::unique_ptr<vec::VectorBatch> currentBatch = nullptr;
@@ -200,21 +223,28 @@ private:
     int32_t currentRowIdx = 0;
     int32_t currentRowCount = 0;
     bool isSpillCompressEnabled = false;
+    bool compareWithHashVal = false;
 };
 
 class SpillMerger {
 public:
     static SpillMerger *Create(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
         const std::vector<SortOrder> &sortOrders, SpillTracker *spillTracker,
-        const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled, bool isAggOp = false)
+        const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled, bool compareWithHashVal = false)
     {
         std::vector<OperatorUtil::CompareFunc> sortCompareFuncs;
-        SetCompareFunctions(dataTypes, sortCols, sortOrders, sortCompareFuncs, isAggOp);
+        std::vector<OperatorUtil::CompareFuncWithHashVal> sortCompareFuncsWithHashVal;
+        if (compareWithHashVal) {
+            SetCompareFunctionsWithHashVal(dataTypes, sortCols, sortOrders, sortCompareFuncsWithHashVal);
+        } else {
+            SetCompareFunctions(dataTypes, sortCols, sortOrders, sortCompareFuncs);
+        }
 
         std::vector<SpillMergeStream *> streams;
         uint64_t totalRowCount = 0;
         for (auto &fileInfo : spillFiles) {
-            auto stream = SpillMergeStream::Create(dataTypes, fileInfo, sortCols, sortCompareFuncs, spillTracker, isSpillCompressEnabled);
+            auto stream = compareWithHashVal ? SpillMergeStream::Create(dataTypes, fileInfo, sortCols, sortCompareFuncsWithHashVal, spillTracker, isSpillCompressEnabled, compareWithHashVal)
+                            : SpillMergeStream::Create(dataTypes, fileInfo, sortCols, sortCompareFuncs, spillTracker, isSpillCompressEnabled);
             if (stream == nullptr) {
                 for (auto createdStream : streams) {
                     delete createdStream;
@@ -270,12 +300,19 @@ public:
     }
 
 private:
+    static void SetCompareFunctionsWithHashVal(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
+        const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFuncWithHashVal> &sortCompareFuncs);
+
     static void SetCompareFunctions(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
-        const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp = false);
+        const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs);
+
+    template <typename T>
+    static void SetCompareFunctionWithHashVal(bool isAscending, bool isNullsFirst,
+        std::vector<OperatorUtil::CompareFuncWithHashVal> &sortCompareFuncs);
 
     template <typename T>
     static void SetCompareFunction(bool isAscending, bool isNullsFirst,
-        std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp = false);
+        std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs);
 
     SpillMerger(const std::vector<SpillMergeStream *> &streams, uint64_t totalRowCount, SpillTracker *spillTracker)
         : mergeStreams(new LoserTree<SpillMergeStream>(streams)),

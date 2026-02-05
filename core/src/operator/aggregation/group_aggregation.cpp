@@ -446,6 +446,9 @@ int32_t HashAggregationOperator::InitMaxRowCountAndOutputTypes()
 
 void HashAggregationOperator::InitSpillInfos()
 {
+    if (serialize != nullptr) {
+        spillTypes.push_back(LongType());
+    }
     spillTypes.push_back(VarcharType());
     for (auto &aggregator: aggregators) {
         auto currentSpillType = aggregator->GetSpillType();
@@ -454,7 +457,11 @@ void HashAggregationOperator::InitSpillInfos()
     }
     SortOrder sortOrder;
     sortOrders.resize(1, sortOrder);
-    groupByCloIdx.resize(1, 0);
+    if (serialize != nullptr) {
+        groupByCloIdx.resize(1, 1);
+    } else {
+        groupByCloIdx.resize(1, 0);
+    }
     aggregationSort = std::make_unique<AggregationSort>(aggregators);
 }
 
@@ -1113,11 +1120,11 @@ ErrorCode HashAggregationOperator::SpillToDisk()
             auto statefulMachine =
                     serialize->hashmap.GetOutputMachine(spillOutputState.outputHashmapPos,
                                                         spillOutputState.hasBeenOutputNum);
-            curOutputState = statefulMachine.HandleElements(totalSpillCount, [&](const auto &key, auto &value) mutable {
-                aggregationSortPtr->ParseHashMapToVector(key, value, lambdaRowIndex);
+            curOutputState = statefulMachine.HandleElementsWithHashVal(totalSpillCount, [&](const auto &key, auto &value, auto hashVal) mutable {
+                aggregationSortPtr->ParseHashMapToVectorWithHashVal(key, value, lambdaRowIndex, hashVal);
                 ++lambdaRowIndex;
-            }, [&](const auto &key, auto &value) mutable {
-                aggregationSortPtr->ParseHashMapToVector(key, value, lambdaRowIndex);
+            }, [&](const auto &key, auto &value, auto hashVal) mutable {
+                aggregationSortPtr->ParseHashMapToVectorWithHashVal(key, value, lambdaRowIndex, hashVal);
                 ++lambdaRowIndex;
             });
         } else if (fixedInt32 != nullptr) {
@@ -1159,10 +1166,10 @@ ErrorCode HashAggregationOperator::SpillToDisk()
     }
     spillOutputState.UpdateState(curOutputState);
 
-    aggregationSort->SortKvVector();
+    aggregationSort->SortKvVector(serialize != nullptr);
     auto rowCount = aggregationSort->GetRowCount();
     LogDebug("Spill data to disk starting in hash aggregation operator, rowCount=%lld\n", rowCount);
-    ErrorCode result = spiller->Spill(aggregationSort.get(), this);
+    ErrorCode result = spiller->Spill(aggregationSort.get(), this, serialize != nullptr);
     LogDebug("Spill data to disk finished in hash aggregation operator, rowCount=%lld\n", rowCount);
     aggregationSort->ClearVector();
     return result;
@@ -1337,7 +1344,8 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithoutAgg(VectorBatch *o
         auto currentRowIndex = spillMerger->CurrentRowIndex();
         if (nextKeyIsNew) {
             // construct the final output
-            auto keyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVecBatch->Get(0));
+            auto keyIndex = serialize != nullptr ? 1 : 0;
+            auto keyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVecBatch->Get(keyIndex));
             auto key = keyVector->GetValue(currentRowIndex);
             StringRef keyRef(const_cast<char *>(key.data()), key.size());
             if (serialize != nullptr) {
@@ -1395,7 +1403,7 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
                 newGroupStates.clear();
             }
             if (offset > 0) {
-                int32_t vectorIndex = 1;
+                int32_t vectorIndex = serialize != nullptr ? 2 : 1;
                 for (int32_t aggIdx = 0; aggIdx < aggNum; aggIdx++) {
                     aggregators[aggIdx]->ProcessGroupUnspill(unspillRows, offset, vectorIndex);
                 }
@@ -1413,7 +1421,8 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
         auto currentRowIndex = spillMerger->CurrentRowIndex(isLastRow);
         if (nextKeyIsNew) {
             // this is a new key
-            auto keyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVecBatch->Get(0));
+            auto keyIndex = serialize != nullptr ? 1 : 0;
+            auto keyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVecBatch->Get(keyIndex));
             auto key = keyVector->GetValue(currentRowIndex);
             StringRef keyRef(const_cast<char *>(key.data()), key.size());
             if (serialize != nullptr) {
@@ -1458,7 +1467,7 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
                 }
                 newGroupStates.clear();
             }
-            int32_t vectorIndex = 1;
+            int32_t vectorIndex = serialize != nullptr ? 2 : 1;
             for (int32_t aggIdx = 0; aggIdx < aggNum; aggIdx++) {
                 aggregators[aggIdx]->ProcessGroupUnspill(unspillRows, offset, vectorIndex);
             }
@@ -1476,7 +1485,7 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
                 newGroupStates.clear();
             }
             if (offset > 0) {
-                int32_t vectorIndex = 1;
+                int32_t vectorIndex = serialize != nullptr ? 2 : 1;
                 for (int32_t aggIdx = 0; aggIdx < aggNum; aggIdx++) {
                     aggregators[aggIdx]->ProcessGroupUnspill(unspillRows, offset, vectorIndex);
                 }
@@ -1503,7 +1512,7 @@ void HashAggregationOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         spilledBytes = spiller->GetSpilledBytes();
         auto spillFiles = spiller->FinishSpill();
         UpdateSpillFileInfo(spillFiles.size());
-        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnable(), true);
+        spillMerger = spiller->CreateSpillMerger(spillFiles, spiller->isSpillCompressEnable(), serialize != nullptr);
         delete spiller;
         spiller = nullptr;
         if (spillMerger == nullptr) {
