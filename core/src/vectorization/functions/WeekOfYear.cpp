@@ -87,6 +87,7 @@ public:
             result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
         }
         if (result->GetSize() < size) {
+            delete inputArg;
             OMNI_THROW("WeekOfYearFunction Error:", "Result vector size is less than input size: " +
                 std::to_string(result->GetSize()) + " < " + std::to_string(size));
         }
@@ -132,6 +133,7 @@ public:
                 }
             });
         }
+        delete inputArg;
     }
 };
 } // namespace

@@ -134,7 +134,6 @@ TEST(WeekdayTest, Date32Basic) {
     WeekdayTestHelper::ExecuteWeekday(inputVec, OMNI_DATE32, resultVec);
     WeekdayTestHelper::ValidateResult(resultVec, expected, dateValues.size());
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -152,7 +151,6 @@ TEST(WeekdayTest, Date32EpochAndNegative) {
     WeekdayTestHelper::ExecuteWeekday(inputVec, OMNI_DATE32, resultVec);
     WeekdayTestHelper::ValidateResult(resultVec, expected, dateValues.size());
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -170,7 +168,6 @@ TEST(WeekdayTest, Date32YearBoundary) {
     WeekdayTestHelper::ExecuteWeekday(inputVec, OMNI_DATE32, resultVec);
     WeekdayTestHelper::ValidateResult(resultVec, expected, dateValues.size());
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -186,7 +183,6 @@ TEST(WeekdayTest, IntBasic) {
     WeekdayTestHelper::ExecuteWeekday(inputVec, OMNI_INT, resultVec);
     WeekdayTestHelper::ValidateResult(resultVec, expected, intValues.size());
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -203,7 +199,6 @@ TEST(WeekdayTest, TimestampBasic) {
     WeekdayTestHelper::ExecuteWeekday(inputVec, OMNI_TIMESTAMP, resultVec);
     WeekdayTestHelper::ValidateResult(resultVec, expected, tsValues.size());
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -219,7 +214,6 @@ TEST(WeekdayTest, LongAsTimestamp) {
     WeekdayTestHelper::ExecuteWeekday(inputVec, OMNI_LONG, resultVec);
     WeekdayTestHelper::ValidateResult(resultVec, expected, longValues.size());
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -242,7 +236,6 @@ TEST(WeekdayTest, Date32WithNull) {
     EXPECT_EQ(typed->GetValue(0), 0);  // 2024-01-01 Monday
     EXPECT_EQ(typed->GetValue(2), 1);  // 2024-12-31 Tuesday
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -262,6 +255,5 @@ TEST(WeekdayTest, TimestampWithNull) {
     auto *typed = dynamic_cast<Vector<int32_t> *>(resultVec);
     EXPECT_EQ(typed->GetValue(0), 0);  // 2024-01-01 Monday
 
-    delete inputVec;
     delete resultVec;
 }
