@@ -46,6 +46,13 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterUnaryNumeric<PositiveFunction>(prefix + "positive");
     RegisterFunction<PowerFunction, double, double, double>(prefix + "power", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<RintFunction, double, double>(prefix + "rint", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    // rand()/random() and rand(seed)/random(seed), aligned with Velox (rand + random as aliases)
+    RegisterFunction<RandFunction, double>(prefix + "rand", {}, OMNI_DOUBLE);
+    RegisterFunction<RandSeedFunctionInt32, double, int32_t>(prefix + "rand", {OMNI_INT}, OMNI_DOUBLE);
+    RegisterFunction<RandSeedFunctionInt64, double, int64_t>(prefix + "rand", {OMNI_LONG}, OMNI_DOUBLE);
+    RegisterFunction<RandFunction, double>(prefix + "random", {}, OMNI_DOUBLE);
+    RegisterFunction<RandSeedFunctionInt32, double, int32_t>(prefix + "random", {OMNI_INT}, OMNI_DOUBLE);
+    RegisterFunction<RandSeedFunctionInt64, double, int64_t>(prefix + "random", {OMNI_LONG}, OMNI_DOUBLE);
     // Register round: round(expr) default scale=0, round(expr, scale)
     RegisterUnaryIntegralNumeric<RoundFunction>(prefix + "round");
     RegisterUnaryFloatingPoint<RoundFunction>(prefix + "round");

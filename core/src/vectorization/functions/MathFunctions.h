@@ -8,10 +8,12 @@
 #include "util/compiler_util.h"
 #include "vectorization/Status.h"
 #include <cmath>
+#include <random>
 #include <utility>
 #include "type/decimal128.h"
 #include "type/data_type.h"
 #include "vectorization/functions/Arithmetic.h"
+#include "util/config/QueryConfig.h"
 
 namespace omniruntime::vectorization {
     template <typename T>
@@ -309,6 +311,57 @@ namespace omniruntime::vectorization {
             result = std::rint(a);
             return Status::OK();
         }
+    };
+
+    // Rand function (aligned with Velox sparksql Rand.h semantics; std lib only, no folly)
+    // rand() -> double in [0, 1), non-deterministic
+    // rand(seed) -> double in [0, 1), one generator per batch, sequence per row (Velox semantics)
+    template <typename T>
+    struct RandFunction {
+        ALWAYS_INLINE Status call(double &result)
+        {
+            thread_local std::mt19937 gen(std::random_device{}());
+            result = std::uniform_real_distribution<double>(0.0, 1.0)(gen);
+            return Status::OK();
+        }
+    };
+
+    // rand(seed): int32 seed, one generator per batch, sequence per row (Velox-aligned). T unused, for RegisterFunction<Func<TReturn>>.
+    template <typename T>
+    struct RandSeedFunctionInt32 {
+        void initialize(const std::vector<omniruntime::type::DataTypeId> & /*inputTypes*/, const config::QueryConfig & config,
+            const int32_t *seed)
+        {
+            const int32_t partitionId = config.sparkPartitionId();
+            int64_t s = seed ? static_cast<int64_t>(*seed) : 0;
+            generator_.seed(static_cast<std::mt19937::result_type>(s + partitionId));
+        }
+        ALWAYS_INLINE Status callNullable(double &result, const int32_t * /*seedInput*/)
+        {
+            result = std::uniform_real_distribution<double>(0.0, 1.0)(generator_);
+            return Status::OK();
+        }
+    private:
+        std::mt19937 generator_;
+    };
+
+    // rand(seed): int64 seed, same semantics. T unused, for RegisterFunction<Func<TReturn>>.
+    template <typename T>
+    struct RandSeedFunctionInt64 {
+        void initialize(const std::vector<omniruntime::type::DataTypeId> & /*inputTypes*/, const config::QueryConfig & config,
+            const int64_t *seed)
+        {
+            const int32_t partitionId = config.sparkPartitionId();
+            int64_t s = seed ? *seed : 0;
+            generator_.seed(static_cast<std::mt19937::result_type>(s + partitionId));
+        }
+        ALWAYS_INLINE Status callNullable(double &result, const int64_t * /*seedInput*/)
+        {
+            result = std::uniform_real_distribution<double>(0.0, 1.0)(generator_);
+            return Status::OK();
+        }
+    private:
+        std::mt19937 generator_;
     };
 
     // Round function: round(expr) default scale=0; round(expr, scale). byte/short/int/long/float/double only.

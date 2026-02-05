@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <cstring>
 #include <limits>
 
 #include "test/util/test_util.h"
@@ -542,6 +543,78 @@ TEST(MathFunctionsTest, SinhDoubleEdgeCases) {
         expectedResults.push_back(std::sinh(x));
     }
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sinh", inputData, expectedResults);
+}
+
+// Test rand() - no args, returns double in [0, 1)
+TEST(MathFunctionsTest, RandNoArg) {
+    const int32_t rowSize = 16;
+    std::vector<DataTypeId> argTypes = {};
+    auto signature = std::make_shared<FunctionSignature>("rand", argTypes, OMNI_DOUBLE);
+    auto vectorFunction = VectorFunction::Find(signature);
+    ASSERT_NE(vectorFunction, nullptr);
+
+    ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    std::stack<BaseVector *> args;
+
+    BaseVector *rawResult = nullptr;
+    auto resultType = std::make_shared<DataType>(OMNI_DOUBLE);
+    vectorFunction->Apply(args, resultType, rawResult, &context);
+    ASSERT_NE(rawResult, nullptr);
+    auto *resultVector = static_cast<Vector<double> *>(rawResult);
+    ASSERT_NE(resultVector, nullptr);
+
+    for (int32_t i = 0; i < rowSize; ++i) {
+        double v = resultVector->GetValue(i);
+        EXPECT_GE(v, 0.0) << "rand() at index " << i;
+        EXPECT_LT(v, 1.0) << "rand() at index " << i;
+    }
+    delete rawResult;
+}
+
+// Test rand(seed) - Velox semantics: one generator per batch, each row gets next value (sequence, not constant); Spark seed is int only
+TEST(MathFunctionsTest, RandWithSeed) {
+    const int32_t rowSize = 4;
+    std::vector<int32_t> seedData = {42, 42, 42, 42};
+    BaseVector *seedVec = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+    auto *seedVector = static_cast<Vector<int32_t> *>(seedVec);
+    for (int32_t i = 0; i < rowSize; ++i) {
+        seedVector->SetValue(i, seedData[i]);
+        seedVector->SetNotNull(i);
+    }
+
+    std::vector<DataTypeId> argTypes = {OMNI_INT};
+    auto signature = std::make_shared<FunctionSignature>("rand", argTypes, OMNI_DOUBLE);
+    // Seed is column (non-constant), so pass { nullptr } so UnpackInitialize gets packed.size() == 1
+    std::vector<BaseVector *> constantInputs = { nullptr };
+    auto vectorFunction = VectorFunction::Find(signature, constantInputs);
+    ASSERT_NE(vectorFunction, nullptr);
+
+    ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    std::stack<BaseVector *> args;
+    args.push(seedVec);
+
+    BaseVector *rawResult = nullptr;
+    auto resultType = std::make_shared<DataType>(OMNI_DOUBLE);
+    vectorFunction->Apply(args, resultType, rawResult, &context);
+    ASSERT_NE(rawResult, nullptr);
+    auto *resultVector = static_cast<Vector<double> *>(rawResult);
+    ASSERT_NE(resultVector, nullptr);
+
+    for (int32_t i = 0; i < rowSize; ++i) {
+        double v = resultVector->GetValue(i);
+        EXPECT_GE(v, 0.0) << "row " << i;
+        EXPECT_LT(v, 1.0) << "row " << i;
+    }
+    // Velox: same batch with same seed produces a sequence (not constant encoding)
+    double first = resultVector->GetValue(0);
+    bool allSame = true;
+    for (int32_t i = 1; i < rowSize && allSame; ++i) {
+        if (resultVector->GetValue(i) != first) allSame = false;
+    }
+    EXPECT_FALSE(allSame) << "rand(seed) batch should produce a sequence, not all same (Velox-aligned)";
+    delete rawResult;
 }
 
 // Test sqrt function
