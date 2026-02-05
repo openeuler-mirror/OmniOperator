@@ -308,6 +308,32 @@ struct ChrFunction {
     }
 };
 
+/// lower function
+/// lower(string) -> string
+/// Converts the input string to lowercase. Aligned with Velox lower semantics:
+/// ASCII letters A-Z are converted to a-z; other bytes are unchanged (ASCII path).
+/// Empty string returns empty string. NULL input yields NULL output.
+template <typename T>
+struct LowerFunction {
+    ALWAYS_INLINE bool call(std::string& result, const std::string_view& input)
+    {
+        result.resize(input.size());
+        for (size_t i = 0; i < input.size(); ++i) {
+            unsigned char c = static_cast<unsigned char>(input[i]);
+            result[i] = (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : input[i];
+        }
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string& result, const std::string_view* input)
+    {
+        if (input == nullptr) {
+            return false;
+        }
+        return call(result, *input);
+    }
+};
+
 /// unbase64(string) -> varbinary (as string)
 /// Decodes Base64-encoded string to binary. Returns Status on decode error (row becomes NULL).
 template <typename T>
