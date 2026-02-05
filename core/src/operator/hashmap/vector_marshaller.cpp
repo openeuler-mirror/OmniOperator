@@ -539,7 +539,7 @@ bool SerializeFixedKeysIgnoreNullIntoArenaSimd(BaseVector *baseVector, int32_t r
     if (rowid == joinRownum - 1) {
         pos += rawDataSize;
     }
-    
+
     return false;
 }
 

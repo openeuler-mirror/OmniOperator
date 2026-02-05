@@ -48,7 +48,7 @@ template <typename DATA_TYPE> void VectorSliceGetValuesAndNulls()
     auto vector = CreateVectorAndSetValue<DATA_TYPE>(size);
     VectorSetNull(vector.get());
 
-    auto vector2 = vector->Slice(offSet, sliceLength);
+    auto vector2 = (Vector<DATA_TYPE> *)(vector->Slice(offSet, sliceLength));
 
     auto vectorNulls = UnsafeBaseVector::GetNullsHelper(vector2);
     DATA_TYPE *vectorValues = UnsafeVector::GetRawValues(vector2);

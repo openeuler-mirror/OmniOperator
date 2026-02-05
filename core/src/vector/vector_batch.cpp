@@ -33,6 +33,12 @@ void VectorBatch::Append(BaseVector *vector)
     vectors.emplace_back(vector);
 }
 
+void VectorBatch::AppendFlat(BaseVector *vector)
+{
+    vectors.emplace_back(vector);
+    ++flatSize;
+}
+
 BaseVector **VectorBatch::GetVectors()
 {
     return vectors.data();
@@ -58,18 +64,9 @@ void VectorBatch::ResizeVectorCount(size_t vectorCnt)
 
 void VectorBatch::FreeAllVectors()
 {
-    auto vectorSize = vectors.size();
-    std::unordered_set<BaseVector *> deleted;
-    for (size_t vecIndex = 0; vecIndex < vectorSize; ++vecIndex) {
-        if (deleted.count(vectors[vecIndex])) {
-            continue;
-        }
+    int32_t vectorSize = static_cast<int32_t>(vectors.size()) - flatSize;
+    for (int32_t vecIndex = 0; vecIndex < vectorSize; ++vecIndex) {
         delete vectors[vecIndex];
-        try {
-            deleted.insert(vectors[vecIndex]);
-        } catch (const std::exception &e) {
-            throw std::runtime_error("fail to insert");
-        }
         vectors[vecIndex] = nullptr;
     }
     vectors.clear();

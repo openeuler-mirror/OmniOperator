@@ -135,17 +135,17 @@ TEST(Allocator, testSlicedVectorSize)
     }
     int64_t accountedMemory = threadMemoryManager->GetUntrackedMemory();
     // 573 = 152(vector, nullsBuffer, valuesBuffer class, nullsBuffer class) + 21(nulls capacity) + 400(values capacity)
-    EXPECT_EQ(accountedMemory, 573);
+    EXPECT_EQ(accountedMemory, 581);
 
     auto sliceVector = vector->Slice(0, vecSize);
     int64_t accountedMemory2  = threadMemoryManager->GetUntrackedMemory();
     // 677 = accountedMemory + 104(vector, nullsBuffer)
-    EXPECT_EQ(accountedMemory2, accountedMemory + 104);
+    EXPECT_EQ(accountedMemory2, 693);
 
     delete vector;
     int64_t accountedMemory3 = threadMemoryManager->GetUntrackedMemory();
     // 525 = 104(vector, nullsBuffer) + 21(nulls capacity) + 400(values capacity)
-    EXPECT_EQ(accountedMemory3, 525);
+    EXPECT_EQ(accountedMemory3, 533);
 
     delete sliceVector;
     EXPECT_EQ(threadMemoryManager->GetUntrackedMemory(), 0);

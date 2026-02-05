@@ -4,6 +4,7 @@
 
 package nova.hetu.omniruntime.type;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -33,6 +34,11 @@ public class DataType implements Serializable {
         return id;
     }
 
+    @JsonIgnore
+    public int getIdValue() {
+        return id.toValue();
+    }
+
     /**
      * Create a data type object.
      *
@@ -40,7 +46,7 @@ public class DataType implements Serializable {
      * @return data type
      */
     public static DataType create(int typeId) {
-        return new DataType(DataTypeId.values()[typeId]);
+        return new DataType(DataTypeId.fromValue(typeId));
     }
 
     /**
@@ -65,10 +71,26 @@ public class DataType implements Serializable {
         OMNI_VARCHAR(15),
         OMNI_CHAR(16),
         OMNI_CONTAINER(17),
-        OMNI_INVALID(18),
-        OMNI_BYTE(19);
+        OMNI_BYTE(18),
+        OMNI_FLOAT(19),
+        OMNI_ARRAY(30),
+        OMNI_MAP(31),
+        OMNI_ROW(32),
+        OMNI_UNKNOWN(33),
+        OMNI_FUNCTION(34),
+        OMNI_OPAQUE(35),
+        OMNI_INVALID(36);
 
         private final int value;
+
+        public static DataTypeId fromValue(int value) {
+            for (DataTypeId type : DataTypeId.values()) {
+                if (type.value == value) {
+                    return type;
+                }
+            }
+            throw new IllegalArgumentException("Unknown value: " + value);
+        }
 
         DataTypeId(int value) {
             this.value = value;

@@ -96,7 +96,7 @@ template <typename T> void bm_slice_vector_getvalue(benchmark::State &state)
         parent->SetValue(i, value);
     }
 
-    auto vector = parent->Slice(offset, vecSize);
+    auto vector = (Vector<T> *)(parent->Slice(offset, vecSize));
     T total = 0;
     for (auto _ : state) {
         for (int i = 0; i < 1'000'000; i++) {
@@ -122,7 +122,7 @@ template <> void bm_slice_vector_getvalue<std::string>(benchmark::State &state)
             parent->SetValue(i, value);
         }
 
-        vector = parent->Slice(offset, vecSize);
+        vector = (Vector<std::string> *)(parent->Slice(offset, vecSize));
     }
     long total = 0;
     for (auto _ : state) {

@@ -105,7 +105,7 @@ public class DataTypeSerializer {
         @Override
         public JavaType typeFromId(DatabindContext context, String id) throws IOException {
             Class<?> subType = null;
-            DataType.DataTypeId dataTypeId = DataType.DataTypeId.values()[Integer.parseInt(id)];
+            DataType.DataTypeId dataTypeId = DataType.DataTypeId.fromValue(Integer.parseInt(id));
             switch (dataTypeId) {
                 case OMNI_INT:
                     subType = IntDataType.class;

@@ -257,8 +257,8 @@ template <typename T> void vector_copy_positions_value()
     int offset1 = 0;
     int offset2 = 1;
     int copySize = 4;
-    auto v1OffsetZero = vector.CopyPositions(index, offset1, copySize);
-    auto v2OffsetNotZero = vector.CopyPositions(index, offset2, copySize);
+    auto v1OffsetZero = (Vector<T> *)(vector.CopyPositions(index, offset1, copySize));
+    auto v2OffsetNotZero = (Vector<T> *)(vector.CopyPositions(index, offset2, copySize));
 
     for (int32_t i = 0; i < copySize; i++) {
         if (i % 2 == 0) {
@@ -270,7 +270,7 @@ template <typename T> void vector_copy_positions_value()
         EXPECT_EQ(v1OffsetZero->GetValue(i), expected[index[i + offset1]]);
     }
 
-    auto v3Empty = vector.CopyPositions(index, offset2, 0);
+    auto v3Empty = (Vector<T> *)(vector.CopyPositions(index, offset2, 0));
     EXPECT_EQ(v3Empty->GetSize(), 0);
     EXPECT_ANY_THROW(vector.CopyPositions(index, offset1, -1));
     delete v1OffsetZero;
@@ -299,7 +299,7 @@ template <typename T> void dict_copy_positions_value()
     int32_t positions[] = {1, 3, 5, 6};
     int32_t offset = 1;
     int32_t newValueSize = 3;
-    auto copyPositions = vector->CopyPositions(positions, offset, newValueSize);
+    auto copyPositions = (Vector<DictionaryContainer<T>> *)(vector->CopyPositions(positions, offset, newValueSize));
 
     for (int i = 0; i < newValueSize; i++) {
         if (values[positions[i + offset]] % 2 == 0) {
@@ -310,7 +310,7 @@ template <typename T> void dict_copy_positions_value()
         EXPECT_EQ(dictionary->GetValue(values[positions[i + offset]]), expectValue);
     }
 
-    auto v3Empty = vector->CopyPositions(positions, offset, 0);
+    auto v3Empty = (Vector<DictionaryContainer<T>> *)(vector->CopyPositions(positions, offset, 0));
     EXPECT_EQ(v3Empty->GetSize(), 0);
     EXPECT_ANY_THROW(vector->CopyPositions(positions, offset, -1));
     delete copyPositions;
@@ -342,7 +342,7 @@ template <> void dict_copy_positions_value<std::string_view>()
     int32_t positions[] = {1, 3, 5, 6};
     int32_t offset = 1;
     int32_t newValueSize = 3;
-    auto copyPositions = vector->CopyPositions(positions, offset, newValueSize);
+    auto copyPositions =(Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *)(vector->CopyPositions(positions, offset, newValueSize));
 
     for (int i = 0; i < newValueSize; i++) {
         if (values[positions[i + offset]] % 2 == 0) {
@@ -353,7 +353,7 @@ template <> void dict_copy_positions_value<std::string_view>()
         EXPECT_EQ(dictionary->GetValue(values[positions[i + offset]]), expectValue);
     }
 
-    auto v3Empty = vector->CopyPositions(positions, offset, 0);
+    auto v3Empty = (Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *)(vector->CopyPositions(positions, offset, 0));
     EXPECT_EQ(v3Empty->GetSize(), 0);
     EXPECT_ANY_THROW(vector->CopyPositions(positions, offset, -1));
     delete copyPositions;

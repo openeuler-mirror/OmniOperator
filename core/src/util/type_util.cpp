@@ -59,6 +59,8 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Interval_month";
         case OMNI_INTERVAL_DAY_TIME:
             return "Interval_day_time";
+        case OMNI_ARRAY:
+            return "Array";
         default:
             return "UNKNOWN";
     }
@@ -244,5 +246,9 @@ std::shared_ptr<ContainerDataType> ContainerType(std::vector<DataTypePtr> &&fiel
     return std::make_shared<ContainerDataType>(fieldTypes);
 }
 
+std::shared_ptr<ArrayType> ArrayDataType(DataTypePtr child)
+{
+    return std::make_shared<ArrayType>(child);
+}
 }
 }
