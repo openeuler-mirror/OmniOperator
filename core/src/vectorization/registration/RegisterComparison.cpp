@@ -5,7 +5,7 @@
 
 #include "vectorization/functions/Comparisons.h"
 #include "vectorization/functions/In.h"
-#include "vectorization/functions/Greatest.h"
+#include "vectorization/functions/LeastGreatest.h"
 
 namespace omniruntime::vectorization {
 void RegisterCompareFunctions(const std::string &prefix)
@@ -16,8 +16,9 @@ void RegisterCompareFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("lessThan"), makeLessThan);
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("lessThanEqual"), makeLessThanOrEqual);
     
-    // Register Greatest function for all supported types
+    // Register Greatest and Least functions for all supported types
     VectorFunction::RegisterVectorFunctionFactory(GreatestSignatures(), makeGreatest);
+    VectorFunction::RegisterVectorFunctionFactory(LeastSignatures(), makeLeast);
     
     registerIn(prefix);
 }
