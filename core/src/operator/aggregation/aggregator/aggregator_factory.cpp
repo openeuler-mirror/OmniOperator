@@ -330,6 +330,69 @@ std::unique_ptr<Aggregator> StddevSampSparkAggregatorFactory::CreateAggregator(c
     }
 }
 
+std::unique_ptr<Aggregator> StddevPopSparkAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
+{
+    auto inputTypeId = inputTypes.GetIds()[0];
+    switch (inputTypeId) {
+        case OMNI_FLOAT: {
+            return std::make_unique<StddevPopAggregator<OMNI_FLOAT>>(inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_DOUBLE: {
+            return std::make_unique<StddevPopAggregator<OMNI_DOUBLE>>(inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        default: {
+            LogError("Unsupported input type %d for spark stddev_pop aggregate", inputTypeId);
+            return nullptr;
+        }
+    }
+}
+
+std::unique_ptr<Aggregator> VarSampSparkAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
+{
+    auto inputTypeId = inputTypes.GetIds()[0];
+    switch (inputTypeId) {
+        case OMNI_FLOAT: {
+            return std::make_unique<VarSampAggregator<OMNI_FLOAT>>(inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_DOUBLE: {
+            return std::make_unique<VarSampAggregator<OMNI_DOUBLE>>(inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        default: {
+            LogError("Unsupported input type %d for spark var_samp aggregate", inputTypeId);
+            return nullptr;
+        }
+    }
+}
+
+std::unique_ptr<Aggregator> VarPopSparkAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
+{
+    auto inputTypeId = inputTypes.GetIds()[0];
+    switch (inputTypeId) {
+        case OMNI_FLOAT: {
+            return std::make_unique<VarPopAggregator<OMNI_FLOAT>>(inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_DOUBLE: {
+            return std::make_unique<VarPopAggregator<OMNI_DOUBLE>>(inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        default: {
+            LogError("Unsupported input type %d for spark var_pop aggregate", inputTypeId);
+            return nullptr;
+        }
+    }
+}
+
 template <typename InputType>
 std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateFirstAggregatorHelper(FunctionType aggregateType,
     const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw,

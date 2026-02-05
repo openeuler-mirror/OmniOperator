@@ -1,13 +1,13 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  */
-#ifndef OMNI_RUNTIME_STDDEV_SAMP_AGGREGATOR_H
-#define OMNI_RUNTIME_STDDEV_SAMP_AGGREGATOR_H
+#ifndef OMNI_RUNTIME_VAR_SAMP_AGGREGATOR_H
+#define OMNI_RUNTIME_VAR_SAMP_AGGREGATOR_H
 
 #include "aggregator.h"
 
 namespace omniruntime::op {
-SIMD_ALWAYS_INLINE void StdDevSampPartialOp(double &mean, double &m2, double &cnt, const double &in)
+SIMD_ALWAYS_INLINE void VarSampPartialOp(double &mean, double &m2, double &cnt, const double &in)
 {
     cnt++;
     double delta = in - mean;
@@ -19,7 +19,7 @@ SIMD_ALWAYS_INLINE void StdDevSampPartialOp(double &mean, double &m2, double &cn
     m2 += delta * (in - mean);
 }
 
-SIMD_ALWAYS_INLINE void StdDevFinalOp(double &inMean, double &inM2, double &inCnt, double cnt, double mean, double m2)
+SIMD_ALWAYS_INLINE void VarSampFinalOp(double &inMean, double &inM2, double &inCnt, double cnt, double mean, double m2)
 {
     double newCnt = inCnt + cnt;
     double delta = mean - inMean;
@@ -29,28 +29,29 @@ SIMD_ALWAYS_INLINE void StdDevFinalOp(double &inMean, double &inM2, double &inCn
     inCnt = newCnt;
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID = OMNI_DOUBLE> class StddevSampAggregator : public TypedAggregator {
+template <DataTypeId IN_ID, DataTypeId OUT_ID = OMNI_DOUBLE> class VarSampAggregator : public TypedAggregator {
     using RawInputType = typename AggNativeAndVectorType<IN_ID>::type;
     using ResultType = typename AggNativeAndVectorType<OUT_ID>::type;
 
 #pragma pack(push, 1)
 
-    struct StdDevState : BaseStdDevState {
-        static const StddevSampAggregator<IN_ID, OUT_ID>::StdDevState *ConstCastState(const AggregateState *state)
+    struct VarSampState : BaseStdDevState {
+        static const VarSampAggregator<IN_ID, OUT_ID>::VarSampState *ConstCastState(const AggregateState *state)
         {
-            return reinterpret_cast<const StddevSampAggregator<IN_ID, OUT_ID>::StdDevState *>(state);
+            return reinterpret_cast<const VarSampAggregator<IN_ID, OUT_ID>::VarSampState *>(state);
         }
 
-        static StddevSampAggregator<IN_ID, OUT_ID>::StdDevState *CastState(AggregateState *state)
+        static VarSampAggregator<IN_ID, OUT_ID>::VarSampState *CastState(AggregateState *state)
         {
-            return reinterpret_cast<StddevSampAggregator<IN_ID, OUT_ID>::StdDevState *>(state);
+            return reinterpret_cast<VarSampAggregator<IN_ID, OUT_ID>::VarSampState *>(state);
         }
+
         template <typename T>
         static void UpdateState(AggregateState *state, const T &in)
         {
-            StdDevState *stdDevState = CastState(state);
+            VarSampState *varPopState = CastState(state);
             double val = static_cast<double>(in);
-            StdDevSampPartialOp(stdDevState->mean, stdDevState->m2, stdDevState->count, val);
+            VarSampPartialOp(varPopState->mean, varPopState->m2, varPopState->count, val);
         }
 
         template <bool addIf, typename T>
@@ -66,23 +67,23 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID = OMNI_DOUBLE> class StddevSampAgg
 #pragma pack(pop)
 
 public:
-    StddevSampAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
+    VarSampAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial, bool isOverflowAsNull)
-        : TypedAggregator(OMNI_AGGREGATION_TYPE_SAMP, inputTypes, outputTypes, channels, inputRaw, outputPartial,
+        : TypedAggregator(OMNI_AGGREGATION_TYPE_VAR_SAMP, inputTypes, outputTypes, channels, inputRaw, outputPartial,
         isOverflowAsNull)
     {}
 
-    ~StddevSampAggregator() override = default;
+    ~VarSampAggregator() override = default;
 
     size_t GetStateSize() override
     {
-        return sizeof(StdDevState);
+        return sizeof(VarSampState);
     }
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
     {
-        StdDevState *sampState = StdDevState::CastState(state);
+        VarSampState *stdsampState = VarSampState::CastState(state);
         if (!inputRaw) {
             ProcessSingleInternalFinal(state, vector, rowOffset, rowCount, nullMap);
             return;
@@ -91,19 +92,19 @@ public:
             auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromVector<IN_ID>(vector));
             ptr += rowOffset;
             if (nullMap == nullptr) {
-                AddMomentStats<StdDevSampPartialOp, RawInputType>(sampState->mean, sampState->m2, sampState->count, ptr, rowCount);
+                AddMomentStats<VarSampPartialOp, RawInputType>(stdsampState->mean, stdsampState->m2, stdsampState->count, ptr, rowCount);
             } else {
-                AddMomentStatsConditional<StdDevSampPartialOp, RawInputType>(sampState->mean, sampState->m2, sampState->count, ptr,
+                AddMomentStatsConditional<VarSampPartialOp, RawInputType>(stdsampState->mean, stdsampState->m2, stdsampState->count, ptr,
                 rowCount, *nullMap);
             }
         } else {
             auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromDict<IN_ID>(vector));
             auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
             if (nullMap == nullptr) {
-                AddMomentStatsDict<StdDevSampPartialOp, RawInputType>(sampState->mean, sampState->m2, sampState->count, ptr, rowCount,
-                        indexMap);
+                AddMomentStatsDict<VarSampPartialOp, RawInputType>(stdsampState->mean, stdsampState->m2, stdsampState->count, ptr, rowCount,
+                indexMap);
             } else {
-                AddMomentStatsDictConditional<StdDevSampPartialOp, RawInputType>(sampState->mean, sampState->m2, sampState->count, ptr,
+                AddMomentStatsDictConditional<VarSampPartialOp, RawInputType>(stdsampState->mean, stdsampState->m2, stdsampState->count, ptr,
                 rowCount, *nullMap, indexMap);
             }
         }
@@ -124,11 +125,11 @@ public:
         meanPtr += rowOffset;
         m2Ptr += rowOffset;
 
-        StdDevState *sampState = StdDevState::CastState(state);
+        VarSampState *sampState = VarSampState::CastState(state);
         bool isNullMap = nullMap == nullptr;
         for (int i = 0; i < rowCount; i++) {
             if (isNullMap || (*nullMap)[i] == false) {
-                StdDevFinalOp(sampState->mean, sampState->m2, sampState->count, cntPtr[i], meanPtr[i], m2Ptr[i]);
+                VarSampFinalOp(sampState->mean, sampState->m2, sampState->count, cntPtr[i], meanPtr[i], m2Ptr[i]);
             }
         }
     }
@@ -141,20 +142,20 @@ public:
                 auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
-                    AddUseRowIndex<RawInputType, StdDevState::UpdateState>(rowStates, aggStateOffset, ptr);
+                    AddUseRowIndex<RawInputType, VarSampState::UpdateState>(rowStates, aggStateOffset, ptr);
                 } else {
-                    AddConditionalUseRowIndex<RawInputType, StdDevState::template UpdateStateWithCondition<false>>(
+                    AddConditionalUseRowIndex<RawInputType, VarSampState::template UpdateStateWithCondition<false>>(
                         rowStates, aggStateOffset, ptr, *nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromDict<IN_ID>(vector));
                 auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
-                    AddDictUseRowIndex<RawInputType, StdDevState::UpdateState>(rowStates, aggStateOffset, ptr,
+                    AddDictUseRowIndex<RawInputType, VarSampState::UpdateState>(rowStates, aggStateOffset, ptr,
                         indexMap);
                 } else {
                     AddDictConditionalUseRowIndex<RawInputType, ResultType,
-                        StdDevState::template UpdateStateWithCondition<false>>(rowStates, aggStateOffset, ptr, *nullMap,
+                        VarSampState::template UpdateStateWithCondition<false>>(rowStates, aggStateOffset, ptr, *nullMap,
                         indexMap);
                 }
             }
@@ -172,11 +173,11 @@ public:
             m2Ptr += rowOffset;
 
             if (nullMap == nullptr) {
-                AddUseRowIndexMomentStatsFinal<StdDevState, StdDevFinalOp>(rowStates, aggStateOffset, cntPtr, meanPtr,
+                AddUseRowIndexMomentStatsFinal<VarSampState, VarSampFinalOp>(rowStates, aggStateOffset, cntPtr, meanPtr,
                     m2Ptr);
             } else {
                 // Reza: can we use customize float operation similar to sumConditionalFloat
-                AddConditionalUseRowIndexMomentStatsFinal<StdDevState, StdDevFinalOp>(rowStates, aggStateOffset, cntPtr,
+                AddConditionalUseRowIndexMomentStatsFinal<VarSampState, VarSampFinalOp>(rowStates, aggStateOffset, cntPtr,
                     meanPtr, m2Ptr, *nullMap);
             }
         }
@@ -184,7 +185,7 @@ public:
 
     void InitState(AggregateState *state) override
     {
-        StdDevState *sumFlatState = StdDevState::CastState(state + aggStateOffset);
+        VarSampState *sumFlatState = VarSampState::CastState(state + aggStateOffset);
         sumFlatState->m2 = 0.0;
         sumFlatState->mean = 0.0;
         sumFlatState->count = 0.0;
@@ -199,7 +200,7 @@ public:
 
     void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        const StdDevState *sampState = StdDevState::ConstCastState(state + aggStateOffset);
+        const VarSampState *sampState = VarSampState::ConstCastState(state + aggStateOffset);
         if (outputPartial) {
             auto *cntVector = static_cast<Vector<double> *>(vectors[0]);
             auto *meanVector = static_cast<Vector<double> *>(vectors[1]);
@@ -228,7 +229,7 @@ public:
                     sampValVector->SetValue(rowIndex, std::numeric_limits<double>::quiet_NaN());
                 }
             } else {
-                auto result = std::sqrt(currentM2 / (sampState->count - 1));
+                auto result = currentM2 / (sampState->count - 1);
                 sampValVector->SetValue(rowIndex, result);
             }
         }
@@ -250,8 +251,8 @@ public:
                 auto mean = meanVector->GetValue(index);
                 auto m2VecIdx = static_cast<Vector<int64_t> *>(batch->Get(thirdVecIdx));
                 auto m2 = m2VecIdx->GetValue(index);
-                StdDevState *state = StdDevState::CastState(row.state + aggStateOffset);
-                StdDevFinalOp(state->mean, state->m2, state->count, count, mean, m2);
+                VarSampState *state = VarSampState::CastState(row.state + aggStateOffset);
+                VarSampFinalOp(state->mean, state->m2, state->count, count, mean, m2);
             }
         }
     }
@@ -264,7 +265,7 @@ public:
 
         auto rowCount = static_cast<int32_t>(groupStates.size());
         for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-            auto *state = StdDevState::CastState(groupStates[rowIndex] + aggStateOffset);
+            auto *state = VarSampState::CastState(groupStates[rowIndex] + aggStateOffset);
             if (UNLIKELY(state->IsEmpty())) {
                 // set null for empty group(all rows are NULL) when spill to ensure skip empty group when unspill
                 countVector->SetNull(rowIndex);
@@ -284,7 +285,7 @@ public:
             auto meanVector = static_cast<Vector<double> *>(vectors[1]);
             auto m2Vector = static_cast<Vector<double> *>(vectors[2]);
             for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-                auto *state = StdDevState::CastState(groupStates[rowIndex] + aggStateOffset);
+                auto *state = VarSampState::CastState(groupStates[rowIndex] + aggStateOffset);
                 if (UNLIKELY(state->IsEmpty())) {
                     // all input are nulls, return 0
                     countVector->SetValue(rowIndex, 0);
@@ -297,23 +298,23 @@ public:
                 m2Vector->SetValue(rowIndex, state->m2);
             }
         } else {
-            auto stdDevSampValVector = static_cast<Vector<double> *>(vectors[0]);
+            auto VarSampValVector = static_cast<Vector<double> *>(vectors[0]);
             for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-                auto *state = StdDevState::CastState(groupStates[rowIndex] + aggStateOffset);
+                auto *state = VarSampState::CastState(groupStates[rowIndex] + aggStateOffset);
                 if (UNLIKELY(state->IsEmpty())) {
                     // only contains null
-                    stdDevSampValVector->SetNull(rowIndex);
+                    VarSampValVector->SetNull(rowIndex);
                     continue;
                 }
                 if (state->count == 1) {
                     if (!IsStatisticalAggregate()) {
-                        stdDevSampValVector->SetNull(rowIndex);
+                        VarSampValVector->SetNull(rowIndex);
                     } else {
-                        stdDevSampValVector->SetValue(rowIndex, std::numeric_limits<double>::quiet_NaN());
+                        VarSampValVector->SetValue(rowIndex, std::numeric_limits<double>::quiet_NaN());
                     }
                 } else {
-                    auto result = std::sqrt(state->m2 / (state->count - 1));
-                    stdDevSampValVector->SetValue(rowIndex, result);
+                    auto result = state->m2 / (state->count - 1);
+                    VarSampValVector->SetValue(rowIndex, result);
                 }
             }
         }
@@ -389,4 +390,4 @@ protected:
 };
 }
 
-#endif // OMNI_RUNTIME_STDDEV_SAMP_AGGREGATOR_H
+#endif // OMNI_RUNTIME_VAR_SAMP_AGGREGATOR_H

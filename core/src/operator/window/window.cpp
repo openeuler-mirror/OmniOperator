@@ -192,6 +192,9 @@ OmniStatus WindowOperator::Init()
             case OMNI_AGGREGATION_TYPE_COUNT_COLUMN:
             case OMNI_AGGREGATION_TYPE_AVG:
             case OMNI_AGGREGATION_TYPE_SAMP:
+            case OMNI_AGGREGATION_TYPE_STD_POP:
+            case OMNI_AGGREGATION_TYPE_VAR_SAMP:
+            case OMNI_AGGREGATION_TYPE_VAR_POP:
             case OMNI_AGGREGATION_TYPE_MAX:
             case OMNI_AGGREGATION_TYPE_MIN:
             case OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL:
