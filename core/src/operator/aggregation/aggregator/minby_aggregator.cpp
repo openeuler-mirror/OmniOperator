@@ -91,6 +91,8 @@ void MinByAggregator<COL1_ID, COL2_ID>::ExtractValuesForSpill(std::vector<Aggreg
         auto *minByState = MinByState<targetValueType, sortKeyType>::CastState(groupStates[rowIndex] + aggStateOffset);
         if (minByState->isEmpty) {
             // dont need spill any states
+			sortKeyVector->SetNull(rowIndex);
+			targetValueVector->SetNull(rowIndex);
             continue;
         }
         targetValueVector->SetValue(rowIndex, minByState->targetValue);

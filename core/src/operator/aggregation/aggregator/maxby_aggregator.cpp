@@ -91,6 +91,8 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ExtractValuesForSpill(std::vector<Aggreg
         auto *maxByState = MaxByState<targetValueType, sortKeyType>::CastState(groupStates[rowIndex] + aggStateOffset);
         if (maxByState->isEmpty) {
             // dont need spill any states
+			sortKeyVector->SetNull(rowIndex);
+			targetValueVector->SetNull(rowIndex);
             continue;
         }
         targetValueVector->SetValue(rowIndex, maxByState->targetValue);
