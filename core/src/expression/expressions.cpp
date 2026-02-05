@@ -986,7 +986,7 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     }
     if (funcName == "CAST") {
         auto hook = std::make_shared<CastHooks>(config::QueryConfig());
-        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, returnType, true, hook);
+        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
     }
 }
 
@@ -1004,7 +1004,7 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     vectorFunction = VectorFunction::Find(signature);
     if (funcName == "CAST") {
         auto hook = std::make_shared<CastHooks>(config::QueryConfig());
-        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, returnType, true, hook);
+        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
     }
 }
 
@@ -1022,7 +1022,7 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     vectorFunction = VectorFunction::Find(signature);
     if (funcName == "CAST") {
         auto hook = std::make_shared<CastHooks>(config::QueryConfig());
-        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, returnType, true, hook);
+        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
     }
 }
 

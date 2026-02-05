@@ -150,6 +150,7 @@ void CastExpr::apply(const SelectivityVector &rows, BaseVector *input, Execution
     }
     // If there are nulls or rows that encountered errors in the input, add nulls
     // to the result at the same rows.
+    result = localResult;
     OMNI_CHECK(result!=nullptr, "result can not be null!");
     // todo:
     // if (nullBits || context.HasError()) {
@@ -232,7 +233,7 @@ VectorPtr CastExpr::applyIntToBinaryCast(const SelectivityVector &rows, Executio
 {
     auto result = VectorHelper::CreateFlatVector(OMNI_VARBINARY, context.GetResultRowSize());
     const auto flatResult = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(result);
-    const auto simpleInput = reinterpret_cast<const Vector<TInput> *>(&input);
+    const auto simpleInput = reinterpret_cast<const Vector<TInput> *>(input);
 
     // The created string view is always inlined for int types.
     char inlined[sizeof(TInput)];
@@ -321,17 +322,17 @@ void CastExpr::applyPeeled(const SelectivityVector &rows, BaseVector *input, Exe
     } else {
         switch (toType->GetId()) {
             case OMNI_MAP: {
-                auto mapVector = reinterpret_cast<const MapVector *>(&input);
+                auto mapVector = reinterpret_cast<const MapVector *>(input);
                 result = applyMap(rows, mapVector, context, fromType->asMap(), toType->asMap());
                 break;
             }
             case OMNI_ARRAY: {
-                auto arrayVector = reinterpret_cast<const ArrayVector *>(&input);
+                auto arrayVector = reinterpret_cast<const ArrayVector *>(input);
                 result = applyArray(rows, arrayVector, context, fromType->asArray(), toType->asArray());
                 break;
             }
             case OMNI_ROW: {
-                auto rowVector = reinterpret_cast<const RowVector *>(&input);
+                auto rowVector = reinterpret_cast<const RowVector *>(input);
                 result = applyRow(rows, rowVector, context, fromType->asRow(), toType);
                 break;
             }
@@ -382,7 +383,7 @@ VectorPtr CastExpr::castFromDate(const SelectivityVector &rows, BaseVector *inpu
     const DataTypePtr &toType)
 {
     auto *castResult = VectorHelper::CreateFlatVector(toType->GetId(), rows.size());
-    auto *inputFlatVector = reinterpret_cast<const Vector<int32_t> *>(&input);
+    auto *inputFlatVector = reinterpret_cast<const Vector<int32_t> *>(input);
 
     switch (toType->GetId()) {
         case OMNI_VARCHAR: {
@@ -407,13 +408,13 @@ VectorPtr CastExpr::castFromDate(const SelectivityVector &rows, BaseVector *inpu
         case OMNI_TIMESTAMP: {
             static const int64_t kMillisPerDay{86'400'000};
             const auto *timeZone = getTimeZoneFromConfig(context.queryConfig());
-            auto *resultFlatVector = reinterpret_cast<Vector<Timestamp> *>(castResult);
+            auto *resultFlatVector = reinterpret_cast<Vector<int64_t> *>(castResult);
             applyToSelectedNoThrowLocal(context, rows, castResult, [&](int row) {
                 auto timestamp = Timestamp::fromMillis(inputFlatVector->GetValue(row) * kMillisPerDay);
                 if (timeZone) {
                     timestamp.toGMT(*timeZone);
                 }
-                resultFlatVector->SetValue(row, timestamp);
+                resultFlatVector->SetValue(row, timestamp.toMicros());
             });
 
             return castResult;
@@ -429,7 +430,7 @@ VectorPtr CastExpr::castToDate(const SelectivityVector &rows, BaseVector *input,
     auto *resultFlatVector = reinterpret_cast<Vector<int32_t> *>(castResult);
     switch (fromType->GetId()) {
         case OMNI_VARCHAR: {
-            auto *inputVector = reinterpret_cast<const Vector<LargeStringContainer<std::string_view>> *>(&input);
+            auto *inputVector = reinterpret_cast<const Vector<LargeStringContainer<std::string_view>> *>(input);
             applyToSelectedNoThrowLocal(context, rows, castResult, [&](int row) {
                 bool wrapException = true;
                 try {
@@ -460,10 +461,10 @@ VectorPtr CastExpr::castToDate(const SelectivityVector &rows, BaseVector *input,
             return castResult;
         }
         case OMNI_TIMESTAMP: {
-            auto *inputVector = reinterpret_cast<const Vector<Timestamp> *>(&input);
+            auto *inputVector = reinterpret_cast<const Vector<int64_t> *>(input);
             const auto *timeZone = getTimeZoneFromConfig(context.queryConfig());
             applyToSelectedNoThrowLocal(context, rows, castResult, [&](int row) {
-                const auto days = omniruntime::type::util::toDate(inputVector->GetValue(row), timeZone);
+                const auto days = omniruntime::type::util::toDate(Timestamp::fromMicros(inputVector->GetValue(row)), timeZone);
                 resultFlatVector->SetValue(row, days);
             });
             return castResult;
@@ -477,7 +478,7 @@ VectorPtr CastExpr::castFromIntervalDayTime(const SelectivityVector &rows, BaseV
 {
     VectorPtr castResult = VectorHelper::CreateFlatVector(toType->GetId(), context.GetResultRowSize());
 
-    auto *inputFlatVector = reinterpret_cast<const Vector<int64_t> *>(&input);
+    auto *inputFlatVector = reinterpret_cast<const Vector<int64_t> *>(input);
     switch (toType->GetId()) {
         case OMNI_VARCHAR: {
             auto *resultFlatVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(castResult);

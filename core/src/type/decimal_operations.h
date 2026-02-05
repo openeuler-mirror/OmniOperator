@@ -82,6 +82,50 @@ static constexpr int MAX_PRECISION = 38;
 static constexpr int MAX_SCALE = 38;
 static constexpr int32_t MAX_DECIMAL64_DIGITS = 18;
 static constexpr int I64_BIT = 64;
+
+static constexpr int128_t kPowersOfTen[39] = {
+    1,
+    10,
+    100,
+    1'000,
+    10'000,
+    100'000,
+    1'000'000,
+    10'000'000,
+    100'000'000,
+    1'000'000'000,
+    10'000'000'000,
+    100'000'000'000,
+    1'000'000'000'000,
+    10'000'000'000'000,
+    100'000'000'000'000,
+    1'000'000'000'000'000,
+    10'000'000'000'000'000,
+    100'000'000'000'000'000,
+    1'000'000'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)10,
+    1'000'000'000'000'000'000 * (int128_t)100,
+    1'000'000'000'000'000'000 * (int128_t)1'000,
+    1'000'000'000'000'000'000 * (int128_t)10'000,
+    1'000'000'000'000'000'000 * (int128_t)100'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000,
+    1'000'000'000'000'000'000 * (int128_t)10'000'000,
+    1'000'000'000'000'000'000 * (int128_t)100'000'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)10'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)100'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)10'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)100'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)10'000'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)100'000'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000'000'000 *
+        (int128_t)10,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000'000'000 *
+        (int128_t)100};
+
 static constexpr uint128_t TenOfScaleMultipliers[39] = {
     uint128_t(1LL),
     uint128_t(10LL),
@@ -170,6 +214,42 @@ static constexpr double DOUBLE_10_POW[] = {
     1.0e12, 1.0e13, 1.0e14, 1.0e15, 1.0e16, 1.0e17,
     1.0e18, 1.0e19, 1.0e20, 1.0e21, 1.0e22
 };
+
+template <typename T>
+T CheckedMultiply(const T &a, const T &b, const char *typeName = "integer")
+{
+    T result;
+    bool overflow = __builtin_mul_overflow(a, b, &result);
+    if (UNLIKELY(overflow)) {
+        OMNI_FAIL("ArithmeticError CheckedMultiply!");
+    }
+    return result;
+}
+
+template <typename R, typename A, typename B>
+inline static R DivideWithRoundUp(R &r, A a, B b, bool noRoundUp, uint8_t aRescale, uint8_t /*bRescale*/)
+{
+    // VELOX_USER_CHECK_NE(b, 0, "Division by zero");
+    int resultSign = 1;
+    R unsignedDividendRescaled(a);
+    if (a < 0) {
+        resultSign = -1;
+        unsignedDividendRescaled *= -1;
+    }
+    B unsignedDivisor(b);
+    if (b < 0) {
+        resultSign *= -1;
+        unsignedDivisor *= -1;
+    }
+    unsignedDividendRescaled = CheckedMultiply<R>(unsignedDividendRescaled, R(kPowersOfTen[aRescale]), "Decimal");
+    R quotient = unsignedDividendRescaled / unsignedDivisor;
+    R remainder = unsignedDividendRescaled % unsignedDivisor;
+    if (!noRoundUp && static_cast<const B>(remainder) * 2 >= unsignedDivisor) {
+        ++quotient;
+    }
+    r = quotient * resultSign;
+    return remainder * resultSign;
+}
 
 template<bool allowDecimalRoundUp = false>
 inline OpStatus DecimalFromString(const char *s, std::size_t len, int128_t &result, int32_t &scale,
@@ -1826,7 +1906,7 @@ public:
     template <typename T>
     FOLLY_ALWAYS_INLINE static bool valueInPrecisionRange(T value, uint8_t precision)
     {
-        return value < TenOfScaleMultipliers[precision] && value > -TenOfScaleMultipliers[precision];
+        return value < kPowersOfTen[precision] && value > -kPowersOfTen[precision];
     }
 
     template <typename TInput, typename TOutput>
@@ -1837,10 +1917,10 @@ public:
         auto scaleDifference = toScale - fromScale;
         bool isOverflow = false;
         if (scaleDifference >= 0) {
-            isOverflow = __builtin_mul_overflow(rescaledValue, TenOfScaleMultipliers[scaleDifference], &rescaledValue);
+            isOverflow = __builtin_mul_overflow(rescaledValue, kPowersOfTen[scaleDifference], &rescaledValue);
         } else {
             scaleDifference = -scaleDifference;
-            const auto scalingFactor = TenOfScaleMultipliers[scaleDifference];
+            const auto scalingFactor = kPowersOfTen[scaleDifference];
             rescaledValue /= scalingFactor;
             int128_t remainder = inputValue % scalingFactor;
             if (inputValue >= 0 && remainder >= scalingFactor / 2) {
@@ -1926,8 +2006,7 @@ public:
             }
         } else {
             const auto scalingFactor = TenOfScaleMultipliers[fractionDigits - scale];
-            //todo:
-            // DivideRoundUp<int128_t>(rescaledValue, rescaledValue, scalingFactor, false, 0, 0);
+            DivideWithRoundUp<TOutput, TOutput, int128_t>(rescaledValue, rescaledValue, scalingFactor, false, 0, 0);
         }
 
         if (!valueInPrecisionRange<TOutput>(rescaledValue, precision)) {

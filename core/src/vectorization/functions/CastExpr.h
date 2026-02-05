@@ -111,8 +111,7 @@ private:
         Func &&func);
 
     template <DataTypeId ToKind, DataTypeId FromKind, typename TPolicy>
-    void applyCastKernel(vector_size_t row, ExecutionContext &context, BaseVector *input,
-        Vector<typename NativeType<ToKind>::type> *result);
+    void applyCastKernel(vector_size_t row, ExecutionContext &context, BaseVector *input, BaseVector *result);
 
     VectorPtr castFromDate(const SelectivityVector &rows, BaseVector *input, ExecutionContext &context,
         const DataTypePtr &toType);

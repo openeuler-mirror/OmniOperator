@@ -33,7 +33,7 @@ struct DecimalComponents {
 };
 
 // Extract a string view of continuous digits.
-std::string_view extractDigits(const char* s, size_t start, size_t size);
+std::string_view extractDigits(const char *s, size_t start, size_t size);
 
 /// Parse decimal components, including whole digits, fractional digits,
 /// exponent and sign, from input chars. Returns error status if input chars
@@ -190,8 +190,11 @@ void CastExpr::applyCastPrimitives(const SelectivityVector &rows, ExecutionConte
 
 template <DataTypeId ToKind, DataTypeId FromKind, typename TPolicy>
 void CastExpr::applyCastKernel(vector_size_t row, ExecutionContext &context, BaseVector *input,
-    Vector<typename NativeType<ToKind>::type> *result)
+    BaseVector *result)
 {
+    using TargetElementType = std::conditional_t<ToKind == OMNI_CHAR || ToKind == OMNI_VARCHAR,
+            LargeStringContainer<std::string_view>, typename NativeType<ToKind>::type>;
+    auto resultFlat = reinterpret_cast<Vector<TargetElementType> *>(result);
     bool wrapException = true;
     auto setError = [&](const std::string &details) INLINE_LAMBDA {
         if (setNullInResultAtError()) {
@@ -199,7 +202,8 @@ void CastExpr::applyCastKernel(vector_size_t row, ExecutionContext &context, Bas
         } else {
             wrapException = false;
             if (context.captureErrorDetails()) {
-                const auto errorDetails = detail::makeErrorMessage(input, row, std::make_shared<IntDataType>(), details);
+                const auto errorDetails =
+                    detail::makeErrorMessage(input, row, std::make_shared<IntDataType>(), details);
                 context.SetStatus(row, Status::UserError("{}", errorDetails));
             } else {
                 context.SetStatus(row, Status::UserError());
@@ -214,12 +218,14 @@ void CastExpr::applyCastKernel(vector_size_t row, ExecutionContext &context, Bas
         if (castResult.hasError()) {
             setError(castResult.error().message());
         } else {
-            result->SetValue(errorRow, castResult.value());
+            resultFlat->SetValue(errorRow, castResult.value());
         }
     };
 
     try {
-        auto inputFlat = reinterpret_cast<Vector<typename NativeType<FromKind>::type> *>(input);
+        using TargetElementType = std::conditional_t<FromKind == OMNI_CHAR || FromKind == OMNI_VARCHAR,
+            LargeStringContainer<std::string_view>, typename NativeType<FromKind>::type>;
+        auto inputFlat = reinterpret_cast<Vector<TargetElementType> *>(input);
         auto inputRowValue = inputFlat->GetValue(row);
 
         if constexpr ((FromKind == OMNI_BYTE || FromKind == OMNI_SHORT || FromKind == OMNI_INT || FromKind == OMNI_LONG)
@@ -235,7 +241,7 @@ void CastExpr::applyCastKernel(vector_size_t row, ExecutionContext &context, Bas
                 setError(castResult.error().message());
             } else {
                 if (castResult.value().has_value()) {
-                    result->SetValue(row, castResult.value().value());
+                    resultFlat->SetValue(row, castResult.value().value());
                 } else {
                     result->SetNull(row);
                 }
@@ -275,9 +281,9 @@ void CastExpr::applyCastKernel(vector_size_t row, ExecutionContext &context, Bas
         if constexpr (ToKind == OMNI_VARCHAR || ToKind == OMNI_VARBINARY) {
             // Write the result output to the output vector
             auto tmpStr = std::string_view(output);
-            result->SetValue(row, tmpStr);
+            resultFlat->SetValue(row, tmpStr);
         } else {
-            result->SetValue(row, output);
+            resultFlat->SetValue(row, output);
         }
     } catch (const OmniException &ue) {
         setError(ue.what());
@@ -290,8 +296,8 @@ template <typename TInput, typename TOutput>
 void CastExpr::applyDecimalCastKernel(const SelectivityVector &rows, BaseVector *input, ExecutionContext &context,
     const DataTypePtr &fromType, const DataTypePtr &toType, VectorPtr &castResult)
 {
-    auto sourceVector = reinterpret_cast<Vector<TInput> *>(&input);
-    auto result = reinterpret_cast<Vector<TOutput> *>(&input);
+    auto sourceVector = reinterpret_cast<Vector<TInput> *>(input);
+    auto result = reinterpret_cast<Vector<TOutput> *>(castResult);
     auto castResultRawBuffer = reinterpret_cast<TOutput *>(VectorHelper::UnsafeGetValues(result));
     const auto &fromPrecisionScale = GetDecimalPrecisionScale(*fromType);
     const auto &toPrecisionScale = GetDecimalPrecisionScale(*toType);
@@ -318,8 +324,8 @@ template <typename TInput, typename TOutput>
 void CastExpr::applyIntToDecimalCastKernel(const SelectivityVector &rows, BaseVector *input, ExecutionContext &context,
     const DataTypePtr &toType, VectorPtr &castResult)
 {
-    auto sourceVector = reinterpret_cast<Vector<TInput> *>(&input);
-    auto result = reinterpret_cast<Vector<TOutput> *>(&input);
+    auto sourceVector = reinterpret_cast<Vector<TInput> *>(input);
+    auto result = reinterpret_cast<Vector<TOutput> *>(castResult);
     auto castResultRawBuffer = reinterpret_cast<TOutput *>(VectorHelper::UnsafeGetValues(result));
     const auto &toPrecisionScale = GetDecimalPrecisionScale(*toType);
     applyToSelectedNoThrowLocal(context, rows, castResult, [&](vector_size_t row) {
@@ -339,7 +345,7 @@ VectorPtr CastExpr::applyDecimalToVarcharCast(const SelectivityVector &rows, Bas
 {
     VectorPtr result = VectorHelper::CreateFlatVector(OMNI_VARCHAR, context.GetResultRowSize());
     auto flatResult = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(result);
-    const auto simpleInput = reinterpret_cast<Vector<FromNativeType> *>(&input);
+    const auto simpleInput = reinterpret_cast<Vector<FromNativeType> *>(input);
     int precision = GetDecimalPrecisionScale(*fromType).first;
     int scale = GetDecimalPrecisionScale(*fromType).second;
     auto rowSize = DecimalOperations::MaxStringViewSize(precision, scale);
@@ -363,8 +369,8 @@ template <typename TInput, typename TOutput>
 void CastExpr::applyFloatingPointToDecimalCastKernel(const SelectivityVector &rows, BaseVector *input,
     ExecutionContext &context, const DataTypePtr &toType, VectorPtr &result)
 {
-    const auto floatingInput = reinterpret_cast<Vector<TInput> *>(&input);
-    auto rawResults = reinterpret_cast<TOutput *>(VectorHelper::UnsafeGetValues(floatingInput));
+    const auto floatingInput = reinterpret_cast<Vector<TInput> *>(input);
+    auto rawResults = reinterpret_cast<TOutput *>(VectorHelper::UnsafeGetValues(result));
     const auto toPrecisionScale = GetDecimalPrecisionScale(*toType);
 
     applyToSelectedNoThrowLocal(context, rows, result, [&](vector_size_t row) {
@@ -388,8 +394,8 @@ template <typename T>
 void CastExpr::applyVarcharToDecimalCastKernel(const SelectivityVector &rows, BaseVector *input,
     ExecutionContext &context, const DataTypePtr &toType, VectorPtr &result)
 {
-    auto sourceVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(&input);
-    const auto floatingInput = reinterpret_cast<Vector<T> *>(&input);
+    auto sourceVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(input);
+    const auto floatingInput = reinterpret_cast<Vector<T> *>(result);
     auto rawResults = reinterpret_cast<T *>(VectorHelper::UnsafeGetValues(floatingInput));
     const auto toPrecisionScale = GetDecimalPrecisionScale(*toType);
 
@@ -419,7 +425,7 @@ VectorPtr CastExpr::applyDecimalToFloatCast(const SelectivityVector &rows, BaseV
     VectorPtr result = VectorHelper::CreateFlatVector(ToKind, context.GetResultRowSize());
     auto resultBuffer = static_cast<To *>(VectorHelper::UnsafeGetValues(result));
     const auto precisionScale = GetDecimalPrecisionScale(*fromType);
-    const auto simpleInput = reinterpret_cast<Vector<FromNativeType> *>(&input);
+    const auto simpleInput = reinterpret_cast<Vector<FromNativeType> *>(input);
     const auto scaleFactor = TenOfScaleMultipliers[precisionScale.second];
     applyToSelectedNoThrowLocal(context, rows, result, [&](int row) {
         const auto output = omniruntime::type::util::Converter<ToKind>::tryCast(simpleInput->GetValue(row)).thenOrThrow(
@@ -440,7 +446,7 @@ VectorPtr CastExpr::applyDecimalToIntegralCast(const SelectivityVector &rows, Ba
     VectorPtr result = VectorHelper::CreateFlatVector(ToKind, context.GetResultRowSize());
     auto resultBuffer = static_cast<To *>(VectorHelper::UnsafeGetValues(result));
     const auto precisionScale = GetDecimalPrecisionScale(*fromType);
-    const auto simpleInput = reinterpret_cast<Vector<FromNativeType> *>(&input);
+    const auto simpleInput = reinterpret_cast<Vector<FromNativeType> *>(input);
     const auto scaleFactor = TenOfScaleMultipliers[precisionScale.second];
     applyToSelectedNoThrowLocal(context, rows, result, [&](vector_size_t row) {
         resultBuffer[row] = static_cast<To>(simpleInput->GetValue(row) / scaleFactor);
@@ -454,7 +460,7 @@ VectorPtr CastExpr::applyDecimalToBooleanCast(const SelectivityVector &rows, Bas
 {
     VectorPtr result = VectorHelper::CreateFlatVector(OMNI_BOOLEAN, context.GetResultRowSize());
     auto resultBuffer = static_cast<bool *>(VectorHelper::UnsafeGetValues(result));
-    const auto simpleInput = reinterpret_cast<Vector<FromNativeType> *>(&input);
+    const auto simpleInput = reinterpret_cast<Vector<FromNativeType> *>(input);
     applyToSelectedNoThrowLocal(context, rows, result, [&](int row) {
         auto value = simpleInput->GetValue(row);
         resultBuffer[row] = value != 0;
@@ -489,6 +495,7 @@ template <DataTypeId ToKind>
 void CastExpr::applyCastPrimitivesDispatch(const DataTypePtr &fromType, const DataTypePtr &toType,
     const SelectivityVector &rows, ExecutionContext &context, BaseVector *input, VectorPtr &result)
 {
+    result = VectorHelper::CreateFlatVector(toType->GetId(), context.GetResultRowSize());
     // This already excludes complex types, hugeInt and unknown from type kinds.
     switch (fromType->GetId()) {
         case OMNI_BOOLEAN: {

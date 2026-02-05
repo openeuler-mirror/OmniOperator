@@ -27,6 +27,7 @@
 #include "type/Timestamp.h"
 #include "type/TimestampConversion.h"
 #include "type/base_operations.h"
+
 namespace omniruntime::type::util {
 using namespace vectorization;
 
@@ -132,6 +133,11 @@ struct Converter<OMNI_BOOLEAN, void, TPolicy> {
     }
 
     static Expected<T> tryCast(folly::StringPiece v)
+    {
+        return castToBoolean<TPolicy>(v.data(), v.size());
+    }
+
+    static Expected<T> tryCast(std::string_view v)
     {
         return castToBoolean<TPolicy>(v.data(), v.size());
     }
@@ -271,6 +277,11 @@ struct Converter<KIND, std::enable_if_t<KIND == OMNI_BYTE || KIND == OMNI_SHORT 
         return result;
     }
 
+    static Expected<T> tryCast(std::string_view v)
+    {
+        return convertStringToInt(v);
+    }
+
     static Expected<T> tryCast(folly::StringPiece v)
     {
         return convertStringToInt(v);
@@ -388,7 +399,7 @@ struct Converter<KIND, std::enable_if_t<KIND == OMNI_BYTE || KIND == OMNI_SHORT 
 
 /// To REAL and DOUBLE converter.
 template <DataTypeId KIND, typename TPolicy>
-struct Converter<KIND, std::enable_if_t<KIND == OMNI_BOOLEAN, void>, TPolicy> {
+struct Converter<KIND, std::enable_if_t<KIND == OMNI_FLOAT || KIND == OMNI_DOUBLE, void>, TPolicy> {
     using T = typename NativeType<KIND>::type;
 
     template <typename From>
@@ -398,6 +409,11 @@ struct Converter<KIND, std::enable_if_t<KIND == OMNI_BOOLEAN, void>, TPolicy> {
     }
 
     static Expected<T> tryCast(folly::StringPiece v)
+    {
+        return tryCast<folly::StringPiece>(v);
+    }
+
+    static Expected<T> tryCast(std::string_view v)
     {
         return tryCast<folly::StringPiece>(v);
     }
@@ -522,8 +538,7 @@ struct Converter<OMNI_VARCHAR, void, TPolicy> {
     /// example, for the given string '12345', replace it with '12345.0'.
     static void normalizeStandardNotation(std::string &str)
     {
-        if (str.find(".") == std::string::npos && isdigit(
-            str[str.length() - 1])) {
+        if (str.find(".") == std::string::npos && isdigit(str[str.length() - 1])) {
             str += ".0";
         }
     }
@@ -576,6 +591,11 @@ struct Converter<OMNI_TIMESTAMP, void, TPolicy> {
     }
 
     static Expected<int64_t> tryCast(folly::StringPiece v)
+    {
+        return FromTimestampString(v.data(), v.size());
+    }
+
+    static Expected<int64_t> tryCast(std::string_view v)
     {
         return FromTimestampString(v.data(), v.size());
     }

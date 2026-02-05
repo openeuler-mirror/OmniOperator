@@ -896,7 +896,7 @@ Expected<int64_t> FromTimestampString(const char *str, size_t len)
     if (pos < len) {
         return folly::makeUnexpected(ParserError(str, len));
     }
-    return resultTimestamp.getNanos();
+    return resultTimestamp.toMicros();
 }
 
 Expected<int32_t> fromDateString(const char *str, size_t len)
