@@ -120,6 +120,21 @@ public class FunctionType extends Constant {
      */
     public static final FunctionType OMNI_AGGREGATION_TYPE_BIT_XOR = new FunctionType(21);
 
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_STD_POP.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_STD_POP = new FunctionType(22);
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_VAR_POP.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_VAR_POP = new FunctionType(23);
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_VAR_SAMP.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_VAR_SAMP = new FunctionType(24);
+
     private static final long serialVersionUID = 5337378607473315604L;
 
     /**

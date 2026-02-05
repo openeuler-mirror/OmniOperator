@@ -220,7 +220,7 @@ VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexAvg(std::vector<Aggre
 }
 
 template<typename STATE, void (*OP)(double &, double &, int64_t &, const double &, const int64_t)>
-VECTORIZE_LOOP NO_INLINE void AddUseRowIndexStdDev(std::vector<AggregateState *> &rowStates,
+VECTORIZE_LOOP NO_INLINE void AddUseRowIndexMomentStats(std::vector<AggregateState *> &rowStates,
     const size_t aggStateOffset,
     const double *__restrict ptr, const int64_t *__restrict cntPtr)
 {
@@ -249,7 +249,7 @@ VECTORIZE_LOOP NO_INLINE void AddUseRowIndexStdDev(std::vector<AggregateState *>
 }
 
 template<typename STATE, void (*OP)(double &, double &, int64_t &, const double &, const int64_t)>
-VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndexStdDev(std::vector<AggregateState *> &rowStates,
+VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndexMomentStats(std::vector<AggregateState *> &rowStates,
     const size_t aggStateOffset, const double *__restrict ptr, const int64_t *__restrict cntPtr,
     const int32_t *__restrict indexMap)
 {
@@ -279,7 +279,7 @@ VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndexStdDev(std::vector<AggregateStat
 }
 
 template<typename STATE, void (*OP)(double &, double &, int64_t &, const double &, const int64_t, const uint8_t &)>
-VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexStdDev(std::vector<AggregateState *> &rowStates,
+VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexMomentStats(std::vector<AggregateState *> &rowStates,
     const size_t aggStateOffset, const double *__restrict ptr, const int64_t *__restrict cntPtr,
     const NullsHelper &condition)
 {
@@ -308,7 +308,7 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexStdDev(std::vector<Aggreg
 }
 
 template<typename STATE, void (*OP)(double &, double &, int64_t &, const double &, const int64_t, const uint8_t &)>
-VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexStdDev(std::vector<AggregateState *> &rowStates,
+VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexMomentStats(std::vector<AggregateState *> &rowStates,
     const size_t aggStateOffset, const double *__restrict ptr, const int64_t *__restrict cntPtr,
     const NullsHelper &condition, const int32_t *__restrict indexMap)
 {
@@ -338,7 +338,7 @@ VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexStdDev(std::vector<Ag
 }
 
 template<typename STATE, void (*OP)(double &, double &, double &, double, double, double)>
-VECTORIZE_LOOP NO_INLINE void AddUseRowIndexStdDevFinal(std::vector<AggregateState *> &rowStates,
+VECTORIZE_LOOP NO_INLINE void AddUseRowIndexMomentStatsFinal(std::vector<AggregateState *> &rowStates,
     int32_t aggStateOffset, double *__restrict cntPtr, double *__restrict meanPt,
     double *__restrict m2Ptr)
 {
@@ -368,7 +368,7 @@ VECTORIZE_LOOP NO_INLINE void AddUseRowIndexStdDevFinal(std::vector<AggregateSta
 }
 
 template<typename STATE, void (*OP)(double &, double &, double &, double, double, double)>
-VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexStdDevFinal(std::vector<AggregateState *> &rowStates,
+VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexMomentStatsFinal(std::vector<AggregateState *> &rowStates,
     const size_t aggStateOffset, double *__restrict cntPtr, double *__restrict meanPt,
     double *__restrict m2Ptr, const NullsHelper &condition)
 {

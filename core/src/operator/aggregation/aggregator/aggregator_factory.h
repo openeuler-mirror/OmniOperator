@@ -202,6 +202,33 @@ public:
         bool isOverflowAsNull = true) override;
 };
 
+class StddevPopSparkAggregatorFactory : public AggregatorFactory {
+public:
+    StddevPopSparkAggregatorFactory() = default;
+    ~StddevPopSparkAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+};
+
+class VarSampSparkAggregatorFactory : public AggregatorFactory {
+public:
+    VarSampSparkAggregatorFactory() = default;
+    ~VarSampSparkAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+};
+
+class VarPopSparkAggregatorFactory : public AggregatorFactory {
+public:
+    VarPopSparkAggregatorFactory() = default;
+    ~VarPopSparkAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+};
+
 class FirstAggregatorFactory : public AggregatorFactory {
 public:
     explicit FirstAggregatorFactory(FunctionType aggregateType) : aggregateType(aggregateType) {}

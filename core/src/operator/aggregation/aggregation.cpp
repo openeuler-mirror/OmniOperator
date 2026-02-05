@@ -82,6 +82,18 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 CreateAggregatorFactory<StddevSampSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
+            case OMNI_AGGREGATION_TYPE_STD_POP: {
+                CreateAggregatorFactory<StddevPopSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_VAR_SAMP: {
+                CreateAggregatorFactory<VarSampSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_VAR_POP: {
+                CreateAggregatorFactory<VarPopSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
             case OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL: {
                 CreateAggregatorFactory<FirstIgnoreNullAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
