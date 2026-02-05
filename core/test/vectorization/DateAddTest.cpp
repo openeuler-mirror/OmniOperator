@@ -71,7 +71,7 @@ public:
     }
     
     static BaseVector* CreateInt16Vector(const std::vector<int16_t>& values) {
-        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_SMALLINT, values.size());
+        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_SHORT, values.size());
         auto* typedVec = static_cast<Vector<int16_t>*>(vec);
         for (size_t i = 0; i < values.size(); ++i) {
             typedVec->SetValue(i, values[i]);
@@ -80,7 +80,7 @@ public:
     }
     
     static BaseVector* CreateInt8Vector(const std::vector<int8_t>& values) {
-        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_TINYINT, values.size());
+        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_BYTE, values.size());
         auto* typedVec = static_cast<Vector<int8_t>*>(vec);
         for (size_t i = 0; i < values.size(); ++i) {
             typedVec->SetValue(i, values[i]);
