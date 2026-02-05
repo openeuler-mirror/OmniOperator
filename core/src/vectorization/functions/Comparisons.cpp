@@ -13,8 +13,9 @@ template <typename Cmp, DataTypeId kind>
 class ComparisonFunction final : public VectorFunction {
     using T = typename NativeType<kind>::type;
 
-    using DictionaryVectorType = std::conditional_t<kind == OMNI_VARCHAR, Vector<DictionaryContainer<std::string_view, LargeStringContainer>>, Vector<DictionaryContainer<T>>>;
-    using FlatVectorType = std::conditional_t<kind == OMNI_VARCHAR, Vector<LargeStringContainer<std::string_view>>, Vector<T>>;
+    static constexpr bool isStringLike = (kind == OMNI_VARCHAR || kind == OMNI_CHAR || kind == OMNI_VARBINARY);
+    using DictionaryVectorType = std::conditional_t<isStringLike, Vector<DictionaryContainer<std::string_view, LargeStringContainer>>, Vector<DictionaryContainer<T>>>;
+    using FlatVectorType = std::conditional_t<isStringLike, Vector<LargeStringContainer<std::string_view>>, Vector<T>>;
 
     bool SupportsFlatNoNullsFastPath() const override
     {
@@ -100,10 +101,10 @@ class ComparisonFunction final : public VectorFunction {
         const Cmp cmp;
         auto selectivity = std::make_shared<SelectivityVector>(rowSize);
 
-        // we always think vlaue type is same with const type
-        using ValueType = std::conditional_t<kind == OMNI_VARCHAR, std::string_view, T>;
+        // we always think value type is same with const type
+        using ValueType = std::conditional_t<(kind == OMNI_VARCHAR || kind == OMNI_CHAR || kind == OMNI_VARBINARY), std::string_view, T>;
         ValueType constValue;
-        if constexpr (kind == OMNI_VARCHAR) {
+        if constexpr (kind == OMNI_VARCHAR || kind == OMNI_CHAR || kind == OMNI_VARBINARY) {
             constValue = reinterpret_cast<ConstVector<std::string_view>*>(constantVector)->GetConstValue();
         } else {
             constValue = constantVector->GetConstValue();
@@ -195,6 +196,12 @@ std::shared_ptr<VectorFunction> MakeImpl(const std::string &functionName, const 
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_TIMESTAMP>>();
         case OMNI_DECIMAL64:
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_DECIMAL64>>();
+        case OMNI_DECIMAL128:
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_DECIMAL128>>();
+        case OMNI_CHAR:
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_CHAR>>();
+        case OMNI_VARBINARY:
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_VARBINARY>>();
         default: OMNI_THROW("Compare error:", "{} Not support type!", functionName);
     }
 }

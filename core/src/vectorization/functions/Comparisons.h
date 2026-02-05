@@ -115,10 +115,13 @@ inline std::vector<std::shared_ptr<codegen::FunctionSignature>> ComparisonSignat
             type::OMNI_FLOAT,
             type::OMNI_DOUBLE,
             type::OMNI_VARCHAR,
+            type::OMNI_CHAR,
+            type::OMNI_VARBINARY,
             type::OMNI_DATE32,
             type::OMNI_DATE64,
             type::OMNI_TIMESTAMP,
-            type::OMNI_DECIMAL64
+            type::OMNI_DECIMAL64,
+            type::OMNI_DECIMAL128
          }) {
         signatures.emplace_back(
             codegen::FunctionSignatureBuilder().FuncName(name).ReturnType(type::OMNI_BOOLEAN).ArgumentType(inputType).
