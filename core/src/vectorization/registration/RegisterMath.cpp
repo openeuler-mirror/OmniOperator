@@ -8,6 +8,7 @@
 #include "../functions/Comparisons.h"
 #include "../functions/IsNull.h"
 #include "../functions/MathFunctions.h"
+#include "../functions/HexFunctions.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -36,6 +37,7 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<SignFunction, double, double>(prefix + "sign", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SinhFunction, double, double>(prefix + "sinh", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SqrtFunction, double, double>(prefix + "sqrt", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<ExpFunction, double, double>(prefix + "exp", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SecFunction, double, double>(prefix + "sec", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Log1pFunction, double, double>(prefix + "log1p", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Log10Function, double, double>(prefix + "log10", {OMNI_DOUBLE}, OMNI_DOUBLE);
@@ -57,5 +59,11 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterUnaryIntegralNumeric<RoundFunction>(prefix + "round");
     RegisterUnaryFloatingPoint<RoundFunction>(prefix + "round");
     RegisterRoundNumericWithScale<RoundFunction>(prefix + "round");
+
+    // hex function: converts integer/string/binary to hexadecimal string
+    RegisterFunction<HexBigintFunction, std::string, int64_t>(prefix + "hex", {OMNI_LONG}, OMNI_VARCHAR);
+    RegisterFunction<HexVarcharFunction, std::string, std::string_view>(prefix + "hex", {OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<HexVarcharFunction, std::string, std::string_view>(prefix + "hex", {OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<HexVarbinaryFunction, std::string, std::string_view>(prefix + "hex", {OMNI_VARBINARY}, OMNI_VARCHAR);
 }
 }
