@@ -10,6 +10,11 @@
 namespace omniruntime::tz {
 class TimeZone;
 
+/// Returns the timeZoneID for the timezone name.
+/// If failOnError = true, throws an exception for unrecognized timezone.
+/// Otherwise, returns -1.
+int16_t getTimeZoneID(std::string_view timeZone, bool failOnError = true);
+
 /// Returns a TimeZone pointer based on a time zone name. This makes an hash
 /// map access, and will construct the index on the first access. `failOnError`
 /// controls whether to throw or return nullptr in case the time zone was not
@@ -22,6 +27,7 @@ template <typename T>
 using time_point = std::chrono::time_point<std::chrono::system_clock, T>;
 
 void validateRange(time_point<std::chrono::seconds> timePoint);
+
 void validateRange(time_point<std::chrono::milliseconds> timePoint);
 
 /// TimeZone is the proxy object for time zone management. It provides access to

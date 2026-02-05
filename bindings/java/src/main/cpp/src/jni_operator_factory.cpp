@@ -470,6 +470,9 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
     auto overflowConfig = operatorConfig.GetOverflowConfig();
+    std::unordered_map<std::string, std::string> configs = {};
+    configs[config::QueryConfig::KIsOverFlowASNull] = overflowConfig->IsOverflowAsNull() ? "true" : "false";
+    config::QueryConfig queryConfig(configs);
     bool isSkipVerify = operatorConfig.IsSkipVerify();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
@@ -518,8 +521,8 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     }
 
     FilterAndProjectOperatorFactory *factory = nullptr;
-    auto exprEvaluator =
-        std::make_shared<ExpressionEvaluator>(filterExpr, projectExprs, inputDataTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<
+        ExpressionEvaluator>(filterExpr, projectExprs, inputDataTypes, queryConfig);
     if (!exprEvaluator->IsSupportedExpr()) {
         return 0;
     }
@@ -545,6 +548,9 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
     auto overflowConfig = operatorConfig.GetOverflowConfig();
+    std::unordered_map<std::string, std::string> configs = {};
+    configs[config::QueryConfig::KIsOverFlowASNull] = overflowConfig->IsOverflowAsNull() ? "true" : "false";
+    config::QueryConfig queryConfig(configs);
     bool isSkipVerify = operatorConfig.IsSkipVerify();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
@@ -572,7 +578,7 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     }
 
     ProjectionOperatorFactory *factory = nullptr;
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(expressions, inputDataTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(expressions, inputDataTypes, queryConfig);
     if (!exprEvaluator->IsSupportedExpr()) {
         return 0;
     }

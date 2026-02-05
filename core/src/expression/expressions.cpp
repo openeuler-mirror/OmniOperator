@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <utility>
 #include "vectorization/functions/IsNull.h"
+#include "vectorization/functions/CastExpr.h"
 #include "type/data_type.h"
 #include "vector/vector.h"
 #include "codegen/func_registry.h"
@@ -1026,6 +1027,10 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     if (vectorFunction == nullptr) {
         vectorFunction = VectorFunction::Find(signature);
     }
+    if (funcName == "CAST") {
+        auto hook = std::make_shared<CastHooks>(config::QueryConfig());
+        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
+    }
 }
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
@@ -1040,6 +1045,10 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
     this->function = FunctionRegistry::LookupFunction(signature.get());
     vectorFunction = VectorFunction::Find(signature);
+    if (funcName == "CAST") {
+        auto hook = std::make_shared<CastHooks>(config::QueryConfig());
+        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
+    }
 }
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
@@ -1054,6 +1063,10 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
     this->function = FunctionRegistry::LookupFunction(signature.get());
     vectorFunction = VectorFunction::Find(signature);
+    if (funcName == "CAST") {
+        auto hook = std::make_shared<CastHooks>(config::QueryConfig());
+        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
+    }
 }
 
 ExprType FuncExpr::GetType() const

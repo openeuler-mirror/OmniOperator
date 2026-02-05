@@ -29,10 +29,7 @@ OperatorFactory *CreateProjectOperatorFactory(
 {
     auto projections = projectNode->GetProjections();
     auto sourceTypes = *(projectNode->Sources()[0]->OutputType());
-    auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
-                                                                 : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(projections, sourceTypes, overflowConfig,
-        queryConfig.PreferVectorizationExpression());
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(projections, sourceTypes, queryConfig);
     return new ProjectionOperatorFactory(move(exprEvaluator));
 }
 

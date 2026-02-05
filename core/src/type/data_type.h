@@ -83,125 +83,125 @@ template <DataTypeId dataTypeId> struct NativeType {};
 
 template <> struct NativeType<DataTypeId::OMNI_INT> {
     using type = int32_t;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "INTEGER";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_LONG> {
     using type = int64_t;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "BIGINT";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DOUBLE> {
     using type = double;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "DOUBLE";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_FLOAT> {
     using type = float;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "FLOAT";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_BOOLEAN> {
     using type = bool;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "BOOLEAN";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_SHORT> {
     using type = int16_t;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "SHORT";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_BYTE> {
     using type = int8_t;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "BYTE";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DECIMAL64> {
     using type = int64_t;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "DECIMAL64";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DECIMAL128> {
     using type = Decimal128;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "DECIMAL128";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DATE32> {
     using type = int32_t;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "DATE32";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DATE64> {
     using type = int64_t;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "DATE64";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_TIME64> {
     using type = int64_t;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "TIME64";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 template <> struct NativeType<DataTypeId::OMNI_VARCHAR> {
     using type = std::string_view;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "VARCHAR";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = false;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_CHAR> {
     using type = std::string_view;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "CHAR";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = false;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_VARBINARY> {
     using type = std::string_view;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "VARBINARY";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = false;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
     using type = int64_t;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "CONTAINER";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
     using type = int64_t;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "TIMESTAMP";
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
     using type = vec::BaseVector*;
-    static constexpr const char* name = "OMNI_INT";
+    static constexpr const char* name = "ARRAY";
     static constexpr bool isPrimitiveType = false;
     static constexpr bool isFixedWidth = false;
 };

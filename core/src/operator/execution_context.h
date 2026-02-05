@@ -46,9 +46,8 @@ public:
 
         errorFlags_->AllocateReuse(size, true);
         rawErrorFlags_ = reinterpret_cast<uint64_t *>(errorFlags_->GetBuffer());
-        if (exceptions_ != nullptr) {
-            // todo:
-            // AlignedBuffer::reallocate<TError>(&exceptions_, size, TError());
+        if (!exceptions_.empty()) {
+            exceptions_.assign(size_, TError());
         }
 
         size_ = size;
@@ -87,11 +86,11 @@ public:
             return std::nullopt;
         }
 
-        if (exceptions_ == nullptr) {
+        if (exceptions_.empty()) {
             return {nullptr};
         }
 
-        return exceptions_->GetValue(index);
+        return exceptions_[index];
     }
 
     /// Bitmask with bits set for rows with errors. Only first 'size()' bits are
@@ -130,11 +129,10 @@ public:
         if (!BitUtil::IsBitSet(rawErrorFlags_, index)) {
             BitUtil::SetBit(rawErrorFlags_, index);
 
-            if (exceptions_ == nullptr) {
-                // todo:
-                // exceptions_ = AlignedBuffer::allocate<TError>(size_, pool_, TError());
+            if (exceptions_.empty()) {
+                exceptions_ = std::vector<TError>(size_);
             }
-            exceptions_->GetBuffer()[index] = std::make_shared<std::exception_ptr>(exceptionPtr);
+            exceptions_[index] = std::make_shared<std::exception_ptr>(exceptionPtr);
         }
     }
 
@@ -148,13 +146,12 @@ public:
             if (!BitUtil::IsBitSet(rawErrorFlags_, toIndex)) {
                 BitUtil::SetBit(rawErrorFlags_, toIndex);
 
-                if (from.exceptions_ != nullptr) {
-                    if (exceptions_ == nullptr) {
-                        // todo:
-                        // exceptions_ = AlignedBuffer::allocate<TError>(size_, pool_, TError());
+                if (!from.exceptions_.empty()) {
+                    if (exceptions_.empty()) {
+                        exceptions_ = std::vector<TError>(size_);
                     }
 
-                    exceptions_->GetBuffer()[toIndex] = from.exceptions_->GetBuffer()[fromIndex];
+                    exceptions_[toIndex] = from.exceptions_[fromIndex];
                 }
             }
         }
@@ -176,7 +173,7 @@ private:
     int32_t size_;
     std::shared_ptr<AlignedBuffer<bool>> errorFlags_;
     uint64_t *rawErrorFlags_;
-    std::shared_ptr<AlignedBuffer<TError>> exceptions_{nullptr};
+    std::vector<TError> exceptions_;
 };
 
 using EvalErrorsPtr = std::shared_ptr<EvalErrors>;
@@ -288,6 +285,16 @@ public:
         } else {
             AddError(index, errors_);
         }
+    }
+
+    void SetConfig(const config::QueryConfig &queryConfig)
+    {
+        queryConfig_ = queryConfig;
+    }
+
+    void SetThrowOnError(bool throwOnError)
+    {
+        throwOnError_ = throwOnError;
     }
 
     void SetError(int32_t index, const std::exception_ptr &exceptionPtr);

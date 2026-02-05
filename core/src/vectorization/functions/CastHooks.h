@@ -11,6 +11,7 @@
 
 namespace omniruntime::vectorization {
 using namespace type;
+
 // This class provides cast hooks following Spark semantics.
 class CastHooks {
 public:
@@ -61,7 +62,7 @@ private:
     template <typename T>
     Expected<int64_t> castNumberToTimestamp(T seconds) const;
 
-    const config::QueryConfig &config_;
+    config::QueryConfig config_;
 
     /// 1) Does not follow 'isLegacyCast'. 2) The conversion precision is
     /// microsecond. 3) Does not append trailing zeros. 4) Adds a positive

@@ -126,7 +126,7 @@ Status toDecimalValue(const std::string_view s, int toPrecision, int toScale, T 
             return Status::UserError("Value too large.");
         }
 
-        bool overflow = __builtin_mul_overflow(out, TenOfScaleMultipliers[-parsedScale + toScale], &out);
+        bool overflow = __builtin_mul_overflow(out, kPowersOfTen[-parsedScale + toScale], &out);
         if (UNLIKELY(overflow)) {
             return Status::UserError("Value too large.");
         }
@@ -426,7 +426,7 @@ VectorPtr CastExpr::applyDecimalToFloatCast(const SelectivityVector &rows, BaseV
     auto resultBuffer = static_cast<To *>(VectorHelper::UnsafeGetValues(result));
     const auto precisionScale = GetDecimalPrecisionScale(*fromType);
     const auto simpleInput = reinterpret_cast<Vector<FromNativeType> *>(input);
-    const auto scaleFactor = TenOfScaleMultipliers[precisionScale.second];
+    const auto scaleFactor = kPowersOfTen[precisionScale.second];
     applyToSelectedNoThrowLocal(context, rows, result, [&](int row) {
         const auto output = omniruntime::type::util::Converter<ToKind>::tryCast(simpleInput->GetValue(row)).thenOrThrow(
             folly::identity, [&](const Status &status) {
@@ -447,7 +447,7 @@ VectorPtr CastExpr::applyDecimalToIntegralCast(const SelectivityVector &rows, Ba
     auto resultBuffer = static_cast<To *>(VectorHelper::UnsafeGetValues(result));
     const auto precisionScale = GetDecimalPrecisionScale(*fromType);
     const auto simpleInput = reinterpret_cast<Vector<FromNativeType> *>(input);
-    const auto scaleFactor = TenOfScaleMultipliers[precisionScale.second];
+    const auto scaleFactor = kPowersOfTen[precisionScale.second];
     applyToSelectedNoThrowLocal(context, rows, result, [&](vector_size_t row) {
         resultBuffer[row] = static_cast<To>(simpleInput->GetValue(row) / scaleFactor);
     });

@@ -99,10 +99,7 @@ OperatorFactory *CreateFilterOperatorFactory(
     } else {
         projections = filterNode->ProjectList();
     }
-    auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
-                                                                 : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, sourceTypes, overflowConfig,
-        queryConfig.PreferVectorizationExpression());
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, sourceTypes, queryConfig);
     return new FilterAndProjectOperatorFactory(move(exprEvaluator));
 }
 

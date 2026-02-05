@@ -129,23 +129,18 @@ setup_dependencies() {
   local folly_source_dir="${workspace}/${open_source_dir}/folly"
   local folly_default_home="/usr/local"
 
-  # Check if FOLLY_HOME exists, skip build if true
-  if [ -n "$FOLLY_HOME" ] && [ -d "$FOLLY_HOME" ]; then
-    echo "FOLLY_HOME=$FOLLY_HOME exists, skip folly build process."
-  else
-    echo "Start to clone folly-${folly_tag} source code and build..."
-    rm -rf ${folly_source_dir} && mkdir -p ${folly_source_dir}
-    git clone --branch ${folly_tag} --depth=1 ${folly_repo} ${folly_source_dir}
-    cd ${folly_source_dir}
-    mkdir -p build && cd build
-    cmake .. -DBUILD_TESTS=OFF -DFOLLY_HAVE_INT128_T=ON
-    make -j$(nproc)
-    sudo make install
-    echo "folly-${folly_tag} build and install completed successfully."
-    export FOLLY_HOME=${folly_default_home}
-    echo "Set FOLLY_HOME=$FOLLY_HOME automatically after folly install."
-    cd ${workspace}
-  fi
+  echo "Start to clone folly-${folly_tag} source code and build..."
+  rm -rf ${folly_source_dir} && mkdir -p ${folly_source_dir}
+  git clone --branch ${folly_tag} --depth=1 ${folly_repo} ${folly_source_dir}
+  cd ${folly_source_dir}
+  mkdir -p build && cd build
+  cmake .. -DFOLLY_HAVE_INT128_T=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+  make -j$(nproc)
+  sudo make install
+  echo "folly-${folly_tag} build and install completed successfully."
+  export FOLLY_HOME=${folly_default_home}
+  echo "Set FOLLY_HOME=$FOLLY_HOME automatically after folly install."
+  cd ${workspace}
 
   echo "Start build open source code for libboundscheck, json and gtest"
   cd ${workspace}/${open_source_dir}/libboundscheck
