@@ -4,6 +4,7 @@
  */
 
 #include "RegistrationHelpers.h"
+#include "vectorization/functions/ArrayFlattenFunction.h"
 #include "vectorization/functions/SubscriptUtil.h"
 #include "vectorization/functions/Slice.h"
 #include "vectorization/functions/SizeFunction.h"
@@ -30,5 +31,7 @@ void RegisterArrayFunctions(const std::string &prefix)
     // reverse(array<T>) -> array<T>: Returns the array with elements in reverse order
     VectorFunction::RegisterVectorFunction("reverse", {OMNI_ARRAY}, OMNI_ARRAY,
         std::make_shared<ReverseFunction>());
+    VectorFunction::RegisterVectorFunction("flatten", {OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayFlattenFunction>());
 }
 }
