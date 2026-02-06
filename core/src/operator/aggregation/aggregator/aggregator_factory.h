@@ -371,6 +371,7 @@ protected:
             case OMNI_TIMESTAMP:
                 return MinByAggregator<OMNI_LONG, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_FLOAT:
+                return MinByAggregator<OMNI_FLOAT, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_DOUBLE:
                 return MinByAggregator<OMNI_DOUBLE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_DECIMAL64:
@@ -465,6 +466,7 @@ protected:
             case OMNI_TIMESTAMP:
                 return MaxByAggregator<OMNI_LONG, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_FLOAT:
+                return MaxByAggregator<OMNI_FLOAT, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_DOUBLE:
                 return MaxByAggregator<OMNI_DOUBLE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_DECIMAL64:
