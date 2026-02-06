@@ -321,6 +321,8 @@ template class MinByVarcharAggregator<OMNI_LONG, OMNI_VARCHAR>;
 
 template class MinByVarcharAggregator<OMNI_DOUBLE, OMNI_VARCHAR>;
 
+template class MinByVarcharAggregator<OMNI_FLOAT, OMNI_VARCHAR>;
+
 template class MinByVarcharAggregator<OMNI_DECIMAL128, OMNI_VARCHAR>;
 
 template class MinByVarcharAggregator<OMNI_DECIMAL64, OMNI_VARCHAR>;
@@ -334,6 +336,8 @@ template class MinByVarcharAggregator<OMNI_INT, OMNI_CHAR>;
 template class MinByVarcharAggregator<OMNI_LONG, OMNI_CHAR>;
 
 template class MinByVarcharAggregator<OMNI_DOUBLE, OMNI_CHAR>;
+
+template class MinByVarcharAggregator<OMNI_FLOAT, OMNI_CHAR>;
 
 template class MinByVarcharAggregator<OMNI_DECIMAL128, OMNI_CHAR>;
 

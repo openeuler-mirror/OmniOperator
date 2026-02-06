@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cfloat>
 #include "typed_aggregator.h"
+#include "maxby_varchar_aggregator.h"
 
 namespace omniruntime {
 namespace op {
@@ -78,6 +79,7 @@ public:
             case OMNI_SHORT:
             case OMNI_INT:
             case OMNI_LONG:
+            case OMNI_FLOAT:
             case OMNI_DOUBLE:
             case OMNI_DECIMAL128:
             case OMNI_DECIMAL64:
@@ -93,6 +95,11 @@ public:
         if (inputTypes.GetType(0)->GetId() != outputTypes.GetType(0)->GetId()) {
             std::string omniExceptionInfo = "output col type not match input";
             throw omniruntime::exception::OmniException("Error in maxby aggregator:", omniExceptionInfo);
+        }
+
+        if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR) {
+            return MaxByVarcharAggregator<COL1_ID, COL2_ID>::Create(inputTypes, outputTypes, channels, rawIn, partialOut,
+                isOverflowAsNull);
         }
 
         if constexpr (!IsSupportedBasicMaxByType(COL1_ID)) {

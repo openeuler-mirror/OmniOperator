@@ -79,6 +79,7 @@ public:
             case OMNI_SHORT:
             case OMNI_INT:
             case OMNI_LONG:
+            case OMNI_FLOAT:
             case OMNI_DOUBLE:
             case OMNI_DECIMAL128:
             case OMNI_DECIMAL64:
