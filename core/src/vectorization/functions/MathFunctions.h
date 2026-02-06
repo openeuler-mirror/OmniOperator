@@ -173,7 +173,7 @@ namespace omniruntime::vectorization {
  	     struct FloorFunction {
  	         template <typename TInput>
  	         ALWAYS_INLINE Status call(int64_t &result, const TInput &a) {
- 	             
+
  	             if constexpr (std::is_integral_v<TInput>) {
  	                 // For integral types, floor is identity
  	                 result = a;
@@ -184,7 +184,7 @@ namespace omniruntime::vectorization {
  	             return Status::OK();
  	    }
  	};
- 	 
+
 
     template <typename T>
         struct NegativeFunction {
@@ -220,6 +220,16 @@ namespace omniruntime::vectorization {
         ALWAYS_INLINE Status call(TInput &result, const TInput &a)
         {
             result = std::sinh(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct HypotFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a, const TInput &b)
+        {
+            result = std::hypot(a, b);
             return Status::OK();
         }
     };
@@ -315,6 +325,17 @@ namespace omniruntime::vectorization {
     };
 
     template <typename T>
+    struct Expm1Function {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            // Use std::expm1 for high precision when x is close to zero
+            result = std::expm1(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
     struct PModIntFunction {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput& result, const TInput a, const TInput n) {
@@ -343,7 +364,7 @@ namespace omniruntime::vectorization {
         }
     };
 
-// Positive function: returns the input value unchanged (identity function) 
+// Positive function: returns the input value unchanged (identity function)
 // Supports: byte, short, int, long, float, double, decimal64, decimal128
     template <typename T>
     struct PositiveFunction {
@@ -432,6 +453,62 @@ namespace omniruntime::vectorization {
     };
 
     template <typename T>
+    struct WidthBucketFunction {
+        ALWAYS_INLINE bool callNullable(int64_t &result, const double *value, const double *bound1,
+            const double *bound2, const int64_t *numBuckets)
+        {
+
+            // NULL input returns NULL
+            if (value == nullptr || bound1 == nullptr || bound2 == nullptr || numBuckets == nullptr) {
+                return false;
+            }
+
+            // Check if should return NULL based on input validation
+            if (shouldReturnNull(*value, *bound1, *bound2, *numBuckets)) {
+                return false;
+            }
+
+            result = computeBucketNumber(*value, *bound1, *bound2, *numBuckets);
+            return true;
+        }
+
+    private:
+        static ALWAYS_INLINE bool shouldReturnNull(double value, double bound1, double bound2, int64_t numBuckets)
+        {
+            return numBuckets <= 0 ||
+                numBuckets == std::numeric_limits<int64_t>::max() ||
+                std::isnan(value) ||
+                bound1 == bound2 ||
+                !std::isfinite(bound1) ||
+                !std::isfinite(bound2);
+        }
+
+        static ALWAYS_INLINE int64_t computeBucketNumber(double value, double bound1, double bound2, int64_t numBuckets)
+        {
+            if (bound1 < bound2) {
+                // Normal ascending range
+                if (value < bound1) {
+                    return 0;
+                }
+                if (value >= bound2) {
+                    return numBuckets + 1;
+                }
+            } else {
+                // bound1 > bound2: descending range
+                if (value > bound1) {
+                    return 0;
+                }
+                if (value <= bound2) {
+                    return numBuckets + 1;
+                }
+            }
+            // Calculate bucket number: floor(numBuckets * (value - bound1) / (bound2 - bound1)) + 1
+            return static_cast<int64_t>(numBuckets * (value - bound1) / (bound2 - bound1)) + 1;
+        }
+    };
+
+    // Round function: round(expr) default scale=0; round(expr, scale). byte/short/int/long/float/double only.
+    template <typename T>
     struct RoundFunction {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput &result, const TInput &a)
@@ -491,7 +568,7 @@ namespace omniruntime::vectorization {
         /// @return Status::OK() if successful, Status::UserError if input is out of valid range (returns NULL)
         ALWAYS_INLINE Status call(int64_t &result, const int32_t &input)
         {
-            
+
             // Check for valid range: 0 <= input <= 20
             if (input < 0 || input > 20) {
                 // Out of range, return UserError to indicate NULL result
@@ -515,5 +592,48 @@ namespace omniruntime::vectorization {
         }
     };
 
+    template <typename T>
+    struct IntegralDivideFunction {
+        template <typename TInput>
+        ALWAYS_INLINE bool callNullable(int64_t &result, const TInput *a, const TInput *b)
+        {
+
+            // NULL input returns NULL
+            if (a == nullptr || b == nullptr) {
+                return false;
+            }
+
+            // Handle Decimal128 type specially
+            if constexpr (std::is_same_v<TInput, type::Decimal128>) {
+                // Division by zero returns NULL
+                if (b->IsZero()) {
+                    return false;
+                }
+
+                // Convert to int128_t for integer division, then truncate to int64_t
+                type::int128_t aVal = a->ToInt128();
+                type::int128_t bVal = b->ToInt128();
+
+                // Perform integer division (truncates towards zero)
+                type::int128_t quotient = aVal / bVal;
+                result = static_cast<int64_t>(quotient);
+                return true;
+            } else {
+                // For integral types (LONG, DECIMAL64)
+                // Division by zero returns NULL
+                if (*b == 0) {
+                    return false;
+                }
+
+                if (*a == std::numeric_limits<int64_t>::min() && *b == static_cast<TInput>(-1)) {
+                    result = *a;
+                    return true;
+                }
+
+                result = static_cast<int64_t>(*a) / static_cast<int64_t>(*b);
+                return true;
+            }
+        }
+    };
 
 }

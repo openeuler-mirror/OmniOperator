@@ -363,12 +363,12 @@ template <typename T>
 struct BitLengthFunction {
     ALWAYS_INLINE Status call(int32_t &result, const std::string_view &input)
     {
-        
+
         // Bit length = byte length * 8
         result = static_cast<int32_t>(input.size() * 8);
         return Status::OK();
     }
-    
+
     ALWAYS_INLINE Status callNullable(int32_t &result, const std::string_view *input)
     {
         if (input == nullptr) {
@@ -523,6 +523,83 @@ struct OverlayFunction {
             result.append(input.data() + part3ByteStart, input.size() - part3ByteStart);
         }
         return true;
+    }
+};
+
+namespace detail {
+/// Helper function to convert a hex character to its numeric value.
+/// Returns -1 for invalid hex characters.
+/// Supports: '0'-'9' -> 0-9, 'A'-'F' -> 10-15, 'a'-'f' -> 10-15
+ALWAYS_INLINE int8_t fromHex(char c) {
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    }
+    if (c >= 'A' && c <= 'F') {
+        return 10 + c - 'A';
+    }
+    if (c >= 'a' && c <= 'f') {
+        return 10 + c - 'a';
+    }
+    return -1;
+}
+} // namespace detail
+
+/// unhex function
+/// unhex(string) -> varbinary
+/// Converts a hexadecimal string to binary data.
+/// The input string should contain only hexadecimal characters (0-9, a-f, A-F).
+/// If the input string has odd length, the first character is treated as a single hex digit.
+/// Returns NULL if any character in the input is not a valid hexadecimal character.
+/// Edge cases:
+/// - Empty string returns empty binary data.
+/// - Odd-length strings: first character is treated as a single hex digit (e.g., "123" -> 0x01, 0x23).
+/// - Invalid hex characters (e.g., 'G', 'g', '@') cause the function to return NULL.
+template <typename T>
+struct UnhexFunction {
+    ALWAYS_INLINE bool call(std::string& result, const std::string_view& input)
+    {
+        // Empty input returns empty result
+        if (input.empty()) {
+            result.clear();
+            return true;
+        }
+
+        const size_t resultSize = (input.size() + 1) >> 1;
+        result.resize(resultSize);
+        const char* inputBuffer = input.data();
+        char* resultBuffer = &result[0];
+
+        size_t i = 0;
+        // Handle odd-length input: first character is a single hex digit
+        if ((input.size() & 0x01) != 0) {
+            const auto v = detail::fromHex(inputBuffer[0]);
+            if (v == -1) {
+                return false;  // Invalid hex character, return NULL
+            }
+            resultBuffer[0] = static_cast<char>(v);
+            i += 1;
+        }
+
+        // Process pairs of hex characters
+        while (i < input.size()) {
+            const auto first = detail::fromHex(inputBuffer[i]);
+            const auto second = detail::fromHex(inputBuffer[i + 1]);
+            if (first == -1 || second == -1) {
+                return false;  // Invalid hex character, return NULL
+            }
+            resultBuffer[(i + 1) / 2] = static_cast<char>((first << 4) | second);
+            i += 2;
+        }
+
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string& result, const std::string_view* input)
+    {
+        if (input == nullptr) {
+            return false;  // NULL input returns NULL
+        }
+        return call(result, *input);
     }
 };
 }

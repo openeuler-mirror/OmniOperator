@@ -40,6 +40,7 @@ void RegisterMathFunctions(const std::string &prefix)
 	RegisterFunction<CeilFunction, int64_t, double>(prefix + "ceil", {OMNI_DOUBLE}, OMNI_LONG);
     RegisterFunction<SignFunction, double, double>(prefix + "sign", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SinhFunction, double, double>(prefix + "sinh", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<HypotFunction, double, double, double>(prefix + "hypot", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SqrtFunction, double, double>(prefix + "sqrt", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<DegreesFunction, double, double>(prefix + "degrees", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<ExpFunction, double, double>(prefix + "exp", {OMNI_DOUBLE}, OMNI_DOUBLE);
@@ -49,6 +50,7 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<Log10Function, double, double>(prefix + "log10", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Log2Function, double, double>(prefix + "log2", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<LogarithmFunction, double, double, double>(prefix + "log", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<Expm1Function, double, double>(prefix + "expm1", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterBinaryIntegral<PModIntFunction>({prefix + "pmod"});
     RegisterBinaryFloatingPoint<PModFloatFunction>({prefix + "pmod"});
     RegisterUnaryNumeric<PositiveFunction>(prefix + "positive");
@@ -86,5 +88,19 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<ConvFunction, std::string, std::string_view, int32_t, int32_t>(
         prefix + "conv", {OMNI_CHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
 
+
+    // Register div (integral division): div(a, b) -> int64_t
+    // Supports: LONG, DECIMAL64, DECIMAL128
+    // Returns NULL if divisor is 0
+    // For Long.MIN_VALUE / -1, returns Long.MIN_VALUE (Java semantics)
+    RegisterFunction<IntegralDivideFunction, int64_t, int64_t, int64_t>(prefix + "div", {OMNI_LONG, OMNI_LONG}, OMNI_LONG);
+    RegisterFunction<IntegralDivideFunction, int64_t, int64_t, int64_t>(prefix + "div", {OMNI_DECIMAL64, OMNI_DECIMAL64}, OMNI_LONG);
+    RegisterFunction<IntegralDivideFunction, int64_t, Decimal128, Decimal128>(prefix + "div", {OMNI_DECIMAL128, OMNI_DECIMAL128}, OMNI_LONG);
+
+    // Register width_bucket: width_bucket(value, bound1, bound2, numBuckets) -> int64_t
+    // Returns the bucket number (0-based) for value in an equiwidth histogram
+    // Supports: DOUBLE for value/bound1/bound2, LONG for numBuckets
+    RegisterFunction<WidthBucketFunction, int64_t, double, double, double, int64_t>(
+        prefix + "width_bucket", {OMNI_DOUBLE, OMNI_DOUBLE, OMNI_DOUBLE, OMNI_LONG}, OMNI_LONG);
 }
 }

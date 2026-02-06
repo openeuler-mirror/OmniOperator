@@ -54,6 +54,7 @@ void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
     RegisterDatetimeFunctions(prefix);
     RegisterMapFunctions(prefix);
     RegisterMathFunctions(prefix);
+    RegisterMiscFunctions(prefix);
     RegisterStringFunctions(prefix);
     RegisterBitwiseFunctions(prefix);
     RegisterLambdaFunctions(prefix);
