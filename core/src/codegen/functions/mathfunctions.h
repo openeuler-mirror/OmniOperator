@@ -33,6 +33,8 @@ extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x);
 
 extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x);
 
+extern "C" DLLEXPORT double CastFloatToDouble(float x);
+
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x);
 
 extern "C" DLLEXPORT int32_t CastInt64ToInt32(int64_t x);

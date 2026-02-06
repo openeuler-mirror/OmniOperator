@@ -200,6 +200,8 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(CastInt64ToDouble), MathCastFnStr(), {}, { OMNI_LONG }, OMNI_DOUBLE,
             INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastFloatToDouble), MathCastFnStr(), {}, { OMNI_FLOAT }, OMNI_DOUBLE,
+            INPUT_DATA),
         Function(reinterpret_cast<void *>(CastInt32ToInt64), MathCastFnStr(), {}, { OMNI_INT }, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(CastInt64ToInt32), MathCastFnStr(), {}, { OMNI_LONG }, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(CastInt16ToInt32), MathCastFnStr(), {}, { OMNI_SHORT }, OMNI_INT, INPUT_DATA),
