@@ -12,6 +12,8 @@
 #include <iostream>
 #include <climits>
 #include <cmath>
+#include <folly/Exception.h>
+#include <optional>
 #include <libboundscheck/include/securec.h>
 #include "integer256.h"
 #include "util/debug.h"
@@ -21,9 +23,33 @@
 #include "base_operations.h"
 #include "data_operations.h"
 #include "codegen/functions/dtoa.h"
+#include "vectorization/Status.h"
 
 namespace omniruntime {
 namespace type {
+namespace {
+ALWAYS_INLINE uint32_t CountDigits(__uint128_t n)
+{
+    uint32_t count = 1;
+    for (;;) {
+        if (n < 10) {
+            return count;
+        }
+        if (n < 100) {
+            return count + 1;
+        }
+        if (n < 1000) {
+            return count + 2;
+        }
+        if (n < 10000) {
+            return count + 3;
+        }
+        n /= 10000u;
+        count += 4;
+    }
+}
+}
+
 using namespace exception;
 using uint128_t = __uint128_t;
 using int128_t = __int128_t;
@@ -49,10 +75,57 @@ enum class RoundingMode {
     ROUND_FLOOR
 };
 
+static constexpr double kMaxDoubleBelowInt128Max = 170141183460469212842221372237303250944.0;
+/// 2 ^ 63 - 1024
+static constexpr double kMaxDoubleBelowInt64Max = 9223372036854774784.0;
 static constexpr int MAX_PRECISION = 38;
 static constexpr int MAX_SCALE = 38;
 static constexpr int32_t MAX_DECIMAL64_DIGITS = 18;
 static constexpr int I64_BIT = 64;
+
+static constexpr int128_t kPowersOfTen[39] = {
+    1,
+    10,
+    100,
+    1'000,
+    10'000,
+    100'000,
+    1'000'000,
+    10'000'000,
+    100'000'000,
+    1'000'000'000,
+    10'000'000'000,
+    100'000'000'000,
+    1'000'000'000'000,
+    10'000'000'000'000,
+    100'000'000'000'000,
+    1'000'000'000'000'000,
+    10'000'000'000'000'000,
+    100'000'000'000'000'000,
+    1'000'000'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)10,
+    1'000'000'000'000'000'000 * (int128_t)100,
+    1'000'000'000'000'000'000 * (int128_t)1'000,
+    1'000'000'000'000'000'000 * (int128_t)10'000,
+    1'000'000'000'000'000'000 * (int128_t)100'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000,
+    1'000'000'000'000'000'000 * (int128_t)10'000'000,
+    1'000'000'000'000'000'000 * (int128_t)100'000'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)10'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)100'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)10'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)100'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)10'000'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)100'000'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000'000'000,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000'000'000 *
+        (int128_t)10,
+    1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000'000'000 *
+        (int128_t)100};
+
 static constexpr uint128_t TenOfScaleMultipliers[39] = {
     uint128_t(1LL),
     uint128_t(10LL),
@@ -141,6 +214,42 @@ static constexpr double DOUBLE_10_POW[] = {
     1.0e12, 1.0e13, 1.0e14, 1.0e15, 1.0e16, 1.0e17,
     1.0e18, 1.0e19, 1.0e20, 1.0e21, 1.0e22
 };
+
+template <typename T>
+T CheckedMultiply(const T &a, const T &b, const char *typeName = "integer")
+{
+    T result;
+    bool overflow = __builtin_mul_overflow(a, b, &result);
+    if (UNLIKELY(overflow)) {
+        OMNI_FAIL("ArithmeticError CheckedMultiply!");
+    }
+    return result;
+}
+
+template <typename R, typename A, typename B>
+inline static R DivideWithRoundUp(R &r, A a, B b, bool noRoundUp, uint8_t aRescale, uint8_t /*bRescale*/)
+{
+    // VELOX_USER_CHECK_NE(b, 0, "Division by zero");
+    int resultSign = 1;
+    R unsignedDividendRescaled(a);
+    if (a < 0) {
+        resultSign = -1;
+        unsignedDividendRescaled *= -1;
+    }
+    B unsignedDivisor(b);
+    if (b < 0) {
+        resultSign *= -1;
+        unsignedDivisor *= -1;
+    }
+    unsignedDividendRescaled = CheckedMultiply<R>(unsignedDividendRescaled, R(kPowersOfTen[aRescale]), "Decimal");
+    R quotient = unsignedDividendRescaled / unsignedDivisor;
+    R remainder = unsignedDividendRescaled % unsignedDivisor;
+    if (!noRoundUp && static_cast<const B>(remainder) * 2 >= unsignedDivisor) {
+        ++quotient;
+    }
+    r = quotient * resultSign;
+    return remainder * resultSign;
+}
 
 template<bool allowDecimalRoundUp = false>
 inline OpStatus DecimalFromString(const char *s, std::size_t len, int128_t &result, int32_t &scale,
@@ -1079,6 +1188,7 @@ public:
     static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_digits10;
     static constexpr uint128_t UNSIGNED_INT64_MIN = __uint128_t(INT64_MAX) + 1;
     static constexpr uint128_t DECIMAL128_MAX_VALUE = (__int128_t(0X4b3b4ca85a86c47a) << 64) + 0x098a223fffffffff;
+    static constexpr uint8_t kMaxPrecision = 38;
 
 private:
     int256_t ReScaleTo256Bits(int32_t newScale) const
@@ -1779,6 +1889,131 @@ public:
             return true;
         }
         return false;
+    }
+
+    static int32_t MaxStringViewSize(int precision, int scale)
+    {
+        int32_t rowSize = precision + 1; // Number and symbol.
+        if (scale > 0) {
+            ++rowSize; // A dot.
+        }
+        if (precision == scale) {
+            ++rowSize; // Leading zero.
+        }
+        return rowSize;
+    }
+
+    template <typename T>
+    FOLLY_ALWAYS_INLINE static bool valueInPrecisionRange(T value, uint8_t precision)
+    {
+        return value < kPowersOfTen[precision] && value > -kPowersOfTen[precision];
+    }
+
+    template <typename TInput, typename TOutput>
+    inline static vectorization::Status rescaleWithRoundUp(TInput inputValue, int fromPrecision, int fromScale,
+        int toPrecision, int toScale, TOutput &output)
+    {
+        int128_t rescaledValue = inputValue;
+        auto scaleDifference = toScale - fromScale;
+        bool isOverflow = false;
+        if (scaleDifference >= 0) {
+            isOverflow = __builtin_mul_overflow(rescaledValue, kPowersOfTen[scaleDifference], &rescaledValue);
+        } else {
+            scaleDifference = -scaleDifference;
+            const auto scalingFactor = kPowersOfTen[scaleDifference];
+            rescaledValue /= scalingFactor;
+            int128_t remainder = inputValue % scalingFactor;
+            if (inputValue >= 0 && remainder >= scalingFactor / 2) {
+                ++rescaledValue;
+            } else if (remainder <= -scalingFactor / 2) {
+                --rescaledValue;
+            }
+        }
+        // Check overflow.
+        if (!valueInPrecisionRange(rescaledValue, toPrecision) || isOverflow) {
+            return vectorization::Status::UserError("Cannot cast DECIMAL '{}' to DECIMAL({}, {})",
+                "DecimalUtil::toString(inputValue, DECIMAL(fromPrecision, fromScale))", toPrecision, toScale);
+        }
+        output = static_cast<TOutput>(rescaledValue);
+        return vectorization::Status::OK();
+    }
+
+    template <typename TInput, typename TOutput>
+    inline static std::optional<TOutput> rescaleInt(TInput inputValue, int toPrecision, int toScale)
+    {
+        int128_t rescaledValue = static_cast<int128_t>(inputValue);
+        bool isOverflow = __builtin_mul_overflow(rescaledValue, TenOfScaleMultipliers[toScale], &rescaledValue);
+        // Check overflow.
+        if (!valueInPrecisionRange(rescaledValue, toPrecision) || isOverflow) {
+            OMNI_FAIL("Cannot cast {} '{}' to DECIMAL({}, {})", "rescaleInt", inputValue, toPrecision, toScale);
+        }
+        return static_cast<TOutput>(rescaledValue);
+    }
+
+    template <typename TInput, typename TOutput>
+    inline static vectorization::Status rescaleFloatingPoint(TInput value, int precision, int scale, TOutput &output)
+    {
+        if (!std::isfinite(value)) {
+            return vectorization::Status::UserError("The input value should be finite.");
+        }
+
+        TInput maxValue;
+        if constexpr (std::is_same_v<TOutput, int64_t>) {
+            maxValue = kMaxDoubleBelowInt64Max;
+        } else {
+            maxValue = kMaxDoubleBelowInt128Max;
+        }
+
+        if (value <= std::numeric_limits<TOutput>::min() || value > maxValue) {
+            return vectorization::Status::UserError("Result overflows.");
+        }
+
+        uint8_t digits;
+        if constexpr (std::is_same_v<TInput, float>) {
+            // A float provides between 6 and 7 decimal digits, so at least 6 digits
+            // are precise.
+            digits = 6;
+        } else {
+            // A double provides from 15 to 17 decimal digits, so at least 15 digits
+            // are precise.
+            digits = 15;
+        }
+
+        // Calculate the precise fractional digits.
+        const auto integralValue = static_cast<uint128_t>(std::abs(value));
+        const auto integralDigits = integralValue == 0 ? 0 : CountDigits(integralValue);
+        const auto fractionDigits = std::max(digits - integralDigits, static_cast<unsigned>(0));
+
+        // Scales up the input value with all the precise fractional digits kept.
+        // Convert value as long double type because 1) double * int128_t returns
+        // int128_t and fractional digits are lost. 2) we could also convert the
+        // int128_t value as double to avoid 'double * int128_t', but double
+        // multiplication gives inaccurate result on large numbers. For example,
+        // -3333030000000000000 * 1e3 = -3333030000000000065536. No need to
+        // consider the result becoming infinite as DOUBLE_MAX * 10^38 <
+        // LONG_DOUBLE_MAX.
+        long double scaledValue = std::round((long double) value * TenOfScaleMultipliers[fractionDigits]);
+        const auto result = folly::tryTo<TOutput>(scaledValue);
+        if (result.hasError()) {
+            return vectorization::Status::UserError("Result overflows.");
+        }
+        TOutput rescaledValue = result.value();
+        if (scale > fractionDigits) {
+            bool isOverflow = __builtin_mul_overflow(rescaledValue, TenOfScaleMultipliers[scale - fractionDigits],
+                &rescaledValue);
+            if (isOverflow) {
+                return vectorization::Status::UserError("Result overflows.");
+            }
+        } else {
+            const auto scalingFactor = TenOfScaleMultipliers[fractionDigits - scale];
+            DivideWithRoundUp<TOutput, TOutput, int128_t>(rescaledValue, rescaledValue, scalingFactor, false, 0, 0);
+        }
+
+        if (!valueInPrecisionRange<TOutput>(rescaledValue, precision)) {
+            return vectorization::Status::UserError("Result cannot fit in the given precision {}.", precision);
+        }
+        output = rescaledValue;
+        return vectorization::Status::OK();
     }
 };
 }

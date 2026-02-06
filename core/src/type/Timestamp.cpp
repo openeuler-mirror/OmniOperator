@@ -4,9 +4,54 @@
 
 #include "Timestamp.h"
 #include <algorithm>
+#include <optional>
+#include <charconv>
 #include "type/tzdb/exception.h"
+#include "type/date32.h"
 
 namespace omniruntime {
+namespace {
+ALWAYS_INLINE uint32_t CountDigits(__uint128_t n)
+{
+    uint32_t count = 1;
+    for (;;) {
+        if (n < 10) {
+            return count;
+        }
+        if (n < 100) {
+            return count + 1;
+        }
+        if (n < 1000) {
+            return count + 2;
+        }
+        if (n < 10000) {
+            return count + 3;
+        }
+        n /= 10000u;
+        count += 4;
+    }
+}
+}
+
+std::string::size_type getMaxStringLength(const TimestampToStringOptions &options)
+{
+    const auto precisionWidth = static_cast<int8_t>(options.precision);
+    switch (options.mode) {
+        case TimestampToStringOptions::Mode::kDateOnly:
+            // Date format is %y-mm-dd, where y has 10 digits at maximum for int32.
+            // Possible sign is considered.
+            return 17;
+        case TimestampToStringOptions::Mode::kTimeOnly:
+            // hh:mm:ss.precision
+            return 9 + precisionWidth;
+        case TimestampToStringOptions::Mode::kFull:
+            // Timestamp format is %y-%m-%dT%h:%m:%s.precision, where y has 10 digits
+            // at maximum for int32. Possible sign is considered.
+            return 27 + precisionWidth;
+        default: OMNI_FAIL("Unsupport!");
+    }
+}
+
 // static
 Timestamp Timestamp::fromDaysAndNanos(int32_t days, int64_t nanos)
 {
@@ -32,6 +77,15 @@ Timestamp Timestamp::now()
     auto now = std::chrono::system_clock::now();
     auto epochMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
     return fromMillis(epochMs);
+}
+
+std::string_view Timestamp::tsToStringView(const Timestamp &ts, const TimestampToStringOptions &options,
+    char *const startPosition)
+{
+    std::tm tmValue;
+    OMNI_CHECK(epochToCalendarUtc(ts.getSeconds(), tmValue), "Can't convert seconds to time: {}", ts.getSeconds());
+    const uint64_t nanos = ts.getNanos();
+    return tmToStringView(tmValue, nanos, options, startPosition);
 }
 
 namespace {
@@ -88,6 +142,113 @@ void Timestamp::toGMT(const tz::TimeZone &zone)
         OMNI_FAIL(e.what());
     }
     seconds_ = sysSeconds.count();
+}
+
+std::string_view Timestamp::tmToStringView(const std::tm &tmValue, uint64_t nanos,
+    const TimestampToStringOptions &options, char *const startPosition)
+{
+    OMNI_CHECK(nanos<1'000'000'000, "");
+
+    const auto appendDigits = [](const int value, const std::optional<uint32_t> minWidth, char *const position) {
+        const auto numDigits = CountDigits(value);
+        uint32_t offset = 0;
+        // Append leading zeros when there is the requirement for minumum width.
+        if (minWidth.has_value() && numDigits < minWidth.value()) {
+            const auto leadingZeros = minWidth.value() - numDigits;
+            std::memset(position, '0', leadingZeros);
+            offset += leadingZeros;
+        }
+        const auto [endPosition, errorCode] = std::to_chars(position + offset, position + offset + numDigits, value);
+        std::ignore = endPosition;
+        OMNI_CHECK(errorCode == std::errc(), "Failed to convert value to varchar: {}.",
+            std::make_error_code(errorCode).message());
+        offset += numDigits;
+        return offset;
+    };
+
+    char *writePosition = startPosition;
+    if (options.mode != TimestampToStringOptions::Mode::kTimeOnly) {
+        int year = kTmYearBase + tmValue.tm_year;
+        const bool leadingPositiveSign = options.leadingPositiveSign && year > 9999;
+        const bool negative = year < 0;
+
+        // Sign.
+        if (negative) {
+            *writePosition++ = '-';
+            year = -year;
+        } else if (leadingPositiveSign) {
+            *writePosition++ = '+';
+        }
+
+        // Year.
+        writePosition += appendDigits(year, options.zeroPaddingYear ? std::optional<uint32_t>(4) : std::nullopt,
+            writePosition);
+
+        // Month.
+        *writePosition++ = '-';
+        writePosition += appendDigits(1 + tmValue.tm_mon, 2, writePosition);
+
+        // Day.
+        *writePosition++ = '-';
+        writePosition += appendDigits(tmValue.tm_mday, 2, writePosition);
+
+        if (options.mode == TimestampToStringOptions::Mode::kDateOnly) {
+            return std::string_view(startPosition, writePosition - startPosition);
+        }
+        *writePosition++ = options.dateTimeSeparator;
+    }
+
+    // Hour.
+    writePosition += appendDigits(tmValue.tm_hour, 2, writePosition);
+
+    // Minute.
+    *writePosition++ = ':';
+    writePosition += appendDigits(tmValue.tm_min, 2, writePosition);
+
+    // Second.
+    *writePosition++ = ':';
+    writePosition += appendDigits(tmValue.tm_sec, 2, writePosition);
+
+    if (options.precision == TimestampToStringOptions::Precision::kMilliseconds) {
+        nanos /= 1'000'000;
+    } else if (options.precision == TimestampToStringOptions::Precision::kMicroseconds) {
+        nanos /= 1'000;
+    }
+    if (options.skipTrailingZeros && nanos == 0) {
+        return std::string_view(startPosition, writePosition - startPosition);
+    }
+
+    // Fractional part.
+    *writePosition++ = '.';
+    // Append leading zeros.
+    const auto numDigits = CountDigits(nanos);
+    const auto precisionWidth = static_cast<int8_t>(options.precision);
+    std::memset(writePosition, '0', precisionWidth - numDigits);
+    writePosition += precisionWidth - numDigits;
+
+    // Append the remaining numeric digits.
+    if (options.skipTrailingZeros) {
+        std::optional<uint32_t> nonZeroOffset = std::nullopt;
+        int32_t offset = numDigits - 1;
+        // Write non-zero digits from end to start.
+        while (nanos > 0) {
+            if (nonZeroOffset.has_value() || nanos % 10 != 0) {
+                *(writePosition + offset) = '0' + nanos % 10;
+                if (!nonZeroOffset.has_value()) {
+                    nonZeroOffset = offset;
+                }
+            }
+            --offset;
+            nanos /= 10;
+        }
+        writePosition += nonZeroOffset.value() + 1;
+    } else {
+        const auto [position, errorCode] = std::to_chars(writePosition, writePosition + numDigits, nanos);
+        OMNI_CHECK(errorCode == std::errc(), "Failed to convert fractional part to chars: {}.",
+            std::make_error_code(errorCode).message());
+        writePosition = position;
+    }
+    return std::string_view(startPosition, writePosition - startPosition);
 }
 
 const tz::TimeZone &Timestamp::defaultTimezone()

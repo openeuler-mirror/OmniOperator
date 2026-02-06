@@ -19,7 +19,7 @@ public:
 
     ~LargeStringContainer() = default;
 
-    std::string_view GetValue(int index);
+    std::string_view GetValue(int index) const;
 
     void SetValue(int index, std::string_view &value);
 

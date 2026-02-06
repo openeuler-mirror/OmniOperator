@@ -58,7 +58,7 @@ using SimpleFunctionFactory = std::function<std::shared_ptr<VectorFunction>(
 
 using SimpleFunctionFactoryMap = std::unordered_map<FunctionSignaturePtr, FunctionFactory, Hash, Equals>;
 
-using VectorPtr = std::shared_ptr<vec::BaseVector>;
+using VectorPtr = vec::BaseVector*;
 
 class VectorFunction {
 public:

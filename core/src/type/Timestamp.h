@@ -9,6 +9,7 @@
 
 #include "util/omni_exception.h"
 #include "type/tz/TimeZoneMap.h"
+#include "type/string_ref.h"
 
 namespace omniruntime {
 namespace tz {
@@ -20,6 +21,46 @@ enum class TimestampPrecision : int8_t {
     kMicroseconds = 6, // 10^6 microseconds are equal to one second.
     kNanoseconds = 9, // 10^9 nanoseconds are equal to one second.
 };
+
+struct TimestampToStringOptions {
+    using Precision = TimestampPrecision;
+
+    Precision precision = Precision::kNanoseconds;
+
+    // Whether to add a leading '+' when year is greater than 9999.
+    bool leadingPositiveSign = false;
+
+    /// Whether to skip trailing zeros of fractional part. E.g. when true,
+    /// '2000-01-01 12:21:56.129000' becomes '2000-01-01 12:21:56.129'.
+    bool skipTrailingZeros = false;
+
+    /// Whether padding zeros are added when the digits of year is less than 4.
+    /// E.g. when true, '1-01-01 05:17:32.000' becomes '0001-01-01 05:17:32.000',
+    /// '-03-24 13:20:00.000' becomes '0000-03-24 13:20:00.000', and '-1-11-29
+    /// 19:33:20.000' becomes '-0001-11-29 19:33:20.000'.
+    bool zeroPaddingYear = false;
+
+    // The separator of date and time.
+    char dateTimeSeparator = 'T';
+
+    enum class Mode : int8_t {
+        /// ISO 8601 timestamp format: %Y-%m-%dT%H:%M:%S.nnnnnnnnn for nanoseconds
+        /// precision; %Y-%m-%dT%H:%M:%S.nnn for milliseconds precision.
+        kFull,
+        /// ISO 8601 date format: %Y-%m-%d.
+        kDateOnly,
+        /// ISO 8601 time format: %H:%M:%S.nnnnnnnnn for nanoseconds precision,
+            /// or %H:%M:%S.nnn for milliseconds precision.
+        kTimeOnly,
+    };
+
+    Mode mode = Mode::kFull;
+
+    const tz::TimeZone *timeZone = nullptr;
+};
+
+/// Returns the max length of a converted string from timestamp.
+std::string::size_type getMaxStringLength(const TimestampToStringOptions &options);
 
 struct Timestamp {
     static constexpr int64_t kMillisecondsInSecond = 1'000;
@@ -148,6 +189,13 @@ struct Timestamp {
     std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>
     toTimePointMs(bool allowOverflow = false) const;
 
+    /// Converts a timestamp to a time/date/timestamp string in ISO 8601 format
+    /// according to TimestampToStringOptions.
+    /// @param startPosition the start position of pre-allocated memory to write
+    /// string to.
+    static std::string_view tsToStringView(const Timestamp &ts, const TimestampToStringOptions &options,
+        char *const startPosition);
+
     static Timestamp fromMillis(int64_t millis)
     {
         if (millis >= 0 || millis % 1'000 == 0) {
@@ -259,8 +307,7 @@ struct Timestamp {
                 return Timestamp::fromMicros(ts.toMicros());
             case TimestampPrecision::kNanoseconds:
                 return ts;
-            default:
-                OMNI_FAIL("Unsupport");
+            default: OMNI_FAIL("Unsupport");
         }
     }
 
@@ -282,6 +329,24 @@ struct Timestamp {
 
     /// A default time zone that is same across the process.
     static const tz::TimeZone &defaultTimezone();
+
+    /// Converts a std::tm to a time/date/timestamp string in ISO 8601 format
+    /// according to TimestampToStringOptions.
+    /// @param startPosition the start position of pre-allocated memory to write
+    /// string to.
+    static std::string_view tmToStringView(const std::tm &tmValue, uint64_t nanos,
+        const TimestampToStringOptions &options, char *const startPosition);
+
+    std::string toString(const TimestampToStringOptions &options = {}) const
+    {
+        std::tm tm;
+        OMNI_CHECK(epochToCalendarUtc(seconds_, tm), "Can't convert seconds to time: {}", seconds_);
+        std::string result;
+        result.resize(getMaxStringLength(options));
+        const auto view = tmToStringView(tm, nanos_, options, result.data());
+        result.resize(view.size());
+        return result;
+    }
 
     bool operator==(const Timestamp &b) const
     {

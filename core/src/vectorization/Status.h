@@ -6,7 +6,7 @@
 #pragma once
 #include <string>
 #include <utility>
-
+#include <folly/Expected.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <util/compiler_util.h>
@@ -80,6 +80,8 @@ public:
 
     Status(StatusCode code, std::string msg);
 
+    explicit Status(StatusCode code);
+
     /// Return an error status for user errors.
     template <typename... Args>
     static Status UserError(Args &&... args)
@@ -99,12 +101,35 @@ public:
         return (state_ == nullptr);
     }
 
+    /// Return the specific error message attached to this status.
+    const std::string &message() const
+    {
+        static const std::string kNoMessage = "";
+        return ok() ? kNoMessage : state_->msg;
+    }
+
+    /// Return the StatusCode value attached to this status.
+    constexpr StatusCode code() const
+    {
+        return ok() ? StatusCode::kOK : state_->code;
+    }
+
+    /// Return true iff the status indicates an user error.
+    constexpr bool isUserError() const
+    {
+        return code() == StatusCode::kUserError;
+    }
+
 private:
     template <typename... Args>
-    static Status
-    FromArgs(StatusCode code, fmt::string_view fmt, Args &&... args)
+    static Status FromArgs(StatusCode code, fmt::string_view fmt, Args &&... args)
     {
         return Status(code, fmt::vformat(fmt, fmt::make_format_args(args...)));
+    }
+
+    static Status FromArgs(StatusCode code)
+    {
+        return Status(code);
     }
 
     struct State {
@@ -116,4 +141,7 @@ private:
     // a `State` structure containing the error code and message(s)
     State *state_;
 };
+
+template <typename T>
+using Expected = folly::Expected<T, Status>;
 }

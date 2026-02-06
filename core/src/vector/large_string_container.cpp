@@ -17,7 +17,7 @@ LargeStringContainer<RAW_DATA_TYPE>::LargeStringContainer(int valueSize, int cap
 }
 
 template<typename RAW_DATA_TYPE>
-std::string_view LargeStringContainer<RAW_DATA_TYPE>::GetValue(int index)
+std::string_view LargeStringContainer<RAW_DATA_TYPE>::GetValue(int index) const
 {
     char *valuePtr = bufferSupplier->Data() + offsets[index];
     size_t valueLen = offsets[index + 1] - offsets[index];

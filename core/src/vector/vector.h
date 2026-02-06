@@ -146,7 +146,7 @@ public:
         OMNI_THROW("Vector Error:", "1");
     }
 
-    DataTypeId ALWAYS_INLINE GetTypeId()
+    DataTypeId ALWAYS_INLINE GetTypeId() const
     {
         return dataTypeId;
     }
@@ -366,7 +366,7 @@ public:
      * @param index
      * @return
      */
-    ALWAYS_INLINE typename PARAM_TYPE<RAW_DATA_TYPE>::type GetValue(int index)
+    ALWAYS_INLINE typename PARAM_TYPE<RAW_DATA_TYPE>::type GetValue(int index) const
     {
         return values[index + offset];
     }
@@ -693,7 +693,7 @@ public:
      * @param index
      * @return
      */
-    ALWAYS_INLINE std::string_view GetValue(int index)
+    ALWAYS_INLINE std::string_view GetValue(int index) const
     {
         return container->GetValue(index + this->offset);
     }
