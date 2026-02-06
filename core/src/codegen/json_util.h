@@ -129,6 +129,11 @@ inline std::optional<std::string> traverse_and_extract(const std::string_view js
             return std::nullopt;
         }
     }
+
+    if (json_parse.is_null()) {
+        return std::nullopt;
+    }
+
     if (json_parse.is_string()) {
         return json_parse.get<std::string>();
     }

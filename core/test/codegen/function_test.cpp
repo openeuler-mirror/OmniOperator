@@ -14,6 +14,7 @@
 #include "codegen/functions/dictionaryfunctions.h"
 #include "codegen/functions/udffunctions.h"
 #include "codegen/functions/datetime_functions.h"
+#include "codegen/functions/json_functions.h"
 #include "jni_mock.h"
 #include "udf/cplusplus/jni_util.h"
 #include "../util/test_util.h"
@@ -1306,7 +1307,7 @@ TEST(FunctionTest, CastNumToString)
     int32_t int_32 = 456;
     int64_t int_64 = 789;
     double num_double = 3.56;
-    
+
     int outLen = 0;
     std::string actual;
     const char *result;
@@ -1552,48 +1553,65 @@ TEST(FunctionTest, ConcatWsStr)
     int32_t outlen = 0;
     const char *result;
     std::string actual;
+    bool retIsNull = false;
 
-    result = ConcatWsStr(contextPtr, ",", 1, "hello", 5, "world", 5, false, &outlen);
+    result = ConcatWsStr(contextPtr, ",", 1, false, "hello", 5, false, "world", 5, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 11);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "hello,world");
 
-    result = ConcatWsStr(contextPtr, "", 0, "hello", 5, "world", 5, false, &outlen);
+    result = ConcatWsStr(contextPtr, "", 0, false, "hello", 5, false, "world", 5, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 10);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "helloworld");
 
-    result = ConcatWsStr(contextPtr, "-", 1, "", 0, "world", 5, false, &outlen);
+    result = ConcatWsStr(contextPtr, "-", 1, false, "", 0, false, "world", 5, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 6);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "-world");
 
-    result = ConcatWsStr(contextPtr, "-", 1, "hello", 5, "", 0, false, &outlen);
+    result = ConcatWsStr(contextPtr, "-", 1, false, "hello", 5, false, "", 0, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 6);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "hello-");
 
-    result = ConcatWsStr(contextPtr, "-", 1, "", 0, "", 0, false, &outlen);
+    result = ConcatWsStr(contextPtr, "-", 1, false, "", 0, false, "", 0, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 1);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "-");
 
-    result = ConcatWsStr(contextPtr, "-", 1, "", 0, "world", 5, false, &outlen);
+    result = ConcatWsStr(contextPtr, "-", 1, false, "", 0, false, "world", 5, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 6);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "-world");
 
-    result = ConcatWsStr(contextPtr, "-", 1, "a", 0, "b", 1, true, &outlen);
-    EXPECT_EQ(outlen, 0);
+    result = ConcatWsStr(contextPtr, "-", 1, true, "a", 1, false, "b", 1, false, &retIsNull, &outlen);
+    EXPECT_TRUE(retIsNull);
     EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(outlen, 0);
 
-    result = ConcatWsStr(contextPtr, "-", 1, nullptr, 0, "b", 1, false, &outlen);
+    result = ConcatWsStr(contextPtr, "-", 1, false, nullptr, 0, true, "b", 1, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 1);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "b");
+
+    result = ConcatWsStr(contextPtr, "-", 1, false, nullptr, 0, true, nullptr, 0, true, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
+    EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 0);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "");
@@ -1608,38 +1626,76 @@ TEST(FunctionTest, ConcatWs3Str)
     int32_t outlen = 0;
     const char *result;
     std::string actual;
+    bool retIsNull = false;
 
-    result = ConcatWs3Str(contextPtr, ",", 1, "a", 1, "b", 1, "c", 1, false, &outlen);
+    result = ConcatWs3Str(contextPtr, ",", 1, false, "a", 1, false, "b", 1, false, "c", 1, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 5);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "a,b,c");
 
-    result = ConcatWs3Str(contextPtr, "=", 1, "a", 1, "", 0, "c", 1, false, &outlen);
+    result = ConcatWs3Str(contextPtr, "=", 1, false, "a", 1, false, "", 0, false, "c", 1, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 4);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "a==c");
 
-    result = ConcatWs3Str(contextPtr, "=", 1, "", 0, "b", 1, "c", 1, false, &outlen);
+    result = ConcatWs3Str(contextPtr, "=", 1, false, "", 0, false, "b", 1, false, "c", 1, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 4);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "=b=c");
 
-    result = ConcatWs3Str(contextPtr, "=", 1, "a", 1, "b", 1, "", 0, false, &outlen);
+    result = ConcatWs3Str(contextPtr, "=", 1, false, "a", 1, false, "b", 1, false, "", 0, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 4);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "a=b=");
 
-    result = ConcatWs3Str(contextPtr, "=", 1, "", 0, "", 0, "", 0, false, &outlen);
+    // concat_ws("-", "", null, "") => "-"
+    result = ConcatWs3Str(contextPtr, "-", 1, false, "", 0, false, nullptr, 0, true, "", 0, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
-    EXPECT_EQ(outlen, 2);
+    EXPECT_EQ(outlen, 1);
     actual = std::string(result, outlen);
-    EXPECT_EQ(actual, "==");
+    EXPECT_EQ(actual, "-");
 
-    result = ConcatWs3Str(contextPtr, "", 0, "a", 1, "b", 1, "c", 1, false, &outlen);
+    // concat_ws("-", "", null, null) => ""
+    result = ConcatWs3Str(contextPtr, "-", 1, false, "", 0, false, nullptr, 0, true, nullptr, 0, true, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "");
+
+    // concat_ws("-", null, null, null) => ""
+    result = ConcatWs3Str(contextPtr, "-", 1, false, nullptr, 0, true, nullptr, 0, true, nullptr, 0, true, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "");
+
+    // separator null => null
+    result = ConcatWs3Str(contextPtr, "-", 1, true, "aa", 2, false, "dd", 2, false, "bb", 2, false, &retIsNull, &outlen);
+    EXPECT_TRUE(retIsNull);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+
+    // concat_ws("", "aa", "", "bb") => "aabb"
+    result = ConcatWs3Str(contextPtr, "", 0, false, "aa", 2, false, "", 0, false, "bb", 2, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 4);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "aabb");
+
+    result = ConcatWs3Str(contextPtr, "", 0, false, "a", 1, false, "b", 1, false, "c", 1, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 3);
     actual = std::string(result, outlen);
@@ -1655,40 +1711,62 @@ TEST(FunctionTest, ConcatWs4Str)
     int32_t outlen = 0;
     const char *result;
     std::string actual;
+    bool retIsNull = false;
 
-    result = ConcatWs4Str(contextPtr, ",", 1, "a", 1, "b", 1, "c", 1, "d", 1, false, &outlen);
+    result = ConcatWs4Str(contextPtr, ",", 1, false, "a", 1, false, "b", 1, false, "c", 1, false, "d", 1, false,
+        &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 7);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "a,b,c,d");
 
-    result = ConcatWs4Str(contextPtr, ",", 1, "a", 1, "b", 1, "", 0, "d", 1, false, &outlen);
+    result = ConcatWs4Str(contextPtr, ",", 1, false, "a", 1, false, "b", 1, false, "", 0, false, "d", 1, false,
+        &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 6);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "a,b,,d");
 
-    result = ConcatWs4Str(contextPtr, ",", 1, "", 0, "b", 1, "c", 1, "", 0, false, &outlen);
+    result = ConcatWs4Str(contextPtr, ",", 1, false, "", 0, false, "b", 1, false, "c", 1, false, "", 0, false,
+        &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 5);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, ",b,c,");
 
-    result = ConcatWs4Str(contextPtr, ",", 1, "", 0, "", 0, "", 0, "", 0, false, &outlen);
+    result = ConcatWs4Str(contextPtr, ",", 1, false, "", 0, false, "", 0, false, "", 0, false, "", 0, false,
+        &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 3);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, ",,,");
 
-    result = ConcatWs4Str(contextPtr, ",", 1, "a", 1, "b", 1, "c", 1, "d", 1, true, &outlen);
+    result = ConcatWs4Str(contextPtr, ",", 1, true, "a", 1, false, "b", 1, false, "c", 1, false, "d", 1, false,
+        &retIsNull, &outlen);
+    EXPECT_TRUE(retIsNull);
     EXPECT_EQ(result, nullptr);
     EXPECT_EQ(outlen, 0);
 
-    result = ConcatWs4Str(contextPtr, "", 0, "a", 1, "b", 1, "c", 1, "d", 1, false, &outlen);
+    result = ConcatWs4Str(contextPtr, "", 0, false, "a", 1, false, "b", 1, false, "c", 1, false, "d", 1, false,
+        &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 4);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "abcd");
+
+    // skip nulls: concat_ws("-", "aa", null, "bb", null) => "aa-bb"
+    result = ConcatWs4Str(contextPtr, "-", 1, false, "aa", 2, false, nullptr, 0, true, "bb", 2, false, nullptr, 0, true,
+        &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 5);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "aa-bb");
 
     delete context;
 }
@@ -1700,40 +1778,61 @@ TEST(FunctionTest, ConcatWs5Str)
     int32_t outlen = 0;
     const char *result;
     std::string actual;
+    bool retIsNull = false;
 
-    result = ConcatWs5Str(contextPtr, ",", 1, "a", 1, "b", 1, "c", 1, "d", 1, "e", 1, false, &outlen);
+    result = ConcatWs5Str(contextPtr, ",", 1, false, "a", 1, false, "b", 1, false, "c", 1, false, "d", 1, false,
+        "e", 1, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 9);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "a,b,c,d,e");
 
-    result = ConcatWs5Str(contextPtr, ",", 1, "a", 1, "b", 1, "", 0, "d", 1, "e", 1, false, &outlen);
+    result = ConcatWs5Str(contextPtr, ",", 1, false, "a", 1, false, "b", 1, false, "", 0, false, "d", 1, false,
+        "e", 1, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 8);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "a,b,,d,e");
 
-    result = ConcatWs5Str(contextPtr, ",", 1, "", 0, "b", 1, "c", 1, "d", 1, "", 0, false, &outlen);
+    result = ConcatWs5Str(contextPtr, ",", 1, false, "", 0, false, "b", 1, false, "c", 1, false, "d", 1, false,
+        "", 0, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 7);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, ",b,c,d,");
 
-    result = ConcatWs5Str(contextPtr, ",", 1, "", 0, "", 0, "", 0, "", 0, "", 0, false, &outlen);
+    result = ConcatWs5Str(contextPtr, ",", 1, false, "", 0, false, "", 0, false, "", 0, false, "", 0, false, "", 0,
+        false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 4);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, ",,,,");
 
-    result = ConcatWs5Str(contextPtr, ",", 1, "a", 1, "b", 1, "c", 1, "d", 1, "e", 1, true, &outlen);
+    result = ConcatWs5Str(contextPtr, ",", 1, true, "a", 1, false, "b", 1, false, "c", 1, false, "d", 1, false,
+        "e", 1, false, &retIsNull, &outlen);
+    EXPECT_TRUE(retIsNull);
     EXPECT_EQ(result, nullptr);
     EXPECT_EQ(outlen, 0);
 
-    result = ConcatWs5Str(contextPtr, "", 0, "a", 1, "b", 1, "c", 1, "d", 1, "e", 1, false, &outlen);
+    result = ConcatWs5Str(contextPtr, "", 0, false, "a", 1, false, "b", 1, false, "c", 1, false, "d", 1, false,
+        "e", 1, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(outlen, 5);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "abcde");
+
+    result = ConcatWs5Str(contextPtr, "-", 1, false, nullptr, 0, true, nullptr, 0, true, nullptr, 0, true, nullptr, 0,
+        true, nullptr, 0, true, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "");
 
     delete context;
 }
@@ -3693,6 +3792,78 @@ TEST(FunctionTest, StaticInvokeCharReadPadding)
     const char* cs7 = StaticInvokeCharReadPadding(contextPtr, nullptr, 0, 4, true, &outLen);
     std::string ss7(cs7, outLen);
     EXPECT_TRUE(cs7 == nullptr);
+    delete context;
+}
+
+TEST(FunctionTest, GetJsonObject)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+
+    auto expectNull = [&](const char *jsonStr, int32_t jsonLen, bool jsonIsNull, const char *pathStr, int32_t pathLen,
+                          bool pathIsNull) {
+        bool retIsNull = false;
+        int32_t outLen = -1;
+        const char *ret = GetJsonObject(contextPtr, jsonStr, jsonLen, jsonIsNull, pathStr, pathLen, pathIsNull,
+            &retIsNull, &outLen);
+        EXPECT_TRUE(retIsNull);
+        EXPECT_EQ(ret, nullptr);
+        EXPECT_EQ(outLen, 0);
+    };
+
+    auto expectValue = [&](const char *jsonStr, int32_t jsonLen, const char *pathStr, int32_t pathLen,
+                           const std::string &expect) {
+        bool retIsNull = true;
+        int32_t outLen = 0;
+        const char *ret = GetJsonObject(contextPtr, jsonStr, jsonLen, false, pathStr, pathLen, false, &retIsNull, &outLen);
+        EXPECT_FALSE(retIsNull);
+        ASSERT_NE(ret, nullptr);
+        EXPECT_EQ(outLen, static_cast<int32_t>(expect.size()));
+        EXPECT_EQ(std::string(ret, outLen), expect);
+    };
+
+    expectNull(nullptr, 0, true, "$.a", 3, false);
+    expectNull("{\"a\":1}", 7, false, nullptr, 0, true);
+    expectNull(nullptr, 0, false, "$.a", 3, false);
+    expectNull("{\"a\":1}", 0, false, "$.a", 3, false);
+    expectNull("{\"a\":1}", 7, false, "$.a", 0, false);
+
+    expectNull("{\"a\":1}", 7, false, "a", 1, false);
+    expectNull("{\"a\":1}", 7, false, "$.", 2, false);
+    expectNull("{\"a\":1}", 7, false, "$[", 2, false);
+
+    expectNull("{", 1, false, "$.a", 3, false);
+
+    expectNull("{\"a\":1}", 7, false, "$.b", 3, false);
+    expectNull("{\"a\":1}", 7, false, "$.a.b", 5, false);
+
+    expectValue("{\"a\":\"x\"}", 9, "$.a", 3, "x");
+    expectValue("{\"a\":20}", 8, "$.a", 3, "20");
+    expectValue("{\"a\":1}", 7, "$.a", 3, "1");
+    expectValue("{\"a\":{\"b\":1}}", 13, "$.a", 3, "{\"b\":1}");
+    expectValue("{\"a\":[1,2]}", 11, "$.a", 3, "[1,2]");
+    expectValue("{\"a\":[10,20]}", 13, "$.a[1]", 6, "20");
+    expectNull("{\"a\":[1]}", 9, false, "$.a[2]", 6, false);
+    expectValue("{\"a\":[{\"b\":\"c\"}]}", 17, "$.a[0].b", 8, "c");
+
+    expectValue("{\"a\":true}", 10, "$.a", 3, "true");
+
+    expectValue("{\"a\":1}", 7, "$", 1, "{\"a\":1}");
+
+    expectNull("{\"a\":null}", 10, false, "$.a", 3, false);
+
+    expectValue("{\"a\":1}", 7, "$['a']", 6, "1");
+
+    expectValue("{\"a\":{\"b\":{\"c\":1}}}", 19, "$.a.b", 5, "{\"c\":1}");
+    expectValue("{\"a\":[[1,2],[3,4]]}", 19, "$.a[1][0]", 9, "3");
+    expectValue("{\"a\":{\"b\":[{\"c\":null},{\"c\":\"d\"}]}}", 35, "$.a.b[1].c", 10, "d");
+    expectNull("{\"a\":{\"b\":[{\"c\":null},{\"c\":\"d\"}]}}", 35, false, "$.a.b[0].c", 10, false);
+    expectValue("{\"a\":{\"b\":\"c\"}}", 16, "$['a']['b']", 11, "c");
+    expectValue("[{\"a\":1},{\"a\":2}]", 17, "$[0].a", 6, "1");
+    expectValue("[{\"a\":1},{\"a\":2}]", 17, "$[1].a", 6, "2");
+    expectValue("[{\"a\":1},{\"a\":2}]", 17, "$[0]", 4, "{\"a\":1}");
+    expectNull("[{\"a\":1},{\"a\":2}]", 17, false, "$[2].a", 6, false);
+
     delete context;
 }
 }
