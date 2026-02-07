@@ -142,5 +142,8 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterFunction<RPadFunction, std::string, std::string_view, int32_t, std::string_view>(
         prefix + "rpad", {OMNI_CHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR);
 
+    // overlay(input, replace, pos, len) -> varchar
+    RegisterFunction<OverlayFunction, std::string, std::string_view, std::string_view, int32_t, int32_t>(
+        prefix + "overlay", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
 }
 }
