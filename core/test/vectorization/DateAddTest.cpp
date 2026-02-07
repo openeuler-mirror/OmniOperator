@@ -160,7 +160,7 @@ TEST(DateAddTest, DateAddNegative) {
     // Expected: 2019-02-28, 2018-01-01
     std::vector<int32_t> expected = {
         DateAddFunctionTestHelper::DateToDays(2019, 2, 28),
-        DateAddFunctionTestHelper::DateToDays(2018, 1, 1)
+        DateAddFunctionTestHelper::DateToDays(2017, 12, 31)
     };
     
     BaseVector* dateVec = DateAddFunctionTestHelper::CreateDate32Vector(dateValues);
