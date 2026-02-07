@@ -12,6 +12,8 @@
 #include "../functions/Trunc.h"
 #include "../functions/AddMonths.h"
 #include "../functions/DateAdd.h"
+#include "../functions/DateSub.h"
+#include "../functions/DateArithmetic.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -27,5 +29,6 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterTruncFunction(prefix + "trunc_date");
     RegisterAddMonthsFunction(prefix + "add_months");
     RegisterDateAddFunction(prefix + "date_add");
+    RegisterDateSubFunction(prefix + "date_sub");
 }
 }
