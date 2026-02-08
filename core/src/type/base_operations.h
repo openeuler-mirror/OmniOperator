@@ -9,6 +9,7 @@
 #include <iostream>
 #include <limits>
 #include "width_integer.h"
+#include "util/omni_exception.h"
 
 namespace omniruntime::type {
 enum Status {

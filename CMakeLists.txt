@@ -8,7 +8,7 @@ message(STATUS "Now processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 
 # omniruntime version
 set(OMNI_RUNTIME_VERSION 2.0.0)
-set(OS_ARCHITECTURES aarch64)
+set(OS_ARCHITECTURES "${CMAKE_HOST_SYSTEM_PROCESSOR}")
 set(OMNI_CODEGEN_SO boostkit-omniop-codegen-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
 set(OMNI_OPERATOR_SO boostkit-omniop-operator-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
 set(OMNI_RUNTIME_SO boostkit-omniop-runtime-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
@@ -57,7 +57,11 @@ endif ()
 #-ffast-math
 #-fopt-info-vec-optimized
 set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} ${SIMD_COMPILE_LEVEL} -fno-var-tracking-assignments -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 ${SIMD_COMPILE_LEVEL} -fno-var-tracking-assignments -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
+if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 ${SIMD_COMPILE_LEVEL} -fno-var-tracking-assignments -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
+else()
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -fno-var-tracking-assignments -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
+endif()
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -finline-limit=6000 --param inline-unit-growth=300")
 
 if(ENABLE_COMPILE_TIME_REPORT)
@@ -77,13 +81,15 @@ message(STATUS "OMNI_HOME is $ENV{OMNI_HOME}")
 message(STATUS "JAVA_HOME is $ENV{JAVA_HOME}")
 
 # clean all target
-set(target_generated ${CMAKE_INSTALL_PREFIX}/lib${OMNI_RUNTIME_SO}.so
-        ${CMAKE_INSTALL_PREFIX}/lib${OMNI_VECTOR_SO}.so
-        ${CMAKE_INSTALL_PREFIX}/lib${OMNI_CODEGEN_SO}.so
-        ${CMAKE_INSTALL_PREFIX}/ir
-        ${CMAKE_INSTALL_PREFIX}/lib${OMNI_OPERATOR_SO}.so
-        ${CMAKE_INSTALL_PREFIX}/lib${OMNI_READER_SO}.so
-        )
+set(target_generated ${CMAKE_INSTALL_PREFIX}/lib${OMNI_VECTOR_SO}.so)
+if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    set(target_generated ${CMAKE_INSTALL_PREFIX}/lib${OMNI_RUNTIME_SO}.so
+            ${CMAKE_INSTALL_PREFIX}/lib${OMNI_CODEGEN_SO}.so
+            ${CMAKE_INSTALL_PREFIX}/ir
+            ${CMAKE_INSTALL_PREFIX}/lib${OMNI_OPERATOR_SO}.so
+            ${CMAKE_INSTALL_PREFIX}/lib${OMNI_READER_SO}.so
+            )
+endif ()
 foreach (file ${target_generated})
     if (EXISTS ${file})
         file(REMOVE_RECURSE ${file})

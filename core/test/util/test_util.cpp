@@ -16,7 +16,6 @@ using namespace omniruntime::type;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace omniruntime::codegen;
-
 namespace omniruntime::TestUtil {
 void PrintNotMatchBatches(VectorBatch *outputPages, VectorBatch *expectPage)
 {
@@ -680,7 +679,7 @@ BaseVector *CreateVarcharVector(std::string *values, int32_t length)
     }
     return vector;
 }
-
+#ifdef __aarch64__
 FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, DataTypePtr returnType)
 {
     std::vector<DataTypeId> argTypes(args.size());
@@ -693,7 +692,7 @@ FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, Dat
     }
     return nullptr;
 }
-
+#endif
 std::string GenerateSpillPath()
 {
     char *dirName = get_current_dir_name();
