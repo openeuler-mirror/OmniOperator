@@ -110,6 +110,12 @@ const std::string NormalizeNaNAndZeroFnStr()
     return normalizeNaNAndZeroFnStr;
 }
 
+const std::string NanvlFnStr()
+{
+    const std::string nanvlFnStr = "nanvl";
+    return nanvlFnStr;
+}
+
 const std::string GreatestFnStr()
 {
     const std::string greatestFnStr = "Greatest";
@@ -301,6 +307,10 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(Floor<int64_t>), FloorFnStr(), {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(Floor<double>), FloorFnStr(), {}, { OMNI_DOUBLE }, OMNI_LONG, INPUT_DATA),
+
+        // nanvl: returns expr1 if not NaN, otherwise returns expr2 (float and double)
+        Function(reinterpret_cast<void *>(Nanvl<float>), NanvlFnStr(), {}, floatParams, OMNI_FLOAT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Nanvl<double>), NanvlFnStr(), {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
 
         // insert native function for each short operations
         Function(reinterpret_cast<void *>(AddInt16), AddFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
