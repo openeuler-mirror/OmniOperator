@@ -82,6 +82,42 @@ public:
 
     explicit Status(StatusCode code);
 
+    // Destructor: free the heap-allocated State
+    ~Status()
+    {
+        delete state_;
+    }
+
+    // Move constructor
+    Status(Status &&other) noexcept : state_(other.state_)
+    {
+        other.state_ = nullptr;
+    }
+
+    // Move assignment
+    Status &operator=(Status &&other) noexcept
+    {
+        if (this != &other) {
+            delete state_;
+            state_ = other.state_;
+            other.state_ = nullptr;
+        }
+        return *this;
+    }
+
+    // Copy constructor
+    Status(const Status &other) : state_(other.state_ ? new State{other.state_->code, other.state_->msg} : nullptr) {}
+
+    // Copy assignment
+    Status &operator=(const Status &other)
+    {
+        if (this != &other) {
+            delete state_;
+            state_ = other.state_ ? new State{other.state_->code, other.state_->msg} : nullptr;
+        }
+        return *this;
+    }
+
     /// Return an error status for user errors.
     template <typename... Args>
     static Status UserError(Args &&... args)

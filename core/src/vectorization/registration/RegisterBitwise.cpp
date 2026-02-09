@@ -33,5 +33,18 @@ void RegisterBitwiseFunctions(const std::string &prefix)
             prefix + "bit_get", {OMNI_INT, OMNI_INT}, OMNI_BYTE);
     RegisterFunction<BitGetFunction, int8_t, int64_t, int32_t>(
             prefix + "bit_get", {OMNI_LONG, OMNI_INT}, OMNI_BYTE);
+
+    // BitCount function: returns int32_t representing the number of 1-bits
+    // Supports: bool, byte, short, int, long
+    RegisterFunction<BitCountFunction, int32_t, bool>(
+            prefix + "bit_count", {OMNI_BOOLEAN}, OMNI_INT);
+    RegisterFunction<BitCountFunction, int32_t, int8_t>(
+            prefix + "bit_count", {OMNI_BYTE}, OMNI_INT);
+    RegisterFunction<BitCountFunction, int32_t, int16_t>(
+            prefix + "bit_count", {OMNI_SHORT}, OMNI_INT);
+    RegisterFunction<BitCountFunction, int32_t, int32_t>(
+            prefix + "bit_count", {OMNI_INT}, OMNI_INT);
+    RegisterFunction<BitCountFunction, int32_t, int64_t>(
+            prefix + "bit_count", {OMNI_LONG}, OMNI_INT);
 }
 }

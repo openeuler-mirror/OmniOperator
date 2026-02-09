@@ -90,5 +90,14 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "position", {OMNI_CHAR, OMNI_VARCHAR}, OMNI_INT);
     RegisterFunction<PositionFunction, int32_t, std::string_view, std::string_view>(
         prefix + "position", {OMNI_CHAR, OMNI_CHAR}, OMNI_INT);
+
+    // bit_length(string/binary) -> integer
+    // Returns the bit length of the input (byte length * 8)
+    RegisterFunction<BitLengthFunction, int32_t, std::string_view>(
+        prefix + "bit_length", {OMNI_VARCHAR}, OMNI_INT);
+    RegisterFunction<BitLengthFunction, int32_t, std::string_view>(
+        prefix + "bit_length", {OMNI_CHAR}, OMNI_INT);
+    RegisterFunction<BitLengthFunction, int32_t, std::string_view>(
+        prefix + "bit_length", {OMNI_VARBINARY}, OMNI_INT);
 }
 }
