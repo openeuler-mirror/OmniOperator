@@ -10,8 +10,7 @@
 #include "type/date32.h"
 #include "vector/vector_helper.h"
 #include "util/bit_util.h"
-#include <limits>
-#include "libboundscheck/include/securec.h"
+#include <cstring>
 
 namespace omniruntime::vectorization {
 using namespace omniruntime::vec;
@@ -20,35 +19,18 @@ using namespace omniruntime::type;
 // Shared implementation namespace for date arithmetic functions
 namespace date_arithmetic_impl {
 // Helper function to perform date arithmetic (add or subtract days)
-// Returns true on success, false on overflow
+// Matches Spark native behavior: no type promotion, no overflow protection
 template <typename TNumDays>
-bool ComputeDateArithmetic(int32_t daysSinceEpoch, TNumDays numDays, int32_t &result, bool isSubtract) {
-    // Convert numDays to int64_t to handle all integer types safely
-    int64_t numDays64 = static_cast<int64_t>(numDays);
-    int64_t daysSinceEpoch64 = static_cast<int64_t>(daysSinceEpoch);
-    int64_t result64 = 0;
-    
-    // Perform addition or subtraction based on isSubtract flag
+void ComputeDateArithmetic(int32_t daysSinceEpoch, TNumDays numDays, int32_t &result, bool isSubtract) {
+    // Direct calculation without type promotion or overflow checking, matching Spark behavior
     if (isSubtract) {
         // date_sub: subtract numDays
-        if (__builtin_sub_overflow(daysSinceEpoch64, numDays64, &result64)) {
-            return false; // Overflow detected
-        }
+        __builtin_sub_overflow(daysSinceEpoch, numDays, &result);
     } else {
         // date_add: add numDays
-        if (__builtin_add_overflow(daysSinceEpoch64, numDays64, &result64)) {
-            return false; // Overflow detected
-        }
+        __builtin_add_overflow(daysSinceEpoch, numDays, &result);
     }
-    
-    // Check if result fits in int32_t
-    if (result64 < std::numeric_limits<int32_t>::min() || 
-        result64 > std::numeric_limits<int32_t>::max()) {
-        return false;
-    }
-    
-    result = static_cast<int32_t>(result64);
-    return true;
+    // Note: __builtin_*_overflow returns overflow flag, but we ignore it to match Spark behavior
 }
 
 // Template class for DateArithmetic function supporting different integer types for numDays
@@ -68,7 +50,7 @@ public:
         op::ExecutionContext *context) const override
     {
         if (args.size() < 2) {
-            return;
+            OMNI_THROW("DateArithmetic error:", "{} requires exactly 2 arguments", functionName_);
         }
         
         // Extract arguments from stack: numDays (TNumDays), date (DATE32)
@@ -111,10 +93,7 @@ public:
                     // If constant is NULL, set all results to NULL
                     auto *resultNulls = unsafe::UnsafeBaseVector::GetNulls(result);
                     auto nullsSize = BitUtil::Nbytes(size);
-                    auto result_code = memset_s(resultNulls, nullsSize, 0xFF, nullsSize);
-                    if (result_code != EOK) {
-                        OMNI_THROW("DateArithmetic error:", "Failed to set null bits, error code: {}", result_code);
-                    }
+                    memset(resultNulls, 0xFF, nullsSize);
                     return;
                 }
             } else {
@@ -127,7 +106,7 @@ public:
             // Copy NULL bits from date input to result (so NULL rows are already set to NULL)
             auto *resultNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
             auto nullsSize = BitUtil::Nbytes(size);
-            memcpy_s(resultNulls, nullsSize, dateNulls, nullsSize);
+            memcpy(resultNulls, dateNulls, nullsSize);
             
             // Process only non-NULL rows using SelectivityVector
             SelectivityVector rows(size);
@@ -147,13 +126,10 @@ public:
                 TNumDays numDays = numDaysIsConst ? constNumDays : numDaysRaw[i];
                 int32_t resultDays = 0;
                 
-                if (ComputeDateArithmetic(daysSinceEpoch, numDays, resultDays, isSubtract_)) {
-                    resultRaw[i] = resultDays;
-                    result->SetNotNull(i);
-                } else {
-                    // If operation fails (overflow), set to null
-                    result->SetNull(i);
-                }
+                // Direct calculation without overflow protection, matching Spark native behavior
+                ComputeDateArithmetic(daysSinceEpoch, numDays, resultDays, isSubtract_);
+                resultRaw[i] = resultDays;
+                result->SetNotNull(i);
             });
         }
     }
