@@ -602,4 +602,84 @@ struct UnhexFunction {
         return call(result, *input);
     }
 };
+
+/// split_part function
+/// split_part(string, delimiter, index) -> varchar
+/// Splits string on delimiter and returns the part at index.
+/// Field indexes start with 1. If the index is larger than the
+/// number of fields, then null is returned.
+/// When delimiter is empty, the string is split into individual characters (Unicode-aware).
+/// Note: Only callNullable is implemented since this function can return NULL
+/// when index is out of range.
+template <typename T>
+struct SplitPartFunction {
+    /// Nullable version - main implementation
+    /// Returns true if result is valid, false if result should be NULL
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *input,
+        const std::string_view *delimiter, const int64_t *index)
+    {
+        // Handle NULL inputs
+        if (input == nullptr || delimiter == nullptr || index == nullptr) {
+            return false;
+        }
+
+        // Index must be greater than zero, return NULL if not
+        if (*index <= 0) {
+            return false;
+        }
+
+        int64_t iteration = 1;
+        size_t curPos = 0;
+
+        // Handle empty delimiter - split into individual characters (Unicode-aware)
+        if (delimiter->empty()) {
+            // UTF-8 character iteration
+            while (curPos < input->size()) {
+                int byteLen = 0;
+                int codePoint = Utf8FirstCodepoint(input->data() + curPos, input->size() - curPos, byteLen);
+                
+                if (byteLen <= 0 || codePoint < 0) {
+                    // Invalid UTF-8, treat as single byte
+                    byteLen = 1;
+                }
+                
+                if (iteration == *index) {
+                    result.assign(input->data() + curPos, byteLen);
+                    return true;
+                }
+                
+                curPos += byteLen;
+                iteration++;
+            }
+            // Index out of range
+            return false;
+        }
+
+        // Non-empty delimiter
+        while (curPos <= input->size()) {
+            size_t start = curPos;
+            size_t foundPos = input->find(*delimiter, curPos);
+            
+            if (iteration == *index) {
+                size_t end = foundPos;
+                if (end == std::string_view::npos) {
+                    end = input->size();
+                }
+                result.assign(input->data() + start, end - start);
+                return true;
+            }
+            
+            if (foundPos == std::string_view::npos) {
+                // No more delimiters and index not found
+                return false;
+            }
+            
+            curPos = foundPos + delimiter->size();
+            iteration++;
+        }
+        
+        return false;
+    }
+};
+
 }
