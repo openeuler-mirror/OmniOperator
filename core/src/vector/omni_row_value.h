@@ -7,24 +7,27 @@
 #define OMNI_RUNTIME_OMNI_ROW_VALUE_H
 
 #include "vector.h"
+#include "omni_row.h"
+#include "array_vector.h"
 #include "type/data_types.h"
 #include "type/data_types.h"
 #include "vector_batch.h"
 #include "util/debug.h"
 /*
  * row format:
- * | isVarchar(1bit 1) + isNull(1bit) + pad (3bit) + sizeLength(3bit) | realLength (n bytes)| varcharValue |
- * | isVarchar(1bit 0) + isNull(1bit) + neg(1bit) + pad (1bit) + sizeLength(4bit) | fixValue |
+ * whichType 000：fixType
+ * whichType 001: varChar
+ * whichType 010: array
+ * 
+ * | whichType(3bit 000) + isNull(1bit) + neg(1bit) + sizeLength(3bit) | fixValue |
+ * | whichType(3bit 001) + isNull(1bit) + sizeLength(4bit) | realLength(n bytes) | varcharValue |
+ * | whichType(3bit 010) + isNull(1bit) + real_num_ele_size(4bit) | real_num_ele(n bytes) | element1 | element2 | ... |
  *
- * for example
- * one row is
- * string("hello",5) + long(100) + long(null) + int(500) + string("world", 5) + string(null)
- * | 1 0 001 000 (b)| 5 | h e l l o  | + | 0 0 001 000| 100 |
- * + | 0 1 000 000 | + | 0 0 001 000 | 500|
- * + | 1 0 001 000 (b)| 5 | h e l l o  | + | 1 1 000 000 (b)|
  */
 namespace omniruntime {
 namespace vec {
+class RowBuffer;
+
 class BaseSerialize {
 public:
     static constexpr int32_t PrefixLen = 1;
@@ -32,10 +35,11 @@ public:
     static constexpr int32_t BIT_8 = 8;
     static constexpr int32_t BIT_1 = 1;
     static constexpr int32_t BIT_16 = 16;
-    static constexpr int8_t VARCHAR_BIT = 1 << 7;
+    static constexpr int8_t VARCHAR_BIT = 1 << 6;
+    static constexpr int8_t ARRAY_BIT = 1 << 7;
     static constexpr int8_t FIX_BIT = 0;
-    static constexpr int8_t NULL_POS = 6;
-    static constexpr int8_t NEG_POS = 5;
+    static constexpr int8_t NULL_POS = 5;
+    static constexpr int8_t NEG_POS = 4;
 
     /* *
      * @brief Translates the specified row from the given BaseVector into a local storage.
@@ -108,9 +112,6 @@ protected:
 
 template <typename T, Encoding encoding = OMNI_FLAT> class SerializedValue : public BaseSerialize {
 public:
-    // only 1 Bytes represent following coding :
-    // 'isVarchar(1bit 1) + isNull(1bit) + sizeLength(3bit)  + pad (3bit)'
-    // or 'isVarchar(1bit 0) + isNull(1bit) + sizeLength(3bit) '
     // set value from vector row
     void TransValue(BaseVector *baseVector, int32_t rowIndex)
     {
@@ -122,6 +123,8 @@ public:
                 value = reinterpret_cast<VectorType *>(baseVector)->GetValue(rowIndex);
             } else if constexpr (encoding == OMNI_DICTIONARY) {
                 value = reinterpret_cast<DicVectorType *>(baseVector)->GetValue(rowIndex);
+            } else if constexpr (encoding == OMNI_ENCODING_ARRAY) {
+                value = reinterpret_cast<ArrayVector *>(baseVector)->GetValue(rowIndex);
             } else {
                 // OMNI_ENCODING_CONTAINER is only used for the agg avg partial in olk. row shuffle is not supported.
                 std::string message = encoding + "encoding type is not supported for omni row";
@@ -151,9 +154,84 @@ public:
             // for varchar
             uint8_t rowLenSize = CalMetaSize();
             return PrefixLen + rowLenSize + value.length();
+        } else if constexpr (std::is_same_v<T, BaseVector*>) {
+            return CompactArrayLength();
         } else {
             return PrefixLen + CalMetaSize();
         }
+    }
+
+    /**
+     * Compute the array final length
+     */
+    int32_t CompactArrayLength()
+    {
+        if (isNull) {
+            return PrefixLen;
+        }
+        DataTypeId arrayDataTypeId = value->GetTypeId();
+        switch (arrayDataTypeId) {
+            case OMNI_BYTE:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_BYTE>();
+                break;
+            case OMNI_SHORT:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_SHORT>();
+                break;
+            case OMNI_INT:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_INT>();
+                break;
+            case OMNI_DATE32:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_DATE32>();
+                break;
+            case OMNI_LONG:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_LONG>();
+                break;
+            case OMNI_TIMESTAMP:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_TIMESTAMP>();
+                break;
+            case OMNI_DECIMAL64:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_DECIMAL64>();
+                break;
+            case OMNI_DECIMAL128:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_DECIMAL128>();
+                break;
+            case OMNI_CHAR:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_CHAR>();
+                break;
+            case OMNI_VARCHAR:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_VARCHAR>();
+                break;
+            case OMNI_DOUBLE:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_DOUBLE>();
+                break;
+            case OMNI_BOOLEAN:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_BOOLEAN>();
+                break;
+            case OMNI_ARRAY:
+                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_ARRAY>();
+                break;
+            default:
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
+        }
+    }
+
+    template <DataTypeId id>
+    uint8_t CalElementSize()
+    {
+        int32_t elementSize = 0;
+        int32_t arraySize = value->GetSize();
+        using elementT = typename NativeType<id>::type;
+        SerializedValue<elementT> serializedValue;
+        auto elementVector = reinterpret_cast<Vector<elementT> *>(value);
+        for (int32_t index = 0; index < arraySize; index++) {
+            elementT elementValue = elementVector->GetValue(index);
+            serializedValue.SetValue(elementValue);
+            elementSize += serializedValue.CompactLength();
+            if constexpr (id == OMNI_ARRAY) {
+                delete elementValue;
+            }
+        }
+        return elementSize;
     }
 
     /* *
@@ -181,6 +259,9 @@ public:
         } else if constexpr (std::is_same_v<T, bool>) {
             // bool value is in meta data
             return 0;
+        } else if constexpr (std::is_same_v<T, BaseVector*>) {
+            int32_t arraySize = value->GetSize();
+            return (BIT_64 - __builtin_clzll(arraySize) + BIT_8) / BIT_8;
         } else {
             auto tmp = value;
             if (value < 0) {
@@ -200,6 +281,8 @@ public:
     {
         if constexpr (std::is_same_v<T, std::string_view>) {
             return WriteVarcharBuffer(writeBuffer);
+        } else if constexpr (std::is_same_v<T, BaseVector*>) {
+            return WriteArrayBuffer(writeBuffer);
         } else {
             if (isNull) {
                 *writeBuffer = (FIX_BIT | (0x1 << NULL_POS));
@@ -271,6 +354,87 @@ private:
         LogDebug("row write str value: offset in writebuffer is %d\n", 1 + rowLenSize + value.size());
 #endif
         return writeBuffer + value.size();
+    }
+
+    uint8_t *WriteArrayBuffer(uint8_t *writeBuffer)
+    {
+        if (isNull) {
+            *writeBuffer = (ARRAY_BIT | (0x1 << NULL_POS));
+            ++writeBuffer;
+            return writeBuffer;
+        }
+
+        int32_t arraySize = value->GetSize();
+        uint8_t rowArraySize = CalMetaSize();
+        *writeBuffer = (ARRAY_BIT | (isNull << NULL_POS) | rowArraySize);
+        ++writeBuffer;
+        std::copy(reinterpret_cast<uint8_t *>(&arraySize), reinterpret_cast<uint8_t *>(&arraySize) + rowArraySize, writeBuffer);
+        writeBuffer += rowArraySize;
+
+        Encoding arrayEncoding = value->GetEncoding();
+        DataTypeId arrayDataTypeId = value->GetTypeId();
+        switch (arrayDataTypeId) {
+            case OMNI_BYTE:
+                return SerializeArrayElements<OMNI_BYTE>(writeBuffer);
+                break;
+            case OMNI_SHORT:
+                return SerializeArrayElements<OMNI_SHORT>(writeBuffer);
+                break;
+            case OMNI_INT:
+                return SerializeArrayElements<OMNI_INT>(writeBuffer);
+                break;
+            case OMNI_DATE32:
+                return SerializeArrayElements<OMNI_DATE32>(writeBuffer);
+                break;
+            case OMNI_LONG:
+                return SerializeArrayElements<OMNI_LONG>(writeBuffer);
+                break;
+            case OMNI_TIMESTAMP:
+                return SerializeArrayElements<OMNI_TIMESTAMP>(writeBuffer);
+                break;
+            case OMNI_DECIMAL64:
+                return SerializeArrayElements<OMNI_DECIMAL64>(writeBuffer);
+                break;
+            case OMNI_DECIMAL128:
+                return SerializeArrayElements<OMNI_DECIMAL128>(writeBuffer);
+                break;
+            case OMNI_CHAR:
+                return SerializeArrayElements<OMNI_CHAR>(writeBuffer);
+                break;
+            case OMNI_VARCHAR:
+                return SerializeArrayElements<OMNI_VARCHAR>(writeBuffer);
+                break;
+            case OMNI_DOUBLE:
+                return SerializeArrayElements<OMNI_DOUBLE>(writeBuffer);
+                break;
+            case OMNI_BOOLEAN:
+                return SerializeArrayElements<OMNI_BOOLEAN>(writeBuffer);
+                break;
+            case OMNI_ARRAY:
+                return SerializeArrayElements<OMNI_ARRAY>(writeBuffer);
+                break;
+            default:
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
+        }
+    }
+
+    template <DataTypeId id>
+    uint8_t* SerializeArrayElements(uint8_t* writeBuffer)
+    {
+        int32_t arraySize = value->GetSize();
+        using elementT = typename NativeType<id>::type;
+        SerializedValue<elementT> serializedValue;
+        auto elementVector = reinterpret_cast<Vector<elementT> *>(value);
+        for (int32_t index = 0; index < arraySize; index++) {
+            elementT elementValue = elementVector->GetValue(index);
+            serializedValue.SetValue(elementValue);
+            writeBuffer = serializedValue.WriteBuffer(writeBuffer);
+            if constexpr (id == OMNI_ARRAY) {
+                delete elementValue;
+            }
+        }
+        delete value;
+        return writeBuffer;
     }
 
     using VectorType = std::conditional_t<std::is_same_v<T, std::string_view>,

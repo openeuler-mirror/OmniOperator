@@ -116,7 +116,7 @@ public:
         return encoding;
     }
 
-    int ALWAYS_INLINE GetSize()
+    int32_t ALWAYS_INLINE GetSize()
     {
         return size;
     }
@@ -334,7 +334,7 @@ public:
      */
     void ALWAYS_INLINE SetValue(int index, typename PARAM_TYPE<RAW_DATA_TYPE>::type value)
     {
-        values[index] = value;
+        values[index + offset] = value;
     }
 
     /* *

@@ -5,12 +5,14 @@
 #include <iostream>
 #include "gtest/gtest.h"
 #include "vector/omni_row.h"
+#include "vector/vector.h"
 #include "test/util/test_util.h"
 #include "operator/hash_util.h"
 
 namespace omniruntime::vec::test {
 using namespace omniruntime::vec;
 using namespace omniruntime::TestUtil;
+using OmniArrayType = omniruntime::type::ArrayType;
 TEST(omni_row, compact_value_test)
 {
     Vector<int16_t> shortVec(1);
@@ -66,7 +68,7 @@ TEST(omni_row, null_write_buffer)
     uint8_t buffer[len];
     uint8_t *end = serializedValue.WriteBuffer(buffer);
     EXPECT_EQ(buffer + len, end);
-    EXPECT_EQ(buffer[0], 0b01000000);
+    EXPECT_EQ(buffer[0], 0b00100000);
 }
 
 TEST(omni_row, int_write_buffer)
@@ -78,7 +80,7 @@ TEST(omni_row, int_write_buffer)
     uint8_t buffer[len];
     uint8_t *end = serializedValue.WriteBuffer(buffer);
     EXPECT_EQ(buffer + len, end);
-    EXPECT_EQ(buffer[0], 0b00100010);
+    EXPECT_EQ(buffer[0], 0b00010010);
     // truncate value
     int16_t ret = ~value;
     EXPECT_EQ(*(reinterpret_cast<int16_t *>(buffer + 1)), ret);
@@ -147,7 +149,7 @@ TEST(omni_row, str_write_buffer)
     uint8_t buffer[len];
     uint8_t *end = serializedValue.WriteBuffer(buffer);
     EXPECT_EQ(buffer + len, end);
-    EXPECT_EQ(buffer[0], 0b10000001);
+    EXPECT_EQ(buffer[0], 0b01000001);
     EXPECT_EQ(buffer[1], 8);
     EXPECT_TRUE(memcmp(value.data(), buffer + 2, value.size()) == 0);
 }
@@ -179,7 +181,7 @@ TEST(omni_row, fill_buffer_no_null)
     double d = *(double *)(buf + 4);
 
     EXPECT_TRUE(memcmp(reinterpret_cast<void *>(&d), reinterpret_cast<void *>(&ori), sizeof(double)) == 0);
-    EXPECT_EQ(buf[12], 0b10000001);
+    EXPECT_EQ(buf[12], 0b01000001);
     EXPECT_EQ(buf[13], 11);
     EXPECT_TRUE(memcmp(reinterpret_cast<void *>(buf + 14), testStr.data(), testStr.length()) == 0);
     mem::Allocator::GetAllocator()->Free(buf, len);
@@ -188,8 +190,7 @@ TEST(omni_row, fill_buffer_no_null)
 TEST(omni_row, fill_buffer_and_deserial_to_vector)
 {
     std::vector<DataTypePtr> types({ LongDataType::Instance(), DoubleDataType::Instance(), VarcharDataType::Instance(),
-        BooleanDataType::Instance() });
-    RowBuffer rowBuffer(types);
+        BooleanDataType::Instance()});
     int32_t rowNumber = 5;
     int64_t data1[] = {-111, 222, 333, 444, -555};
     double data2[] = {999.99f, 999.0f, 999.999f, 99.96f, 999.99999f};
@@ -199,6 +200,66 @@ TEST(omni_row, fill_buffer_and_deserial_to_vector)
 
     DataTypes dataTypes(types);
     VectorBatch *vecBatch = CreateVectorBatch(dataTypes, rowNumber, data1, data2, data3, data4);
+
+    // Create array vector
+    // [[1], [2], [3, 3], [4], [5, 5, 5]]
+    int32_t elementSize = 8;
+    auto elementVector = std::make_shared<vec::Vector<int32_t>>(elementSize);
+    elementVector->SetValue(0, 1);
+    elementVector->SetValue(1, 2);
+    elementVector->SetValue(2, 3);
+    elementVector->SetValue(3, 3);
+    elementVector->SetValue(4, 4);
+    elementVector->SetValue(5, 5);
+    elementVector->SetValue(6, 5);
+    elementVector->SetValue(7, 5);
+    vec::ArrayVector* arrayVector = new vec::ArrayVector(rowNumber, elementVector);
+    arrayVector->SetOffset(0, 0);
+    arrayVector->SetOffset(1, 1);
+    arrayVector->SetOffset(2, 2);
+    arrayVector->SetOffset(3, 4);
+    arrayVector->SetOffset(4, 5);
+    arrayVector->SetOffset(5, 8);
+    vecBatch->Append(arrayVector);
+
+    // fill fake data into result vector batch before parse function
+    int64_t fakeData1[] = {0, 0, 0, 0, 0};
+    double fakeData2[] = {0.1f, 0.1f, 0.1f, 0.2f, 0.3f};
+    std::string fakeData3[] = {"a", "b", "c", "d", "e"};
+    bool fakeData4[] = {false, false, false, false, false};
+    // Create fakeArray vector
+    // [[0], [0], [0, 0], [0], [0, 0, 0]]
+    auto fakeElementVector = std::make_shared<vec::Vector<int32_t>>(elementSize);
+    fakeElementVector->SetValue(0, 0);
+    fakeElementVector->SetValue(1, 0);
+    fakeElementVector->SetValue(2, 0);
+    fakeElementVector->SetValue(3, 0);
+    fakeElementVector->SetValue(4, 0);
+    fakeElementVector->SetValue(5, 0);
+    fakeElementVector->SetValue(6, 0);
+    fakeElementVector->SetValue(7, 0);
+    vec::ArrayVector* fakeArrayVector = new vec::ArrayVector(rowNumber, fakeElementVector);
+    fakeArrayVector->SetOffset(0, 0);
+    fakeArrayVector->SetOffset(1, 1);
+    fakeArrayVector->SetOffset(2, 2);
+    fakeArrayVector->SetOffset(3, 4);
+    fakeArrayVector->SetOffset(4, 5);
+    fakeArrayVector->SetOffset(5, 8);
+
+    VectorBatch *result = CreateVectorBatch(dataTypes, rowNumber, fakeData1, fakeData2, fakeData3, fakeData4);
+    result->Append(fakeArrayVector);
+
+    types.push_back(std::make_shared<OmniArrayType>(IntType()));
+    std::vector<Encoding> encodings({OMNI_FLAT, OMNI_FLAT, OMNI_FLAT, OMNI_FLAT, OMNI_ENCODING_ARRAY});
+    std::vector<type::DataTypeId> typeIds({
+        type::DataTypeId::OMNI_LONG,
+        type::DataTypeId::OMNI_DOUBLE,
+        type::DataTypeId::OMNI_VARCHAR,
+        type::DataTypeId::OMNI_BOOLEAN,
+        type::DataTypeId::OMNI_ARRAY
+    });
+
+    RowBuffer rowBuffer(typeIds, encodings);
     std::vector<RowInfo> rows;
     rows.reserve(rowNumber);
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
@@ -208,14 +269,6 @@ TEST(omni_row, fill_buffer_and_deserial_to_vector)
     }
 
     auto parser = std::make_unique<RowParser>(types);
-
-    // fill fake data into result vector batch before parse function
-    int64_t fakeData1[] = {0, 0, 0, 0, 0};
-    double fakeData2[] = {0.1f, 0.1f, 0.1f, 0.2f, 0.3f};
-    std::string fakeData3[] = {"a", "b", "c", "d", "e"};
-    bool fakeData4[] = {false, false, false, false, false};
-
-    VectorBatch *result = CreateVectorBatch(dataTypes, rowNumber, fakeData1, fakeData2, fakeData3, fakeData4);
     BaseVector *vecs[types.size()];
     for (int32_t i = 0; i < static_cast<int32_t>(types.size()); ++i) {
         vecs[i] = result->Get(i);
