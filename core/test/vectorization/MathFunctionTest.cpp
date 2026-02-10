@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
 * Description: Unit tests for mathematical functions (acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, cot, csc)
 */
  	 
@@ -511,13 +511,13 @@ TEST(MathFunctionsTest, SignDouble) {
 
 // Test sign function with edge cases (NULL, NaN, Infinity, zero)
 TEST(MathFunctionsTest, SignDoubleEdgeCases) {
-    constexpr double kInf = std::numeric_limits<double>::infinity();
-    constexpr double kNan = std::numeric_limits<double>::quiet_NaN();
+    constexpr double kInfVal = std::numeric_limits<double>::infinity();
+    constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
 
     // Test cases: 0, NaN, infinity, -infinity, positive, negative
-    std::vector<double> inputData = {0.0, kNan, kInf, -kInf, 100.0, -100.0};
+    std::vector<double> inputData = {0.0, kNanVal, kInfVal, -kInfVal, 100.0, -100.0};
     // sign(0) = 0, sign(NaN) = NaN, sign(inf) = 1, sign(-inf) = -1, sign(100) = 1, sign(-100) = -1
-    std::vector<double> expectedResults = {0.0, kNan, 1.0, -1.0, 1.0, -1.0};
+    std::vector<double> expectedResults = {0.0, kNanVal, 1.0, -1.0, 1.0, -1.0};
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sign", inputData, expectedResults);
 }
 
@@ -533,11 +533,11 @@ TEST(MathFunctionsTest, SinhDouble) {
 
 // Test sinh function with edge cases (NULL, NaN, Infinity)
 TEST(MathFunctionsTest, SinhDoubleEdgeCases) {
-    constexpr double kInf = std::numeric_limits<double>::infinity();
-    constexpr double kNan = std::numeric_limits<double>::quiet_NaN();
+    constexpr double kInfVal = std::numeric_limits<double>::infinity();
+    constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
 
     // Test cases: 0, NaN, infinity, -infinity
-    std::vector<double> inputData = {0.0, kNan, kInf, -kInf};
+    std::vector<double> inputData = {0.0, kNanVal, kInfVal, -kInfVal};
     std::vector<double> expectedResults;
     for (double x : inputData) {
         expectedResults.push_back(std::sinh(x));
@@ -629,11 +629,11 @@ TEST(MathFunctionsTest, SqrtDouble) {
 
 // Test sqrt function with edge cases (NULL, NaN, Infinity, negative numbers)
 TEST(MathFunctionsTest, SqrtDoubleEdgeCases) {
-    constexpr double kInf = std::numeric_limits<double>::infinity();
-    constexpr double kNan = std::numeric_limits<double>::quiet_NaN();
+    constexpr double kInfVal = std::numeric_limits<double>::infinity();
+    constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
 
     // Test cases: 0, 4, NaN, infinity, -1 (should be NaN)
-    std::vector<double> inputData = {0.0, 4.0, kNan, kInf, -1.0};
+    std::vector<double> inputData = {0.0, 4.0, kNanVal, kInfVal, -1.0};
     std::vector<double> expectedResults;
     for (double x : inputData) {
         expectedResults.push_back(std::sqrt(x));
@@ -880,6 +880,329 @@ TEST(MathFunctionsExtendedTest, RoundDoubleWithScale) {
     TestBinaryRoundOperation<double, OMNI_DOUBLE>("round", leftData, rightData, expectedResults, 1e-10);
 }
 
+// Test csc function
+TEST(MathFunctionsTest, CscDouble) {
+    std::vector<double> inputData = {1.0, -1.0, M_PI / 2.0, M_PI / 4.0, M_PI / 3.0, M_PI / 6.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(1.0 / std::sin(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("csc", inputData, expectedResults);
+}
+
+// Test csc function 
+TEST(MathFunctionsTest, CscDoubleEdgeCases) {
+    constexpr double kInfVal = std::numeric_limits<double>::infinity();
+    constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
+
+    // csc(0) = 1/sin(0) = +Infinity, csc(NaN) = NaN, csc(Inf) = NaN, csc(-Inf) = NaN
+    std::vector<double> inputData = {0.0, kNanVal, kInfVal, -kInfVal};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(1.0 / std::sin(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("csc", inputData, expectedResults);
+}
+
+// Test csc function via ExprEval path
+TEST(MathFunctionsTest, CscDoubleExprEval) {
+    double tolerance = 1e-6;
+    std::vector<double> inputData = {1.0, -1.0, M_PI / 2.0, M_PI / 4.0, M_PI / 6.0};
+    std::vector<double> expectedResults;
+    std::string functionName = "csc";
+    for (double x : inputData) {
+        expectedResults.push_back(1.0 / std::sin(x));
+    }
+    int rowSize = static_cast<int>(inputData.size());
+    auto returnType = std::make_shared<DataType>(OMNI_DOUBLE);
+    auto type = std::make_shared<DataType>(OMNI_DOUBLE);
+    std::vector<Expr*> args = {new FieldExpr(0, type)};
+    auto funcExpr = new FuncExpr("csc", args, returnType);
+    double col1[5] = {1.0, -1.0, M_PI / 2.0, M_PI / 4.0, M_PI / 6.0};
+    std::vector vecOfTypes = {DoubleType()};
+    DataTypes inputTypes(vecOfTypes);
+    VectorBatch *input = CreateVectorBatch(inputTypes, rowSize, col1);
+    VectorHelper::PrintVecBatch(input);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.Visit(*funcExpr);
+    auto result = e.GetResult();
+    VectorBatch vectorBatch(rowSize);
+    vectorBatch.Append(result);
+    VectorHelper::PrintVecBatch(&vectorBatch);
+
+    auto *resultVector = dynamic_cast<Vector<double> *>(result);
+
+    for (int32_t i = 0; i < rowSize; ++i) {
+        double actualResult = resultVector->GetValue(i);
+        double expectedResult = expectedResults[i];
+
+        if (std::isnan(expectedResult)) {
+            EXPECT_TRUE(std::isnan(actualResult))
+                << "NaN mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i];
+        } else if (std::isinf(expectedResult)) {
+            EXPECT_TRUE(std::isinf(actualResult) && std::signbit(actualResult) == std::signbit(expectedResult))
+                << "Infinity mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i];
+        } else {
+            EXPECT_NEAR(actualResult, expectedResult, tolerance)
+                << "Value mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i]
+                << ", expected=" << expectedResult << ", actual=" << actualResult;
+        }
+    }
+    delete input;
+    delete funcExpr;
+    delete context;
+}
+
+// Test degrees function
+TEST(MathFunctionsTest, DegreesDouble) {
+    std::vector<double> inputData = {0.0, 1.0, -1.0, 3.14, -3.14, M_PI, -M_PI, M_PI / 2.0, M_PI / 4.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(x * (180.0 / M_PI));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("degrees", inputData, expectedResults);
+}
+
+// Test degrees function
+TEST(MathFunctionsTest, DegreesDoubleEdgeCases) {
+    constexpr double kInfVal = std::numeric_limits<double>::infinity();
+    constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
+
+    std::vector<double> inputData = {0.0, kNanVal, kInfVal, -kInfVal,
+                                     std::numeric_limits<double>::min(),
+                                     std::numeric_limits<double>::max()};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(x * (180.0 / M_PI));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("degrees", inputData, expectedResults);
+}
+
+// Test degrees function via ExprEval path
+TEST(MathFunctionsTest, DegreesDoubleExprEval) {
+    double tolerance = 1e-6;
+    std::vector<double> inputData = {0.0, 1.0, -1.0, 3.14, -3.14, M_PI, -M_PI};
+    std::vector<double> expectedResults;
+    std::string functionName = "degrees";
+    for (double x : inputData) {
+        expectedResults.push_back(x * (180.0 / M_PI));
+    }
+    int rowSize = static_cast<int>(inputData.size());
+    auto returnType = std::make_shared<DataType>(OMNI_DOUBLE);
+    auto type = std::make_shared<DataType>(OMNI_DOUBLE);
+    std::vector<Expr*> args = {new FieldExpr(0, type)};
+    auto funcExpr = new FuncExpr("degrees", args, returnType);
+    double col1[7] = {0.0, 1.0, -1.0, 3.14, -3.14, M_PI, -M_PI};
+    std::vector vecOfTypes = {DoubleType()};
+    DataTypes inputTypes(vecOfTypes);
+    VectorBatch *input = CreateVectorBatch(inputTypes, rowSize, col1);
+    VectorHelper::PrintVecBatch(input);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.Visit(*funcExpr);
+    auto result = e.GetResult();
+    VectorBatch vectorBatch(rowSize);
+    vectorBatch.Append(result);
+    VectorHelper::PrintVecBatch(&vectorBatch);
+
+    auto *resultVector = dynamic_cast<Vector<double> *>(result);
+
+    for (int32_t i = 0; i < rowSize; ++i) {
+        double actualResult = resultVector->GetValue(i);
+        double expectedResult = expectedResults[i];
+
+        if (std::isnan(expectedResult)) {
+            EXPECT_TRUE(std::isnan(actualResult))
+                << "NaN mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i];
+        } else if (std::isinf(expectedResult)) {
+            EXPECT_TRUE(std::isinf(actualResult) && std::signbit(actualResult) == std::signbit(expectedResult))
+                << "Infinity mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i];
+        } else {
+            EXPECT_NEAR(actualResult, expectedResult, tolerance)
+                << "Value mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i]
+                << ", expected=" << expectedResult << ", actual=" << actualResult;
+        }
+    }
+    delete input;
+    delete funcExpr;
+    delete context;
+}
+
+// Test cot function 
+TEST(MathFunctionsTest, CotDouble) {
+    std::vector<double> inputData = {1.0, -1.0, M_PI / 4.0, M_PI / 3.0, M_PI / 6.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(1.0 / std::tan(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("cot", inputData, expectedResults);
+}
+
+// Test cot function 
+TEST(MathFunctionsTest, CotDoubleEdgeCases) {
+    constexpr double kInfVal = std::numeric_limits<double>::infinity();
+    constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
+
+    std::vector<double> inputData = {0.0, kNanVal, kInfVal, -kInfVal};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(1.0 / std::tan(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("cot", inputData, expectedResults);
+}
+
+// Test cot function via ExprEval path
+TEST(MathFunctionsTest, CotDoubleExprEval) {
+    double tolerance = 1e-6;
+    std::vector<double> inputData = {1.0, -1.0, M_PI / 4.0, M_PI / 3.0, M_PI / 6.0};
+    std::vector<double> expectedResults;
+    std::string functionName = "cot";
+    for (double x : inputData) {
+        expectedResults.push_back(1.0 / std::tan(x));
+    }
+    int rowSize = static_cast<int>(inputData.size());
+    auto returnType = std::make_shared<DataType>(OMNI_DOUBLE);
+    auto type = std::make_shared<DataType>(OMNI_DOUBLE);
+    std::vector<Expr*> args = {new FieldExpr(0, type)};
+    auto funcExpr = new FuncExpr("cot", args, returnType);
+    double col1[5] = {1.0, -1.0, M_PI / 4.0, M_PI / 3.0, M_PI / 6.0};
+    std::vector vecOfTypes = {DoubleType()};
+    DataTypes inputTypes(vecOfTypes);
+    VectorBatch *input = CreateVectorBatch(inputTypes, rowSize, col1);
+    VectorHelper::PrintVecBatch(input);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.Visit(*funcExpr);
+    auto result = e.GetResult();
+    VectorBatch vectorBatch(rowSize);
+    vectorBatch.Append(result);
+    VectorHelper::PrintVecBatch(&vectorBatch);
+
+    auto *resultVector = dynamic_cast<Vector<double> *>(result);
+
+    for (int32_t i = 0; i < rowSize; ++i) {
+        double actualResult = resultVector->GetValue(i);
+        double expectedResult = expectedResults[i];
+
+        if (std::isnan(expectedResult)) {
+            EXPECT_TRUE(std::isnan(actualResult))
+                << "NaN mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i];
+        } else if (std::isinf(expectedResult)) {
+            EXPECT_TRUE(std::isinf(actualResult) && std::signbit(actualResult) == std::signbit(expectedResult))
+                << "Infinity mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i];
+        } else {
+            EXPECT_NEAR(actualResult, expectedResult, tolerance)
+                << "Value mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i]
+                << ", expected=" << expectedResult << ", actual=" << actualResult;
+        }
+    }
+    delete input;
+    delete funcExpr;
+    delete context;
+}
+
+// Test atanh function 
+TEST(MathFunctionsTest, AtanhDouble) {
+    std::vector<double> inputData = {0.0, 0.5, -0.5, 0.9, -0.9};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::atanh(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("atanh", inputData, expectedResults);
+}
+
+// Test atanh function 
+TEST(MathFunctionsTest, AtanhDoubleEdgeCases) {
+    constexpr double kInfVal = std::numeric_limits<double>::infinity();
+    constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
+
+    std::vector<double> inputData = {0.0, 1.0, -1.0, kNanVal, kInfVal, -kInfVal};
+    std::vector<double> expectedResults = {
+        0.0,    
+        kInfVal,   
+        -kInfVal,  
+        kNanVal,   
+        kNanVal,   
+        kNanVal    
+    };
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("atanh", inputData, expectedResults);
+}
+
+// Test atanh function via ExprEval path
+TEST(MathFunctionsTest, AtanhDoubleExprEval) {
+    double tolerance = 1e-6;
+    std::vector<double> inputData = {0.0, 0.5, -0.5, 0.9, -0.9};
+    std::vector<double> expectedResults;
+    std::string functionName = "atanh";
+    for (double x : inputData) {
+        expectedResults.push_back(std::atanh(x));
+    }
+    int rowSize = static_cast<int>(inputData.size());
+    auto returnType = std::make_shared<DataType>(OMNI_DOUBLE);
+    auto type = std::make_shared<DataType>(OMNI_DOUBLE);
+    std::vector<Expr*> args = {new FieldExpr(0, type)};
+    auto funcExpr = new FuncExpr("atanh", args, returnType);
+    double col1[5] = {0.0, 0.5, -0.5, 0.9, -0.9};
+    std::vector vecOfTypes = {DoubleType()};
+    DataTypes inputTypes(vecOfTypes);
+    VectorBatch *input = CreateVectorBatch(inputTypes, rowSize, col1);
+    VectorHelper::PrintVecBatch(input);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.Visit(*funcExpr);
+    auto result = e.GetResult();
+    VectorBatch vectorBatch(rowSize);
+    vectorBatch.Append(result);
+    VectorHelper::PrintVecBatch(&vectorBatch);
+
+    auto *resultVector = dynamic_cast<Vector<double> *>(result);
+
+    for (int32_t i = 0; i < rowSize; ++i) {
+        double actualResult = resultVector->GetValue(i);
+        double expectedResult = expectedResults[i];
+
+        if (std::isnan(expectedResult)) {
+            EXPECT_TRUE(std::isnan(actualResult))
+                << "NaN mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i];
+        } else if (std::isinf(expectedResult)) {
+            EXPECT_TRUE(std::isinf(actualResult) && std::signbit(actualResult) == std::signbit(expectedResult))
+                << "Infinity mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i];
+        } else {
+            EXPECT_NEAR(actualResult, expectedResult, tolerance)
+                << "Value mismatch at index " << i << " for " << functionName
+                << " with input=" << inputData[i]
+                << ", expected=" << expectedResult << ", actual=" << actualResult;
+        }
+    }
+    delete input;
+    delete funcExpr;
+    delete context;
+}
+
 // Test exp function - Returns e raised to the power of the input
 TEST(MathFunctionsExtendedTest, ExpDouble) {
     const double kE = std::exp(1.0);  // Euler's number e ≈ 2.71828
@@ -893,11 +1216,11 @@ TEST(MathFunctionsExtendedTest, ExpDouble) {
 
 // Test exp function with edge cases (NaN, Infinity, large values)
 TEST(MathFunctionsExtendedTest, ExpDoubleEdgeCases) {
-    constexpr double kInf = std::numeric_limits<double>::infinity();
-    constexpr double kNan = std::numeric_limits<double>::quiet_NaN();
+    constexpr double kInfVal = std::numeric_limits<double>::infinity();
+    constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
 
     // Test cases: 0, NaN, infinity, -infinity, large positive (may overflow), large negative
-    std::vector<double> inputData = {0.0, kNan, kInf, -kInf, 100.0, -100.0};
+    std::vector<double> inputData = {0.0, kNanVal, kInfVal, -kInfVal, 100.0, -100.0};
     // exp(0) = 1, exp(NaN) = NaN, exp(inf) = inf, exp(-inf) = 0, exp(100) ≈ 2.688e43, exp(-100) ≈ 0
     std::vector<double> expectedResults;
     for (double x : inputData) {
