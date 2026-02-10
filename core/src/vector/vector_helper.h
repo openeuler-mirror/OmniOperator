@@ -389,7 +389,7 @@ public:
                     PrintArrayElement<OMNI_CHAR>(elementVec.get(), offset + i);
                     break;
                 default:
-                    throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Not supported type in PrintArrayVectorValue()!");
+                    throw omniruntime::exception::OmniException("PrintArrayVectorValue", "Unsupported type: " + elementType);
             }
         }
         std::cout << "]";
