@@ -72,6 +72,8 @@ DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
             return Time32Type(dataTypeJson[TIME_UNIT].get<TimeUnit>());
         case OMNI_TIME64:
             return Time64Type(dataTypeJson[TIME_UNIT].get<TimeUnit>());
+        case OMNI_VARBINARY:
+            return VarBinaryType(dataTypeJson[WIDTH].get<uint32_t>());
         case OMNI_VARCHAR:
             return VarcharType(dataTypeJson[WIDTH].get<uint32_t>());
         case OMNI_CHAR:
