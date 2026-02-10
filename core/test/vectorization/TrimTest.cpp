@@ -1,287 +1,230 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
- * Description: Trim function test
-
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Description: Trim function unit tests
+ *   Trim(string) -> string  (trim leading/trailing space only, per TrimFunction)
+ *   Trim(trimStr, string) -> string  (trim leading/trailing chars in trimStr, per TrimWithCharsFunction)
+ */
 
 #include <gtest/gtest.h>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <stdexcept>
 
 #include "test/util/test_util.h"
 #include "vectorization/registration/Register.h"
-#include "vectorization/ExprEval.h"
-#include "expression/expressions.h"
-#include "type/decimal_operations.h"
-#include "vectorization/registration/SimpleFunctionRegistry.h"
+#include "vectorization/VectorFunction.h"
+#include "codegen/func_signature.h"
+#include "vector/vector_helper.h"
+#include "vector/vector.h"
 
 using namespace omniruntime;
 using namespace omniruntime::vec;
 using namespace omniruntime::vectorization;
 using namespace omniruntime::mem;
 using namespace omniruntime::op;
-using namespace omniruntime::expressions;
+using namespace omniruntime::type;
+using namespace omniruntime::codegen;
 using namespace omniruntime::TestUtil;
 
-class TrimFunctionTestHelper {
+class TrimTestEnvironment : public ::testing::Environment {
 public:
-    static void SetupTestVector(int rowSize,
-                                const std::vector<std::string>& inputStrs,
-                                vec::BaseVector*& inputVec)
-    {
-        inputVec = VectorHelper::CreateStringVector(rowSize);
-        auto *inputVector = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(inputVec);
-        if (!inputVector) {
-            FAIL() << "Type conversion failed for input vector";
-            return;
-        }
-        for (int i = 0; i < rowSize; i++) {
-            std::string_view inputStr(inputStrs[i]);
-            inputVector->SetValue(i, inputStr);
-        }
-    }
-
-    static void ValidateResult(Vector<LargeStringContainer<std::string_view>>* resultVector, 
-                               const std::vector<std::string>& expectedStrs, 
-                               int rowSize)
-    {
-        if (!resultVector) {
-            FAIL() << "Result vector is null";
-            return;
-        }
-
-        ASSERT_EQ(resultVector->GetSize(), rowSize) 
-            << "Result vector size does not match expected row size";
-
-        for (int row = 0; row < rowSize; ++row) {
-            if (resultVector->IsNull(row)) {
-                std::cout << "Row " << row << ": Result is NULL" << std::endl;
-                continue;
-            }
-
-            std::string_view resultValue = resultVector->GetValue(row);
-            std::string resultStr(resultValue);
-            std::string expectedStr = expectedStrs[row];
-
-            std::cout << "Row " << row << ": Input=\"" << resultStr 
-                      << "\", Expected=\"" << expectedStr << "\"" << std::endl;
-
-            EXPECT_EQ(resultStr, expectedStr) 
-                << "Row " << row << " result does not match expected value";
-        }
-    }
-
-    static void ExecuteTrimFunction(vec::BaseVector* inputVec, int rowSize)
-    {
-        auto signature = std::make_shared<FunctionSignature>("trim",
-            std::vector<omniruntime::type::DataTypeId>{OMNI_VARCHAR},
-            OMNI_VARCHAR);
-        auto function = VectorFunction::Find(signature);
-        if (!function) {
-            FAIL() << "Trim function not found";
-            return;
-        }
-
-        vec::BaseVector* resultVector = nullptr;
-        auto varcharType = std::make_shared<DataType>(OMNI_VARCHAR);
-
-        op::ExecutionContext context;
-        context.SetResultRowSize(rowSize);
-        std::stack<vec::BaseVector*> args;
-        args.push(inputVec);
-
-        ASSERT_NO_THROW(function->Apply(args, varcharType, resultVector, &context))
-            << "TrimFunction.apply() threw an unexpected exception";
-
-        auto* resultStrVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(resultVector);
-        if (!resultStrVec) {
-            FAIL() << "Result vector type conversion failed";
-            delete resultVector;
-            return;
-        }
-
-        // Store results for validation
-        std::vector<std::string> results;
-        for (int i = 0; i < rowSize; ++i) {
-            if (resultStrVec->IsNull(i)) {
-                results.push_back("");
-            } else {
-                std::string_view sv = resultStrVec->GetValue(i);
-                results.push_back(std::string(sv));
-            }
-        }
-
-        delete resultVector;
+    void SetUp() override {
+        RegisterFunctions::RegisterAllFunctions("");
     }
 };
 
-TEST(VectorizationTest, TrimFunctionBasicTest) {
-    std::cout << "=== Trim Function Basic Test ===" << std::endl;
+::testing::Environment* const trim_test_env =
+    ::testing::AddGlobalTestEnvironment(new TrimTestEnvironment);
 
-    int rowSize = 5;
-    vec::BaseVector *inputVec;
+class TrimFunctionTestHelper {
+public:
+    static BaseVector* CreateStringVector(const std::vector<std::string>& values) {
+        BaseVector* vec = VectorHelper::CreateStringVector(values.size());
+        vec->SetIsField(true);
+        auto* typed = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(vec);
+        EXPECT_NE(typed, nullptr);
+        for (size_t i = 0; i < values.size(); ++i) {
+            std::string_view sv(values[i]);
+            typed->SetValue(i, sv);
+        }
+        return vec;
+    }
 
-    std::vector<std::string> inputStrs = {
+    static void ValidateStringResult(BaseVector* result,
+                                    const std::vector<std::string>& expected,
+                                    int rowSize) {
+        auto* resultVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(result);
+        ASSERT_NE(resultVec, nullptr) << "Result vector type mismatch";
+        for (int i = 0; i < rowSize; ++i) {
+            if (result->IsNull(i)) {
+                EXPECT_TRUE(expected[static_cast<size_t>(i)].empty() || expected[static_cast<size_t>(i)] == "<null>")
+                    << "Row " << i << " result is NULL";
+                continue;
+            }
+            std::string_view actual = resultVec->GetValue(i);
+            std::string actualStr(actual);
+            const std::string& exp = expected[static_cast<size_t>(i)];
+            EXPECT_EQ(actualStr, exp) << "Row " << i << " expected=\"" << exp << "\" actual=\"" << actualStr << "\"";
+        }
+    }
+
+    // Use OMNI_VARCHAR in signature: Trim is registered for OMNI_VARCHAR; CreateStringVector may return OMNI_CHAR.
+    static void ExecuteTrimOneArg(BaseVector* strVec, BaseVector*& result) {
+        std::vector<DataTypeId> inputTypeIds = { OMNI_VARCHAR };
+        auto sig = std::make_shared<FunctionSignature>("Trim", inputTypeIds, OMNI_VARCHAR);
+        auto fn = VectorFunction::Find(sig);
+        ASSERT_NE(fn, nullptr) << "Trim(string) function not found";
+        auto outputType = std::make_shared<DataType>(OMNI_VARCHAR);
+        ExecutionContext ctx;
+        ctx.SetResultRowSize(strVec->GetSize());
+        std::stack<BaseVector*> args;
+        args.push(strVec);
+        ASSERT_NO_THROW(fn->Apply(args, outputType, result, &ctx));
+    }
+
+    // TrimWithCharsFunction(trimStr, str): first arg = trimStr, second = str. Use OMNI_VARCHAR for lookup.
+    static void ExecuteTrimTwoArgs(BaseVector* strVec, BaseVector* trimStrVec, BaseVector*& result) {
+        std::vector<DataTypeId> inputTypeIds = { OMNI_VARCHAR, OMNI_VARCHAR };
+        auto sig = std::make_shared<FunctionSignature>("Trim", inputTypeIds, OMNI_VARCHAR);
+        auto fn = VectorFunction::Find(sig);
+        ASSERT_NE(fn, nullptr) << "Trim(trimStr, string) function not found";
+        auto outputType = std::make_shared<DataType>(OMNI_VARCHAR);
+        ExecutionContext ctx;
+        ctx.SetResultRowSize(strVec->GetSize());
+        std::stack<BaseVector*> args;
+        args.push(trimStrVec);
+        args.push(strVec);
+        ASSERT_NO_THROW(fn->Apply(args, outputType, result, &ctx));
+    }
+};
+
+// --- TrimFunction (single arg: trim space only) ---
+// String.h TrimFunction uses find_first_not_of(" ") / find_last_not_of(" "), so only space is trimmed.
+
+TEST(TrimTest, SingleArgTrimSpace) {
+    std::vector<std::string> strings = {
         "  hello world  ",
-        "\t\ntest\n\t",
-        "no_spaces",
         "   ",
-        ""
-    };
-
-    std::vector<std::string> expectedStrs = {
-        "hello world",
-        "test",
         "no_spaces",
+        "",
+        " \t leading and trailing "
+    };
+    std::vector<std::string> expected = {
+        "hello world",
+        "",
+        "no_spaces",
+        "",
+        "\t leading and trailing"   // only trailing space trimmed; leading \t not trimmed
+    };
+    std::unique_ptr<BaseVector> strVec(TrimFunctionTestHelper::CreateStringVector(strings));
+    BaseVector* result = nullptr;
+    TrimFunctionTestHelper::ExecuteTrimOneArg(strVec.get(), result);
+    std::unique_ptr<BaseVector> resultHolder(result);
+    TrimFunctionTestHelper::ValidateStringResult(resultHolder.get(), expected, static_cast<int>(strings.size()));
+}
+
+TEST(TrimTest, SingleArgEdgeCases) {
+    std::vector<std::string> strings = {
+        "  leading only",
+        "trailing only  ",
+        "  both  ",
+        "single_char",
+        "\t\ntest\n\t"   // TrimFunction only trims space, so tab/newline remain
+    };
+    std::vector<std::string> expected = {
+        "leading only",
+        "trailing only",
+        "both",
+        "single_char",
+        "\t\ntest\n\t"
+    };
+    std::unique_ptr<BaseVector> strVec(TrimFunctionTestHelper::CreateStringVector(strings));
+    BaseVector* result = nullptr;
+    TrimFunctionTestHelper::ExecuteTrimOneArg(strVec.get(), result);
+    std::unique_ptr<BaseVector> resultHolder(result);
+    TrimFunctionTestHelper::ValidateStringResult(resultHolder.get(), expected, static_cast<int>(strings.size()));
+}
+
+TEST(TrimTest, SingleArgConstVector) {
+    int rowSize = 3;
+    std::string_view constVal("  constant value  ");
+    std::unique_ptr<BaseVector> inputVec(new ConstVector<std::string_view>(constVal, OMNI_VARCHAR, rowSize));
+    std::vector<std::string> expected(rowSize, "constant value");
+    BaseVector* result = nullptr;
+    TrimFunctionTestHelper::ExecuteTrimOneArg(inputVec.get(), result);
+    std::unique_ptr<BaseVector> resultHolder(result);
+    TrimFunctionTestHelper::ValidateStringResult(resultHolder.get(), expected, rowSize);
+}
+
+// --- TrimWithCharsFunction (two args: trim chars in trimStr from string) ---
+
+TEST(TrimTest, TwoArgsTrimChars) {
+    std::vector<std::string> strings = {
+        "xxxyyhelloyyxx",
+        "ababab",
+        "xyz",
+        "",
+        "abcd"
+    };
+    std::vector<std::string> trimStrs = {
+        "xy",
+        "ab",
+        "xyz",
+        "a",
+        "abcd"
+    };
+    std::vector<std::string> expected = {
+        "hello",
+        "",
+        "",
         "",
         ""
     };
-
-    TrimFunctionTestHelper::SetupTestVector(rowSize, inputStrs, inputVec);
-
-    auto signature = std::make_shared<FunctionSignature>("trim",
-        std::vector<omniruntime::type::DataTypeId>{OMNI_VARCHAR},
-        OMNI_VARCHAR);
-    auto function = VectorFunction::Find(signature);
-    ASSERT_NE(function, nullptr) << "Trim function not found";
-
-    vec::BaseVector* resultVector = nullptr;
-    auto varcharType = std::make_shared<DataType>(OMNI_VARCHAR);
-
-    op::ExecutionContext context;
-    context.SetResultRowSize(rowSize);
-    std::stack<vec::BaseVector*> args;
-    args.push(inputVec);
-
-    ASSERT_NO_THROW(function->Apply(args, varcharType, resultVector, &context))
-        << "TrimFunction.apply() threw an unexpected exception";
-
-    auto* resultStrVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(resultVector);
-    ASSERT_NE(resultStrVec, nullptr) << "Result vector type conversion failed";
-
-    // Validate results
-    for (int row = 0; row < rowSize; ++row) {
-        if (resultStrVec->IsNull(row)) {
-            EXPECT_TRUE(expectedStrs[row].empty()) 
-                << "Row " << row << " result is NULL but expected non-empty";
-            continue;
-        }
-
-        std::string_view resultValue = resultStrVec->GetValue(row);
-        std::string resultStr(resultValue);
-        std::string expectedStr = expectedStrs[row];
-
-        EXPECT_EQ(resultStr, expectedStr) 
-            << "Row " << row << " result does not match expected value. "
-            << "Got: \"" << resultStr << "\", Expected: \"" << expectedStr << "\"";
-    }
-
-    delete resultVector;
-    delete inputVec;
-
-    std::cout << "=== Basic Test Completed ===" << std::endl;
+    std::unique_ptr<BaseVector> strVec(TrimFunctionTestHelper::CreateStringVector(strings));
+    std::unique_ptr<BaseVector> trimStrVec(TrimFunctionTestHelper::CreateStringVector(trimStrs));
+    BaseVector* result = nullptr;
+    TrimFunctionTestHelper::ExecuteTrimTwoArgs(strVec.get(), trimStrVec.get(), result);
+    std::unique_ptr<BaseVector> resultHolder(result);
+    TrimFunctionTestHelper::ValidateStringResult(resultHolder.get(), expected, static_cast<int>(strings.size()));
 }
 
-TEST(VectorizationTest, TrimFunctionEdgeCasesTest) {
-    std::cout << "=== Trim Function Edge Cases Test ===" << std::endl;
-
-    int rowSize = 4;
-    vec::BaseVector *inputVec;
-
-    std::vector<std::string> inputStrs = {
-        "  leading only",
-        "trailing only  ",
-        "\r\nmixed\t whitespace\r\n",
-        "single_char"
-    };
-
-    std::vector<std::string> expectedStrs = {
-        "leading only",
-        "trailing only",
-        "mixed\t whitespace",
-        "single_char"
-    };
-
-    TrimFunctionTestHelper::SetupTestVector(rowSize, inputStrs, inputVec);
-
-    auto signature = std::make_shared<FunctionSignature>("trim",
-        std::vector<omniruntime::type::DataTypeId>{OMNI_VARCHAR},
-        OMNI_VARCHAR);
-    auto function = VectorFunction::Find(signature);
-    ASSERT_NE(function, nullptr) << "Trim function not found";
-
-    vec::BaseVector* resultVector = nullptr;
-    auto varcharType = std::make_shared<DataType>(OMNI_VARCHAR);
-
-    op::ExecutionContext context;
-    context.SetResultRowSize(rowSize);
-    std::stack<vec::BaseVector*> args;
-    args.push(inputVec);
-
-    ASSERT_NO_THROW(function->Apply(args, varcharType, resultVector, &context))
-        << "TrimFunction.apply() threw an unexpected exception";
-
-    auto* resultStrVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(resultVector);
-    ASSERT_NE(resultStrVec, nullptr) << "Result vector type conversion failed";
-
-    // Validate results
-    for (int row = 0; row < rowSize; ++row) {
-        std::string_view resultValue = resultStrVec->GetValue(row);
-        std::string resultStr(resultValue);
-        std::string expectedStr = expectedStrs[row];
-
-        EXPECT_EQ(resultStr, expectedStr) 
-            << "Row " << row << " result does not match expected value. "
-            << "Got: \"" << resultStr << "\", Expected: \"" << expectedStr << "\"";
-    }
-
-    delete resultVector;
-    delete inputVec;
-
-    std::cout << "=== Edge Cases Test Completed ===" << std::endl;
+TEST(TrimTest, TwoArgsEmptyTrimStr) {
+    // Empty trimStr: find_first_not_of("") returns 0, so full string returned.
+    std::vector<std::string> strings = { "  hello  ", "data", "" };
+    std::vector<std::string> trimStrs = { "", "", "" };
+    std::vector<std::string> expected = { "  hello  ", "data", "" };
+    std::unique_ptr<BaseVector> strVec(TrimFunctionTestHelper::CreateStringVector(strings));
+    std::unique_ptr<BaseVector> trimStrVec(TrimFunctionTestHelper::CreateStringVector(trimStrs));
+    BaseVector* result = nullptr;
+    TrimFunctionTestHelper::ExecuteTrimTwoArgs(strVec.get(), trimStrVec.get(), result);
+    std::unique_ptr<BaseVector> resultHolder(result);
+    TrimFunctionTestHelper::ValidateStringResult(resultHolder.get(), expected, 3);
 }
 
-TEST(VectorizationTest, TrimFunctionConstVectorTest) {
-    std::cout << "=== Trim Function Const Vector Test ===" << std::endl;
-
-    int rowSize = 3;
-    vec::BaseVector *inputVec = new ConstVector<std::string>("  constant value  ", OMNI_VARCHAR, rowSize);
-
-    auto signature = std::make_shared<FunctionSignature>("trim",
-        std::vector<omniruntime::type::DataTypeId>{OMNI_VARCHAR},
-        OMNI_VARCHAR);
-    auto function = VectorFunction::Find(signature);
-    ASSERT_NE(function, nullptr) << "Trim function not found";
-
-    vec::BaseVector* resultVector = nullptr;
-    auto varcharType = std::make_shared<DataType>(OMNI_VARCHAR);
-
-    op::ExecutionContext context;
-    context.SetResultRowSize(rowSize);
-    std::stack<vec::BaseVector*> args;
-    args.push(inputVec);
-
-    ASSERT_NO_THROW(function->Apply(args, varcharType, resultVector, &context))
-        << "TrimFunction.apply() threw an unexpected exception";
-
-    auto* resultStrVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(resultVector);
-    ASSERT_NE(resultStrVec, nullptr) << "Result vector type conversion failed";
-
-    // All rows should have the same trimmed value
-    std::string expectedStr = "constant value";
-    for (int row = 0; row < rowSize; ++row) {
-        std::string_view resultValue = resultStrVec->GetValue(row);
-        std::string resultStr(resultValue);
-
-        EXPECT_EQ(resultStr, expectedStr) 
-            << "Row " << row << " result does not match expected value. "
-            << "Got: \"" << resultStr << "\", Expected: \"" << expectedStr << "\"";
-    }
-
-    delete resultVector;
-    delete inputVec;
-
-    std::cout << "=== Const Vector Test Completed ===" << std::endl;
+TEST(TrimTest, TwoArgsSingleCharTrim) {
+    std::vector<std::string> strings = { "zzhellozz", "aaa", "bbb" };
+    std::vector<std::string> trimStrs = { "z", "a", "b" };
+    std::vector<std::string> expected = { "hello", "", "" };
+    std::unique_ptr<BaseVector> strVec(TrimFunctionTestHelper::CreateStringVector(strings));
+    std::unique_ptr<BaseVector> trimStrVec(TrimFunctionTestHelper::CreateStringVector(trimStrs));
+    BaseVector* result = nullptr;
+    TrimFunctionTestHelper::ExecuteTrimTwoArgs(strVec.get(), trimStrVec.get(), result);
+    std::unique_ptr<BaseVector> resultHolder(result);
+    TrimFunctionTestHelper::ValidateStringResult(resultHolder.get(), expected, 3);
 }
-*/
+
+TEST(TrimTest, TwoArgsTrimSpace) {
+    // trimStr = " " should behave like single-arg trim for space
+    std::vector<std::string> strings = { "  both  ", " x ", "a b" };
+    std::vector<std::string> trimStrs = { " ", " ", " " };
+    std::vector<std::string> expected = { "both", "x", "a b" };
+    std::unique_ptr<BaseVector> strVec(TrimFunctionTestHelper::CreateStringVector(strings));
+    std::unique_ptr<BaseVector> trimStrVec(TrimFunctionTestHelper::CreateStringVector(trimStrs));
+    BaseVector* result = nullptr;
+    TrimFunctionTestHelper::ExecuteTrimTwoArgs(strVec.get(), trimStrVec.get(), result);
+    std::unique_ptr<BaseVector> resultHolder(result);
+    TrimFunctionTestHelper::ValidateStringResult(resultHolder.get(), expected, 3);
+}
