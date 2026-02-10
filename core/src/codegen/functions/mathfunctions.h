@@ -33,6 +33,8 @@ extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x);
 
 extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x);
 
+extern "C" DLLEXPORT double CastFloatToDouble(float x);
+
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x);
 
 extern "C" DLLEXPORT int32_t CastInt64ToInt32(int64_t x);
@@ -340,6 +342,14 @@ template <typename T> extern DLLEXPORT int64_t Floor(T x)
     } else {
         return std::floor(x);
     }
+}
+
+// nanvl(expr1, expr2): returns expr1 if not NaN, otherwise returns expr2
+// Note: NULL propagation is handled by the codegen framework (INPUT_DATA mode).
+// The actual vectorized execution uses NanvlFunction (VectorFunction) which handles NULL correctly.
+template <typename T> extern DLLEXPORT T Nanvl(T expr1, T expr2)
+{
+    return std::isnan(expr1) ? expr2 : expr1;
 }
 
 template <typename T> extern DLLEXPORT T BitwiseAndFunction(T a, T b)

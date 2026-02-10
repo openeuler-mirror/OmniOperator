@@ -49,9 +49,13 @@ file(GLOB READER_ORC_HEAD_FILES
 file(GLOB READER_COMMON_HEAD_FILES
         ${SOURCE_ROOT}/src/reader/common/*.h
         ${SOURCE_ROOT}/src/reader/common/*.hh)
+file(GLOB READER_PARQUET_HEAD_FILES
+        ${SOURCE_ROOT}/src/reader/parquet/*.h
+        ${SOURCE_ROOT}/src/reader/parquet/*.hh)
 
 file(GLOB READER_FILE_HEAD_FILES  ${SOURCE_ROOT}/src/filesystem/*.h)
 install(FILES ${READER_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader)
 install(FILES ${READER_ORC_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/orc)
 install(FILES ${READER_FILE_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/filesystem)
 install(FILES ${READER_COMMON_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/common)
+install(FILES ${READER_PARQUET_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/parquet)

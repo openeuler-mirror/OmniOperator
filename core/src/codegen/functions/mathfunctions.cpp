@@ -92,6 +92,11 @@ extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x)
     return static_cast<double>(x);
 }
 
+extern "C" DLLEXPORT double CastFloatToDouble(float x)
+{
+    return static_cast<double>(x);
+}
+
 extern "C" DLLEXPORT int32_t CastDoubleToInt32Down(double x)
 {
     return static_cast<int32_t>(x);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2026. All rights reserved.
  * Description: DateTime function registration
  */
 
@@ -9,8 +9,14 @@
 #include "../functions/Month.h"
 #include "../functions/Quarter.h"
 #include "../functions/Year.h"
+#include "../functions/Day.h"
+#include "../functions/DayOfWeek.h"
+#include "../functions/DayOfYear.h"
 #include "../functions/Trunc.h"
 #include "../functions/AddMonths.h"
+#include "../functions/DateAdd.h"
+#include "../functions/DateSub.h"
+#include "../functions/DateArithmetic.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -21,9 +27,15 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterMonthFunction(prefix + "month");
     RegisterQuarterFunction(prefix + "quarter");
     RegisterYearFunction(prefix + "year");
+    RegisterDayFunction(prefix + "day");
+    RegisterDayFunction(prefix + "dayofmonth");
+    RegisterDayOfWeekFunction(prefix + "dayofweek");
+    RegisterDayOfYearFunction(prefix + "dayofyear");
     // Register as "trunc_date" to match Gluten mapping (Substrait "trunc" -> "trunc_date")
     // and codegen layer registration
     RegisterTruncFunction(prefix + "trunc_date");
     RegisterAddMonthsFunction(prefix + "add_months");
+    RegisterDateAddFunction(prefix + "date_add");
+    RegisterDateSubFunction(prefix + "date_sub");
 }
 }

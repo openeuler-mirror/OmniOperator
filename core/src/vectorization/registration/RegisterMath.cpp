@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: visitor class for expressions
  */
 
@@ -9,6 +9,7 @@
 #include "../functions/IsNull.h"
 #include "../functions/MathFunctions.h"
 #include "../functions/HexFunctions.h"
+#include "../functions/ConvFunction.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -28,7 +29,9 @@ void RegisterMathFunctions(const std::string &prefix)
 	RegisterFunction<AsinFunction, double, double>(prefix + "asin", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<AsinhFunction, double, double>(prefix + "asinh", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<AtanFunction, double, double>(prefix + "atan", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<AtanhFunction, double, double>(prefix + "atanh", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Atan2Function, double, double, double>(prefix + "atan2", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<CotFunction, double, double>(prefix + "cot", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<CosFunction, double, double>(prefix + "cos", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<CoshFunction, double, double>(prefix + "cosh", {OMNI_DOUBLE}, OMNI_DOUBLE);
 	RegisterFunction<CbrtFunction, double, double>(prefix + "cbrt", {OMNI_DOUBLE}, OMNI_DOUBLE);
@@ -37,8 +40,10 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<SignFunction, double, double>(prefix + "sign", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SinhFunction, double, double>(prefix + "sinh", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SqrtFunction, double, double>(prefix + "sqrt", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<DegreesFunction, double, double>(prefix + "degrees", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<ExpFunction, double, double>(prefix + "exp", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SecFunction, double, double>(prefix + "sec", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<CscFunction, double, double>(prefix + "csc", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Log1pFunction, double, double>(prefix + "log1p", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Log10Function, double, double>(prefix + "log10", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Log2Function, double, double>(prefix + "log2", {OMNI_DOUBLE}, OMNI_DOUBLE);
@@ -74,5 +79,11 @@ void RegisterMathFunctions(const std::string &prefix)
     // Register factorial: factorial(int) -> bigint
     // Input: int32 (OMNI_INT), Output: int64 (OMNI_LONG)
     RegisterFunction<FactorialFunction, int64_t, int32_t>(prefix + "factorial", {OMNI_INT}, OMNI_LONG);
+
+    RegisterFunction<ConvFunction, std::string, std::string_view, int32_t, int32_t>(
+        prefix + "conv", {OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<ConvFunction, std::string, std::string_view, int32_t, int32_t>(
+        prefix + "conv", {OMNI_CHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
+
 }
 }

@@ -21,6 +21,8 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterString<StartsWithFunction>({prefix + "startswith"});
     RegisterString<ContainsFunction>({prefix + "Contains"});
     RegisterFunction<TrimFunction, std::string, std::string_view>(prefix + "Trim", {OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_CHAR}, OMNI_VARCHAR);
 
     // char_length / character_length / length(string) -> integer (character count, Unicode-aware)
     RegisterFunction<CharLengthFunction, int32_t, std::string_view>(prefix + "length", {OMNI_VARCHAR}, OMNI_INT);
@@ -99,5 +101,46 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "bit_length", {OMNI_CHAR}, OMNI_INT);
     RegisterFunction<BitLengthFunction, int32_t, std::string_view>(
         prefix + "bit_length", {OMNI_VARBINARY}, OMNI_INT);
+
+    // lpad(string, size, padString) -> varchar
+    // Left pads string to size characters with padString
+    // Support all combinations of VARCHAR/CHAR string types and INT32/INT64 size types
+    RegisterFunction<LPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "lpad", {OMNI_VARCHAR, OMNI_LONG, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<LPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "lpad", {OMNI_VARCHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<LPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "lpad", {OMNI_CHAR, OMNI_LONG, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<LPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "lpad", {OMNI_CHAR, OMNI_INT, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<LPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "lpad", {OMNI_VARCHAR, OMNI_LONG, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<LPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "lpad", {OMNI_VARCHAR, OMNI_INT, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<LPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "lpad", {OMNI_CHAR, OMNI_LONG, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<LPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "lpad", {OMNI_CHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR);
+
+    // rpad(string, size, padString) -> varchar
+    // Right pads string to size characters with padString
+    // Support all combinations of VARCHAR/CHAR string types and INT32/INT64 size types
+    RegisterFunction<RPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "rpad", {OMNI_VARCHAR, OMNI_LONG, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<RPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "rpad", {OMNI_VARCHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<RPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "rpad", {OMNI_CHAR, OMNI_LONG, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<RPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "rpad", {OMNI_CHAR, OMNI_INT, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<RPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "rpad", {OMNI_VARCHAR, OMNI_LONG, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<RPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "rpad", {OMNI_VARCHAR, OMNI_INT, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<RPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "rpad", {OMNI_CHAR, OMNI_LONG, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<RPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "rpad", {OMNI_CHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR);
+
 }
 }
