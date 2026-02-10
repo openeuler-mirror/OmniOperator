@@ -10,6 +10,7 @@
 #include "vector/unsafe_vector.h"
 #include "type/data_type.h"
 #include "type/decimal128.h"
+#include "vector/array_vector.h"
 #include "operator/omni_id_type_vector_traits.h"
 #include "operator/execution_context.h"
 #include "operator/filter/filter_and_project.h"
@@ -83,6 +84,9 @@ public:
                 const auto width = static_cast<VarcharDataType &>(*dataTypePtr).GetWidth();
                 return width < INT_MAX ? width : DEFAULT_CHAR_LENGTH;
             }
+            case OMNI_ARRAY:
+                // Variable-length; use a conservative estimate so GetMaxRowCount gives a reasonable batch size.
+                return DEFAULT_CHAR_LENGTH;
             default:
                 return 0;
         }
@@ -155,6 +159,88 @@ public:
                 break;
         }
         return 0;
+    }
+
+    static ALWAYS_INLINE int32_t CompareElementAt(vec::BaseVector *leftVec, vec::BaseVector *rightVec,
+        int32_t pos, type::DataTypeId elementTypeId)
+    {
+        switch (elementTypeId) {
+            case OMNI_BOOLEAN:
+                return CompareValue<bool, true, true, true>(leftVec, pos, rightVec, pos);
+            case OMNI_INT:
+            case OMNI_DATE32:
+                return CompareValue<int32_t, true, true, true>(leftVec, pos, rightVec, pos);
+            case OMNI_SHORT:
+                return CompareValue<int16_t, true, true, true>(leftVec, pos, rightVec, pos);
+            case OMNI_LONG:
+            case OMNI_TIMESTAMP:
+            case OMNI_DECIMAL64:
+                return CompareValue<int64_t, true, true, true>(leftVec, pos, rightVec, pos);
+            case OMNI_DOUBLE:
+                return CompareValue<double, true, true, true>(leftVec, pos, rightVec, pos);
+            case OMNI_FLOAT:
+                return CompareValue<float, true, true, true>(leftVec, pos, rightVec, pos);
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+            case OMNI_VARBINARY:
+                return CompareValue<std::string_view, true, true, true>(leftVec, pos, rightVec, pos);
+            case OMNI_DECIMAL128:
+                return CompareValue<type::Decimal128, true, true, true>(leftVec, pos, rightVec, pos);
+            case OMNI_BYTE:
+                return CompareValue<int8_t, true, true, true>(leftVec, pos, rightVec, pos);
+            case OMNI_ARRAY:
+                // Recursive compare: leftVec/rightVec are element slices (see CompareArrayValue), pos is the
+                // index within the slice;
+                return CompareArrayValue(leftVec, pos, rightVec, pos);
+            default:
+                throw omniruntime::exception::OmniException("OperatorUtil::CompareElementAt",
+                    "unsupported array element type for compare");
+        }
+    }
+
+    /** Compare two array rows. Nulls first, ascending. Used by sort and SMJ. */
+    static int32_t CompareArrayValue(vec::BaseVector *leftColumn, int32_t leftPosition,
+        vec::BaseVector *rightColumn, int32_t rightPosition)
+    {
+        auto *leftArr = reinterpret_cast<vec::ArrayVector *>(leftColumn);
+        auto *rightArr = reinterpret_cast<vec::ArrayVector *>(rightColumn);
+        bool leftNull = leftArr->IsNull(leftPosition);
+        bool rightNull = rightArr->IsNull(rightPosition);
+        auto nullResult = CompareNull<true, true>(leftNull, rightNull);
+        if (nullResult != COMPARE_STATUS_OTHER) {
+            return nullResult;
+        }
+        int64_t leftLen = leftArr->GetSize(leftPosition);
+        int64_t rightLen = rightArr->GetSize(rightPosition);
+        std::unique_ptr<vec::BaseVector> leftSlice(leftArr->GetValue(leftPosition));
+        std::unique_ptr<vec::BaseVector> rightSlice(rightArr->GetValue(rightPosition));
+        type::DataTypeId elementTypeId = leftArr->GetElementVector()->GetTypeId();
+        int64_t minLen = std::min(leftLen, rightLen);
+        for (int64_t i = 0; i < minLen; ++i) {
+            int32_t leftIdx = static_cast<int32_t>(i);
+            bool leftElemNull = leftSlice->IsNull(leftIdx);
+            bool rightElemNull = rightSlice->IsNull(leftIdx);
+            if (leftElemNull && rightElemNull) {
+                continue;
+            }
+            if (leftElemNull) {
+                return COMPARE_STATUS_LESS_THAN;
+            }
+            if (rightElemNull) {
+                return COMPARE_STATUS_GREATER_THAN;
+            }
+            int32_t cmp = CompareElementAt(leftSlice.get(), rightSlice.get(), leftIdx, elementTypeId);
+            if (cmp != COMPARE_STATUS_EQUAL) {
+                return cmp;
+            }
+        }
+        if (leftLen < rightLen) {
+            return COMPARE_STATUS_LESS_THAN;
+        }
+        if (leftLen > rightLen) {
+            return COMPARE_STATUS_GREATER_THAN;
+        }
+        return COMPARE_STATUS_EQUAL;
     }
 
     static ALWAYS_INLINE CompareStatus CompareNull(vec::BaseVector *leftColumn, int32_t leftPosition,

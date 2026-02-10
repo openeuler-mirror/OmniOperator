@@ -95,7 +95,7 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     if (sourceTypes.GetSize() == 1) {
         const auto &firstSourceTypeId = sourceTypes.GetType(0)->GetId();
         canInplaceSort = (firstSourceTypeId != OMNI_VARCHAR) && (firstSourceTypeId != OMNI_CHAR) &&
-            (firstSourceTypeId != OMNI_BOOLEAN);
+            (firstSourceTypeId != OMNI_BOOLEAN) && (firstSourceTypeId != OMNI_ARRAY);
     }
 
     if (!canInplaceSort) {
@@ -308,8 +308,16 @@ void SortOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
     }
 
     // third step, get sorted vector batches
-    int32_t rowCountToOutput =
-        static_cast<int32_t>(std::min(static_cast<size_t>(maxRowCountPerBatch), (totalRowCount - rowCountOutputted)));
+    // Use same source as Sort(): pagesIndex->GetRowCount() is the number of rows just sorted
+    const int32_t totalSortedRows = static_cast<int32_t>(pagesIndex->GetRowCount());
+    const int32_t remaining =
+        std::max<int32_t>(0, totalSortedRows - static_cast<int32_t>(rowCountOutputted));
+    int32_t rowCountToOutput = std::min(maxRowCountPerBatch, remaining);
+    if (maxRowCountPerBatch <= 1 && remaining > 1) {
+        const int32_t fallbackMaxRows =
+            OperatorUtil::MAX_VEC_BATCH_SIZE_IN_BYTES / OperatorUtil::DEFAULT_CHAR_LENGTH;
+        rowCountToOutput = std::min(remaining, fallbackMaxRows);
+    }
 
     auto result = std::make_unique<VectorBatch>(rowCountToOutput);
     auto resultPtr = result.get();
@@ -352,7 +360,13 @@ void SortOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         delete spiller;
         spiller = nullptr;
     }
-    int32_t rowCount = std::min(maxRowCountPerBatch, static_cast<int32_t>(totalRowCount - rowCountOutputted));
+    int32_t remaining = static_cast<int32_t>(totalRowCount - rowCountOutputted);
+    int32_t rowCount = std::min(maxRowCountPerBatch, remaining);
+    if (maxRowCountPerBatch <= 1 && remaining > 1) {
+        const int32_t fallbackMaxRows =
+            OperatorUtil::MAX_VEC_BATCH_SIZE_IN_BYTES / OperatorUtil::DEFAULT_CHAR_LENGTH;
+        rowCount = std::min(remaining, fallbackMaxRows);
+    }
     batches.resize(rowCount);
     rowIdxes.resize(rowCount);
 
