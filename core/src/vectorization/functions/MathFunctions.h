@@ -1,6 +1,6 @@
 
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: Mathematical functions for vectorization framework
  */
 
@@ -8,6 +8,7 @@
 #include "util/compiler_util.h"
 #include "vectorization/Status.h"
 #include <cmath>
+#include <iostream>
 #include <random>
 #include <utility>
 #include "type/decimal128.h"
@@ -67,11 +68,32 @@ namespace omniruntime::vectorization {
     };
 
     template <typename T>
+    struct AtanhFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = std::atanh(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
     struct Atan2Function {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput &result, const TInput &a, const TInput &b)
         {
             result = std::atan2(a + 0.0, b + 0.0);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct CotFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            double tanVal = std::tan(static_cast<double>(a));
+            result = static_cast<TInput>(1.0 / tanVal);
             return Status::OK();
         }
     };
@@ -191,6 +213,16 @@ namespace omniruntime::vectorization {
     };
 
     template <typename T>
+    struct DegreesFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = a * (180.0 / M_PI);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
     struct ExpFunction {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput &result, const TInput &a)
@@ -205,7 +237,19 @@ namespace omniruntime::vectorization {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput &result, const TInput &a)
         {
-            result = 1 / std::cos(a);
+            double cosVal = std::cos(static_cast<double>(a));
+            result = static_cast<TInput>(1.0 / cosVal);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct CscFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            double sinVal = std::sin(static_cast<double>(a));
+            result = static_cast<TInput>(1.0 / sinVal);
             return Status::OK();
         }
     };
@@ -241,7 +285,9 @@ namespace omniruntime::vectorization {
     struct LogarithmFunction {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput &result, const TInput &a, const TInput &b) {
-            result = std::log(b) / std::log(a);
+            double logBase = std::log(static_cast<double>(a));
+            double logVal = std::log(static_cast<double>(b));
+            result = static_cast<TInput>(logVal / logBase);
             return Status::OK();
         }
     };
@@ -275,8 +321,8 @@ namespace omniruntime::vectorization {
         }
     };
 
-    // Positive function: returns the input value unchanged (identity function)
-    // Supports: byte, short, int, long, float, double, decimal64, decimal128
+// Positive function: returns the input value unchanged (identity function) 
+// Supports: byte, short, int, long, float, double, decimal64, decimal128
     template <typename T>
     struct PositiveFunction {
         template <typename TInput>
@@ -287,7 +333,6 @@ namespace omniruntime::vectorization {
         }
     };
 
-    // Specialization for Decimal128
     template <>
     struct PositiveFunction<type::Decimal128> {
 		template <typename R, typename A>
@@ -298,9 +343,6 @@ namespace omniruntime::vectorization {
         }
     };
 
-
-    // Power function: returns x raised to the power of y
-    // Supports: double
     template <typename T>
     struct PowerFunction {
         template <typename TInput>
@@ -311,8 +353,6 @@ namespace omniruntime::vectorization {
         }
     };
 
-    // Rint function: rounds to nearest integer using current rounding mode
-    // Supports: double
     template <typename T>
     struct RintFunction {
         template <typename TInput>
@@ -323,9 +363,6 @@ namespace omniruntime::vectorization {
         }
     };
 
-    // Rand function (aligned with Velox sparksql Rand.h semantics; std lib only, no folly)
-    // rand() -> double in [0, 1), non-deterministic
-    // rand(seed) -> double in [0, 1), one generator per batch, sequence per row (Velox semantics)
     template <typename T>
     struct RandFunction {
         ALWAYS_INLINE Status call(double &result)
@@ -336,7 +373,6 @@ namespace omniruntime::vectorization {
         }
     };
 
-    // rand(seed): int32 seed, one generator per batch, sequence per row (Velox-aligned). T unused, for RegisterFunction<Func<TReturn>>.
     template <typename T>
     struct RandSeedFunctionInt32 {
         void initialize(const std::vector<omniruntime::type::DataTypeId> & /*inputTypes*/, const config::QueryConfig & config,
@@ -355,7 +391,6 @@ namespace omniruntime::vectorization {
         std::mt19937 generator_;
     };
 
-    // rand(seed): int64 seed, same semantics. T unused, for RegisterFunction<Func<TReturn>>.
     template <typename T>
     struct RandSeedFunctionInt64 {
         void initialize(const std::vector<omniruntime::type::DataTypeId> & /*inputTypes*/, const config::QueryConfig & config,
@@ -374,7 +409,6 @@ namespace omniruntime::vectorization {
         std::mt19937 generator_;
     };
 
-    // Round function: round(expr) default scale=0; round(expr, scale). byte/short/int/long/float/double only.
     template <typename T>
     struct RoundFunction {
         template <typename TInput>
