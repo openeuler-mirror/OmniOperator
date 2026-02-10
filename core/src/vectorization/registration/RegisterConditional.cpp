@@ -6,6 +6,7 @@
 #include <string>
 #include "../functions/Coalesce.h"
 #include "../functions/If.h"
+#include "../functions/Nanvl.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -25,6 +26,11 @@ void RegisterConditionalFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_DATE64, OMNI_DATE64}, OMNI_DATE64, ifFunction);
     VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_TIMESTAMP, OMNI_TIMESTAMP}, OMNI_TIMESTAMP, ifFunction);
     VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_DECIMAL64, OMNI_DECIMAL64}, OMNI_DECIMAL64, ifFunction);
+    VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_DECIMAL128, OMNI_DECIMAL128}, OMNI_DECIMAL128, ifFunction);
+    VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_VARBINARY, OMNI_VARBINARY}, OMNI_VARBINARY, ifFunction);
+    VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY, ifFunction);
+    VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_MAP, OMNI_MAP}, OMNI_MAP, ifFunction);
+    VectorFunction::RegisterVectorFunction("if", {OMNI_BOOLEAN, OMNI_ROW, OMNI_ROW}, OMNI_ROW, ifFunction);
 
     // Register coalesce - 2 arguments
     auto coalesceFunction = std::make_shared<CoalesceFunction>();
@@ -40,5 +46,10 @@ void RegisterConditionalFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("coalesce", {OMNI_DATE64, OMNI_DATE64}, OMNI_DATE64, coalesceFunction);
     VectorFunction::RegisterVectorFunction("coalesce", {OMNI_TIMESTAMP, OMNI_TIMESTAMP}, OMNI_TIMESTAMP, coalesceFunction);
     VectorFunction::RegisterVectorFunction("coalesce", {OMNI_DECIMAL64, OMNI_DECIMAL64}, OMNI_DECIMAL64, coalesceFunction);
+
+    // Register nanvl - conditional function for NaN handling (float and double only)
+    auto nanvlFunction = std::make_shared<NanvlFunction>();
+    VectorFunction::RegisterVectorFunction("nanvl", {OMNI_FLOAT, OMNI_FLOAT}, OMNI_FLOAT, nanvlFunction);
+    VectorFunction::RegisterVectorFunction("nanvl", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE, nanvlFunction);
 }
 }
