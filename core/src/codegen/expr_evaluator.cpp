@@ -562,6 +562,67 @@ BaseVector *Projection::ColumnProjectionVarCharVectorHelper(VectorBatch *vecBatc
 }
 
 ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vector<Expr *> &projectionExprs,
+    const DataTypes &inputDataTypes, const config::QueryConfig &queryConfig)
+    : inputTypes(const_cast<DataTypes &>(inputDataTypes)), queryConfig_(queryConfig)
+{
+    auto ofConfig = queryConfig.IsOverFlowASNull() == true
+                    ? std::make_unique<OverflowConfig>(OVERFLOW_CONFIG_NULL)
+                    : std::make_unique<OverflowConfig>(OVERFLOW_CONFIG_EXCEPTION);
+    preferVectorization = queryConfig.PreferVectorizationExpression();
+    hasFilter = true;
+    filterExpr = filterExpression;
+    for (auto &projectionExpr : projectionExprs) {
+        projectionExpr->isRoot = true;
+        projExprs.emplace_back(projectionExpr);
+    }
+    overflowConfig = std::make_unique<OverflowConfig>(*ofConfig);
+    projectVecCount = static_cast<int32_t>(projectionExprs.size());
+
+    for (int i = 0; isSupportedExpr && i < projectVecCount; ++i) {
+        outputTypes.emplace_back(projExprs[i]->GetReturnType());
+    }
+
+    ExprVerifier verifier;
+    verifier.VisitExpr(*filterExpr);
+    for (auto &projExpr : projExprs) {
+        verifier.VisitExpr(*projExpr);
+    }
+
+    isSupportVectorization = verifier.IsSupportVectorization();
+    isSupportCodegen = verifier.IsSupportCodegen();
+    useCodegen = !(preferVectorization && isSupportVectorization) && isSupportCodegen;
+}
+
+ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionExprs, const DataTypes &inputDataTypes,
+    const config::QueryConfig &queryConfig)
+    : inputTypes(const_cast<DataTypes &>(inputDataTypes)), queryConfig_(queryConfig)
+{
+    overflowConfig = queryConfig.IsOverFlowASNull() == true
+                    ? std::make_unique<OverflowConfig>(OVERFLOW_CONFIG_NULL)
+                    : std::make_unique<OverflowConfig>(OVERFLOW_CONFIG_EXCEPTION);
+    preferVectorization = queryConfig.PreferVectorizationExpression();
+    hasFilter = false;
+    for (auto &projectionExpr : projectionExprs) {
+        projectionExpr->isRoot = true;
+        projExprs.emplace_back(projectionExpr);
+    }
+    projectVecCount = static_cast<int32_t>(projectionExprs.size());
+
+    for (int i = 0; isSupportedExpr && i < projectVecCount; ++i) {
+        outputTypes.emplace_back(projExprs[i]->GetReturnType());
+    }
+
+    ExprVerifier verifier;
+    for (auto &projExpr : projExprs) {
+        verifier.VisitExpr(*projExpr);
+    }
+
+    isSupportVectorization = verifier.IsSupportVectorization();
+    isSupportCodegen = verifier.IsSupportCodegen();
+    useCodegen = !(preferVectorization && isSupportVectorization) && isSupportCodegen;
+}
+
+ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vector<Expr *> &projectionExprs,
     const DataTypes &inputDataTypes, OverflowConfig *ofConfig, bool preferVectorization)
     : inputTypes(const_cast<DataTypes &>(inputDataTypes)), preferVectorization(preferVectorization)
 {
@@ -623,6 +684,8 @@ bool ExpressionEvaluator::IsSupportedExpr() const
 VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionContext *context,
     AlignedBuffer<int32_t> *selectedRowsBuffer)
 {
+    context->SetConfig(queryConfig_);
+    context->SetThrowOnError(!overflowConfig->IsOverflowAsNull());
     const int32_t vectorCount = vecBatch->GetVectorCount();
     intptr_t valueAddrs[vectorCount];
     intptr_t nullAddrs[vectorCount];

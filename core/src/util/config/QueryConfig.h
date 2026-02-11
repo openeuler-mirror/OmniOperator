@@ -29,23 +29,20 @@ namespace omniruntime::config {
 /// Does not allow altering properties on the fly. Only at creation time.
 class QueryConfig {
 public:
-    explicit QueryConfig(): config_{
-        std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>())
-    }
+    explicit QueryConfig(): config_(
+        std::make_shared<config::ConfigBase>(std::unordered_map<std::string, std::string>()))
     {
         ValidateConfig();
     }
 
-    explicit QueryConfig(const std::unordered_map<std::string, std::string> &values): config_{
-        std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>(values))
-    }
+    explicit QueryConfig(const std::unordered_map<std::string, std::string> &values): config_(
+        std::make_shared<config::ConfigBase>(std::unordered_map<std::string, std::string>(values)))
     {
         ValidateConfig();
     }
 
-    explicit QueryConfig(std::unordered_map<std::string, std::string> &&values): config_{
-        std::make_unique<config::ConfigBase>(std::move(values))
-    }
+    explicit QueryConfig(std::unordered_map<std::string, std::string> &&values): config_(
+        std::make_shared<config::ConfigBase>(std::move(values)))
     {
         ValidateConfig();
     }
@@ -437,7 +434,7 @@ public:
     void testingOverrideConfigUnsafe(std::unordered_map<std::string, std::string> &&values);
 
 private:
-    void ValidateConfig() {}
+    void ValidateConfig();
 
     std::shared_ptr<ConfigBase> config_;
 };

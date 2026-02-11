@@ -69,11 +69,9 @@ namespace omniruntime {
         {
             auto projections = expandNode->GetProjections();
             auto sourceTypes = *(expandNode->InputType());
-            auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
-                                                                         : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
             std::vector<std::shared_ptr<ExpressionEvaluator>> exprEvaluators;
             for (const auto& projection : projections) {
-                auto exprEvaluator = std::make_shared<ExpressionEvaluator>(projection, sourceTypes, overflowConfig);
+                auto exprEvaluator = std::make_shared<ExpressionEvaluator>(projection, sourceTypes, queryConfig);
                 exprEvaluators.push_back(exprEvaluator);
             }
 

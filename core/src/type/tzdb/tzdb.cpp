@@ -160,21 +160,23 @@ static void __matches(std::istream &__input, std::string_view __expected)
 [[nodiscard]] static std::string __parse_string(std::istream &__input)
 {
     std::string __result;
-    while (__input.get() != std::istream::traits_type::eof()) {
+    while (true) {
         int __c = __input.get();
         switch (__c) {
             case ' ':
             case '\t':
             case '\n':
                 __input.unget();
+                [[fallthrough]];
+            case std::istream::traits_type::eof():
+                if (__result.empty()) std::__throw_runtime_error("corrupt tzdb: expected a string");
+
+                return __result;
+
             default:
                 __result.push_back(__c);
         }
     }
-
-    if (__result.empty()) std::__throw_runtime_error("corrupt tzdb: expected a string");
-    return __result;
-
 }
 
 [[nodiscard]] static int64_t __parse_integral(std::istream &__input, bool __leading_zero_allowed)

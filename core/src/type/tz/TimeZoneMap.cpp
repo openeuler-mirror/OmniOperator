@@ -280,6 +280,12 @@ std::string normalizeTimeZone(const std::string &originalZoneId)
 }
 }
 
+int16_t getTimeZoneID(std::string_view timeZone, bool failOnError)
+{
+    const TimeZone *tz = locateZone(timeZone, failOnError);
+    return tz == nullptr ? -1 : tz->id();
+}
+
 void validateRange(time_point<std::chrono::seconds> timePoint)
 {
     validateRangeImpl(timePoint);

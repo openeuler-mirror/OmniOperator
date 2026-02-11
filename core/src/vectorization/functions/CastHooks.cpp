@@ -24,12 +24,12 @@ CastHooks::CastHooks(const config::QueryConfig &config)
 Expected<int64_t> CastHooks::castStringToTimestamp(const std::string_view &view) const
 {
     auto conversionResult = util::fromTimestampWithTimezoneString(view.data(), view.size());
-    if (!conversionResult.hasError()) {
+    if (conversionResult.hasError()) {
         return folly::makeUnexpected(conversionResult.error());
     }
 
     auto sessionTimezone = config_.SessionTimezone().empty() ? nullptr : tz::locateZone(config_.SessionTimezone());
-    return util::fromParsedTimestampWithTimeZone(conversionResult.value(), sessionTimezone).getNanos();
+    return util::fromParsedTimestampWithTimeZone(conversionResult.value(), sessionTimezone).toMicros();
 }
 
 template <typename T>
@@ -39,18 +39,18 @@ Expected<int64_t> CastHooks::castNumberToTimestamp(T seconds) const
     // To avoid overflow, we need to check the range of seconds.
     static constexpr int64_t maxSeconds = std::numeric_limits<int64_t>::max() / Timestamp::kMicrosecondsInSecond;
     if (seconds > maxSeconds) {
-        return Timestamp::fromMicrosNoError(std::numeric_limits<int64_t>::max()).getNanos();
+        return Timestamp::fromMicrosNoError(std::numeric_limits<int64_t>::max()).toMicros();
     }
     if (seconds < -maxSeconds) {
-        return Timestamp::fromMicrosNoError(std::numeric_limits<int64_t>::min()).getNanos();
+        return Timestamp::fromMicrosNoError(std::numeric_limits<int64_t>::min()).toMicros();
     }
 
     if constexpr (std::is_floating_point_v<T>) {
         return Timestamp::fromMicrosNoError(static_cast<int64_t>(seconds * Timestamp::kMicrosecondsInSecond)).
-            getNanos();
+            toMicros();
     }
 
-    return Timestamp(seconds, 0).getNanos();
+    return Timestamp(seconds, 0).toMicros();
 }
 
 Expected<int64_t> CastHooks::castIntToTimestamp(int64_t seconds) const

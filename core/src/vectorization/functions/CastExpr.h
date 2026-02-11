@@ -178,7 +178,7 @@ private:
 
     bool setNullInResultAtError() const
     {
-        return nullOnFailure() && inTopLevel;
+        return nullOnFailure();
     }
 
     CastOperatorPtr getCastOperator(const DataTypePtr &type);

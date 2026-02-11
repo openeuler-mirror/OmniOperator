@@ -134,6 +134,7 @@ void CastExpr::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputTy
 void CastExpr::apply(const SelectivityVector &rows, BaseVector *input, ExecutionContext &context,
     const DataTypePtr &fromType, const DataTypePtr &toType, VectorPtr &result)
 {
+    hooks_ = std::make_shared<CastHooks>(context.queryConfig());
     const auto size = input->GetSize();
     const auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(input));
     SelectivityVector newRows(size);
@@ -141,8 +142,8 @@ void CastExpr::apply(const SelectivityVector &rows, BaseVector *input, Execution
 
     VectorPtr localResult = nullptr;
     if (!newRows.hasSelections()) {
-        // todo:
-        // localResult = BaseVector::createNullConstant(toType, rows.end(), context.pool());
+        localResult = VectorHelper::CreateFlatVector(toType->GetId(), context.GetResultRowSize());
+        localResult->GetNullsBuffer()->SetNulls(0, true, context.GetResultRowSize());
     } else if (input->GetEncoding() == OMNI_FLAT) {
         applyPeeled(newRows, input, context, fromType, toType, localResult);
     } else {
@@ -152,10 +153,6 @@ void CastExpr::apply(const SelectivityVector &rows, BaseVector *input, Execution
     // to the result at the same rows.
     result = localResult;
     OMNI_CHECK(result!=nullptr, "result can not be null!");
-    // todo:
-    // if (nullBits || context.HasError()) {
-    //     EvalCtx::addNulls(rows, remainingRows->asRange().bits(), context, toType, result);
-    // }
 }
 
 VectorPtr CastExpr::applyMap(const SelectivityVector &rows, const MapVector *input, ExecutionContext &context,
@@ -355,6 +352,9 @@ void CastExpr::applyPeeled(const SelectivityVector &rows, BaseVector *input, Exe
                     case OMNI_LONG: {
                         return applyCastPrimitivesDispatch<OMNI_LONG>(fromType, toType, rows, context, input, result);
                     }
+                    case OMNI_FLOAT: {
+                        return applyCastPrimitivesDispatch<OMNI_FLOAT>(fromType, toType, rows, context, input, result);
+                    }
                     case OMNI_DOUBLE: {
                         return applyCastPrimitivesDispatch<OMNI_DOUBLE>(fromType, toType, rows, context, input, result);
                     }
@@ -464,7 +464,8 @@ VectorPtr CastExpr::castToDate(const SelectivityVector &rows, BaseVector *input,
             auto *inputVector = reinterpret_cast<const Vector<int64_t> *>(input);
             const auto *timeZone = getTimeZoneFromConfig(context.queryConfig());
             applyToSelectedNoThrowLocal(context, rows, castResult, [&](int row) {
-                const auto days = omniruntime::type::util::toDate(Timestamp::fromMicros(inputVector->GetValue(row)), timeZone);
+                const auto days = omniruntime::type::util::toDate(Timestamp::fromMicros(inputVector->GetValue(row)),
+                    timeZone);
                 resultFlatVector->SetValue(row, days);
             });
             return castResult;
@@ -517,7 +518,7 @@ VectorPtr CastExpr::applyTimestampToVarcharCast(const DataTypePtr &toType, const
 
     applyToSelectedNoThrowLocal(context, rows, result, [&](vector_size_t row) {
         // Adjust input timestamp according the session timezone.
-        Timestamp inputValue(simpleInput->GetValue(row));
+        Timestamp inputValue = Timestamp::fromMicros(simpleInput->GetValue(row));
         if (options.timeZone) {
             inputValue.toTimezone(*(options.timeZone));
         }

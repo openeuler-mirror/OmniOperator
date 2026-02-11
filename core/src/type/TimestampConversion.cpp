@@ -454,12 +454,12 @@ int64_t fromTime(int32_t hour, int32_t minute, int32_t second, int32_t microseco
     return result;
 }
 
-std::optional<int64_t> daysSinceEpochFromDate(int32_t year, int32_t month, int32_t day)
+Expected<int64_t> daysSinceEpochFromDate(int32_t year, int32_t month, int32_t day)
 {
     int64_t daysSinceEpoch = 0;
 
     if (!isValidDate(year, month, day)) {
-        return std::nullopt;;
+        return folly::makeUnexpected(vectorization::Status::UserError("Date out of range: {}-{}-{}", year, month, day));
     }
     while (year < 1970) {
         year += kYearInterval;
@@ -664,8 +664,8 @@ bool tryParseDateString(const char *buf, size_t len, size_t &pos, int64_t &daysS
 
     // No month or day.
     if ((pos == len || buf[pos] == 'T')) {
-        std::optional<int64_t> expected = daysSinceEpochFromDate(year, 1, 1);
-        if (expected.has_value()) {
+        Expected<int64_t> expected = daysSinceEpochFromDate(year, 1, 1);
+        if (expected.hasError()) {
             return false;
         }
         daysSinceEpoch = expected.value();
@@ -690,8 +690,8 @@ bool tryParseDateString(const char *buf, size_t len, size_t &pos, int64_t &daysS
 
     // No day.
     if ((pos == len || buf[pos] == 'T')) {
-        std::optional<int64_t> expected = daysSinceEpochFromDate(year, month, 1);
-        if (expected.has_value()) {
+        Expected<int64_t> expected = daysSinceEpochFromDate(year, month, 1);
+        if (expected.hasError()) {
             return false;
         }
         daysSinceEpoch = expected.value();
@@ -715,8 +715,8 @@ bool tryParseDateString(const char *buf, size_t len, size_t &pos, int64_t &daysS
         return false;
     }
 
-    std::optional<int64_t> expected = daysSinceEpochFromDate(year, month, day);
-    if (!expected.has_value()) {
+    Expected<int64_t> expected = daysSinceEpochFromDate(year, month, day);
+    if (expected.hasError()) {
         return false;
     }
     daysSinceEpoch = expected.value();

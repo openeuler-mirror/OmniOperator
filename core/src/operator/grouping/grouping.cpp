@@ -25,9 +25,6 @@ GroupingOperator::GroupingOperator(const std::shared_ptr<const GroupingNode> &gr
     auto projections = expandNode->GetProjections();
     auto sourceTypes = *(expandNode->InputType());
     auto residualOutputType = aggPlanNode_->OutputType();
-    auto overflowConfig = queryConfig_.IsOverFlowASNull() == true
-                          ? std::make_shared<OverflowConfig>(OVERFLOW_CONFIG_NULL)
-                          : std::make_shared<OverflowConfig>(OVERFLOW_CONFIG_EXCEPTION);
     aggFactor_ = CreateOperatorFactory(aggPlanNode_, queryConfig_);
     int32_t index = 0;
     auto nullSizeEnd = aggPlanNode_->GetGroupByNum() - 1;
@@ -36,7 +33,7 @@ GroupingOperator::GroupingOperator(const std::shared_ptr<const GroupingNode> &gr
     residualAggFactor_ = CreateResidualOperatorFactory(aggPlanNode_, residualOutputType, nullSizeEnd + 1, queryConfig_);
     for (const auto &projection : projections) {
         if (index == 0) {
-            auto exprEvaluator = std::make_shared<ExpressionEvaluator>(projection, sourceTypes, overflowConfig.get());
+            auto exprEvaluator = std::make_shared<ExpressionEvaluator>(projection, sourceTypes, queryConfig);
             exprEvaluator->ProjectFuncGeneration();
             expressionEvaluators_.push_back(exprEvaluator);
             aggOperators_[index] = std::shared_ptr<Operator>(aggFactor_->CreateOperator());
@@ -57,7 +54,7 @@ GroupingOperator::GroupingOperator(const std::shared_ptr<const GroupingNode> &gr
             }
             nullSizeFrond--;
             auto exprEvaluator = std::make_shared<ExpressionEvaluator>(expressions, *residualOutputType.get(),
-                overflowConfig.get());
+                queryConfig);
             exprEvaluator->ProjectFuncGeneration();
             expressionEvaluators_.push_back(exprEvaluator);
             aggOperators_[index] = std::shared_ptr<Operator>(residualAggFactor_->CreateOperator());

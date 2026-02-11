@@ -201,6 +201,12 @@ private:
 class ExpressionEvaluator {
 public:
     ExpressionEvaluator(Expr *filterExpression, const std::vector<Expr *> &projectionExprs,
+        const DataTypes &inputDataTypes, const config::QueryConfig &queryConfig);
+
+    ExpressionEvaluator(const std::vector<Expr *> &projectionExprs, const DataTypes &inputDataTypes,
+        const config::QueryConfig &queryConfig);
+
+    ExpressionEvaluator(Expr *filterExpression, const std::vector<Expr *> &projectionExprs,
         const DataTypes &inputDataTypes, OverflowConfig *ofConfig, bool preferVectorization = false);
 
     ExpressionEvaluator(const std::vector<Expr *> &projectionExprs, const DataTypes &inputDataTypes,
@@ -267,6 +273,7 @@ public:
     }
 
 private:
+    config::QueryConfig queryConfig_;
     bool isSupportCodegen = true;
     bool isSupportVectorization = true;
     bool preferVectorization = false;
