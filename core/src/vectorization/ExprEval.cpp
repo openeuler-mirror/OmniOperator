@@ -5,7 +5,9 @@
 
 #include "ExprEval.h"
 #include <iostream>
+#include <string>
 #include "codegen/expr_evaluator.h"
+#include "type/data_type.h"
 
 namespace omniruntime::vectorization {
 using namespace omniruntime::expressions;
@@ -392,6 +394,117 @@ void ExprEval::Visit(const FuncExpr &e)
     }
 
     BaseVector *result = nullptr;
+    if (e.vectorFunction == nullptr) {
+        OMNI_THROW("Vectorization Error:", "Vector function not found for function: " + e.funcName);
+    }
+    
+    // Special handling for CAST from Decimal types to preserve scale information
+    if (e.funcName == "CAST" && !e.arguments.empty()) {
+        auto inputTypeId = e.arguments[0]->GetReturnTypeId();
+        auto outputTypeId = e.dataType->GetId();
+        
+        // Handle Decimal64 to floating point conversion
+        if (inputTypeId == OMNI_DECIMAL64 && 
+            (outputTypeId == OMNI_DOUBLE || outputTypeId == OMNI_FLOAT)) {
+            auto inputArg = inputValues_.top();
+            inputValues_.pop();
+            
+            // Get scale from the input expression's dataType
+            auto inputDataType = e.arguments[0]->GetReturnType();
+            int32_t scale = 0;
+            if (auto* decimalType = dynamic_cast<type::DecimalDataType*>(inputDataType.get())) {
+                scale = decimalType->GetScale();
+            }
+            
+            auto size = context->GetResultRowSize();
+            result = VectorHelper::CreateFlatVector(outputTypeId, size);
+            
+            // Calculate scale divisor
+            double scaleDivisor = 1.0;
+            for (int32_t i = 0; i < scale; i++) {
+                scaleDivisor *= 10.0;
+            }
+            
+            for (int32_t row = 0; row < size; ++row) {
+                if (inputArg->IsNull(inputArg->GetEncoding() == OMNI_ENCODING_CONST ? 0 : row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                
+                int64_t intValue;
+                if (inputArg->GetEncoding() == OMNI_ENCODING_CONST) {
+                    auto* constVec = static_cast<ConstVector<int64_t>*>(inputArg);
+                    intValue = constVec->GetConstValue();
+                } else {
+                    auto* flatVec = static_cast<Vector<int64_t>*>(inputArg);
+                    intValue = flatVec->GetValue(row);
+                }
+                
+                double doubleValue = static_cast<double>(intValue) / scaleDivisor;
+                
+                if (outputTypeId == OMNI_DOUBLE) {
+                    static_cast<Vector<double>*>(result)->SetValue(row, doubleValue);
+                } else {
+                    static_cast<Vector<float>*>(result)->SetValue(row, static_cast<float>(doubleValue));
+                }
+            }
+            inputValues_.push(result);
+            return;
+        }
+        
+        // Handle Decimal128 to floating point conversion
+        if (inputTypeId == OMNI_DECIMAL128 && 
+            (outputTypeId == OMNI_DOUBLE || outputTypeId == OMNI_FLOAT)) {
+            auto inputArg = inputValues_.top();
+            inputValues_.pop();
+            
+            // Get scale from the input expression's dataType
+            auto inputDataType = e.arguments[0]->GetReturnType();
+            int32_t scale = 0;
+            if (auto* decimalType = dynamic_cast<type::DecimalDataType*>(inputDataType.get())) {
+                scale = decimalType->GetScale();
+            }
+            
+            auto size = context->GetResultRowSize();
+            result = VectorHelper::CreateFlatVector(outputTypeId, size);
+            
+            // Calculate scale divisor
+            double scaleDivisor = 1.0;
+            for (int32_t i = 0; i < scale; i++) {
+                scaleDivisor *= 10.0;
+            }
+            
+            for (int32_t row = 0; row < size; ++row) {
+                if (inputArg->IsNull(inputArg->GetEncoding() == OMNI_ENCODING_CONST ? 0 : row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                
+                Decimal128 dec128Value;
+                if (inputArg->GetEncoding() == OMNI_ENCODING_CONST) {
+                    auto* constVec = static_cast<ConstVector<Decimal128>*>(inputArg);
+                    dec128Value = constVec->GetConstValue();
+                } else {
+                    auto* flatVec = static_cast<Vector<Decimal128>*>(inputArg);
+                    dec128Value = flatVec->GetValue(row);
+                }
+                
+                // Convert Decimal128 to double using its ToDouble method or manual conversion
+                // For simplicity, convert to string first then to double
+                std::string decStr = dec128Value.ToString();
+                double doubleValue = std::stod(decStr) / scaleDivisor;
+                
+                if (outputTypeId == OMNI_DOUBLE) {
+                    static_cast<Vector<double>*>(result)->SetValue(row, doubleValue);
+                } else {
+                    static_cast<Vector<float>*>(result)->SetValue(row, static_cast<float>(doubleValue));
+                }
+            }
+            inputValues_.push(result);
+            return;
+        }
+    }
+    
     e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }

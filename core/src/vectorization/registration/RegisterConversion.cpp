@@ -100,6 +100,45 @@ void RegisterConversionFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_VARCHAR, castFunction);
 
 
+    // Decimal64 conversions
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL64}, OMNI_BYTE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL64}, OMNI_SHORT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL64}, OMNI_INT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL64}, OMNI_LONG, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL64}, OMNI_FLOAT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL64}, OMNI_DOUBLE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL64}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL64}, OMNI_DECIMAL64, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL64}, OMNI_DECIMAL128, castFunction);
+    
+    // Decimal128 conversions
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL128}, OMNI_BYTE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL128}, OMNI_SHORT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL128}, OMNI_INT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL128}, OMNI_LONG, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL128}, OMNI_FLOAT, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL128}, OMNI_DOUBLE, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL128}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL128}, OMNI_DECIMAL64, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DECIMAL128}, OMNI_DECIMAL128, castFunction);
+    
+    // Numeric to Decimal conversions
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BYTE}, OMNI_DECIMAL64, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_SHORT}, OMNI_DECIMAL64, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_DECIMAL64, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_DECIMAL64, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_FLOAT}, OMNI_DECIMAL64, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_DECIMAL64, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_DECIMAL64, castFunction);
+    
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_BYTE}, OMNI_DECIMAL128, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_SHORT}, OMNI_DECIMAL128, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_DECIMAL128, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_LONG}, OMNI_DECIMAL128, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_FLOAT}, OMNI_DECIMAL128, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_DECIMAL128, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_DECIMAL128, castFunction);
+
     // Date/Timestamp conversions (treated as numeric types)
     VectorFunction::RegisterVectorFunction("CAST", {OMNI_DATE32}, OMNI_INT, castFunction);
     VectorFunction::RegisterVectorFunction("CAST", {OMNI_INT}, OMNI_DATE32, castFunction);

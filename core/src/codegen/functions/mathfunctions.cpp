@@ -313,6 +313,20 @@ extern "C" DLLEXPORT int64_t DivideInt64(bool *isNull, int64_t divident, int64_t
     return divident / divisor;
 }
 
+extern "C" DLLEXPORT int64_t DivInt64(bool *isNull, int64_t divident, int64_t divisor)
+{
+    // Integer division (truncates toward zero), returns NULL if divisor is 0
+    if (divisor == 0) {
+        *isNull = true;
+        return 0;
+    }
+    // Handle overflow case: Long.MIN_VALUE / -1
+    if (divident == std::numeric_limits<int64_t>::min() && divisor == -1) {
+        return divident;  // Overflow wraps to Long.MIN_VALUE (Java semantics)
+    }
+    return divident / divisor;
+}
+
 extern "C" DLLEXPORT int64_t ModulusInt64(bool *isNull, int64_t divident, int64_t divisor)
 {
     if (divisor == 0) {
@@ -642,4 +656,9 @@ extern "C" DLLEXPORT bool NotEqualInt8(int8_t left, int8_t right)
 extern "C" DLLEXPORT bool ExpFunction(double a)
 {
     return std::exp(a);
+}
+
+extern "C" DLLEXPORT double Expm1Function(double a)
+{
+    return std::expm1(a);
 }

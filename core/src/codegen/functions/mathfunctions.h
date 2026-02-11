@@ -196,6 +196,8 @@ extern "C" DLLEXPORT int64_t MultiplyInt64(int64_t left, int64_t right);
 
 extern "C" DLLEXPORT int64_t DivideInt64(bool *isNull, int64_t divident, int64_t divisor);
 
+extern "C" DLLEXPORT int64_t DivInt64(bool *isNull, int64_t divident, int64_t divisor);
+
 extern "C" DLLEXPORT int64_t ModulusInt64(bool *isNull, int64_t divident, int64_t divisor);
 
 extern "C" DLLEXPORT int64_t AddInt64RetNull(bool *isNull, int64_t left, int64_t right);
@@ -306,6 +308,8 @@ extern "C" DLLEXPORT bool EqualInt8(int8_t left, int8_t right);
 extern "C" DLLEXPORT bool NotEqualInt8(int8_t left, int8_t right);
 
 extern "C" DLLEXPORT bool ExpFunction(double a);
+
+extern "C" DLLEXPORT double Expm1Function(double a);
 
 template <typename T> extern DLLEXPORT T Pmod(T x, T y)
 {

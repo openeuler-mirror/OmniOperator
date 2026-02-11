@@ -641,6 +641,124 @@ TEST(MathFunctionsTest, SqrtDoubleEdgeCases) {
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sqrt", inputData, expectedResults);
 }
 
+// Test hypot function - basic cases
+// hypot(x, y) = sqrt(x² + y²)
+TEST(MathFunctionsTest, HypotDoubleBasic) {
+    // Test basic Pythagorean triples and common cases
+    std::vector<double> leftData = {3.0, -3.0, 3.0, 3.5, 3.5, 0.0, 5.0, 12.0};
+    std::vector<double> rightData = {4.0, -4.0, -4.0, 4.5, -4.5, 0.0, 12.0, 5.0};
+    std::vector<double> expectedResults;
+    for (size_t i = 0; i < leftData.size(); ++i) {
+        expectedResults.push_back(std::hypot(leftData[i], rightData[i]));
+    }
+    // Expected results:
+    // hypot(3, 4) = 5
+    // hypot(-3, -4) = 5
+    // hypot(3, -4) = 5
+    // hypot(3.5, 4.5) ≈ 5.70087712549569
+    // hypot(3.5, -4.5) ≈ 5.70087712549569
+    // hypot(0, 0) = 0
+    // hypot(5, 12) = 13
+    // hypot(12, 5) = 13
+    TestBinaryMathOperation<double, OMNI_DOUBLE>("hypot", leftData, rightData, expectedResults);
+}
+
+// Test hypot function with edge cases (NaN, Infinity, zero)
+TEST(MathFunctionsTest, HypotDoubleEdgeCases) {
+    constexpr double kInf = std::numeric_limits<double>::infinity();
+    constexpr double kNan = std::numeric_limits<double>::quiet_NaN();
+
+    // Test edge cases:
+    // - hypot(0, 0) = 0
+    // - hypot(inf, x) = inf (for any finite x)
+    // - hypot(x, inf) = inf (for any finite x)
+    // - hypot(-inf, x) = inf
+    // - hypot(nan, x) = nan
+    // - hypot(x, nan) = nan
+    // - hypot(inf, nan) = inf (IEEE 754 special case)
+    std::vector<double> leftData = {0.0, kInf, 1.0, -kInf, kNan, 1.0, kInf};
+    std::vector<double> rightData = {0.0, 1.0, kInf, 1.0, 1.0, kNan, kNan};
+    std::vector<double> expectedResults;
+    for (size_t i = 0; i < leftData.size(); ++i) {
+        expectedResults.push_back(std::hypot(leftData[i], rightData[i]));
+    }
+    TestBinaryMathOperation<double, OMNI_DOUBLE>("hypot", leftData, rightData, expectedResults);
+}
+
+// Test hypot function with very small and very large numbers
+TEST(MathFunctionsTest, HypotDoubleExtremeValues) {
+    // Test with very small numbers (underflow prevention)
+    std::vector<double> leftData = {1e-200, 1e200, 1e-300, 1.0};
+    std::vector<double> rightData = {1e-200, 1e200, 1e-300, 1e-15};
+    std::vector<double> expectedResults;
+    for (size_t i = 0; i < leftData.size(); ++i) {
+        expectedResults.push_back(std::hypot(leftData[i], rightData[i]));
+    }
+    // std::hypot handles overflow/underflow better than sqrt(x*x + y*y)
+    TestBinaryMathOperation<double, OMNI_DOUBLE>("hypot", leftData, rightData, expectedResults, 1e-10);
+}
+
+// Test hypot function with ExprEval integration
+TEST(MathFunctionsTest, HypotDoubleExprEval) {
+    double tolerance = 1e-6;
+    std::vector<double> leftData = {3.0, 5.0, 8.0, 0.0};
+    std::vector<double> rightData = {4.0, 12.0, 15.0, 0.0};
+    std::vector<double> expectedResults;
+    std::string functionName = "hypot";
+    for (size_t i = 0; i < leftData.size(); ++i) {
+        expectedResults.push_back(std::hypot(leftData[i], rightData[i]));
+    }
+    int rowSize = 4;
+    auto returnType = std::make_shared<DataType>(OMNI_DOUBLE);
+    auto type = std::make_shared<DataType>(OMNI_DOUBLE);
+    std::vector<Expr*> args = {new FieldExpr(0, type), new FieldExpr(1, type)};
+    auto funcExpr = new FuncExpr("hypot", args, returnType);
+
+    double col1[4] = {3.0, 5.0, 8.0, 0.0};
+    double col2[4] = {4.0, 12.0, 15.0, 0.0};
+    std::vector vecOfTypes = {DoubleType(), DoubleType()};
+    DataTypes inputTypes(vecOfTypes);
+    VectorBatch *input = CreateVectorBatch(inputTypes, rowSize, col1, col2);
+    std::cout << "=== hypot input ===" << std::endl;
+    VectorHelper::PrintVecBatch(input);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.Visit(*funcExpr);
+    auto result = e.GetResult();
+    VectorBatch vectorBatch(rowSize);
+    vectorBatch.Append(result);
+    std::cout << "=== hypot Result ===" << std::endl;
+    VectorHelper::PrintVecBatch(&vectorBatch);
+
+    auto *resultVector = dynamic_cast<Vector<double> *>(result);
+
+    for (int32_t i = 0; i < rowSize; ++i) {
+        double actualResult = resultVector->GetValue(i);
+        double expectedResult = expectedResults[i];
+
+        if (std::isnan(expectedResult)) {
+            EXPECT_TRUE(std::isnan(actualResult))
+                << "NaN mismatch at index " << i << " for " << functionName
+                << " with left=" << leftData[i] << ", right=" << rightData[i];
+        } else if (std::isinf(expectedResult)) {
+            EXPECT_TRUE(std::isinf(actualResult) && std::signbit(actualResult) == std::signbit(expectedResult))
+                << "Infinity mismatch at index " << i << " for " << functionName
+                << " with left=" << leftData[i] << ", right=" << rightData[i];
+        } else {
+            EXPECT_NEAR(actualResult, expectedResult, tolerance)
+                << "Value mismatch at index " << i << " for " << functionName
+                << " with left=" << leftData[i] << ", right=" << rightData[i]
+                << ", expected=" << expectedResult << ", actual=" << actualResult;
+        }
+    }
+    delete input;
+    delete funcExpr;
+    delete context;
+}
+
 // Test sec function
 TEST(MathFunctionsTest, SecDouble) {
     // Test normal values
@@ -890,7 +1008,7 @@ TEST(MathFunctionsTest, CscDouble) {
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("csc", inputData, expectedResults);
 }
 
-// Test csc function 
+// Test csc function
 TEST(MathFunctionsTest, CscDoubleEdgeCases) {
     constexpr double kInfVal = std::numeric_limits<double>::infinity();
     constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
@@ -1041,7 +1159,7 @@ TEST(MathFunctionsTest, DegreesDoubleExprEval) {
     delete context;
 }
 
-// Test cot function 
+// Test cot function
 TEST(MathFunctionsTest, CotDouble) {
     std::vector<double> inputData = {1.0, -1.0, M_PI / 4.0, M_PI / 3.0, M_PI / 6.0};
     std::vector<double> expectedResults;
@@ -1051,7 +1169,7 @@ TEST(MathFunctionsTest, CotDouble) {
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("cot", inputData, expectedResults);
 }
 
-// Test cot function 
+// Test cot function
 TEST(MathFunctionsTest, CotDoubleEdgeCases) {
     constexpr double kInfVal = std::numeric_limits<double>::infinity();
     constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
@@ -1120,7 +1238,7 @@ TEST(MathFunctionsTest, CotDoubleExprEval) {
     delete context;
 }
 
-// Test atanh function 
+// Test atanh function
 TEST(MathFunctionsTest, AtanhDouble) {
     std::vector<double> inputData = {0.0, 0.5, -0.5, 0.9, -0.9};
     std::vector<double> expectedResults;
@@ -1130,19 +1248,19 @@ TEST(MathFunctionsTest, AtanhDouble) {
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("atanh", inputData, expectedResults);
 }
 
-// Test atanh function 
+// Test atanh function
 TEST(MathFunctionsTest, AtanhDoubleEdgeCases) {
     constexpr double kInfVal = std::numeric_limits<double>::infinity();
     constexpr double kNanVal = std::numeric_limits<double>::quiet_NaN();
 
     std::vector<double> inputData = {0.0, 1.0, -1.0, kNanVal, kInfVal, -kInfVal};
     std::vector<double> expectedResults = {
-        0.0,    
-        kInfVal,   
-        -kInfVal,  
-        kNanVal,   
-        kNanVal,   
-        kNanVal    
+        0.0,
+        kInfVal,
+        -kInfVal,
+        kNanVal,
+        kNanVal,
+        kNanVal
     };
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("atanh", inputData, expectedResults);
 }
@@ -1227,4 +1345,328 @@ TEST(MathFunctionsExtendedTest, ExpDoubleEdgeCases) {
         expectedResults.push_back(std::exp(x));
     }
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("exp", inputData, expectedResults, 1e-6);
+}
+
+
+// Test expm1 function - returns e^x - 1
+TEST(MathFunctionsTest, Expm1Double) {
+    const double kE = std::exp(1.0);
+    std::vector<double> inputData = {0.0, 1.0, -1.0, 0.5, 2.0, -0.5};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::expm1(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("expm1", inputData, expectedResults);
+}
+
+// Test expm1 function with edge cases (NaN, Infinity, small numbers for precision)
+TEST(MathFunctionsTest, Expm1DoubleEdgeCases) {
+    constexpr double kInf = std::numeric_limits<double>::infinity();
+    constexpr double kNan = std::numeric_limits<double>::quiet_NaN();
+    const double kE = std::exp(1.0);
+
+    // Test cases covering edge cases:
+    // - NaN input should return NaN
+    // - Positive infinity should return positive infinity
+    // - Negative infinity should return -1
+    // - Zero should return 0
+    // - 1 should return e-1
+    // - Small numbers (1e-12) to test precision advantage over exp(x)-1
+    std::vector<double> inputData = {0.0, 1.0, kNan, kInf, -kInf, 1e-12};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::expm1(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("expm1", inputData, expectedResults);
+}
+
+// ============================================================================
+// div (Integral Division) Tests
+// ============================================================================
+
+// Helper function to test binary operations with int64_t return type for integral division
+template <typename TInput, DataTypeId inputTypeId>
+void TestIntegralDivideOperation(
+        const std::string& functionName,
+        const std::vector<TInput>& leftData,
+        const std::vector<TInput>& rightData,
+        const std::vector<int64_t>& expectedResults,
+        const std::vector<bool>& expectedNulls = {}) {
+
+    int32_t rowSize = static_cast<int32_t>(leftData.size());
+
+    // Create left vector
+    BaseVector* leftVec = VectorHelper::CreateFlatVector(inputTypeId, rowSize);
+    auto* leftVector = static_cast<Vector<TInput>*>(leftVec);
+    for (int32_t i = 0; i < rowSize; ++i) {
+        leftVector->SetValue(i, leftData[i]);
+        leftVector->SetNotNull(i);
+    }
+
+    // Create right vector
+    BaseVector* rightVec = VectorHelper::CreateFlatVector(inputTypeId, rowSize);
+    auto* rightVector = static_cast<Vector<TInput>*>(rightVec);
+    for (int32_t i = 0; i < rowSize; ++i) {
+        rightVector->SetValue(i, rightData[i]);
+        rightVector->SetNotNull(i);
+    }
+
+    // Create function signature: div(inputType, inputType) -> LONG
+    std::vector<DataTypeId> argTypes = {inputTypeId, inputTypeId};
+    auto signature = std::make_shared<FunctionSignature>(functionName, argTypes, OMNI_LONG);
+
+    // Find vector function
+    auto vectorFunction = VectorFunction::Find(signature);
+    ASSERT_NE(vectorFunction, nullptr) << "Function " << functionName << " not found for type " << static_cast<int>(inputTypeId);
+
+    // Create execution context
+    ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+
+    // Prepare arguments stack
+    std::stack<BaseVector*> args;
+    args.push(leftVec);
+    args.push(rightVec);
+
+    // Execute function
+    BaseVector* result = nullptr;
+    auto resultType = std::make_shared<DataType>(OMNI_LONG);
+    vectorFunction->Apply(args, resultType, result, &context);
+
+    // Verify results
+    auto* resultVector = static_cast<Vector<int64_t>*>(result);
+    ASSERT_NE(resultVector, nullptr);
+
+    for (int32_t i = 0; i < rowSize; ++i) {
+        if (!expectedNulls.empty() && expectedNulls[i]) {
+            EXPECT_TRUE(result->IsNull(i))
+                << "Expected NULL at index " << i << " for " << functionName
+                << " with left=" << leftData[i] << ", right=" << rightData[i];
+        } else {
+            int64_t actualResult = resultVector->GetValue(i);
+            int64_t expectedResult = expectedResults[i];
+            EXPECT_EQ(actualResult, expectedResult)
+                << "Value mismatch at index " << i << " for " << functionName
+                << " with left=" << leftData[i] << ", right=" << rightData[i]
+                << ", expected=" << expectedResult << ", actual=" << actualResult;
+        }
+    }
+
+    // Cleanup
+    delete result;
+}
+
+// Test div function for LONG type - basic cases
+TEST(MathFunctionsTest, DivLongBasic) {
+    std::vector<int64_t> leftData = {10, 20, 15, -10, 100, 7};
+    std::vector<int64_t> rightData = {3, 4, 5, 3, 7, 2};
+    std::vector<int64_t> expected = {3, 5, 3, -3, 14, 3};  // Integer division truncates toward zero
+    TestIntegralDivideOperation<int64_t, OMNI_LONG>("div", leftData, rightData, expected);
+}
+
+// Test div function for LONG type - negative numbers
+TEST(MathFunctionsTest, DivLongNegative) {
+    std::vector<int64_t> leftData = {-10, 10, -10, 10};
+    std::vector<int64_t> rightData = {3, -3, -3, 3};
+    // Integer division truncates toward zero:
+    // -10 / 3 = -3 (not -4)
+    // 10 / -3 = -3 (not -4)
+    // -10 / -3 = 3
+    // 10 / 3 = 3
+    std::vector<int64_t> expected = {-3, -3, 3, 3};
+    TestIntegralDivideOperation<int64_t, OMNI_LONG>("div", leftData, rightData, expected);
+}
+
+// Test div function for LONG type - edge case: Long.MIN_VALUE / -1
+TEST(MathFunctionsTest, DivLongMinValueEdgeCase) {
+    constexpr int64_t longMin = std::numeric_limits<int64_t>::min();
+    constexpr int64_t longMax = std::numeric_limits<int64_t>::max();
+
+    std::vector<int64_t> leftData = {longMin, longMax, longMin};
+    std::vector<int64_t> rightData = {-1, 1, 1};
+    // Long.MIN_VALUE / -1 returns Long.MIN_VALUE (Java semantics - overflow wraps around)
+    // Long.MAX_VALUE / 1 = Long.MAX_VALUE
+    // Long.MIN_VALUE / 1 = Long.MIN_VALUE
+    std::vector<int64_t> expected = {longMin, longMax, longMin};
+    TestIntegralDivideOperation<int64_t, OMNI_LONG>("div", leftData, rightData, expected);
+}
+
+// Test div function for LONG type - division by zero returns NULL
+TEST(MathFunctionsTest, DivLongDivisionByZero) {
+    int rowSize = 4;
+    auto returnType = std::make_shared<DataType>(OMNI_LONG);
+    auto type = std::make_shared<DataType>(OMNI_LONG);
+    std::vector<Expr*> args = {new FieldExpr(0, type), new FieldExpr(1, type)};
+    auto funcExpr = new FuncExpr("div", args, returnType);
+
+    int64_t col1[4] = {10, 20, 30, 40};
+    int64_t col2[4] = {2, 0, 5, 0};  // Contains zeros
+
+    std::vector vecOfTypes = {LongType(), LongType()};
+    DataTypes inputTypes(vecOfTypes);
+    VectorBatch *input = CreateVectorBatch(inputTypes, rowSize, col1, col2);
+
+    std::cout << "=== div with zero divisor input ===" << std::endl;
+    VectorHelper::PrintVecBatch(input);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.Visit(*funcExpr);
+    auto result = e.GetResult();
+    VectorBatch vectorBatch(rowSize);
+    vectorBatch.Append(result);
+    std::cout << "=== div with zero divisor Result ===" << std::endl;
+    VectorHelper::PrintVecBatch(&vectorBatch);
+
+    auto *resultVector = dynamic_cast<Vector<int64_t> *>(result);
+    ASSERT_NE(resultVector, nullptr);
+
+    // Row 0: 10 / 2 = 5
+    EXPECT_FALSE(result->IsNull(0));
+    EXPECT_EQ(resultVector->GetValue(0), 5);
+
+    // Row 1: 20 / 0 = NULL
+    EXPECT_TRUE(result->IsNull(1)) << "Division by zero should return NULL";
+
+    // Row 2: 30 / 5 = 6
+    EXPECT_FALSE(result->IsNull(2));
+    EXPECT_EQ(resultVector->GetValue(2), 6);
+
+    // Row 3: 40 / 0 = NULL
+    EXPECT_TRUE(result->IsNull(3)) << "Division by zero should return NULL";
+
+    delete input;
+    delete funcExpr;
+    delete context;
+}
+
+// Test div function for DECIMAL64 type - basic cases
+TEST(MathFunctionsTest, DivDecimal64Basic) {
+    // DECIMAL64 is represented as int64_t internally
+    std::vector<int64_t> leftData = {1000, 2500, 1500, -1000, 10000};
+    std::vector<int64_t> rightData = {300, 400, 500, 300, 700};
+    // Integer division: 1000/300=3, 2500/400=6, 1500/500=3, -1000/300=-3, 10000/700=14
+    std::vector<int64_t> expected = {3, 6, 3, -3, 14};
+    TestIntegralDivideOperation<int64_t, OMNI_DECIMAL64>("div", leftData, rightData, expected);
+}
+
+// Test div function for DECIMAL64 type - large values
+TEST(MathFunctionsTest, DivDecimal64LargeValues) {
+    std::vector<int64_t> leftData = {999999999999999999LL, 123456789012345678LL, 100000000000000000LL};
+    std::vector<int64_t> rightData = {1000000000LL, 1000000000LL, 100000000LL};
+    std::vector<int64_t> expected = {999999999LL, 123456789LL, 1000000000LL};
+    TestIntegralDivideOperation<int64_t, OMNI_DECIMAL64>("div", leftData, rightData, expected);
+}
+
+// Test div function for DECIMAL128 type - basic cases
+TEST(MathFunctionsTest, DivDecimal128Basic) {
+    std::vector<Decimal128> leftData = {
+        Decimal128("1000"),
+        Decimal128("2500"),
+        Decimal128("1500"),
+        Decimal128("-1000"),
+        Decimal128("10000")
+    };
+    std::vector<Decimal128> rightData = {
+        Decimal128("300"),
+        Decimal128("400"),
+        Decimal128("500"),
+        Decimal128("300"),
+        Decimal128("700")
+    };
+    // Integer division
+    std::vector<int64_t> expected = {3, 6, 3, -3, 14};
+    TestIntegralDivideOperation<Decimal128, OMNI_DECIMAL128>("div", leftData, rightData, expected);
+}
+
+// Test div function for DECIMAL128 type - negative numbers
+TEST(MathFunctionsTest, DivDecimal128Negative) {
+    std::vector<Decimal128> leftData = {
+        Decimal128("-100"),
+        Decimal128("100"),
+        Decimal128("-100"),
+        Decimal128("100")
+    };
+    std::vector<Decimal128> rightData = {
+        Decimal128("30"),
+        Decimal128("-30"),
+        Decimal128("-30"),
+        Decimal128("30")
+    };
+    // Integer division truncates toward zero
+    std::vector<int64_t> expected = {-3, -3, 3, 3};
+    TestIntegralDivideOperation<Decimal128, OMNI_DECIMAL128>("div", leftData, rightData, expected);
+}
+
+// Test div function for DECIMAL128 type - large values (within int64_t range)
+TEST(MathFunctionsTest, DivDecimal128LargeValues) {
+    std::vector<Decimal128> leftData = {
+        Decimal128("9223372036854775807"),  // Long.MAX_VALUE
+        Decimal128("12345678901234567890"),
+        Decimal128("10000000000000000000")
+    };
+    std::vector<Decimal128> rightData = {
+        Decimal128("10"),
+        Decimal128("10"),
+        Decimal128("10")
+    };
+    // Integer division results that fit in int64_t
+    // 9223372036854775807 / 10 = 922337203685477580
+    // 12345678901234567890 / 10 = 1234567890123456789
+    // 10000000000000000000 / 10 = 1000000000000000000
+    std::vector<int64_t> expected = {
+        922337203685477580LL,
+        1234567890123456789LL,
+        1000000000000000000LL
+    };
+    TestIntegralDivideOperation<Decimal128, OMNI_DECIMAL128>("div", leftData, rightData, expected);
+}
+
+// Test div function with NULL values
+TEST(MathFunctionsTest, DivWithNullValues) {
+    int rowSize = 3;
+    auto returnType = std::make_shared<DataType>(OMNI_LONG);
+    auto type = std::make_shared<DataType>(OMNI_LONG);
+    std::vector<Expr*> args = {new FieldExpr(0, type), new FieldExpr(1, type)};
+    auto funcExpr = new FuncExpr("div", args, returnType);
+
+    int64_t col1[3] = {100, 200, 300};
+    int64_t col2[3] = {10, 20, 30};
+
+    std::vector vecOfTypes = {LongType(), LongType()};
+    DataTypes inputTypes(vecOfTypes);
+    VectorBatch *input = CreateVectorBatch(inputTypes, rowSize, col1, col2);
+
+    // Set first value of col1 to NULL
+    input->Get(0)->SetNull(0);
+
+    std::cout << "=== div with NULL input ===" << std::endl;
+    VectorHelper::PrintVecBatch(input);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.Visit(*funcExpr);
+    auto result = e.GetResult();
+    VectorBatch vectorBatch(rowSize);
+    vectorBatch.Append(result);
+    std::cout << "=== div with NULL Result ===" << std::endl;
+    VectorHelper::PrintVecBatch(&vectorBatch);
+
+    // First row should be NULL (input is NULL)
+    EXPECT_TRUE(result->IsNull(0)) << "Result should be NULL when input is NULL";
+    // Second and third rows should have valid results
+    EXPECT_FALSE(result->IsNull(1)) << "Result should not be NULL for valid inputs";
+    EXPECT_FALSE(result->IsNull(2)) << "Result should not be NULL for valid inputs";
+
+    auto *resultVector = dynamic_cast<Vector<int64_t> *>(result);
+    EXPECT_EQ(resultVector->GetValue(1), 10);  // 200 / 20 = 10
+    EXPECT_EQ(resultVector->GetValue(2), 10);  // 300 / 30 = 10
+
+    delete input;
+    delete funcExpr;
+    delete context;
 }

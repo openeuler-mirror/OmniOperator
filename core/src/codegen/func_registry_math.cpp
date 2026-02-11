@@ -50,6 +50,12 @@ const std::string DivideFnStr()
     return divideFnStr;
 }
 
+const std::string DivFnStr()
+{
+    const std::string divFnStr = "div";
+    return divFnStr;
+}
+
 const std::string ModulusFnStr()
 {
     const std::string modulusFnStr = "modulus";
@@ -256,6 +262,7 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(SubtractInt64), SubtractFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(MultiplyInt64), MultiplyFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(DivideInt64), DivideFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(DivInt64), DivFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(ModulusInt64), ModulusFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(AddInt64RetNull), TryAddFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(SubtractInt64RetNull), TrySubtractFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
@@ -356,6 +363,7 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(EqualInt8), EqualFnStr(), {}, byteParams, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(NotEqualInt8), NotEqualFnStr(), {}, byteParams, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(ExpFunction), "exp", {}, {OMNI_DOUBLE}, OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Expm1Function), "expm1", {}, {OMNI_DOUBLE}, OMNI_DOUBLE, INPUT_DATA),
 
         Function(reinterpret_cast<void *>(BitwiseAndFunction<int8_t>), BitwiseAndFnStr(), {}, { OMNI_BYTE, OMNI_BYTE}, OMNI_BYTE, INPUT_DATA),
         Function(reinterpret_cast<void *>(BitwiseAndFunction<int16_t>), BitwiseAndFnStr(), {}, { OMNI_SHORT, OMNI_SHORT}, OMNI_SHORT, INPUT_DATA),
