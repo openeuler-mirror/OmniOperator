@@ -164,6 +164,28 @@ namespace omniruntime::vectorization {
 		}
 	};
 
+         /// Floor function
+ 	     /// floor(x) -> bigint
+ 	     /// Returns the largest integer less than or equal to x.
+ 	     /// In Spark, both ceil and floor must return Long type.
+ 	     /// Supports: long, double
+ 	     template <typename T>
+ 	     struct FloorFunction {
+ 	         template <typename TInput>
+ 	         ALWAYS_INLINE Status call(int64_t &result, const TInput &a) {
+ 	             
+ 	             if constexpr (std::is_integral_v<TInput>) {
+ 	                 // For integral types, floor is identity
+ 	                 result = a;
+ 	             } else {
+ 	                 // For floating-point types, use std::floor and safe conversion
+ 	                 result = safeDoubleToInt64(std::floor(a));
+ 	             }
+ 	             return Status::OK();
+ 	    }
+ 	};
+ 	 
+
     template <typename T>
         struct NegativeFunction {
         template <typename TInput>
@@ -429,5 +451,69 @@ namespace omniruntime::vectorization {
             return Status::OK();
         }
     };
+
+    /// Factorial function
+    /// factorial(n) -> bigint
+    /// Returns the factorial of a non-negative integer n.
+    /// Factorial is defined as n! = n × (n-1) × ... × 2 × 1, with 0! = 1.
+    /// Supports integers from 0 to 20 (21! overflows int64_t).
+    /// Returns NULL for negative numbers or numbers greater than 20.
+    template <typename T>
+    struct FactorialFunction {
+        // Pre-computed factorial lookup table for 0! to 20!
+        static constexpr int64_t kFactorials[21] = {
+            1LL,                    // 0!
+            1LL,                    // 1!
+            2LL,                    // 2!
+            6LL,                    // 3!
+            24LL,                   // 4!
+            120LL,                  // 5!
+            720LL,                  // 6!
+            5040LL,                 // 7!
+            40320LL,                // 8!
+            362880LL,               // 9!
+            3628800LL,              // 10!
+            39916800LL,             // 11!
+            479001600LL,            // 12!
+            6227020800LL,           // 13!
+            87178291200LL,          // 14!
+            1307674368000LL,        // 15!
+            20922789888000LL,       // 16!
+            355687428096000LL,      // 17!
+            6402373705728000LL,     // 18!
+            121645100408832000LL,   // 19!
+            2432902008176640000LL   // 20!
+        };
+
+        /// call method for non-nullable input
+        /// @param result Output: the factorial result
+        /// @param input The input integer (int32_t)
+        /// @return Status::OK() if successful, Status::UserError if input is out of valid range (returns NULL)
+        ALWAYS_INLINE Status call(int64_t &result, const int32_t &input)
+        {
+            
+            // Check for valid range: 0 <= input <= 20
+            if (input < 0 || input > 20) {
+                // Out of range, return UserError to indicate NULL result
+                return Status::UserError("factorial requires 0 <= input <= 20, got {}", input);
+            }
+            result = kFactorials[input];
+            return Status::OK();
+        }
+
+        /// callNullable method for nullable input
+        /// @param result Output: the factorial result
+        /// @param input Pointer to input integer (nullptr means NULL input)
+        /// @return Status::OK() if successful, Status::UserError if input is NULL or out of valid range
+        ALWAYS_INLINE Status callNullable(int64_t &result, const int32_t *input)
+        {
+            if (input == nullptr) {
+                // NULL input, return UserError to indicate NULL result
+                return Status::UserError("factorial received NULL input");
+            }
+            return call(result, *input);
+        }
+    };
+
 
 }
