@@ -73,7 +73,7 @@ public:
         auto eOfvectorBatch = new VectorBatch(0);
         for (int i = 0; i < streamedTypes.Get().size(); i++) {
             auto type = streamedTypes.GetType(i);
-            auto vec = VectorHelper::CreateVector(OMNI_FLAT, static_cast<int32_t>(type->GetId()), 0);
+            auto vec = VectorHelper::CreateComplexVector(type.get(), 0);
             eOfvectorBatch->Append(vec);
         }
         this->AddInput(eOfvectorBatch);
@@ -133,7 +133,7 @@ public:
         auto eOfvectorBatch = new VectorBatch(0);
         for (int i = 0; i < bufferedTypes.Get().size(); i++) {
             auto type = bufferedTypes.GetType(i);
-            auto vec = VectorHelper::CreateVector(OMNI_FLAT, static_cast<int32_t>(type->GetId()), 0);
+            auto vec = VectorHelper::CreateComplexVector(type.get(), 0);
             eOfvectorBatch->Append(vec);
         }
         this->AddInput(eOfvectorBatch);

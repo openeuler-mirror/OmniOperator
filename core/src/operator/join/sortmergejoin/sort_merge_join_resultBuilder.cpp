@@ -9,6 +9,7 @@
 #include "operator/omni_id_type_vector_traits.h"
 #include "sort_merge_join_scanner.h"
 #include "util/compiler_util.h"
+#include "vector/array_vector.h"
 
 namespace omniruntime {
 namespace op {
@@ -148,7 +149,8 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
     auto vectorBatch = std::make_unique<VectorBatch>(maxRowCount);
 
     for (auto &type : allTypes) {
-        vectorBatch->Append(VectorHelper::CreateFlatVector(type->GetId(), maxRowCount));
+        // ARRAY/MAP/ROW must use CreateComplexVector; CreateFlatVector only supports primitive types
+        vectorBatch->Append(VectorHelper::CreateComplexVector(type.get(), maxRowCount));
     }
     return vectorBatch.release();
 }
@@ -203,16 +205,45 @@ void AddValuesToVector(BaseVector *inputVector, const int32_t* inputRowIds, int3
 void AddValueToBuildVector(BaseVector *inputVector, const DataTypePtr &inputDataType, int32_t inputRowId,
     BaseVector *outputVector, int32_t outputRowId)
 {
-    DYNAMIC_TYPE_DISPATCH(AddValueToVector, inputDataType->GetId(), inputVector, inputRowId, outputVector, outputRowId);
+    auto typeId = inputDataType->GetId();
+    if (typeId == type::OMNI_ARRAY) {
+        auto *inputArr = static_cast<ArrayVector *>(inputVector);
+        auto *outputArr = static_cast<ArrayVector *>(outputVector);
+        if (UNLIKELY(inputArr->IsNull(inputRowId))) {
+            outputArr->SetNull(outputRowId);
+        } else {
+            BaseVector *slice = inputArr->GetValue(inputRowId);
+            outputArr->SetValue(outputRowId, slice);
+            delete slice;
+        }
+        return;
+    }
+    DYNAMIC_TYPE_DISPATCH(AddValueToVector, typeId, inputVector, inputRowId, outputVector, outputRowId);
 }
 
 void AddValuesToBuildVector(BaseVector *inputVector, const DataTypePtr &inputDataType, const std::vector<int32_t> &rows,
     BaseVector *outputVector, int32_t outputRowId)
 {
+    auto typeId = inputDataType->GetId();
+    if (typeId == type::OMNI_ARRAY) {
+        auto *inputArr = static_cast<ArrayVector *>(inputVector);
+        auto *outputArr = static_cast<ArrayVector *>(outputVector);
+        for (size_t i = 0; i < rows.size(); i++) {
+            int32_t inputRowId = rows[i];
+            if (UNLIKELY(inputArr->IsNull(inputRowId))) {
+                outputArr->SetNull(outputRowId);
+            } else {
+                BaseVector *slice = inputArr->GetValue(inputRowId);
+                outputArr->SetValue(outputRowId, slice);
+                delete slice;
+            }
+            ++outputRowId;
+        }
+        return;
+    }
     auto rowIds = rows.data();
     auto rowIdsCount = rows.size();
-    DYNAMIC_TYPE_DISPATCH(AddValuesToVector, inputDataType->GetId(), inputVector, rowIds, rowIdsCount, outputVector,
-                          outputRowId);
+    DYNAMIC_TYPE_DISPATCH(AddValuesToVector, typeId, inputVector, rowIds, rowIdsCount, outputVector, outputRowId);
 }
 
 void AddValueNullToBuildVector(const DataTypePtr &dataType, BaseVector *vector, int32_t rowId)
