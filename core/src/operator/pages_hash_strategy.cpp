@@ -140,6 +140,9 @@ bool ValueEqualsValueIgnoreNulls(int32_t dataType, BaseVector *leftVector, uint3
             return VarcharValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_DECIMAL128:
             return ValueEqualsValueIgnoreNulls<Decimal128>(leftVector, leftRowIndex, rightVector, rightRowIndex);
+        case OMNI_ARRAY:
+            return OperatorUtil::CompareArrayValue(leftVector, static_cast<int32_t>(leftRowIndex),
+                rightVector, static_cast<int32_t>(rightRowIndex)) == OperatorUtil::COMPARE_STATUS_EQUAL;
         default:
             return false;
     }

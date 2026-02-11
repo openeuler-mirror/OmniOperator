@@ -750,6 +750,11 @@ bool WindowOperator::IsSamePartition(VectorBatch *lastBatch, int32_t lastIdx)
             case OMNI_CHAR:
                 isSame = ValueEqualsLastValue<string_view>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
                 break;
+            case OMNI_ARRAY:
+                // Reuse OperatorUtil::CompareArrayValue (lexicographic, null-aware) for equality check
+                isSame = (OperatorUtil::CompareArrayValue(lastVector, lastIdx, currentVector, currentRowIdx) ==
+                    OperatorUtil::COMPARE_STATUS_EQUAL);
+                break;
             default:
                 break;
         }
@@ -831,11 +836,14 @@ void WindowOperator::PaddingPartitionVector(vec::BaseVector *groupedVector, int3
 
 void WindowOperator::PaddingPartitionArrayVector(vec::BaseVector *groupedVector, int32_t rowIdx, int32_t colIdx)
 {
-    auto currentVector = static_cast<ArrayVector *>(currentBatch->Get(colIdx));
-    if (currentVector->IsNull(currentRowIdx)) {
-        static_cast<ArrayVector *>(groupedVector)->SetNull(rowIdx);
+    auto *srcArray = static_cast<ArrayVector *>(currentBatch->Get(colIdx));
+    auto *dstArray = static_cast<ArrayVector *>(groupedVector);
+    if (srcArray->IsNull(currentRowIdx)) {
+        dstArray->SetNull(rowIdx);
     } else {
-        static_cast<ArrayVector *>(groupedVector)->SetValue(rowIdx, currentVector->GetValue(currentRowIdx));
+        // Use GetArrayAt (returns shared_ptr) for RAII-safe memory management
+        auto elemSlice = srcArray->GetArrayAt(currentRowIdx);
+        dstArray->SetValue(rowIdx, elemSlice.get());
     }
 }
 
