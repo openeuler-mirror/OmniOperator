@@ -317,8 +317,8 @@ bool CompareDoubleBits(double d1, double d2)
 {
     uint64_t bits1;
     uint64_t bits2;
-    memcpy_s(&bits1, sizeof bits1, &d1, sizeof(double));
-    memcpy_s(&bits2, sizeof bits2, &d2, sizeof(double));
+    memcpy(&bits1, &d1, sizeof(double));
+    memcpy(&bits2, &d2, sizeof(double));
     return bits1 == bits2;
 }
 
@@ -327,7 +327,7 @@ TEST(BatchFunctionTest, BatchNormalizeNaNAndZero)
     const int32_t rowCnt = 3;
     uint64_t nanBits = 0xFFF8000000000001L;
     double nanDouble = 0;
-    memcpy_s(&nanDouble, sizeof nanDouble, &nanBits, sizeof(nanBits));
+    memcpy(&nanDouble, &nanBits, sizeof(nanBits));
     double value = 3.5;
     double input[rowCnt] = {-0.0, nanDouble, value};
     bool isAnyNull[rowCnt] = {false, false, false};

@@ -31,7 +31,7 @@ public:
         allocator.Allocate(defaultSize * sizeof(Slot), &address);
         allocator.Allocate(sizeof(Slot), &nullAddress);
         isAssigned = new bool[defaultSize];
-        memset_sp(isAssigned, sizeof(bool) * defaultSize, 0, sizeof(bool) * defaultSize);
+        memset(isAssigned, 0, sizeof(bool) * defaultSize);
         slots = reinterpret_cast<Slot *>(address);
         nullSlot = reinterpret_cast<Slot>(nullAddress);
         elementsSize = 0;

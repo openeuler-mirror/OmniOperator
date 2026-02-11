@@ -81,7 +81,7 @@ public:
     {
         auto rowSize = arrayArg->GetSize();
         int32_t dicIndex[rowSize];
-        memset_s(dicIndex, sizeof(dicIndex), -1, sizeof(dicIndex));
+        memset(dicIndex, -1, sizeof(dicIndex));
         auto arrayVector = dynamic_cast<ArrayVector *>(arrayArg);
 
         I index = 0;

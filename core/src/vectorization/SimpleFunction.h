@@ -186,7 +186,7 @@ private:
         auto resultAddr = static_cast<return_type_traits *>(VectorHelper::UnsafeGetValues(result));
         auto nullBuffer = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
         auto copyNullSize = NullsBuffer::CalculateNbytes(rowSize) - 8;
-        memcpy_s(nullBuffer, copyNullSize, context.rows->allBits(), copyNullSize);
+        memcpy(nullBuffer, context.rows->allBits(), copyNullSize);
         BitUtil::Negate(nullBuffer, rowSize);
         if constexpr (std::is_same_v<return_type_traits, std::string>) {
             auto tempResult = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(result);

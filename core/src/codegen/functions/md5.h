@@ -8,7 +8,6 @@
 
 #include <iostream>
 #include <cstring>
-#include <libboundscheck/include/securec.h>
 
 namespace omniruntime::codegen::function {
 class Md5Function {

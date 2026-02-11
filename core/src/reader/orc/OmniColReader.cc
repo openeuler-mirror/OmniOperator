@@ -192,7 +192,7 @@ namespace omniruntime::reader {
         } else if (incomingNulls) {
             // if we don't have a notNull stream, copy the incomingNulls
             // To do finished
-            memcpy_s(reinterpret_cast<uint64_t*>(nulls), BitUtil::Nbytes(numValues), incomingNulls,
+            memcpy(reinterpret_cast<uint64_t*>(nulls), incomingNulls,
                 BitUtil::Nbytes(numValues));
             return;
         }
@@ -247,7 +247,7 @@ namespace omniruntime::reader {
             if (posn + length > bufferSize) {
                 throw ::orc::ParseError("Corrupt dictionary blob in StringDictionaryColumn");
             }
-            memcpy_s(buffer + posn, bufferSize - posn, chunk, static_cast<size_t>(length));
+            memcpy(buffer + posn, chunk, static_cast<size_t>(length));
             posn += length;
         }
     }
@@ -880,7 +880,7 @@ namespace omniruntime::reader {
         size_t bytesBuffered = 0;
         char ptr[totalLength];
         while (bytesBuffered + lastBufferLength < totalLength) {
-            memcpy_s(ptr + bytesBuffered, totalLength - bytesBuffered, lastBuffer, lastBufferLength);
+            memcpy(ptr + bytesBuffered, lastBuffer, lastBufferLength);
             bytesBuffered += lastBufferLength;
             const void* readBuffer;
             int readLength;
@@ -893,7 +893,7 @@ namespace omniruntime::reader {
 
         if (bytesBuffered < totalLength) {
             size_t moreBytes = totalLength - bytesBuffered;
-            memcpy_s(ptr + bytesBuffered, moreBytes, lastBuffer, moreBytes);
+            memcpy(ptr + bytesBuffered, lastBuffer, moreBytes);
             lastBuffer += moreBytes;
             lastBufferLength -= moreBytes;
         }

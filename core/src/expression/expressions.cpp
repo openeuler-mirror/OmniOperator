@@ -214,9 +214,9 @@ uint8_t* LiteralExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *
     }
     auto rowSize = vecBatch->GetRowCount();
     if (boolVal) {
-        memset_s(bitMark, BitUtil::Nbytes(rowSize), 0xFF, BitUtil::Nbytes(rowSize));
+        memset(bitMark, 0xFF, BitUtil::Nbytes(rowSize));
     } else {
-        memset_s(bitMark, BitUtil::Nbytes(rowSize), 0, BitUtil::Nbytes(rowSize));
+        memset(bitMark, 0, BitUtil::Nbytes(rowSize));
     }
     return bitMark;
 }
@@ -982,13 +982,9 @@ uint8_t *IsNullExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *b
     auto vector = expr->GetFieldVector(vecBatch);
     auto rowSize = vecBatch->GetRowCount();
     if (vector->HasNull()) {
-        errno_t opIsNullRet = memcpy_s(bitMark, BitUtil::Nbytes(rowSize),
-            vec::unsafe::UnsafeBaseVector::GetNulls(vector), BitUtil::Nbytes(rowSize));
-        if (UNLIKELY(opIsNullRet != EOK)) {
-            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "IS_NULL memcpy_s fail.");
-        }
+        memcpy(bitMark, vec::unsafe::UnsafeBaseVector::GetNulls(vector), BitUtil::Nbytes(rowSize));
     } else {
-        memset_s(bitMark, BitUtil::Nbytes(rowSize), 0, BitUtil::Nbytes(rowSize));
+        memset(bitMark, 0, BitUtil::Nbytes(rowSize));
     }
     return bitMark;
 }

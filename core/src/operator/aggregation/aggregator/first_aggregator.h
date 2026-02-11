@@ -66,7 +66,7 @@ public:
     {
         auto size = firstVarcharValue.size();
         auto ptr = arenaAllocator->Allocate(size);
-        memcpy_s(ptr, size, firstVarcharValue.data(), size);
+        memcpy(ptr, firstVarcharValue.data(), size);
         firstState->val = std::string_view(reinterpret_cast<const char *>(ptr), size);
     }
 

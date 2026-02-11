@@ -11,7 +11,6 @@
 #include <memory>
 #include <locale>
 #include <codecvt>
-#include <libboundscheck/include/securec.h>
 #include "util/utf8_util.h"
 
 namespace omniruntime::codegen::function {
@@ -102,17 +101,12 @@ public:
             return reinterpret_cast<const char *>(EMPTY);
         }
 
-        // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
+        // allocate one more byte is mainly for memcpy, when the copy source and destination are
         // both empty strings, the security function will not return an error.
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
-        errno_t res2 = memset_s(ret + apLen, *outLen - apLen + 1, ' ', aPaddingCount);
-        errno_t res3 = memcpy_s(ret + apLen + aPaddingCount, *outLen - (apLen + aPaddingCount) + 1, bp, bpLen);
-        if (res1 != EOK || res2 != EOK || res3 != EOK) {
-            *hasErr = true;
-            *outLen = 0;
-            return nullptr;
-        }
+        memcpy(ret, ap, apLen);
+        memset(ret + apLen, ' ', aPaddingCount);
+        memcpy(ret + apLen + aPaddingCount, bp, bpLen);
         return ret;
     }
 
@@ -124,16 +118,11 @@ public:
             *outLen = 0;
             return reinterpret_cast<const char *>(EMPTY);
         }
-        // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
+        // allocate one more byte is mainly for memcpy, when the copy source and destination are
         // both empty strings, the security function will not return an error.
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
-        errno_t res2 = memcpy_s(ret + apLen, *outLen - apLen + 1, bp, bpLen);
-        if (res1 != EOK || res2 != EOK) {
-            *hasErr = true;
-            *outLen = 0;
-            return nullptr;
-        }
+        memcpy(ret, ap, apLen);
+        memcpy(ret + apLen, bp, bpLen);
         return ret;
     }
 
@@ -146,14 +135,9 @@ public:
             return reinterpret_cast<const char *>(EMPTY);
         }
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
-        errno_t res2 = memcpy_s(ret + apLen, *outLen + 1 - apLen, separator, separatorLen);
-        errno_t res3 = memcpy_s(ret + apLen + separatorLen, *outLen + 1 - apLen - separatorLen, bp, bpLen);
-        if (res1 != EOK || res2 != EOK || res3 != EOK) {
-            *hasErr = true;
-            *outLen = 0;
-            return nullptr;
-        }
+        memcpy(ret, ap, apLen);
+        memcpy(ret + apLen, separator, separatorLen);
+        memcpy(ret + apLen + separatorLen, bp, bpLen);
         return ret;
     }
 
@@ -201,12 +185,7 @@ public:
 
         *outLen = static_cast<int32_t>(s.length());
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        error_t res = memcpy_s(ret, *outLen + 1, s.c_str(), s.length());
-        if (res != EOK) {
-            *hasErr = true;
-            *outLen = 0;
-            return nullptr;
-        }
+        memcpy(ret, s.c_str(), s.length());
         return ret;
     }
 
@@ -217,31 +196,15 @@ public:
         *outLen = strLen + (strCodePoints + 1) * replaceLen;
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         int32_t indexBuffer = 0;
-        errno_t res;
         for (int32_t index = 0; index < strLen;) {
-            res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, replaceStr, replaceLen);
-            if (res != EOK) {
-                *hasErr = true;
-                *outLen = 0;
-                return nullptr;
-            }
+            memcpy(ret + indexBuffer, replaceStr, replaceLen);
             indexBuffer += replaceLen;
             int32_t codePointLength = omniruntime::Utf8Util::LengthOfCodePoint(*(str + index));
-            res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, str + index, codePointLength);
-            if (res != EOK) {
-                *hasErr = true;
-                *outLen = 0;
-                return nullptr;
-            }
+            memcpy(ret + indexBuffer, str + index, codePointLength);
             indexBuffer += codePointLength;
             index += codePointLength;
         }
-        res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, replaceStr, replaceLen);
-        if (res != EOK) {
-            *hasErr = true;
-            *outLen = 0;
-            return nullptr;
-        }
+        memcpy(ret + indexBuffer, replaceStr, replaceLen);
         return ret;
     }
 
@@ -309,10 +272,7 @@ public:
         char *outStr, int32_t outStrLen, bool *hasErr)
     {
         int32_t maxCopy = std::min({srcStrLen - startIdx, copyLen, outStrLen});
-        error_t res = memcpy_s(outStr, outStrLen, srcStr + startIdx, maxCopy);
-        if (res != EOK) {
-            *hasErr = true;
-        }
+        memcpy(outStr, srcStr + startIdx, maxCopy);
     }
 
     static inline int32_t FindChar(const char *str, int32_t strLen, const char *searchChar, int32_t searchCharLen,
@@ -399,11 +359,7 @@ public:
         }
         *outLen = static_cast<int32_t>(result.length());
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        if (memcpy_s(ret, *outLen + 1, result.c_str(), result.length()) != EOK) {
-            *hasErr = true;
-            *outLen = 0;
-            return nullptr;
-        }
+        memcpy(ret, result.c_str(), result.length());
         return ret;
     }
 
@@ -419,11 +375,7 @@ public:
         }
         *outLen = static_cast<int32_t>(result.length());
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        if (memcpy_s(ret, *outLen + 1, result.c_str(), result.length()) != EOK) {
-            *hasErr = true;
-            *outLen = 0;
-            return nullptr;
-        }
+        memcpy(ret, result.c_str(), result.length()); 
         return ret;
     }
 
@@ -439,11 +391,7 @@ public:
         }
         *outLen = static_cast<int32_t>(result.length());
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        if (memcpy_s(ret, *outLen + 1, result.c_str(), result.length()) != EOK) {
-            *hasErr = true;
-            *outLen = 0;
-            return nullptr;
-        }
+        memcpy(ret, result.c_str(), result.length()); 
         return ret;
     }
 

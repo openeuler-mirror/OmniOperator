@@ -14,7 +14,6 @@
 #include <cmath>
 #include <folly/Exception.h>
 #include <optional>
-#include <libboundscheck/include/securec.h>
 #include "integer256.h"
 #include "util/debug.h"
 #include "util/omni_exception.h"

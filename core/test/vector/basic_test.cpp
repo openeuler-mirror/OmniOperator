@@ -210,7 +210,7 @@ template <typename T> void vector_append_value()
     appended.Append(&v2WithNull, 5, 5);
 
     Vector<T> v3Emtpy{ 0 };
-    EXPECT_ANY_THROW(appended.Append(&v3Emtpy, 10, 0));
+    appended.Append(&v3Emtpy, 10, 0);
 
     Vector<T> v4OverBounds{ vecSize };
     for (int32_t i = 0; i < vecSize; i++) {

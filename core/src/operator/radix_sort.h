@@ -72,7 +72,7 @@ void RadixSortLSD(const DataPtr_type &dataPtr, const DataPtr_type &tempPtr, cons
         swap = !swap;
     }
     if (swap) {
-        memcpy_s(dataPtr, len * rowWidth, tempPtr, len * rowWidth);
+        memcpy(dataPtr, tempPtr, len * rowWidth);
     }
 }
 
@@ -128,7 +128,7 @@ void RadixSortMSD(const DataPtr_type origPtr, const DataPtr_type tempPtr, const 
     // Check if it has ended
     if (msdOffset == 0) {
         if (swap) {
-            memcpy_s(origPtr, len * rowWidth, tempPtr, len * rowWidth);
+            memcpy(origPtr, tempPtr, len * rowWidth);
         }
         return;
     }

@@ -252,7 +252,7 @@ namespace common {
         // 该列过滤出来都是全部为空的情况
         if (isAllNull) {
             auto *nulls = reinterpret_cast<uint8_t *>(UnsafeBaseVector::GetNulls(selectedBaseVector));
-            memset_s(nulls, BitUtil::Nbytes(selectedBaseVector->GetSize()), -1, BitUtil::Nbytes(selectedBaseVector->GetSize()));
+            memset(nulls, -1, BitUtil::Nbytes(selectedBaseVector->GetSize()));
             return;
         }
         // 该列过滤出来都是全部不为空的情况
@@ -265,7 +265,7 @@ namespace common {
                     continue;
                 }
                 if (mask == 255) {
-                    memcpy_s(destValues + index, batchStep * sizeof(RAW_DATA_TYPE), srcValues + j, batchStep * sizeof(RAW_DATA_TYPE));
+                    memcpy(destValues + index, srcValues + j, batchStep * sizeof(RAW_DATA_TYPE));
                     index += batchStep;
                     continue;
                 }

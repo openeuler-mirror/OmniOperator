@@ -20,7 +20,7 @@ BaseVector *ApplyMapTyped(const SelectivityVector &rows, BaseVector *mapArg, Bas
     using KeyType = typename NativeType<kind>::type;
     auto rowSize = mapArg->GetSize();
     int32_t dicIndex[rowSize];
-    memset_s(dicIndex, sizeof(dicIndex), -1, sizeof(dicIndex));
+    memset(dicIndex, -1, sizeof(dicIndex));
 
     auto mapVector = reinterpret_cast<MapVector *>(mapArg);
     if (indexArg->GetEncoding() == OMNI_ENCODING_CONST) {

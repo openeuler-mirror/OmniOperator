@@ -1054,7 +1054,7 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
                     values[i] = reinterpret_cast<int64_t>(valuePtr + originalRowIndex);
                 } else if constexpr (std::is_same_v<RawType, double>) {
                     double value = dictionaryVector->GetValue(rowIdx);
-                    memcpy_s(values + i, sizeof(double), &value, sizeof(double));
+                    memcpy(values + i, &value, sizeof(double));
                 } else {
                     values[i] = dictionaryVector->GetValue(rowIdx);
                 }
@@ -1065,7 +1065,7 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
                         unsafe::UnsafeVector::GetRawValues(static_cast<FlatVector *>(column)) + rowIdx);
                 } else if constexpr (std::is_same_v<RawType, double>) {
                     double value = static_cast<FlatVector *>(column)->GetValue(rowIdx);
-                    memcpy_s(values + i, sizeof(double), &value, sizeof(double));
+                    memcpy(values + i, &value, sizeof(double));
                 } else {
                     values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
                 }
@@ -1077,7 +1077,7 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
                     unsafe::UnsafeVector::GetRawValues(static_cast<FlatVector *>(column)) + rowIdx);
             } else if constexpr (std::is_same_v<RawType, double>) {
                 double value = static_cast<FlatVector *>(column)->GetValue(rowIdx);
-                memcpy_s(values + i, sizeof(double), &value, sizeof(double));
+                memcpy(values + i, &value, sizeof(double));
             } else {
                 values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
             }

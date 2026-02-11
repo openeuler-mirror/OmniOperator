@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-#include <libboundscheck/include/securec.h>
 #include "dtoa.h"
 
 namespace omniruntime::codegen::function {
@@ -24,7 +23,7 @@ template<class Dest, class Source>
 static ALWAYS_INLINE Dest BitCast(const Source &source)
 {
     Dest dest;
-    memmove_s(&dest, sizeof(dest), &source, sizeof(dest));
+    memmove(&dest, &source, sizeof(dest));
     return dest;
 }
 
@@ -186,7 +185,7 @@ FDBigInteger FDBigInteger::LeftShift(int shift)
         if (bitCount == 0) {
             int newData[MAX_DATA_LENGTH]{0};
             int count = nWords * static_cast<int>(sizeof(int));
-            memcpy_s(newData, count, data, count);
+            memcpy(newData, data, count);
             return {newData, offset + wordCount, nWords};
         } else {
             int antiCount = 32 - bitCount;
@@ -227,7 +226,7 @@ FDBigInteger FDBigInteger::LeftShift(int shift)
                 int prev = data[idx];
                 int hi = Unsigned32RightShift(prev, antiCount);
                 int src[MAX_DATA_LENGTH]{0};
-                memcpy_s(src, nWords * sizeof(int), data, nWords * sizeof(int));
+                memcpy(src, data, nWords * sizeof(int));
                 if (hi != 0) {
                     if (nWords == DataSize()) {
                         Resize(nWords + 1);
@@ -325,7 +324,7 @@ FDBigInteger FDBigInteger::MulBy10()
             if (nWords == DataSize()) {
                 if (data[0] == 0) {
                     auto l = --nWords;
-                    memcpy_s(data, l * sizeof(int), data + 1, l * sizeof(int));
+                    memcpy(data, data + 1, l * sizeof(int));
                     offset++;
                 } else {
                     Resize(DataSize() + 1);
@@ -1082,7 +1081,7 @@ int DoubleToString::GetChars(char *result) const
     if (decExponent > 0 && decExponent < 8) {
         // print digits.digits.
         int charLength = std::min(nDigits, decExponent);
-        memcpy_s(result + index, charLength, digits + firstDigitIndex, charLength);
+        memcpy(result + index, digits + firstDigitIndex, charLength);
         index += charLength;
         if (charLength < decExponent) {
             charLength = decExponent - charLength;
@@ -1094,7 +1093,7 @@ int DoubleToString::GetChars(char *result) const
             result[index++] = '.';
             if (charLength < nDigits) {
                 int t = nDigits - charLength;
-                memcpy_s(result + index, t, digits + (firstDigitIndex + charLength), t);
+                memcpy(result + index, digits + (firstDigitIndex + charLength), t);
                 index += t;
             } else {
                 result[index++] = '0';
@@ -1107,13 +1106,13 @@ int DoubleToString::GetChars(char *result) const
             std::fill(result + index, result + (index - decExponent), '0');
             index -= decExponent;
         }
-        memcpy_s(result + index, nDigits, digits + firstDigitIndex, nDigits);
+        memcpy(result + index, digits + firstDigitIndex, nDigits);
         index += nDigits;
     } else {
         result[index++] = digits[firstDigitIndex];
         result[index++] = '.';
         if (nDigits > 1) {
-            memcpy_s(result + index, nDigits - 1, digits + (firstDigitIndex + 1), nDigits - 1);
+            memcpy(result + index, digits + (firstDigitIndex + 1), nDigits - 1);
             index += nDigits - 1;
         } else {
             result[index++] = '0';
@@ -1178,7 +1177,7 @@ std::size_t DoubleToString::DoubleToStringConverter(double d, char *result)
 
     auto setValueAndGetSize = [&result](const std::string &inputString) -> std::size_t {
         auto size = inputString.size();
-        memcpy_s(result, size, inputString.c_str(), size);
+        memcpy(result, inputString.c_str(), size);
         return size;
     };
     // Discover obvious special cases of NaN and Infinity.

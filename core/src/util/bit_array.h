@@ -8,6 +8,7 @@
 #include <math.h>
 #include <memory>
 #include <sstream>
+#include <cstring>
 #include "omni_exception.h"
 #include "bit_map.h"
 

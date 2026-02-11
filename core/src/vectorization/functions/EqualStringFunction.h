@@ -115,7 +115,7 @@ class EqualStringFunction final : public VectorFunction {
         auto *flatResult = reinterpret_cast<Vector<bool> *>(VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowSize));
         auto alignedBuffer = unsafe::UnsafeVector::GetValues(flatResult)->GetBuffer();
         // set defualt compared result is 0 which means the result is filtered for there might exists some row not compare when it's null
-        memset_sp(alignedBuffer, rowSize, 0, rowSize);
+        memset(alignedBuffer, 0, rowSize);
         if (leftArg->GetEncoding() == OMNI_ENCODING_CONST || rightArg->GetEncoding() == OMNI_ENCODING_CONST) {
             // Fast path for (flat, const).
             auto leftIsConst = leftArg->GetEncoding() == OMNI_ENCODING_CONST;

@@ -39,11 +39,7 @@ extern "C" DLLEXPORT const char *GetJsonObject(int64_t contextPtr, const char *j
     *outLen = static_cast<int32_t>(result.size());
 
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-    if (memcpy_s(ret, *outLen + 1, result.c_str(), result.size()) != EOK) {
-        *retIsNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(ret, result.c_str(), result.size());
     static_cast<char*>(ret)[*outLen] = '\0';
     return ret;
 }

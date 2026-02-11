@@ -31,7 +31,7 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AvgConditionalFloat(MID *res, int64_t &f
         const int64_t mask = (!condition[i] == addIf) - 1;
 
         int64_t iValue;
-        // Note: using memcpy_s hugely degrades performance
+        // Note: using memcpy hugely degrades performance
         std::copy(reinterpret_cast<const uint8_t *>(&ptr[i]), reinterpret_cast<const uint8_t *>(&ptr[i]) + len,
             reinterpret_cast<uint8_t *>(&iValue));
         iValue &= mask;

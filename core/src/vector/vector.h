@@ -351,14 +351,7 @@ public:
         }
 
         RAW_DATA_TYPE *startAddr = reinterpret_cast<RAW_DATA_TYPE *>(this->values);
-        errno_t ret =
-            memcpy_s(startAddr + startIndex, length * sizeof(RAW_DATA_TYPE), values, length * sizeof(RAW_DATA_TYPE));
-        if (UNLIKELY(ret != EOK)) {
-            std::string message = "memory copy failed " + std::to_string(ret) + ",vec size " + std::to_string(size) +
-                ", length " + std::to_string(length) + ", startIndex " + std::to_string(startIndex) + ", startAddr " +
-                std::to_string(reinterpret_cast<std::uintptr_t>(startAddr));
-            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
-        }
+        memcpy(startAddr + startIndex, values, length * sizeof(RAW_DATA_TYPE));
     }
 
     /* *
@@ -477,11 +470,7 @@ public:
         values = valuesBuffer->GetBuffer();
 
         if (oldValues != nullptr) {
-            error_t res = memcpy_s(values, newCapacity * sizeof(RAW_DATA_TYPE),
-                oldValues, oldSize * sizeof(RAW_DATA_TYPE));
-            if (res != EOK) {
-                throw OmniException("ERROR : Vector Expand memcpy_s failed ", std::to_string(res));
-            }
+            memcpy(values, oldValues, oldSize * sizeof(RAW_DATA_TYPE));
         }
 
         auto oldNullsBuffer = nullsBuffer;

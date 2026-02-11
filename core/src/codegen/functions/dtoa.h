@@ -28,7 +28,7 @@ public:
         this->offset = offset;
         this->nWords = length;
         this->length = length;
-        memcpy_s(this->data, nWords * sizeof(int), data, nWords * sizeof(int));
+        memcpy(this->data, data, nWords * sizeof(int));
         this->TrimLeadingZeros();
     }
 
@@ -246,7 +246,7 @@ private:
 
     void UpdateDataVector(int *newData)
     {
-        memcpy_s(this->data, nWords * sizeof(int), newData, nWords * sizeof(int));
+        memcpy(this->data, newData, nWords * sizeof(int));
     }
 
     /**

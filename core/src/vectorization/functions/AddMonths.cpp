@@ -130,10 +130,7 @@ public:
                     // If constant is NULL, set all results to NULL
                     auto *resultNulls = unsafe::UnsafeBaseVector::GetNulls(result);
                     auto nullsSize = BitUtil::Nbytes(size);
-                    auto result_code = memset_s(resultNulls, nullsSize, 0xFF, nullsSize);
-                    if (result_code != EOK) {
-                        OMNI_THROW("AddMonths error:", "Failed to set null bits, error code: {}", result_code);
-                    }
+                    memset(resultNulls, 0xFF, nullsSize);
                     return;
                 }
             } else {
@@ -146,7 +143,7 @@ public:
             // Copy NULL bits from date input to result (so NULL rows are already set to NULL)
             auto *resultNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
             auto nullsSize = BitUtil::Nbytes(size);
-            memcpy_s(resultNulls, nullsSize, dateNulls, nullsSize);
+            memcpy(resultNulls, dateNulls, nullsSize);
             
             // Process only non-NULL rows using SelectivityVector
             SelectivityVector rows(size);
