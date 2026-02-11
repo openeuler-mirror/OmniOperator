@@ -155,6 +155,7 @@ uint64_t Spiller::CollectVecBatchSize(vec::VectorBatch *vectorBatch)
             case OMNI_DECIMAL128:
                 result += CollectVectorSize<Decimal128>(vector);
                 break;
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 result += CollectVectorSize<std::string_view>(vector);
@@ -310,6 +311,7 @@ ErrorCode SpillWriter::WriteVecBatchToBuffer(vec::VectorBatch *vectorBatch)
             case OMNI_DECIMAL128:
                 result = WriteVectorToBuffer<Decimal128>(vector, rowCount, writeOffset);
                 break;
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 result = WriteVectorToBuffer<std::string_view>(vector, rowCount, writeOffset);
@@ -422,6 +424,7 @@ ErrorCode SpillWriter::WriteVecBatchToFile(vec::VectorBatch *vectorBatch)
             case OMNI_DECIMAL128:
                 result = WriteVector<Decimal128>(vector, rowCount);
                 break;
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 result = WriteVector<std::string_view>(vector, rowCount);

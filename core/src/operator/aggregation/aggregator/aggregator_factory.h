@@ -508,6 +508,16 @@ public:
     ~BloomFilterAggregatorFactory() override = default;
 };
 
+class ApproxCountDistinctAggregatorFactory : public AggregatorFactory {
+  public:
+    ApproxCountDistinctAggregatorFactory() = default;
+    ~ApproxCountDistinctAggregatorFactory() override = default;
+
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+};
+
 template <class T> class MaskAggregatorFactory : public AggregatorFactory {
 public:
     explicit MaskAggregatorFactory(int32_t maskCol) : maskColumnId(maskCol), realFactory(std::make_unique<T>()) {}

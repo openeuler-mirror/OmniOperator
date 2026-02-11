@@ -87,6 +87,7 @@ ErrorCode SpillReader::ReadVecBatch(std::unique_ptr<vec::VectorBatch> &vectorBat
             case OMNI_DOUBLE:
                 result = ReadVector<double>(vector, rowCount);
                 break;
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 result = ReadVector<std::string_view>(vector, rowCount);
@@ -305,6 +306,7 @@ void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const st
             case OMNI_DOUBLE:
                 SetCompareFunction<double>(isAscending, isNullsFirst, sortCompareFuncs);
                 break;
+            case OMNI_VARBINARY:
             case OMNI_CHAR:
             case OMNI_VARCHAR:
                 SetCompareFunction<std::string_view>(isAscending, isNullsFirst, sortCompareFuncs);
