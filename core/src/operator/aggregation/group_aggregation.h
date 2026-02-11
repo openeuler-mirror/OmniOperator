@@ -47,7 +47,8 @@ public:
     {
         isStepPartials = isPartialOutput(step) && !groupByCols.empty();
         for (auto i : aggFuncTypesVector) {
-            if (i == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL || i == OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL) {
+            if (i == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL || i == OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL
+                || i == OMNI_AGGREGATION_TYPE_LAST_IGNORENULL || i == OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL) {
                 isStepPartials = false;
                 break;
             }

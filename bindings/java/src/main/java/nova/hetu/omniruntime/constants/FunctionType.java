@@ -135,6 +135,16 @@ public class FunctionType extends Constant {
      */
     public static final FunctionType OMNI_AGGREGATION_TYPE_VAR_SAMP = new FunctionType(24);
 
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_LAST_IGNORENULL.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_LAST_IGNORENULL = new FunctionType(25);
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL = new FunctionType(26);
+
     private static final long serialVersionUID = 5337378607473315604L;
 
     /**

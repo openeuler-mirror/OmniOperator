@@ -3099,6 +3099,122 @@ TEST(AggregationWithExprOperatorTest, test_agg_first_expr)
     delete overflowConfig;
 }
 
+// last with empty groupKey (global aggregation, groupByNum=0)
+TEST(AggregationWithExprOperatorTest, test_agg_last_expr)
+{
+    const int32_t dataSize = 8;
+    const int32_t groupByNum = 0;
+    const int32_t expectDataSize = 1;
+
+    // last(c3), last(c4) => 8, 8.5f (last row: c3=8, c4=8.5f)
+    int64_t data1[] = {2L, 5L, 8L, 11L, 14L, 17L, 20L, 23L}; // c0
+    int64_t data2[] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};      // c1
+    int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};              // c2
+    int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};              // c3
+    float data5[] = {1.5f, 2.5f, 3.5f, 4.5f, 5.5f, 6.5f, 7.5f, 8.5f}; // c4
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType(), FloatType() }));
+    DataTypes aggOutputTypes1(std::vector<DataTypePtr>({ IntType() }));
+    DataTypes aggOutputTypes2(std::vector<DataTypePtr>({ FloatType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5);
+
+    std::vector<Expr *> aggKeys1 = { new FieldExpr(3, IntType()) };
+    std::vector<Expr *> aggKeys2 = { new FieldExpr(4, FloatType()) };
+    std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys = { aggKeys1, aggKeys2 };
+
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_LAST_IGNORENULL,
+        OMNI_AGGREGATION_TYPE_LAST_IGNORENULL };
+    std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
+    std::vector<DataTypes> aggsOutputTypes = { aggOutputTypes1, aggOutputTypes2 };
+    auto overflowConfig = new OverflowConfig();
+    std::vector<Expr *> groupByKeys = {};
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
+    std::vector<omniruntime::expressions::Expr *> aggFilters;
+    aggFilters.reserve(2);
+    aggFilters.push_back(nullptr);
+    aggFilters.push_back(nullptr);
+
+    auto *aggWithExprOperatorFactory =
+        new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, sourceTypes, aggsOutputTypes,
+        aggFuncTypes, aggFilters, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
+    auto *aggWithExprOperator =
+        static_cast<AggregationWithExprOperator *>(CreateTestOperator(aggWithExprOperatorFactory));
+
+    aggWithExprOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    aggWithExprOperator->GetOutput(&outputVecBatch);
+
+    int64_t expData1[] = {8};
+    float expData2[] = {8.5f};
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), FloatType() }));
+    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecorBatch));
+
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggAllKeys);
+    omniruntime::op::Operator::DeleteOperator(aggWithExprOperator);
+    delete aggWithExprOperatorFactory;
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete overflowConfig;
+}
+
+// last with non-empty groupKey (groupBy c0 mod 2, two groups)
+TEST(AggregationWithExprOperatorTest, test_agg_last_expr_with_groupby)
+{
+    const int32_t dataSize = 6;
+    const int32_t groupByNum = 1;
+    const int32_t expectDataSize = 2;
+
+    // c0: 2,4,6 -> group 0; c0: 1,3,5 -> group 1. last(c2) per group: group0 last c2=6, group1 last c2=5
+    int64_t data1[] = {2L, 4L, 6L, 1L, 3L, 5L};   // c0
+    int32_t data2[] = {10, 20, 30, 11, 21, 31};   // c1
+    int32_t data3[] = {2, 4, 6, 1, 3, 5};         // c2
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), IntType(), IntType() }));
+    DataTypes aggOutputTypes1(std::vector<DataTypePtr>({ IntType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
+
+    auto *modLeft = new FieldExpr(0, LongType());
+    LiteralExpr *modRight = new LiteralExpr(2, LongType());
+    modRight->longVal = 2;
+    std::vector<Expr *> groupByKeys = { new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType()) };
+    std::vector<Expr *> aggKeys1 = { new FieldExpr(2, IntType()) };
+    std::vector<std::vector<Expr *>> aggAllKeys = { aggKeys1 };
+
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_LAST_IGNORENULL };
+    std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1) };
+    std::vector<DataTypes> aggsOutputTypes = { aggOutputTypes1 };
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
+    std::vector<Expr *> aggFilters = { nullptr };
+
+    auto *aggFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters,
+        sourceTypes, aggsOutputTypes, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, OperatorConfig());
+    auto *aggOperator = static_cast<HashAggregationWithExprOperator *>(CreateTestOperator(aggFactory));
+
+    aggOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    aggOperator->GetOutput(&outputVecBatch);
+
+    // group 0 (c0%2=0): last c2 = 6; group 1 (c0%2=1): last c2 = 5
+    int64_t expGroup[] = {0, 1};
+    int32_t expLast[] = {6, 5};
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType() }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, expectDataSize, expGroup, expLast);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggAllKeys);
+    omniruntime::op::Operator::DeleteOperator(aggOperator);
+    delete aggFactory;
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
 TEST(HashAggregationWithExprOperatorTest, adaptor_header_with_null)
 {
     OneRowAdaptor adaptor;
@@ -3839,7 +3955,9 @@ void SetAggKeys(const std::vector<DataTypePtr> &finalInputTypes, const std::vect
                 break;
             }
             case OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL:
-            case OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL: {
+            case OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL:
+            case OMNI_AGGREGATION_TYPE_LAST_IGNORENULL:
+            case OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL: {
                 aggCols.emplace_back(aggIdx);
                 aggInputType.emplace_back(finalInputTypes[aggIdx]);
                 aggIdx++;

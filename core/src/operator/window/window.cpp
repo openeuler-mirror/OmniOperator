@@ -199,6 +199,8 @@ OmniStatus WindowOperator::Init()
             case OMNI_AGGREGATION_TYPE_MIN:
             case OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL:
             case OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL:
+            case OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL:
+            case OMNI_AGGREGATION_TYPE_LAST_IGNORENULL:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
                     sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i),
                     std::move(windowFrame), executionContext.get(), isOverflowAsNull)));
