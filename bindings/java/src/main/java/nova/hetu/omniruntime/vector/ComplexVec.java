@@ -66,9 +66,13 @@ public abstract class ComplexVec extends Vec {
             case OMNI_DECIMAL64: {
                 return new LongVec(nativeVector);
             }
+            case OMNI_FLOAT: {
+                return new FloatVec(nativeVector);
+            }
             case OMNI_DOUBLE: {
                 return new DoubleVec(nativeVector);
             }
+            case OMNI_VARBINARY:
             case OMNI_CHAR:
             case OMNI_VARCHAR: {
                 return new VarcharVec(nativeVector);

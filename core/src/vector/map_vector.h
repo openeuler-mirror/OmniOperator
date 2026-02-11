@@ -17,14 +17,14 @@ public:
     MapVector(int64_t size, std::shared_ptr<BaseVector> keyVector, std::shared_ptr<BaseVector> valueVector)
         : BaseVector(size, OMNI_ENCODING_MAP, OMNI_MAP),
           keys(std::move(keyVector)),
-          values(std::move(valueVector))
+          values(std::move(valueVector)), capacity(size)
     {
         offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
         offsets = offsetsBuffer->GetBuffer();
         offsets[0] = 0;
     }
 
-    MapVector(int64_t size) : BaseVector(size, OMNI_ENCODING_MAP, OMNI_MAP)
+    MapVector(int64_t size) : BaseVector(size, OMNI_ENCODING_MAP, OMNI_MAP), capacity(size)
     {
         offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
         offsets = offsetsBuffer->GetBuffer();
@@ -144,11 +144,52 @@ public:
         SetSize(index, 0);
     }
 
+    void Expand(int64_t needCapacity)
+    {
+        if (needCapacity <= size) {
+            return;
+        }
+
+        if (needCapacity <= capacity) {
+            size = needCapacity;
+            return;
+        }
+
+        int64_t newCapacity = std::max(capacity * 2, needCapacity);
+        int64_t oldSize = size;
+
+        auto oldOffsetsBuffer = offsetsBuffer;
+        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(newCapacity + 1);
+        offsets = offsetsBuffer->GetBuffer();
+
+        if (oldOffsetsBuffer != nullptr) {
+            memcpy(
+                offsets,
+                oldOffsetsBuffer->GetBuffer(),
+                (oldSize + 1) * sizeof(int64_t)
+            );
+        } else {
+            memset(offsets, 0, (newCapacity + 1) * sizeof(int64_t));
+        }
+
+        auto oldNullsBuffer = nullsBuffer;
+        nullsBuffer = std::make_shared<NullsBuffer>(newCapacity);
+        if (oldNullsBuffer != nullptr) {
+            nullsBuffer->SetNulls(0, oldNullsBuffer.get(), oldSize);
+        } else {
+            nullsBuffer->SetNulls(0, false, newCapacity);
+        }
+
+        capacity = newCapacity;
+        size = needCapacity;
+    }
+
 protected:
     int64_t* offsets;
     std::shared_ptr<AlignedBuffer<int64_t>> offsetsBuffer;
     std::shared_ptr<BaseVector> keys;
     std::shared_ptr<BaseVector> values;
+    int64_t capacity;
 };
 }
 

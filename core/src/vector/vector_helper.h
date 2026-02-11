@@ -295,9 +295,9 @@ public:
         using namespace omniruntime::type;
         using T = typename NativeType<typeId>::type;
         if constexpr (std::is_same_v<T, std::string_view>) {
-            std::cout << std::dec << static_cast<Vector<LargeStringContainer<T>> *>(elementVec)->GetValue(index) << "\t";
+            std::cout << std::dec << static_cast<Vector<LargeStringContainer<T>> *>(elementVec)->GetValue(index);
         } else {
-            std::cout << std::dec << static_cast<Vector<T> *>(elementVec)->GetValue(index) << "\t";
+            std::cout << std::dec << static_cast<Vector<T> *>(elementVec)->GetValue(index);
         }
     }
 
@@ -343,11 +343,44 @@ public:
             if (i > 0)
                 std::cout << ", ";
             switch (elementType) {
+                case OMNI_BYTE:
+                    PrintArrayElement<OMNI_BYTE>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_BOOLEAN:
+                    PrintArrayElement<OMNI_BOOLEAN>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_SHORT:
+                    PrintArrayElement<OMNI_SHORT>(elementVec.get(), offset + i);
+                    break;
                 case OMNI_INT:
                     PrintArrayElement<OMNI_INT>(elementVec.get(), offset + i);
                     break;
+                case OMNI_FLOAT:
+                    PrintArrayElement<OMNI_FLOAT>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_DATE32:
+                    PrintArrayElement<OMNI_DATE32>(elementVec.get(), offset + i);
+                    break;
                 case OMNI_LONG:
                     PrintArrayElement<OMNI_LONG>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_TIMESTAMP:
+                    PrintArrayElement<OMNI_TIMESTAMP>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_DOUBLE:
+                    PrintArrayElement<OMNI_DOUBLE>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_DATE64:
+                    PrintArrayElement<OMNI_DATE64>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_DECIMAL64:
+                    PrintArrayElement<OMNI_DECIMAL64>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_DECIMAL128:
+                    PrintArrayElement<OMNI_DECIMAL128>(elementVec.get(), offset + i);
+                    break;
+                case OMNI_VARBINARY:
+                    PrintArrayElement<OMNI_VARBINARY>(elementVec.get(), offset + i);
                     break;
                 case OMNI_VARCHAR:
                     PrintArrayElement<OMNI_VARCHAR>(elementVec.get(), offset + i);
@@ -355,15 +388,8 @@ public:
                 case OMNI_CHAR:
                     PrintArrayElement<OMNI_CHAR>(elementVec.get(), offset + i);
                     break;
-                case OMNI_BOOLEAN:
-                    PrintArrayElement<OMNI_BOOLEAN>(elementVec.get(), offset + i);
-                    break;
-                case OMNI_DOUBLE:
-                    PrintArrayElement<OMNI_DOUBLE>(elementVec.get(), offset + i);
-                    break;
                 default:
-                    std::cout << "?";
-                    break;
+                    throw omniruntime::exception::OmniException("PrintArrayVectorValue", "Unsupported type: " + elementType);
             }
         }
         std::cout << "]";
