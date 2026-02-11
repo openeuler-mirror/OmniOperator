@@ -17,9 +17,9 @@ namespace op {
 class SpillWriter {
 public:
     SpillWriter(const type::DataTypes &dataTypes, const std::string &dirPath, uint64_t writeBufferSize = 0,
-                bool enableSpillCompression = false)
+                bool IsSpillCompressEnabled = false)
         : dataTypes(dataTypes), dirPath(dirPath), writeBufferSize(writeBufferSize), writeBufferOffset(0),
-          IsSpillCompressEnabled(enableSpillCompression)
+          IsSpillCompressEnabled(IsSpillCompressEnabled)
     {
         if (writeBufferSize != 0) {
             writeBuffer = new char[writeBufferSize];
@@ -91,9 +91,9 @@ class Spiller {
 public:
     Spiller(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
         const std::vector<SortOrder> &sortOrders, const std::string &spillPath, uint64_t maxSpillBytes,
-        uint64_t writeBufferSize = 0, bool enableSpillCompression = false)
+        uint64_t writeBufferSize = 0, bool isSpillCompressEnabled = false)
         : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders), writeBufferSize(writeBufferSize),
-          isSpillCompressEnabled(enableSpillCompression)
+          isSpillCompressEnabled(isSpillCompressEnabled)
     {
         dirPaths.emplace_back(spillPath);
         int32_t dataTypeCount = dataTypes.GetSize();
@@ -115,7 +115,7 @@ public:
 
     ErrorCode Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort, Operator* op);
 
-    ErrorCode Spill(AggregationSort *aggregationSort, Operator* op);
+    ErrorCode Spill(AggregationSort *aggregationSort, Operator* op, bool compareWithHashVal = false);
 
     std::vector<SpillFileInfo> FinishSpill()
     {
@@ -126,15 +126,15 @@ public:
         return spillFiles;
     }
 
-    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool enableSpillCompression)
+    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled)
     {
-        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, enableSpillCompression);
+        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, isSpillCompressEnabled);
         return merger;
     }
 
-    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool enableSpillCompression, bool isAggOp)
+    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool spillCompressEnabled, bool comapreWithHashVal)
     {
-        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, enableSpillCompression, isAggOp);
+        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, spillCompressEnabled, comapreWithHashVal);
         return merger;
     }
 

@@ -21,7 +21,7 @@ static int32_t SPILL_TEMPLATE_SIZE = static_cast<int32_t>(SPILL_TEMPLATE.size())
 constexpr int PID_LENGTH = 10;
 constexpr int TID_LENGTH = 10;
 
-ErrorCode Spiller::Spill(AggregationSort *aggregationSort, Operator* op)
+ErrorCode Spiller::Spill(AggregationSort *aggregationSort, Operator* op, bool comapreWithHashVal)
 {
     size_t totalRowCount = aggregationSort->GetRowCount();
     if (totalRowCount <= 0) {
@@ -47,7 +47,7 @@ ErrorCode Spiller::Spill(AggregationSort *aggregationSort, Operator* op)
             spillVecBatch->Resize(rowCount);
         }
         auto spillVecBatchPtr = spillVecBatch.get();
-        aggregationSort->SetSpillVectorBatch(spillVecBatchPtr, totalRowOffset);
+        aggregationSort->SetSpillVectorBatch(spillVecBatchPtr, totalRowOffset, comapreWithHashVal);
         auto vecBatchSize = CollectVecBatchSize(spillVecBatchPtr);
         if (isSpillCompressEnabled) {
             if (writer->getTotalCompressBytes() + vecBatchSize> UINT64_MAX) {
@@ -126,6 +126,7 @@ ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRa
 
     return writer->Close();
 }
+
 
 uint64_t Spiller::CollectVecBatchSize(vec::VectorBatch *vectorBatch)
 {

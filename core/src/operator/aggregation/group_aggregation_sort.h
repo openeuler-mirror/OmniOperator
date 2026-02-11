@@ -38,6 +38,15 @@ public:
         kv.value = value;
     }
 
+    void ParseHashMapToVectorWithHashVal(const omniruntime::type::StringRef &key, AggregateState *value, size_t groupIndex, int64_t hashValue)
+    {
+        auto &kv = kvVec[groupIndex];
+        kv.keyAddr = const_cast<char *>(key.data);
+        kv.keyLen = key.size;
+        kv.hashValue = hashValue;
+        kv.value = value;
+    }
+
     template<typename T>
     void ParseHashMapToVector(const T &key, AggregateState *value, size_t groupIndex)
     {
@@ -69,12 +78,12 @@ public:
         return groupCount;
     }
 
-    void SortKvVector()
+    void SortKvVector(bool compareWithHashVal = false)
     {
-        std::sort(kvVec.begin(), kvVec.end(), HashKeyCompare);
+        std::sort(kvVec.begin(), kvVec.end(), compareWithHashVal ? HashKeyCompareWithHashVal : HashKeyCompare);
     }
 
-    void SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint64_t rowOffset);
+    void SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint64_t rowOffset, bool compareWithHashVal);
 
 private:
     std::vector<std::unique_ptr<Aggregator>> &aggregators;
@@ -83,6 +92,15 @@ private:
     std::vector<AggregateState *> groupStates;
     size_t groupCount = 0;
     std::vector<int32_t> aggVectorCounts;
+
+    static ALWAYS_INLINE bool HashKeyCompareWithHashVal(const omniruntime::op::KeyValue &a, omniruntime::op::KeyValue &b)
+    {
+        if (a.hashValue != b.hashValue) {
+            return a.hashValue < b.hashValue;
+        }
+
+        return memcmp(a.keyAddr, b.keyAddr, std::min(a.keyLen, b.keyLen)) < 0;
+    }
 
     static ALWAYS_INLINE bool HashKeyCompare(const omniruntime::op::KeyValue &a, omniruntime::op::KeyValue &b)
     {

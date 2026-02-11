@@ -718,6 +718,28 @@ public:
             return OutputState(pos, expectSize - remainHandleSize);
         }
 
+        template <class Func, class NullFunc> OutputState HandleElementsWithHashVal(uint32_t expectSize, Func func,
+            NullFunc nullFunc)
+        {
+            uint32_t remainHandleSize = expectSize;
+            while (remainSlot && remainHandleSize) {
+                FindNext();
+                --remainSlot;
+                --remainHandleSize;
+                func((hashMapPtr->slots + pos)->GetKey(), (hashMapPtr->slots + pos)->GetValue(), (hashMapPtr->slots + pos)->GetHashVal());
+                // value in cur pos has been assigned , so we need to plus one
+                MoveToNext();
+            }
+            if (remainHandleSize == 0) {
+                return OutputState(pos, expectSize);
+            }
+            if (hashMapPtr->HasNullCell()) {
+                --remainHandleSize;
+                nullFunc(hashMapPtr->nullSlot->GetKey(), hashMapPtr->nullSlot->GetValue(), (hashMapPtr->slots + pos)->GetHashVal());
+            }
+            return OutputState(pos, expectSize - remainHandleSize);
+        }
+
     private:
         BaseHashMap<KeyType, ValueType, HashType, GrowStrategy, Allocator> *hashMapPtr;
         ctrl_t *identifiers_ = EmptyGroup();

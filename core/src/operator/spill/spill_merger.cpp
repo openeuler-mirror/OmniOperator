@@ -322,25 +322,71 @@ ErrorCode SpillReader::ReadWithCompress(void *buf, size_t bufSize)
 
 int32_t SpillMergeStream::CompareTo(const SpillMergeStream &other)
 {
-    auto leftVectorBatch = currentBatchPtr;
-    auto rightVectorBatch = other.currentBatchPtr;
-    auto leftPosition = currentRowIdx;
-    auto rightPosition = other.currentRowIdx;
-    auto sortColsCount = sortCols.size();
-    for (size_t i = 0; i < sortColsCount; i++) {
-        int32_t sortCol = sortCols[i];
-        BaseVector *leftVector = leftVectorBatch->Get(sortCol);
-        BaseVector *rightVector = rightVectorBatch->Get(sortCol);
-        int32_t compare = sortCompareFuncs[i](leftVector, leftPosition, rightVector, rightPosition);
-        if (compare != 0) {
-            return compare;
+    if (compareWithHashVal) {
+        auto leftVectorBatch = currentBatchPtr;
+        auto rightVectorBatch = other.currentBatchPtr;
+        auto leftPosition = currentRowIdx;
+        auto rightPosition = other.currentRowIdx;
+        auto sortColsCount = sortCols.size();
+
+        BaseVector *leftHashVector = leftVectorBatch->Get(0);
+        BaseVector *rightHashVector = rightVectorBatch->Get(0);
+
+        for (size_t i = 0; i < sortColsCount; i++) {
+            int32_t sortCol = sortCols[i];
+            BaseVector *leftVector = leftVectorBatch->Get(sortCol);
+            BaseVector *rightVector = rightVectorBatch->Get(sortCol);
+            int32_t compare = sortCompareFuncsWithHashVal[i](leftHashVector, leftVector, leftPosition, rightHashVector, rightVector, rightPosition);
+            if (compare != 0) {
+                return compare;
+            }
+        }
+        return 0;
+    } else {
+        auto leftVectorBatch = currentBatchPtr;
+        auto rightVectorBatch = other.currentBatchPtr;
+        auto leftPosition = currentRowIdx;
+        auto rightPosition = other.currentRowIdx;
+        auto sortColsCount = sortCols.size();
+        for (size_t i = 0; i < sortColsCount; i++) {
+            int32_t sortCol = sortCols[i];
+            BaseVector *leftVector = leftVectorBatch->Get(sortCol);
+            BaseVector *rightVector = rightVectorBatch->Get(sortCol);
+            int32_t compare = sortCompareFuncs[i](leftVector, leftPosition, rightVector, rightPosition);
+            if (compare != 0) {
+                return compare;
+            }
+        }
+        return 0;
+    }
+
+}
+
+void SpillMerger::SetCompareFunctionsWithHashVal(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
+const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFuncWithHashVal> &sortCompareFuncs)
+{
+    auto dataTypeIds = dataTypes.GetIds();
+    auto sortColSize = sortCols.size();
+    for (size_t i = 0; i < sortColSize; i++) {
+        auto typeId = dataTypeIds[sortCols[i]];
+        bool isAscending = sortOrders[i].IsAscending();
+        bool isNullsFirst = sortOrders[i].IsNullsFirst();
+        switch (typeId) {
+            case OMNI_CHAR:
+            case OMNI_VARCHAR:
+                SetCompareFunctionWithHashVal<std::string_view>(isAscending, isNullsFirst, sortCompareFuncs);
+            break;
+
+            default:
+                std::string errStr = "Do not support the data type" + std::to_string(typeId) +
+                    " in SetCompareFunctions.";
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errStr);
         }
     }
-    return 0;
 }
 
 void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
-    const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp)
+    const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs)
 {
     auto dataTypeIds = dataTypes.GetIds();
     auto sortColSize = sortCols.size();
@@ -370,7 +416,7 @@ void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const st
             case OMNI_VARBINARY:
             case OMNI_CHAR:
             case OMNI_VARCHAR:
-                SetCompareFunction<std::string_view>(isAscending, isNullsFirst, sortCompareFuncs, isAggOp);
+                SetCompareFunction<std::string_view>(isAscending, isNullsFirst, sortCompareFuncs);
                 break;
             case OMNI_DECIMAL128:
                 SetCompareFunction<Decimal128>(isAscending, isNullsFirst, sortCompareFuncs);
@@ -387,20 +433,25 @@ void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const st
 }
 
 template <typename T>
-void SpillMerger::SetCompareFunction(bool isAscending, bool isNullsFirst,
-    std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp)
+void SpillMerger::SetCompareFunctionWithHashVal(bool isAscending, bool isNullsFirst,
+    std::vector<OperatorUtil::CompareFuncWithHashVal> &sortCompareFuncs)
 {
-    if (isAggOp) {
-        if (isAscending && isNullsFirst) {
-            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, true, true, true>);
-        } else if (isAscending && !isNullsFirst) {
-            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, true, true, false>);
-        } else if (!isAscending && isNullsFirst) {
-            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, false, true, true>);
-        } else {
-            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, false, true, false>);
-        }
-    } else if (isAscending && isNullsFirst) {
+    if (isAscending && isNullsFirst) {
+        sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateWithHashVal<T, true, true, true>);
+    } else if (isAscending && !isNullsFirst) {
+        sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateWithHashVal<T, true, true, false>);
+    } else if (!isAscending && isNullsFirst) {
+        sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateWithHashVal<T, false, true, true>);
+    } else {
+        sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateWithHashVal<T, false, true, false>);
+    }
+}
+
+template <typename T>
+void SpillMerger::SetCompareFunction(bool isAscending, bool isNullsFirst,
+    std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs)
+{
+    if (isAscending && isNullsFirst) {
         sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplate<T, true, true, true>);
     } else if (isAscending && !isNullsFirst) {
         sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplate<T, true, true, false>);

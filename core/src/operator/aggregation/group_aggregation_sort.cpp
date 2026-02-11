@@ -7,15 +7,26 @@
 
 using namespace omniruntime::op;
 
-void AggregationSort::SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint64_t rowOffset)
+void AggregationSort::SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint64_t rowOffset, bool compareWithHashVal)
 {
-    auto keyVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(spillVecBatch->Get(0));
+    // first set hash values
+    Vector<LargeStringContainer<std::string_view>> * keyVector = nullptr;
+    Vector<int64_t> * hashVector = nullptr;
+    if (compareWithHashVal) {
+        hashVector = reinterpret_cast<Vector<int64_t> *>(spillVecBatch->Get(0));
+        keyVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(spillVecBatch->Get(1));
+    } else {
+        keyVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(spillVecBatch->Get(0));
+    }
     auto kvPtr = kvVec.data() + rowOffset;
     auto rowCount = spillVecBatch->GetRowCount();
     groupStates.resize(rowCount);
     for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
         auto &kv = kvPtr[rowIndex];
         std::string_view keyStr(kv.keyAddr, kv.keyLen);
+        if (compareWithHashVal) {
+            hashVector->SetValue(rowIndex, static_cast<int64_t>(kv.hashValue));
+        }
         keyVector->SetValue(rowIndex, keyStr);
         groupStates[rowIndex] = kv.value;
     }
@@ -23,7 +34,7 @@ void AggregationSort::SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint6
     const size_t aggNum = aggregators.size();
     if (aggNum > 0) {
         std::vector<BaseVector *> oneAggOutputVecs;
-        auto aggOutputStartIndex = 1;
+        auto aggOutputStartIndex = compareWithHashVal ? 2 : 1;
         for (size_t aggIndex = 0; aggIndex < aggNum; ++aggIndex) {
             int32_t oneAggOutputCols = aggVectorCounts[aggIndex];
             oneAggOutputVecs.resize(oneAggOutputCols);

@@ -44,6 +44,8 @@ public:
 
     using CompareFunc = int32_t (*)(vec::BaseVector *leftVector, int32_t leftPosition, vec::BaseVector *rightVector,
         int32_t rightPosition);
+    using CompareFuncWithHashVal = int32_t (*)(vec::BaseVector *leftHashVector, vec::BaseVector *leftVector, int32_t leftPosition, vec::BaseVector *rightHashVector,
+        vec::BaseVector *rightVector, int32_t rightPosition);
 
     static int32_t GetTypeSize(const DataTypePtr dataTypePtr)
     {
@@ -253,6 +255,47 @@ public:
             }
             result = left > right ? COMPARE_STATUS_GREATER_THAN :
                      (left < right ? COMPARE_STATUS_LESS_THAN : COMPARE_STATUS_EQUAL);
+        }
+        if constexpr (IsAscending) {
+            return result;
+        } else {
+            return -result;
+        }
+    }
+
+
+    template <typename T, bool IsAscending, bool NeedCompareNull, bool IsNullsFirst>
+    static ALWAYS_INLINE int32_t CompareFlatTemplateWithHashVal(vec::BaseVector *leftHashVector, vec::BaseVector *leftVector, int32_t leftPosition,
+        vec::BaseVector *rightHashVector, vec::BaseVector *rightVector, int32_t rightPosition)
+    {
+        if constexpr (NeedCompareNull) {
+            bool isNullLeft = leftVector->IsNull(leftPosition);
+            bool isNullRight = rightVector->IsNull(rightPosition);
+            auto nullResult = CompareNull<IsAscending, IsNullsFirst>(isNullLeft, isNullRight);
+            if (nullResult != COMPARE_STATUS_OTHER) {
+                return nullResult;
+            }
+        }
+
+        int32_t result = 0;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            auto leftHashVal = reinterpret_cast<Vector<int64_t> *>(leftHashVector)->GetValue(leftPosition);
+            auto rightHashVal = reinterpret_cast<Vector<int64_t> *>(rightHashVector)->GetValue(rightPosition);
+            std::string_view leftValue = reinterpret_cast<VarcharVector *>(leftVector)->GetValue(leftPosition);
+            std::string_view rightValue = reinterpret_cast<VarcharVector *>(rightVector)->GetValue(rightPosition);
+            auto leftLength = leftValue.length();
+            auto rightLength = rightValue.length();
+
+            if (leftHashVal != rightHashVal) {
+                return leftHashVal > rightHashVal ? COMPARE_STATUS_GREATER_THAN : COMPARE_STATUS_LESS_THAN;
+            }
+
+            result = memcmp(leftValue.data(), rightValue.data(), std::min(leftLength, rightLength));
+        } else {
+            T left = static_cast<omniruntime::vec::Vector<T> *>(leftVector)->GetValue(leftPosition);
+            T right = static_cast<omniruntime::vec::Vector<T> *>(rightVector)->GetValue(rightPosition);
+            result = left > right ? COMPARE_STATUS_GREATER_THAN :
+                (left < right ? COMPARE_STATUS_LESS_THAN : COMPARE_STATUS_EQUAL);
         }
         if constexpr (IsAscending) {
             return result;

@@ -3993,29 +3993,16 @@ TEST(HashAggregationOperatorTest, test_hashagg_same_key_cross_spill_file)
     hashAggOperator->AddInput(vecBatch1);
     hashAggOperator->AddInput(vecBatch2);
 
-    std::string expectData00[] = {"A", "A", "Ab", "Ab", "Ab"};
-    int64_t expectData01[] = {7205, 7205, 25033, 25033, 25033};
-    int32_t expectData02[] = {11275, 11301, 11273, 11317, 11263};
-    int64_t expectData03[] = {1, 2, 1, 1, 1};
-    std::string expectData10[] = {"As junior schools love simply.", "As junior schools love simply.",
-        "Asleep, high machines shall no", "Asleep, high machines shall no", "Asleep, indian sciences may in"};
-    int64_t expectData11[] = {22900, 22901, 21194, 21194, 22342};
-    int32_t expectData12[] = {10957, 11316, 11308, 11313, 11274};
-    int64_t expectData13[] = {1, 2, 1, 2, 2};
-    std::string expectData20[] = {"Asleep, indian sciences may in"};
-    int64_t expectData21[] = {22342};
-    int32_t expectData22[] = {10957};
-    int64_t expectData23[] = {1};
+    std::string expectData00[] = {"A", "A", "Ab", "Ab", "Ab", "As junior schools love simply.", "As junior schools love simply.",
+        "Asleep, high machines shall no", "Asleep, high machines shall no", "Asleep, indian sciences may in", "Asleep, indian sciences may in"};
+    int64_t expectData01[] = {7205, 7205, 25033, 25033, 25033, 22900, 22901, 21194, 21194, 22342, 22342};
+    int32_t expectData02[] = {11275, 11301, 11273, 11317, 11263, 10957, 11316, 11308, 11313, 11274, 10957};
+    int64_t expectData03[] = {1, 2, 1, 1, 1, 1, 2, 1, 2, 2, 1};
+
     DataTypes expectDataTypes(
         std::vector<DataTypePtr>({ VarcharType(50), LongType(), Date32Type(DateUnit::DAY), LongType() }));
-    auto expectVecBatch0 =
-        CreateVectorBatch(expectDataTypes, 5, expectData00, expectData01, expectData02, expectData03);
-    auto expectVecBatch1 =
-        CreateVectorBatch(expectDataTypes, 5, expectData10, expectData11, expectData12, expectData13);
-    auto expectVecBatch2 =
-        CreateVectorBatch(expectDataTypes, 1, expectData20, expectData21, expectData22, expectData23);
-
-    hashAggOperator->SetRowCountPerBatch(5);
+    auto expectVecBatchR =
+        CreateVectorBatch(expectDataTypes, 11, expectData00, expectData01, expectData02, expectData03);
     std::vector<VectorBatch *> result;
     while (hashAggOperator->GetStatus() != OMNI_STATUS_FINISHED) {
         VectorBatch *outputVecBatch = nullptr;
@@ -4023,17 +4010,12 @@ TEST(HashAggregationOperatorTest, test_hashagg_same_key_cross_spill_file)
         result.emplace_back(outputVecBatch);
     }
 
-    EXPECT_EQ(3, result.size());
-    EXPECT_TRUE(VecBatchMatch(result[0], expectVecBatch0));
-    EXPECT_TRUE(VecBatchMatch(result[1], expectVecBatch1));
-    EXPECT_TRUE(VecBatchMatch(result[2], expectVecBatch2));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(result[0], expectVecBatchR));
 
     omniruntime::op::Operator::DeleteOperator(hashAggOperator);
     delete hashAggOperatorFactory;
     VectorHelper::FreeVecBatches(result);
-    VectorHelper::FreeVecBatch(expectVecBatch0);
-    VectorHelper::FreeVecBatch(expectVecBatch1);
-    VectorHelper::FreeVecBatch(expectVecBatch2);
+    VectorHelper::FreeVecBatch(expectVecBatchR);
 }
 
 template <typename T> T *ExtractValueFromState(AggregateState *state)

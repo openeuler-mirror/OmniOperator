@@ -46,6 +46,7 @@ struct DecimalSumState {
 struct KeyValue {
     char *keyAddr;
     size_t keyLen;
+    int64_t hashValue;
     AggregateState *value;
 };
 
