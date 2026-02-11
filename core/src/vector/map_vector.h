@@ -163,14 +163,14 @@ public:
         offsets = offsetsBuffer->GetBuffer();
 
         if (oldOffsetsBuffer != nullptr) {
-            errno_t res = memcpy_s(
+            errno_t res = memcpy(
                     offsets,
                     (newCapacity + 1) * sizeof(int64_t),
                     oldOffsetsBuffer->GetBuffer(),
                     (oldSize + 1) * sizeof(int64_t)
             );
             if (res != EOK) {
-                throw OmniException("ERROR : MapVector Expand memcpy_s failed ! ", std::to_string(res));
+                throw OmniException("ERROR : MapVector Expand memcpy failed ! ", std::to_string(res));
             }
         } else {
             memset(offsets, 0, (newCapacity + 1) * sizeof(int64_t));
