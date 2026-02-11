@@ -485,4 +485,44 @@ struct LPadFunction : public PadFunctionBase<true, T> {};
 /// Right pads string to size characters with padString.
 template <typename T>
 struct RPadFunction : public PadFunctionBase<false, T> {};
+
+/// overlay function
+/// overlay(input, replace, pos, len) -> varchar
+/// Replaces len characters of input starting at 1-based position pos with replace.
+/// result = input[1..pos-1] + replace + input[(pos+effectiveLen)..end] (1-based).
+/// pos: 1-based; 0 means first char; negative means from end (Spark semantics).
+/// len: number of chars to replace; -1 means use replace string length (Unicode chars).
+/// Part3 start in Velox is 1-based (pos+length), so 0-based index = (pos+effectiveLen)-1.
+template <typename T>
+struct OverlayFunction {
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input,
+        const std::string_view &replace, int32_t pos, int32_t len)
+    {
+        int64_t numChars = stringImpl::length<false /*isAscii*/>(input);
+        int64_t startChar0 = 0;
+        if (pos > 0) {
+            startChar0 = std::min(static_cast<int64_t>(pos - 1), numChars);
+        }
+
+        int32_t effectiveLen = (len >= 0) ? len : static_cast<int32_t>(stringImpl::length<false>(replace));
+        int64_t posPlusLen = static_cast<int64_t>(pos) + static_cast<int64_t>(effectiveLen);
+        int64_t part3StartChar0 = posPlusLen > 0 ? posPlusLen - 1 : numChars + posPlusLen;
+        part3StartChar0 = std::max(0L, std::min(part3StartChar0, numChars));
+
+        size_t part1ByteLen = static_cast<size_t>(stringImpl::cappedByteLengthUnicode(
+            input.data(), static_cast<int64_t>(input.size()), startChar0));
+
+        result.clear();
+        result.reserve(part1ByteLen + replace.size() + (input.size() - part1ByteLen));
+        result.append(input.data(), part1ByteLen);
+        result.append(replace.data(), replace.size());
+
+        if (part3StartChar0 < numChars) {
+            size_t part3ByteStart = static_cast<size_t>(stringImpl::cappedByteLengthUnicode(
+                input.data(), static_cast<int64_t>(input.size()), part3StartChar0));
+            result.append(input.data() + part3ByteStart, input.size() - part3ByteStart);
+        }
+        return true;
+    }
+};
 }
