@@ -65,7 +65,7 @@ static constexpr SetVector GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     SetContainerVector,
     nullptr,
     SetVectorImpl<Vector<float>>,
-    nullptr,
+    SetVarcharVector,
     nullptr,
     nullptr,
     nullptr,

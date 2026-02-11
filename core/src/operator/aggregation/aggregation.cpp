@@ -122,6 +122,10 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 CreateAggregatorFactory<BloomFilterAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
+            case OMNI_AGGREGATION_TYPE_APPROX_COUNT_DISTINCT: {
+                CreateAggregatorFactory<ApproxCountDistinctAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
             default: {
                 std::string omniExceptionInfo = "In function CreateAggregatorFactories, No such agg func type " +
                     std::to_string(funcTypesContext[i]);

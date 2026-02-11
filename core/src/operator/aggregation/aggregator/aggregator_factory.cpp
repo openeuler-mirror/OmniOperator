@@ -74,6 +74,9 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
         case OMNI_AGGREGATION_TYPE_MAX_BY: {
             return std::make_unique<MaxByAggregatorFactory>();
         }
+        case OMNI_AGGREGATION_TYPE_APPROX_COUNT_DISTINCT: {
+            return std::make_unique<ApproxCountDistinctAggregatorFactory>();
+        }
         default: {
             std::string omniExceptionInfo =
                 "In function CreateAggregatorFactory, no such aggregate type " + std::to_string(aggType);
@@ -607,6 +610,113 @@ std::unique_ptr<Aggregator> LastAggregatorFactory::CreateAggregator(const DataTy
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
+}
+
+// approx_count_distinct two-phase: Partial operator one aggregate (raw type -> VARBINARY), Final operator one aggregate (VARBINARY -> LONG).
+// Distinguished by plan inputRaws/outputPartials: Partial=(true,true), Final=(false,false), single-stage=(true,false).
+std::unique_ptr<Aggregator> ApproxCountDistinctAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
+{
+    auto inputTypeId = inputTypes.GetType(0)->GetId();
+    if (inputRaw && outputPartial) {
+        // Partial phase: raw column -> serialized HLL/boolean state (VARBINARY); supports bool/tinyint/smallint/integer/bigint/real/double/varchar/varbinary/timestamp/date etc. aligned with Velox
+        switch (inputTypeId) {
+            case OMNI_BOOLEAN:
+                return ApproxCountDistinctAggregator<OMNI_BOOLEAN, OMNI_VARBINARY>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_BYTE:
+                return ApproxCountDistinctAggregator<OMNI_BYTE, OMNI_VARBINARY>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_SHORT:
+                return ApproxCountDistinctAggregator<OMNI_SHORT, OMNI_VARBINARY>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+            case OMNI_TIMESTAMP:
+                return ApproxCountDistinctAggregator<OMNI_LONG, OMNI_VARBINARY>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_INT:
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+                return ApproxCountDistinctAggregator<OMNI_INT, OMNI_VARBINARY>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_FLOAT:
+                return ApproxCountDistinctAggregator<OMNI_FLOAT, OMNI_VARBINARY>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DOUBLE:
+                return ApproxCountDistinctAggregator<OMNI_DOUBLE, OMNI_VARBINARY>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARCHAR:
+                return ApproxCountDistinctAggregator<OMNI_VARCHAR, OMNI_VARBINARY>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_CHAR:
+                return ApproxCountDistinctAggregator<OMNI_CHAR, OMNI_VARBINARY>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARBINARY:
+                return ApproxCountDistinctAggregator<OMNI_VARBINARY, OMNI_VARBINARY>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            default: {
+                std::string omniExceptionInfo =
+                    "ApproxCountDistinctAggregatorFactory: unsupported input type " + std::to_string(inputTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+            }
+        }
+    }
+    if (inputRaw && !outputPartial) {
+        // Single-stage: raw column -> approximate cardinality output (LONG) directly
+        switch (inputTypeId) {
+            case OMNI_BOOLEAN:
+                return ApproxCountDistinctAggregator<OMNI_BOOLEAN, OMNI_LONG>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_BYTE:
+                return ApproxCountDistinctAggregator<OMNI_BYTE, OMNI_LONG>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_SHORT:
+                return ApproxCountDistinctAggregator<OMNI_SHORT, OMNI_LONG>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+            case OMNI_TIMESTAMP:
+                return ApproxCountDistinctAggregator<OMNI_LONG, OMNI_LONG>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_INT:
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+                return ApproxCountDistinctAggregator<OMNI_INT, OMNI_LONG>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_FLOAT:
+                return ApproxCountDistinctAggregator<OMNI_FLOAT, OMNI_LONG>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DOUBLE:
+                return ApproxCountDistinctAggregator<OMNI_DOUBLE, OMNI_LONG>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARCHAR:
+                return ApproxCountDistinctAggregator<OMNI_VARCHAR, OMNI_LONG>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_CHAR:
+                return ApproxCountDistinctAggregator<OMNI_CHAR, OMNI_LONG>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARBINARY:
+                return ApproxCountDistinctAggregator<OMNI_VARBINARY, OMNI_LONG>::Create(inputTypes, outputTypes,
+                    channels, inputRaw, outputPartial, isOverflowAsNull);
+            default: {
+                std::string omniExceptionInfo =
+                    "ApproxCountDistinctAggregatorFactory: unsupported input type " + std::to_string(inputTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+            }
+        }
+    }
+    if (!inputRaw && !outputPartial) {
+        // Final phase: upstream Partial VARBINARY output -> merge and output approximate cardinality (LONG)
+        return ApproxCountDistinctAggregator<OMNI_VARBINARY, OMNI_LONG>::Create(inputTypes, outputTypes,
+            channels, inputRaw, outputPartial, isOverflowAsNull);
+    }
+    std::string omniExceptionInfo =
+        "ApproxCountDistinctAggregatorFactory: invalid inputRaw/outputPartial combination";
+    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
 }
 }
 }

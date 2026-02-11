@@ -158,6 +158,7 @@ uint64_t Spiller::CollectComplexVectorSize(const DataTypePtr& dataType, vec::Bas
         return CollectVectorSize<double>(vector);
     case OMNI_DECIMAL128:
         return CollectVectorSize<Decimal128>(vector);
+    case OMNI_VARBINARY:
     case OMNI_VARCHAR:
     case OMNI_CHAR:
         return CollectVectorSize<std::string_view>(vector);
@@ -443,6 +444,7 @@ ErrorCode SpillWriter::WriteComplexVectorToBuffer(const DataTypePtr &dataType, v
         case OMNI_DECIMAL128:
             result = WriteVectorToBuffer<Decimal128>(vector, rowCount, writeOffset);
             break;
+        case OMNI_VARBINARY:
         case OMNI_VARCHAR:
         case OMNI_CHAR:
             result = WriteVectorToBuffer<std::string_view>(vector, rowCount, writeOffset);
@@ -661,6 +663,7 @@ ErrorCode SpillWriter::WriteComplexVector(const DataTypePtr &dataType, omnirunti
     case OMNI_DECIMAL128:
         result = WriteVector<Decimal128>(vector, rowCount);
         break;
+    case OMNI_VARBINARY:
     case OMNI_VARCHAR:
     case OMNI_CHAR:
         result = WriteVector<std::string_view>(vector, rowCount);
