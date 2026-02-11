@@ -5,55 +5,56 @@
 
 #include "Coalesce.h"
 #include "vector/vector.h"
-#include <limits>
-#include <cstring>
 #include <algorithm>
 
 namespace omniruntime::vectorization {
     using namespace omniruntime::type;
     using namespace omniruntime::vec;
 
-void CoalesceFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, 
+void CoalesceFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
                             BaseVector *&result, ExecutionContext *context) const {
+
     if (args.empty()) {
         OMNI_THROW("Coalesce function Error", "No input arguments");
     }
-    
-    // Collect all arguments from stack (they are in reverse order)
+
     std::vector<BaseVector *> argVectors;
     while (!args.empty()) {
         argVectors.push_back(args.top());
         args.pop();
     }
-    
-    // Reverse to get correct order (first argument first)
+
     std::reverse(argVectors.begin(), argVectors.end());
-    
+
     if (argVectors.size() < 2) {
         OMNI_THROW("Coalesce function Error", "Coalesce requires at least 2 arguments");
     }
-    
-    // Check that all arguments have the same size
+
     int32_t size = argVectors[0]->GetSize();
     for (size_t i = 1; i < argVectors.size(); ++i) {
         if (argVectors[i]->GetSize() != size) {
             OMNI_THROW("Coalesce function Error", "All arguments must have the same size");
         }
     }
-    
+
     DispatchCoalesce(argVectors, outputType, result);
 }
 
-void CoalesceFunction::DispatchCoalesce(const std::vector<BaseVector *> &argVectors, 
+void CoalesceFunction::DispatchCoalesce(const std::vector<BaseVector *> &argVectors,
                                         const DataTypePtr &outputType, BaseVector *&result) const {
     DataTypeId outputTypeId = outputType->GetId();
-    
+
     if (TypeUtil::IsStringType(outputTypeId)) {
         CoalesceString(argVectors, result, outputType);
     } else if (outputTypeId == OMNI_BOOLEAN) {
         CoalesceBoolean(argVectors, result, outputType);
+    } else if (outputTypeId == OMNI_ARRAY) {
+        CoalesceArray(argVectors, result, outputType);
+    } else if (outputTypeId == OMNI_MAP) {
+        CoalesceMap(argVectors, result, outputType);
+    } else if (outputTypeId == OMNI_ROW) {
+        CoalesceRow(argVectors, result, outputType);
     } else {
-        // Numeric types
         switch (outputTypeId) {
             case OMNI_BYTE:
                 CoalesceNumeric<int8_t>(argVectors, result, outputType);
@@ -77,18 +78,18 @@ void CoalesceFunction::DispatchCoalesce(const std::vector<BaseVector *> &argVect
                 CoalesceNumeric<double>(argVectors, result, outputType);
                 break;
             default:
-                OMNI_THROW("Coalesce function Error", 
+                OMNI_THROW("Coalesce function Error",
                         "Unsupported output type: " + TypeUtil::TypeToString(outputTypeId));
         }
     }
 }
 
 template<typename T>
-void CoalesceFunction::CoalesceNumeric(const std::vector<BaseVector *> &argVectors, 
+void CoalesceFunction::CoalesceNumeric(const std::vector<BaseVector *> &argVectors,
                                        BaseVector *&result, const DataTypePtr &outputType) const {
     auto size = argVectors[0]->GetSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
-    
+
     for (int32_t row = 0; row < size; ++row) {
         bool found = false;
         for (size_t argIdx = 0; argIdx < argVectors.size(); ++argIdx) {
@@ -100,17 +101,16 @@ void CoalesceFunction::CoalesceNumeric(const std::vector<BaseVector *> &argVecto
             }
         }
         if (!found) {
-            // All arguments are NULL
             result->SetNull(row);
         }
     }
 }
 
-void CoalesceFunction::CoalesceString(const std::vector<BaseVector *> &argVectors, 
+void CoalesceFunction::CoalesceString(const std::vector<BaseVector *> &argVectors,
                                      BaseVector *&result, const DataTypePtr &outputType) const {
     auto size = argVectors[0]->GetSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
-    
+
     for (int32_t row = 0; row < size; ++row) {
         bool found = false;
         for (size_t argIdx = 0; argIdx < argVectors.size(); ++argIdx) {
@@ -122,17 +122,16 @@ void CoalesceFunction::CoalesceString(const std::vector<BaseVector *> &argVector
             }
         }
         if (!found) {
-            // All arguments are NULL
             result->SetNull(row);
         }
     }
 }
 
-void CoalesceFunction::CoalesceBoolean(const std::vector<BaseVector *> &argVectors, 
+void CoalesceFunction::CoalesceBoolean(const std::vector<BaseVector *> &argVectors,
                                       BaseVector *&result, const DataTypePtr &outputType) const {
     auto size = argVectors[0]->GetSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
-    
+
     for (int32_t row = 0; row < size; ++row) {
         bool found = false;
         for (size_t argIdx = 0; argIdx < argVectors.size(); ++argIdx) {
@@ -144,8 +143,189 @@ void CoalesceFunction::CoalesceBoolean(const std::vector<BaseVector *> &argVecto
             }
         }
         if (!found) {
-            // All arguments are NULL
             result->SetNull(row);
+        }
+    }
+}
+
+void CoalesceFunction::CoalesceArray(const std::vector<BaseVector *> &argVectors,
+                                     BaseVector *&result, const DataTypePtr &outputType) const {
+    auto size = argVectors[0]->GetSize();
+
+    result = VectorHelper::CreateComplexVector(outputType.get(), size);
+    auto *resultArray = static_cast<ArrayVector *>(result);
+
+    for (int32_t row = 0; row < size; ++row) {
+        bool found = false;
+        for (size_t argIdx = 0; argIdx < argVectors.size(); ++argIdx) {
+            if (!argVectors[argIdx]->IsNull(row)) {
+                auto *srcArray = static_cast<ArrayVector *>(argVectors[argIdx]);
+                BaseVector *elemSlice = srcArray->GetValue(row);
+                resultArray->SetValue(row, elemSlice);
+                delete elemSlice;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            resultArray->SetNull(row);
+        }
+    }
+}
+
+void CoalesceFunction::CoalesceMap(const std::vector<BaseVector *> &argVectors,
+                                   BaseVector *&result, const DataTypePtr &outputType) const {
+    auto size = argVectors[0]->GetSize();
+    std::vector<int32_t> sourceIdx(size, -1);
+    for (int32_t row = 0; row < size; ++row) {
+        for (size_t argIdx = 0; argIdx < argVectors.size(); ++argIdx) {
+            if (!argVectors[argIdx]->IsNull(row)) {
+                sourceIdx[row] = static_cast<int32_t>(argIdx);
+                break;
+            }
+        }
+    }
+
+    auto *firstSrcMap = static_cast<MapVector *>(argVectors[0]);
+
+    result = VectorHelper::CreateComplexVector(outputType.get(), size);
+    auto *resultMap = static_cast<MapVector *>(result);
+
+    int64_t totalElements = 0;
+
+    for (int32_t row = 0; row < size; ++row) {
+        if (sourceIdx[row] < 0) {
+            resultMap->SetNull(row);
+            continue;
+        }
+
+        auto *srcMap = static_cast<MapVector *>(argVectors[sourceIdx[row]]);
+        int64_t mapEntryCount = srcMap->GetSize(row);
+        int64_t srcStartOffset = srcMap->GetOffset(row);
+
+        if (mapEntryCount > 0) {
+            auto keyVec = resultMap->GetKeyVector();
+            auto valVec = resultMap->GetValueVector();
+
+            BaseVector *keySlice = srcMap->GetKeyVector()->Slice(srcStartOffset, mapEntryCount);
+            BaseVector *valSlice = srcMap->GetValueVector()->Slice(srcStartOffset, mapEntryCount);
+
+            VectorHelper::ExpandElementVector(keyVec.get(), keyVec->GetTypeId(),
+                                              totalElements + mapEntryCount);
+            VectorHelper::AppendVector(keyVec.get(), totalElements,
+                                       keySlice,
+                                       static_cast<int32_t>(mapEntryCount));
+
+            VectorHelper::ExpandElementVector(valVec.get(), valVec->GetTypeId(),
+                                              totalElements + mapEntryCount);
+            VectorHelper::AppendVector(valVec.get(), totalElements,
+                                       valSlice,
+                                       static_cast<int32_t>(mapEntryCount));
+
+            delete keySlice;
+            delete valSlice;
+        }
+
+        resultMap->SetSize(row, static_cast<int32_t>(mapEntryCount));
+        totalElements += mapEntryCount;
+    }
+}
+
+void CoalesceFunction::CoalesceRow(const std::vector<BaseVector *> &argVectors,
+                                   BaseVector *&result, const DataTypePtr &outputType) const {
+    auto size = argVectors[0]->GetSize();
+
+    std::vector<int32_t> sourceIdx(size, -1);
+    for (int32_t row = 0; row < size; ++row) {
+        for (size_t argIdx = 0; argIdx < argVectors.size(); ++argIdx) {
+            if (!argVectors[argIdx]->IsNull(row)) {
+                sourceIdx[row] = static_cast<int32_t>(argIdx);
+                break;
+            }
+        }
+    }
+
+    result = VectorHelper::CreateComplexVector(outputType.get(), size);
+    auto *resultRow = static_cast<RowVector *>(result);
+
+    for (int32_t row = 0; row < size; ++row) {
+        if (sourceIdx[row] < 0) {
+            resultRow->SetNull(row);
+            for (int32_t childIdx = 0; childIdx < resultRow->ChildSize(); ++childIdx) {
+                resultRow->ChildAt(childIdx)->SetNull(row);
+            }
+            continue;
+        }
+
+        auto *srcRow = static_cast<RowVector *>(argVectors[sourceIdx[row]]);
+
+        for (int32_t childIdx = 0; childIdx < resultRow->ChildSize(); ++childIdx) {
+            BaseVector *srcChild = srcRow->ChildAt(childIdx).get();
+            BaseVector *dstChild = resultRow->ChildAt(childIdx).get();
+
+            if (srcChild->IsNull(row)) {
+                dstChild->SetNull(row);
+            } else {
+                DataTypeId childTypeId = srcChild->GetTypeId();
+                switch (childTypeId) {
+                    case OMNI_BOOLEAN: {
+                        auto val = static_cast<Vector<bool> *>(srcChild)->GetValue(row);
+                        static_cast<Vector<bool> *>(dstChild)->SetValue(row, val);
+                        break;
+                    }
+                    case OMNI_BYTE: {
+                        auto val = static_cast<Vector<int8_t> *>(srcChild)->GetValue(row);
+                        static_cast<Vector<int8_t> *>(dstChild)->SetValue(row, val);
+                        break;
+                    }
+                    case OMNI_SHORT: {
+                        auto val = static_cast<Vector<int16_t> *>(srcChild)->GetValue(row);
+                        static_cast<Vector<int16_t> *>(dstChild)->SetValue(row, val);
+                        break;
+                    }
+                    case OMNI_INT:
+                    case OMNI_DATE32: {
+                        auto val = static_cast<Vector<int32_t> *>(srcChild)->GetValue(row);
+                        static_cast<Vector<int32_t> *>(dstChild)->SetValue(row, val);
+                        break;
+                    }
+                    case OMNI_LONG:
+                    case OMNI_TIMESTAMP:
+                    case OMNI_DECIMAL64: {
+                        auto val = static_cast<Vector<int64_t> *>(srcChild)->GetValue(row);
+                        static_cast<Vector<int64_t> *>(dstChild)->SetValue(row, val);
+                        break;
+                    }
+                    case OMNI_FLOAT: {
+                        auto val = static_cast<Vector<float> *>(srcChild)->GetValue(row);
+                        static_cast<Vector<float> *>(dstChild)->SetValue(row, val);
+                        break;
+                    }
+                    case OMNI_DOUBLE: {
+                        auto val = static_cast<Vector<double> *>(srcChild)->GetValue(row);
+                        static_cast<Vector<double> *>(dstChild)->SetValue(row, val);
+                        break;
+                    }
+                    case OMNI_VARCHAR:
+                    case OMNI_CHAR:
+                    case OMNI_VARBINARY: {
+                        auto val = static_cast<Vector<LargeStringContainer<std::string_view>> *>(
+                            srcChild)->GetValue(row);
+                        static_cast<Vector<LargeStringContainer<std::string_view>> *>(
+                            dstChild)->SetValue(row, val);
+                        break;
+                    }
+                    case OMNI_DECIMAL128: {
+                        auto val = static_cast<Vector<Decimal128> *>(srcChild)->GetValue(row);
+                        static_cast<Vector<Decimal128> *>(dstChild)->SetValue(row, val);
+                        break;
+                    }
+                    default:
+                        OMNI_THROW("Coalesce function Error",
+                                   "Unsupported child type in ROW: " +
+                                   TypeUtil::TypeToString(childTypeId));
+                }
+            }
         }
     }
 }
@@ -153,7 +333,7 @@ void CoalesceFunction::CoalesceBoolean(const std::vector<BaseVector *> &argVecto
 template<typename T>
 T CoalesceFunction::GetValueFromVector(BaseVector *vec, int32_t row) const {
     Encoding encoding = vec->GetEncoding();
-    
+
     if (encoding == OMNI_ENCODING_CONST) {
         auto *constVec = static_cast<ConstVector<T> *>(vec);
         return constVec->GetConstValue();
@@ -170,7 +350,7 @@ T CoalesceFunction::GetValueFromVector(BaseVector *vec, int32_t row) const {
 
 std::string_view CoalesceFunction::GetStringValueFromVector(BaseVector *vec, int32_t row) const {
     Encoding encoding = vec->GetEncoding();
-    
+
     if (encoding == OMNI_ENCODING_CONST) {
         auto *constVec = static_cast<ConstVector<std::string_view> *>(vec);
         return constVec->GetConstValue();
@@ -191,7 +371,7 @@ void CoalesceFunction::SetValueToVector(BaseVector *vec, int32_t row, const T &v
     resultVec->SetValue(row, value);
 }
 
-void CoalesceFunction::SetStringValueToVector(BaseVector *vec, int32_t row, 
+void CoalesceFunction::SetStringValueToVector(BaseVector *vec, int32_t row,
                                              std::string_view &value) const {
     auto *resultVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
     resultVec->SetValue(row, value);
