@@ -78,8 +78,6 @@ DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
             return VarcharType(dataTypeJson[WIDTH].get<uint32_t>());
         case OMNI_CHAR:
             return CharType(dataTypeJson[WIDTH].get<uint32_t>());
-        case OMNI_VARBINARY:
-            return VarBinaryType(dataTypeJson[WIDTH].get<uint32_t>());
         case OMNI_CONTAINER: {
             std::vector<DataTypePtr> fieldTypes;
             for (const auto &fieldJson : dataTypeJson[FIELD_TYPES]) {
