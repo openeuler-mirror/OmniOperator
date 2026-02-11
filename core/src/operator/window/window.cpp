@@ -797,6 +797,8 @@ void WindowOperator::PaddingPartitionVecBatch(vec::VectorBatch *partitionVecBatc
             case OMNI_CHAR:
                 PaddingPartitionVector<std::string_view>(partitionVector, rowIdx, i);
                 break;
+            case OMNI_ARRAY:
+                PaddingPartitionArrayVector(partitionVector, rowIdx, i);
             default:
                 break;
         }
@@ -824,5 +826,16 @@ void WindowOperator::PaddingPartitionVector(vec::BaseVector *groupedVector, int3
         }
     }
 }
+
+void WindowOperator::PaddingPartitionArrayVector(vec::BaseVector *groupedVector, int32_t rowIdx, int32_t colIdx)
+{
+    auto currentVector = static_cast<ArrayVector *>(currentBatch->Get(colIdx));
+    if (currentVector->IsNull(currentRowIdx)) {
+        static_cast<ArrayVector *>(groupedVector)->SetNull(rowIdx);
+    } else {
+        static_cast<ArrayVector *>(groupedVector)->SetValue(rowIdx, currentVector->GetValue(currentRowIdx));
+    }
+}
+
 }
 }

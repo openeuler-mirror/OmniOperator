@@ -12,6 +12,24 @@ namespace  omniruntime::reader {
 static constexpr int32_t MAX_DECIMAL64_DIGITS = 18;
 uint64_t batchLen = 0;
 
+// Static helper method to parse comma-separated column names string
+static std::vector<std::string> ParseColumnNamesString(const std::string& colsStr) {
+    std::vector<std::string> columns;
+    std::stringstream ss(colsStr);
+    std::string col;
+    while (std::getline(ss, col, ',')) {
+        // Trim leading whitespace
+        col.erase(0, col.find_first_not_of(" \t"));
+        // Trim trailing whitespace
+        col.erase(col.find_last_not_of(" \t") + 1);
+        // Add non-empty columns
+        if (!col.empty()) {
+            columns.push_back(col);
+        }
+    }
+    return columns;
+}
+
 bool StringToBool(const std::string &boolStr)
 {
     if (boost::iequals(boolStr, "true")) {
@@ -373,14 +391,9 @@ void ReaderOptions::ParseEnhanceJson(const std::string &enhancementJson)
 
     if (enhancementJson_->contains("includedColumns") && enhancementJson_->at("includedColumns").is_string()) {
         std::string colsStr = enhancementJson_->at("includedColumns").get<std::string>();
-        std::stringstream ss(colsStr);
-        std::string col;
-        while (std::getline(ss, col, ',')) {
-            col.erase(0, col.find_first_not_of(" \t"));
-            col.erase(col.find_last_not_of(" \t") + 1);
-            if (!col.empty()) {
-                includedColumnsList_.push_back(col);
-            }
+        auto columns = ParseColumnNamesString(colsStr);
+        for (const auto& col : columns) {
+            includedColumnsList_.push_back(col);
         }
     }
 }
@@ -419,14 +432,17 @@ void ReaderOptions::ParseEnhanceJson(const std::string &enhancementJson, FileFor
 
             if (enhancementJson_->contains("includedColumns") && enhancementJson_->at("includedColumns").is_string()) {
                 std::string colsStr = enhancementJson_->at("includedColumns").get<std::string>();
-                std::stringstream ss(colsStr);
-                std::string col;
-                while (std::getline(ss, col, ',')) {
-                    col.erase(0, col.find_first_not_of(" \t"));
-                    col.erase(col.find_last_not_of(" \t") + 1);
-                    if (!col.empty()) {
-                        includedColumnsList_.push_back(col);
-                    }
+                auto columns = ParseColumnNamesString(colsStr);
+                for (const auto& col : columns) {
+                    includedColumnsList_.push_back(col);
+                }
+            }
+
+            if (enhancementJson_->contains("allColumns") && enhancementJson_->at("allColumns").is_string()) {
+                std::string colsStr = enhancementJson_->at("allColumns").get<std::string>();
+                auto columns = ParseColumnNamesString(colsStr);
+                for (const auto& col : columns) {
+                    allColumnsList_.push_back(col);
                 }
             }
             break;
@@ -437,15 +453,7 @@ void ReaderOptions::ParseEnhanceJson(const std::string &enhancementJson, FileFor
             std::vector<std::string> includedColumns;
             if (enhancementJson_->contains("includedColumns") && enhancementJson_->at("includedColumns").is_string()) {
                 std::string colsStr = enhancementJson_->at("includedColumns").get<std::string>();
-                std::stringstream ss(colsStr);
-                std::string col;
-                while (std::getline(ss, col, ',')) {
-                    col.erase(0, col.find_first_not_of(" \t"));
-                    col.erase(col.find_last_not_of(" \t") + 1);
-                    if (!col.empty()) {
-                        includedColumns.push_back(col);
-                    }
-                }
+                includedColumns = ParseColumnNamesString(colsStr);
             }
             includedColumnsList_.assign(includedColumns.begin(), includedColumns.end());
             SetParquetIncludedColumns(std::move(includedColumns));

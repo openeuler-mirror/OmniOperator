@@ -121,6 +121,8 @@ private:
     template <typename T>
     void SetSpillOutputVector(vec::BaseVector *outputVector, int32_t outputRowIdx, int32_t outputRowCount,
         int32_t outputCol);
+    void SetSpillOutputArrayVector(vec::BaseVector *outputVector, int32_t outputRowIdx, int32_t outputRowCount,
+        int32_t outputCol);
 
     bool hasSorted = false;
     bool canInplaceSort = false;

@@ -35,7 +35,7 @@ public:
         uint32_t aggInputColsSize, std::vector<DataTypes> &aggInputTypes, std::vector<DataTypes> &aggOutputTypes,
         std::vector<std::unique_ptr<Aggregator>> &&aggs, std::vector<bool> &inputRaws,
         std::vector<bool> &outputPartials, const std::vector<int8_t> &hasAggFilters,
-        const OperatorConfig &operatorConfig, std::vector<uint32_t> aggFuncTypesVector)
+        const OperatorConfig &operatorConfig, std::vector<uint32_t> aggFuncTypesVector, AggregationNode::Step step)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials),
           groupByCols(groupByCols),
           aggInputCols(aggInputCols),
@@ -45,13 +45,7 @@ public:
           hasAggFilters(hasAggFilters),
           operatorConfig(operatorConfig)
     {
-        isStepPartials = outputPartials.size() != 0;
-        for (auto outputPartial : outputPartials) {
-            if (!outputPartial) {
-                isStepPartials = false;
-                break;
-            }
-        }
+        isStepPartials = isPartialOutput(step) && !groupByCols.empty();
         for (auto i : aggFuncTypesVector) {
             if (i == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL || i == OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL) {
                 isStepPartials = false;
@@ -95,6 +89,11 @@ public:
     uint64_t GetHashMapUniqueKeys() override;
 
     VectorBatch *AlignSchema(VectorBatch *inputVecBatch) override;
+
+    bool isPartialOutput(AggregationNode::Step step) {
+        return step == AggregationNode::Step::K_PARTIAL ||
+               step == AggregationNode::Step::K_INTERMEDIATE;
+    }
 
     void SetRowCountPerBatch(int32_t rowCount)
     {
@@ -281,7 +280,7 @@ public:
         std::vector<std::vector<uint32_t>> &aggsCols, std::vector<DataTypes> &aggInputTypes,
         std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
         std::vector<uint32_t> &maskColsVector, std::vector<bool> inputRaws, std::vector<bool> outputPartials,
-        const std::vector<int8_t> &hasAggFilters, const OperatorConfig &operatorConfig)
+        const std::vector<int8_t> &hasAggFilters, const OperatorConfig &operatorConfig, AggregationNode::Step step)
         : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector,
         operatorConfig.GetOverflowConfig()->IsOverflowAsNull(), operatorConfig.IsStatisticalAggregate()),
           groupByColsVector(groupByCol),
@@ -291,7 +290,8 @@ public:
           aggOutputTypes(aggOutputTypes),
           aggFuncTypesVector(aggFuncTypes),
           hasAggFilters(hasAggFilters),
-          operatorConfig(operatorConfig)
+          operatorConfig(operatorConfig),
+          step(step)
     {}
 
     ~HashAggregationOperatorFactory() override = default;
@@ -316,6 +316,7 @@ private:
     HandleType handleType;
     std::vector<int8_t> hasAggFilters;
     OperatorConfig operatorConfig;
+    AggregationNode::Step step;
     void ChooseGroupByType();
 };
 } // end of namespace omniruntime::op

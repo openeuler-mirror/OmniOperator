@@ -20,9 +20,15 @@ static constexpr int32_t ERROR_BUFFER_SIZE = 128;
 
 static void GetErrorMsg(int32_t errorCode, char *buffer, int32_t bufferLen)
 {
-    if (strerror_r(errorCode, buffer, bufferLen) == nullptr) {
-        throw exception::OmniException("SPILL FAILED", "strerror failed.");
+    if (buffer == nullptr || bufferLen <= 0) return;
+
+    const char* msg = strerror(errorCode);
+    if (msg == nullptr) {
+        msg = "Unknown error";
     }
+
+    strncpy(buffer, msg, bufferLen - 1);
+    buffer[bufferLen - 1] = '\0';
 }
 
 class SortOrder {
@@ -78,6 +84,10 @@ public:
 
 private:
     template <typename T> ErrorCode ReadVector(vec::BaseVector *vector, int32_t rowCount);
+
+    ErrorCode ReadArrayVector(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
+
+    ErrorCode ReadComplexVector(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
 
     ErrorCode Read(void *buf, size_t bufSize);
 
@@ -196,10 +206,10 @@ class SpillMerger {
 public:
     static SpillMerger *Create(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
         const std::vector<SortOrder> &sortOrders, SpillTracker *spillTracker,
-        const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled)
+        const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled, bool isAggOp = false)
     {
         std::vector<OperatorUtil::CompareFunc> sortCompareFuncs;
-        SetCompareFunctions(dataTypes, sortCols, sortOrders, sortCompareFuncs);
+        SetCompareFunctions(dataTypes, sortCols, sortOrders, sortCompareFuncs, isAggOp);
 
         std::vector<SpillMergeStream *> streams;
         uint64_t totalRowCount = 0;
@@ -261,11 +271,11 @@ public:
 
 private:
     static void SetCompareFunctions(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
-        const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs);
+        const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp = false);
 
     template <typename T>
     static void SetCompareFunction(bool isAscending, bool isNullsFirst,
-        std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs);
+        std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp = false);
 
     SpillMerger(const std::vector<SpillMergeStream *> &streams, uint64_t totalRowCount, SpillTracker *spillTracker)
         : mergeStreams(new LoserTree<SpillMergeStream>(streams)),

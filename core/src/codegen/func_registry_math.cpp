@@ -292,7 +292,9 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(NotEqualInt32), NotEqualFnStr(), {}, intParams, OMNI_BOOLEAN, INPUT_DATA),
 
         // insert pmod function for project operator support
-        Function(reinterpret_cast<void *>(Pmod), PmodFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Pmod<int16_t>), PmodFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Pmod<int32_t>), PmodFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Pmod<int64_t>), PmodFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
         // insert native functions for each round math function
         Function(reinterpret_cast<void *>(Round<int32_t>), RoundFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(RoundLong), RoundFnStr(), {}, { OMNI_LONG, OMNI_INT }, OMNI_LONG,

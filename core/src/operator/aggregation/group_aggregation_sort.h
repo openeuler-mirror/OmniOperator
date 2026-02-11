@@ -10,6 +10,8 @@
 #include "aggregator/aggregator.h"
 #include "type/data_types.h"
 #include "type/string_ref.h"
+#include "operator/hashmap/base_hash_map.h"
+
 
 namespace omniruntime::op {
 class AggregationSort {
@@ -84,11 +86,10 @@ private:
 
     static ALWAYS_INLINE bool HashKeyCompare(const omniruntime::op::KeyValue &a, omniruntime::op::KeyValue &b)
     {
-        int ret = memcmp(a.keyAddr, b.keyAddr, std::min(a.keyLen, b.keyLen));
-        if (ret == 0) {
-            return a.keyLen < b.keyLen;
+        if (a.keyLen == b.keyLen) {
+            return memcmp(a.keyAddr, b.keyAddr, std::min(a.keyLen, b.keyLen)) < 0;
         } else {
-            return ret < 0;
+            return a.keyLen < b.keyLen;
         }
     }
 };

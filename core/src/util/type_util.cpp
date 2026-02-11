@@ -67,6 +67,8 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Array";
         case OMNI_MAP:
             return "Map";
+        case OMNI_ROW:
+            return "Row";
         default:
             return "UNKNOWN";
     }

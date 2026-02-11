@@ -5679,4 +5679,39 @@ TEST(HashAggregationOperatorTest, test_hashagg_groupbysingle_spill)
     VectorHelper::FreeVecBatches(result);
     VectorHelper::FreeVecBatch(expectVecBatch1);
 }
+
+TEST(HashAggregationOperatorTest, test_step) {
+        std::vector<uint32_t> groupByCol({0});
+        DataTypes groupInputTypes(std::vector<DataTypePtr>({LongType()}));
+        std::vector<uint32_t> aggInputCols({1});
+        auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
+        DataTypes aggInputTypes(std::vector<DataTypePtr>({ LongType() }));
+        auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+        DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType() }));
+        auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+        std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM };
+        std::vector<uint32_t> maskColsVector = { static_cast<uint32_t>(-1) };
+        auto inputRaws = std::vector<bool>(aggFuncTypes.size(), true);
+        auto outputPartials = std::vector<bool>(aggFuncTypes.size(), true);
+        SparkSpillConfig spillConfig(GenerateSpillPath(), INT32_MAX, 0);
+        OperatorConfig operatorConfig(spillConfig);
+        std::vector<int8_t> hasAggFilters = { static_cast<int8_t>(-1) };
+        auto hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, groupInputTypes, aggInputColsWrap,
+                                                                         aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypes, maskColsVector,
+                                                                         inputRaws, outputPartials, hasAggFilters, operatorConfig,AggregationNode::Step::K_PARTIAL);
+        hashAggOperatorFactory->Init();
+        auto *hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
+        EXPECT_EQ(true, hashAggOperator->IsStepPartials());
+
+        auto hashAggOperatorFactory2 = new HashAggregationOperatorFactory(groupByCol, groupInputTypes, aggInputColsWrap,
+                                                                    aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypes, maskColsVector,
+                                                                    inputRaws, outputPartials, hasAggFilters, operatorConfig,AggregationNode::Step::K_SINGLE);
+        hashAggOperatorFactory2->Init();
+        auto *hashAggOperator2 = static_cast<HashAggregationOperator *>(hashAggOperatorFactory2->CreateOperator());
+        EXPECT_EQ(false, hashAggOperator2->IsStepPartials());
+        omniruntime::op::Operator::DeleteOperator(hashAggOperator);
+        delete hashAggOperatorFactory;
+        omniruntime::op::Operator::DeleteOperator(hashAggOperator2);
+        delete hashAggOperatorFactory2;
+}
 }
