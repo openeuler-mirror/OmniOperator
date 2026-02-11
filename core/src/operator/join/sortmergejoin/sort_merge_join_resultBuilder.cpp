@@ -102,9 +102,9 @@ void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig* overflowConfig)
     values = new int64_t[originalAllColsCount];
     nulls = new bool[originalAllColsCount];
     lengths = new int32_t[originalAllColsCount];
-    memset_sp(values, sizeof(int64_t) * originalAllColsCount, 0, sizeof(int64_t) * originalAllColsCount);
-    memset_sp(nulls, sizeof(bool) * originalAllColsCount, 0, sizeof(bool) * originalAllColsCount);
-    memset_sp(lengths, sizeof(int32_t) * originalAllColsCount, 0, sizeof(int32_t) * originalAllColsCount);
+    memset(values, 0, sizeof(int64_t) * originalAllColsCount);
+    memset(nulls, 0, sizeof(bool) * originalAllColsCount);
+    memset(lengths, 0, sizeof(int32_t) * originalAllColsCount);
 }
 
 void JoinResultBuilder::JoinFilterExprCodeGen(OverflowConfig *overflowConfig)
@@ -137,9 +137,9 @@ void JoinResultBuilder::JoinFilterExprCodeGen(OverflowConfig *overflowConfig)
     values = new int64_t[originalAllColsCount];
     nulls = new bool[originalAllColsCount];
     lengths = new int32_t[originalAllColsCount];
-    memset_sp(values, sizeof(int64_t) * originalAllColsCount, 0, sizeof(int64_t) * originalAllColsCount);
-    memset_sp(nulls, sizeof(bool) * originalAllColsCount, 0, sizeof(bool) * originalAllColsCount);
-    memset_sp(lengths, sizeof(int32_t) * originalAllColsCount, 0, sizeof(int32_t) * originalAllColsCount);
+    memset(values, 0, sizeof(int64_t) * originalAllColsCount);
+    memset(nulls, 0, sizeof(bool) * originalAllColsCount);
+    memset(lengths, 0, sizeof(int32_t) * originalAllColsCount);
 }
 
 VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const

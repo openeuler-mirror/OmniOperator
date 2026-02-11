@@ -83,12 +83,7 @@ void NullColumnProjection(ExecutionContext *context, BaseVector *outVec)
 {
     auto outNulls = unsafe::UnsafeBaseVector::GetNulls(outVec);
     auto outNullsSize = BitUtil::Nbytes(outVec->GetSize());
-    auto result = memset_s(outNulls, outNullsSize, -1, outNullsSize);
-    if (result != EOK) {
-        std::string errorMessage = "Memset failed, ret " + std::to_string(result) + " destMax " +
-            std::to_string(outNullsSize) + " count " + std::to_string(outNullsSize);
-        OMNI_THROW("Runtime error", "NullColumnProjection:" + errorMessage);
-    }
+    memset(outNulls, -1, outNullsSize);
 }
 
 void ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec, const LiteralExpr &literalVal)

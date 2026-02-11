@@ -174,7 +174,7 @@ public:
         if (numWords > bits_.size()) {
             bits_.resize(numWords);
         }
-        memcpy_s(bits_.data(), numWords * 8, bits, numWords * 8);
+        memcpy(bits_.data(), bits, numWords * 8);
         size_ = size;
         end_ = size;
         begin_ = 0;
@@ -187,7 +187,7 @@ public:
         if (numWords > bits_.size()) {
             bits_.resize(numWords);
         }
-        memcpy_s(bits_.data(), numWords * 8, bits, numWords * 8);
+        memcpy(bits_.data(), bits, numWords * 8);
         BitUtil::Negate(bits_.data(), size);
         size_ = size;
         end_ = size;

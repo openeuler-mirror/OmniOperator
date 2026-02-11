@@ -36,7 +36,6 @@
 #include <string>
 #include <cstring>
 #include <limits>
-#include <libboundscheck/include/securec.h>
 #include "width_integer.h"
 #include "big_integer.h"
 
@@ -72,7 +71,7 @@ template<class Dest, class Source>
 static inline Dest BitCast(const Source &source)
 {
     Dest dest;
-    memmove_s(&dest, sizeof(dest), &source, sizeof(dest));
+    memmove(&dest, &source, sizeof(dest));
     return dest;
 }
 

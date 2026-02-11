@@ -404,7 +404,7 @@ static inline uint64_t UInt64FromBigEndian(const uint8_t* bytes, int32_t length)
     // Using memcpy instead of special casing for length
     // and doing the conversion in 16, 32 parts, which could
     // possibly create unaligned memory access on certain platforms
-    memcpy_s(reinterpret_cast<uint8_t*>(&result) + 8 - length, length, bytes, length);
+    memcpy(reinterpret_cast<uint8_t*>(&result) + 8 - length, bytes, length);
     return ::arrow::bit_util::FromBigEndian(result);
 }
 

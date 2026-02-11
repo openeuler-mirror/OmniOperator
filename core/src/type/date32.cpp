@@ -123,7 +123,7 @@ int64_t TimestampUtil::TmToStringView(const std::tm &tmValue, char *const startP
         // Append leading zeros when there is the requirement for minumum width.
         if (minWidth.has_value() && numDigits < minWidth.value()) {
             const auto leadingZeros = minWidth.value() - numDigits;
-            memset_s(position, leadingZeros, '0', leadingZeros);
+            memset(position, '0', leadingZeros);
             offset += leadingZeros;
         }
 

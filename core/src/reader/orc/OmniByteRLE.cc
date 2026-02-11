@@ -316,7 +316,7 @@ namespace omniruntime::reader {
                         }
                     }
                 } else {
-                    memset_s(data + position, count, value, count);
+                    memset(data + position, value, count);
                     consumed = count;
                 }
             } else {
@@ -336,7 +336,7 @@ namespace omniruntime::reader {
                         uint64_t copyBytes =
                         std::min(static_cast<uint64_t>(count - i),
                                                     static_cast<uint64_t>(bufferEnd - bufferStart));
-                        memcpy_s(data + position + i, copyBytes, bufferStart, copyBytes);
+                        memcpy(data + position + i, bufferStart, copyBytes);
                         bufferStart += copyBytes;
                         i += copyBytes;
                     }
@@ -376,7 +376,7 @@ namespace omniruntime::reader {
                         }
                     }
                 } else {
-                    memset_s(data + position, count, value, count);
+                    memset(data + position, value, count);
                     consumed = count;
                 }
             } else {
@@ -396,7 +396,7 @@ namespace omniruntime::reader {
                         uint64_t copyBytes =
                                 std::min(static_cast<uint64_t>(count - i),
                                          static_cast<uint64_t>(bufferEnd - bufferStart));
-                        memcpy_s(data + position + i, copyBytes, bufferStart, copyBytes);
+                        memcpy(data + position + i, bufferStart, copyBytes);
                         bufferStart += copyBytes;
                         i += copyBytes;
                     }

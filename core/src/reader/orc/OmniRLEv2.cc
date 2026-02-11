@@ -907,7 +907,7 @@ namespace omniruntime::reader {
                    }
                }
            } else {
-               memcpy_s(data + offset, nRead * sizeof(int64_t), literals.data() + runRead, nRead * sizeof(int64_t));
+               memcpy(data + offset, literals.data() + runRead, nRead * sizeof(int64_t));
                runRead += nRead;
            }
         } else {

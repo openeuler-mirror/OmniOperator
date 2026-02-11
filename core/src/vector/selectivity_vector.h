@@ -33,7 +33,7 @@ public:
     explicit SelectivityVector(uint8_t *nulls, size_t arrayLength, size_t bitNum)
     {
         bits.resize(omniruntime::Nwords(bitNum), 0);
-        memcpy_s(bits.data(), sizeof(uint64_t) * bits.size(), nulls, sizeof(uint8_t) * arrayLength);
+        memcpy(bits.data(), nulls, sizeof(uint8_t) * arrayLength);
         elementSize = bitNum;
         begin = 0;
         end = elementSize;

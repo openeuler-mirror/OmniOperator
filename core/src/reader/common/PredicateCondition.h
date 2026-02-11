@@ -305,17 +305,11 @@ namespace common {
             auto vectorSize = vector->GetSize();
             switch (op) {
                 case TRUE: {
-                    errno_t opTrueRet = memset_s(bitMark, BitUtil::Nbytes(bitSize), -1, BitUtil::Nbytes(bitSize));
-                    if (UNLIKELY(opTrueRet != EOK)) {
-                        throw OmniException("OPERATOR_RUNTIME_ERROR", "LeafPredicateCondition TRUE memset_s fail.");
-                    }
+                    memset(bitMark, -1, BitUtil::Nbytes(bitSize));
                     break;
                 }
                 case FALSE: {
-                    errno_t opFalseRet = memset_s(bitMark, BitUtil::Nbytes(bitSize), 0, BitUtil::Nbytes(bitSize));
-                    if (UNLIKELY(opFalseRet != EOK)) {
-                        throw OmniException("OPERATOR_RUNTIME_ERROR", "LeafPredicateCondition FALSE memset_s fail.");
-                    }
+                    memset(bitMark, 0, BitUtil::Nbytes(bitSize));
                     break;
                 }
                 case EQUAL_TO: {
@@ -354,11 +348,7 @@ namespace common {
                     break;
                 }
                 case IS_NULL: {
-                    errno_t opIsNullRet = memcpy_s(bitMark, BitUtil::Nbytes(vectorSize),
-                         UnsafeBaseVector::GetNulls(vector), BitUtil::Nbytes(vectorSize));
-                    if (UNLIKELY(opIsNullRet != EOK)) {
-                        throw OmniException("OPERATOR_RUNTIME_ERROR", "LeafPredicateCondition IS_NULL memcpy_s fail.");
-                    }
+                    memcpy(bitMark, UnsafeBaseVector::GetNulls(vector), BitUtil::Nbytes(vectorSize));
                     break;
                 }
                 default:

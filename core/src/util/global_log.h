@@ -11,7 +11,6 @@
 #include <string>
 #include <iostream>
 #include <sstream>
-#include <libboundscheck/include/securec.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +20,7 @@ extern "C" {
     stringStream << "[" << __FILE__ << "][" << __FUNCTION__ << "][" << __LINE__ << "]" << formatStr
 
 #define LogsInfoVargMacro(logBuf, format, ...)                                                                   \
-    snprintf_s(logBuf, GLOBAL_LOG_BUF_SIZE, GLOBAL_LOG_BUF_SIZE, "[%s][%s][%d]:" format, __FILE__, __FUNCTION__, \
+    snprintf(logBuf, GLOBAL_LOG_BUF_SIZE, "[%s][%s][%d]:" format, __FILE__, __FUNCTION__, \
         __LINE__, ##__VA_ARGS__)
 
 enum class LogType {

@@ -5,7 +5,6 @@
 #ifndef OMNI_RUNTIME_DATA_UTILS_H
 #define OMNI_RUNTIME_DATA_UTILS_H
 #include <iostream>
-#include <libboundscheck/include/securec.h>
 
 namespace omniruntime {
 namespace type {

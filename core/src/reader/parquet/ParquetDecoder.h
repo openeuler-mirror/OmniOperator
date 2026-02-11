@@ -61,7 +61,7 @@ namespace omniruntime::reader {
     template <typename T>
     inline int SpacedExpand(T* buffer, int num_values, int null_count, uint8_t* nulls, int64_t nullsOffset) {
         int idx_decode = num_values - null_count;
-        memset_s(static_cast<void*>(buffer + idx_decode), null_count * sizeof(T), 0, null_count * sizeof(T));
+        memset(static_cast<void*>(buffer + idx_decode), 0, null_count * sizeof(T));
         if (idx_decode == 0) {
             // All nulls, nothing more to do
             return num_values;
@@ -69,7 +69,7 @@ namespace omniruntime::reader {
         for (int i = num_values - 1; i >= 0; --i) {
             if (!BitUtil::IsBitSet(nulls, nullsOffset + i)) {
                 idx_decode--;
-                memmove_s(buffer + i, sizeof(T), buffer + idx_decode, sizeof(T));
+                memmove(buffer + i, buffer + idx_decode, sizeof(T));
             }
         }
         if (idx_decode != 0) {
@@ -382,7 +382,7 @@ namespace omniruntime::reader {
             ::parquet::ParquetException::EofException();
         }
         if (bytes_to_decode > 0) {
-            memcpy_s(out, data_size, data, bytes_to_decode);
+            memcpy(out, data, bytes_to_decode);
         }
         return static_cast<int>(bytes_to_decode);
     }
@@ -429,7 +429,7 @@ namespace omniruntime::reader {
             ::parquet::ParquetException::EofException();
         }
 
-        memcpy_s(reinterpret_cast<uint8_t*>(out), bytes_to_decode, data, bytes_to_decode);
+        memcpy(reinterpret_cast<uint8_t*>(out), data, bytes_to_decode);
 
         return static_cast<int>(bytes_to_decode);
     }

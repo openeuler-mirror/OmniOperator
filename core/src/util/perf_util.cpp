@@ -34,8 +34,8 @@
  **
  */
 #include "perf_util.h"
-#include <libboundscheck/include/securec.h>
 #include <cstdio>
+#include <cstring>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
@@ -44,7 +44,7 @@
 void PerfUtil::Init()
 {
     struct perf_event_attr pe {};
-    memset_s(&pe, sizeof(struct perf_event_attr), 0, sizeof(struct perf_event_attr));
+    memset(&pe, 0, sizeof(struct perf_event_attr));
     pe.type = PERF_TYPE_HARDWARE;
     pe.size = sizeof(struct perf_event_attr);
     pe.config = PERF_COUNT_HW_INSTRUCTIONS;

@@ -12,7 +12,6 @@
 #include <cstring>
 #include <regex>
 #include <cmath>
-#include <libboundscheck/include/securec.h>
 #include "codegen/context_helper.h"
 #include "codegen/functions/decimal_arithmetic_functions.h"
 #include "codegen/functions/decimal_cast_functions.h"

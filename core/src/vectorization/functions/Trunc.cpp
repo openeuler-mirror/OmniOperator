@@ -65,7 +65,7 @@ public:
             // Copy NULL bits from date input to result (so NULL rows are already set to NULL)
             auto *resultNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
             auto nullsSize = BitUtil::Nbytes(size);
-            memcpy_s(resultNulls, nullsSize, dateNulls, nullsSize);
+            memcpy(resultNulls, dateNulls, nullsSize);
             
             // Process only non-NULL rows using SelectivityVector
             SelectivityVector rows(size);
