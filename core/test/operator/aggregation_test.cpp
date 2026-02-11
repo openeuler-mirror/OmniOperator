@@ -1597,6 +1597,100 @@ TEST(HashAggregationOperatorTest, verify_first_val)
     delete aggFinalFactory;
 }
 
+TEST(HashAggregationOperatorTest, verify_last_val)
+{
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
+    const int vecBatchNum = 1;
+    const int rowSize = 20;
+    const int cardinality = 10;
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_LAST_IGNORENULL,
+        OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL };
+    std::vector<DataTypePtr> groupTypes = { VarcharType(5) };
+    std::vector<DataTypePtr> aggTypes = { VarcharType(5), VarcharType(5) };
+    VectorBatch **input1 = BuildAggInput(vecBatchNum, rowSize, cardinality, 1, 2, groupTypes, aggTypes);
+
+    std::vector<uint32_t> groupByCol0({ 0 });
+    DataTypes groupInputTypes0(groupTypes);
+    std::vector<std::vector<uint32_t>> aggsCols0({ { 1 }, { 2 } });
+    std::vector<DataTypes> aggInputTypes0({ DataTypes(std::vector<DataTypePtr>({ VarcharType(5) })),
+        DataTypes(std::vector<DataTypePtr>({ VarcharType(5) })) });
+    std::vector<DataTypes> aggOutputTypes0({ DataTypes(std::vector<DataTypePtr>({ VarcharType(5), BooleanType() })),
+        DataTypes(std::vector<DataTypePtr>({ VarcharType(5), BooleanType() })) });
+    std::vector<uint32_t> maskColsVector0({ static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) });
+    std::vector<bool> inputRaws0({ true, true });
+    std::vector<bool> outputPartials0({ true, true });
+    auto aggPartialFactory = new HashAggregationOperatorFactory(groupByCol0, groupInputTypes0, aggsCols0,
+        aggInputTypes0, aggOutputTypes0, aggFuncTypes, maskColsVector0, inputRaws0, outputPartials0);
+    aggPartialFactory->Init();
+
+    auto aggPartial1 = aggPartialFactory->CreateOperator();
+    aggPartial1->Init();
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        aggPartial1->AddInput(input1[i]);
+    }
+
+    VectorBatch *outputVecBatch1 = nullptr;
+    int32_t vecBatchCount = aggPartial1->GetOutput(&outputVecBatch1);
+    EXPECT_EQ(vecBatchCount, 1);
+    op::Operator::DeleteOperator(aggPartial1);
+
+    VectorBatch **input2 = BuildAggInput(vecBatchNum, rowSize, cardinality, 1, 2, groupTypes, aggTypes);
+
+    auto aggPartial2 = aggPartialFactory->CreateOperator();
+    aggPartial2->Init();
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        aggPartial2->AddInput(input2[i]);
+    }
+
+    VectorBatch *outputVecBatch2 = nullptr;
+    int32_t tableCount2 = aggPartial2->GetOutput(&outputVecBatch2);
+    EXPECT_EQ(tableCount2, 1);
+    op::Operator::DeleteOperator(aggPartial2);
+
+    std::vector<uint32_t> groupByCol1({ 0 });
+    DataTypes groupInputTypes1(groupTypes);
+    std::vector<std::vector<uint32_t>> aggsCols1({ { 1, 2 }, { 3, 4 } });
+    std::vector<DataTypes> aggInputTypes1({ DataTypes(std::vector<DataTypePtr>({ VarcharType(5), BooleanType() })),
+        DataTypes(std::vector<DataTypePtr>({ VarcharType(5), BooleanType() })) });
+    std::vector<DataTypes> aggOutputTypes1({ DataTypes(std::vector<DataTypePtr>({ VarcharType(5) })),
+        DataTypes(std::vector<DataTypePtr>({ VarcharType(5) })) });
+    std::vector<uint32_t> maskColsVector1({ static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) });
+    std::vector<bool> inputRaws1({ false, false });
+    std::vector<bool> outputPartials1({ false, false });
+    auto aggFinalFactory = new HashAggregationOperatorFactory(groupByCol1, groupInputTypes1, aggsCols1, aggInputTypes1,
+        aggOutputTypes1, aggFuncTypes, maskColsVector1, inputRaws1, outputPartials1);
+    aggFinalFactory->Init();
+
+    auto aggFinal = aggFinalFactory->CreateOperator();
+    aggFinal->Init();
+
+    aggFinal->AddInput(outputVecBatch1);
+    aggFinal->AddInput(outputVecBatch2);
+
+    VectorBatch *outputVecBatch3 = nullptr;
+    aggFinal->GetOutput(&outputVecBatch3);
+    op::Operator::DeleteOperator(aggFinal);
+
+    std::vector<DataTypePtr> expectFieldTypes { VarcharType(5), VarcharType(5), VarcharType(5) };
+    DataTypes expectTypes(expectFieldTypes);
+    // BuildAggInput: group col = to_string(j % 10), agg col = to_string(j). So each group k has two rows:
+    // first row agg="k", last row agg="10+k". Last(agg) must be "10","11",...,"19" (same row order as groups).
+    std::string expectData1[cardinality] = {"1", "2", "9", "3", "5", "4", "7", "0", "6", "8"};
+    std::string expectData2[cardinality] = {"11", "12", "19", "13", "15", "14", "17", "10", "16", "18"};
+    std::string expectData3[cardinality] = {"11", "12", "19", "13", "15", "14", "17", "10", "16", "18"};
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, cardinality, expectData1, expectData2, expectData3);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch3, expectVecBatch));
+    EXPECT_EQ(outputVecBatch3->GetVectorCount(), 3);
+
+    delete[] input1;
+    delete[] input2;
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch3);
+    delete aggPartialFactory;
+    delete aggFinalFactory;
+}
+
 #ifdef DISABLE_TEST_NO_NEED_OCCUPY_BRANCH_TEST
 TEST(HashAggregationOperatorTest, DISABLED_original_multiple_threads)
 {
@@ -5841,6 +5935,249 @@ TEST(AggregatorTest, first_int_ignorenull_2steps_test)
     delete firstIgnoreNullFactory;
 }
 
+// last basic function: last with ignore null (single group, no groupKey)
+TEST(AggregatorTest, last_short_ignorenull_test)
+{
+    auto lastIgnoreNullFactory = new LastAggregatorFactory(OMNI_AGGREGATION_TYPE_LAST_IGNORENULL);
+    std::vector<int32_t> channal0 = { 0 };
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto lastIgnoreNullShortAggPartial =
+        lastIgnoreNullFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(ShortType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(ShortType()).get()), channal0, true, true);
+    lastIgnoreNullShortAggPartial->SetExecutionContext(executionContext.get());
+
+    auto *inputShortVec1 = new Vector<short>(5);
+    for (int i = 0; i < 5; i++) {
+        inputShortVec1->SetNull(i);
+    }
+
+    auto *vecBatch1 = new VectorBatch(1);
+    vecBatch1->Append(inputShortVec1);
+
+    auto *resultLastVec1 = new Vector<short>(1);
+    auto *resultValueSetVec1 = new Vector<bool>(1);
+    std::vector<BaseVector *> extractVecs = { resultLastVec1, resultValueSetVec1 };
+
+    auto state = NewAndInitState(lastIgnoreNullShortAggPartial.get());
+
+    lastIgnoreNullShortAggPartial->ProcessGroup(state.get(), vecBatch1, 0);
+    lastIgnoreNullShortAggPartial->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_TRUE(resultLastVec1->IsNull(0));
+    EXPECT_FALSE(resultValueSetVec1->GetValue(0));
+
+    lastIgnoreNullShortAggPartial->ProcessGroup(state.get(), vecBatch1, 4);
+    lastIgnoreNullShortAggPartial->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_TRUE(resultLastVec1->IsNull(0));
+    EXPECT_FALSE(resultValueSetVec1->GetValue(0));
+
+    // second batch: null, 211, 212 -> last non-null is 212
+    auto *inputShortVec2 = new Vector<short>(3);
+    inputShortVec2->SetNull(0);
+    inputShortVec2->SetValue(1, 211);
+    inputShortVec2->SetValue(2, 212);
+    auto *vecBatch2 = new VectorBatch(1);
+    vecBatch2->Append(inputShortVec2);
+
+    lastIgnoreNullShortAggPartial->ProcessGroup(state.get(), vecBatch2, 0);
+    lastIgnoreNullShortAggPartial->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_TRUE(resultLastVec1->IsNull(0));
+    EXPECT_FALSE(resultValueSetVec1->GetValue(0));
+
+    lastIgnoreNullShortAggPartial->ProcessGroup(state.get(), vecBatch2, 1);
+    lastIgnoreNullShortAggPartial->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_EQ(211, resultLastVec1->GetValue(0));
+    EXPECT_TRUE(resultValueSetVec1->GetValue(0));
+
+    lastIgnoreNullShortAggPartial->ProcessGroup(state.get(), vecBatch2, 2);
+    lastIgnoreNullShortAggPartial->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_EQ(212, resultLastVec1->GetValue(0));
+    EXPECT_TRUE(resultValueSetVec1->GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch1);
+    VectorHelper::FreeVecBatch(vecBatch2);
+    delete resultLastVec1;
+    delete resultValueSetVec1;
+    delete lastIgnoreNullFactory;
+}
+
+// last basic function: last with ignore null, int type (single group, no groupKey)
+TEST(AggregatorTest, last_int_ignorenull_test)
+{
+    auto lastIgnoreNullFactory = new LastAggregatorFactory(OMNI_AGGREGATION_TYPE_LAST_IGNORENULL);
+    std::vector<int32_t> channal0 = { 0 };
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto lastIgnoreNullIntAggPartial =
+        lastIgnoreNullFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal0, true, true);
+    lastIgnoreNullIntAggPartial->SetExecutionContext(executionContext.get());
+
+    auto *inputIntVec1 = new Vector<int32_t>(5);
+    for (int i = 0; i < 5; i++) {
+        inputIntVec1->SetNull(i);
+    }
+
+    auto *vecBatch1 = new VectorBatch(1);
+    vecBatch1->Append(inputIntVec1);
+
+    auto *resultLastVec1 = new Vector<int32_t>(1);
+    auto *resultValueSetVec1 = new Vector<bool>(1);
+    std::vector<BaseVector *> extractVecs = { resultLastVec1, resultValueSetVec1 };
+
+    auto state = NewAndInitState(lastIgnoreNullIntAggPartial.get());
+
+    lastIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 0);
+    lastIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_TRUE(resultLastVec1->IsNull(0));
+    EXPECT_FALSE(resultValueSetVec1->GetValue(0));
+
+    // second batch: null, 211, 212 -> last non-null is 212
+    auto *inputIntVec2 = new Vector<int32_t>(3);
+    inputIntVec2->SetNull(0);
+    inputIntVec2->SetValue(1, 211);
+    inputIntVec2->SetValue(2, 212);
+    auto *vecBatch2 = new VectorBatch(1);
+    vecBatch2->Append(inputIntVec2);
+
+    lastIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch2, 1);
+    lastIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_EQ(211, resultLastVec1->GetValue(0));
+    EXPECT_TRUE(resultValueSetVec1->GetValue(0));
+
+    lastIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch2, 2);
+    lastIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_EQ(212, resultLastVec1->GetValue(0));
+    EXPECT_TRUE(resultValueSetVec1->GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch1);
+    VectorHelper::FreeVecBatch(vecBatch2);
+    delete resultLastVec1;
+    delete resultValueSetVec1;
+    delete lastIgnoreNullFactory;
+}
+
+// last basic function: last include null (single group, no groupKey)
+TEST(AggregatorTest, last_int_includenull_test)
+{
+    auto lastWithNullFactory = new LastAggregatorFactory(OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL);
+    std::vector<int32_t> channal0 = { 0 };
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto lastWithNullIntAggPartial =
+        lastWithNullFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal0, true, true);
+    lastWithNullIntAggPartial->SetExecutionContext(executionContext.get());
+
+    auto *inputIntVec1 = new Vector<int32_t>(5);
+    inputIntVec1->SetNull(0);
+    inputIntVec1->SetNull(1);
+    inputIntVec1->SetValue(2, 111);
+    inputIntVec1->SetValue(3, 113);
+    inputIntVec1->SetNull(4);
+
+    auto *vecBatch1 = new VectorBatch(1);
+    vecBatch1->Append(inputIntVec1);
+
+    auto *resultLastVec1 = new Vector<int32_t>(1);
+    auto *resultValueSetVec1 = new Vector<bool>(1);
+    std::vector<BaseVector *> extractVecs = { resultLastVec1, resultValueSetVec1 };
+
+    auto state = NewAndInitState(lastWithNullIntAggPartial.get());
+    lastWithNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 0);
+    lastWithNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_TRUE(resultLastVec1->IsNull(0));
+    EXPECT_TRUE(resultValueSetVec1->GetValue(0));
+
+    lastWithNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 4);
+    lastWithNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_TRUE(resultLastVec1->IsNull(0));
+    EXPECT_TRUE(resultValueSetVec1->GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch1);
+    delete resultLastVec1;
+    delete resultValueSetVec1;
+    delete lastWithNullFactory;
+}
+
+// last agg function for 2 steps partial + final (single group, no groupKey)
+TEST(AggregatorTest, last_int_ignorenull_2steps_test)
+{
+    auto lastIgnoreNullFactory = new LastAggregatorFactory(OMNI_AGGREGATION_TYPE_LAST_IGNORENULL);
+
+    std::vector<int32_t> channal0 = { 0 };
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto lastIgnoreNullIntAggPartial =
+        lastIgnoreNullFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
+    lastIgnoreNullIntAggPartial->SetExecutionContext(executionContext.get());
+
+    auto *inputLongVec1 = new Vector<int64_t>(2);
+    inputLongVec1->SetNull(0);
+    inputLongVec1->SetValue(1, 222);
+
+    auto *vecBatch1 = new VectorBatch(1);
+    vecBatch1->Append(inputLongVec1);
+
+    auto *resultLastVec1 = new Vector<int64_t>(1);
+    auto *resultValueSetVec1 = new Vector<bool>(1);
+    std::vector<BaseVector *> extractVecs1 = { resultLastVec1, resultValueSetVec1 };
+
+    auto partialState = NewAndInitState(lastIgnoreNullIntAggPartial.get());
+    lastIgnoreNullIntAggPartial->ProcessGroup(partialState.get(), vecBatch1, 0);
+    lastIgnoreNullIntAggPartial->ExtractValues(partialState.get(), extractVecs1, 0);
+    EXPECT_TRUE(resultLastVec1->IsNull(0));
+    EXPECT_FALSE(resultValueSetVec1->GetValue(0));
+
+    lastIgnoreNullIntAggPartial->ProcessGroup(partialState.get(), vecBatch1, 1);
+    lastIgnoreNullIntAggPartial->ExtractValues(partialState.get(), extractVecs1, 0);
+    EXPECT_FALSE(resultLastVec1->IsNull(0));
+    EXPECT_EQ(222, resultLastVec1->GetValue(0));
+
+    std::vector<DataTypePtr> vector;
+    vector.push_back(LongType());
+    vector.push_back(BooleanType());
+    DataTypesPtr inputTypes = std::make_unique<DataTypes>(vector);
+
+    std::vector<int32_t> channal2 = { 0, 1 };
+    auto lastIgnoreNullIntAggFinal = lastIgnoreNullFactory->CreateAggregator(*inputTypes.get(),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal2, false, false);
+    lastIgnoreNullIntAggFinal->SetExecutionContext(executionContext.get());
+
+    // final input: partial results (val, valueSet); last one has value 333
+    auto *inputLongVec2 = new Vector<int64_t>(4);
+    inputLongVec2->SetValue(0, 111);
+    inputLongVec2->SetValue(1, 222);
+    inputLongVec2->SetNull(2);
+    inputLongVec2->SetValue(3, 333);
+
+    auto *inputBooleanVec2 = new Vector<bool>(4);
+    inputBooleanVec2->SetValue(0, true);
+    inputBooleanVec2->SetValue(1, true);
+    inputBooleanVec2->SetValue(2, false);
+    inputBooleanVec2->SetValue(3, true);
+
+    auto *vecBatch2 = new VectorBatch(2);
+    vecBatch2->Append(inputLongVec2);
+    vecBatch2->Append(inputBooleanVec2);
+
+    auto *resultLastVec2 = new Vector<int64_t>(1);
+    std::vector<BaseVector *> extractVecs2 = { resultLastVec2 };
+
+    auto finalState = NewAndInitState(lastIgnoreNullIntAggFinal.get());
+    lastIgnoreNullIntAggFinal->ProcessGroup(finalState.get(), vecBatch2, 0);
+    lastIgnoreNullIntAggFinal->ProcessGroup(finalState.get(), vecBatch2, 1);
+    lastIgnoreNullIntAggFinal->ProcessGroup(finalState.get(), vecBatch2, 2);
+    lastIgnoreNullIntAggFinal->ProcessGroup(finalState.get(), vecBatch2, 3);
+    lastIgnoreNullIntAggFinal->ExtractValues(finalState.get(), extractVecs2, 0);
+    EXPECT_FALSE(resultLastVec2->IsNull(0));
+    EXPECT_EQ(333, resultLastVec2->GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch1);
+    VectorHelper::FreeVecBatch(vecBatch2);
+    delete resultLastVec1;
+    delete resultValueSetVec1;
+    delete resultLastVec2;
+    delete lastIgnoreNullFactory;
+}
+
 TEST(AggregatorTest, typed_aggregator_test)
 {
     class TestTypeAggregator : public TypedAggregator {
@@ -6494,5 +6831,40 @@ TEST(HashAggregationOperatorTest, test_hashagg_groupbysingle_spill)
     delete hashAggOperatorFactory;
     VectorHelper::FreeVecBatches(result);
     VectorHelper::FreeVecBatch(expectVecBatch1);
+}
+
+TEST(HashAggregationOperatorTest, test_step) {
+        std::vector<uint32_t> groupByCol({0});
+        DataTypes groupInputTypes(std::vector<DataTypePtr>({LongType()}));
+        std::vector<uint32_t> aggInputCols({1});
+        auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
+        DataTypes aggInputTypes(std::vector<DataTypePtr>({ LongType() }));
+        auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+        DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType() }));
+        auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+        std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM };
+        std::vector<uint32_t> maskColsVector = { static_cast<uint32_t>(-1) };
+        auto inputRaws = std::vector<bool>(aggFuncTypes.size(), true);
+        auto outputPartials = std::vector<bool>(aggFuncTypes.size(), true);
+        SparkSpillConfig spillConfig(GenerateSpillPath(), INT32_MAX, 0);
+        OperatorConfig operatorConfig(spillConfig);
+        std::vector<int8_t> hasAggFilters = { static_cast<int8_t>(-1) };
+        auto hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, groupInputTypes, aggInputColsWrap,
+                                                                         aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypes, maskColsVector,
+                                                                         inputRaws, outputPartials, hasAggFilters, operatorConfig,AggregationNode::Step::K_PARTIAL);
+        hashAggOperatorFactory->Init();
+        auto *hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
+        EXPECT_EQ(true, hashAggOperator->IsStepPartials());
+
+        auto hashAggOperatorFactory2 = new HashAggregationOperatorFactory(groupByCol, groupInputTypes, aggInputColsWrap,
+                                                                    aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypes, maskColsVector,
+                                                                    inputRaws, outputPartials, hasAggFilters, operatorConfig,AggregationNode::Step::K_SINGLE);
+        hashAggOperatorFactory2->Init();
+        auto *hashAggOperator2 = static_cast<HashAggregationOperator *>(hashAggOperatorFactory2->CreateOperator());
+        EXPECT_EQ(false, hashAggOperator2->IsStepPartials());
+        omniruntime::op::Operator::DeleteOperator(hashAggOperator);
+        delete hashAggOperatorFactory;
+        omniruntime::op::Operator::DeleteOperator(hashAggOperator2);
+        delete hashAggOperatorFactory2;
 }
 }

@@ -17,9 +17,9 @@ namespace op {
 class SpillWriter {
 public:
     SpillWriter(const type::DataTypes &dataTypes, const std::string &dirPath, uint64_t writeBufferSize = 0,
-                bool IsSpillCompressEnabled = false)
+                bool enableSpillCompression = false)
         : dataTypes(dataTypes), dirPath(dirPath), writeBufferSize(writeBufferSize), writeBufferOffset(0),
-          IsSpillCompressEnabled(IsSpillCompressEnabled)
+          IsSpillCompressEnabled(enableSpillCompression)
     {
         if (writeBufferSize != 0) {
             writeBuffer = new char[writeBufferSize];
@@ -51,9 +51,17 @@ private:
     template <typename T>
     ErrorCode WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
 
+    ErrorCode WriteArrayVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
+
+    ErrorCode WriteComplexVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
+
     ErrorCode WriteVecBatchToFile(vec::VectorBatch *vectorBatch);
 
     template <typename T> ErrorCode WriteVector(omniruntime::vec::BaseVector *vector, int32_t rowCount);
+
+    ErrorCode WriteArrayVector(const DataTypePtr& dataType, omniruntime::vec::BaseVector* vector, int32_t rowCount);
+
+    ErrorCode WriteComplexVector(const DataTypePtr& dataType, omniruntime::vec::BaseVector* vector, int32_t rowCount);
 
     ErrorCode Write(void *buf, size_t length);
 
@@ -83,9 +91,9 @@ class Spiller {
 public:
     Spiller(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
         const std::vector<SortOrder> &sortOrders, const std::string &spillPath, uint64_t maxSpillBytes,
-        uint64_t writeBufferSize = 0, bool isSpillCompressEnabled = false)
+        uint64_t writeBufferSize = 0, bool enableSpillCompression = false)
         : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders), writeBufferSize(writeBufferSize),
-          isSpillCompressEnabled(isSpillCompressEnabled)
+          isSpillCompressEnabled(enableSpillCompression)
     {
         dirPaths.emplace_back(spillPath);
         int32_t dataTypeCount = dataTypes.GetSize();
@@ -118,9 +126,15 @@ public:
         return spillFiles;
     }
 
-    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool isSpillCompressEnabled)
+    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool enableSpillCompression)
     {
-        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, isSpillCompressEnabled);
+        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, enableSpillCompression);
+        return merger;
+    }
+
+    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles, bool enableSpillCompression, bool isAggOp)
+    {
+        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles, enableSpillCompression, isAggOp);
         return merger;
     }
 
@@ -149,6 +163,10 @@ private:
     uint64_t CollectVecBatchSize(vec::VectorBatch *vectorBatch);
 
     template <typename T> uint64_t CollectVectorSize(vec::BaseVector *vector);
+
+    uint64_t CollectComplexVectorSize(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
+
+    uint64_t CollectArrayVectorSize(const DataTypePtr &arrayType, vec::BaseVector *vector, int32_t rowCount);
 
     DataTypes dataTypes;
     std::vector<int32_t> sortCols;

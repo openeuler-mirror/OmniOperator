@@ -93,6 +93,15 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterFunction<PositionFunction, int32_t, std::string_view, std::string_view>(
         prefix + "position", {OMNI_CHAR, OMNI_CHAR}, OMNI_INT);
 
+    // bit_length(string/binary) -> integer
+    // Returns the bit length of the input (byte length * 8)
+    RegisterFunction<BitLengthFunction, int32_t, std::string_view>(
+        prefix + "bit_length", {OMNI_VARCHAR}, OMNI_INT);
+    RegisterFunction<BitLengthFunction, int32_t, std::string_view>(
+        prefix + "bit_length", {OMNI_CHAR}, OMNI_INT);
+    RegisterFunction<BitLengthFunction, int32_t, std::string_view>(
+        prefix + "bit_length", {OMNI_VARBINARY}, OMNI_INT);
+
     // lpad(string, size, padString) -> varchar
     // Left pads string to size characters with padString
     // Support all combinations of VARCHAR/CHAR string types and INT32/INT64 size types
@@ -132,5 +141,6 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "rpad", {OMNI_CHAR, OMNI_LONG, OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<RPadFunction, std::string, std::string_view, int32_t, std::string_view>(
         prefix + "rpad", {OMNI_CHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR);
+
 }
 }

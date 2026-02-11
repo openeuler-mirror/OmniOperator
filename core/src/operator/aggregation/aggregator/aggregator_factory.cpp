@@ -62,6 +62,12 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
         case OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL: {
             return std::make_unique<FirstIncludeNullAggregatorFactory>();
         }
+        case OMNI_AGGREGATION_TYPE_LAST_IGNORENULL: {
+            return std::make_unique<LastIgnoreNullAggregatorFactory>();
+        }
+        case OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL: {
+            return std::make_unique<LastIncludeNullAggregatorFactory>();
+        }
         case OMNI_AGGREGATION_TYPE_MIN_BY: {
             return std::make_unique<MinByAggregatorFactory>();
         }
@@ -501,6 +507,105 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateAggregator(const DataT
         default: {
             std::string omniExceptionInfo =
                 "In function FirstAggregatorFactory::CreateAggregator, no such input type " +
+                std::to_string(inputTypeId);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+        }
+    }
+}
+
+template <typename InputType>
+std::unique_ptr<Aggregator> LastAggregatorFactory::CreateLastAggregatorHelper(FunctionType aggregateType,
+    const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw,
+    bool outputPartial, bool isOverflowAsNull)
+{
+    if (inputRaw) {
+        if (outputPartial) {
+            if (aggregateType == OMNI_AGGREGATION_TYPE_LAST_IGNORENULL) {
+                return std::make_unique<LastAggregator<true, true, true, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            } else {
+                return std::make_unique<LastAggregator<true, true, false, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            }
+        } else {
+            if (aggregateType == OMNI_AGGREGATION_TYPE_LAST_IGNORENULL) {
+                return std::make_unique<LastAggregator<true, false, true, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            } else {
+                return std::make_unique<LastAggregator<true, false, false, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            }
+        }
+    } else {
+        if (outputPartial) {
+            if (aggregateType == OMNI_AGGREGATION_TYPE_LAST_IGNORENULL) {
+                return std::make_unique<LastAggregator<false, true, true, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            } else {
+                return std::make_unique<LastAggregator<false, true, false, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            }
+        } else {
+            if (aggregateType == OMNI_AGGREGATION_TYPE_LAST_IGNORENULL) {
+                return std::make_unique<LastAggregator<false, false, true, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            } else {
+                return std::make_unique<LastAggregator<false, false, false, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            }
+        }
+    }
+}
+
+std::unique_ptr<Aggregator> LastAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
+{
+    auto inputTypeId = inputTypes.GetIds()[0];
+    switch (inputTypeId) {
+        case OMNI_BOOLEAN: {
+            return CreateLastAggregatorHelper<bool>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_BYTE: {
+            return CreateLastAggregatorHelper<int8_t>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_SHORT: {
+            return CreateLastAggregatorHelper<int16_t>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_INT:
+        case OMNI_DATE32: {
+            return CreateLastAggregatorHelper<int32_t>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_LONG:
+        case OMNI_TIMESTAMP:
+        case OMNI_DECIMAL64: {
+            return CreateLastAggregatorHelper<int64_t>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_FLOAT: {
+            return CreateLastAggregatorHelper<float>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_DOUBLE: {
+            return CreateLastAggregatorHelper<double>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_DECIMAL128: {
+            return CreateLastAggregatorHelper<Decimal128>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        case OMNI_VARCHAR:
+        case OMNI_CHAR: {
+            return CreateLastAggregatorHelper<std::string_view>(aggregateType, inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull);
+        }
+        default: {
+            std::string omniExceptionInfo =
+                "In function LastAggregatorFactory::CreateAggregator, no such input type " +
                 std::to_string(inputTypeId);
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }

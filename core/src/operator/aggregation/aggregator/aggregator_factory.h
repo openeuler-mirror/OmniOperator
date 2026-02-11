@@ -258,6 +258,35 @@ public:
     ~FirstIncludeNullAggregatorFactory() override = default;
 };
 
+class LastAggregatorFactory : public AggregatorFactory {
+public:
+    explicit LastAggregatorFactory(FunctionType aggregateType) : aggregateType(aggregateType) {}
+    ~LastAggregatorFactory() override = default;
+    template <typename InputType>
+    std::unique_ptr<Aggregator> CreateLastAggregatorHelper(FunctionType aggregateType, const DataTypes &inputTypes,
+        const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true);
+
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = false) override;
+
+private:
+    FunctionType aggregateType;
+};
+
+class LastIgnoreNullAggregatorFactory : public LastAggregatorFactory {
+public:
+    explicit LastIgnoreNullAggregatorFactory() : LastAggregatorFactory(OMNI_AGGREGATION_TYPE_LAST_IGNORENULL) {}
+    ~LastIgnoreNullAggregatorFactory() override = default;
+};
+
+class LastIncludeNullAggregatorFactory : public LastAggregatorFactory {
+public:
+    explicit LastIncludeNullAggregatorFactory() : LastAggregatorFactory(OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL) {}
+    ~LastIncludeNullAggregatorFactory() override = default;
+};
+
 class AverageAggregatorFactory : public TypedAggregatorFactory<AverageAggregator> {
 public:
     AverageAggregatorFactory() : TypedAggregatorFactory<AverageAggregator>() {}

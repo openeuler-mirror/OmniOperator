@@ -351,6 +351,33 @@ struct UnBase64Function {
     }
 };
 
+/// bit_length(string/binary) -> integer
+/// Returns the bit length of the input string or binary.
+/// The bit length is the byte length multiplied by 8.
+/// Examples:
+///   bit_length("") = 0
+///   bit_length("1") = 8
+///   bit_length("123") = 24
+///   bit_length("hello") = 40
+template <typename T>
+struct BitLengthFunction {
+    ALWAYS_INLINE Status call(int32_t &result, const std::string_view &input)
+    {
+        
+        // Bit length = byte length * 8
+        result = static_cast<int32_t>(input.size() * 8);
+        return Status::OK();
+    }
+    
+    ALWAYS_INLINE Status callNullable(int32_t &result, const std::string_view *input)
+    {
+        if (input == nullptr) {
+            return Status::UserError("bit_length received NULL input");
+        }
+        return call(result, *input);
+    }
+};
+
 /// Pad functions base template
 /// pad(string, size, padString) -> varchar
 /// Pads string to size characters with padString. If size is less than the length

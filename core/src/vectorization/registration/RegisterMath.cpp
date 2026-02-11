@@ -18,6 +18,7 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterIsNullFunction(prefix + "isnull");
     RegisterBinaryNumeric<PlusFunction>({prefix + "add"});
     RegisterBinaryLogical<And>(prefix + "and");
+	RegisterBinaryLogical<Or>(prefix + "or");
     RegisterUnaryIntegral<Not>(prefix + "not");
     RegisterBinaryNumeric<MinusFunction>({prefix + "subtract"});
     RegisterBinaryNumeric<MultiplyFunction>({prefix + "multiply"});
@@ -70,9 +71,20 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<HexVarcharFunction, std::string, std::string_view>(prefix + "hex", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<HexVarcharFunction, std::string, std::string_view>(prefix + "hex", {OMNI_CHAR}, OMNI_VARCHAR);
     RegisterFunction<HexVarbinaryFunction, std::string, std::string_view>(prefix + "hex", {OMNI_VARBINARY}, OMNI_VARCHAR);
+
+    // Register floor: floor(long) -> long, floor(double) -> long
+    // In Spark, floor must return Long type
+    RegisterFunction<FloorFunction, int64_t, int64_t>(prefix + "floor", {OMNI_LONG}, OMNI_LONG);
+    RegisterFunction<FloorFunction, int64_t, double>(prefix + "floor", {OMNI_DOUBLE}, OMNI_LONG);
+
+    // Register factorial: factorial(int) -> bigint
+    // Input: int32 (OMNI_INT), Output: int64 (OMNI_LONG)
+    RegisterFunction<FactorialFunction, int64_t, int32_t>(prefix + "factorial", {OMNI_INT}, OMNI_LONG);
+
     RegisterFunction<ConvFunction, std::string, std::string_view, int32_t, int32_t>(
         prefix + "conv", {OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
     RegisterFunction<ConvFunction, std::string, std::string_view, int32_t, int32_t>(
         prefix + "conv", {OMNI_CHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
+
 }
 }

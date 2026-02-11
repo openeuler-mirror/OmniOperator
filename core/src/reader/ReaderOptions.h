@@ -85,6 +85,7 @@ private:
     int64_t splitEnd_;
     std::unique_ptr<::orc::SearchArgument> searchArgument_;
     std::list<std::string> includedColumnsList_;
+    std::list<std::string> allColumnsList_;
     Expression parquetPushedFilterArray_;
     std::vector<std::string> parquetIncludedColumns_;
 
@@ -220,6 +221,11 @@ public:
     void SetIncludedColumnsList(std::list<std::string> includedColumnsList)
     {
         includedColumnsList_ = includedColumnsList;
+    }
+
+    std::list<std::string>& GetAllColumnsList()
+    {
+        return allColumnsList_;
     }
 
     const Expression& GetParquetPushedFilterArray() const

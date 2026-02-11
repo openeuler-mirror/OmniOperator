@@ -238,11 +238,11 @@ public:
         const std::vector<DataTypes> aggsOutputTypes, const std::vector<uint32_t> &aggFuncTypes,
         const std::vector<ExprPtr> &aggFilters, const std::vector<uint32_t> &maskColumns,
         const std::vector<bool> &inputRaws, const std::vector<bool> &outputPartials, const bool isStatisticalAggregate,
-        const DataTypesPtr outputType, PlanNodePtr source)
+        const DataTypesPtr outputType, PlanNodePtr source, Step step)
         : PlanNode(id), groupByKeys(groupByKeys), groupByNum(groupByNum), aggKeys(aggKeys),
           sourceDataTypes(sourceDataTypes), aggsOutputTypes(aggsOutputTypes), aggFuncTypes(aggFuncTypes),
           aggFilters(aggFilters), maskColumns(maskColumns), inputRaws(inputRaws), outputPartials(outputPartials),
-        isStatisticalAggregate(isStatisticalAggregate), outputType(outputType), sources({source}) {}
+        isStatisticalAggregate(isStatisticalAggregate), outputType(outputType), sources({source}), step(step) {}
 
     ~AggregationNode() override = default;
 
@@ -274,6 +274,8 @@ public:
 
     const std::vector<DataTypes> &GetAggsOutputTypes() const { return aggsOutputTypes; }
 
+    Step GetStep() const { return step;}
+
 private:
     const std::vector<ExprPtr> groupByKeys;
     const uint32_t groupByNum;
@@ -288,6 +290,7 @@ private:
     bool isStatisticalAggregate;
     const DataTypesPtr outputType;
     const std::vector<PlanNodePtr> sources;
+    const Step step;
 };
 
 class WindowNode : public PlanNode {

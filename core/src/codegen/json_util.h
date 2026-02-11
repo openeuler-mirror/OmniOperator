@@ -9,9 +9,10 @@
 #include <string>
 #include <optional>
 #include "codegen/context_helper.h"
-#include "nlohmann/json.hpp"
-#include <optional>
-using json = nlohmann::json;
+#include "rapidjson/document.h"
+#include "rapidjson/reader.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
 
 namespace omniruntime::codegen::function {
 
@@ -107,38 +108,47 @@ private:
 
 inline std::optional<std::string> traverse_and_extract(const std::string_view json_sv, JsonPathTokenizer& tok)
 {
-    auto json_parse = json::parse(json_sv.begin(), json_sv.end());
+    rapidjson::Document doc;
+    doc.Parse<rapidjson::kParseNoFlags>(json_sv.data(), json_sv.size());
+    if (doc.HasParseError()) {
+        return std::nullopt;
+    }
+
+    rapidjson::Value* current = &doc;
     while (tok.hasNext()) {
         auto tokenOpt = tok.next();
-        if (!tokenOpt) {
+        if (!tokenOpt || tokenOpt->empty()) {
             return std::nullopt;
         }
-        const std::string& token = *tokenOpt;
-        if (json_parse.is_object()) {
-            if (!json_parse.contains(token)) {
+        const std::string_view& token = *tokenOpt;
+
+        const char* token_cstr = token.data();
+        if (current->IsObject()) {
+            if (!current->HasMember(token_cstr)) {
                 return std::nullopt;
             }
-            json_parse = json_parse[token];
-        } else if (json_parse.is_array()) {
-            size_t idx = 0;
-            idx = std::stoul(token);
-            if (idx >= json_parse.size()) {
+            current = &(*current)[token_cstr];
+        } else if (current->IsArray()) {
+            char* end = nullptr;
+            size_t idx = strtoul(token_cstr, &end, 10);
+            if (end == token_cstr || idx >= current->Size()) {
                 return std::nullopt;
             }
-            json_parse = json_parse[idx];
+            current = &(*current)[static_cast<rapidjson::SizeType>(idx)];
         } else {
             return std::nullopt;
         }
     }
-
-    if (json_parse.is_null()) {
+    if (current->IsNull()) {
         return std::nullopt;
+    } else if (current->IsString()) {
+        return std::string(current->GetString(), current->GetStringLength());
+    } else {
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        current->Accept(writer);
+        return std::string(buffer.GetString(), buffer.GetSize());
     }
-
-    if (json_parse.is_string()) {
-        return json_parse.get<std::string>();
-    }
-    return json_parse.dump(-1);
 }
 }
 #endif

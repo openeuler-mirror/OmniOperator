@@ -24,6 +24,8 @@ static bool HasArgument(int32_t functionType)
         case OMNI_AGGREGATION_TYPE_MIN:
         case OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL:
         case OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL:
+        case OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL:
+        case OMNI_AGGREGATION_TYPE_LAST_IGNORENULL:
             return true;
         default:
             return false;

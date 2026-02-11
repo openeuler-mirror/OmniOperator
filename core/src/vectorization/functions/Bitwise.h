@@ -136,4 +136,50 @@ struct BitGetFunction {
         return Status::OK();
     }
 };
+/// Bit Count function
+ 	 /// bit_count(x) -> int32_t
+ 	 /// Returns the number of bits that are set (1) in the binary representation of x.
+ 	 /// Supports: bool, byte, short, int, long
+ 	 /// Examples:
+ 	 ///   bit_count(0) = 0
+ 	 ///   bit_count(1) = 1
+ 	 ///   bit_count(255) = 8 (0xFF has 8 bits set)
+ 	 ///   bit_count(-1) = 8 for int8_t (0xFF), 32 for int32_t (0xFFFFFFFF)
+ 	 template <typename T>
+ 	 struct BitCountFunction {
+ 	     template <typename TInput>
+ 	     ALWAYS_INLINE Status call(int32_t &result, const TInput &num)
+ 	     {
+ 	         
+ 	         // Calculate the number of bits to count based on input type
+ 	         constexpr int kMaxBits = sizeof(TInput) * 8;
+ 	         
+ 	         // Convert to unsigned type for proper bit counting
+ 	         // This ensures negative numbers are counted correctly
+ 	         if constexpr (std::is_same_v<TInput, bool>) {
+ 	             // For boolean: true=1, false=0
+ 	             result = num ? 1 : 0;
+ 	         } else if constexpr (sizeof(TInput) <= 4) {
+ 	             // For 8-bit, 16-bit, and 32-bit integers
+ 	             // Mask to only count the relevant bits
+ 	             uint32_t value;
+ 	             if constexpr (std::is_same_v<TInput, int8_t>) {
+ 	                 value = static_cast<uint8_t>(num);
+ 	             } else if constexpr (std::is_same_v<TInput, int16_t>) {
+ 	                 value = static_cast<uint16_t>(num);
+ 	             } else {
+ 	                 value = static_cast<uint32_t>(num);
+ 	             }
+ 	             // Use GCC/Clang built-in popcount for 32-bit
+ 	             result = __builtin_popcount(value);
+ 	         } else {
+ 	             // For 64-bit integers
+ 	             uint64_t value = static_cast<uint64_t>(num);
+ 	             // Use GCC/Clang built-in popcountll for 64-bit
+ 	             result = __builtin_popcountll(value);
+ 	         }
+ 	         
+ 	         return Status::OK();
+ 	}
+};
 }

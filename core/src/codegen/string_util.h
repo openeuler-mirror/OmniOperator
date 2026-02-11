@@ -19,6 +19,7 @@ static std::string REPLACE_ERR_MSG = "Replace failed";
 static std::string CONCAT_ERR_MSG = "Concat failed";
 static std::string CONCAT_WS_ERR_MSG = "ConcatWs failed";
 static constexpr uint8_t EMPTY[] = "";
+static constexpr int32_t NAIVE_SEARCH_THRESHOLD = 16;
 static int32_t STEP = static_cast<int>('a') - static_cast<int>('A');
 static uint8_t BytesOfCodePointInUTF8[] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x00..0F
@@ -252,7 +253,17 @@ public:
 
     static inline bool StrContainsStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen)
     {
-        std::unique_ptr<int[]>next = std::make_unique<int[]>(matchLen);
+        if (matchLen <= NAIVE_SEARCH_THRESHOLD) {
+            const char *end = srcStr + (srcLen - matchLen);
+            for (const char *p = srcStr; p <= end; ++p) {
+                if (memcmp(p, matchStr, matchLen) == 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        int next[matchLen];
         next[0] = -1;
         int i = 0;
         int j = -1;

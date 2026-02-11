@@ -63,45 +63,9 @@ ErrorCode SpillReader::ReadVecBatch(std::unique_ptr<vec::VectorBatch> &vectorBat
     }
 
     int32_t vecCount = vectorBatchPtr->GetVectorCount();
-    auto vecTypeIds = dataTypes.GetIds();
     for (int32_t vecIndex = 0; vecIndex < vecCount; vecIndex++) {
-        ErrorCode result = ErrorCode::SUCCESS;
         BaseVector *vector = vectorBatchPtr->Get(vecIndex);
-        int32_t typeId = vecTypeIds[vecIndex];
-        switch (typeId) {
-            case OMNI_BOOLEAN:
-                result = ReadVector<bool>(vector, rowCount);
-                break;
-            case OMNI_INT:
-            case OMNI_DATE32:
-                result = ReadVector<int32_t>(vector, rowCount);
-                break;
-            case OMNI_SHORT:
-                result = ReadVector<int16_t>(vector, rowCount);
-                break;
-            case OMNI_LONG:
-            case OMNI_DECIMAL64:
-            case OMNI_TIMESTAMP:
-                result = ReadVector<int64_t>(vector, rowCount);
-                break;
-            case OMNI_DOUBLE:
-                result = ReadVector<double>(vector, rowCount);
-                break;
-            case OMNI_VARBINARY:
-            case OMNI_VARCHAR:
-            case OMNI_CHAR:
-                result = ReadVector<std::string_view>(vector, rowCount);
-                break;
-            case OMNI_DECIMAL128:
-                result = ReadVector<Decimal128>(vector, rowCount);
-                break;
-            case OMNI_BYTE:
-                result = ReadVector<int8_t>(vector, rowCount);
-                break;
-            default:
-                result = ErrorCode::READ_FAILED;
-                break;
-        }
+        ErrorCode result = ReadComplexVector(dataTypes.GetType(vecIndex), vector, rowCount);
         if (result != ErrorCode::SUCCESS) {
             isEnd = true;
             fclose(file);
@@ -192,14 +156,111 @@ std::pair<size_t, bool> parseCompressionHeader(const char* header_buf) {
     return {compressedSize, is_original};
 }
 
+ErrorCode SpillReader::ReadArrayVector(const DataTypePtr &dataType, BaseVector *vector, int32_t rowCount)
+{
+    auto arrayVec = static_cast<omniruntime::vec::ArrayVector*>(vector);
+
+    // read null
+    uint8_t* nulls = unsafe::UnsafeBaseVector::GetNulls(arrayVec);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+
+    if (Read(nulls, nullsSize) != ErrorCode::SUCCESS) {
+        LogError("Read array nulls from %s failed.", filePath.c_str());
+        return ErrorCode::READ_FAILED;
+    }
+
+    // read offsets (int64_t[RowCount + 1])
+    int64_t* offsets = arrayVec->GetOffsets();
+    ssize_t offsetsSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int64_t));
+    if (Read(offsets, offsetsSize) != ErrorCode::SUCCESS) {
+        LogError("Read array offsets from %s failed.", filePath.c_str());
+        return ErrorCode::READ_FAILED;
+    }
+
+    auto arrayType = std::dynamic_pointer_cast<ArrayType>(dataType);
+    if (!arrayType) {
+        LogError("DataType is not ArrayType for OMNI_ARRAY column.");
+        return ErrorCode::READ_FAILED;
+    }
+    const auto& elementType = arrayType->ElementType();
+
+    int32_t elementRowCount = static_cast<int32_t>(offsets[rowCount]);
+    auto elementVec = arrayVec->GetElementVector();
+    if (!elementVec) {
+        LogError("arrayVec->GetElementVector() is null.");
+        return ErrorCode::READ_FAILED;
+    }
+    elementVec->Expand(elementRowCount);
+
+    // read element vector
+    auto result = ReadComplexVector(elementType, elementVec.get(), elementRowCount);
+    if (result != ErrorCode::SUCCESS) {
+        LogError("Failed to read array element vector from %s.", filePath.c_str());
+        return result;
+    }
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode SpillReader::ReadComplexVector(const DataTypePtr &dataType, BaseVector *vector, int32_t rowCount)
+{
+    ErrorCode result = ErrorCode::SUCCESS;
+    int32_t typeId = dataType->GetId();
+    switch (typeId) {
+        case OMNI_BOOLEAN:
+            result = ReadVector<bool>(vector, rowCount);
+            break;
+        case OMNI_INT:
+        case OMNI_DATE32:
+            result = ReadVector<int32_t>(vector, rowCount);
+            break;
+        case OMNI_SHORT:
+            result = ReadVector<int16_t>(vector, rowCount);
+            break;
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+        case OMNI_TIMESTAMP:
+            result = ReadVector<int64_t>(vector, rowCount);
+            break;
+        case OMNI_DOUBLE:
+            result = ReadVector<double>(vector, rowCount);
+            break;
+        case OMNI_VARBINARY:
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+            result = ReadVector<std::string_view>(vector, rowCount);
+            break;
+        case OMNI_DECIMAL128:
+            result = ReadVector<Decimal128>(vector, rowCount);
+            break;
+        case OMNI_BYTE:
+            result = ReadVector<int8_t>(vector, rowCount);
+            break;
+        case OMNI_ARRAY:
+            result = ReadArrayVector(dataType, vector, rowCount);
+            break;
+        default:
+            result = ErrorCode::READ_FAILED;
+            LogError("ReadComplexVector failed for unsupported typeId=%s", std::to_string(typeId));
+            break;
+    }
+    return result;
+}
+
 ErrorCode SpillReader::Read(void *buf, size_t bufSize)
 {
+    // clear before error
+    clearerr(file);
     if (!isSpillCompressEnabled) {
-        if (fread(buf, bufSize, NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
-            auto errorNum = errno;
+        size_t nread = fread(buf, bufSize, NUMBER_OF_ELEMENTS, file);
+        if (nread < NUMBER_OF_ELEMENTS) {
+            // save errno
+            int savedErrno = ferror(file) ? errno : 0;
+            if (savedErrno == 0 && feof(file)) {
+                savedErrno = EIO;
+            }
             char errorBuf[ERROR_BUFFER_SIZE];
-            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
-            LogError("Read from %s failed since %s.", filePath.c_str(), errorBuf);
+            GetErrorMsg(savedErrno, errorBuf, ERROR_BUFFER_SIZE);
+            LogError("Read from %s failed: %s (errno=%d)", filePath.c_str(), errorBuf, savedErrno);
             return ErrorCode::READ_FAILED;
         }
         return ErrorCode::SUCCESS;
@@ -279,7 +340,7 @@ int32_t SpillMergeStream::CompareTo(const SpillMergeStream &other)
 }
 
 void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
-    const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs)
+    const std::vector<SortOrder> &sortOrders, std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp)
 {
     auto dataTypeIds = dataTypes.GetIds();
     auto sortColSize = sortCols.size();
@@ -309,7 +370,7 @@ void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const st
             case OMNI_VARBINARY:
             case OMNI_CHAR:
             case OMNI_VARCHAR:
-                SetCompareFunction<std::string_view>(isAscending, isNullsFirst, sortCompareFuncs);
+                SetCompareFunction<std::string_view>(isAscending, isNullsFirst, sortCompareFuncs, isAggOp);
                 break;
             case OMNI_DECIMAL128:
                 SetCompareFunction<Decimal128>(isAscending, isNullsFirst, sortCompareFuncs);
@@ -318,16 +379,28 @@ void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const st
                 SetCompareFunction<int8_t>(isAscending, isNullsFirst, sortCompareFuncs);
                 break;
             default:
-                break;
+                std::string errStr = "Do not support the data type" + std::to_string(typeId) +
+                    " in SetCompareFunctions.";
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errStr);
         }
     }
 }
 
 template <typename T>
 void SpillMerger::SetCompareFunction(bool isAscending, bool isNullsFirst,
-    std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs)
+    std::vector<OperatorUtil::CompareFunc> &sortCompareFuncs, bool isAggOp)
 {
-    if (isAscending && isNullsFirst) {
+    if (isAggOp) {
+        if (isAscending && isNullsFirst) {
+            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, true, true, true>);
+        } else if (isAscending && !isNullsFirst) {
+            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, true, true, false>);
+        } else if (!isAscending && isNullsFirst) {
+            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, false, true, true>);
+        } else {
+            sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplateForAgg<T, false, true, false>);
+        }
+    } else if (isAscending && isNullsFirst) {
         sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplate<T, true, true, true>);
     } else if (isAscending && !isNullsFirst) {
         sortCompareFuncs.emplace_back(OperatorUtil::CompareFlatTemplate<T, true, true, false>);
