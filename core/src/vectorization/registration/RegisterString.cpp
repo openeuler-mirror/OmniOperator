@@ -149,5 +149,18 @@ void RegisterStringFunctions(const std::string &prefix)
     // overlay(input, replace, pos, len) -> varchar
     RegisterFunction<OverlayFunction, std::string, std::string_view, std::string_view, int32_t, int32_t>(
         prefix + "overlay", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
+
+    // split_part(string, delimiter, index) -> varchar
+    // Splits string on delimiter and returns the part at index (1-based).
+    // Returns NULL if index is larger than the number of fields.
+    // Supports VARCHAR and CHAR string types with INT64 index type.
+    RegisterFunction<SplitPartFunction, std::string, std::string_view, std::string_view, int64_t>(
+        prefix + "split_part", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_LONG}, OMNI_VARCHAR);
+    RegisterFunction<SplitPartFunction, std::string, std::string_view, std::string_view, int64_t>(
+        prefix + "split_part", {OMNI_VARCHAR, OMNI_CHAR, OMNI_LONG}, OMNI_VARCHAR);
+    RegisterFunction<SplitPartFunction, std::string, std::string_view, std::string_view, int64_t>(
+        prefix + "split_part", {OMNI_CHAR, OMNI_VARCHAR, OMNI_LONG}, OMNI_VARCHAR);
+    RegisterFunction<SplitPartFunction, std::string, std::string_view, std::string_view, int64_t>(
+        prefix + "split_part", {OMNI_CHAR, OMNI_CHAR, OMNI_LONG}, OMNI_VARCHAR);
 }
 }
