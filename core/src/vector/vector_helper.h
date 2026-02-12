@@ -529,6 +529,9 @@ public:
                 return reinterpret_cast<void *>(unsafe::UnsafeStringVector::GetOffsets(varCharVec));
             }
         }
+        if (dataTypeId == type::OMNI_ARRAY) {
+            return reinterpret_cast<void *>(reinterpret_cast<ArrayVector *>(vector)->GetOffsets());
+        }
         return nullptr;
     }
 

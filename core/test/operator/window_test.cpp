@@ -4864,4 +4864,404 @@ TEST(NativeOmniWindowOperatorTest, testWindowSpillWithFrameUnBounded)
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
+
+// ==================== Array type support tests ====================
+
+/*
+ * Test 1: Array<Int> as partition key with ROW_NUMBER.
+ * Input:  col0(Int32 sort key), col1(Array<Int32> partition key)
+ * Query:  ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col0 ASC)
+ * Partitions:
+ *   [1,2]   -> sort vals 10, 20, 50 -> row_number 1, 2, 3
+ *   [3,4,5] -> sort vals 30, 40, 60 -> row_number 1, 2, 3
+ */
+TEST(NativeOmniWindowOperatorTest, testArrayPartitionKeyRowNumber)
+{
+    const int32_t ROW_COUNT = 6;
+    const int32_t TOTAL_ELEMENTS = 15; // 2+2+3+3+2+3
+
+    // ====== Build input VectorBatch manually ======
+    auto *vecBatch = new VectorBatch(ROW_COUNT);
+
+    // col0: Int32 sort key
+    auto *intCol = new Vector<int32_t>(ROW_COUNT);
+    int32_t sortVals[] = {10, 20, 30, 40, 50, 60};
+    for (int i = 0; i < ROW_COUNT; ++i) {
+        intCol->SetValue(i, sortVals[i]);
+    }
+    vecBatch->Append(intCol);
+
+    // col1: Array<Int32> partition key
+    //   Row 0: [1,2], Row 1: [1,2], Row 2: [3,4,5],
+    //   Row 3: [3,4,5], Row 4: [1,2], Row 5: [3,4,5]
+    auto elemVec = std::make_shared<Vector<int32_t>>(TOTAL_ELEMENTS);
+    int32_t elements[] = {1, 2, 1, 2, 3, 4, 5, 3, 4, 5, 1, 2, 3, 4, 5};
+    for (int i = 0; i < TOTAL_ELEMENTS; ++i) {
+        elemVec->SetValue(i, elements[i]);
+    }
+    auto *arrayCol = new ArrayVector(ROW_COUNT, elemVec);
+    arrayCol->SetOffset(0, 0);
+    arrayCol->SetSize(0, 2); // [1,2]
+    arrayCol->SetSize(1, 2); // [1,2]
+    arrayCol->SetSize(2, 3); // [3,4,5]
+    arrayCol->SetSize(3, 3); // [3,4,5]
+    arrayCol->SetSize(4, 2); // [1,2]
+    arrayCol->SetSize(5, 3); // [3,4,5]
+    vecBatch->Append(arrayCol);
+
+    // ====== Configure Window operator ======
+    DataTypePtr intType = IntType();
+    DataTypePtr arrayType = std::make_shared<omniruntime::type::ArrayType>(intType);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({intType, arrayType}));
+
+    int32_t outputCols[] = {0, 1};
+    int32_t partitionCols[] = {1};  // partition by col1 (Array)
+    int32_t sortCols[] = {0};       // order by col0 (Int) ASC
+    int32_t ascendings[] = {1};
+    int32_t nullFirsts[] = {0};
+    int32_t windowFunctionTypes[] = {OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[] = {-1};
+    int32_t windowFrameEndTypes[] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[] = {-1};
+    int32_t preGroupedCols[0] = {};
+    int32_t argumentChannels[0] = {};
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    // allTypes = source types + window result type (LongType for ROW_NUMBER)
+    DataTypes allTypes(std::vector<DataTypePtr>({intType, arrayType, LongType()}));
+
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(
+        sourceTypes, outputCols, 2, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0,
+        sortCols, ascendings, nullFirsts, 1, preSortedChannelPrefix, expectedPositions, allTypes,
+        argumentChannels, 0, windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels,
+        windowFrameEndTypes, windowFrameEndChannels);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    // ====== Verify output ======
+    ASSERT_NE(outputVecBatch, nullptr);
+    EXPECT_EQ(outputVecBatch->GetRowCount(), ROW_COUNT);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 3); // col0 + col1 + row_number
+
+    auto *outInt = static_cast<Vector<int32_t> *>(outputVecBatch->Get(0));
+    auto *outArr = static_cast<ArrayVector *>(outputVecBatch->Get(1));
+    auto *outRowNum = static_cast<Vector<int64_t> *>(outputVecBatch->Get(2));
+
+    for (int i = 0; i < ROW_COUNT; ++i) {
+        int32_t sortKey = outInt->GetValue(i);
+        int64_t rowNum = outRowNum->GetValue(i);
+        int64_t arrSize = outArr->GetSize(i);
+
+        if (arrSize == 2) {
+            // Partition [1,2]
+            auto arrElem = outArr->GetElementVector();
+            int64_t off = outArr->GetOffset(i);
+            EXPECT_EQ(static_cast<Vector<int32_t> *>(arrElem.get())->GetValue(off), 1);
+            EXPECT_EQ(static_cast<Vector<int32_t> *>(arrElem.get())->GetValue(off + 1), 2);
+            // Check row_number assignment: 10->1, 20->2, 50->3
+            if (sortKey == 10) {
+                EXPECT_EQ(rowNum, 1);
+            } else if (sortKey == 20) {
+                EXPECT_EQ(rowNum, 2);
+            } else if (sortKey == 50) {
+                EXPECT_EQ(rowNum, 3);
+            } else {
+                FAIL() << "Unexpected sortKey " << sortKey << " in partition [1,2]";
+            }
+        } else if (arrSize == 3) {
+            // Partition [3,4,5]
+            auto arrElem = outArr->GetElementVector();
+            int64_t off = outArr->GetOffset(i);
+            EXPECT_EQ(static_cast<Vector<int32_t> *>(arrElem.get())->GetValue(off), 3);
+            EXPECT_EQ(static_cast<Vector<int32_t> *>(arrElem.get())->GetValue(off + 1), 4);
+            EXPECT_EQ(static_cast<Vector<int32_t> *>(arrElem.get())->GetValue(off + 2), 5);
+            // Check row_number: 30->1, 40->2, 60->3
+            if (sortKey == 30) {
+                EXPECT_EQ(rowNum, 1);
+            } else if (sortKey == 40) {
+                EXPECT_EQ(rowNum, 2);
+            } else if (sortKey == 60) {
+                EXPECT_EQ(rowNum, 3);
+            } else {
+                FAIL() << "Unexpected sortKey " << sortKey << " in partition [3,4,5]";
+            }
+        } else {
+            FAIL() << "Unexpected array size " << arrSize;
+        }
+    }
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
+/*
+ * Test 2: Array<Int> with NULL arrays and different-length arrays as partition key.
+ * Input:  col0(Int32 sort key), col1(Array<Int32> partition key)
+ * Query:  ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col0 ASC)
+ * Partitions:
+ *   NULL array -> sort vals 10, 40 -> row_number 1, 2
+ *   [1]        -> sort vals 20, 50 -> row_number 1, 2
+ *   [1,2]      -> sort vals 30, 60 -> row_number 1, 2
+ */
+TEST(NativeOmniWindowOperatorTest, testArrayPartitionKeyWithNulls)
+{
+    const int32_t ROW_COUNT = 6;
+    const int32_t TOTAL_ELEMENTS = 6; // 0+1+2+0+1+2
+
+    auto *vecBatch = new VectorBatch(ROW_COUNT);
+
+    // col0: Int32 sort key
+    auto *intCol = new Vector<int32_t>(ROW_COUNT);
+    int32_t sortVals[] = {10, 20, 30, 40, 50, 60};
+    for (int i = 0; i < ROW_COUNT; ++i) {
+        intCol->SetValue(i, sortVals[i]);
+    }
+    vecBatch->Append(intCol);
+
+    // col1: Array<Int32> partition key
+    //   Row 0: NULL,  Row 1: [1],    Row 2: [1,2],
+    //   Row 3: NULL,  Row 4: [1],    Row 5: [1,2]
+    auto elemVec = std::make_shared<Vector<int32_t>>(TOTAL_ELEMENTS);
+    int32_t elements[] = {1, 1, 2, 1, 1, 2};
+    for (int i = 0; i < TOTAL_ELEMENTS; ++i) {
+        elemVec->SetValue(i, elements[i]);
+    }
+    auto *arrayCol = new ArrayVector(ROW_COUNT, elemVec);
+    // Row 0: NULL array
+    arrayCol->SetOffset(0, 0);
+    arrayCol->SetNull(0);
+    // Row 1: [1] (1 element starting at offset 0)
+    arrayCol->SetSize(1, 1); // offsets[2] = offsets[1] + 1 = 0 + 1 = 1
+    // Row 2: [1,2] (2 elements starting at offset 1)
+    arrayCol->SetSize(2, 2); // offsets[3] = offsets[2] + 2 = 1 + 2 = 3
+    // Row 3: NULL array
+    arrayCol->SetNull(3);    // SetNull also sets size to 0, so offsets[4] = offsets[3] + 0 = 3
+    // Row 4: [1] (1 element starting at offset 3)
+    arrayCol->SetSize(4, 1); // offsets[5] = offsets[4] + 1 = 3 + 1 = 4
+    // Row 5: [1,2] (2 elements starting at offset 4)
+    arrayCol->SetSize(5, 2); // offsets[6] = offsets[5] + 2 = 4 + 2 = 6
+    vecBatch->Append(arrayCol);
+
+    // ====== Configure Window operator ======
+    DataTypePtr intType = IntType();
+    DataTypePtr arrayType = std::make_shared<omniruntime::type::ArrayType>(intType);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({intType, arrayType}));
+
+    int32_t outputCols[] = {0, 1};
+    int32_t partitionCols[] = {1};
+    int32_t sortCols[] = {0};
+    int32_t ascendings[] = {1};
+    int32_t nullFirsts[] = {1}; // NULLS FIRST
+    int32_t windowFunctionTypes[] = {OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[] = {-1};
+    int32_t windowFrameEndTypes[] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[] = {-1};
+    int32_t preGroupedCols[0] = {};
+    int32_t argumentChannels[0] = {};
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>({intType, arrayType, LongType()}));
+
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(
+        sourceTypes, outputCols, 2, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0,
+        sortCols, ascendings, nullFirsts, 1, preSortedChannelPrefix, expectedPositions, allTypes,
+        argumentChannels, 0, windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels,
+        windowFrameEndTypes, windowFrameEndChannels);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    // ====== Verify output ======
+    ASSERT_NE(outputVecBatch, nullptr);
+    EXPECT_EQ(outputVecBatch->GetRowCount(), ROW_COUNT);
+
+    auto *outInt = static_cast<Vector<int32_t> *>(outputVecBatch->Get(0));
+    auto *outArr = static_cast<ArrayVector *>(outputVecBatch->Get(1));
+    auto *outRowNum = static_cast<Vector<int64_t> *>(outputVecBatch->Get(2));
+
+    for (int i = 0; i < ROW_COUNT; ++i) {
+        int32_t sortKey = outInt->GetValue(i);
+        int64_t rowNum = outRowNum->GetValue(i);
+        bool isNull = outArr->IsNull(i);
+
+        if (isNull) {
+            // NULL partition: sortKeys 10, 40 -> row_number 1, 2
+            if (sortKey == 10) {
+                EXPECT_EQ(rowNum, 1) << "NULL partition, sortKey=10";
+            } else if (sortKey == 40) {
+                EXPECT_EQ(rowNum, 2) << "NULL partition, sortKey=40";
+            } else {
+                FAIL() << "Unexpected sortKey " << sortKey << " in NULL partition";
+            }
+        } else {
+            int64_t arrSize = outArr->GetSize(i);
+            if (arrSize == 1) {
+                // Partition [1]: sortKeys 20, 50 -> row_number 1, 2
+                if (sortKey == 20) {
+                    EXPECT_EQ(rowNum, 1) << "Partition [1], sortKey=20";
+                } else if (sortKey == 50) {
+                    EXPECT_EQ(rowNum, 2) << "Partition [1], sortKey=50";
+                } else {
+                    FAIL() << "Unexpected sortKey " << sortKey << " in partition [1]";
+                }
+            } else if (arrSize == 2) {
+                // Partition [1,2]: sortKeys 30, 60 -> row_number 1, 2
+                if (sortKey == 30) {
+                    EXPECT_EQ(rowNum, 1) << "Partition [1,2], sortKey=30";
+                } else if (sortKey == 60) {
+                    EXPECT_EQ(rowNum, 2) << "Partition [1,2], sortKey=60";
+                } else {
+                    FAIL() << "Unexpected sortKey " << sortKey << " in partition [1,2]";
+                }
+            } else {
+                FAIL() << "Unexpected array size " << arrSize;
+            }
+        }
+    }
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
+/*
+ * Test 3: Array<Int> with identical arrays having NULL elements inside.
+ * Input:  col0(Int32 sort key), col1(Array<Int32> partition key with NULL elements)
+ * Query:  ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col0 ASC)
+ * Partitions:
+ *   [1,NULL,3] -> sort vals 10, 30 -> row_number 1, 2
+ *   [2,NULL,4] -> sort vals 20, 40 -> row_number 1, 2
+ */
+TEST(NativeOmniWindowOperatorTest, testArrayPartitionKeyWithNullElements)
+{
+    const int32_t ROW_COUNT = 4;
+    const int32_t TOTAL_ELEMENTS = 12; // 3+3+3+3
+
+    auto *vecBatch = new VectorBatch(ROW_COUNT);
+
+    // col0: Int32 sort key
+    auto *intCol = new Vector<int32_t>(ROW_COUNT);
+    int32_t sortVals[] = {10, 20, 30, 40};
+    for (int i = 0; i < ROW_COUNT; ++i) {
+        intCol->SetValue(i, sortVals[i]);
+    }
+    vecBatch->Append(intCol);
+
+    // col1: Array<Int32> with NULL elements
+    //   Row 0: [1, NULL, 3]   (elements at indices 0,1,2; index 1 is null)
+    //   Row 1: [2, NULL, 4]   (elements at indices 3,4,5; index 4 is null)
+    //   Row 2: [1, NULL, 3]   (elements at indices 6,7,8; index 7 is null)
+    //   Row 3: [2, NULL, 4]   (elements at indices 9,10,11; index 10 is null)
+    auto elemVec = std::make_shared<Vector<int32_t>>(TOTAL_ELEMENTS);
+    elemVec->SetValue(0, 1);
+    elemVec->SetNull(1);
+    elemVec->SetValue(2, 3);
+    elemVec->SetValue(3, 2);
+    elemVec->SetNull(4);
+    elemVec->SetValue(5, 4);
+    elemVec->SetValue(6, 1);
+    elemVec->SetNull(7);
+    elemVec->SetValue(8, 3);
+    elemVec->SetValue(9, 2);
+    elemVec->SetNull(10);
+    elemVec->SetValue(11, 4);
+
+    auto *arrayCol = new ArrayVector(ROW_COUNT, elemVec);
+    arrayCol->SetOffset(0, 0);
+    arrayCol->SetSize(0, 3); // [1,NULL,3]
+    arrayCol->SetSize(1, 3); // [2,NULL,4]
+    arrayCol->SetSize(2, 3); // [1,NULL,3]
+    arrayCol->SetSize(3, 3); // [2,NULL,4]
+    vecBatch->Append(arrayCol);
+
+    // ====== Configure Window operator ======
+    DataTypePtr intType = IntType();
+    DataTypePtr arrayType = std::make_shared<omniruntime::type::ArrayType>(intType);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({intType, arrayType}));
+
+    int32_t outputCols[] = {0, 1};
+    int32_t partitionCols[] = {1};
+    int32_t sortCols[] = {0};
+    int32_t ascendings[] = {1};
+    int32_t nullFirsts[] = {0};
+    int32_t windowFunctionTypes[] = {OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[] = {-1};
+    int32_t windowFrameEndTypes[] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[] = {-1};
+    int32_t preGroupedCols[0] = {};
+    int32_t argumentChannels[0] = {};
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>({intType, arrayType, LongType()}));
+
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(
+        sourceTypes, outputCols, 2, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0,
+        sortCols, ascendings, nullFirsts, 1, preSortedChannelPrefix, expectedPositions, allTypes,
+        argumentChannels, 0, windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels,
+        windowFrameEndTypes, windowFrameEndChannels);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    // ====== Verify output ======
+    ASSERT_NE(outputVecBatch, nullptr);
+    EXPECT_EQ(outputVecBatch->GetRowCount(), ROW_COUNT);
+
+    auto *outInt = static_cast<Vector<int32_t> *>(outputVecBatch->Get(0));
+    auto *outArr = static_cast<ArrayVector *>(outputVecBatch->Get(1));
+    auto *outRowNum = static_cast<Vector<int64_t> *>(outputVecBatch->Get(2));
+
+    for (int i = 0; i < ROW_COUNT; ++i) {
+        int32_t sortKey = outInt->GetValue(i);
+        int64_t rowNum = outRowNum->GetValue(i);
+
+        // Identify partition by first element
+        auto arrElem = outArr->GetElementVector();
+        int64_t off = outArr->GetOffset(i);
+        int32_t firstElem = static_cast<Vector<int32_t> *>(arrElem.get())->GetValue(off);
+
+        if (firstElem == 1) {
+            // Partition [1,NULL,3]: sortKeys 10, 30 -> row_number 1, 2
+            if (sortKey == 10) {
+                EXPECT_EQ(rowNum, 1) << "Partition [1,NULL,3], sortKey=10";
+            } else if (sortKey == 30) {
+                EXPECT_EQ(rowNum, 2) << "Partition [1,NULL,3], sortKey=30";
+            } else {
+                FAIL() << "Unexpected sortKey " << sortKey << " in partition [1,NULL,3]";
+            }
+        } else if (firstElem == 2) {
+            // Partition [2,NULL,4]: sortKeys 20, 40 -> row_number 1, 2
+            if (sortKey == 20) {
+                EXPECT_EQ(rowNum, 1) << "Partition [2,NULL,4], sortKey=20";
+            } else if (sortKey == 40) {
+                EXPECT_EQ(rowNum, 2) << "Partition [2,NULL,4], sortKey=40";
+            } else {
+                FAIL() << "Unexpected sortKey " << sortKey << " in partition [2,NULL,4]";
+            }
+        } else {
+            FAIL() << "Unexpected first element " << firstElem;
+        }
+    }
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
 }

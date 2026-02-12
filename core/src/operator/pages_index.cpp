@@ -5,10 +5,12 @@
 #include <algorithm>
 #include <cstring>
 #include "vector/vector.h"
+#include "vector/array_vector.h"
 #include "type/data_type.h"
 #include "radix_sort.h"
 #include "pages_index.h"
 #include "simd/func/quick_sort_simd.h"
+#include "operator/util/operator_util.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
@@ -861,6 +863,120 @@ void SortNullAndGetVarcharValue(BaseVector **sortColumn, int64_t *values, std::v
     to = nonNullTo;
 }
 
+template <bool hasNull, bool sortNullFirst>
+static void SortNullPartitionArray(BaseVector **sortColumn, int64_t *values, uint64_t *addresses, int32_t &from,
+    int32_t &to)
+{
+    int32_t nonNullFrom = from;
+    int32_t nonNullTo = to;
+    int32_t i = from;
+    while (i < nonNullTo) {
+        uint64_t encodedIndex = addresses[i];
+        uint32_t vecBatchIdx = DecodeSliceIndex(encodedIndex);
+        uint32_t rowIdx = DecodePosition(encodedIndex);
+        auto column = sortColumn[vecBatchIdx];
+        if constexpr (hasNull) {
+            if (UNLIKELY(column->IsNull(rowIdx))) {
+                if constexpr (sortNullFirst) {
+                    Swap(values, addresses, i++, nonNullFrom++);
+                } else {
+                    Swap(values, addresses, i, --nonNullTo);
+                }
+                continue;
+            }
+        }
+        ++i;
+    }
+    from = nonNullFrom;
+    to = nonNullTo;
+}
+
+void PagesIndex::ArrayColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings,
+    const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *values, std::vector<uint32_t> &varcharLength,
+    int32_t from, int32_t to, int32_t currentCol)
+{
+    const auto sortCol = sortCols[currentCol];
+    const auto sortAscending = sortAscendings[currentCol];
+    const auto sortColumn = columns[sortCol];
+    const auto hasNull = hasNulls[sortCol];
+    int32_t nonNullFrom = from;
+    int32_t nonNullTo = to;
+
+    DataTypePtr colType = dataTypes.GetType(sortCol);
+    if (colType->GetId() != OMNI_ARRAY) {
+        return;
+    }
+
+    if (sortNullFirsts[currentCol] == 0) {
+        if (hasNull) {
+            SortNullPartitionArray<true, false>(sortColumn, values, valueAddresses, nonNullFrom, nonNullTo);
+        } else {
+            SortNullPartitionArray<false, false>(sortColumn, values, valueAddresses, nonNullFrom, nonNullTo);
+        }
+    } else {
+        if (hasNull) {
+            SortNullPartitionArray<true, true>(sortColumn, values, valueAddresses, nonNullFrom, nonNullTo);
+        } else {
+            SortNullPartitionArray<false, true>(sortColumn, values, valueAddresses, nonNullFrom, nonNullTo);
+        }
+    }
+
+    if (nonNullFrom + 1 < nonNullTo) {
+        auto *addrBase = valueAddresses;
+        const int32_t asc = sortAscending;
+        std::sort(addrBase + nonNullFrom, addrBase + nonNullTo, [&](uint64_t a, uint64_t b) {
+            uint32_t leftColIdx = DecodeSliceIndex(a);
+            uint32_t leftRowIdx = DecodePosition(a);
+            uint32_t rightColIdx = DecodeSliceIndex(b);
+            uint32_t rightRowIdx = DecodePosition(b);
+            vec::BaseVector *leftCol = sortColumn[leftColIdx];
+            vec::BaseVector *rightCol = sortColumn[rightColIdx];
+            int32_t c = OperatorUtil::CompareArrayValue(leftCol, leftRowIdx, rightCol, rightRowIdx);
+            return asc ? (c < 0) : (c > 0);
+        });
+    }
+
+    if (currentCol == sortColCount - 1) {
+        return;
+    }
+
+    const auto nextCol = currentCol + 1;
+    if (nonNullFrom != from && from + 1 < nonNullFrom) {
+        ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from, nonNullFrom,
+            nextCol);
+    } else if (nonNullTo != to && nonNullTo + 1 < to) {
+        ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, nonNullTo, to,
+            nextCol);
+    }
+
+    if (nonNullFrom + 1 >= nonNullTo) {
+        return;
+    }
+
+    int32_t start = nonNullFrom;
+    for (int32_t i = nonNullFrom + 1; i < nonNullTo; ++i) {
+        uint64_t a = valueAddresses[start];
+        uint64_t b = valueAddresses[i];
+        uint32_t leftColIdx = DecodeSliceIndex(a);
+        uint32_t leftRowIdx = DecodePosition(a);
+        uint32_t rightColIdx = DecodeSliceIndex(b);
+        uint32_t rightRowIdx = DecodePosition(b);
+        int32_t c = OperatorUtil::CompareArrayValue(sortColumn[leftColIdx], leftRowIdx, sortColumn[rightColIdx],
+            rightRowIdx);
+        if (c != 0) {
+            if (start + 1 != i) {
+                ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, start, i,
+                    nextCol);
+            }
+            start = i;
+        }
+    }
+    if (start + 1 != nonNullTo) {
+        ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, start, nonNullTo,
+            nextCol);
+    }
+}
+
 template <typename RawType>
 void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
     int32_t sortColCount, int64_t *values, std::vector<uint32_t> &varcharLength, int32_t from, int32_t to,
@@ -1130,6 +1246,11 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
                 from, to, currentCol);
             break;
         }
+        case OMNI_ARRAY: {
+            ArrayColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from, to,
+                currentCol);
+            break;
+        }
         default:
             break;
     }
@@ -1252,6 +1373,11 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                     outputIndex);
                 break;
             }
+            case OMNI_ARRAY: {
+            ConstructVector<OMNI_ARRAY>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
+            break;
+            }
             default:
                 break;
         }
@@ -1333,6 +1459,8 @@ static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, 
         if (UNLIKELY(inputVector->IsNull(inputIndex))) {
             if constexpr (dataTypeId == OMNI_VARCHAR) {
                 static_cast<VarcharVector *>(outputVector)->SetNull(outputIndex);
+            } else if constexpr (dataTypeId == OMNI_ARRAY) {
+                static_cast<ArrayVector *>(outputVector)->SetNull(outputIndex);
             } else {
                 outputVector->SetNull(outputIndex);
             }
@@ -1360,10 +1488,17 @@ static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, 
             } else {
                 value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
             }
+            static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
         } else {
-            value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
+            if constexpr (dataTypeId == OMNI_ARRAY) {
+                value = static_cast<ArrayVector *>(inputVector)->GetValue(inputIndex);
+                static_cast<ArrayVector *>(outputVector)->SetValue(outputIndex, value);
+                delete value;
+            } else {
+                value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
+                static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
+            }
         }
-        static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
     }
 }
 
