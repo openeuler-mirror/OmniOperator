@@ -45,6 +45,7 @@ public:
         return offsets[index];
     }
 
+    // Return the number of elements in the array at the index-th position
     int64_t GetSize(int64_t index)
     {
         return offsets[index + 1] - offsets[index];
@@ -52,14 +53,11 @@ public:
 
     using BaseVector::GetSize;
 
+    BaseVector* GetValue(int index);
+
     const std::shared_ptr<BaseVector> GetElementVector() const
     {
         return elements;
-    }
-
-    void SetElementVector(std::shared_ptr<BaseVector> elementVector)
-    {
-        elements = std::move(elementVector);
     }
 
     void SetOffset(int32_t index, int32_t offset)
@@ -72,10 +70,23 @@ public:
         offsets[index + 1] = offsets[index] + size;
     }
 
+    void SetElementVector(std::shared_ptr<BaseVector> elementVector)
+    {
+        elements = std::move(elementVector);
+    }
+
     void AddElements(BaseVector* addedElements)
     {
         elements = std::shared_ptr<BaseVector>(addedElements);
     }
+
+    void ALWAYS_INLINE SetNull(int64_t index)
+    {
+        BaseVector::SetNull(index);
+        SetSize(index, 0);
+    }
+
+    void SetValue(int index, BaseVector* elements);
 
     /* *
      * Get the array at the specified index with optional copying.
@@ -84,12 +95,16 @@ public:
      * @param copy If true, return a copy instead of a view
      * @return std::shared_ptr<BaseVector> GetArrayAt(int64_t index, bool copy)
      */
-    std::shared_ptr<BaseVector> GetArrayAt(int64_t index, bool copy)
+    std::shared_ptr<BaseVector> GetArrayAt(int64_t index, bool copy = false)
     {
         if (UNLIKELY(index < 0 || index >= size)) {
-            std::string message("slice vector out of range(needed size:%d, real size:%d).", index,
+            std::string message("index out of range(needed size:%d, real size:%d).", index,
                 size);
             throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+
+        if (IsNull(index)) {
+            return nullptr;
         }
 
         int64_t startOffset = GetOffset(index);
@@ -129,12 +144,12 @@ public:
         return sliced;
     }
 
-       /* *
-        * Copies the values of the vector at the indicated positions
-        * @param positions
-        * @param offset
-        * @param length
-        */
+    /* *
+     * Copies the values of the vector at the indicated positions
+     * @param positions
+     * @param offset
+     * @param length
+     */
     ArrayVector *CopyPositions(const int *positions, int positionOffset, int length);
 
     static void updateElementPositions(std::vector<int> &elementPositions, int index, int size)
@@ -189,11 +204,11 @@ public:
     }
 
     /* *
-     * append another arrayVector to the current arrayVector
+     * Append another arrayVector to the current arrayVector starting at a specified offset
      *
-     * @param other the dst data from
-     * @param positionOffset element position
-     * @param length number of elements
+     * @param other Source ArrayVector to copy from
+     * @param positionOffset Starting index in this vector where data will be written
+     * @param length Number of array entries to copy from source ArrayVector
      */
     void Append(BaseVector *other, int positionOffset, int length)
     {
@@ -221,16 +236,6 @@ public:
             }
             newIndex++;
         }
-    }
-
-    void SetValue(int index, BaseVector* elements);
-
-    BaseVector* GetValue(int index);
-
-    void ALWAYS_INLINE SetNull(int64_t index)
-    {
-        BaseVector::SetNull(index);
-        SetSize(index, 0);
     }
 
 protected:

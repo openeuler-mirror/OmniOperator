@@ -39,6 +39,9 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
         case OMNI_TIMESTAMP_WITHOUT_TIME_ZONE:
             return reinterpret_cast<int64_t>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(colVec)));
+        case OMNI_ARRAY:
+            // ARRAY has no single raw value buffer; layout is offsets + element vector. Return 0 so callers
+            // that need the column use the vector (e.g. column projection) or offsetAddrs.
         default:
             LogError("Do not support such vector type %d", types.GetIds()[i]);
             return 0;

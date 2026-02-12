@@ -20,6 +20,10 @@
 #include "simd/func/small_case_sort.h"
 #include "operator/pages_index.h"
 #include "random"
+#include "vector/array_vector.h"
+#include "type/data_type.h"
+#include "type/decimal128.h"
+#include "util/type_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -3013,6 +3017,455 @@ TEST(NativeOmniSortTest, TestSortRadixSort)
         omniruntime::op::Operator::DeleteOperator(sortOperator);
         DeleteSortOperatorFactory(operatorFactory);
     }
+}
+
+// Build an ArrayVector (ARRAY<INT>) from given rows. Caller transfers ownership by appending to a batch.
+static ArrayVector *CreateArrayIntVector(const std::vector<std::vector<int32_t>> &rows)
+{
+    int32_t rowCount = static_cast<int32_t>(rows.size());
+    int32_t totalElements = 0;
+    for (const auto &arr : rows) {
+        totalElements += static_cast<int32_t>(arr.size());
+    }
+    auto *elements = new Vector<int32_t>(totalElements);
+    int32_t idx = 0;
+    for (const auto &arr : rows) {
+        for (int32_t v : arr) {
+            elements->SetValue(idx++, v);
+        }
+    }
+    auto *arrayVector = new ArrayVector(rowCount);
+    int32_t offset = 0;
+    for (int32_t i = 0; i < rowCount; i++) {
+        arrayVector->SetOffset(i, offset);
+        offset += static_cast<int32_t>(rows[i].size());
+    }
+    arrayVector->SetOffset(rowCount, offset);
+    arrayVector->AddElements(elements);
+    return arrayVector;
+}
+
+// Build a VectorBatch with one ARRAY<INT> column from given arrays (each inner vector is one row).
+static VectorBatch *CreateArrayIntColumnBatch(const std::vector<std::vector<int32_t>> &rows)
+{
+    int32_t rowCount = static_cast<int32_t>(rows.size());
+    auto *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(CreateArrayIntVector(rows));
+    return vecBatch;
+}
+
+// Build expected batch with ARRAY<INT> column where rows are reordered by rowIndices.
+static VectorBatch *CreateExpectedArrayIntBatch(const std::vector<std::vector<int32_t>> &rows,
+    const std::vector<int32_t> &rowIndices)
+{
+    std::vector<std::vector<int32_t>> reordered;
+    for (int32_t i : rowIndices) {
+        reordered.push_back(rows[i]);
+    }
+    return CreateArrayIntColumnBatch(reordered);
+}
+
+// ARRAY<DOUBLE>: build one-column batch from rows. Caller must FreeVecBatch.
+static VectorBatch *CreateArrayDoubleColumnBatch(const std::vector<std::vector<double>> &rows)
+{
+    int32_t rowCount = static_cast<int32_t>(rows.size());
+    int32_t totalElements = 0;
+    for (const auto &arr : rows) {
+        totalElements += static_cast<int32_t>(arr.size());
+    }
+    auto *elements = new Vector<double>(totalElements);
+    int32_t idx = 0;
+    for (const auto &arr : rows) {
+        for (double v : arr) {
+            elements->SetValue(idx++, v);
+        }
+    }
+    auto *arrayVector = new ArrayVector(rowCount);
+    int32_t offset = 0;
+    for (int32_t i = 0; i < rowCount; i++) {
+        arrayVector->SetOffset(i, offset);
+        offset += static_cast<int32_t>(rows[i].size());
+    }
+    arrayVector->SetOffset(rowCount, offset);
+    arrayVector->AddElements(elements);
+    auto *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(arrayVector);
+    return vecBatch;
+}
+
+static VectorBatch *CreateExpectedArrayDoubleBatch(const std::vector<std::vector<double>> &rows,
+    const std::vector<int32_t> &rowIndices)
+{
+    std::vector<std::vector<double>> reordered;
+    for (int32_t i : rowIndices) {
+        reordered.push_back(rows[i]);
+    }
+    return CreateArrayDoubleColumnBatch(reordered);
+}
+
+// ARRAY<VARCHAR>: flatStrings must outlive the returned batch (string_views point into it).
+static VectorBatch *CreateArrayVarcharColumnBatch(const std::vector<std::vector<std::string>> &rows,
+    std::vector<std::string> &flatStrings)
+{
+    flatStrings.clear();
+    for (const auto &arr : rows) {
+        for (const std::string &s : arr) {
+            flatStrings.push_back(s);
+        }
+    }
+    int32_t rowCount = static_cast<int32_t>(rows.size());
+    int32_t totalElements = static_cast<int32_t>(flatStrings.size());
+    auto *elements = new VarcharVector(totalElements);
+    int32_t idx = 0;
+    for (const auto &arr : rows) {
+        for (const std::string &s : arr) {
+            std::string_view sv(s.data(), s.size());
+            elements->SetValue(idx++, sv);
+        }
+    }
+    auto *arrayVector = new ArrayVector(rowCount);
+    int32_t offset = 0;
+    for (int32_t i = 0; i < rowCount; i++) {
+        arrayVector->SetOffset(i, offset);
+        offset += static_cast<int32_t>(rows[i].size());
+    }
+    arrayVector->SetOffset(rowCount, offset);
+    arrayVector->AddElements(elements);
+    auto *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(arrayVector);
+    return vecBatch;
+}
+
+static VectorBatch *CreateExpectedArrayVarcharBatch(const std::vector<std::vector<std::string>> &rows,
+    const std::vector<int32_t> &rowIndices, std::vector<std::string> &flatStrings)
+{
+    std::vector<std::vector<std::string>> reordered;
+    for (int32_t i : rowIndices) {
+        reordered.push_back(rows[i]);
+    }
+    return CreateArrayVarcharColumnBatch(reordered, flatStrings);
+}
+
+// ARRAY<DECIMAL128>: build one-column batch from rows (each value as int64 for simplicity).
+static VectorBatch *CreateArrayDecimal128ColumnBatch(const std::vector<std::vector<omniruntime::type::Decimal128>> &rows)
+{
+    int32_t rowCount = static_cast<int32_t>(rows.size());
+    int32_t totalElements = 0;
+    for (const auto &arr : rows) {
+        totalElements += static_cast<int32_t>(arr.size());
+    }
+    using Dec128 = omniruntime::type::Decimal128;
+    auto *elements = new Vector<Dec128>(totalElements);
+    int32_t idx = 0;
+    for (const auto &arr : rows) {
+        for (const Dec128 &v : arr) {
+            elements->SetValue(idx++, v);
+        }
+    }
+    auto *arrayVector = new ArrayVector(rowCount);
+    int32_t offset = 0;
+    for (int32_t i = 0; i < rowCount; i++) {
+        arrayVector->SetOffset(i, offset);
+        offset += static_cast<int32_t>(rows[i].size());
+    }
+    arrayVector->SetOffset(rowCount, offset);
+    arrayVector->AddElements(elements);
+    auto *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(arrayVector);
+    return vecBatch;
+}
+
+static VectorBatch *CreateExpectedArrayDecimal128Batch(
+    const std::vector<std::vector<omniruntime::type::Decimal128>> &rows,
+    const std::vector<int32_t> &rowIndices)
+{
+    std::vector<std::vector<omniruntime::type::Decimal128>> reordered;
+    for (int32_t i : rowIndices) {
+        reordered.push_back(rows[i]);
+    }
+    return CreateArrayDecimal128ColumnBatch(reordered);
+}
+
+TEST(NativeOmniSortTest, TestSortArrayColumnAsc)
+{
+    // Input: 5 rows, each row is an array of int. Sort by array ascending (lexicographic).
+    std::vector<std::vector<int32_t>> inputArrays = { {3, 1}, {1, 2}, {2}, {1, 2, 0}, {1, 2} };
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ std::make_shared<omniruntime::type::ArrayType>(IntType()) }));
+    VectorBatch *vecBatch = CreateArrayIntColumnBatch(inputArrays);
+
+    int32_t outputCols[1] = {0};
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {1};
+
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols,
+        ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    // Ascending lex order: [1,2], [1,2], [1,2,0], [2], [3,1] -> row indices 1, 4, 3, 2, 0
+    std::vector<int32_t> expectOrder = {1, 4, 3, 2, 0};
+    auto expectVecBatch = CreateExpectedArrayIntBatch(inputArrays, expectOrder);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortArrayColumnDesc)
+{
+    std::vector<std::vector<int32_t>> inputArrays = { {3, 1}, {1, 2}, {2}, {1, 2, 0}, {1, 2} };
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ std::make_shared<omniruntime::type::ArrayType>(IntType()) }));
+    VectorBatch *vecBatch = CreateArrayIntColumnBatch(inputArrays);
+
+    int32_t outputCols[1] = {0};
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {0};
+    int32_t nullFirsts[1] = {1};
+
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols,
+        ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    // Descending lex order: [3,1], [2], [1,2,0], [1,2], [1,2] -> row indices 0, 2, 3, 1, 4
+    std::vector<int32_t> expectOrder = {0, 2, 3, 1, 4};
+    auto expectVecBatch = CreateExpectedArrayIntBatch(inputArrays, expectOrder);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortArrayDoubleColumnAsc)
+{
+    // ARRAY<DOUBLE> sort ascending: same lex order as INT. [1.0,2.0], [1.0,2.0], [1.0,2.0,0.0], [2.0], [3.0,1.0]
+    std::vector<std::vector<double>> inputArrays = { {3.0, 1.0}, {1.0, 2.0}, {2.0}, {1.0, 2.0, 0.0}, {1.0, 2.0} };
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ std::make_shared<omniruntime::type::ArrayType>(DoubleType()) }));
+    VectorBatch *vecBatch = CreateArrayDoubleColumnBatch(inputArrays);
+
+    int32_t outputCols[1] = {0};
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {1};
+
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols,
+        ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    std::vector<int32_t> expectOrder = {1, 4, 3, 2, 0};
+    VectorBatch *expectVecBatch = CreateExpectedArrayDoubleBatch(inputArrays, expectOrder);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortArrayVarcharColumnAsc)
+{
+    // ARRAY<VARCHAR> sort ascending: lex order by string. ["c","a"], ["a","b"], ["b"], ["a","b","z"], ["a","b"]
+    std::vector<std::vector<std::string>> inputArrays = {
+        {"c", "a"}, {"a", "b"}, {"b"}, {"a", "b", "z"}, {"a", "b"}
+    };
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ std::make_shared<omniruntime::type::ArrayType>(VarcharType(32)) }));
+    std::vector<std::string> flatStorage;
+    VectorBatch *vecBatch = CreateArrayVarcharColumnBatch(inputArrays, flatStorage);
+
+    int32_t outputCols[1] = {0};
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {1};
+
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols,
+        ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    std::vector<int32_t> expectOrder = {1, 4, 3, 2, 0};
+    std::vector<std::string> expectFlat;
+    VectorBatch *expectVecBatch = CreateExpectedArrayVarcharBatch(inputArrays, expectOrder, expectFlat);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortArrayDecimal128ColumnAsc)
+{
+    // ARRAY<DECIMAL128> sort ascending. Same pattern as INT: [3,1], [1,2], [2], [1,2,0], [1,2] -> order 1,4,3,2,0
+    using Dec128 = omniruntime::type::Decimal128;
+    std::vector<std::vector<Dec128>> inputArrays = {
+        {Dec128(3), Dec128(1)}, {Dec128(1), Dec128(2)}, {Dec128(2)},
+        {Dec128(1), Dec128(2), Dec128(0)}, {Dec128(1), Dec128(2)}
+    };
+    DataTypes sourceTypes(std::vector<DataTypePtr>({
+        std::make_shared<omniruntime::type::ArrayType>(Decimal128Type(2, 0))
+    }));
+    VectorBatch *vecBatch = CreateArrayDecimal128ColumnBatch(inputArrays);
+
+    int32_t outputCols[1] = {0};
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {1};
+
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols,
+        ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    std::vector<int32_t> expectOrder = {1, 4, 3, 2, 0};
+    VectorBatch *expectVecBatch = CreateExpectedArrayDecimal128Batch(inputArrays, expectOrder);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortByIdAndArrayColumn)
+{
+    // Two columns: id (long), scores (ARRAY<INT>). Sort by scores asc, then by id asc.
+    const int32_t rowCount = 5;
+    std::vector<std::vector<int32_t>> inputArrays = { {3, 1}, {1, 2}, {1, 2}, {1, 2, 0}, {2} };
+    int64_t ids[rowCount] = {10, 20, 30, 40, 50};
+
+    auto *idVector = new Vector<int64_t>(rowCount);
+    for (int32_t i = 0; i < rowCount; i++) {
+        idVector->SetValue(i, ids[i]);
+    }
+    ArrayVector *arrayVector = CreateArrayIntVector(inputArrays);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), std::make_shared<omniruntime::type::ArrayType>(IntType()) }));
+    auto *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(idVector);
+    vecBatch->Append(arrayVector);
+
+    int32_t outputCols[2] = {0, 1};
+    int32_t sortCols[2] = {1, 0};
+    int32_t ascendings[2] = {1, 1};
+    int32_t nullFirsts[2] = {1, 1};
+
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
+        ascendings, nullFirsts, 2);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    // By scores asc then id asc: [1,2] (id 20), [1,2] (id 30), [1,2,0] (40), [2] (50), [3,1] (10)
+    int64_t expectIds[rowCount] = {20, 30, 40, 50, 10};
+    std::vector<int32_t> expectOrder = {1, 2, 3, 4, 0};
+    std::vector<std::vector<int32_t>> expectArrays;
+    for (int32_t i : expectOrder) {
+        expectArrays.push_back(inputArrays[i]);
+    }
+    int32_t expectTotalElements = 0;
+    for (const auto &arr : expectArrays) {
+        expectTotalElements += static_cast<int32_t>(arr.size());
+    }
+    auto *expectElements = new Vector<int32_t>(expectTotalElements);
+    int32_t ei = 0;
+    for (const auto &arr : expectArrays) {
+        for (int32_t v : arr) {
+            expectElements->SetValue(ei++, v);
+        }
+    }
+    auto *expectArrayVec = new ArrayVector(rowCount);
+    int32_t off = 0;
+    for (int32_t i = 0; i < rowCount; i++) {
+        expectArrayVec->SetOffset(i, off);
+        off += static_cast<int32_t>(expectArrays[i].size());
+    }
+    expectArrayVec->SetOffset(rowCount, off);
+    expectArrayVec->AddElements(expectElements);
+    auto *expectVecBatch = new VectorBatch(rowCount);
+    auto *expectIdCol = new Vector<int64_t>(rowCount);
+    for (int32_t i = 0; i < rowCount; i++) {
+        expectIdCol->SetValue(i, expectIds[i]);
+    }
+    expectVecBatch->Append(expectIdCol);
+    expectVecBatch->Append(expectArrayVec);
+    EXPECT_EQ(outputVecBatch->GetRowCount(), rowCount);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 2);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortArrayColumnWithNullFirst)
+{
+    // One ARRAY<INT> column with one null row. Nulls first. Rows: [2], null, [1,2], [3,1].
+    const int32_t rowCount = 4;
+    auto *elements = new Vector<int32_t>(5);
+    elements->SetValue(0, 2);
+    elements->SetValue(1, 1);
+    elements->SetValue(2, 2);
+    elements->SetValue(3, 3);
+    elements->SetValue(4, 1);
+    auto *arrayVector = new ArrayVector(rowCount);
+    arrayVector->SetOffset(0, 0);
+    arrayVector->SetOffset(1, 1);
+    arrayVector->SetOffset(2, 1);
+    arrayVector->SetOffset(3, 3);
+    arrayVector->SetOffset(4, 5);
+    arrayVector->AddElements(elements);
+    arrayVector->SetNull(1);
+    auto *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(arrayVector);
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ std::make_shared<omniruntime::type::ArrayType>(IntType()) }));
+    int32_t outputCols[1] = {0};
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {1};
+
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols,
+        ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    EXPECT_EQ(outputVecBatch->GetRowCount(), rowCount);
+    EXPECT_TRUE(outputVecBatch->Get(0)->IsNull(0));
+    EXPECT_FALSE(outputVecBatch->Get(0)->IsNull(1));
+    auto *outArr = static_cast<ArrayVector *>(outputVecBatch->Get(0));
+    EXPECT_EQ(outArr->GetSize(1), 2);
+    EXPECT_EQ(outArr->GetSize(2), 1);
+    EXPECT_EQ(outArr->GetSize(3), 2);
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
 }
 
 } // namespace SortTest

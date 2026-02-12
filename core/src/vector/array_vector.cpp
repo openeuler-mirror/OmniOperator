@@ -64,6 +64,7 @@ ArrayVector *ArrayVector::CopyPositions(const int *positions, int positionOffset
         }
         if (UNLIKELY(IsNull(position))) {
             newArrayVector->SetNull(i);
+            continue;
         }
         int elementIndex = this->GetOffset(position);
         int elementSize = this->GetSize(position);

@@ -729,6 +729,11 @@ bool WindowOperator::IsSamePartition(VectorBatch *lastBatch, int32_t lastIdx)
             case OMNI_CHAR:
                 isSame = ValueEqualsLastValue<string_view>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
                 break;
+            case OMNI_ARRAY:
+                // Reuse OperatorUtil::CompareArrayValue (lexicographic, null-aware) for equality check
+                isSame = (OperatorUtil::CompareArrayValue(lastVector, lastIdx, currentVector, currentRowIdx) ==
+                    OperatorUtil::COMPARE_STATUS_EQUAL);
+                break;
             default:
                 break;
         }
@@ -775,6 +780,8 @@ void WindowOperator::PaddingPartitionVecBatch(vec::VectorBatch *partitionVecBatc
             case OMNI_CHAR:
                 PaddingPartitionVector<std::string_view>(partitionVector, rowIdx, i);
                 break;
+            case OMNI_ARRAY:
+                PaddingPartitionArrayVector(partitionVector, rowIdx, i);
             default:
                 break;
         }
@@ -802,5 +809,19 @@ void WindowOperator::PaddingPartitionVector(vec::BaseVector *groupedVector, int3
         }
     }
 }
+
+void WindowOperator::PaddingPartitionArrayVector(vec::BaseVector *groupedVector, int32_t rowIdx, int32_t colIdx)
+{
+    auto *srcArray = static_cast<ArrayVector *>(currentBatch->Get(colIdx));
+    auto *dstArray = static_cast<ArrayVector *>(groupedVector);
+    if (srcArray->IsNull(currentRowIdx)) {
+        dstArray->SetNull(rowIdx);
+    } else {
+        // Use GetArrayAt (returns shared_ptr) for RAII-safe memory management
+        auto elemSlice = srcArray->GetArrayAt(currentRowIdx);
+        dstArray->SetValue(rowIdx, elemSlice.get());
+    }
+}
+
 }
 }
