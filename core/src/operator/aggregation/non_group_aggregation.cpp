@@ -105,11 +105,22 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-static ALWAYS_INLINE void GenerateAggVector(VectorBatch *vectorBatch, std::vector<DataTypeId> &dataTypes, int size)
+static ALWAYS_INLINE void GenerateAggVector(VectorBatch *vectorBatch, std::vector<DataTypes> &aggsOutputTypes, int size)
 {
-    for (auto &typeId : dataTypes) {
-        auto &newFunc = newUniqueVectorFunctions[typeId];
-        newFunc(vectorBatch, size);
+    // one AggregateExec has multi aggregators, every aggregator may have multi output; create one vector per output column.
+    for (auto &outputTypes : aggsOutputTypes) {
+        // noramally one aggregator only has one output, but for complex agg function, it may have multi output.
+        for (int32_t i = 0; i < outputTypes.GetSize(); ++i) {
+            auto typeId = outputTypes.GetType(i)->GetId();
+            if (typeId == OMNI_ARRAY || typeId == OMNI_MAP || typeId == OMNI_ROW) {
+                // OMNI_ARRAY = 30, OMNI_MAP = 31, OMNI_ROW = 32
+                auto &newFunc = newUniqueComplexVectorFunctions[typeId - OMNI_ARRAY];
+                newFunc(outputTypes.GetType(i), vectorBatch, size);
+            } else {
+                auto &newFunc = newUniqueVectorFunctions[typeId];
+                newFunc(vectorBatch, size);
+            }
+        }
     }
 }
 
@@ -127,7 +138,7 @@ int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
     }
     auto output = std::make_unique<VectorBatch>(1);
     auto outputPtr = output.get();
-    GenerateAggVector(outputPtr, aggsOutputDataTypeIds, 1);
+    GenerateAggVector(outputPtr, aggsOutputTypes, 1);
 
     // set result value
     int32_t aggOutputColsStart = 0;

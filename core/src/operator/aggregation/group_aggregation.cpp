@@ -456,7 +456,7 @@ void HashAggregationOperator::InitSpillInfos()
     aggregationSort = std::make_unique<AggregationSort>(aggregators);
 }
 
-void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType)
+void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowCount)
 {
     std::shared_ptr<BaseVector> elementVector;
     auto elemTypeId = elementType->GetId();
@@ -488,8 +488,8 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType)
         default:
             throw omniruntime::exception::OmniException("Set ArrayVector error, unsupport element type:", std::to_string(elemTypeId));
     }
-    auto arrayVector = new ArrayVector(0, elementVector);
-    //initialize arrayVector's size to 0 for expanding it's capacity with Expand function
+
+    auto arrayVector = new ArrayVector(rowCount, elementVector);
     vecBatch->Append(arrayVector);
 }
 
@@ -504,7 +504,7 @@ void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<
         } else if (typeId == OMNI_ARRAY) {
             auto arrayType = std::static_pointer_cast<ArrayType>(type);
             DataTypePtr elementType = arrayType->ElementType();
-            SetArrayVector(output, elementType);
+            SetArrayVector(output, elementType, rowCount);
         }
     }
 }
