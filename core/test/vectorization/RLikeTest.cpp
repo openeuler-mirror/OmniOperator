@@ -100,8 +100,6 @@ TEST(RLikeTest, RLikeSimpleMatch) {
     RLikeFunctionTestHelper::ExecuteRLike(strVec, patternVec, resultVec);
     RLikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -120,8 +118,6 @@ TEST(RLikeTest, RLikeRegexPattern) {
     RLikeFunctionTestHelper::ExecuteRLike(strVec, patternVec, resultVec);
     RLikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -140,8 +136,6 @@ TEST(RLikeTest, RLikeNoMatch) {
     RLikeFunctionTestHelper::ExecuteRLike(strVec, patternVec, resultVec);
     RLikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -160,8 +154,6 @@ TEST(RLikeTest, RLikeMixedMatches) {
     RLikeFunctionTestHelper::ExecuteRLike(strVec, patternVec, resultVec);
     RLikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -186,8 +178,6 @@ TEST(RLikeTest, RLikeWithNullString) {
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (string is NULL)";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -212,8 +202,6 @@ TEST(RLikeTest, RLikeWithNullPattern) {
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (pattern is NULL)";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -232,8 +220,6 @@ TEST(RLikeTest, RLikeDigitPattern) {
     RLikeFunctionTestHelper::ExecuteRLike(strVec, patternVec, resultVec);
     RLikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -252,8 +238,6 @@ TEST(RLikeTest, RLikeCharacterClass) {
     RLikeFunctionTestHelper::ExecuteRLike(strVec, patternVec, resultVec);
     RLikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -272,8 +256,6 @@ TEST(RLikeTest, RLikeEmptyString) {
     RLikeFunctionTestHelper::ExecuteRLike(strVec, patternVec, resultVec);
     RLikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -292,8 +274,6 @@ TEST(RLikeTest, RLikeInvalidPattern) {
     ASSERT_THROW({RLikeFunctionTestHelper::ExecuteRLike(strVec, patternVec, resultVec);}, omniruntime::exception::OmniException)
         << "RLike should handle invalid regex through throw exception";
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -312,7 +292,5 @@ TEST(RLikeTest, RLikeQuantifierPattern) {
     RLikeFunctionTestHelper::ExecuteRLike(strVec, patternVec, resultVec);
     RLikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }

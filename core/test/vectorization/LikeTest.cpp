@@ -96,8 +96,6 @@ TEST(LikeTest, BasicMatch) {
     LikeFunctionTestHelper::ExecuteLike(strVec, patternVec, resultVec);
     LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -113,8 +111,6 @@ TEST(LikeTest, NoMatch) {
     LikeFunctionTestHelper::ExecuteLike(strVec, patternVec, resultVec);
     LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -130,8 +126,6 @@ TEST(LikeTest, PercentSuffix) {
     LikeFunctionTestHelper::ExecuteLike(strVec, patternVec, resultVec);
     LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -147,8 +141,6 @@ TEST(LikeTest, PercentPrefix) {
     LikeFunctionTestHelper::ExecuteLike(strVec, patternVec, resultVec);
     LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -164,8 +156,6 @@ TEST(LikeTest, PercentBoth) {
     LikeFunctionTestHelper::ExecuteLike(strVec, patternVec, resultVec);
     LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -181,8 +171,6 @@ TEST(LikeTest, UnderscoreWildcard) {
     LikeFunctionTestHelper::ExecuteLike(strVec, patternVec, resultVec);
     LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -198,8 +186,6 @@ TEST(LikeTest, EscapePercent) {
     LikeFunctionTestHelper::ExecuteLike(strVec, patternVec, resultVec);
     LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -215,8 +201,6 @@ TEST(LikeTest, EmptyString) {
     LikeFunctionTestHelper::ExecuteLike(strVec, patternVec, resultVec);
     LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -235,8 +219,6 @@ TEST(LikeTest, NullString) {
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (string is NULL)";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }
 
@@ -255,7 +237,5 @@ TEST(LikeTest, NullPattern) {
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (pattern is NULL)";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
 
-    delete strVec;
-    delete patternVec;
     delete resultVec;
 }

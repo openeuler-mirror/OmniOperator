@@ -105,7 +105,6 @@ TEST(ReverseTest, ReverseFunctionBasicTest) {
     ReverseFunctionTestHelper::ValidateResult(resultStrVec, expectedStrs, rowSize);
 
     delete resultVector;
-    delete inputVec;
 }
 
 TEST(ReverseTest, ReverseFunctionEmptyStringTest) {
@@ -140,7 +139,6 @@ TEST(ReverseTest, ReverseFunctionEmptyStringTest) {
     ReverseFunctionTestHelper::ValidateResult(resultStrVec, expectedStrs, rowSize);
 
     delete resultVector;
-    delete inputVec;
 }
 
 TEST(ReverseTest, ReverseFunctionNullTest) {
@@ -195,7 +193,6 @@ TEST(ReverseTest, ReverseFunctionNullTest) {
     }
 
     delete resultVector;
-    delete inputVec;
 }
 
 TEST(ReverseTest, ReverseFunctionSingleCharTest) {
@@ -230,7 +227,6 @@ TEST(ReverseTest, ReverseFunctionSingleCharTest) {
     ReverseFunctionTestHelper::ValidateResult(resultStrVec, expectedStrs, rowSize);
 
     delete resultVector;
-    delete inputVec;
 }
 
 TEST(ReverseTest, ReverseFunctionLongStringTest) {
@@ -265,7 +261,6 @@ TEST(ReverseTest, ReverseFunctionLongStringTest) {
     ReverseFunctionTestHelper::ValidateResult(resultStrVec, expectedStrs, rowSize);
 
     delete resultVector;
-    delete inputVec;
 }
 
 // ==================== Array Type Tests ====================
@@ -421,7 +416,6 @@ TEST(ReverseTest, ReverseArrayIntBasicTest) {
     }
 
     delete resultVector;
-    delete inputVec;
 }
 
 // Test string array reverse
@@ -483,7 +477,6 @@ TEST(ReverseTest, ReverseArrayStringTest) {
     }
 
     delete resultVector;
-    delete inputVec;
 }
 
 // Test array with NULL values
@@ -545,7 +538,6 @@ TEST(ReverseTest, ReverseArrayNullTest) {
     }
 
     delete resultVector;
-    delete inputVec;
 }
 
 // Test empty array
@@ -587,7 +579,6 @@ TEST(ReverseTest, ReverseEmptyArrayTest) {
     }
 
     delete resultVector;
-    delete inputVec;
 }
 
 // Test single element array
@@ -632,7 +623,6 @@ TEST(ReverseTest, ReverseSingleElementArrayTest) {
         << "Single element should be 42";
 
     delete resultVector;
-    delete inputVec;
 }
 
 // Test array with null element vector (edge case following Spark behavior)
@@ -687,5 +677,4 @@ TEST(ReverseTest, ReverseArrayNullElementVectorTest) {
     EXPECT_EQ(resultArrayVec->GetSize(2), 0) << "Row 2 should be empty array";
 
     delete resultVector;
-    delete inputVec;
 }

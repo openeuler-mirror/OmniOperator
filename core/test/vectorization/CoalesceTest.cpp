@@ -178,8 +178,6 @@ TEST(CoalesceTest, BooleanCoalesceTwoArgs) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_BOOLEAN, resultVec);
     CoalesceFunctionTestHelper::ValidateBooleanResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -198,8 +196,6 @@ TEST(CoalesceTest, BooleanCoalesceWithNullFirst) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_BOOLEAN, resultVec);
     CoalesceFunctionTestHelper::ValidateBooleanResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -218,8 +214,6 @@ TEST(CoalesceTest, ByteCoalesce) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_BYTE, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -238,8 +232,6 @@ TEST(CoalesceTest, ShortCoalesce) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_SHORT, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -257,8 +249,6 @@ TEST(CoalesceTest, IntCoalesceTwoArgs) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_INT, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -277,8 +267,6 @@ TEST(CoalesceTest, IntCoalesceWithNullFirst) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_INT, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -302,8 +290,6 @@ TEST(CoalesceTest, IntCoalesceAllNull) {
         EXPECT_TRUE(resultVec->IsNull(i)) << "Row " << i << " should be NULL";
     }
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -322,8 +308,6 @@ TEST(CoalesceTest, LongCoalesce) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_LONG, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -342,8 +326,6 @@ TEST(CoalesceTest, FloatCoalesce) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_FLOAT, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -362,8 +344,6 @@ TEST(CoalesceTest, DoubleCoalesce) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_DOUBLE, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -383,8 +363,6 @@ TEST(CoalesceTest, TimestampCoalesce) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_TIMESTAMP, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -403,8 +381,6 @@ TEST(CoalesceTest, BinaryCoalesce) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_VARBINARY, resultVec);
     CoalesceFunctionTestHelper::ValidateStringResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -427,8 +403,6 @@ TEST(CoalesceTest, BinaryCoalesceAllNull) {
         EXPECT_TRUE(resultVec->IsNull(i)) << "Row " << i << " should be NULL";
     }
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -446,8 +420,6 @@ TEST(CoalesceTest, StringCoalesce) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_VARCHAR, resultVec);
     CoalesceFunctionTestHelper::ValidateStringResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -466,8 +438,6 @@ TEST(CoalesceTest, StringCoalesceWithNullFirst) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_VARCHAR, resultVec);
     CoalesceFunctionTestHelper::ValidateStringResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -523,8 +493,6 @@ TEST(CoalesceTest, ArrayCoalesce) {
     EXPECT_FALSE(resultArray->IsNull(2)) << "Row 2 should not be NULL";
     EXPECT_EQ(resultArray->GetSize(2), 3) << "Row 2 array size should be 3";
 
-    delete arg1;
-    delete arg2;
     delete resultVec;
 }
 
@@ -548,8 +516,6 @@ TEST(CoalesceTest, ArrayCoalesceAllNull) {
     EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
 
-    delete arg1;
-    delete arg2;
     delete resultVec;
 }
 
@@ -629,8 +595,6 @@ TEST(CoalesceTest, MapCoalesce) {
     EXPECT_FALSE(resultMap->IsNull(2)) << "Row 2 should not be NULL";
     EXPECT_EQ(resultMap->GetSize(2), 1) << "Row 2 map size should be 1";
 
-    delete arg1;
-    delete arg2;
     delete resultVec;
 }
 
@@ -685,8 +649,6 @@ TEST(CoalesceTest, RowCoalesce) {
     EXPECT_EQ(nameVec->GetValue(2), "Charlie");
     EXPECT_EQ(ageVec->GetValue(2), 50);
 
-    delete arg1;
-    delete arg2;
     delete resultVec;
 }
 
@@ -713,8 +675,6 @@ TEST(CoalesceTest, RowCoalesceAllNull) {
     EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
 
-    delete arg1;
-    delete arg2;
     delete resultVec;
 }
 
@@ -737,8 +697,6 @@ TEST(CoalesceTest, IntCoalesceMixedNullPattern) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_INT, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -758,8 +716,6 @@ TEST(CoalesceTest, IntCoalesceBoundaryValues) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_INT, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }
 
@@ -779,7 +735,5 @@ TEST(CoalesceTest, LongCoalesceBoundaryValues) {
     CoalesceFunctionTestHelper::ExecuteCoalesce({arg1Vec, arg2Vec}, OMNI_LONG, resultVec);
     CoalesceFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, arg1Values.size());
 
-    delete arg1Vec;
-    delete arg2Vec;
     delete resultVec;
 }

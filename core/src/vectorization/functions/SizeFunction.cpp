@@ -25,9 +25,10 @@ void SizeFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outp
 
     // Extract legacySizeOfNull parameter (second argument, boolean)
     // Stack order: top = legacySizeOfNull, bottom = input (array/map)
+    BaseVector *boolArg = nullptr;
     bool legacySizeOfNull = false;
     if (args.size() >= 2) {
-        auto boolArg = args.top();
+        boolArg = args.top();
         args.pop();
         // Extract boolean value from the vector
         // Handle both ConstVector and FlatVector for legacySizeOfNull parameter
@@ -74,7 +75,16 @@ void SizeFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outp
     } else if (inputTypeId == OMNI_MAP) {
         ProcessMapSize(inputArg, resultVec, rowSize, legacySizeOfNull);
     } else {
+        delete inputArg;
+        if (boolArg != nullptr) {
+            delete boolArg;
+        }
         OMNI_THROW("SizeFunction Error:", "Unsupported input type: " + std::to_string(inputTypeId));
+    }
+
+    delete inputArg;
+    if (boolArg != nullptr) {
+        delete boolArg;
     }
 }
 

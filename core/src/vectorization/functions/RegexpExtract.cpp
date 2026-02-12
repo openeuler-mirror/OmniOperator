@@ -53,6 +53,10 @@ void RegexpExtractFunction::Apply(std::stack<BaseVector *> &args, const DataType
     args.pop();
 
     ApplyRegexpExtract(strVec, patternVec, groupIdxVec, result, outputType);
+
+    delete groupIdxVec;
+    delete patternVec;
+    delete strVec;
 }
 
 void RegexpExtractFunction::ApplyRegexpExtract(BaseVector *strVec, BaseVector *patternVec,
