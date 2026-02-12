@@ -21,7 +21,7 @@ public:
 
     std::string_view GetValue(int index) const;
 
-    void SetValue(int index, std::string_view &value);
+    void SetValue(int index, const std::string_view &value);
 
     /* *
      * set the element at the index position to null

@@ -25,7 +25,7 @@ std::string_view LargeStringContainer<RAW_DATA_TYPE>::GetValue(int index) const
 }
 
 template<typename RAW_DATA_TYPE>
-void LargeStringContainer<RAW_DATA_TYPE>::SetValue(int index, std::string_view &value)
+void LargeStringContainer<RAW_DATA_TYPE>::SetValue(int index, const std::string_view &value)
 {
     FillSlots(index); // rescue offset for null values
 
