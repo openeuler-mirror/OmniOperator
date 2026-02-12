@@ -151,6 +151,22 @@ private:
 
     void Accumulate(omniruntime::vec::VectorBatch *inputVecBatchForAgg, int32_t start, int32_t end);
 };
+
+class CountAllWindowFunction : public WindowFunction {
+public:
+    CountAllWindowFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType);
+    ~CountAllWindowFunction() override = default;
+    void Reset(WindowIndex *pWindowIndex) override;
+    void ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index, int32_t peerGroupStart,
+        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd);
+    void ResetAccumulator();
+private:
+    int32_t currentStart;
+    int32_t currentEnd;
+
+    void Accumulate(BaseVector *column, int32_t index, int32_t start, int32_t end);
+};
+
 }
 }
 #endif

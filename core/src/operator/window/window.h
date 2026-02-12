@@ -284,6 +284,7 @@ private:
     void WindowOperator::PaddingPartitionArrayVector(vec::BaseVector *groupedVector, int32_t rowIdx, int32_t colIdx);
     bool ProcessNextWindowPartition();
     bool IsSamePartition(VectorBatch *lastBatch, int32_t lastIdx);
+    vec::VectorBatch* createSpillVectorBatch(int32_t rowCnt, int32_t offset);
 
     bool hasPrepare = false;
     size_t totalRowCount = 0;
@@ -302,6 +303,8 @@ private:
     int32_t partitionOutputted = 0;
     size_t maxRowCountPerVecBatch = 0;
     uint64_t spilledBytes = 0;
+    vec::VectorBatch *spillOutBatch = nullptr;
+    int32_t spillBatchOffset = 0;
 };
 
 int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition);
