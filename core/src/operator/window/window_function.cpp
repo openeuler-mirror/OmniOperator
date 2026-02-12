@@ -196,7 +196,7 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
 
     auto rowCount = end - start + 1;
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
-        auto vector = std::make_unique<Vector<int64_t>>(rowCount);
+        auto vector = std::make_unique<ConstVector<int64_t>>(0, OMNI_LONG, rowCount);
         inputVecBatchForAgg->SetVector(0, vector.get());
         aggregator->ProcessGroup(aggregateState, inputVecBatchForAgg, start, rowCount);
         return;
@@ -218,5 +218,50 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
         aggregator->ProcessGroup(aggregateState, inputVecBatchForAgg, static_cast<int32_t>(vectorPosition), 1);
     }
 }
+
+void CountAllWindowFunction::Accumulate(BaseVector *column, int32_t index, int32_t start, int32_t end)
+{
+    int64_t rowCount = end - start + 1;
+    VectorHelper::SetValue(column, index, &rowCount);
+}
+
+CountAllWindowFunction::CountAllWindowFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType)
+        : WindowFunction(std::move(frame), std::move(inputType), std::move(outputType)),
+          currentStart(0),
+          currentEnd(0)
+{}
+
+void CountAllWindowFunction::ResetAccumulator()
+{
+    if (currentStart >= 0) {
+        currentStart = -1;
+        currentEnd = -1;
+    }
+}
+
+void CountAllWindowFunction::Reset(WindowIndex *pWindowIndex)
+{
+    ResetAccumulator();
+}
+
+void CountAllWindowFunction::ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index, int32_t peerGroupStart,
+                int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd)
+{
+
+    if (frameStart < 0) {
+        ResetAccumulator();
+    } else if ((frameStart == currentStart) && (frameEnd >= currentEnd)) {
+        // same or expanding frame
+        Accumulate(column, index, frameStart, frameEnd);
+        currentEnd = frameEnd;
+    } else {
+        // different frame
+        ResetAccumulator();
+        Accumulate(column, index, frameStart, frameEnd);
+        currentStart = frameStart;
+        currentEnd = frameEnd;
+    }
+}
+
 }
 }

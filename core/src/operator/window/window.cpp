@@ -206,9 +206,8 @@ OmniStatus WindowOperator::Init()
                     std::move(windowFrame), executionContext.get(), isOverflowAsNull)));
                 break;
             case OMNI_AGGREGATION_TYPE_COUNT_ALL:
-                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
-                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i), std::move(windowFrame),
-                    executionContext.get(), isOverflowAsNull)));
+                windowFunctions.push_back(std::move(make_unique<CountAllWindowFunction>(std::move(windowFrame),
+                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;
@@ -332,6 +331,9 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
         rowCountOutputted = 0;
         hasPrepare = false;
         inputVecBatchForAgg->SetVector(0, nullptr);
+        // reset
+        VectorHelper::FreeVecBatch(spillOutBatch);
+        spillBatchOffset = 0;
         pagesIndex->Clear();
         executionContext->GetArena()->Reset();
         SetStatus(OMNI_STATUS_FINISHED);
@@ -549,6 +551,11 @@ void WindowOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
     auto outputPtr = output.get();
     DataTypes dataTypes(outputTypes);
     VectorHelper::AppendVectors(outputPtr, dataTypes, rowCount);
+    if (this->spillOutBatch == nullptr) {
+        DataTypes inDataTypes(sourceTypes);
+        this->spillOutBatch = new VectorBatch(totalRowCount - rowCountOutputted);
+        VectorHelper::AppendVectors(this->spillOutBatch, inDataTypes, totalRowCount - rowCountOutputted);
+    }
 
     try {
         ProcessDataFromDisk(outputPtr, rowCount);
@@ -561,14 +568,15 @@ void WindowOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         hasPrepare = false;
         inputVecBatchForAgg->SetVector(0, nullptr);
         pagesIndex->Clear();
+        VectorHelper::FreeVecBatch(spillOutBatch);
         throw e;
     }
-
     *outputVecBatch = output.release();
 }
 
 void WindowOperator::ProcessDataFromDisk(VectorBatch *&outputVecBatch, int32_t rowCount)
 {
+    bool needClear = true;
     if (partition != nullptr && partition->HasNext()) {
         int32_t outputCount = min(partitionRowCount - partitionOutputted, rowCount);
         pagesIndex->GetOutput(outputCols.data(), outputColsCount, outputVecBatch, sourceTypes.GetIds(),
@@ -577,6 +585,11 @@ void WindowOperator::ProcessDataFromDisk(VectorBatch *&outputVecBatch, int32_t r
 
     for (int32_t i = 0; i < rowCount; i++) {
         if (partition == nullptr || !partition->HasNext()) {
+            if (needClear) {
+                spillOutBatch->Resize(totalRowCount - rowCountOutputted);
+                needClear = false;
+                spillBatchOffset = 0;
+            }
             if (!ProcessNextWindowPartition()) {
                 partition = nullptr;
                 break;
@@ -594,6 +607,15 @@ void WindowOperator::ProcessDataFromDisk(VectorBatch *&outputVecBatch, int32_t r
     }
 }
 
+vec::VectorBatch* WindowOperator::createSpillVectorBatch(int32_t rowCnt, int32_t offset) {
+    auto *vecBatch = new VectorBatch(rowCnt);
+    for (int32_t col = 0; col < sourceTypes.GetSize(); ++col) {
+        auto vector = VectorHelper::SliceVector(this->spillOutBatch->Get(col), offset, rowCnt);
+        vecBatch->Append(vector);
+        }
+    return vecBatch;
+}
+
 bool WindowOperator::ProcessNextWindowPartition()
 {
     if (rowCountOutputted == totalRowCount) {
@@ -605,29 +627,26 @@ bool WindowOperator::ProcessNextWindowPartition()
     partitionOutputted = 0;
 
     int32_t vecBatchRowCount = min(maxRowCountPerVecBatch, totalRowCount - rowCountOutputted);
-
-    auto *vecBatch = new VectorBatch(vecBatchRowCount);
-    DataTypes dataTypes(sourceTypes);
-    VectorHelper::AppendVectors(vecBatch, dataTypes, vecBatchRowCount);
-
     int32_t rowIdx = 0;
     VectorBatch *lastVecBatch = nullptr;
     int32_t lastRowIdx = 0;
     bool isFirstRow = true;
 
+    int32_t offset = spillBatchOffset;
+
     while (isFirstRow || IsSamePartition(lastVecBatch, lastRowIdx)) {
-        PaddingPartitionVecBatch(vecBatch, rowIdx);
+        PaddingPartitionVecBatch(spillOutBatch, spillBatchOffset++);
+
         isFirstRow = false;
-        lastVecBatch = vecBatch;
-        lastRowIdx = rowIdx;
+        lastVecBatch = spillOutBatch;
+        lastRowIdx = spillBatchOffset - 1;
         rowIdx++;
         partitionRowCount++;
 
         if (rowIdx == vecBatchRowCount) {
+            auto *vecBatch = createSpillVectorBatch(rowIdx, offset);
             pagesIndex->AddVecBatch(vecBatch);
-            vecBatch = new VectorBatch(vecBatchRowCount);
-            DataTypes groupedDataType(sourceTypes);
-            VectorHelper::AppendVectors(vecBatch, groupedDataType, vecBatchRowCount);
+            offset += rowIdx;
             rowIdx = 0;
         }
 
@@ -640,7 +659,11 @@ bool WindowOperator::ProcessNextWindowPartition()
         currentRowIdx = spillMerger->CurrentRowIndex();
     }
 
-    pagesIndex->AddVecBatch(vecBatch);
+    if (rowIdx > 0) {
+        auto *vecBatch = createSpillVectorBatch(rowIdx, offset);
+        pagesIndex->AddVecBatch(vecBatch);
+    }
+
     pagesIndex->Prepare();
     peerGroupHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
         originSortCols.data(), originSortColCount);
