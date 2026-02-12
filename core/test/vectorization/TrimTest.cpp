@@ -152,6 +152,7 @@ TEST(TrimTest, SingleArgConstVector) {
     int rowSize = 3;
     std::string_view constVal("  constant value  ");
     std::unique_ptr<BaseVector> inputVec(new ConstVector<std::string_view>(constVal, OMNI_VARCHAR, rowSize));
+    inputVec->SetIsField(true);  // Caller owns; prevent ConstVectorReader from deleting in Apply()
     std::vector<std::string> expected(rowSize, "constant value");
     BaseVector* result = nullptr;
     TrimFunctionTestHelper::ExecuteTrimOneArg(inputVec.get(), result);
