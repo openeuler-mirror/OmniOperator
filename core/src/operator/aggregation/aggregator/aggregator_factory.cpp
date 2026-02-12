@@ -44,6 +44,15 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
         case OMNI_AGGREGATION_TYPE_BIT_XOR: {
             return std::make_unique<BitXorAggregatorFactory>();
         }
+        case OMNI_AGGREGATION_TYPE_CORR: {
+            return std::make_unique<CorrAggregatorFactory>();
+        }
+        case OMNI_AGGREGATION_TYPE_COVAR_POP: {
+            return std::make_unique<CovarPopAggregatorFactory>();
+        }
+        case OMNI_AGGREGATION_TYPE_COVAR_SAMP: {
+            return std::make_unique<CovarSampAggregatorFactory>();
+        }
         case OMNI_AGGREGATION_TYPE_MIN: {
             return std::make_unique<MinAggregatorFactory>();
         }
@@ -83,6 +92,129 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
+}
+
+std::unique_ptr<Aggregator> CorrAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+                                                                    const DataTypes &outputTypes,
+                                                                    std::vector<int32_t> &channels, bool inputRaw,
+                                                                    bool outputPartial,
+                                                                    bool isOverflowAsNull) {
+    // Gluten/Spark merge: inputAggBufferAttributes → 6 expressions → Omni gets 6 RAW Double columns only (no container).
+    const size_t nInput = inputTypes.GetSize();
+    if (nInput == 6) {
+        for (size_t k = 0; k < 6; k++) {
+            if (inputTypes.GetType(k)->GetId() != OMNI_DOUBLE) {
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                    "Corr merge expects 6 DOUBLE columns; type[" + std::to_string(k) + "]=" +
+                    std::to_string(static_cast<int32_t>(inputTypes.GetType(k)->GetId())));
+            }
+        }
+        if (outputPartial)
+            return CorrAggregator<OMNI_CONTAINER, OMNI_CONTAINER>::Create(inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull);
+        else
+            return CorrAggregator<OMNI_CONTAINER, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull);
+    }
+    if (nInput != 2) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Corr requires 2 columns (raw) or 6 DOUBLE (merge). Got size=" + std::to_string(nInput));
+    }
+    if (!outputPartial && outputTypes.GetType(0)->GetId() != OMNI_DOUBLE) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Corr aggregator final output type must be DOUBLE");
+    }
+    auto inputTypeId = inputTypes.GetType(0)->GetId();
+    switch (inputTypeId) {
+        case OMNI_SHORT:
+            return CorrAggregator<OMNI_SHORT, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+                                                                   inputRaw, outputPartial, isOverflowAsNull);
+        case OMNI_INT:
+            return CorrAggregator<OMNI_INT, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+                                                                 inputRaw, outputPartial, isOverflowAsNull);
+        case OMNI_LONG:
+            return CorrAggregator<OMNI_LONG, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+                                                                  inputRaw, outputPartial, isOverflowAsNull);
+        case OMNI_FLOAT:
+            return CorrAggregator<OMNI_FLOAT, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+                                                                   inputRaw, outputPartial, isOverflowAsNull);
+        case OMNI_DOUBLE:
+            return CorrAggregator<OMNI_DOUBLE, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+                                                                    inputRaw, outputPartial, isOverflowAsNull);
+        case OMNI_DECIMAL64:
+            return CorrAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+                                                                       inputRaw, outputPartial, isOverflowAsNull);
+        case OMNI_DECIMAL128:
+            return CorrAggregator<OMNI_DECIMAL128, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+                                                                        inputRaw, outputPartial, isOverflowAsNull);
+        default: {
+            std::string omniExceptionInfo =
+                    "Corr aggregator does not support input type " + std::to_string(inputTypeId);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+        }
+    }
+}
+
+static std::unique_ptr<Aggregator> CreateCovarianceAggregator(FunctionType aggType, const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull) {
+    const bool isPop = (aggType == OMNI_AGGREGATION_TYPE_COVAR_POP);
+    const char *aggName = isPop ? "CovarPop" : "CovarSamp";
+    // Gluten/Spark merge: inputAggBufferAttributes → 4 expressions → Omni gets 4 RAW Double columns only (no container).
+    const size_t nInput = inputTypes.GetSize();
+    if (nInput == 4) {
+        for (size_t k = 0; k < 4; k++) {
+            if (inputTypes.GetType(k)->GetId() != OMNI_DOUBLE) {
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                    std::string(aggName) + " merge expects 4 DOUBLE columns; type[" + std::to_string(k) + "]=" +
+                    std::to_string(static_cast<int32_t>(inputTypes.GetType(k)->GetId())));
+            }
+        }
+        if (outputPartial)
+            return isPop ? CovarPopAggregator<OMNI_CONTAINER, OMNI_CONTAINER>::Create(inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull)
+                : CovarSampAggregator<OMNI_CONTAINER, OMNI_CONTAINER>::Create(inputTypes, outputTypes, channels,
+                    inputRaw, outputPartial, isOverflowAsNull);
+        else
+            return isPop ? CovarPopAggregator<OMNI_CONTAINER, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull)
+                : CovarSampAggregator<OMNI_CONTAINER, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+                    inputRaw, outputPartial, isOverflowAsNull);
+    }
+    if (nInput != 2) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            std::string(aggName) + " requires 2 columns (raw) or 4 DOUBLE (merge). Got size=" + std::to_string(nInput));
+    }
+    if (!outputPartial && outputTypes.GetType(0)->GetId() != OMNI_DOUBLE) {
+        if (isPop)
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "CovarPop aggregator final output type must be DOUBLE");
+        else
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "CovarSamp aggregator final output type must be DOUBLE");
+    }
+    if (inputTypes.GetType(0)->GetId() != OMNI_DOUBLE || inputTypes.GetType(1)->GetId() != OMNI_DOUBLE) {
+        if (isPop)
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "CovarPop aggregator raw input requires both columns to be DOUBLE");
+        else
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "CovarSamp aggregator raw input requires both columns to be DOUBLE");
+    }
+    return isPop ? CovarPopAggregator<OMNI_DOUBLE, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+        inputRaw, outputPartial, isOverflowAsNull)
+        : CovarSampAggregator<OMNI_DOUBLE, OMNI_DOUBLE>::Create(inputTypes, outputTypes, channels,
+            inputRaw, outputPartial, isOverflowAsNull);
+}
+
+std::unique_ptr<Aggregator> CovarPopAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull) {
+    return CreateCovarianceAggregator(OMNI_AGGREGATION_TYPE_COVAR_POP, inputTypes, outputTypes, channels,
+        inputRaw, outputPartial, isOverflowAsNull);
+}
+
+std::unique_ptr<Aggregator> CovarSampAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull) {
+    return CreateCovarianceAggregator(OMNI_AGGREGATION_TYPE_COVAR_SAMP, inputTypes, outputTypes, channels,
+        inputRaw, outputPartial, isOverflowAsNull);
 }
 
 template <template <bool, bool, typename...> class T, typename... Args>

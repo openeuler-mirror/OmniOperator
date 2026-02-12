@@ -150,6 +150,21 @@ public class FunctionType extends Constant {
      */
     public static final FunctionType OMNI_AGGREGATION_TYPE_APPROX_COUNT_DISTINCT = new FunctionType(27);
 
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_CORR.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_CORR = new FunctionType(28);
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_COVAR_POP.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_COVAR_POP = new FunctionType(29);
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_COVAR_SAMP.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_COVAR_SAMP = new FunctionType(30);
+
     private static final long serialVersionUID = 5337378607473315604L;
 
     /**

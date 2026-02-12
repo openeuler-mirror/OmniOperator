@@ -317,6 +317,30 @@ public:
     ~BitXorAggregatorFactory() override = default;
 };
 
+class CorrAggregatorFactory : public AggregatorFactory {
+public:
+    CorrAggregatorFactory() = default;
+    ~CorrAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override;
+};
+
+class CovarPopAggregatorFactory : public AggregatorFactory {
+public:
+    CovarPopAggregatorFactory() = default;
+    ~CovarPopAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override;
+};
+
+class CovarSampAggregatorFactory : public AggregatorFactory {
+public:
+    CovarSampAggregatorFactory() = default;
+    ~CovarSampAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override;
+};
+
 class MinAggregatorFactory : public TypedAggregatorFactory<MinAggregator> {
 public:
     MinAggregatorFactory() : TypedAggregatorFactory<MinAggregator>() {}

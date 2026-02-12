@@ -126,6 +126,18 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 CreateAggregatorFactory<ApproxCountDistinctAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
+            case OMNI_AGGREGATION_TYPE_CORR: {
+                CreateAggregatorFactory<CorrAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_COVAR_POP: {
+                CreateAggregatorFactory<CovarPopAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_COVAR_SAMP: {
+                CreateAggregatorFactory<CovarSampAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
             default: {
                 std::string omniExceptionInfo = "In function CreateAggregatorFactories, No such agg func type " +
                     std::to_string(funcTypesContext[i]);
