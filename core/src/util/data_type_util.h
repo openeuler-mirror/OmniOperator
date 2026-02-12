@@ -49,7 +49,7 @@ public:
     static void GetArrayElementType(JNIEnv *env, jobject jDataType, jobject *elementType)
     {
         jclass arrayTypeClass = env->GetObjectClass(jDataType);
-        jmethodID getElementTypeMethod = env->GetMethodID(arrayTypeClass, "getChild", "()Lnova/hetu/omniruntime/type/DataType;");
+        jmethodID getElementTypeMethod = env->GetMethodID(arrayTypeClass, "getElementType", "()Lnova/hetu/omniruntime/type/DataType;");
         *elementType = env->CallObjectMethod(jDataType, getElementTypeMethod);
     }
 
