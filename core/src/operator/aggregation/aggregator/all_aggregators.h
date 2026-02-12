@@ -33,4 +33,7 @@
 #include "operator/aggregation/aggregator/bit_or_aggregator.h"
 #include "operator/aggregation/aggregator/bit_xor_aggregator.h"
 #include "operator/aggregation/aggregator/approx_count_distinct_aggregator.h"
+#include "operator/aggregation/aggregator/corr_aggregator.h"
+#include "operator/aggregation/aggregator/covar_pop_aggregator.h"
+#include "operator/aggregation/aggregator/covar_samp_aggregator.h"
 #endif // OMNI_RUNTIME_ALL_AGGREGATORS_H

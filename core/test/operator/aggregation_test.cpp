@@ -19,6 +19,8 @@
 #include "util/config_util.h"
 #include "util/test_util.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
+#include "operator/aggregation/aggregator/corr_aggregator.h"
+#include "operator/aggregation/container_vector.h"
 #include "type/decimal128.h"
 
 namespace omniruntime {
@@ -6848,5 +6850,230 @@ TEST(HashAggregationOperatorTest, test_step) {
         delete hashAggOperatorFactory;
         omniruntime::op::Operator::DeleteOperator(hashAggOperator2);
         delete hashAggOperatorFactory2;
+}
+
+
+// corr: Pearson correlation. Raw input 2 columns (numeric), output 1 double.
+// Merge: 1 container (Spark order n,xAvg,yAvg,ck,xMk,yMk all Double). Partial output: same Spark order.
+// Test data: x = [0,1,2,3,4], y = [0,1,4,9,16] => corr ≈ 0.9589
+TEST(AggregattorTest, corr_aggregation_test) {
+    const int32_t rowNum = 5;
+    op::CorrAggregatorFactory corrFactory;
+    DataTypes corrInputTypes(std::vector<DataTypePtr>{LongType(), LongType()});
+    DataTypes corrOutputTypes(std::vector<DataTypePtr>{DoubleType()});
+    std::vector<int32_t> channels = {0, 1};
+    auto corrAgg = corrFactory.CreateAggregator(corrInputTypes, corrOutputTypes, channels, true, false, false);
+    ASSERT_NE(corrAgg.get(), nullptr);
+
+    Vector<int64_t> *inputCol1 = new Vector<int64_t>(rowNum);
+    Vector<int64_t> *inputCol2 = new Vector<int64_t>(rowNum);
+    for (int i = 0; i < rowNum; ++i) {
+        inputCol1->SetValue(i, static_cast<int64_t>(i));
+        inputCol2->SetValue(i, static_cast<int64_t>(i * i));
+    }
+    VectorBatch *vectorBatch = new VectorBatch(2);
+    vectorBatch->Append(inputCol1);
+    vectorBatch->Append(inputCol2);
+
+    auto state = NewAndInitState(corrAgg.get());
+    corrAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    Vector<double> outputVec(1);
+    std::vector<BaseVector *> extractVectors = {&outputVec};
+    corrAgg->ExtractValues(state.get(), extractVectors, 0);
+    double result = outputVec.GetValue(0);
+    EXPECT_NEAR(result, 0.95892660297076826, 1e-9);
+
+    delete vectorBatch;
+}
+
+// covar_pop: population covariance. Raw input 2 DOUBLE columns, output 1 double.
+// Merge: 1 container (Spark order n,xAvg,yAvg,ck all Double). Partial output: same Spark order. Final = c2/count.
+// Test: x=[0,1,2,3,4], y=[0,1,4,9,16] => covar_pop = 8
+TEST(AggregattorTest, covar_pop_aggregation_test) {
+    const int32_t rowNum = 5;
+    op::CovarPopAggregatorFactory covarPopFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{DoubleType(), DoubleType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{DoubleType()});
+    std::vector<int32_t> channels = {0, 1};
+    auto covarPopAgg = covarPopFactory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(covarPopAgg.get(), nullptr);
+
+    Vector<double> *col1 = new Vector<double>(rowNum);
+    Vector<double> *col2 = new Vector<double>(rowNum);
+    for (int i = 0; i < rowNum; ++i) {
+        col1->SetValue(i, static_cast<double>(i));
+        col2->SetValue(i, static_cast<double>(i * i));
+    }
+    VectorBatch *vectorBatch = new VectorBatch(2);
+    vectorBatch->Append(col1);
+    vectorBatch->Append(col2);
+
+    auto state = NewAndInitState(covarPopAgg.get());
+    covarPopAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    Vector<double> outputVec(1);
+    std::vector<BaseVector *> extractVectors = {&outputVec};
+    covarPopAgg->ExtractValues(state.get(), extractVectors, 0);
+    double result = outputVec.GetValue(0);
+    EXPECT_NEAR(result, 8.0, 1e-9);
+
+    delete vectorBatch;
+}
+
+// covar_samp: sample covariance. Raw input 2 DOUBLE columns, output 1 double.
+// Merge: 1 container (Spark order n,xAvg,yAvg,ck all Double). Partial output: same Spark order. Final = c2/(count-1).
+// Same data => covar_samp = 10
+TEST(AggregattorTest, covar_samp_aggregation_test) {
+    const int32_t rowNum = 5;
+    op::CovarSampAggregatorFactory covarSampFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{DoubleType(), DoubleType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{DoubleType()});
+    std::vector<int32_t> channels = {0, 1};
+    auto covarSampAgg = covarSampFactory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(covarSampAgg.get(), nullptr);
+
+    Vector<double> *col1 = new Vector<double>(rowNum);
+    Vector<double> *col2 = new Vector<double>(rowNum);
+    for (int i = 0; i < rowNum; ++i) {
+        col1->SetValue(i, static_cast<double>(i));
+        col2->SetValue(i, static_cast<double>(i * i));
+    }
+    VectorBatch *vectorBatch = new VectorBatch(2);
+    vectorBatch->Append(col1);
+    vectorBatch->Append(col2);
+
+    auto state = NewAndInitState(covarSampAgg.get());
+    covarSampAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    Vector<double> outputVec(1);
+    std::vector<BaseVector *> extractVectors = {&outputVec};
+    covarSampAgg->ExtractValues(state.get(), extractVectors, 0);
+    double result = outputVec.GetValue(0);
+    EXPECT_NEAR(result, 10.0, 1e-9);
+
+    delete vectorBatch;
+}
+
+// corr merge from 6 RAW Double columns (Gluten: Spark order n, xAvg, yAvg, ck, xMk, yMk). Same data => corr ≈ 0.9589
+TEST(AggregattorTest, corr_merge_from_6_columns_test) {
+    const int32_t rowNum = 1;
+    op::CorrAggregatorFactory corrFactory;
+    DataTypes corrInputTypes(std::vector<DataTypePtr>{
+        DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()});
+    DataTypes corrOutputTypes(std::vector<DataTypePtr>{DoubleType()});
+    std::vector<int32_t> channels = {0, 1, 2, 3, 4, 5};
+
+    auto *vN = new Vector<double>(rowNum);
+    auto *vXAvg = new Vector<double>(rowNum);
+    auto *vYAvg = new Vector<double>(rowNum);
+    auto *vCk = new Vector<double>(rowNum);
+    auto *vXMk = new Vector<double>(rowNum);
+    auto *vYMk = new Vector<double>(rowNum);
+    // Spark partial for x=[0,1,2,3,4], y=[0,1,4,9,16]: n=5, xAvg=2, yAvg=6, ck=40, xMk=10, yMk=174
+    vN->SetValue(0, 5.0);
+    vXAvg->SetValue(0, 2.0);
+    vYAvg->SetValue(0, 6.0);
+    vCk->SetValue(0, 40.0);
+    vXMk->SetValue(0, 10.0);
+    vYMk->SetValue(0, 174.0);
+
+    VectorBatch *vectorBatch = new VectorBatch(6);
+    vectorBatch->Append(vN);
+    vectorBatch->Append(vXAvg);
+    vectorBatch->Append(vYAvg);
+    vectorBatch->Append(vCk);
+    vectorBatch->Append(vXMk);
+    vectorBatch->Append(vYMk);
+
+    auto corrAgg = corrFactory.CreateAggregator(corrInputTypes, corrOutputTypes, channels, false, false, false);
+    ASSERT_NE(corrAgg.get(), nullptr);
+
+    auto state = NewAndInitState(corrAgg.get());
+    corrAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    Vector<double> outputVec(1);
+    std::vector<BaseVector *> extractVectors = {&outputVec};
+    corrAgg->ExtractValues(state.get(), extractVectors, 0);
+    double result = outputVec.GetValue(0);
+    EXPECT_NEAR(result, 0.95892660297076826, 1e-9);
+
+    delete vectorBatch;
+}
+
+// covar_pop merge from 4 RAW Double columns (Gluten: Spark order n, xAvg, yAvg, ck). Same data => covar_pop = 8
+TEST(AggregattorTest, covar_pop_merge_from_4_columns_test) {
+    const int32_t rowNum = 1;
+    op::CovarPopAggregatorFactory covarPopFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{
+        DoubleType(), DoubleType(), DoubleType(), DoubleType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{DoubleType()});
+    std::vector<int32_t> channels = {0, 1, 2, 3};
+
+    auto *vN = new Vector<double>(rowNum);
+    auto *vXAvg = new Vector<double>(rowNum);
+    auto *vYAvg = new Vector<double>(rowNum);
+    auto *vCk = new Vector<double>(rowNum);
+    vN->SetValue(0, 5.0);
+    vXAvg->SetValue(0, 2.0);
+    vYAvg->SetValue(0, 6.0);
+    vCk->SetValue(0, 40.0);
+
+    VectorBatch *vectorBatch = new VectorBatch(4);
+    vectorBatch->Append(vN);
+    vectorBatch->Append(vXAvg);
+    vectorBatch->Append(vYAvg);
+    vectorBatch->Append(vCk);
+
+    auto covarPopAgg = covarPopFactory.CreateAggregator(inputTypes, outputTypes, channels, false, false, false);
+    ASSERT_NE(covarPopAgg.get(), nullptr);
+
+    auto state = NewAndInitState(covarPopAgg.get());
+    covarPopAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    Vector<double> outputVec(1);
+    std::vector<BaseVector *> extractVectors = {&outputVec};
+    covarPopAgg->ExtractValues(state.get(), extractVectors, 0);
+    EXPECT_NEAR(outputVec.GetValue(0), 8.0, 1e-9);
+
+    delete vectorBatch;
+}
+
+// covar_samp merge from 4 RAW Double columns (Gluten: Spark order n, xAvg, yAvg, ck). Same data => covar_samp = 10
+TEST(AggregattorTest, covar_samp_merge_from_4_columns_test) {
+    const int32_t rowNum = 1;
+    op::CovarSampAggregatorFactory covarSampFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{
+        DoubleType(), DoubleType(), DoubleType(), DoubleType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{DoubleType()});
+    std::vector<int32_t> channels = {0, 1, 2, 3};
+
+    auto *vN = new Vector<double>(rowNum);
+    auto *vXAvg = new Vector<double>(rowNum);
+    auto *vYAvg = new Vector<double>(rowNum);
+    auto *vCk = new Vector<double>(rowNum);
+    vN->SetValue(0, 5.0);
+    vXAvg->SetValue(0, 2.0);
+    vYAvg->SetValue(0, 6.0);
+    vCk->SetValue(0, 40.0);
+
+    VectorBatch *vectorBatch = new VectorBatch(4);
+    vectorBatch->Append(vN);
+    vectorBatch->Append(vXAvg);
+    vectorBatch->Append(vYAvg);
+    vectorBatch->Append(vCk);
+
+    auto covarSampAgg = covarSampFactory.CreateAggregator(inputTypes, outputTypes, channels, false, false, false);
+    ASSERT_NE(covarSampAgg.get(), nullptr);
+
+    auto state = NewAndInitState(covarSampAgg.get());
+    covarSampAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    Vector<double> outputVec(1);
+    std::vector<BaseVector *> extractVectors = {&outputVec};
+    covarSampAgg->ExtractValues(state.get(), extractVectors, 0);
+    EXPECT_NEAR(outputVec.GetValue(0), 10.0, 1e-9);
+
+    delete vectorBatch;
 }
 }
