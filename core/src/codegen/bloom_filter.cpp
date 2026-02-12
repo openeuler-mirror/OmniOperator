@@ -16,21 +16,20 @@ using namespace omniruntime::type;
 /**
  * Build a BloomFilter object and store the input data into the BloomFilter structure after reversing the byte order.
  *
+ * Only UT use this constructor now, so we do not need to filp the endian
+ *
  * @param in: Pointer to input data.
  * @param versionJava: The version of the BloomFilter.
  */
 BloomFilter::BloomFilter(int8_t *in, int32_t versionJava) : version(versionJava)
 {
-    // Flip the data endianness
-    auto buf = WriteData(reinterpret_cast<char *>(in));
-
-    int32_t versionIn = (reinterpret_cast<int32_t *>(buf->GetBuffer()))[0]; // version 4 Bytes
+    int32_t versionIn = (reinterpret_cast<int32_t *>(in))[0];
     if (version != versionIn) {
         throw omniruntime::exception::OmniException("ILLEGAL_INPUT", "wrong version for bloom filter");
     }
 
-    numHashFunctions = (reinterpret_cast<int32_t *>(buf->GetBuffer()))[1]; // numHashFunctions 4 Bytes
-    bits = new BitArray(buf->GetBuffer() + 8);                    // offset is 8 Bytes
+    numHashFunctions = (reinterpret_cast<int32_t *>(in))[1]; // numHashFunctions 4 Bytes
+    bits = new BitArray(in + 8);                    // offset is 8 Bytes
 }
 
 /**

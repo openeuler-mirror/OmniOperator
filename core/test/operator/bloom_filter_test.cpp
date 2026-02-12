@@ -1,11 +1,11 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  * Description: ...
+ */
 
 #include "gtest/gtest.h"
 #include "codegen/bloom_filter.h"
 #include "util/test_util.h"
-#include "operator/aggregation/aggregator/bloom_filter_aggregator.h"
 #include "operator/aggregation/aggregator/aggregator_util.h"
 #include "operator/aggregation/non_group_aggregation.h"
 
@@ -179,6 +179,15 @@ TEST(BloomFilterTest, TestBloomFilterAggregator)
         EXPECT_TRUE(finalBf->MightContainLong(inputDataVector2[i]));
         EXPECT_FALSE(finalBf->MightContainLong(inputDataVector2[i] + 1));
     }
+
+    VectorHelper::FreeVecBatch(finalOutputVecBatch);
+    delete aggPartial1;
+    delete aggPartial2;
+    delete aggFinal;
+
+    delete partialBf1;
+    delete partialBf2;
+    delete finalBf;
 }
 
 TEST(BloomFilterTest, TestBloomFilterPutLong)
@@ -223,5 +232,3 @@ TEST(BloomFilterTest, TestBloomFilterMightContain)
     delete[] in;
 }
 }
-
-*/
