@@ -5,6 +5,7 @@
 #include "expr_verifier.h"
 #include "codegen/func_registry.h"
 #include "vectorization/registration/SimpleFunctionRegistry.h"
+#include "util/debug.h"
 
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
@@ -318,8 +319,7 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
                 std::string fmtStr = *(literalArg->stringVal);
                 if (fmtStr != "yyyy-MM-dd") {
                     this->isSupportCodegen_ = false;
-                    std::cout << "WARN : date_format fallback, due to unsupported formatStr, only support yyyy-MM-dd."
-                        << std::endl;
+                    LogWarn("date_format fallback, due to unsupported formatStr, only support yyyy-MM-dd.");
                     return;
                 }
             }
