@@ -165,6 +165,11 @@ public class FunctionType extends Constant {
      */
     public static final FunctionType OMNI_AGGREGATION_TYPE_COVAR_SAMP = new FunctionType(30);
 
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_COLLECT_SET.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_COLLECT_SET = new FunctionType(28);
+
     private static final long serialVersionUID = 5337378607473315604L;
 
     /**

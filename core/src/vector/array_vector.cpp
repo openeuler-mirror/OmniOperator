@@ -18,6 +18,10 @@ void ArrayVector::SetValue(int index, BaseVector *value)
     int valueSize = value->GetSize();
     if (valueSize > 0) {
         int elementVectorSize = GetOffset(index);
+        if (elements.get() == nullptr) {
+            std::string message("elementVector of ArrayVector is nullptr, please SetElementVector first.");
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
         elements->Expand(elementVectorSize + valueSize);
         VectorHelper::AppendVector(elements.get(), elementVectorSize, value, valueSize);
     }

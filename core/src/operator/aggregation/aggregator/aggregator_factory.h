@@ -353,6 +353,17 @@ public:
     ~MaxAggregatorFactory() override = default;
 };
 
+// CollectSet: always use element type T as template param, create CollectSetAggregator<T, T> for both partial and final.
+// Partial: input T -> CollectSetAggregator<T, T>; Final: input Array<T> -> element type T -> CollectSetAggregator<T, T>.
+// String types (OMNI_CHAR, OMNI_VARCHAR) and nested array (OMNI_ARRAY) are passed through for custom handling.
+class CollectSetAggregatorFactory : public AggregatorFactory {
+public:
+    CollectSetAggregatorFactory() = default;
+    ~CollectSetAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override;
+};
+
 class MinByAggregatorFactory : public AggregatorFactory {
 public:
     MinByAggregatorFactory() : AggregatorFactory() {}

@@ -54,24 +54,38 @@ template <type::DataTypeId OmniId> const int32_t *GetIdsFromDict(BaseVector *vec
 
 using NewUniqueVectorFunction = std::function<void(VectorBatch *, int)>;
 
-template <type::DataTypeId OmniId> ALWAYS_INLINE static void NewUniqueVector(VectorBatch *vectorBatch, int size)
+using NewUniqueComplexVectorFunction = std::function<void(DataTypePtr, VectorBatch *, int)>;
+
+template <type::DataTypeId OmniId> ALWAYS_INLINE void NewUniqueVector(VectorBatch *vectorBatch, int size)
 {
-    auto vector = VectorHelper::CreateVector(OMNI_FLAT, OmniId, size);
+    if (OmniId == OMNI_CONTAINER) {
+        auto doubleVector = new Vector<double>(size);
+        auto longVector = new Vector<int64_t>(size);
+        // container is used in average final stage , the inputs only include doubleVector and longVector
+        std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
+        vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector);
+        vectorAddresses[1] = reinterpret_cast<int64_t>(longVector);
+        std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
+        auto containerVector = std::make_unique<ContainerVector>(size, vectorAddresses, dataTypes);
+        vectorBatch->Append(containerVector.release());
+    } else {
+        auto vector = VectorHelper::CreateVector(OMNI_FLAT, OmniId, size);
+        vectorBatch->Append(vector);
+    }
+}
+
+template <type::DataTypeId OmniId> ALWAYS_INLINE void NewUniqueComplexVector(DataTypePtr datatType, VectorBatch *vectorBatch, int size)
+{
+    // COMPLEX TYPE: ARRAY, MAP, ROW
+    auto vector = VectorHelper::CreateComplexVector(datatType.get(), size);
     vectorBatch->Append(vector);
 }
 
-template <> ALWAYS_INLINE void NewUniqueVector<type::DataTypeId::OMNI_CONTAINER>(VectorBatch *vectorBatch, int size)
-{
-    auto doubleVector = new Vector<double>(size);
-    auto longVector = new Vector<int64_t>(size);
-    // container is used in average final stage , the inputs only include doubleVector and longVector
-    std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
-    vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector);
-    vectorAddresses[1] = reinterpret_cast<int64_t>(longVector);
-    std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
-    auto containerVector = std::make_unique<ContainerVector>(size, vectorAddresses, dataTypes);
-    vectorBatch->Append(containerVector.release());
-}
+const std::vector<NewUniqueComplexVectorFunction> newUniqueComplexVectorFunctions {
+    NewUniqueComplexVector<OMNI_ARRAY>,      // OMNI_ARRAY
+    nullptr,                                 // OMNI_MAP
+    nullptr,                                 // OMNI_ROW
+};
 
 const std::vector<NewUniqueVectorFunction> newUniqueVectorFunctions {
     nullptr,                          // OMNI_NONE

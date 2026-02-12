@@ -123,7 +123,9 @@ public:
             std::vector<std::shared_ptr<BaseVector>> children;
             auto arrayType = static_cast<ArrayType*>(dataType);
             for (int i = 0; i < arrayType->Size(); i++) {
-                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(arrayType->ElementType().get(), 0)));
+                children.push_back(
+                    std::shared_ptr<BaseVector>(CreateComplexVector(arrayType->ElementType().get(), 0))
+                );
             }
             return new ArrayVector(size, children[0]);
         } else {

@@ -616,6 +616,34 @@ public:
         return;
     }
 
+    template <class Func> void ForEachKV(Func &&func) const
+    {
+        int remainNum = elementsSize;
+        if (HasNullCell()) {
+            --remainNum;
+            func(nullSlot->GetKey(), nullSlot->GetValue());
+        }
+
+        int index = 0;
+        while (remainNum) {
+            __builtin_prefetch(identifiers + index + 1, 0, 3);
+            __builtin_prefetch(slots + index + 1, 0, 3);
+            while (IsEmptyOrDeleted(*(identifiers + index))) {
+                // ctrl is not necessarily aligned to Group::kWidth. It is also likely
+                // to read past the space for ctrl bytes and into slots. This is ok
+                // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
+                // is no way to read outside the combined slot array.
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, identifiers + index);
+                index += shift;
+            }
+            auto &slot = slots[index];
+            func(slot.GetKey(), slot.GetValue());
+            ++index;
+            --remainNum;
+        }
+        return;
+    }
+
     template <class Func> void ForEachValue(Func &&func)
     {
         int remainNum = elementsSize;
@@ -641,7 +669,6 @@ public:
             --remainNum;
         }
     }
-
     size_t CalculateHash(const KeyType &key)
     {
         return hasher(key);
