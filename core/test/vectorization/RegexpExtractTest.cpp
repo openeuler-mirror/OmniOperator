@@ -181,6 +181,8 @@ TEST(RegexpExtractTest, RegexpExtractNoMatch) {
         EXPECT_TRUE(resultVec->IsNull(i)) << "Row " << i << " should be NULL (no match)";
     }
 
+    // groupIdxVec was not passed to Apply (nullptr was passed instead), so must delete here
+    delete groupIdxVec;
     delete resultVec;
 }
 
@@ -320,6 +322,10 @@ TEST(RegexpExtractTest, RegexpExtractInvalidPattern) {
     ASSERT_THROW({RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);}, omniruntime::exception::OmniException)
          << "RegexpExtract should handle invalid regex through throw exception";
 
+    // Apply threw before reaching its delete statements, so args are leaked - clean up here
+    delete strVec;
+    delete patternVec;
+    delete groupIdxVec;
     delete resultVec;
 }
 

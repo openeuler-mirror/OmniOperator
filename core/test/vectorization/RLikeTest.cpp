@@ -274,6 +274,9 @@ TEST(RLikeTest, RLikeInvalidPattern) {
     ASSERT_THROW({RLikeFunctionTestHelper::ExecuteRLike(strVec, patternVec, resultVec);}, omniruntime::exception::OmniException)
         << "RLike should handle invalid regex through throw exception";
 
+    // Apply threw before reaching its delete statements, so args are leaked - clean up here
+    delete strVec;
+    delete patternVec;
     delete resultVec;
 }
 
