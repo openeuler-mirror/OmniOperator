@@ -8,11 +8,15 @@
 #define OMNI_RUNTIME_COVAR_POP_AGGREGATOR_H
 
 #include <cstdint>
+#include <cmath>
 #include "typed_aggregator.h"
 #include "operator/aggregation/container_vector.h"
 
 namespace omniruntime {
 namespace op {
+
+// Number of partial output columns for covar_pop/covar_samp (n, xAvg, yAvg, ck). Compatible with Spark/Gluten/Velox.
+constexpr int kCovarPartialColumnCount = 4;
 
 // 4-value partial state compatible with Spark/Gluten/Velox: (c2, count, meanX, meanY)
 #pragma pack(push, 1)
@@ -32,7 +36,7 @@ struct CovarPartialState {
     bool IsEmpty() const { return valueState == AggValueState::EMPTY_VALUE; }
     bool IsOverFlowed() const { return valueState == AggValueState::OVERFLOWED; }
 
-    // Welford-style update (same as Velox CovarAccumulator::update)
+    // Welford-style update (same as Velox CovarAccumulator::update). Sets valueState to OVERFLOWED on overflow.
     void Update(double x, double y) {
         count += 1;
         double deltaX = x - meanX;
@@ -40,11 +44,19 @@ struct CovarPartialState {
         double deltaY = y - meanY;
         meanY += deltaY / count;
         c2 += deltaX * (y - meanY);
+        if (!std::isfinite(meanX) || !std::isfinite(meanY) || !std::isfinite(c2)) {
+            valueState = AggValueState::OVERFLOWED;
+        }
     }
 
-    // Merge (same as Velox CovarAccumulator::merge)
+    // Merge (same as Velox CovarAccumulator::merge). Sets valueState to OVERFLOWED on overflow.
     void Merge(int64_t countOther, double meanXOther, double meanYOther, double c2Other) {
         if (countOther == 0) return;
+        if (valueState == AggValueState::OVERFLOWED) return;
+        if (!std::isfinite(meanXOther) || !std::isfinite(meanYOther) || !std::isfinite(c2Other)) {
+            valueState = AggValueState::OVERFLOWED;
+            return;
+        }
         if (count == 0) {
             count = countOther;
             meanX = meanXOther;
@@ -59,6 +71,9 @@ struct CovarPartialState {
         meanX += deltaMeanX * countOther / static_cast<double>(newCount);
         meanY += deltaMeanY * countOther / static_cast<double>(newCount);
         count = newCount;
+        if (!std::isfinite(meanX) || !std::isfinite(meanY) || !std::isfinite(c2)) {
+            valueState = AggValueState::OVERFLOWED;
+        }
     }
 };
 #pragma pack(pop)

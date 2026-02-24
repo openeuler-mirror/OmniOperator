@@ -22,11 +22,14 @@ std::unique_ptr<Aggregator> CovarPopAggregator<IN_ID, OUT_ID>::Create(const Data
         LogError("Error in covar_pop aggregator: Unsupported output type %s", TypeUtil::TypeToStringLog(OUT_ID).c_str());
         return nullptr;
     }
-    if (IN_ID != OMNI_CONTAINER && (inputTypes.GetSize() != 2 || !TypedAggregator::CheckTypes("covar_pop", inputTypes, outputTypes, IN_ID, OUT_ID)))
+    if (IN_ID != OMNI_CONTAINER && (inputTypes.GetSize() != 2 || !TypedAggregator::CheckTypes(
+                                        "covar_pop", inputTypes, outputTypes, IN_ID, OUT_ID))) {
         return nullptr;
+    }
     // Merge: Gluten sends 4 RAW Double columns only.
-    if (IN_ID == OMNI_CONTAINER && inputTypes.GetSize() != 4)
+    if (IN_ID == OMNI_CONTAINER && inputTypes.GetSize() != kCovarPartialColumnCount) {
         return nullptr;
+    }
     return std::unique_ptr<CovarPopAggregator<IN_ID, OUT_ID>>(
         new CovarPopAggregator<IN_ID, OUT_ID>(inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
 }
@@ -38,23 +41,43 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState *stat
     auto *s = CovarPartialState::ConstCastState(state + aggStateOffset);
     if (s->IsEmpty()) {
         if (outputPartial) {
-            if (vectors.size() >= 4) {
-                for (int i = 0; i < 4; i++)
+            if (vectors.size() >= kCovarPartialColumnCount) {
+                for (int i = 0; i < kCovarPartialColumnCount; i++) {
                     reinterpret_cast<Vector<double> *>(vectors[i])->SetNull(rowIndex);
+                }
             } else {
                 auto *vec = static_cast<ContainerVector *>(vectors[0]);
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < kCovarPartialColumnCount; i++) {
                     reinterpret_cast<Vector<double> *>(vec->GetValue(i))->SetNull(rowIndex);
+                }
             }
         } else {
             static_cast<OutVector *>(vectors[0])->SetNull(rowIndex);
         }
         return;
     }
+    if (s->IsOverFlowed()) {
+        if (outputPartial) {
+            if (vectors.size() >= kCovarPartialColumnCount) {
+                for (int i = 0; i < kCovarPartialColumnCount; i++) {
+                    reinterpret_cast<Vector<double> *>(vectors[i])->SetNull(rowIndex);
+                }
+            } else {
+                auto *vec = static_cast<ContainerVector *>(vectors[0]);
+                for (int i = 0; i < kCovarPartialColumnCount; i++) {
+                    reinterpret_cast<Vector<double> *>(vec->GetValue(i))->SetNull(rowIndex);
+                }
+            }
+            this->SetNullOrThrowException(vectors[0], rowIndex, "covar_pop_aggregator overflow.");
+        } else {
+            this->SetNullOrThrowException(vectors[0], rowIndex, "covar_pop_aggregator overflow.");
+        }
+        return;
+    }
     if (outputPartial) {
         // Spark order: (n, xAvg, yAvg, ck) all Double
         double n = static_cast<double>(s->count);
-        if (vectors.size() >= 4) {
+        if (vectors.size() >= kCovarPartialColumnCount) {
             reinterpret_cast<Vector<double> *>(vectors[0])->SetValue(rowIndex, n);
             reinterpret_cast<Vector<double> *>(vectors[1])->SetValue(rowIndex, s->meanX);
             reinterpret_cast<Vector<double> *>(vectors[2])->SetValue(rowIndex, s->meanY);
@@ -68,6 +91,10 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState *stat
         }
     } else {
         double v = CovarPopFromState(s->count, s->meanX, s->meanY, s->c2);
+        if (!std::isfinite(v)) {
+            this->SetNullOrThrowException(vectors[0], rowIndex, "covar_pop_aggregator overflow.");
+            return;
+        }
         static_cast<OutVector *>(vectors[0])->SetValue(rowIndex, static_cast<OutType>(v));
     }
 }
@@ -78,7 +105,7 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<Aggregate
     (void)rowOffset;
     if (outputPartial) {
         Vector<double> *vN = nullptr, *vXAvg = nullptr, *vYAvg = nullptr, *vCk = nullptr;
-        if (vectors.size() >= 4) {
+        if (vectors.size() >= kCovarPartialColumnCount) {
             vN = reinterpret_cast<Vector<double> *>(vectors[0]);
             vXAvg = reinterpret_cast<Vector<double> *>(vectors[1]);
             vYAvg = reinterpret_cast<Vector<double> *>(vectors[2]);
@@ -93,7 +120,16 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<Aggregate
         for (int32_t i = 0; i < rowCount; i++) {
             auto *s = CovarPartialState::CastState(groupStates[i] + aggStateOffset);
             if (s->IsEmpty()) {
-                vN->SetNull(i); vXAvg->SetNull(i); vYAvg->SetNull(i); vCk->SetNull(i);
+                vN->SetNull(i); vXAvg->SetNull(i); vYAvg->SetNull(i);
+                vCk->SetNull(i);
+            } else if (s->IsOverFlowed()) {
+                vN->SetNull(i);
+                vXAvg->SetNull(i);
+                vYAvg->SetNull(i);
+                vCk->SetNull(i);
+                this->SetNullOrThrowException(
+                    vectors.size() >= kCovarPartialColumnCount ? vectors[0] : reinterpret_cast<BaseVector *>(vN), i,
+                    "covar_pop_aggregator overflow.");
             } else {
                 vN->SetValue(i, static_cast<double>(s->count));
                 vXAvg->SetValue(i, s->meanX);
@@ -105,10 +141,18 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<Aggregate
         auto *v = static_cast<OutVector *>(vectors[0]);
         for (int32_t i = 0; i < rowCount; i++) {
             auto *s = CovarPartialState::CastState(groupStates[i] + aggStateOffset);
-            if (s->IsEmpty())
+            if (s->IsEmpty()) {
                 v->SetNull(i);
-            else
-                v->SetValue(i, static_cast<OutType>(CovarPopFromState(s->count, s->meanX, s->meanY, s->c2)));
+            } else if (s->IsOverFlowed()) {
+                this->SetNullOrThrowException(v, i, "covar_pop_aggregator overflow.");
+            } else {
+                double val = CovarPopFromState(s->count, s->meanX, s->meanY, s->c2);
+                if (!std::isfinite(val)) {
+                    this->SetNullOrThrowException(v, i, "covar_pop_aggregator overflow.");
+                } else {
+                    v->SetValue(i, static_cast<OutType>(val));
+                }
+            }
         }
     }
 }
@@ -116,8 +160,9 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<Aggregate
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 std::vector<DataTypePtr> CovarPopAggregator<IN_ID, OUT_ID>::GetSpillType() {
     std::vector<DataTypePtr> spillTypes;
-    for (int i = 0; i < 4; i++)
-        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));  // Spark order: n, xAvg, yAvg, ck
+    for (int i = 0; i < kCovarPartialColumnCount; i++) {
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE)); // Spark order: n, xAvg, yAvg, ck
+    }
     return spillTypes;
 }
 
@@ -157,8 +202,9 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *st
             if (col1->IsNull(rowOffset + i) || col2->IsNull(rowOffset + i)) continue;
             s->Update(p1[i], p2[i]);
         }
-        if (s->count > 0)
+        if (s->count > 0 && !s->IsOverFlowed()) {
             s->valueState = AggValueState::NORMAL;
+        }
     } else {
         // Merge: Gluten sends 4 RAW Double columns. Spark order: n, xAvg, yAvg, ck
         double *vN = reinterpret_cast<double *>(GetValuesFromVector<OMNI_DOUBLE>(curVectorBatch->Get(channels[0]))) + rowOffset;
@@ -172,8 +218,9 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *st
             if (n <= 0) continue;
             s->Merge(static_cast<int64_t>(n), vXAvg[i], vYAvg[i], vCk[i]);
         }
-        if (s->count > 0)
+        if (s->count > 0 && !s->IsOverFlowed()) {
             s->valueState = AggValueState::NORMAL;
+        }
     }
 }
 
@@ -193,7 +240,9 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggrega
             if (col1->IsNull(rowOffset + i) || col2->IsNull(rowOffset + i)) continue;
             auto *s = CovarPartialState::CastState(rowStates[i] + aggStateOffset);
             s->Update(p1[i], p2[i]);
-            s->valueState = AggValueState::NORMAL;
+            if (!s->IsOverFlowed()) {
+                s->valueState = AggValueState::NORMAL;
+            }
         }
     } else {
         // Merge: 4 RAW Double columns (Gluten). Spark order: n, xAvg, yAvg, ck
@@ -209,8 +258,9 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggrega
             if (n <= 0) continue;
             auto *s = CovarPartialState::CastState(rowStates[i] + aggStateOffset);
             s->Merge(static_cast<int64_t>(n), vXAvg[i], vYAvg[i], vCk[i]);
-            if (s->count > 0)
+            if (s->count > 0 && !s->IsOverFlowed()) {
                 s->valueState = AggValueState::NORMAL;
+            }
         }
     }
 }

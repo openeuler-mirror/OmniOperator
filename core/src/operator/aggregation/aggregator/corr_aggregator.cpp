@@ -27,7 +27,7 @@ std::unique_ptr<Aggregator> CorrAggregator<IN_ID, OUT_ID>::Create(const DataType
     if (IN_ID != OMNI_CONTAINER && (inputTypes.GetSize() != 2 || !TypedAggregator::CheckTypes("corr", inputTypes, outputTypes, IN_ID, OUT_ID)))
         return nullptr;
     // Merge: Gluten sends 6 RAW Double columns only.
-    if (IN_ID == OMNI_CONTAINER && inputTypes.GetSize() != 6)
+    if (IN_ID == OMNI_CONTAINER && inputTypes.GetSize() != kCorrPartialColumnCount)
         return nullptr;
     return std::unique_ptr<CorrAggregator<IN_ID, OUT_ID>>(
         new CorrAggregator<IN_ID, OUT_ID>(inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
@@ -39,16 +39,36 @@ void CorrAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState *state, s
     auto *s = CorrPartialState::ConstCastState(state + aggStateOffset);
     if (s->IsEmpty()) {
         if (outputPartial) {
-            if (vectors.size() >= 6) {
-                for (int i = 0; i < 6; i++)
+            if (vectors.size() >= kCorrPartialColumnCount) {
+                for (int i = 0; i < kCorrPartialColumnCount; i++) {
                     vectors[i]->SetNull(rowIndex);
+                }
             } else {
                 auto *vec = static_cast<ContainerVector *>(vectors[0]);
-                for (int i = 0; i < 6; i++)
+                for (int i = 0; i < kCorrPartialColumnCount; i++) {
                     reinterpret_cast<Vector<double> *>(vec->GetValue(i))->SetNull(rowIndex);
+                }
             }
         } else {
             static_cast<OutVector *>(vectors[0])->SetNull(rowIndex);
+        }
+        return;
+    }
+    if (s->IsOverFlowed()) {
+        if (outputPartial) {
+            if (vectors.size() >= kCorrPartialColumnCount) {
+                for (int i = 0; i < kCorrPartialColumnCount; i++) {
+                    vectors[i]->SetNull(rowIndex);
+                }
+            } else {
+                auto *vec = static_cast<ContainerVector *>(vectors[0]);
+                for (int i = 0; i < kCorrPartialColumnCount; i++) {
+                    reinterpret_cast<Vector<double> *>(vec->GetValue(i))->SetNull(rowIndex);
+                }
+            }
+            this->SetNullOrThrowException(vectors[0], rowIndex, "corr_aggregator overflow.");
+        } else {
+            this->SetNullOrThrowException(vectors[0], rowIndex, "corr_aggregator overflow.");
         }
         return;
     }
@@ -60,7 +80,7 @@ void CorrAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState *state, s
         double ck = (n > 0) ? (s->sum_xy - s->sum_x * s->sum_y / n) : 0.0;
         double xMk = (n > 0) ? (s->sum_xx - s->sum_x * s->sum_x / n) : 0.0;
         double yMk = (n > 0) ? (s->sum_yy - s->sum_y * s->sum_y / n) : 0.0;
-        if (vectors.size() >= 6) {
+        if (vectors.size() >= kCorrPartialColumnCount) {
             reinterpret_cast<Vector<double> *>(vectors[0])->SetValue(rowIndex, n);
             reinterpret_cast<Vector<double> *>(vectors[1])->SetValue(rowIndex, xAvg);
             reinterpret_cast<Vector<double> *>(vectors[2])->SetValue(rowIndex, yAvg);
@@ -77,7 +97,16 @@ void CorrAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState *state, s
             reinterpret_cast<Vector<double> *>(vec->GetValue(5))->SetValue(rowIndex, yMk);
         }
     } else {
+        // Spark: corr has no result when count < 2 (single row or empty); return NULL.
+        if (s->count < 2) {
+            static_cast<OutVector *>(vectors[0])->SetNull(rowIndex);
+            return;
+        }
         double corr = CorrFromSuffStats(s->count, s->sum_x, s->sum_y, s->sum_xx, s->sum_yy, s->sum_xy);
+        if (!std::isfinite(corr)) {
+            this->SetNullOrThrowException(vectors[0], rowIndex, "corr_aggregator overflow.");
+            return;
+        }
         static_cast<OutVector *>(vectors[0])->SetValue(rowIndex, static_cast<OutType>(corr));
     }
 }
@@ -88,7 +117,7 @@ void CorrAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateStat
     (void)rowOffset;
     if (outputPartial) {
         Vector<double> *vN = nullptr, *vXAvg = nullptr, *vYAvg = nullptr, *vCk = nullptr, *vXMk = nullptr, *vYMk = nullptr;
-        if (vectors.size() >= 6) {
+        if (vectors.size() >= kCorrPartialColumnCount) {
             vN = reinterpret_cast<Vector<double> *>(vectors[0]);
             vXAvg = reinterpret_cast<Vector<double> *>(vectors[1]);
             vYAvg = reinterpret_cast<Vector<double> *>(vectors[2]);
@@ -109,6 +138,10 @@ void CorrAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateStat
             if (s->IsEmpty()) {
                 vN->SetNull(i); vXAvg->SetNull(i); vYAvg->SetNull(i);
                 vCk->SetNull(i); vXMk->SetNull(i); vYMk->SetNull(i);
+            } else if (s->IsOverFlowed()) {
+                vN->SetNull(i); vXAvg->SetNull(i); vYAvg->SetNull(i);
+                vCk->SetNull(i); vXMk->SetNull(i); vYMk->SetNull(i);
+                this->SetNullOrThrowException(vectors.size() >= kCorrPartialColumnCount ? vectors[0] : reinterpret_cast<BaseVector *>(vN), i, "corr_aggregator overflow.");
             } else {
                 double n = static_cast<double>(s->count);
                 double xAvg = s->sum_x / n, yAvg = s->sum_y / n;
@@ -124,10 +157,20 @@ void CorrAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateStat
         auto *v = static_cast<OutVector *>(vectors[0]);
         for (int32_t i = 0; i < rowCount; i++) {
             auto *s = CorrPartialState::CastState(groupStates[i] + aggStateOffset);
-            if (s->IsEmpty())
+            if (s->IsEmpty()) {
                 v->SetNull(i);
-            else
-                v->SetValue(i, static_cast<OutType>(CorrFromSuffStats(s->count, s->sum_x, s->sum_y, s->sum_xx, s->sum_yy, s->sum_xy)));
+            } else if (s->count < 2) {
+                v->SetNull(i); // Spark: corr has no result when count < 2
+            } else if (s->IsOverFlowed()) {
+                this->SetNullOrThrowException(v, i, "corr_aggregator overflow.");
+            } else {
+                double corr = CorrFromSuffStats(s->count, s->sum_x, s->sum_y, s->sum_xx, s->sum_yy, s->sum_xy);
+                if (!std::isfinite(corr)) {
+                    this->SetNullOrThrowException(v, i, "corr_aggregator overflow.");
+                } else {
+                    v->SetValue(i, static_cast<OutType>(corr));
+                }
+            }
         }
     }
 }
@@ -135,8 +178,9 @@ void CorrAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateStat
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 std::vector<DataTypePtr> CorrAggregator<IN_ID, OUT_ID>::GetSpillType() {
     std::vector<DataTypePtr> spillTypes;
-    for (int i = 0; i < 6; i++)
-        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));  // Spark order: n, xAvg, yAvg, ck, xMk, yMk
+    for (int i = 0; i < kCorrPartialColumnCount; i++) {
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE)); // Spark order: n, xAvg, yAvg, ck, xMk, yMk
+    }
     return spillTypes;
 }
 
@@ -172,9 +216,10 @@ void CorrAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state,
         p1 += rowOffset;
         p2 += rowOffset;
         std::shared_ptr<NullsHelper> nm = nullMap ? nullMap : std::make_shared<NullsHelper>(std::make_shared<NullsBuffer>(rowCount));
-        CorrAccumulateRaw<InType, false>(s->count, s->sum_x, s->sum_y, s->sum_xx, s->sum_yy, s->sum_xy, p1, p2, rowCount, *nm);
-        if (s->count > 0)
+        CorrAccumulateRaw<InType, false>(s->count, s->sum_x, s->sum_y, s->sum_xx, s->sum_yy, s->sum_xy, s->valueState, p1, p2, rowCount, *nm);
+        if (s->count > 0 && s->valueState != AggValueState::OVERFLOWED) {
             s->valueState = AggValueState::NORMAL;
+        }
     } else {
         // Merge: Gluten sends 6 RAW Double columns. Spark order: n, xAvg, yAvg, ck, xMk, yMk
         double *vN = reinterpret_cast<double *>(GetValuesFromVector<OMNI_DOUBLE>(curVectorBatch->Get(channels[0]))) + rowOffset;
@@ -195,11 +240,17 @@ void CorrAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state,
             other.sum_xx = vXMk[i] + n * vXAvg[i] * vXAvg[i];
             other.sum_yy = vYMk[i] + n * vYAvg[i] * vYAvg[i];
             other.sum_xy = vCk[i] + n * vXAvg[i] * vYAvg[i];
-            other.valueState = AggValueState::NORMAL;
+            if (!std::isfinite(other.sum_x) || !std::isfinite(other.sum_y) || !std::isfinite(other.sum_xx) ||
+                !std::isfinite(other.sum_yy) || !std::isfinite(other.sum_xy)) {
+                other.valueState = AggValueState::OVERFLOWED;
+            } else {
+                other.valueState = AggValueState::NORMAL;
+            }
             s->Merge(other);
         }
-        if (s->count > 0)
+        if (s->count > 0) {
             s->valueState = AggValueState::NORMAL;
+        }
     }
 }
 
@@ -229,7 +280,12 @@ void CorrAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSt
             s->count += 1;
             s->sum_x += x; s->sum_y += y;
             s->sum_xx += x * x; s->sum_yy += y * y; s->sum_xy += x * y;
-            s->valueState = AggValueState::NORMAL;
+            if (!std::isfinite(s->sum_x) || !std::isfinite(s->sum_y) || !std::isfinite(s->sum_xx) ||
+                !std::isfinite(s->sum_yy) || !std::isfinite(s->sum_xy)) {
+                s->valueState = AggValueState::OVERFLOWED;
+            } else {
+                s->valueState = AggValueState::NORMAL;
+            }
         }
     } else {
         // Merge: 6 RAW Double columns (Gluten). Spark order: n, xAvg, yAvg, ck, xMk, yMk
@@ -252,11 +308,17 @@ void CorrAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSt
             other.sum_xx = vXMk[i] + n * vXAvg[i] * vXAvg[i];
             other.sum_yy = vYMk[i] + n * vYAvg[i] * vYAvg[i];
             other.sum_xy = vCk[i] + n * vXAvg[i] * vYAvg[i];
-            other.valueState = AggValueState::NORMAL;
+            if (!std::isfinite(other.sum_x) || !std::isfinite(other.sum_y) || !std::isfinite(other.sum_xx) ||
+                !std::isfinite(other.sum_yy) || !std::isfinite(other.sum_xy)) {
+                other.valueState = AggValueState::OVERFLOWED;
+            } else {
+                other.valueState = AggValueState::NORMAL;
+            }
             auto *s = CorrPartialState::CastState(rowStates[i] + aggStateOffset);
             s->Merge(other);
-            if (s->count > 0)
+            if (s->count > 0) {
                 s->valueState = AggValueState::NORMAL;
+            }
         }
     }
 }
