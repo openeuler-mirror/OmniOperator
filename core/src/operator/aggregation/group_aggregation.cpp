@@ -461,12 +461,16 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
     std::shared_ptr<BaseVector> elementVector;
     auto elemTypeId = elementType->GetId();
     switch (elemTypeId) {
+        case type::OMNI_BYTE:
+            elementVector = std::make_shared<Vector<int8_t>>(0);
+            break;
         case type::OMNI_INT:
         case type::OMNI_DATE32:
             elementVector = std::make_shared<Vector<int32_t>>(0);
             break;
         case type::OMNI_LONG:
         case type::OMNI_DATE64:
+        case type::OMNI_DECIMAL64:
             elementVector = std::make_shared<Vector<int64_t>>(0);
             break;
         case type::OMNI_SHORT:
@@ -480,6 +484,9 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
             break;
         case type::OMNI_BOOLEAN:
             elementVector = std::make_shared<Vector<bool>>(0);
+            break;
+        case type::OMNI_DECIMAL128:
+            elementVector = std::make_shared<Vector<Decimal128>>(0);
             break;
         case type::OMNI_CHAR:
         case type::OMNI_VARCHAR:

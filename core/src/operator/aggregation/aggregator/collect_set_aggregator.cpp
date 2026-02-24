@@ -171,10 +171,10 @@ void CollectSetAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *
     using stateType = typename AggNativeAndVectorType<IN_ID>::type;
     SetState<stateType> *setState = SetState<stateType>::CastState(state + aggStateOffset);
     if (IsInputRaw()) {
-        setState->UpdatePartialState(vector, rowCount, nullMap, isDictionary);
+        setState->UpdatePartialState(vector, rowCount, nullMap, isDictionary, rowOffset);
     } else {
         auto arrayVector = static_cast<ArrayVector *>(vector);
-        setState->UpdateFinalState(arrayVector, rowCount, nullMap, isDictionary);
+        setState->UpdateFinalState(arrayVector, rowCount, nullMap, isDictionary, rowOffset);
     }
 }
 
@@ -202,10 +202,14 @@ void CollectSetAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
         using stateType = typename AggNativeAndVectorType<IN_ID>::type;
         SetState<stateType> *setState = SetState<stateType>::CastState(rowStates[rowIndex] + aggStateOffset);
         if (IsInputRaw()) {
-            setState->UpdatePartialState(vector->Slice(offset, 1), 1, nullMap, isDictionary);
+            BaseVector *sliced = vector->Slice(offset, 1);
+            setState->UpdatePartialState(sliced, 1, nullMap, isDictionary, static_cast<int32_t>(rowIndex));
+            delete sliced;
         } else {
             auto arrayVector = reinterpret_cast<ArrayVector *>(vector);
-            setState->UpdateFinalState(arrayVector->Slice(offset, 1), 1, nullMap, isDictionary);
+            BaseVector *sliced = arrayVector->Slice(offset, 1);
+            setState->UpdateFinalState(static_cast<ArrayVector *>(sliced), 1, nullMap, isDictionary, static_cast<int32_t>(rowIndex));
+            delete sliced;
         }
         ++offset;
     }
@@ -291,12 +295,14 @@ CollectSetAggregator<IN_ID, OUT_ID>::CollectSetAggregator(
 }
 
 template class CollectSetAggregator<OMNI_BOOLEAN, OMNI_BOOLEAN>;
+template class CollectSetAggregator<OMNI_BYTE, OMNI_BYTE>;
 template class CollectSetAggregator<OMNI_SHORT, OMNI_SHORT>;
 template class CollectSetAggregator<OMNI_INT, OMNI_INT>;
 template class CollectSetAggregator<OMNI_LONG, OMNI_LONG>;
 template class CollectSetAggregator<OMNI_FLOAT, OMNI_FLOAT>;
 template class CollectSetAggregator<OMNI_DOUBLE, OMNI_DOUBLE>;
 template class CollectSetAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>;
-// DECIMAL128/CHAR/VARCHAR/VARBINARY/ARRAY: key type has no std::hash (Decimal128/DecimalPartialResult/ArrayType), DefaultHashMap not supported. Factory throws for these.
+template class CollectSetAggregator<OMNI_DECIMAL128, OMNI_DECIMAL128>;
+// CHAR/VARCHAR/VARBINARY/ARRAY: key type has no GroupbyHashCalculator, DefaultHashMap not supported. Factory throws for these.
 
 } //omniruntim::op

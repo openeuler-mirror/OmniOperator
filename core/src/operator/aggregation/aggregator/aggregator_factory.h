@@ -364,6 +364,14 @@ public:
         std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override;
 };
 
+class CollectListAggregatorFactory : public AggregatorFactory {
+public:
+    CollectListAggregatorFactory() = default;
+    ~CollectListAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override;
+};
+
 class MinByAggregatorFactory : public AggregatorFactory {
 public:
     MinByAggregatorFactory() : AggregatorFactory() {}

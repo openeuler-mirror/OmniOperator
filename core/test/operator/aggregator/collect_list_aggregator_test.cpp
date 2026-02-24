@@ -1,14 +1,13 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025-2026. All rights reserved.
- * Description: Unit tests for CollectSet aggregation (CollectSetAggregator and CollectSetAggregatorFactory).
- * Coverage target: collect_set_aggregator and factory >= 75%.
+ * Description: Unit tests for CollectList aggregation (CollectListAggregator and CollectListAggregatorFactory).
+ * CollectList preserves order and allows duplicates (unlike CollectSet).
  */
 
 #include <memory>
 #include <vector>
-#include <algorithm>
 #include <gtest/gtest.h>
-#include "operator/aggregation/aggregator/collect_set_aggregator.h"
+#include "operator/aggregation/aggregator/collect_list_aggregator.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "operator/aggregation/aggregator/aggregator_util.h"
 #include "operator/aggregation/aggregator/aggregator.h"
@@ -39,27 +38,11 @@ static DataTypePtr ArrayOf(const DataTypePtr &elementType)
     return std::make_shared<ArrayType>(elementType);
 }
 
-/** Call before freeing state buffer to avoid leak. CollectSet-specific (no base class DestroyState). */
-static void DestroyCollectSetState(Aggregator *agg, AggregateState *state)
-{
-    if (auto *p = dynamic_cast<CollectSetAggregator<OMNI_INT, OMNI_INT> *>(agg)) {
-        p->DestroyState(state);
-    } else if (auto *q = dynamic_cast<CollectSetAggregator<OMNI_LONG, OMNI_LONG> *>(agg)) {
-        q->DestroyState(state);
-    } else if (auto *r = dynamic_cast<CollectSetAggregator<OMNI_DECIMAL128, OMNI_DECIMAL128> *>(agg)) {
-        r->DestroyState(state);
-    } else if (auto *s = dynamic_cast<CollectSetAggregator<OMNI_BYTE, OMNI_BYTE> *>(agg)) {
-        s->DestroyState(state);
-    } else if (auto *t = dynamic_cast<CollectSetAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64> *>(agg)) {
-        t->DestroyState(state);
-    }
-}
+// ---- CollectListAggregatorFactory tests ----
 
-// ---- CollectSetAggregatorFactory tests ----
-
-TEST(CollectSetAggregatorTest, FactoryPartialInt)
+TEST(CollectListAggregatorTest, FactoryPartialInt)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
@@ -70,9 +53,9 @@ TEST(CollectSetAggregatorTest, FactoryPartialInt)
     EXPECT_GT(agg->GetStateSize(), 0u);
 }
 
-TEST(CollectSetAggregatorTest, FactoryPartialLong)
+TEST(CollectListAggregatorTest, FactoryPartialLong)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{LongType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(LongType())});
@@ -80,59 +63,9 @@ TEST(CollectSetAggregatorTest, FactoryPartialLong)
     ASSERT_NE(agg, nullptr);
 }
 
-TEST(CollectSetAggregatorTest, FactoryPartialBoolean)
+TEST(CollectListAggregatorTest, FactoryPartialDecimal128)
 {
-    CollectSetAggregatorFactory factory;
-    std::vector<int32_t> channels = {0};
-    DataTypes inputTypes(std::vector<DataTypePtr>{BooleanType()});
-    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(BooleanType())});
-    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
-    ASSERT_NE(agg, nullptr);
-}
-
-TEST(CollectSetAggregatorTest, FactoryPartialShort)
-{
-    CollectSetAggregatorFactory factory;
-    std::vector<int32_t> channels = {0};
-    DataTypes inputTypes(std::vector<DataTypePtr>{ShortType()});
-    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(ShortType())});
-    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
-    ASSERT_NE(agg, nullptr);
-}
-
-TEST(CollectSetAggregatorTest, FactoryPartialFloat)
-{
-    CollectSetAggregatorFactory factory;
-    std::vector<int32_t> channels = {0};
-    DataTypes inputTypes(std::vector<DataTypePtr>{FloatType()});
-    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(FloatType())});
-    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
-    ASSERT_NE(agg, nullptr);
-}
-
-TEST(CollectSetAggregatorTest, FactoryPartialDouble)
-{
-    CollectSetAggregatorFactory factory;
-    std::vector<int32_t> channels = {0};
-    DataTypes inputTypes(std::vector<DataTypePtr>{DoubleType()});
-    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(DoubleType())});
-    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
-    ASSERT_NE(agg, nullptr);
-}
-
-TEST(CollectSetAggregatorTest, FactoryPartialDecimal64)
-{
-    CollectSetAggregatorFactory factory;
-    std::vector<int32_t> channels = {0};
-    DataTypes inputTypes(std::vector<DataTypePtr>{Decimal64Type()});
-    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Decimal64Type())});
-    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
-    ASSERT_NE(agg, nullptr);
-}
-
-TEST(CollectSetAggregatorTest, FactoryPartialDecimal128)
-{
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{Decimal128Type()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Decimal128Type())});
@@ -140,9 +73,9 @@ TEST(CollectSetAggregatorTest, FactoryPartialDecimal128)
     ASSERT_NE(agg, nullptr);
 }
 
-TEST(CollectSetAggregatorTest, FactoryFinalArrayInt)
+TEST(CollectListAggregatorTest, FactoryFinalArrayInt)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
@@ -151,19 +84,9 @@ TEST(CollectSetAggregatorTest, FactoryFinalArrayInt)
     EXPECT_FALSE(agg->IsInputRaw());
 }
 
-TEST(CollectSetAggregatorTest, FactoryFinalArrayLong)
+TEST(CollectListAggregatorTest, FactoryFinalNonArrayThrows)
 {
-    CollectSetAggregatorFactory factory;
-    std::vector<int32_t> channels = {0};
-    DataTypes inputTypes(std::vector<DataTypePtr>{ArrayOf(LongType())});
-    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(LongType())});
-    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, false, false, false);
-    ASSERT_NE(agg, nullptr);
-}
-
-TEST(CollectSetAggregatorTest, FactoryFinalNonArrayThrows)
-{
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
@@ -172,57 +95,21 @@ TEST(CollectSetAggregatorTest, FactoryFinalNonArrayThrows)
         omniruntime::exception::OmniException);
 }
 
-TEST(CollectSetAggregatorTest, FactoryPartialWithArrayInput)
-{
-    CollectSetAggregatorFactory factory;
-    std::vector<int32_t> channels = {0};
-    DataTypes inputTypes(std::vector<DataTypePtr>{ArrayOf(LongType())});
-    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(LongType())});
-    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
-    ASSERT_NE(agg, nullptr);
-}
-
-TEST(CollectSetAggregatorTest, FactoryUnsupportedElementTypeThrows)
-{
-    CollectSetAggregatorFactory factory;
-    std::vector<int32_t> channels = {0};
-    DataTypes inputTypes(std::vector<DataTypePtr>{NoneType()});
-    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(NoneType())});
-    EXPECT_THROW(
-        factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false),
-        omniruntime::exception::OmniException);
-}
-
-TEST(CollectSetAggregatorTest, FactoryVarcharVarBinaryNotImplemented)
-{
-    CollectSetAggregatorFactory factory;
-    std::vector<int32_t> channels = {0};
-    DataTypes inputVarchar(std::vector<DataTypePtr>{VarcharType(100)});
-    DataTypes outputVarchar(std::vector<DataTypePtr>{ArrayOf(VarcharType(100))});
-    EXPECT_THROW(factory.CreateAggregator(inputVarchar, outputVarchar, channels, true, true, false),
-        omniruntime::exception::OmniException);
-
-    DataTypes inputVarbinary(std::vector<DataTypePtr>{VarBinaryType(100)});
-    DataTypes outputVarbinary(std::vector<DataTypePtr>{ArrayOf(VarBinaryType(100))});
-    EXPECT_THROW(factory.CreateAggregator(inputVarbinary, outputVarbinary, channels, true, true, false),
-        omniruntime::exception::OmniException);
-}
-
-// ---- CollectSetAggregator direct Create / behaviour tests ----
-
-TEST(CollectSetAggregatorTest, CreateBasicTypeSuccess)
+TEST(CollectListAggregatorTest, CreateBasicTypeSuccess)
 {
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
-    auto agg = CollectSetAggregator<OMNI_INT, OMNI_INT>::Create(
+    auto agg = CollectListAggregator<OMNI_INT, OMNI_INT>::Create(
         inputTypes, outputTypes, channels, true, true, false);
     ASSERT_NE(agg, nullptr);
 }
 
-TEST(CollectSetAggregatorTest, PartialProcessGroupAndExtractValuesInt)
+// ---- Order and duplicates: input [1,2,1,3] -> output [1,2,1,3] ----
+
+TEST(CollectListAggregatorTest, PartialProcessGroupOrderAndDuplicatesInt)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
@@ -232,8 +119,8 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupAndExtractValuesInt)
     auto executionContext = std::make_unique<ExecutionContext>();
     agg->SetExecutionContext(executionContext.get());
 
-    const int32_t rowCnt = 8;
-    int32_t data[rowCnt] = {10, 20, 10, 30, 20, 10, 40, 30};
+    const int32_t rowCnt = 4;
+    int32_t data[rowCnt] = {1, 2, 1, 3};
     VectorBatch *vecBatch = CreateVectorBatch(DataTypes(std::vector<DataTypePtr>{IntType()}), rowCnt, data);
     ASSERT_EQ(vecBatch->GetRowCount(), rowCnt);
 
@@ -250,18 +137,20 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupAndExtractValuesInt)
     std::shared_ptr<BaseVector> elemVec = arrayVec->GetArrayAt(0, false);
     ASSERT_NE(elemVec, nullptr);
     auto *intVec = static_cast<Vector<int32_t> *>(elemVec.get());
-    int32_t uniqueCount = static_cast<int32_t>(intVec->GetSize());
-    EXPECT_EQ(uniqueCount, 4);
+    EXPECT_EQ(intVec->GetSize(), 4);
+    EXPECT_EQ(intVec->GetValue(0), 1);
+    EXPECT_EQ(intVec->GetValue(1), 2);
+    EXPECT_EQ(intVec->GetValue(2), 1);
+    EXPECT_EQ(intVec->GetValue(3), 3);
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outputVector;
-    DestroyCollectSetState(agg.get(), state.get());
 }
 
 // Dictionary-encoded input: same semantics as flat; verifies isDictionary path in UpdatePartialState.
-TEST(CollectSetAggregatorTest, PartialProcessGroupAndExtractValuesIntDictionary)
+TEST(CollectListAggregatorTest, PartialProcessGroupOrderAndDuplicatesIntDictionary)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
@@ -271,15 +160,14 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupAndExtractValuesIntDictionary)
     auto executionContext = std::make_unique<ExecutionContext>();
     agg->SetExecutionContext(executionContext.get());
 
-    // Dictionary: distinct values [10, 20, 30, 40]. Row values via ids: 10, 20, 10, 30, 20, 10, 40, 30 -> 4 unique.
-    const int32_t dictSize = 4;
-    const int32_t rowCnt = 8;
+    // Dictionary: distinct values [1, 2, 3]. Row values via ids: 1, 2, 1, 3 -> list [1, 2, 1, 3].
+    const int32_t dictSize = 3;
+    const int32_t rowCnt = 4;
     Vector<int32_t> *dict = new Vector<int32_t>(dictSize);
-    dict->SetValue(0, 10);
-    dict->SetValue(1, 20);
-    dict->SetValue(2, 30);
-    dict->SetValue(3, 40);
-    int32_t ids[rowCnt] = {0, 1, 0, 2, 1, 0, 3, 2};
+    dict->SetValue(0, 1);
+    dict->SetValue(1, 2);
+    dict->SetValue(2, 3);
+    int32_t ids[rowCnt] = {0, 1, 0, 2};
     BaseVector *dictCol = VectorHelper::CreateDictionary(ids, rowCnt, dict);
     VectorBatch *vecBatch = new VectorBatch(rowCnt);
     vecBatch->Append(dictCol);
@@ -299,28 +187,21 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupAndExtractValuesIntDictionary)
     std::shared_ptr<BaseVector> elemVec = arrayVec->GetArrayAt(0, false);
     ASSERT_NE(elemVec, nullptr);
     auto *intVec = static_cast<Vector<int32_t> *>(elemVec.get());
-    int32_t uniqueCount = static_cast<int32_t>(intVec->GetSize());
-    EXPECT_EQ(uniqueCount, 4);
-
-    std::vector<int32_t> extracted(uniqueCount);
-    for (int32_t i = 0; i < uniqueCount; i++) {
-        extracted[i] = intVec->GetValue(i);
-    }
-    std::sort(extracted.begin(), extracted.end());
-    EXPECT_EQ(extracted[0], 10);
-    EXPECT_EQ(extracted[1], 20);
-    EXPECT_EQ(extracted[2], 30);
-    EXPECT_EQ(extracted[3], 40);
+    EXPECT_EQ(intVec->GetSize(), 4);
+    EXPECT_EQ(intVec->GetValue(0), 1);
+    EXPECT_EQ(intVec->GetValue(1), 2);
+    EXPECT_EQ(intVec->GetValue(2), 1);
+    EXPECT_EQ(intVec->GetValue(3), 3);
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete dict;
     delete outputVector;
-    DestroyCollectSetState(agg.get(), state.get());
 }
 
-TEST(CollectSetAggregatorTest, PartialProcessGroupAndExtractValuesDecimal128)
+// CollectList with Decimal128: state is std::vector<Decimal128>; order and duplicates preserved.
+TEST(CollectListAggregatorTest, PartialProcessGroupOrderAndDuplicatesDecimal128)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{Decimal128Type()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Decimal128Type())});
@@ -330,11 +211,9 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupAndExtractValuesDecimal128)
     auto executionContext = std::make_unique<ExecutionContext>();
     agg->SetExecutionContext(executionContext.get());
 
-    const int32_t rowCnt = 6;
-    Decimal128 data[rowCnt] = {Decimal128("10"), Decimal128("20"), Decimal128("10"), Decimal128("30"),
-                               Decimal128("20"), Decimal128("10")};
+    const int32_t rowCnt = 4;
+    Decimal128 data[rowCnt] = {Decimal128("10"), Decimal128("20"), Decimal128("10"), Decimal128("30")};
     VectorBatch *vecBatch = CreateVectorBatch(DataTypes(std::vector<DataTypePtr>{Decimal128Type()}), rowCnt, data);
-    ASSERT_NE(vecBatch, nullptr);
     ASSERT_EQ(vecBatch->GetRowCount(), rowCnt);
 
     auto state = NewAndInitState(agg.get());
@@ -350,26 +229,19 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupAndExtractValuesDecimal128)
     std::shared_ptr<BaseVector> elemVec = arrayVec->GetArrayAt(0, false);
     ASSERT_NE(elemVec, nullptr);
     auto *decimalVec = static_cast<Vector<Decimal128> *>(elemVec.get());
-    int32_t uniqueCount = static_cast<int32_t>(decimalVec->GetSize());
-    EXPECT_EQ(uniqueCount, 3);
-
-    std::vector<Decimal128> extracted(uniqueCount);
-    for (int32_t i = 0; i < uniqueCount; i++) {
-        extracted[i] = decimalVec->GetValue(i);
-    }
-    std::sort(extracted.begin(), extracted.end(), [](const Decimal128 &a, const Decimal128 &b) { return a.Compare(b) < 0; });
-    EXPECT_EQ(extracted[0], Decimal128("10"));
-    EXPECT_EQ(extracted[1], Decimal128("20"));
-    EXPECT_EQ(extracted[2], Decimal128("30"));
+    EXPECT_EQ(decimalVec->GetSize(), 4);
+    EXPECT_EQ(decimalVec->GetValue(0), Decimal128("10"));
+    EXPECT_EQ(decimalVec->GetValue(1), Decimal128("20"));
+    EXPECT_EQ(decimalVec->GetValue(2), Decimal128("10"));
+    EXPECT_EQ(decimalVec->GetValue(3), Decimal128("30"));
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outputVector;
-    DestroyCollectSetState(agg.get(), state.get());
 }
 
-TEST(CollectSetAggregatorTest, PartialProcessGroupEmptyInputExtractNull)
+TEST(CollectListAggregatorTest, PartialProcessGroupEmptyInputExtractNull)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{LongType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(LongType())});
@@ -396,12 +268,11 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupEmptyInputExtractNull)
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outputVector;
-    DestroyCollectSetState(agg.get(), state.get());
 }
 
-TEST(CollectSetAggregatorTest, PartialProcessGroupAllNullsExtractNull)
+TEST(CollectListAggregatorTest, PartialProcessGroupAllNullsExtractNull)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
@@ -416,7 +287,7 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupAllNullsExtractNull)
     col->SetNull(0);
     col->SetNull(1);
     col->SetNull(2);
-    col->SetNullFlag(true);  // ensure aggregator gets nullMap (nullMap: true = null)
+    col->SetNullFlag(true);
     VectorBatch *vecBatch = new VectorBatch(rowCnt);
     vecBatch->Append(col);
 
@@ -433,12 +304,11 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupAllNullsExtractNull)
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outputVector;
-    DestroyCollectSetState(agg.get(), state.get());
 }
 
-TEST(CollectSetAggregatorTest, InitStatesMultiGroup)
+TEST(CollectListAggregatorTest, InitStatesMultiGroup)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
@@ -455,15 +325,12 @@ TEST(CollectSetAggregatorTest, InitStatesMultiGroup)
     agg->SetStateOffset(0);
     agg->InitStates(groupStates);
     EXPECT_GT(agg->GetStateSize(), 0u);
-    for (int32_t i = 0; i < groupCount; i++) {
-        DestroyCollectSetState(agg.get(), groupStates[i]);
-    }
 }
 
-// Grouped aggregation (with groupby): 3 groups, each group gets one value; verifies baseRowIndex fix for byte/decimal64/decimal128.
-TEST(CollectSetAggregatorTest, GroupedAggregationByte)
+// Grouped aggregation (with groupby): verifies baseRowIndex fix for byte/decimal64/decimal128.
+TEST(CollectListAggregatorTest, GroupedAggregationByte)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{ByteType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(ByteType())});
@@ -504,14 +371,11 @@ TEST(CollectSetAggregatorTest, GroupedAggregationByte)
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outputVector;
-    for (int32_t i = 0; i < groupCount; i++) {
-        DestroyCollectSetState(agg.get(), groupStates[i]);
-    }
 }
 
-TEST(CollectSetAggregatorTest, GroupedAggregationDecimal64)
+TEST(CollectListAggregatorTest, GroupedAggregationDecimal64)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{Decimal64Type()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Decimal64Type())});
@@ -552,14 +416,11 @@ TEST(CollectSetAggregatorTest, GroupedAggregationDecimal64)
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outputVector;
-    for (int32_t i = 0; i < groupCount; i++) {
-        DestroyCollectSetState(agg.get(), groupStates[i]);
-    }
 }
 
-TEST(CollectSetAggregatorTest, GroupedAggregationDecimal128)
+TEST(CollectListAggregatorTest, GroupedAggregationDecimal128)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{Decimal128Type()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Decimal128Type())});
@@ -600,15 +461,12 @@ TEST(CollectSetAggregatorTest, GroupedAggregationDecimal128)
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outputVector;
-    for (int32_t i = 0; i < groupCount; i++) {
-        DestroyCollectSetState(agg.get(), groupStates[i]);
-    }
 }
 
-TEST(CollectSetAggregatorTest, GetStateSize)
+TEST(CollectListAggregatorTest, GetStateSize)
 {
     std::vector<int32_t> channels = {0};
-    auto agg = CollectSetAggregator<OMNI_LONG, OMNI_LONG>::Create(
+    auto agg = CollectListAggregator<OMNI_LONG, OMNI_LONG>::Create(
         DataTypes(std::vector<DataTypePtr>{LongType()}),
         DataTypes(std::vector<DataTypePtr>{ArrayOf(LongType())}),
         channels, true, true, false);
@@ -616,9 +474,9 @@ TEST(CollectSetAggregatorTest, GetStateSize)
     EXPECT_GT(agg->GetStateSize(), 0u);
 }
 
-TEST(CollectSetAggregatorTest, CreateAggregatorFactorySwitch)
+TEST(CollectListAggregatorTest, CreateAggregatorFactorySwitch)
 {
-    auto factory = CreateAggregatorFactory(OMNI_AGGREGATION_TYPE_COLLECT_SET);
+    auto factory = CreateAggregatorFactory(OMNI_AGGREGATION_TYPE_COLLECT_LIST);
     ASSERT_NE(factory, nullptr);
 
     std::vector<int32_t> channels = {0};
@@ -628,11 +486,11 @@ TEST(CollectSetAggregatorTest, CreateAggregatorFactorySwitch)
     ASSERT_NE(agg, nullptr);
 }
 
-// ---- ProcessGroupUnspill tests ----
+// ---- ProcessGroupUnspill: order preserved ----
 
-TEST(CollectSetAggregatorTest, ProcessGroupUnspillMergeSpilledArrays)
+TEST(CollectListAggregatorTest, ProcessGroupUnspillMergeSpilledArraysOrderPreserved)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
@@ -652,11 +510,9 @@ TEST(CollectSetAggregatorTest, ProcessGroupUnspillMergeSpilledArrays)
     }
     agg->InitStates(groupStates);
 
-    // Build spill batch: one ArrayVector column with 2 rows: row0 = [1,2,3], row1 = [4,5]
-    const int32_t elemCount = 5;
-    Vector<int32_t> *allElements = new Vector<int32_t>(elemCount);
+    Vector<int32_t> *allElements = new Vector<int32_t>(5);
     int32_t flatData[] = {1, 2, 3, 4, 5};
-    for (int32_t i = 0; i < elemCount; i++) {
+    for (int32_t i = 0; i < 5; i++) {
         allElements->SetValue(i, flatData[i]);
     }
     ArrayVector *spillArray = new ArrayVector(2, std::shared_ptr<BaseVector>(allElements));
@@ -675,7 +531,6 @@ TEST(CollectSetAggregatorTest, ProcessGroupUnspillMergeSpilledArrays)
     agg->ProcessGroupUnspill(unspillRows, 2, vectorIndex);
     EXPECT_EQ(vectorIndex, 1);
 
-    // ArrayVector(size) does not initialize elements; SetValue would crash. Use constructor with element vector.
     Vector<int32_t> *outputElements = new Vector<int32_t>(0);
     BaseVector *outputVector = new ArrayVector(2, std::shared_ptr<BaseVector>(outputElements));
     std::vector<BaseVector *> extractVectors = {outputVector};
@@ -687,32 +542,25 @@ TEST(CollectSetAggregatorTest, ProcessGroupUnspillMergeSpilledArrays)
     ASSERT_NE(elem0, nullptr);
     Vector<int32_t> *intVec0 = static_cast<Vector<int32_t> *>(elem0.get());
     EXPECT_EQ(intVec0->GetSize(), 3);
-    std::vector<int32_t> row0Values = {intVec0->GetValue(0), intVec0->GetValue(1), intVec0->GetValue(2)};
-    std::sort(row0Values.begin(), row0Values.end());
-    EXPECT_EQ(row0Values[0], 1);
-    EXPECT_EQ(row0Values[1], 2);
-    EXPECT_EQ(row0Values[2], 3);
+    EXPECT_EQ(intVec0->GetValue(0), 1);
+    EXPECT_EQ(intVec0->GetValue(1), 2);
+    EXPECT_EQ(intVec0->GetValue(2), 3);
 
     ASSERT_FALSE(resultArray->IsNull(1));
     std::shared_ptr<BaseVector> elem1 = resultArray->GetArrayAt(1, false);
     ASSERT_NE(elem1, nullptr);
     Vector<int32_t> *intVec1 = static_cast<Vector<int32_t> *>(elem1.get());
     EXPECT_EQ(intVec1->GetSize(), 2);
-    std::vector<int32_t> row1Values = {intVec1->GetValue(0), intVec1->GetValue(1)};
-    std::sort(row1Values.begin(), row1Values.end());
-    EXPECT_EQ(row1Values[0], 4);
-    EXPECT_EQ(row1Values[1], 5);
+    EXPECT_EQ(intVec1->GetValue(0), 4);
+    EXPECT_EQ(intVec1->GetValue(1), 5);
 
-    for (int32_t i = 0; i < groupCount; i++) {
-        DestroyCollectSetState(agg.get(), groupStates[i]);
-    }
     VectorHelper::FreeVecBatch(spillBatch);
     delete outputVector;
 }
 
-TEST(CollectSetAggregatorTest, ProcessGroupUnspillSkipsNullRow)
+TEST(CollectListAggregatorTest, ProcessGroupUnspillSkipsNullRow)
 {
-    CollectSetAggregatorFactory factory;
+    CollectListAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
@@ -732,7 +580,6 @@ TEST(CollectSetAggregatorTest, ProcessGroupUnspillSkipsNullRow)
     }
     agg->InitStates(groupStates);
 
-    // Spill batch: row0 = [10, 20], row1 = null
     Vector<int32_t> *elements = new Vector<int32_t>(2);
     elements->SetValue(0, 10);
     elements->SetValue(1, 20);
@@ -751,7 +598,6 @@ TEST(CollectSetAggregatorTest, ProcessGroupUnspillSkipsNullRow)
     int32_t vectorIndex = 0;
     agg->ProcessGroupUnspill(unspillRows, 2, vectorIndex);
 
-    // ArrayVector(size) does not initialize elements; SetValue would crash. Use constructor with element vector.
     Vector<int32_t> *outputElements = new Vector<int32_t>(0);
     BaseVector *outputVector = new ArrayVector(2, std::shared_ptr<BaseVector>(outputElements));
     std::vector<BaseVector *> extractVectors = {outputVector};
@@ -765,10 +611,34 @@ TEST(CollectSetAggregatorTest, ProcessGroupUnspillSkipsNullRow)
 
     EXPECT_TRUE(resultArray->IsNull(1));
 
-    for (int32_t i = 0; i < groupCount; i++) {
-        DestroyCollectSetState(agg.get(), groupStates[i]);
-    }
     VectorHelper::FreeVecBatch(spillBatch);
     delete outputVector;
 }
+
+TEST(CollectListAggregatorTest, FactoryUnsupportedElementTypeThrows)
+{
+    CollectListAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{NoneType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(NoneType())});
+    EXPECT_THROW(
+        factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false),
+        omniruntime::exception::OmniException);
 }
+
+TEST(CollectListAggregatorTest, FactoryVarcharVarBinaryNotImplemented)
+{
+    CollectListAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputVarchar(std::vector<DataTypePtr>{VarcharType(100)});
+    DataTypes outputVarchar(std::vector<DataTypePtr>{ArrayOf(VarcharType(100))});
+    EXPECT_THROW(factory.CreateAggregator(inputVarchar, outputVarchar, channels, true, true, false),
+        omniruntime::exception::OmniException);
+
+    DataTypes inputVarbinary(std::vector<DataTypePtr>{VarBinaryType(100)});
+    DataTypes outputVarbinary(std::vector<DataTypePtr>{ArrayOf(VarBinaryType(100))});
+    EXPECT_THROW(factory.CreateAggregator(inputVarbinary, outputVarbinary, channels, true, true, false),
+        omniruntime::exception::OmniException);
+}
+
+}  // namespace omniruntime
