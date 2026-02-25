@@ -9,6 +9,7 @@
 #include "vectorization/functions/IsNull.h"
 #include "vectorization/functions/CastExpr.h"
 #include "vectorization/functions/NameStruct.h"
+#include "vectorization/functions/MapFunction.h"
 #include "type/data_type.h"
 #include "vector/vector.h"
 #include "codegen/func_registry.h"
@@ -1027,6 +1028,9 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     if (vectorFunction == nullptr && funcName == "name_struct" && dataType->GetId() == OMNI_ROW) {
         vectorFunction = std::make_shared<vectorization::NameStructFunction>();
     }
+    if (vectorFunction == nullptr && funcName == "map" && dataType->GetId() == OMNI_MAP) {
+        vectorFunction = std::make_shared<vectorization::MapFunction>();
+    }
     if (funcName == "CAST") {
         auto hook = std::make_shared<CastHooks>(config::QueryConfig());
         vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
@@ -1048,6 +1052,9 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     if (vectorFunction == nullptr && funcName == "name_struct" && dataType->GetId() == OMNI_ROW) {
         vectorFunction = std::make_shared<vectorization::NameStructFunction>();
     }
+    if (vectorFunction == nullptr && funcName == "map" && dataType->GetId() == OMNI_MAP) {
+        vectorFunction = std::make_shared<vectorization::MapFunction>();
+    }
     if (funcName == "CAST") {
         auto hook = std::make_shared<CastHooks>(config::QueryConfig());
         vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
@@ -1068,6 +1075,9 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     vectorFunction = VectorFunction::Find(signature);
     if (vectorFunction == nullptr && funcName == "name_struct" && dataType->GetId() == OMNI_ROW) {
         vectorFunction = std::make_shared<vectorization::NameStructFunction>();
+    }
+    if (vectorFunction == nullptr && funcName == "map" && dataType->GetId() == OMNI_MAP) {
+        vectorFunction = std::make_shared<vectorization::MapFunction>();
     }
     if (funcName == "CAST") {
         auto hook = std::make_shared<CastHooks>(config::QueryConfig());

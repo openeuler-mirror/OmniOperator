@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2026. All rights reserved.
  */
 
 #include "large_string_container.h"
@@ -33,8 +33,10 @@ void LargeStringContainer<RAW_DATA_TYPE>::SetValue(int index, const std::string_
     int32_t needCapacityInBytes = offsets[index] + valueSize; // start offset, and then value size
     char *charBuffer = GetBufferWithSpace(needCapacityInBytes);
 
-    // src len can be 0, but dest len can not be 0 when empty strings, otherwise the memcpy return errno 34
-    memcpy(charBuffer + offsets[index], value.data(), valueSize);
+    // Avoid memcpy when valueSize is 0: empty string_view.data() may be nullptr, causing SIGSEGV on aarch64
+    if (valueSize > 0) {
+        memcpy(charBuffer + offsets[index], value.data(), valueSize);
+    }
     offsets[index + 1] = needCapacityInBytes;
     lastOffsetPosition = index;
 }
