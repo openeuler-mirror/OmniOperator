@@ -897,7 +897,8 @@ TEST(PipelineTest, TestExplodeFilterNullEmpty)
     
     VectorBatch *expVecBatch = CreateTestExplodeOutputVecBatchWithNullEmpty();
     EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
-    Expr::DeleteExprs({expr1, expr2});
+    std::vector<Expr*> exprsToDelete = {expr1, expr2};
+    Expr::DeleteExprs(exprsToDelete);
     VectorHelper::FreeVecBatch(expVecBatch);
     VectorHelper::FreeVecBatch(vectorBatch);
 }
@@ -969,7 +970,8 @@ TEST(PipelineTest, TestExplodeOuterPreserveNullEmpty)
     
     VectorBatch *expVecBatch = CreateTestExplodeOuterOutputVecBatchWithNullEmpty();
     EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
-    Expr::DeleteExprs({expr1, expr2});
+    std::vector<Expr*> exprsToDelete = {expr1, expr2};
+    Expr::DeleteExprs(exprsToDelete);
     VectorHelper::FreeVecBatch(expVecBatch);
     VectorHelper::FreeVecBatch(vectorBatch);
 }
@@ -1026,7 +1028,8 @@ TEST(PipelineTest, TestPosexplodeWithOrdinality)
     
     VectorBatch *expVecBatch = CreateTestPosexplodeOutputVecBatch();
     EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
-    Expr::DeleteExprs({expr1, expr2});
+    std::vector<Expr*> exprsToDelete = {expr1, expr2};
+    Expr::DeleteExprs(exprsToDelete);
     VectorHelper::FreeVecBatch(expVecBatch);
     VectorHelper::FreeVecBatch(vectorBatch);
 }
