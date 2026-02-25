@@ -107,7 +107,7 @@ namespace omniruntime::vec {
             return newRowVector;
         }
 
-        void Expand(int64_t needCapacity)
+        void Expand(int32_t needCapacity) override
         {
             if (needCapacity <= size) {
                 return;
@@ -118,8 +118,8 @@ namespace omniruntime::vec {
                 return;
             }
 
-            int64_t newCapacity = std::max(capacity * 2, needCapacity);
-            int64_t oldSize = size;
+            int32_t newCapacity = std::max(capacity * 2, needCapacity);
+            int32_t oldSize = size;
 
             auto oldNullsBuffer = nullsBuffer;
             nullsBuffer = std::make_shared<NullsBuffer>(newCapacity);
@@ -139,7 +139,7 @@ namespace omniruntime::vec {
         std::vector<std::shared_ptr<BaseVector>> children_;
         // rawChildren_ elements no needs to release, this only use for immutable view, like string and string_view
         std::vector<BaseVector *> rawChildren_;
-        int64_t capacity;
+        int32_t capacity;
     };
 }
 

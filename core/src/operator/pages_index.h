@@ -131,6 +131,10 @@ private:
         int32_t sortColCount, int64_t *values, std::vector<uint32_t> &varcharLength, int32_t from, int32_t to,
         int32_t currentCol);
 
+    void StructColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
+        int32_t sortColCount, int64_t *values, std::vector<uint32_t> &varcharLength, int32_t from, int32_t to,
+        int32_t currentCol);
+
     template <DataTypeId typeId> void PartitionNonNull()
     {
         using T = typename NativeType<typeId>::type;

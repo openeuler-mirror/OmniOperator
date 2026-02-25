@@ -21,6 +21,7 @@
 #include "operator/pages_index.h"
 #include "random"
 #include "vector/array_vector.h"
+#include "vector/row_vector.h"
 #include "type/data_type.h"
 #include "type/decimal128.h"
 #include "util/type_util.h"
@@ -3118,6 +3119,67 @@ static VectorBatch *CreateExpectedArrayDoubleBatch(const std::vector<std::vector
     return CreateArrayDoubleColumnBatch(reordered);
 }
 
+// ===== Helpers for STRUCT/ROW tests =====
+
+// Build a VectorBatch with one ROW<INT, INT> column from given (a,b) pairs.
+static VectorBatch *CreateStructIntIntColumnBatch(const std::vector<std::pair<int32_t, int32_t>> &rows)
+{
+    int32_t rowCount = static_cast<int32_t>(rows.size());
+    auto child0 = std::make_shared<Vector<int32_t>>(rowCount);
+    auto child1 = std::make_shared<Vector<int32_t>>(rowCount);
+    for (int32_t i = 0; i < rowCount; ++i) {
+        child0->SetValue(i, rows[i].first);
+        child1->SetValue(i, rows[i].second);
+    }
+    auto *rowVector = new RowVector(rowCount, std::vector<std::shared_ptr<BaseVector>>{child0, child1});
+    auto *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(rowVector);
+    return vecBatch;
+}
+
+// Build expected batch with ROW<INT, INT> column where rows are reordered by rowIndices.
+static VectorBatch *CreateExpectedStructIntIntBatch(const std::vector<std::pair<int32_t, int32_t>> &rows,
+    const std::vector<int32_t> &rowIndices)
+{
+    std::vector<std::pair<int32_t, int32_t>> reordered;
+    reordered.reserve(rowIndices.size());
+    for (int32_t idx : rowIndices) {
+        reordered.emplace_back(rows[idx]);
+    }
+    return CreateStructIntIntColumnBatch(reordered);
+}
+
+// Build a VectorBatch with one ROW<INT, ARRAY<INT>> column from given (a, b) rows.
+static VectorBatch *CreateStructIntArrayIntColumnBatch(const std::vector<int32_t> &fieldA,
+    const std::vector<std::vector<int32_t>> &fieldB)
+{
+    EXPECT_EQ(fieldA.size(), fieldB.size());
+    int32_t rowCount = static_cast<int32_t>(fieldA.size());
+    auto child0 = std::make_shared<Vector<int32_t>>(rowCount);
+    for (int32_t i = 0; i < rowCount; ++i) {
+        child0->SetValue(i, fieldA[i]);
+    }
+    auto child1 = std::shared_ptr<BaseVector>(CreateArrayIntVector(fieldB));
+    auto *rowVector = new RowVector(rowCount, std::vector<std::shared_ptr<BaseVector>>{child0, child1});
+    auto *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(rowVector);
+    return vecBatch;
+}
+
+static VectorBatch *CreateExpectedStructIntArrayIntBatch(const std::vector<int32_t> &fieldA,
+    const std::vector<std::vector<int32_t>> &fieldB, const std::vector<int32_t> &rowIndices)
+{
+    std::vector<int32_t> reorderedA;
+    std::vector<std::vector<int32_t>> reorderedB;
+    reorderedA.reserve(rowIndices.size());
+    reorderedB.reserve(rowIndices.size());
+    for (int32_t idx : rowIndices) {
+        reorderedA.emplace_back(fieldA[idx]);
+        reorderedB.emplace_back(fieldB[idx]);
+    }
+    return CreateStructIntArrayIntColumnBatch(reorderedA, reorderedB);
+}
+
 // ARRAY<VARCHAR>: flatStrings must outlive the returned batch (string_views point into it).
 static VectorBatch *CreateArrayVarcharColumnBatch(const std::vector<std::vector<std::string>> &rows,
     std::vector<std::string> &flatStrings)
@@ -3479,6 +3541,129 @@ TEST(NativeOmniSortTest, TestSortArrayColumnWithNullFirst)
     EXPECT_EQ(outArr->GetSize(3), 2);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortStructTwoIntFieldsAsc)
+{
+    // One ROW<INT, INT> column. Lexicographic sort by (f0, f1) ascending.
+    std::vector<std::pair<int32_t, int32_t>> inputRows = {
+        {1, 2}, {2, 1}, {1, 1}, {2, 0}, {1, 3}
+    };
+    using namespace omniruntime::type;
+    std::vector<DataTypePtr> fieldTypes { IntType(), IntType() };
+    std::vector<std::string> fieldNames { "c0", "c1" };
+    auto structType = std::make_shared<RowType>(fieldTypes, fieldNames);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ structType }));
+    VectorBatch *vecBatch = CreateStructIntIntColumnBatch(inputRows);
+
+    int32_t outputCols[1] = {0};
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {1};
+
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols,
+        ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    // Expected lexicographic order: (1,1),(1,2),(1,3),(2,0),(2,1) -> row indices 2,0,4,3,1
+    std::vector<int32_t> expectOrder = {2, 0, 4, 3, 1};
+    auto expectVecBatch = CreateExpectedStructIntIntBatch(inputRows, expectOrder);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortStructColumnWithNullFirst)
+{
+    // ROW<INT, INT> column with one null row. Nulls first.
+    const int32_t rowCount = 4;
+    std::vector<std::pair<int32_t, int32_t>> inputRows = {
+        {1, 10}, {0, 0}, {1, 5}, {2, 0}
+    };
+    using namespace omniruntime::type;
+    std::vector<DataTypePtr> fieldTypes { IntType(), IntType() };
+    std::vector<std::string> fieldNames { "c0", "c1" };
+    auto structType = std::make_shared<RowType>(fieldTypes, fieldNames);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ structType }));
+    VectorBatch *vecBatch = CreateStructIntIntColumnBatch(inputRows);
+
+    // Mark second row as NULL at struct level.
+    auto *rowVec = static_cast<RowVector *>(vecBatch->Get(0));
+    rowVec->SetNull(1);
+
+    int32_t outputCols[1] = {0};
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {1};
+
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols,
+        ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    auto *outRow = static_cast<RowVector *>(outputVecBatch->Get(0));
+    EXPECT_EQ(outputVecBatch->GetRowCount(), rowCount);
+    EXPECT_TRUE(outRow->IsNull(0));
+    EXPECT_FALSE(outRow->IsNull(1));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortStructNestedArrayAsc)
+{
+    // ROW<a:INT, b:ARRAY<INT>> ascending by struct value.
+    std::vector<int32_t> inputA = {1, 1, 2, 1};
+    std::vector<std::vector<int32_t>> inputB = {
+        {1, 2},
+        {1, 3},
+        {0},
+        {1, 2, 0}
+    };
+
+    using namespace omniruntime::type;
+    std::vector<DataTypePtr> fieldTypes {
+        IntType(),
+        std::make_shared<omniruntime::type::ArrayType>(IntType())
+    };
+    std::vector<std::string> fieldNames { "a", "b" };
+    auto structType = std::make_shared<RowType>(fieldTypes, fieldNames);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ structType }));
+    VectorBatch *vecBatch = CreateStructIntArrayIntColumnBatch(inputA, inputB);
+
+    int32_t outputCols[1] = {0};
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {1};
+
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols,
+        ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    // Expected order: (1,[1,2]), (1,[1,2,0]), (1,[1,3]), (2,[0]) -> row indices 0,3,1,2
+    std::vector<int32_t> expectOrder = {0, 3, 1, 2};
+    auto expectVecBatch = CreateExpectedStructIntArrayIntBatch(inputA, inputB, expectOrder);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
 }

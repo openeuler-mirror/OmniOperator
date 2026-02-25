@@ -95,7 +95,8 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     if (sourceTypes.GetSize() == 1) {
         const auto &firstSourceTypeId = sourceTypes.GetType(0)->GetId();
         canInplaceSort = (firstSourceTypeId != OMNI_VARCHAR) && (firstSourceTypeId != OMNI_CHAR) &&
-            (firstSourceTypeId != OMNI_BOOLEAN) && (firstSourceTypeId != OMNI_ARRAY);
+            (firstSourceTypeId != OMNI_BOOLEAN) && (firstSourceTypeId != OMNI_ARRAY) &&
+            (firstSourceTypeId != OMNI_ROW);
     }
 
     if (!canInplaceSort) {
