@@ -29,6 +29,24 @@ static type::DataTypeId GetCollectSetElementTypeId(const type::DataTypes &inputT
     return inputType->asArray().ElementType()->GetId();
 }
 
+static type::DataTypeId GetCollectListElementTypeId(const type::DataTypes &inputTypes, bool inputRaw)
+{
+    const type::DataTypePtr &inputType = inputTypes.GetType(0);
+    type::DataTypeId inputTypeId = inputType->GetId();
+    if (inputRaw) {
+        if (inputTypeId == type::OMNI_ARRAY) {
+            return inputType->asArray().ElementType()->GetId();
+        }
+        return inputTypeId;
+    }
+    if (inputTypeId != type::OMNI_ARRAY) {
+        std::string omniExceptionInfo =
+            "CollectList final stage expects array input type, got " + std::to_string(inputTypeId);
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+    }
+    return inputType->asArray().ElementType()->GetId();
+}
+
 /*
  * e.g(Partial):
  * input: T, output: Array<T>
@@ -46,6 +64,9 @@ std::unique_ptr<Aggregator> CollectSetAggregatorFactory::CreateAggregator(const 
     switch (elementTypeId) {
         case type::OMNI_BOOLEAN:
             return CollectSetAggregator<type::OMNI_BOOLEAN, type::OMNI_BOOLEAN>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_BYTE:
+            return CollectSetAggregator<type::OMNI_BYTE, type::OMNI_BYTE>::Create(inputTypes, outputTypes,
                 channels, inputRaw, outputPartial, isOverflowAsNull);
         case type::OMNI_SHORT:
             return CollectSetAggregator<type::OMNI_SHORT, type::OMNI_SHORT>::Create(inputTypes, outputTypes,
@@ -70,14 +91,65 @@ std::unique_ptr<Aggregator> CollectSetAggregatorFactory::CreateAggregator(const 
         case type::OMNI_DECIMAL64:
             return CollectSetAggregator<type::OMNI_DECIMAL64, type::OMNI_DECIMAL64>::Create(inputTypes, outputTypes,
                 channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_DECIMAL128:
+            return CollectSetAggregator<type::OMNI_DECIMAL128, type::OMNI_DECIMAL128>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
         default: {
-            // DECIMAL128/CHAR/VARCHAR/VARBINARY/ARRAY: key type has no std::hash (Decimal128/DecimalPartialResult/ArrayType), DefaultHashMap not supported. Factory throws for these.
+            // CHAR/VARCHAR/VARBINARY/ARRAY: key type has no GroupbyHashCalculator (e.g. DecimalPartialResult/ArrayType), DefaultHashMap not supported. Factory throws for these.
             std::string omniExceptionInfo =
                 "CollectSet unsupported element type " + std::to_string(elementTypeId);
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
 }
+
+
+std::unique_ptr<Aggregator> CollectListAggregatorFactory::CreateAggregator(const type::DataTypes &inputTypes,
+                                                                          const type::DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+                                                                          bool isOverflowAsNull)
+{
+    type::DataTypeId elementTypeId = GetCollectListElementTypeId(inputTypes, inputRaw);
+    switch (elementTypeId) {
+        case type::OMNI_BOOLEAN:
+            return CollectListAggregator<type::OMNI_BOOLEAN, type::OMNI_BOOLEAN>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_BYTE:
+            return CollectListAggregator<type::OMNI_BYTE, type::OMNI_BYTE>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_SHORT:
+            return CollectListAggregator<type::OMNI_SHORT, type::OMNI_SHORT>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_DATE32:
+        case type::OMNI_TIME32:
+        case type::OMNI_INT:
+            return CollectListAggregator<type::OMNI_INT, type::OMNI_INT>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_LONG:
+        case type::OMNI_DATE64:
+        case type::OMNI_TIME64:
+        case type::OMNI_TIMESTAMP:
+            return CollectListAggregator<type::OMNI_LONG, type::OMNI_LONG>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_FLOAT:
+            return CollectListAggregator<type::OMNI_FLOAT, type::OMNI_FLOAT>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_DOUBLE:
+            return CollectListAggregator<type::OMNI_DOUBLE, type::OMNI_DOUBLE>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_DECIMAL64:
+            return CollectListAggregator<type::OMNI_DECIMAL64, type::OMNI_DECIMAL64>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_DECIMAL128:
+            return CollectListAggregator<type::OMNI_DECIMAL128, type::OMNI_DECIMAL128>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        default: {
+            std::string omniExceptionInfo =
+                "CollectList unsupported element type " + std::to_string(elementTypeId);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+        }
+    }
+}
+
 
 std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
 {
@@ -161,6 +233,9 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
         }
         case OMNI_AGGREGATION_TYPE_COLLECT_SET: {
             return std::make_unique<CollectSetAggregatorFactory>();
+        }
+        case OMNI_AGGREGATION_TYPE_COLLECT_LIST: {
+            return std::make_unique<CollectListAggregatorFactory>();
         }
         default: {
             std::string omniExceptionInfo =

@@ -6,6 +6,7 @@
 #define OMNI_RUNTIME_GROUP_HASHER_H
 #include <operator/hash_util.h>
 #include <type/string_ref.h>
+#include <type/decimal128.h>
 #include <functional>
 #include "crc_hasher.h"
 
@@ -44,6 +45,15 @@ struct GroupbyHashCalculator<int16_t> {
     size_t operator()(const int16_t data) const
     {
         return omniruntime::simdutil::CRC32HasherForInt(data);
+    }
+};
+
+// Custom hash for Decimal128 so DefaultHashMap<Decimal128, ...> can be used (e.g. CollectSetAggregator).
+template <>
+struct GroupbyHashCalculator<omniruntime::type::Decimal128> {
+    size_t operator()(const omniruntime::type::Decimal128 &val) const
+    {
+        return static_cast<size_t>(HashUtil::HashValue(static_cast<int64_t>(val.LowBits()), val.HighBits()));
     }
 };
 }

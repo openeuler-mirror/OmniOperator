@@ -28,49 +28,50 @@ namespace omniruntime::op {
             return reinterpret_cast<SetState<T> *>(state);
         }
 
-        void UpdatePartialState(BaseVector *vector, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap, const bool isDictionary)
+        // baseRowIndex is the row index of the base vector, it is normally 0.
+        void UpdatePartialState(BaseVector *vector, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap, const bool isDictionary, int32_t baseRowIndex = 0)
         {
-            T *valuePtr;
+            DefaultHashMap<T, int8_t>* uniqueValues = reinterpret_cast<DefaultHashMap<T, int8_t> *>(uniqueValuesAddr);
             if (isDictionary) {
-                // todo: DictionaryContainer support complex type?
                 auto *dictVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector);
-                valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictVector);
+                T *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictVector);
+                const int32_t *ids = unsafe::UnsafeDictionaryVector::GetIds(dictVector);
+                for (uint32_t i = 0; i < static_cast<uint32_t>(rowCount); i++) {
+                    if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
+                        uniqueValues->Emplace(valuePtr[ids[i]]);
+                    }
+                }
             } else {
                 auto flatVector = reinterpret_cast<Vector<T> *>(vector);
-                valuePtr = unsafe::UnsafeVector::GetRawValues<T>(flatVector);
-            }
-
-            DefaultHashMap<T, int8_t>* uniqueValues = reinterpret_cast<DefaultHashMap<T, int8_t> *>(uniqueValuesAddr);
-            for (uint32_t i = 0; i < rowCount; i++) {
-                // nullMap: true means null (per framework). Only add when no nullMap or row is not null.
-                if (nullMap == nullptr || !(*nullMap)[i]) {
-                    uniqueValues->Emplace(valuePtr[i]);
+                T *valuePtr = unsafe::UnsafeVector::GetRawValues<T>(flatVector);
+                for (uint32_t i = 0; i < static_cast<uint32_t>(rowCount); i++) {
+                    if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
+                        uniqueValues->Emplace(valuePtr[i]);
+                    }
                 }
             }
         }
 
-        void UpdateFinalState(ArrayVector *arrayVector, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap, const bool isDictionary)
+        void UpdateFinalState(ArrayVector *arrayVector, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap, const bool isDictionary, int32_t baseRowIndex = 0)
         {
             DefaultHashMap<T, int8_t>* uniqueValues = reinterpret_cast<DefaultHashMap<T, int8_t> *>(uniqueValuesAddr);
-
-            for (uint32_t i = 0; i < rowCount; i++) {
-                // nullMap: true means null. Only merge when no nullMap or row is not null.
-                if (nullMap == nullptr || !(*nullMap)[i]) {
+            for (uint32_t i = 0; i < static_cast<uint32_t>(rowCount); i++) {
+                if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
                     auto elementVector = arrayVector->GetArrayAt(i, false);
                     auto elementSize = elementVector->GetSize();
-
-                    T *valuePtr;
                     if (isDictionary) {
                         auto *dictVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(elementVector.get());
-                        valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictVector);
+                        T *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictVector);
+                        const int32_t *ids = unsafe::UnsafeDictionaryVector::GetIds(dictVector);
+                        for (uint32_t j = 0; j < elementSize; j++) {
+                            uniqueValues->Emplace(valuePtr[ids[j]]);
+                        }
                     } else {
                         auto flatVector = reinterpret_cast<Vector<T> *>(elementVector.get());
-                        valuePtr = unsafe::UnsafeVector::GetRawValues<T>(flatVector);
-                    }
-
-                    // merge all ElementVectors from input ArrayVectors
-                    for (uint32_t j = 0; j < elementSize; j++) {
-                        uniqueValues->Emplace(valuePtr[j]);
+                        T *valuePtr = unsafe::UnsafeVector::GetRawValues<T>(flatVector);
+                        for (uint32_t j = 0; j < elementSize; j++) {
+                            uniqueValues->Emplace(valuePtr[j]);
+                        }
                     }
                 }
             }
@@ -130,9 +131,9 @@ public:
                 TypeUtil::TypeToStringLog(IN_ID).c_str(), TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         }
-        // Basic types
-        if constexpr (IN_ID == OMNI_BOOLEAN || IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG ||
-            IN_ID == OMNI_FLOAT || IN_ID == OMNI_DOUBLE || IN_ID == OMNI_DECIMAL64) {
+        // Basic types (including DECIMAL128: GroupbyHashCalculator<Decimal128> in group_hasher.h)
+        if constexpr (IN_ID == OMNI_BOOLEAN || IN_ID == OMNI_BYTE || IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG ||
+            IN_ID == OMNI_FLOAT || IN_ID == OMNI_DOUBLE || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_DECIMAL128) {
             LogInfo("Create CollectSetAggregator<%s, %s>.", TypeUtil::TypeToStringLog(IN_ID).c_str(),
                 TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return std::make_unique<CollectSetAggregator<IN_ID, OUT_ID>>(inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull);

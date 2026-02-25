@@ -41,6 +41,7 @@ using FunctionType = enum FunctionType {
     OMNI_AGGREGATION_TYPE_COVAR_POP,
     OMNI_AGGREGATION_TYPE_COVAR_SAMP,
     OMNI_AGGREGATION_TYPE_COLLECT_SET,
+    OMNI_AGGREGATION_TYPE_COLLECT_LIST,
 };
 
 template <typename Enumeration>
