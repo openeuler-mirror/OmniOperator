@@ -15,10 +15,14 @@
 namespace omniruntime {
 namespace op {
 
-// Accumulate (x,y) into partial state (count, sum_x, sum_y, sum_xx, sum_yy, sum_xy)
+// Number of partial output columns for corr (n, xAvg, yAvg, ck, xMk, yMk). Compatible with Spark/Gluten.
+constexpr int kCorrPartialColumnCount = 6;
+
+// Accumulate (x,y) into partial state (count, sum_x, sum_y, sum_xx, sum_yy, sum_xy). Sets valueState to OVERFLOWED on overflow.
 template <typename IN, bool addIf>
 VECTORIZE_LOOP FAST_MATH NO_INLINE void CorrAccumulateRaw(int64_t &count, double &sum_x, double &sum_y,
-    double &sum_xx, double &sum_yy, double &sum_xy, const IN *__restrict col1ptr, const IN *__restrict col2ptr,
+    double &sum_xx, double &sum_yy, double &sum_xy, AggValueState &valueState,
+    const IN *__restrict col1ptr, const IN *__restrict col2ptr,
     const size_t rowCount, const NullsHelper &condition) {
     if (rowCount == 0) return;
     col1ptr = (const IN *)__builtin_assume_aligned(col1ptr, ARRAY_ALIGNMENT);
@@ -40,10 +44,15 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void CorrAccumulateRaw(int64_t &count, double
         sum_xx += x * x;
         sum_yy += y * y;
         sum_xy += x * y;
+        if (!std::isfinite(sum_x) || !std::isfinite(sum_y) || !std::isfinite(sum_xx) ||
+            !std::isfinite(sum_yy) || !std::isfinite(sum_xy)) {
+            valueState = AggValueState::OVERFLOWED;
+            return;
+        }
     }
 }
 
-// Compute Pearson correlation from 6 sufficient statistics
+// Compute Pearson correlation from 6 sufficient statistics. Returns 0.0 if n<2 or den<=0; may return non-finite on overflow.
 inline double CorrFromSuffStats(int64_t n, double sum_x, double sum_y, double sum_xx, double sum_yy, double sum_xy) {
     if (n < 2) return 0.0;
     double num = n * sum_xy - sum_x * sum_y;
@@ -82,6 +91,10 @@ class CorrAggregator : public TypedAggregator {
         bool IsOverFlowed() const { return valueState == AggValueState::OVERFLOWED; }
         void Merge(const CorrPartialState &other) {
             if (other.IsEmpty()) return;
+            if (other.IsOverFlowed()) {
+                valueState = AggValueState::OVERFLOWED;
+                return;
+            }
             if (IsEmpty()) {
                 count = other.count;
                 sum_x = other.sum_x;
@@ -98,6 +111,10 @@ class CorrAggregator : public TypedAggregator {
             sum_xx += other.sum_xx;
             sum_yy += other.sum_yy;
             sum_xy += other.sum_xy;
+            if (!std::isfinite(sum_x) || !std::isfinite(sum_y) || !std::isfinite(sum_xx) ||
+                !std::isfinite(sum_yy) || !std::isfinite(sum_xy)) {
+                valueState = AggValueState::OVERFLOWED;
+            }
         }
     };
 #pragma pack(pop)
