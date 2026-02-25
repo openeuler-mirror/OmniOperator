@@ -26,7 +26,7 @@ namespace omniruntime::vec {
             throw OmniException("TYPE_MISMATCH_ERROR", message);
         }
 
-        int64_t newSize = positionOffset + length;
+        int32_t newSize = positionOffset + length;
         Expand(newSize);
 
         for (int i = 0; i < length; i++) {

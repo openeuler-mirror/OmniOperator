@@ -1193,6 +1193,7 @@ void PagesIndex::ArrayColumnarSort(const int32_t *sortCols, const int32_t *sortA
     if (nonNullFrom + 1 < nonNullTo) {
         auto *addrBase = valueAddresses;
         const int32_t asc = sortAscending;
+        const bool nullsFirst = sortNullFirsts[currentCol] != 0;
         std::sort(addrBase + nonNullFrom, addrBase + nonNullTo, [&](uint64_t a, uint64_t b) {
             uint32_t leftColIdx = DecodeSliceIndex(a);
             uint32_t leftRowIdx = DecodePosition(a);
@@ -1200,7 +1201,7 @@ void PagesIndex::ArrayColumnarSort(const int32_t *sortCols, const int32_t *sortA
             uint32_t rightRowIdx = DecodePosition(b);
             vec::BaseVector *leftCol = sortColumn[leftColIdx];
             vec::BaseVector *rightCol = sortColumn[rightColIdx];
-            int32_t c = OperatorUtil::CompareArrayValue(leftCol, leftRowIdx, rightCol, rightRowIdx);
+            int32_t c = OperatorUtil::CompareArrayValue(leftCol, leftRowIdx, rightCol, rightRowIdx, nullsFirst);
             return asc ? (c < 0) : (c > 0);
         });
     }
@@ -1223,6 +1224,7 @@ void PagesIndex::ArrayColumnarSort(const int32_t *sortCols, const int32_t *sortA
     }
 
     int32_t start = nonNullFrom;
+    const bool nullsFirst = sortNullFirsts[currentCol] != 0;
     for (int32_t i = nonNullFrom + 1; i < nonNullTo; ++i) {
         uint64_t a = valueAddresses[start];
         uint64_t b = valueAddresses[i];
@@ -1231,7 +1233,102 @@ void PagesIndex::ArrayColumnarSort(const int32_t *sortCols, const int32_t *sortA
         uint32_t rightColIdx = DecodeSliceIndex(b);
         uint32_t rightRowIdx = DecodePosition(b);
         int32_t c = OperatorUtil::CompareArrayValue(sortColumn[leftColIdx], leftRowIdx, sortColumn[rightColIdx],
-            rightRowIdx);
+            rightRowIdx, nullsFirst);
+        if (c != 0) {
+            if (start + 1 != i) {
+                ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, start, i,
+                    nextCol);
+            }
+            start = i;
+        }
+    }
+    if (start + 1 != nonNullTo) {
+        ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, start, nonNullTo,
+            nextCol);
+    }
+}
+
+void PagesIndex::StructColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings,
+    const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *values, std::vector<uint32_t> &varcharLength,
+    int32_t from, int32_t to, int32_t currentCol)
+{
+    const auto sortCol = sortCols[currentCol];
+    const auto sortAscending = sortAscendings[currentCol];
+    const auto sortColumn = columns[sortCol];
+    const auto hasNull = hasNulls[sortCol];
+    int32_t nonNullFrom = from;
+    int32_t nonNullTo = to;
+
+    DataTypePtr colType = dataTypes.GetType(sortCol);
+    if (colType->GetId() != OMNI_ROW) {
+        return;
+    }
+
+    // Partition nulls to front/back, same as ArrayColumnarSort.
+    if (sortNullFirsts[currentCol] == 0) {
+        // NULLS LAST
+        if (hasNull) {
+            SortNullPartitionArray<true, false>(sortColumn, values, valueAddresses, nonNullFrom, nonNullTo);
+        } else {
+            SortNullPartitionArray<false, false>(sortColumn, values, valueAddresses, nonNullFrom, nonNullTo);
+        }
+    } else {
+        // NULLS FIRST
+        if (hasNull) {
+            SortNullPartitionArray<true, true>(sortColumn, values, valueAddresses, nonNullFrom, nonNullTo);
+        } else {
+            SortNullPartitionArray<false, true>(sortColumn, values, valueAddresses, nonNullFrom, nonNullTo);
+        }
+    }
+
+    // Sort non-null range [nonNullFrom, nonNullTo) by struct value.
+    if (nonNullFrom + 1 < nonNullTo) {
+        auto *addrBase = valueAddresses;
+        const int32_t asc = sortAscending;
+        const bool nullsFirst = sortNullFirsts[currentCol] != 0;
+        std::sort(addrBase + nonNullFrom, addrBase + nonNullTo, [&](uint64_t a, uint64_t b) {
+            uint32_t leftColIdx = DecodeSliceIndex(a);
+            uint32_t leftRowIdx = DecodePosition(a);
+            uint32_t rightColIdx = DecodeSliceIndex(b);
+            uint32_t rightRowIdx = DecodePosition(b);
+            vec::BaseVector *leftCol = sortColumn[leftColIdx];
+            vec::BaseVector *rightCol = sortColumn[rightColIdx];
+            int32_t c = OperatorUtil::CompareStructValue(
+                leftCol, static_cast<int32_t>(leftRowIdx), rightCol, static_cast<int32_t>(rightRowIdx), nullsFirst);
+            return asc ? (c < 0) : (c > 0);
+        });
+    }
+
+    if (currentCol == sortColCount - 1) {
+        return;
+    }
+
+    const auto nextCol = currentCol + 1;
+    // For groups of equal structs, recurse on next sort column.
+    if (nonNullFrom != from && from + 1 < nonNullFrom) {
+        ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from, nonNullFrom,
+            nextCol);
+    } else if (nonNullTo != to && nonNullTo + 1 < to) {
+        ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, nonNullTo, to,
+            nextCol);
+    }
+
+    if (nonNullFrom + 1 >= nonNullTo) {
+        return;
+    }
+
+    int32_t start = nonNullFrom;
+    const bool nullsFirst = sortNullFirsts[currentCol] != 0;
+    for (int32_t i = nonNullFrom + 1; i < nonNullTo; ++i) {
+        uint64_t a = valueAddresses[start];
+        uint64_t b = valueAddresses[i];
+        uint32_t leftColIdx = DecodeSliceIndex(a);
+        uint32_t leftRowIdx = DecodePosition(a);
+        uint32_t rightColIdx = DecodeSliceIndex(b);
+        uint32_t rightRowIdx = DecodePosition(b);
+        int32_t c = OperatorUtil::CompareStructValue(
+            sortColumn[leftColIdx], static_cast<int32_t>(leftRowIdx),
+            sortColumn[rightColIdx], static_cast<int32_t>(rightRowIdx), nullsFirst);
         if (c != 0) {
             if (start + 1 != i) {
                 ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, start, i,
@@ -1522,6 +1619,11 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
                 currentCol);
             break;
         }
+        case OMNI_ROW: {
+            StructColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from, to,
+                currentCol);
+            break;
+        }
         default:
             break;
     }
@@ -1653,6 +1755,11 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                     outputIndex);
                 break;
             }
+            case OMNI_ROW: {
+                ConstructVector<OMNI_ROW>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
+                break;
+            }
             default:
                 break;
         }
@@ -1726,8 +1833,27 @@ PagesIndex::~PagesIndex()
     Clear();
 }
 
+// ROW path: never uses NativeType<OMNI_ROW>::type. Only instantiated for OMNI_ROW.
+template <bool hasNull, bool hasDictionary>
+static ALWAYS_INLINE void SetValueRow(BaseVector *inputVector, int32_t inputIndex, BaseVector *outputVector,
+    int32_t outputIndex)
+{
+    if constexpr (hasNull) {
+        if (UNLIKELY(inputVector->IsNull(inputIndex))) {
+            outputVector->SetNull(outputIndex);
+            return;
+        }
+    }
+    auto *inputRow = static_cast<RowVector *>(inputVector);
+    auto *outputRow = static_cast<RowVector *>(outputVector);
+    auto *slice = inputRow->Slice(inputIndex, 1, false);
+    outputRow->Append(slice, outputIndex, 1);
+    delete slice;
+}
+
+// Scalar/ARRAY path: uses NativeType<dataTypeId>::type. Never instantiated for OMNI_ROW.
 template <type::DataTypeId dataTypeId, bool hasNull, bool hasDictionary>
-static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, BaseVector *outputVector,
+static ALWAYS_INLINE void SetValueNonRow(BaseVector *inputVector, int32_t inputIndex, BaseVector *outputVector,
     int32_t outputIndex)
 {
     if constexpr (hasNull) {
@@ -1766,14 +1892,25 @@ static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, 
             static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
         } else {
             if constexpr (dataTypeId == OMNI_ARRAY) {
-                value = static_cast<ArrayVector *>(inputVector)->GetValue(inputIndex);
-                static_cast<ArrayVector *>(outputVector)->SetValue(outputIndex, value);
-                delete value;
+                BaseVector *arrayValue = static_cast<ArrayVector *>(inputVector)->GetValue(inputIndex);
+                static_cast<ArrayVector *>(outputVector)->SetValue(outputIndex, arrayValue);
+                delete arrayValue;
             } else {
                 value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
                 static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
             }
         }
+    }
+}
+
+template <type::DataTypeId dataTypeId, bool hasNull, bool hasDictionary>
+static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, BaseVector *outputVector,
+    int32_t outputIndex)
+{
+    if constexpr (dataTypeId == OMNI_ROW) {
+        SetValueRow<hasNull, hasDictionary>(inputVector, inputIndex, outputVector, outputIndex);
+    } else {
+        SetValueNonRow<dataTypeId, hasNull, hasDictionary>(inputVector, inputIndex, outputVector, outputIndex);
     }
 }
 

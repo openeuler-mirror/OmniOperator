@@ -11,6 +11,7 @@
 #include "type/data_type.h"
 #include "type/decimal128.h"
 #include "vector/array_vector.h"
+#include "vector/row_vector.h"
 #include "operator/omni_id_type_vector_traits.h"
 #include "operator/execution_context.h"
 #include "operator/filter/filter_and_project.h"
@@ -87,6 +88,7 @@ public:
                 return width < INT_MAX ? width : DEFAULT_CHAR_LENGTH;
             }
             case OMNI_ARRAY:
+            case OMNI_ROW:
                 // Variable-length; use a conservative estimate so GetMaxRowCount gives a reasonable batch size.
                 return DEFAULT_CHAR_LENGTH;
             default:
@@ -164,7 +166,7 @@ public:
     }
 
     static ALWAYS_INLINE int32_t CompareElementAt(vec::BaseVector *leftVec, vec::BaseVector *rightVec,
-        int32_t pos, type::DataTypeId elementTypeId)
+        int32_t pos, type::DataTypeId elementTypeId, bool nullsFirst = true)
     {
         switch (elementTypeId) {
             case OMNI_BOOLEAN:
@@ -193,22 +195,69 @@ public:
             case OMNI_ARRAY:
                 // Recursive compare: leftVec/rightVec are element slices (see CompareArrayValue), pos is the
                 // index within the slice;
-                return CompareArrayValue(leftVec, pos, rightVec, pos);
+                return CompareArrayValue(leftVec, pos, rightVec, pos, nullsFirst);
+            case OMNI_ROW:
+                // Recursive compare for struct/row: leftVec/rightVec are RowVector (or slices), pos is the row index.
+                return CompareStructValue(leftVec, pos, rightVec, pos, nullsFirst);
             default:
                 throw omniruntime::exception::OmniException("OperatorUtil::CompareElementAt",
-                    "unsupported array element type for compare");
+                    "unsupported element type for compare");
         }
     }
 
-    /** Compare two array rows. Nulls first, ascending. Used by sort and SMJ. */
+    static ALWAYS_INLINE int32_t CompareStructFieldAt(vec::BaseVector *leftVec, int32_t leftPos,
+        vec::BaseVector *rightVec, int32_t rightPos, type::DataTypeId fieldTypeId, bool nullsFirst = true)
+    {
+        switch (fieldTypeId) {
+            case OMNI_BOOLEAN:
+                return CompareValue<bool, true, true, true>(leftVec, leftPos, rightVec, rightPos);
+            case OMNI_INT:
+            case OMNI_DATE32:
+                return CompareValue<int32_t, true, true, true>(leftVec, leftPos, rightVec, rightPos);
+            case OMNI_SHORT:
+                return CompareValue<int16_t, true, true, true>(leftVec, leftPos, rightVec, rightPos);
+            case OMNI_LONG:
+            case OMNI_TIMESTAMP:
+            case OMNI_DECIMAL64:
+                return CompareValue<int64_t, true, true, true>(leftVec, leftPos, rightVec, rightPos);
+            case OMNI_DOUBLE:
+                return CompareValue<double, true, true, true>(leftVec, leftPos, rightVec, rightPos);
+            case OMNI_FLOAT:
+                return CompareValue<float, true, true, true>(leftVec, leftPos, rightVec, rightPos);
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+            case OMNI_VARBINARY:
+                return CompareValue<std::string_view, true, true, true>(leftVec, leftPos, rightVec, rightPos);
+            case OMNI_DECIMAL128:
+                return CompareValue<type::Decimal128, true, true, true>(leftVec, leftPos, rightVec, rightPos);
+            case OMNI_BYTE:
+                return CompareValue<int8_t, true, true, true>(leftVec, leftPos, rightVec, rightPos);
+            case OMNI_ARRAY:
+                // For struct field that is an array: reuse array compare on the full column.
+                return CompareArrayValue(leftVec, leftPos, rightVec, rightPos, nullsFirst);
+            case OMNI_ROW:
+                // Nested struct field: recurse.
+                return CompareStructValue(leftVec, leftPos, rightVec, rightPos, nullsFirst);
+            default:
+                throw omniruntime::exception::OmniException("OperatorUtil::CompareStructFieldAt",
+                    "unsupported struct field type for compare");
+        }
+    }
+
+    /** Compare two array rows. Nulls first/last based on nullsFirst parameter, ascending. Used by sort and SMJ. */
     static int32_t CompareArrayValue(vec::BaseVector *leftColumn, int32_t leftPosition,
-        vec::BaseVector *rightColumn, int32_t rightPosition)
+        vec::BaseVector *rightColumn, int32_t rightPosition, bool nullsFirst = true)
     {
         auto *leftArr = reinterpret_cast<vec::ArrayVector *>(leftColumn);
         auto *rightArr = reinterpret_cast<vec::ArrayVector *>(rightColumn);
         bool leftNull = leftArr->IsNull(leftPosition);
         bool rightNull = rightArr->IsNull(rightPosition);
-        auto nullResult = CompareNull<true, true>(leftNull, rightNull);
+        int32_t nullResult;
+        if (nullsFirst) {
+            nullResult = CompareNull<true, true>(leftNull, rightNull);
+        } else {
+            nullResult = CompareNull<true, false>(leftNull, rightNull);
+        }
         if (nullResult != COMPARE_STATUS_OTHER) {
             return nullResult;
         }
@@ -226,12 +275,12 @@ public:
                 continue;
             }
             if (leftElemNull) {
-                return COMPARE_STATUS_LESS_THAN;
+                return nullsFirst ? COMPARE_STATUS_LESS_THAN : COMPARE_STATUS_GREATER_THAN;
             }
             if (rightElemNull) {
-                return COMPARE_STATUS_GREATER_THAN;
+                return nullsFirst ? COMPARE_STATUS_GREATER_THAN : COMPARE_STATUS_LESS_THAN;
             }
-            int32_t cmp = CompareElementAt(leftSlice.get(), rightSlice.get(), leftIdx, elementTypeId);
+            int32_t cmp = CompareElementAt(leftSlice.get(), rightSlice.get(), leftIdx, elementTypeId, nullsFirst);
             if (cmp != COMPARE_STATUS_EQUAL) {
                 return cmp;
             }
@@ -242,6 +291,44 @@ public:
         if (leftLen > rightLen) {
             return COMPARE_STATUS_GREATER_THAN;
         }
+        return COMPARE_STATUS_EQUAL;
+    }
+
+    /** Compare two struct/row values. Nulls first/last based on nullsFirst parameter, ascending, lexicographic by fields. */
+    static int32_t CompareStructValue(vec::BaseVector *leftColumn, int32_t leftPosition,
+        vec::BaseVector *rightColumn, int32_t rightPosition, bool nullsFirst = true)
+    {
+        auto *leftRow = reinterpret_cast<vec::RowVector *>(leftColumn);
+        auto *rightRow = reinterpret_cast<vec::RowVector *>(rightColumn);
+        bool leftNull = leftRow->IsNull(leftPosition);
+        bool rightNull = rightRow->IsNull(rightPosition);
+        int32_t nullResult;
+        if (nullsFirst) {
+            nullResult = CompareNull<true, true>(leftNull, rightNull);
+        } else {
+            nullResult = CompareNull<true, false>(leftNull, rightNull);
+        }
+        if (nullResult != COMPARE_STATUS_OTHER) {
+            return nullResult;
+        }
+
+        const int32_t childCount = leftRow->ChildSize();
+        OMNI_CHECK(childCount == rightRow->ChildSize(), "Row fields size mismatch in CompareStructValue");
+
+        for (int32_t childIdx = 0; childIdx < childCount; ++childIdx) {
+            auto &leftChildPtr = leftRow->ChildAt(childIdx);
+            auto &rightChildPtr = rightRow->ChildAt(childIdx);
+            auto *leftChild = leftChildPtr.get();
+            auto *rightChild = rightChildPtr.get();
+            auto fieldTypeId = static_cast<type::DataTypeId>(leftChild->GetTypeId());
+
+            // For each field, compare leftPosition vs rightPosition on the corresponding child vectors.
+            int32_t cmp = CompareStructFieldAt(leftChild, leftPosition, rightChild, rightPosition, fieldTypeId, nullsFirst);
+            if (cmp != COMPARE_STATUS_EQUAL) {
+                return cmp;
+            }
+        }
+
         return COMPARE_STATUS_EQUAL;
     }
 

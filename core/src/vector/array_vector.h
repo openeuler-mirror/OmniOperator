@@ -15,7 +15,7 @@ class ArrayVector : public BaseVector {
 public:
     ArrayVector(int64_t size, std::shared_ptr<BaseVector> elementVector)
         : BaseVector(size, OMNI_ENCODING_ARRAY, OMNI_ARRAY),
-          elements(std::move(elementVector)), capacity(size)
+          elements(std::move(elementVector)), capacity(static_cast<int32_t>(size))
     {
         offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
         offsets = offsetsBuffer->GetBuffer();
@@ -23,7 +23,7 @@ public:
     }
 
     ArrayVector(int64_t size)
-        : BaseVector(size, OMNI_ENCODING_ARRAY, OMNI_ARRAY), capacity(size)
+        : BaseVector(size, OMNI_ENCODING_ARRAY, OMNI_ARRAY), capacity(static_cast<int32_t>(size))
     {
         offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
         offsets = offsetsBuffer->GetBuffer();
@@ -159,7 +159,7 @@ public:
         }
     }
 
-    void Expand(int64_t needCapacity)
+    void Expand(int32_t needCapacity) override
     {
         if (needCapacity <= size) {
             return;
@@ -170,8 +170,8 @@ public:
             return;
         }
 
-        int64_t newCapacity = std::max(capacity * 2, needCapacity);
-        int64_t oldSize = size;
+        int32_t newCapacity = std::max(capacity * 2, needCapacity);
+        int32_t oldSize = size;
 
         auto oldOffsetsBuffer = offsetsBuffer;
         offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(newCapacity + 1);
@@ -218,7 +218,7 @@ public:
             throw OmniException("ARRAYVECTOR_APPEND_ERROR", message);
         }
 
-        int64_t newSize = positionOffset + length;
+        int32_t newSize = positionOffset + length;
         Expand(newSize);
 
         int newIndex = positionOffset;
@@ -238,7 +238,7 @@ protected:
     int64_t* offsets;
     std::shared_ptr<AlignedBuffer<int64_t>> offsetsBuffer;
     std::shared_ptr<BaseVector> elements;
-    int64_t capacity;
+    int32_t capacity;
 };
 }
 
