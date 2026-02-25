@@ -63,6 +63,18 @@ void RegisterStringFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("reverse", {OMNI_VARCHAR}, OMNI_VARCHAR,
         std::make_shared<ReverseFunction>());
 
+    // repeat(string, n) -> varchar
+    // Returns the string which repeats input n times. Result size <= 1MB. n <= 0 or empty input -> "".
+    // Support VARCHAR/CHAR with INT/LONG (all Velox-supported type combinations)
+    RegisterFunction<RepeatFunction, std::string, std::string_view, int32_t>(
+        prefix + "repeat", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<RepeatFunction, std::string, std::string_view, int64_t>(
+        prefix + "repeat", {OMNI_VARCHAR, OMNI_LONG}, OMNI_VARCHAR);
+    RegisterFunction<RepeatFunction, std::string, std::string_view, int32_t>(
+        prefix + "repeat", {OMNI_CHAR, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<RepeatFunction, std::string, std::string_view, int64_t>(
+        prefix + "repeat", {OMNI_CHAR, OMNI_LONG}, OMNI_VARCHAR);
+
     // Register locate function with full type support
     // locate(substring, string, start) -> integer
     // Support all combinations of VARCHAR/CHAR string types and INT32/INT64 integer types

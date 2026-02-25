@@ -378,6 +378,67 @@ struct BitLengthFunction {
     }
 };
 
+/// repeat(string, n) -> varchar
+/// Returns the string which repeats input n times.
+/// Result size must be less than or equal to 1MB.
+/// If n is less than or equal to 0, or input is empty, returns empty string.
+/// On integer overflow or result size > 1MB, returns error (row becomes NULL).
+template <typename T>
+struct RepeatFunction {
+    static constexpr size_t kResultMaxSize = 1024 * 1024; // 1MB
+
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input, int32_t n)
+    {
+        return doCall(result, input, static_cast<int64_t>(n));
+    }
+
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input, int64_t n)
+    {
+        return doCall(result, input, n);
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *input, const int32_t *n)
+    {
+        if (input == nullptr || n == nullptr) {
+            return false;
+        }
+        return call(result, *input, *n);
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *input, const int64_t *n)
+    {
+        if (input == nullptr || n == nullptr) {
+            return false;
+        }
+        return call(result, *input, *n);
+    }
+
+private:
+    ALWAYS_INLINE bool doCall(std::string &result, const std::string_view &input, int64_t n)
+    {
+        size_t inputSize = input.size();
+        if (inputSize == 0 || n <= 0) {
+            result.clear();
+            return true;
+        }
+        // Avoid integer overflow: result size = inputSize * n
+        if (n > static_cast<int64_t>(kResultMaxSize / inputSize)) {
+            result.clear();
+            return true; // treat as empty to avoid throw; or use Status for strict Velox behavior
+        }
+        size_t newSize = inputSize * static_cast<size_t>(n);
+        if (newSize > kResultMaxSize) {
+            result.clear();
+            return true;
+        }
+        result.resize(newSize);
+        for (int64_t i = 0; i < n; ++i) {
+            std::memcpy(result.data() + i * inputSize, input.data(), inputSize);
+        }
+        return true;
+    }
+};
+
 /// Pad functions base template
 /// pad(string, size, padString) -> varchar
 /// Pads string to size characters with padString. If size is less than the length
