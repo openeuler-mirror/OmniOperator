@@ -10,6 +10,8 @@
 #include <memory>
 #include "expressions.h"
 #include "util/type_util.h"
+#include "type/data_type.h"
+#include "util/type_util.h"
 
 class ParserHelper {
 public:

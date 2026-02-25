@@ -778,6 +778,11 @@ bool WindowOperator::IsSamePartition(VectorBatch *lastBatch, int32_t lastIdx)
                 isSame = (OperatorUtil::CompareArrayValue(lastVector, lastIdx, currentVector, currentRowIdx) ==
                     OperatorUtil::COMPARE_STATUS_EQUAL);
                 break;
+            case OMNI_ROW:
+                // Use OperatorUtil::CompareStructValue for struct equality check
+                isSame = (OperatorUtil::CompareStructValue(lastVector, lastIdx, currentVector, currentRowIdx) ==
+                    OperatorUtil::COMPARE_STATUS_EQUAL);
+                break;
             default:
                 break;
         }
@@ -829,7 +834,9 @@ void WindowOperator::PaddingPartitionVecBatch(vec::VectorBatch *partitionVecBatc
                 break;
             case OMNI_ARRAY:
                 PaddingPartitionArrayVector(partitionVector, rowIdx, i);
-            default:
+                break;
+            case OMNI_ROW:
+                PaddingPartitionRowVector(partitionVector, rowIdx, i);
                 break;
         }
     }
@@ -864,9 +871,35 @@ void WindowOperator::PaddingPartitionArrayVector(vec::BaseVector *groupedVector,
     if (srcArray->IsNull(currentRowIdx)) {
         dstArray->SetNull(rowIdx);
     } else {
-        // Use GetArrayAt (returns shared_ptr) for RAII-safe memory management
-        auto elemSlice = srcArray->GetArrayAt(currentRowIdx);
-        dstArray->SetValue(rowIdx, elemSlice.get());
+        // 对齐Velox：使用GetValue获取数组切片，然后设置到目标位置
+        BaseVector *arraySlice = srcArray->GetValue(currentRowIdx);
+        dstArray->SetValue(rowIdx, arraySlice);
+        delete arraySlice;  // GetValue返回的是新分配的向量，需要手动释放
+    }
+}
+
+void WindowOperator::PaddingPartitionRowVector(vec::BaseVector *groupedVector, int32_t rowIdx, int32_t colIdx)
+{
+    auto *srcRow = static_cast<RowVector *>(currentBatch->Get(colIdx));
+    auto *dstRow = static_cast<RowVector *>(groupedVector);
+    if (srcRow->IsNull(currentRowIdx)) {
+        dstRow->SetNull(rowIdx);
+    } else {
+        // For RowVector, we need to copy each field individually
+        for (int i = 0; i < srcRow->ChildSize(); i++) {
+            auto *srcField = srcRow->ChildAt(i).get();
+            auto *dstField = dstRow->ChildAt(i).get();
+            
+            // Copy the value from source to destination
+            if (srcField->IsNull(currentRowIdx)) {
+                dstField->SetNull(rowIdx);
+            } else {
+                // 对齐Velox：使用Slice获取指定行的数据，然后Append
+                BaseVector* srcSlice = srcField->Slice(currentRowIdx, 1);
+                VectorHelper::AppendVector(dstField, rowIdx, srcSlice, 1);
+                delete srcSlice;  // Slice返回新分配的向量，需要释放
+            }
+        }
     }
 }
 
