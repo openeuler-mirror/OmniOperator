@@ -672,7 +672,7 @@ public:
      * @param index
      * @param value
      */
-    void ALWAYS_INLINE SetValue(int index, std::string_view &value)
+    void ALWAYS_INLINE SetValue(int index, const std::string_view &value)
     {
         container->SetValue(index, value);
     }

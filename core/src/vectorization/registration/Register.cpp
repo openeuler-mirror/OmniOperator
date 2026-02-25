@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: visitor class for expressions
  */
 
@@ -27,6 +27,8 @@ extern void RegisterMapFunctions(const std::string &prefix);
 
 extern void RegisterMathFunctions(const std::string &prefix);
 
+extern void RegisterPredicateFunctions(const std::string &prefix);
+
 extern void RegisterMiscFunctions(const std::string &prefix);
 
 extern void RegisterRegexpFunctions(const std::string &prefix);
@@ -38,6 +40,12 @@ extern void RegisterStringFunctions(const std::string &prefix);
 extern void RegisterUrlFunctions(const std::string &prefix);
 
 extern void RegisterLambdaFunctions(const std::string &prefix);
+
+extern void RegisterHashFunctions(const std::string &prefix);
+
+extern void RegisterStructFunctions(const std::string &prefix);
+
+extern void RegisterCollectionFunctions(const std::string &prefix);
 
 int RegisterFunctions::Register()
 {
@@ -55,10 +63,14 @@ void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
     RegisterMapFunctions(prefix);
     RegisterMathFunctions(prefix);
     RegisterMiscFunctions(prefix);
+    RegisterPredicateFunctions(prefix);
     RegisterStringFunctions(prefix);
     RegisterBitwiseFunctions(prefix);
     RegisterLambdaFunctions(prefix);
     RegisterRegexpFunctions(prefix);
+    RegisterHashFunctions(prefix);
+    RegisterStructFunctions(prefix);
+    RegisterCollectionFunctions(prefix);
 }
 
 void link_register_functions() {}
