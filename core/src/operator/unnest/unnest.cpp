@@ -254,23 +254,19 @@ void UnnestOperator::generateComplexRepeatedValues(int32_t inputSize, auto* inpu
                 int64_t end = inputVector->GetOffset(i + 1);
                 int64_t length = end - start;
                 
-                // Generate arrays: for each output row, generate one element from the array
-                // If the array has fewer elements than rawMaxSizes_[i], pad with NULL
+                // For repeated columns (arrays), copy the entire array rawMaxSizes_[i] times
+                // Each output row gets a copy of the entire array
                 for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-                    if (j < length) {
-                        // Generate actual array element
-                        if (inputElementVector->IsNull(start + j)) {
+                    // Copy the entire array for this output row
+                    for (auto k = start; k < end; ++k) {
+                        if (inputElementVector->IsNull(k)) {
                             outputElementVector->SetNull(elementIndex++);
                         } else {
-                            auto value = inputElementVector->GetValue(start + j);
+                            auto value = inputElementVector->GetValue(k);
                             outputElementVector->SetValue(elementIndex++, value);
                         }
-                        outputVector->SetSize(index++, 1);
-                    } else {
-                        // Pad with NULL element (for multi-array unnest when arrays have different sizes)
-                        outputElementVector->SetNull(elementIndex++);
-                        outputVector->SetSize(index++, 1);
                     }
+                    outputVector->SetSize(index++, length);
                 }
             }
         }
@@ -296,12 +292,16 @@ void UnnestOperator::generateUnrepeatedValues(omniruntime::vec::BaseVector* inpu
             } else {
                 auto start = unrepeatVector->GetOffset(i);
                 auto length = unrepeatVector->GetSize(i);
+                // Generate actual array elements
                 for (auto j = 0; j < length; ++j) {
                     auto value = elementVector->GetValue(start + j);
                     outputVector->SetValue(index++, value);
                 }
-                // Only generate null padding if outer=true and rawMaxSizes_[i] > length
-                if (outer_ && rawMaxSizes_[i] > length) {
+                // Generate null padding when rawMaxSizes_[i] > length
+                // This is needed for multi-array unnest when arrays have different sizes
+                // Note: This padding is independent of outer parameter - it's needed to align
+                // all unnest columns to the same number of output rows
+                if (rawMaxSizes_[i] > length) {
                     for (auto j = length; j < rawMaxSizes_[i]; ++j) {
                         outputVector->SetNull(index++);
                     }
