@@ -21,6 +21,7 @@ Operator* UnnestOperatorFactory::CreateOperator()
 
 UnnestOperator::UnnestOperator(std::shared_ptr<const UnnestNode> planNode)
     : withOrdinality_(planNode->withOrdinality()),
+      outer_(planNode->outer()),
       outputVecBatch(nullptr)
 {
     const auto& unnestVariables = planNode->unnestVariables();
@@ -49,14 +50,20 @@ int32_t UnnestOperator::AddInput(omniruntime::vec::VectorBatch* vecBatch)
     }
     int32_t numElements = 0;
     rawMaxSizes_.resize(vecBatch->Get(0)->GetSize());
-    std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), 1);
+    // Initialize based on outer parameter: 1 for outer (preserve null/empty rows), 0 for non-outer (filter null/empty rows)
+    std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), outer_ ? 1 : 0);
     for (size_t channel = 0; channel < unnestChannels_.size(); ++channel) {
         const auto& unnestVector = vecBatch->Get(unnestChannels_[channel]);
 
         auto processVector = [&](auto* inputVector) {
             for (auto row = 0; row < unnestVector->GetSize(); ++row) {
-                auto rowSize = inputVector->GetSize(row);
-                rawMaxSizes_[row] = (rowSize > rawMaxSizes_[row]) ? rowSize : rawMaxSizes_[row];
+                // Only update rawMaxSizes_ if the array is not null (similar to Velox)
+                if (!unnestVector->IsNull(row)) {
+                    auto rowSize = inputVector->GetSize(row);
+                    rawMaxSizes_[row] = (rowSize > rawMaxSizes_[row]) ? rowSize : rawMaxSizes_[row];
+                }
+                // If null and outer=false, rawMaxSizes_[row] remains 0 (will be filtered)
+                // If null and outer=true, rawMaxSizes_[row] remains 1 (will be preserved)
             }
         };
 
@@ -67,7 +74,15 @@ int32_t UnnestOperator::AddInput(omniruntime::vec::VectorBatch* vecBatch)
         }
     }
 
-    numElements = std::max(std::accumulate(rawMaxSizes_.begin(), rawMaxSizes_.end(), 0), vecBatch->Get(0)->GetSize());
+    // Calculate numElements: sum of all rawMaxSizes_, but for outer mode, ensure at least input size
+    int32_t totalSizes = std::accumulate(rawMaxSizes_.begin(), rawMaxSizes_.end(), 0);
+    if (outer_) {
+        // For outer mode, ensure we have at least one row per input row (for null/empty arrays)
+        numElements = std::max(totalSizes, vecBatch->Get(0)->GetSize());
+    } else {
+        // For non-outer mode, only count actual elements (null/empty arrays contribute 0)
+        numElements = totalSizes;
+    }
     generateOutput(numElements, vecBatch);
     return 0;
 }
@@ -109,14 +124,18 @@ void UnnestOperator::generateRepeatedValues(VectorType* inputVector, VectorType*
     int32_t index = 0;
     int32_t inputSize = inputVector->GetSize();
     for (auto i = 0; i < inputSize; ++i) {
-        if (inputVector->IsNull(i)) {
-            for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-                outputVector->SetNull(index++);
-            }
-        } else {
-            auto value = inputVector->GetValue(i);
-            for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-                outputVector->SetValue(index++, value);
+        // Only generate repeated values if rawMaxSizes_[i] > 0
+        // For null/empty arrays with outer=false, rawMaxSizes_[i] is 0, so no output is generated
+        if (rawMaxSizes_[i] > 0) {
+            if (inputVector->IsNull(i)) {
+                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                    outputVector->SetNull(index++);
+                }
+            } else {
+                auto value = inputVector->GetValue(i);
+                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                    outputVector->SetValue(index++, value);
+                }
             }
         }
     }
@@ -241,9 +260,13 @@ void UnnestOperator::generateUnrepeatedValues(omniruntime::vec::BaseVector* inpu
     auto insetVector = [&](auto* unrepeatVector, auto* outputVector) {
         for (auto i = 0; i < inputSize; ++i) {
             if (unrepeatVector->IsNull(i)) {
-                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-                    outputVector->SetNull(index++);
+                // For null arrays, only generate null values if outer=true
+                if (outer_ && rawMaxSizes_[i] > 0) {
+                    for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                        outputVector->SetNull(index++);
+                    }
                 }
+                // If outer=false, rawMaxSizes_[i] is 0, so no output is generated (filtered)
             } else {
                 auto start = unrepeatVector->GetOffset(i);
                 auto length = unrepeatVector->GetSize(i);
@@ -251,7 +274,8 @@ void UnnestOperator::generateUnrepeatedValues(omniruntime::vec::BaseVector* inpu
                     auto value = elementVector->GetValue(start + j);
                     outputVector->SetValue(index++, value);
                 }
-                if (rawMaxSizes_[i] > length) {
+                // Only generate null padding if outer=true and rawMaxSizes_[i] > length
+                if (outer_ && rawMaxSizes_[i] > length) {
                     for (auto j = length; j < rawMaxSizes_[i]; ++j) {
                         outputVector->SetNull(index++);
                     }
@@ -453,8 +477,11 @@ void UnnestOperator::generateOrdinalityColumns(int32_t numElements, omniruntime:
     BaseVector* baseVector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_LONG, numElements);
     auto ordVector = dynamic_cast<omniruntime::vec::Vector<int64_t>*>(baseVector);
     for (size_t i = 0; i < rawMaxSizes_.size(); ++i) {
-        for (int64_t j = 0; j < rawMaxSizes_[i]; ++j) {
-            ordVector->SetValue(index++, j + 1);
+        // Only generate ordinality for rows that have output (rawMaxSizes_[i] > 0)
+        if (rawMaxSizes_[i] > 0) {
+            for (int64_t j = 0; j < rawMaxSizes_[i]; ++j) {
+                ordVector->SetValue(index++, j + 1);
+            }
         }
     }
     resultVecBatch->SetVector(outputTypeSize_ - 1, baseVector);
