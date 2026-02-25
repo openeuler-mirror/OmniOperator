@@ -60,6 +60,7 @@ void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
     RegisterConditionalFunctions(prefix);
     RegisterConversionFunctions(prefix);
     RegisterDatetimeFunctions(prefix);
+    RegisterJsonFunctions(prefix);
     RegisterMapFunctions(prefix);
     RegisterMathFunctions(prefix);
     RegisterMiscFunctions(prefix);
