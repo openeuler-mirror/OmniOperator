@@ -255,4 +255,50 @@ TEST(CollectSetVarcharAggregatorTest, InitStatesMultiGroup)
     }
 }
 
+// ---- ConstVector tests ----
+
+// CollectSetVarchar with ConstVector<std::string_view> input: all same value -> set {value}
+TEST(CollectSetVarcharAggregatorTest, PartialProcessGroupConstVectorVarchar)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{VarcharType(100)});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(VarcharType(100))});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    const int32_t rowCount = 4;
+    std::string constStr = "hello";
+    auto *constCol = new ConstVector<std::string_view>(
+        std::string_view(constStr.data(), constStr.size()), OMNI_VARCHAR, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+    ASSERT_EQ(vecBatch->GetRowCount(), rowCount);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    auto *emptyElem = static_cast<Vector<LargeStringContainer<std::string_view>> *>(
+        VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, 0));
+    BaseVector *outputVector = new ArrayVector(1, std::shared_ptr<BaseVector>(emptyElem));
+    std::vector<BaseVector *> extractVectors = {outputVector};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    auto *arrayVec = static_cast<ArrayVector *>(extractVectors[0]);
+    EXPECT_FALSE(arrayVec->IsNull(0));
+    std::shared_ptr<BaseVector> elemVec = arrayVec->GetArrayAt(0, false);
+    ASSERT_NE(elemVec, nullptr);
+    auto *strVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(elemVec.get());
+    // Set should deduplicate: all "hello" -> {"hello"}
+    EXPECT_EQ(strVec->GetSize(), 1);
+    EXPECT_EQ(std::string(strVec->GetValue(0)), "hello");
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outputVector;
+    static_cast<CollectSetVarcharAggregator *>(agg.get())->DestroyState(state.get());
+}
+
 }  // namespace omniruntime

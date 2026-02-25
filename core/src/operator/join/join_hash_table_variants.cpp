@@ -102,6 +102,18 @@ JoinHashTableVariants<KeyType, RowRefListType>::~JoinHashTableVariants()
     inputVecBatches.clear();
 }
 
+template <typename T>
+static inline T GetVectorValue(BaseVector *vec, int32_t index)
+{
+    if (vec->GetEncoding() == OMNI_ENCODING_CONST) {
+        return static_cast<ConstVector<T> *>(vec)->GetConstValue();
+    } else if (vec->GetEncoding() == OMNI_DICTIONARY) {
+        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(vec)->GetValue(index);
+    } else {
+        return reinterpret_cast<Vector<T> *>(vec)->GetValue(index);
+    }
+}
+
 template <typename KeyType, typename RowRefListType>
 void JoinHashTableVariants<KeyType, RowRefListType>::ComputeMultiColKey(
     BaseVector **hashColumns, int32_t hashColCount, int32_t index, KeyType& key)
@@ -112,28 +124,20 @@ void JoinHashTableVariants<KeyType, RowRefListType>::ComputeMultiColKey(
             switch (hashColumns[i]->GetTypeId()) {
                 case OMNI_BYTE:
                     key = static_cast<KeyType>(key) << BITS_OF_BYTE | static_cast<KeyType>(
-                        hashColumns[i]->GetEncoding() == OMNI_DICTIONARY ?
-                        reinterpret_cast<Vector<DictionaryContainer<int8_t>> *>(hashColumns[i])->GetValue(index)
-                        : reinterpret_cast<Vector<int8_t> *>(hashColumns[i])->GetValue(index));
+                        GetVectorValue<int8_t>(hashColumns[i], index));
                     break;
                 case OMNI_SHORT:
                     key = static_cast<KeyType>(key) << BITS_OF_SHORT | static_cast<KeyType>(
-                        hashColumns[i]->GetEncoding() == OMNI_DICTIONARY ?
-                        reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(hashColumns[i])->GetValue(index)
-                        : reinterpret_cast<Vector<int16_t> *>(hashColumns[i])->GetValue(index));
+                        GetVectorValue<int16_t>(hashColumns[i], index));
                     break;
                 case OMNI_INT:
                     key = static_cast<KeyType>(key) << BITS_OF_INT | static_cast<KeyType>(
-                        hashColumns[i]->GetEncoding() == OMNI_DICTIONARY ?
-                        reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(hashColumns[i])->GetValue(index)
-                        : reinterpret_cast<Vector<int32_t> *>(hashColumns[i])->GetValue(index));
+                        GetVectorValue<int32_t>(hashColumns[i], index));
                     break;
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:
                     key = static_cast<KeyType>(key) << BITS_OF_LONG | static_cast<KeyType>(
-                        hashColumns[i]->GetEncoding() == OMNI_DICTIONARY ?
-                        reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(hashColumns[i])->GetValue(index)
-                        : reinterpret_cast<Vector<int64_t> *>(hashColumns[i])->GetValue(index));
+                        GetVectorValue<int64_t>(hashColumns[i], index));
                     break;
                 default:
                     std::string omniExceptionInfo =
@@ -163,7 +167,9 @@ InsertResult<RowRefListType *> JoinHashTableVariants<KeyType, RowRefListType>::F
 
     if constexpr (std::is_same_v<KeyType, int8_t> || std::is_same_v<KeyType, int16_t> ||
                   std::is_same_v<KeyType, int32_t> || std::is_same_v<KeyType, int64_t>) {
-        if (probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY) {
+        if (probeHashColumns[0]->GetEncoding() == OMNI_ENCODING_CONST) {
+            key = static_cast<ConstVector<KeyType> *>(probeHashColumns[0])->GetConstValue();
+        } else if (probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY) {
             auto curVector = reinterpret_cast<Vector<KeyType> *>(probeHashColumns[0]);
             key = curVector->GetValue(probePosition);
         } else {
@@ -182,7 +188,9 @@ InsertResult<RowRefListType *> JoinHashTableVariants<KeyType, RowRefListType>::F
         }
     } else {
         if constexpr (!std::is_same_v<KeyType, type::StringRef>) {
-            if (probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY) {
+            if (probeHashColumns[0]->GetEncoding() == OMNI_ENCODING_CONST) {
+                key = static_cast<ConstVector<KeyType> *>(probeHashColumns[0])->GetConstValue();
+            } else if (probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY) {
                 auto curVector = reinterpret_cast<Vector<KeyType> *>(probeHashColumns[0]);
                 key = curVector->GetValue(probePosition);
             } else {
@@ -206,7 +214,9 @@ KeyType JoinHashTableVariants<KeyType, RowRefListType>::GetKeyValue(BaseVector *
     int32_t probePosition)
 {
     KeyType key;
-    if (probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY) {
+    if (probeHashColumns[0]->GetEncoding() == OMNI_ENCODING_CONST) {
+        key = static_cast<ConstVector<KeyType> *>(probeHashColumns[0])->GetConstValue();
+    } else if (probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY) {
         auto curVector = reinterpret_cast<Vector<KeyType> *>(probeHashColumns[0]);
         key = curVector->GetValue(probePosition);
     } else {
@@ -267,7 +277,11 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceSingleNotNullKeyToNo
             if constexpr (isDic) {
                 key = reinterpret_cast<Vector<DictionaryContainer<KeyType>> *>(buildVectors[0])->GetValue(offset);
             } else {
-                key = reinterpret_cast<Vector<KeyType> *>(buildVectors[0])->GetValue(offset);
+                if (buildVectors[0]->GetEncoding() == OMNI_ENCODING_CONST) {
+                    key = static_cast<ConstVector<KeyType> *>(buildVectors[0])->GetConstValue();
+                } else {
+                    key = reinterpret_cast<Vector<KeyType> *>(buildVectors[0])->GetValue(offset);
+                }
             }
             auto ret = hashTable->InsertJoinKeysToHashmap(key);
             if (ret.IsInsert()) {
@@ -296,7 +310,11 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceSingleKeyToNormalHas
         if constexpr (isDic) {
             key = reinterpret_cast<Vector<DictionaryContainer<KeyType>> *>(buildVectors[0])->GetValue(offset);
         } else {
-            key = reinterpret_cast<Vector<KeyType> *>(buildVectors[0])->GetValue(offset);
+            if (buildVectors[0]->GetEncoding() == OMNI_ENCODING_CONST) {
+                key = static_cast<ConstVector<KeyType> *>(buildVectors[0])->GetConstValue();
+            } else {
+                key = reinterpret_cast<Vector<KeyType> *>(buildVectors[0])->GetValue(offset);
+            }
         }
         if (LIKELY(unNullKey)) {
             auto ret = hashTable->InsertJoinKeysToHashmap(key);
@@ -550,6 +568,11 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildNormalHashTableWithFix
                         dicVectorSerializerFixedKeysIgnoreNullCenter[curVector->GetTypeId()]);
                     hashTable->PushBackFixedKeysIgnoreNullSerializerSimd(
                         dicVectorSerializerFixedKeysIgnoreNullCenterSimd[curVector->GetTypeId()]);
+                } else if (curVector->GetEncoding() == Encoding::OMNI_ENCODING_CONST) {
+                    hashTable->PushBackFixedKeysIgnoreNullSerializer(
+                        constVectorSerializerFixedKeysIgnoreNullCenter[curVector->GetTypeId()]);
+                    hashTable->PushBackFixedKeysIgnoreNullSerializerSimd(
+                        constVectorSerializerFixedKeysIgnoreNullCenterSimd[curVector->GetTypeId()]);
                 } else {
                     hashTable->PushBackFixedKeysIgnoreNullSerializer(
                         vectorSerializerFixedKeysIgnoreNullCenter[curVector->GetTypeId()]);
@@ -592,6 +615,9 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildNormalHashTableWithVar
                 if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
                     hashTable->PushBackIgnoreNullSerializer(
                         dicVectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
+                } else if (curVector->GetEncoding() == Encoding::OMNI_ENCODING_CONST) {
+                    hashTable->PushBackIgnoreNullSerializer(
+                        constVectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
                 } else {
                     hashTable->PushBackIgnoreNullSerializer(vectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
                 }
@@ -759,7 +785,13 @@ bool JoinHashTableVariants<KeyType, RowRefListType>::TryToBuildArrayTable(uint32
         VectorBatch *vecBatch = vecBatchesOnePartition[vecBatchIdx];
         auto rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
         auto vector = vecBatch->Get(colIndex);
-        if (vector->GetEncoding() != OMNI_DICTIONARY) {
+        if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+            if (!vector->IsNull(0)) {
+                auto value = static_cast<ConstVector<T> *>(vector)->GetConstValue();
+                max = std::max(max, value);
+                min = std::min(min, value);
+            }
+        } else if (vector->GetEncoding() != OMNI_DICTIONARY) {
             // Caveat: null data might be a random number
             auto valuePtr = unsafe::UnsafeVector::GetRawValues(static_cast<Vector<T> *>(vector));
             if (vector->HasNull()) {
@@ -877,8 +909,40 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceKeyToArrayTable(T &m
     int32_t vecBatchCount = vecBatchesOnePartition.size();
     for (auto j = 0; j < vecBatchCount; j++) {
         auto vecBatch = vecBatchesOnePartition[j];
-        auto curVector = reinterpret_cast<Vector<T> *>(vecBatch->Get(buildHashCol));
+        auto baseVector = vecBatch->Get(buildHashCol);
         auto rowCount = vecBatch->GetRowCount();
+
+        if (baseVector->GetEncoding() == OMNI_ENCODING_CONST) {
+            if (!baseVector->IsNull(0)) {
+                key = static_cast<ConstVector<T> *>(baseVector)->GetConstValue();
+                for (auto offset = 0; offset < rowCount; offset++) {
+                    auto ret = hashTable->InsertJoinKeysToHashmap(static_cast<size_t>(key - min));
+                    if (ret.IsInsert()) {
+                        rowRef = reinterpret_cast<RowRefListType *>(arenaAllocator.Allocate(sizeOfRowRefList));
+                        *rowRef = RowRefListType(static_cast<uint32_t>(offset), static_cast<uint32_t>(j));
+                        ret.SetValue(rowRef);
+                    } else {
+                        rowRef = ret.GetValue();
+                        rowRef->Insert({ static_cast<uint32_t>(offset), static_cast<uint32_t>(j) }, arenaAllocator);
+                    }
+                }
+            } else {
+                for (auto offset = 0; offset < rowCount; offset++) {
+                    auto ret = hashTable->InsertNullKeysToHashmap();
+                    if (ret.IsInsert()) {
+                        rowRef = reinterpret_cast<RowRefListType *>(arenaAllocator.Allocate(sizeOfRowRefList));
+                        *rowRef = RowRefListType(static_cast<uint32_t>(offset), static_cast<uint32_t>(j));
+                        ret.SetValue(rowRef);
+                    } else {
+                        rowRef = ret.GetValue();
+                        rowRef->Insert({ static_cast<uint32_t>(offset), static_cast<uint32_t>(j) }, arenaAllocator);
+                    }
+                }
+            }
+            continue;
+        }
+
+        auto curVector = reinterpret_cast<Vector<T> *>(baseVector);
         if (!curVector->HasNull()) {
             for (auto offset = 0; offset < rowCount; offset++) {
                 key = curVector->GetValue(offset);

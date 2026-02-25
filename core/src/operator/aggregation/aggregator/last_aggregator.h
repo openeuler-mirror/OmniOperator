@@ -76,7 +76,9 @@ public:
             if constexpr (IGNORE_NULL) {
                 lastState->valIsNull = false;
                 std::string_view varcharVal;
-                if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+                    varcharVal = static_cast<vec::ConstVector<std::string_view> *>(vector)->GetConstValue();
+                } else if (vector->GetEncoding() == OMNI_DICTIONARY) {
                     auto varcharVector = static_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
                     varcharVal = varcharVector->GetValue(rowIndex);
                 } else {
@@ -90,7 +92,9 @@ public:
                     return;
                 }
                 std::string_view varcharVal;
-                if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+                    varcharVal = static_cast<vec::ConstVector<std::string_view> *>(vector)->GetConstValue();
+                } else if (vector->GetEncoding() == OMNI_DICTIONARY) {
                     auto varcharVector = static_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
                     varcharVal = varcharVector->GetValue(rowIndex);
                 } else {
@@ -108,9 +112,14 @@ public:
             if (lastState->valIsNull) {
                 return;
             } else {
-                auto varcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
-                auto varcharVal = varcharVector->GetValue(rowIndex);
-                return UpdateLastStateVarcharVal(lastState, varcharVal);
+                if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+                    auto varcharVal = static_cast<vec::ConstVector<std::string_view> *>(vector)->GetConstValue();
+                    return UpdateLastStateVarcharVal(lastState, varcharVal);
+                } else {
+                    auto varcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
+                    auto varcharVal = varcharVector->GetValue(rowIndex);
+                    return UpdateLastStateVarcharVal(lastState, varcharVal);
+                }
             }
         }
     }
@@ -120,14 +129,18 @@ public:
         if constexpr (INPUT_RAW) {
             if constexpr (IGNORE_NULL) {
                 lastState->valIsNull = false;
-                if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+                    lastState->val = static_cast<vec::ConstVector<InputType> *>(vector)->GetConstValue();
+                } else if (vector->GetEncoding() == OMNI_DICTIONARY) {
                     lastState->val = static_cast<Vector<DictionaryContainer<InputType>> *>(vector)->GetValue(rowIndex);
                 } else {
                     lastState->val = static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
                 }
             } else {
                 lastState->valIsNull = vector->IsNull(rowIndex);
-                if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+                    lastState->val = static_cast<vec::ConstVector<InputType> *>(vector)->GetConstValue();
+                } else if (vector->GetEncoding() == OMNI_DICTIONARY) {
                     lastState->val = static_cast<Vector<DictionaryContainer<InputType>> *>(vector)->GetValue(rowIndex);
                 } else {
                     lastState->val = static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
@@ -135,7 +148,11 @@ public:
             }
         } else {
             lastState->valIsNull = vector->IsNull(rowIndex);
-            lastState->val = static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
+            if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+                lastState->val = static_cast<vec::ConstVector<InputType> *>(vector)->GetConstValue();
+            } else {
+                lastState->val = static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
+            }
         }
     }
 

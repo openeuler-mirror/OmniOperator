@@ -62,17 +62,23 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
-    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
         if (nullMap == nullptr) {
-            AddChar<MinCharOp>(state, vector, rowOffset, rowCount);
+            AddConstChar<MinConstCharOp>(state, vector, rowOffset, rowCount);
         } else {
-            AddConditionalChar<MinCharOp>(state, vector, rowOffset, rowCount, *nullMap);
+            AddConstConditionalChar<MinConstCharOp>(state, vector, rowOffset, rowCount, *nullMap);
         }
-    } else {
+    } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
             AddDictChar<MinDictCharOp>(state, vector, rowOffset, rowCount);
         } else {
             AddDictConditionalChar<MinDictCharOp>(state, vector, rowOffset, rowCount, *nullMap);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddChar<MinCharOp>(state, vector, rowOffset, rowCount);
+        } else {
+            AddConditionalChar<MinCharOp>(state, vector, rowOffset, rowCount, *nullMap);
         }
     }
 
@@ -83,17 +89,23 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
     BaseVector *vector, const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
-    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
         if (nullMap == nullptr) {
-            AddUseRowIndexChar<MinCharOp>(rowStates, aggStateOffset, vector, rowOffset);
+            AddConstUseRowIndexChar<MinConstCharOp>(rowStates, aggStateOffset, vector, rowOffset);
         } else {
-            AddConditionalUseRowIndexChar<MinCharOp>(rowStates, aggStateOffset, vector, rowOffset, *nullMap);
+            AddConstConditionalUseRowIndexChar<MinConstCharOp>(rowStates, aggStateOffset, vector, rowOffset, *nullMap);
         }
-    } else {
+    } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
             AddDictUseRowIndexChar<MinDictCharOp>(rowStates, aggStateOffset, rowOffset, vector);
         } else {
             AddDictConditionalUseRowIndexChar<MinDictCharOp>(rowStates, aggStateOffset, rowOffset, vector, *nullMap);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddUseRowIndexChar<MinCharOp>(rowStates, aggStateOffset, vector, rowOffset);
+        } else {
+            AddConditionalUseRowIndexChar<MinCharOp>(rowStates, aggStateOffset, vector, rowOffset, *nullMap);
         }
     }
 

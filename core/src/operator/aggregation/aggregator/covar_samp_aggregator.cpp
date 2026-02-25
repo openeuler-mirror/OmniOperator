@@ -216,10 +216,20 @@ void CovarSampAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *s
     if (inputRaw) {
         auto *col1 = curVectorBatch->Get(channels[0]);
         auto *col2 = curVectorBatch->Get(channels[1]);
-        auto *p1 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col1));
-        auto *p2 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col2));
-        p1 += rowOffset;
-        p2 += rowOffset;
+        bool col1Const = (col1->GetEncoding() == vec::OMNI_ENCODING_CONST);
+        bool col2Const = (col2->GetEncoding() == vec::OMNI_ENCODING_CONST);
+        InType constVal1{}, constVal2{};
+        InType *p1 = nullptr, *p2 = nullptr;
+        if (col1Const) {
+            constVal1 = static_cast<vec::ConstVector<InType> *>(col1)->GetConstValue();
+        } else {
+            p1 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col1)) + rowOffset;
+        }
+        if (col2Const) {
+            constVal2 = static_cast<vec::ConstVector<InType> *>(col2)->GetConstValue();
+        } else {
+            p2 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col2)) + rowOffset;
+        }
         for (int32_t i = 0; i < rowCount; i++) {
             if (nullMap && (*nullMap)[i]) {
                 continue;
@@ -227,7 +237,7 @@ void CovarSampAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *s
             if (col1->IsNull(rowOffset + i) || col2->IsNull(rowOffset + i)) {
                 continue;
             }
-            s->Update(p1[i], p2[i]);
+            s->Update(col1Const ? constVal1 : p1[i], col2Const ? constVal2 : p2[i]);
         }
         if (s->count > 0 && !s->IsOverFlowed()) {
             s->valueState = AggValueState::NORMAL;
@@ -257,16 +267,26 @@ void CovarSampAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggreg
     if (inputRaw) {
         auto *col1 = curVectorBatch->Get(channels[0]);
         auto *col2 = curVectorBatch->Get(channels[1]);
-        auto *p1 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col1));
-        auto *p2 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col2));
-        p1 += rowOffset;
-        p2 += rowOffset;
+        bool col1Const = (col1->GetEncoding() == vec::OMNI_ENCODING_CONST);
+        bool col2Const = (col2->GetEncoding() == vec::OMNI_ENCODING_CONST);
+        InType constVal1{}, constVal2{};
+        InType *p1 = nullptr, *p2 = nullptr;
+        if (col1Const) {
+            constVal1 = static_cast<vec::ConstVector<InType> *>(col1)->GetConstValue();
+        } else {
+            p1 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col1)) + rowOffset;
+        }
+        if (col2Const) {
+            constVal2 = static_cast<vec::ConstVector<InType> *>(col2)->GetConstValue();
+        } else {
+            p2 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col2)) + rowOffset;
+        }
         const size_t rowCount = rowStates.size();
         for (size_t i = 0; i < rowCount; i++) {
             if (nullMap && (*nullMap)[i]) continue;
             if (col1->IsNull(rowOffset + i) || col2->IsNull(rowOffset + i)) continue;
             auto *s = CovarPartialState::CastState(rowStates[i] + aggStateOffset);
-            s->Update(p1[i], p2[i]);
+            s->Update(col1Const ? constVal1 : p1[i], col2Const ? constVal2 : p2[i]);
             if (!s->IsOverFlowed()) {
                 s->valueState = AggValueState::NORMAL;
             }

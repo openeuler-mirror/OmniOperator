@@ -44,6 +44,9 @@ public class VecFactory {
             case OMNI_ENCODING_ARRAY:
                 vector = new ArrayVec(nativeVector, (ArrayDataType) dataType);
                 break;
+            case OMNI_VEC_ENCODING_CONST:
+                vector = new ConstVec(nativeVector, dataType);
+                break;
             default:
                 throw new IllegalArgumentException("Not Support Vec Encoding " + encoding);
         }
@@ -118,6 +121,9 @@ public class VecFactory {
             case OMNI_ENCODING_STRUCT:
                 StructDataType structDataType = (StructDataType) ComplexVec.getComplexDataTypeNative(nativeVector);
                 vector = new StructVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size, structDataType);
+                break;
+            case OMNI_VEC_ENCODING_CONST:
+                vector = new ConstVec(nativeVector, nativeVectorNullBufAddress, size, dataType);
                 break;
             default:
                 throw new IllegalArgumentException("Not Support Vec Encoding " + encoding);

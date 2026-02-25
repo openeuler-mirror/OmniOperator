@@ -109,7 +109,6 @@ protected:
         return static_cast<int64_t>(micros.count());
     }
 
-    // Convert "YYYY-MM-DD" to the number of days since 1970-01-01 (consistent with DATE32 semantics)
     // Convert YYYY-MM-DD to the number of days since 1970-01-01 (DATE32)
     constexpr bool isLeap(int year) {
         return (year % 4 == 0) && (year % 100 != 0 || year % 400 == 0);
@@ -136,31 +135,134 @@ protected:
             throw std::invalid_argument("Invalid month or day");
         }
 
-        // Check if day exceeds the maximum for the given month
         int maxDay = kDaysInMonth[month - 1];
         if (month == 2 && isLeap(year)) maxDay = 29;
         if (day > maxDay) {
             throw std::invalid_argument("Invalid day for month");
         }
 
-        // Calculate the number of days from 1970-01-01 to (year, month, day)
         int32_t days = 0;
-
-        // Add full years first
         for (int y = 1970; y < year; ++y) {
             days += isLeap(y) ? 366 : 365;
         }
 
-        // Then add months in the current year
         for (int m = 1; m < month; ++m) {
             days += kDaysInMonth[m - 1];
             if (m == 2 && isLeap(year)) days += 1;
         }
 
-        // Finally add days (1st of the month is day 0, so add (day - 1))
         days += (day - 1);
 
         return days;
+    }
+
+    vec::BaseVector* createNullConstVec(omniruntime::type::DataTypeId dataTypeId,
+        int32_t batchRowSize) {
+        vec::BaseVector *result = nullptr;
+        switch (dataTypeId) {
+            case omniruntime::type::OMNI_BYTE:
+                result = new vec::ConstVector<int8_t>(0, dataTypeId, batchRowSize);
+                break;
+            case omniruntime::type::OMNI_SHORT:
+                result = new vec::ConstVector<int16_t>(0, dataTypeId, batchRowSize);
+                break;
+            case omniruntime::type::OMNI_INT:
+            case omniruntime::type::OMNI_DATE32:
+                result = new vec::ConstVector<int32_t>(0, dataTypeId, batchRowSize);
+                break;
+            case omniruntime::type::OMNI_LONG:
+            case omniruntime::type::OMNI_DECIMAL64:
+            case omniruntime::type::OMNI_TIMESTAMP:
+            case omniruntime::type::OMNI_DATE64:
+                result = new vec::ConstVector<int64_t>(0, dataTypeId, batchRowSize);
+                break;
+            case omniruntime::type::OMNI_FLOAT:
+                result = new vec::ConstVector<float>(0.0f, dataTypeId, batchRowSize);
+                break;
+            case omniruntime::type::OMNI_DOUBLE:
+                result = new vec::ConstVector<double>(0.0, dataTypeId, batchRowSize);
+                break;
+            case omniruntime::type::OMNI_BOOLEAN:
+                result = new vec::ConstVector<bool>(false, dataTypeId, batchRowSize);
+                break;
+            case omniruntime::type::OMNI_CHAR:
+            case omniruntime::type::OMNI_VARCHAR:
+                result = new vec::ConstVector<std::string_view>(
+                    std::string_view(), dataTypeId, batchRowSize);
+                break;
+            case omniruntime::type::OMNI_DECIMAL128:
+                result = new vec::ConstVector<omniruntime::type::Decimal128>(
+                    omniruntime::type::Decimal128(0), dataTypeId, batchRowSize);
+                break;
+            default:
+                LogError("createNullConstVec: unsupported data type %d", dataTypeId);
+                return nullptr;
+        }
+        result->SetNulls(0, true, batchRowSize);
+        return result;
+    }
+
+    // NOTE: For VARCHAR/CHAR types, the returned ConstVector<std::string_view> holds a
+    // view into the string data owned by hiveSplit_->partitionKeys. Callers must ensure
+    // that hiveSplit_ outlives the returned vector.
+    vec::BaseVector* createConstPartitionVec(omniruntime::type::DataTypeId dataTypeId,
+        int32_t batchRowSize, const std::string &val) {
+        switch (dataTypeId) {
+            case omniruntime::type::OMNI_BYTE: {
+                int8_t item = static_cast<int8_t>(std::stoi(val));
+                return new vec::ConstVector<int8_t>(item, dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_SHORT: {
+                int16_t item = static_cast<int16_t>(std::stoi(val));
+                return new vec::ConstVector<int16_t>(item, dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_INT: {
+                int32_t item = std::stoi(val);
+                return new vec::ConstVector<int32_t>(item, dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_DATE32: {
+                int32_t item = ParseDate32(val);
+                return new vec::ConstVector<int32_t>(item, dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_LONG: {
+                int64_t item = std::stol(val);
+                return new vec::ConstVector<int64_t>(item, dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_FLOAT: {
+                float item = std::stof(val);
+                return new vec::ConstVector<float>(item, dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_DOUBLE: {
+                double item = std::stod(val);
+                return new vec::ConstVector<double>(item, dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_BOOLEAN: {
+                bool item = (val == "true" || val == "1");
+                return new vec::ConstVector<bool>(item, dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_CHAR:
+            case omniruntime::type::OMNI_VARCHAR: {
+                return new vec::ConstVector<std::string_view>(
+                    std::string_view(val), dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_DECIMAL64: {
+                auto decimal = omniruntime::type::Decimal128(val);
+                int64_t item = static_cast<int64_t>(decimal.ToInt128());
+                return new vec::ConstVector<int64_t>(item, dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_DECIMAL128: {
+                auto item = omniruntime::type::Decimal128(val);
+                return new vec::ConstVector<omniruntime::type::Decimal128>(
+                    item, dataTypeId, batchRowSize);
+            }
+            case omniruntime::type::OMNI_TIMESTAMP: {
+                int64_t item = StringToTimestamp(val);
+                return new vec::ConstVector<int64_t>(item, dataTypeId, batchRowSize);
+            }
+            default:
+                LogError("createConstPartitionVec: unsupported data type %d", dataTypeId);
+                return nullptr;
+        }
     }
 
     void setPartitionVal(vec::BaseVector *vector, int32_t index, std::string &val) {

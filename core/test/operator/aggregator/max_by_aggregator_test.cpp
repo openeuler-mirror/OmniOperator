@@ -740,4 +740,313 @@ TEST(MaxByAggregatorTest, ProcessGroupUnspillSkipsNullRow)
     delete outVec;
 }
 
+// ---- ConstVector tests: ProcessGroup with ConstVector columns ----
+
+// ConstVector target (col1), FlatVector sort key (col2) - scalar types
+TEST(MaxByAggregatorTest, ProcessGroupConstTargetIntInt)
+{
+    MaxByAggregatorFactory factory;
+    std::vector<int32_t> channels = {0, 1};
+    DataTypes inputTypes(std::vector<DataTypePtr>{IntType(), IntType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{IntType()});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    // Build VectorBatch: col1=ConstVector(42), col2=FlatVector{3,1,2}
+    const int32_t rowCount = 3;
+    auto *constTarget = new ConstVector<int32_t>(42, OMNI_INT, rowCount);
+    auto *keyVec = new Vector<int32_t>(rowCount);
+    keyVec->SetValue(0, 3);
+    keyVec->SetValue(1, 1);
+    keyVec->SetValue(2, 2);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constTarget);
+    vecBatch->Append(keyVec);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    Vector<int32_t> *outVec = new Vector<int32_t>(1);
+    std::vector<BaseVector *> extractVectors = {outVec};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    EXPECT_FALSE(outVec->IsNull(0));
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(extractVectors[0])->GetValue(0), 42);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outVec;
+}
+
+// FlatVector target (col1), ConstVector sort key (col2) - scalar types
+TEST(MaxByAggregatorTest, ProcessGroupConstKeyIntInt)
+{
+    MaxByAggregatorFactory factory;
+    std::vector<int32_t> channels = {0, 1};
+    DataTypes inputTypes(std::vector<DataTypePtr>{IntType(), IntType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{IntType()});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    // Build VectorBatch: col1=FlatVector{10,20,30}, col2=ConstVector(5)
+    const int32_t rowCount = 3;
+    auto *targetVec = new Vector<int32_t>(rowCount);
+    targetVec->SetValue(0, 10);
+    targetVec->SetValue(1, 20);
+    targetVec->SetValue(2, 30);
+    auto *constKey = new ConstVector<int32_t>(5, OMNI_INT, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(targetVec);
+    vecBatch->Append(constKey);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    Vector<int32_t> *outVec = new Vector<int32_t>(1);
+    std::vector<BaseVector *> extractVectors = {outVec};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    // All keys are equal (5), so the last row processed (key >= current) wins -> target=30
+    EXPECT_FALSE(outVec->IsNull(0));
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(extractVectors[0])->GetValue(0), 30);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outVec;
+}
+
+// Both ConstVector target and sort key
+TEST(MaxByAggregatorTest, ProcessGroupBothConstIntInt)
+{
+    MaxByAggregatorFactory factory;
+    std::vector<int32_t> channels = {0, 1};
+    DataTypes inputTypes(std::vector<DataTypePtr>{IntType(), IntType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{IntType()});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    const int32_t rowCount = 3;
+    auto *constTarget = new ConstVector<int32_t>(99, OMNI_INT, rowCount);
+    auto *constKey = new ConstVector<int32_t>(7, OMNI_INT, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constTarget);
+    vecBatch->Append(constKey);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    Vector<int32_t> *outVec = new Vector<int32_t>(1);
+    std::vector<BaseVector *> extractVectors = {outVec};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    EXPECT_FALSE(outVec->IsNull(0));
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(extractVectors[0])->GetValue(0), 99);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outVec;
+}
+
+// ConstVector target with Long type sort key
+TEST(MaxByAggregatorTest, ProcessGroupConstTargetLongLong)
+{
+    MaxByAggregatorFactory factory;
+    std::vector<int32_t> channels = {0, 1};
+    DataTypes inputTypes(std::vector<DataTypePtr>{LongType(), LongType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{LongType()});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    const int32_t rowCount = 3;
+    auto *constTarget = new ConstVector<int64_t>(100L, OMNI_LONG, rowCount);
+    auto *keyVec = new Vector<int64_t>(rowCount);
+    keyVec->SetValue(0, 30L);
+    keyVec->SetValue(1, 10L);
+    keyVec->SetValue(2, 20L);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constTarget);
+    vecBatch->Append(keyVec);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    Vector<int64_t> *outVec = new Vector<int64_t>(1);
+    std::vector<BaseVector *> extractVectors = {outVec};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    EXPECT_FALSE(outVec->IsNull(0));
+    EXPECT_EQ(static_cast<Vector<int64_t> *>(extractVectors[0])->GetValue(0), 100L);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outVec;
+}
+
+// ConstVector target with Double type
+TEST(MaxByAggregatorTest, ProcessGroupConstTargetDoubleDouble)
+{
+    MaxByAggregatorFactory factory;
+    std::vector<int32_t> channels = {0, 1};
+    DataTypes inputTypes(std::vector<DataTypePtr>{DoubleType(), DoubleType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{DoubleType()});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    const int32_t rowCount = 3;
+    auto *constTarget = new ConstVector<double>(5.5, OMNI_DOUBLE, rowCount);
+    auto *keyVec = new Vector<double>(rowCount);
+    keyVec->SetValue(0, 3.0);
+    keyVec->SetValue(1, 1.0);
+    keyVec->SetValue(2, 2.0);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constTarget);
+    vecBatch->Append(keyVec);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    Vector<double> *outVec = new Vector<double>(1);
+    std::vector<BaseVector *> extractVectors = {outVec};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    EXPECT_FALSE(outVec->IsNull(0));
+    EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(extractVectors[0])->GetValue(0), 5.5);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outVec;
+}
+
+// ConstVector target (Int), Varchar sort key (FlatVector)
+TEST(MaxByAggregatorTest, ProcessGroupConstTargetIntVarchar)
+{
+    MaxByAggregatorFactory factory;
+    std::vector<int32_t> channels = {0, 1};
+    DataTypes inputTypes(std::vector<DataTypePtr>{IntType(), VarcharType(10)});
+    DataTypes outputTypes(std::vector<DataTypePtr>{IntType()});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    const int32_t rowCount = 3;
+    auto *constTarget = new ConstVector<int32_t>(42, OMNI_INT, rowCount);
+    std::string keyData[] = {"c", "a", "b"};
+    auto *keyVec = new Vector<LargeStringContainer<std::string_view>>(rowCount);
+    for (int i = 0; i < rowCount; i++) {
+        keyVec->SetValue(i, std::string_view(keyData[i].data(), keyData[i].size()));
+    }
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constTarget);
+    vecBatch->Append(keyVec);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    Vector<int32_t> *outVec = new Vector<int32_t>(1);
+    std::vector<BaseVector *> extractVectors = {outVec};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    // max key = "c" -> target = 42 (const)
+    EXPECT_FALSE(outVec->IsNull(0));
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(extractVectors[0])->GetValue(0), 42);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outVec;
+}
+
+// FlatVector target (Int), ConstVector varchar sort key
+TEST(MaxByAggregatorTest, ProcessGroupConstVarcharKeyIntVarchar)
+{
+    MaxByAggregatorFactory factory;
+    std::vector<int32_t> channels = {0, 1};
+    DataTypes inputTypes(std::vector<DataTypePtr>{IntType(), VarcharType(10)});
+    DataTypes outputTypes(std::vector<DataTypePtr>{IntType()});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    const int32_t rowCount = 3;
+    int32_t targetData[] = {10, 20, 30};
+    auto *targetVec = new Vector<int32_t>(rowCount);
+    for (int i = 0; i < rowCount; i++) {
+        targetVec->SetValue(i, targetData[i]);
+    }
+    std::string constKeyStr = "xyz";
+    auto *constKey = new ConstVector<std::string_view>(
+        std::string_view(constKeyStr.data(), constKeyStr.size()), OMNI_VARCHAR, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(targetVec);
+    vecBatch->Append(constKey);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    Vector<int32_t> *outVec = new Vector<int32_t>(1);
+    std::vector<BaseVector *> extractVectors = {outVec};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    // All keys are equal ("xyz"), first processed row wins (equal keys don't update state) -> target = 10
+    EXPECT_FALSE(outVec->IsNull(0));
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(extractVectors[0])->GetValue(0), 10);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outVec;
+}
+
+// ConstVector target (Varchar), Varchar sort key (FlatVector)
+TEST(MaxByAggregatorTest, ProcessGroupConstTargetVarcharVarchar)
+{
+    MaxByAggregatorFactory factory;
+    std::vector<int32_t> channels = {0, 1};
+    DataTypes inputTypes(std::vector<DataTypePtr>{VarcharType(10), VarcharType(10)});
+    DataTypes outputTypes(std::vector<DataTypePtr>{VarcharType(10)});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    const int32_t rowCount = 3;
+    std::string constTargetStr = "hello";
+    auto *constTarget = new ConstVector<std::string_view>(
+        std::string_view(constTargetStr.data(), constTargetStr.size()), OMNI_VARCHAR, rowCount);
+    std::string keyData[] = {"a", "c", "b"};
+    auto *keyVec = new Vector<LargeStringContainer<std::string_view>>(rowCount);
+    for (int i = 0; i < rowCount; i++) {
+        keyVec->SetValue(i, std::string_view(keyData[i].data(), keyData[i].size()));
+    }
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constTarget);
+    vecBatch->Append(keyVec);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    using VarcharVec = Vector<LargeStringContainer<std::string_view>>;
+    VarcharVec *outVec = new VarcharVec(1);
+    std::vector<BaseVector *> extractVectors = {outVec};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    // max key = "c" -> target = "hello" (const)
+    EXPECT_FALSE(outVec->IsNull(0));
+    EXPECT_EQ(std::string(outVec->GetValue(0)), "hello");
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outVec;
+}
+
 } // namespace omniruntime

@@ -434,7 +434,13 @@ void ApproxPercentileAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateState
     }
     if (acc->percentiles.empty()) acc->percentiles.push_back(0.5);
 
-    if (vector->GetEncoding() == omniruntime::vec::OMNI_DICTIONARY) {
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        InType constValue = static_cast<vec::ConstVector<InType>*>(vector)->GetConstValue();
+        for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
+            if (nullMap && (*nullMap)[rowOffset + rowIdx]) continue;
+            acc->insert(IN_ID, &constValue);
+        }
+    } else if (vector->GetEncoding() == omniruntime::vec::OMNI_DICTIONARY) {
         const int32_t* ids = GetIdsFromDict<IN_ID>(vector);
         const InType* dict = reinterpret_cast<const InType*>(GetValuesFromDict<IN_ID>(vector));
         for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
@@ -544,7 +550,14 @@ void ApproxPercentileAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatc
         int32_t rowCount = originVector->GetSize();
         auto* outVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>>*>(
             VectorHelper::CreateFlatVector(type::OMNI_VARBINARY, rowCount, 4096 * static_cast<size_t>(rowCount)));
-        const InType* valuePtr = reinterpret_cast<const InType*>(GetValuesFromVector<IN_ID>(originVector));
+        const bool isConst = (originVector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+        InType constValue{};
+        const InType* valuePtr = nullptr;
+        if (isConst) {
+            constValue = static_cast<vec::ConstVector<InType>*>(originVector)->GetConstValue();
+        } else {
+            valuePtr = reinterpret_cast<const InType*>(GetValuesFromVector<IN_ID>(originVector));
+        }
         for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
             if (nullMap && !(*nullMap)[rowIdx]) {
                 outVec->SetNull(rowIdx);
@@ -553,7 +566,8 @@ void ApproxPercentileAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatc
             ApproxPercentileAccumulator acc;
             acc.ensureSketch(IN_ID);
             acc.percentiles.push_back(0.5);
-            acc.insert(IN_ID, &valuePtr[rowIdx]);
+            const InType* valPtr = isConst ? &constValue : &valuePtr[rowIdx];
+            acc.insert(IN_ID, valPtr);
             size_t serializedSize = acc.serializedByteSize();
             std::vector<char> buf(serializedSize);
             acc.serialize(buf.data());

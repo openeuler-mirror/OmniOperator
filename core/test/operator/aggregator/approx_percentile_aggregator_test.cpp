@@ -826,4 +826,48 @@ TEST(ApproxPercentileAggregationTest, approx_percentile_align_schema)
     op::Operator::DeleteOperator(aggFinal);
     VectorHelper::FreeVecBatch(finalOutput);
 }
+
+// approx_percentile with ConstVector value input: all same values, median should be that value
+TEST(ApproxPercentileAggregationTest, approx_percentile_partial_final_const_vector_long)
+{
+    const int32_t rowCount = 100;
+    std::vector<DataTypePtr> sourceTypesVec = { LongType(), DoubleType() };
+    std::vector<DataTypePtr> partialOutputTypes = { VarBinaryType(65536) };
+    std::vector<DataTypePtr> finalOutputTypes = { LongType() };
+
+    VectorBatch* vecBatch = new VectorBatch(rowCount);
+    // ConstVector: all 100 rows have value 42
+    auto *constValueCol = new ConstVector<int64_t>(42L, OMNI_LONG, rowCount);
+    // Percentile column (0.5 for median)
+    Vector<double>* percentileCol = new Vector<double>(rowCount);
+    for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
+        percentileCol->SetValue(rowIdx, 0.5);
+    }
+    vecBatch->Append(constValueCol);
+    vecBatch->Append(percentileCol);
+
+    std::unique_ptr<AggregationOperatorFactory> partialFactory, finalFactory;
+    BuildPartialFinalFactories(sourceTypesVec, partialOutputTypes, finalOutputTypes, &partialFactory, &finalFactory);
+    auto aggPartial = partialFactory->CreateOperator();
+    aggPartial->AddInput(vecBatch);
+
+    VectorBatch* partialOutput = nullptr;
+    (void)aggPartial->GetOutput(&partialOutput);
+    ASSERT_NE(partialOutput, nullptr);
+
+    auto aggFinal = finalFactory->CreateOperator();
+    aggFinal->AddInput(partialOutput);
+    op::Operator::DeleteOperator(aggPartial);
+
+    VectorBatch* finalOutput = nullptr;
+    (void)aggFinal->GetOutput(&finalOutput);
+    ASSERT_NE(finalOutput, nullptr);
+    auto* resultVec = static_cast<Vector<int64_t>*>(finalOutput->Get(0));
+    int64_t approxMedian = resultVec->GetValue(0);
+    // All values are 42, so median should be 42
+    EXPECT_EQ(approxMedian, 42L);
+
+    op::Operator::DeleteOperator(aggFinal);
+    VectorHelper::FreeVecBatch(finalOutput);
+}
 }

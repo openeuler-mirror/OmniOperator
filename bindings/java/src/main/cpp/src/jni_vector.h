@@ -330,6 +330,29 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_addOffsetsNati
     jintArray offsetsAddr);
 
 
+/*
+ * Class:     nova_hetu_omniruntime_vector_ConstVec
+ * Method:    getConstValueAsLongNative
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ConstVec_getConstValueAsLongNative(JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ConstVec
+ * Method:    getConstValueAsBytesNative
+ * Signature: (J)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_nova_hetu_omniruntime_vector_ConstVec_getConstValueAsBytesNative(JNIEnv *, jclass,
+    jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ConstVec
+ * Method:    getConstDecimal128BytesNative
+ * Signature: (J)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_nova_hetu_omniruntime_vector_ConstVec_getConstDecimal128BytesNative(JNIEnv *, jclass,
+    jlong);
+
 #ifdef __cplusplus
 }
 #endif

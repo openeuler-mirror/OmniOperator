@@ -79,14 +79,23 @@ void BitXorAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *stat
     const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
     auto bitXorState = BitXorState::CastState(state);
-    auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
-    ptr += rowOffset;
-    if (nullMap == nullptr) {
-        Add<InType, ResultType, AggValueState, BitXorOp<InType, ResultType>>(&bitXorState->value,
-                        bitXorState->valueState, ptr, rowCount);
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        if (nullMap == nullptr) {
+            auto constValue = static_cast<vec::ConstVector<InType> *>(vector)->GetConstValue();
+            for (int32_t i = 0; i < rowCount; ++i) {
+                BitXorOp<InType, ResultType>(&bitXorState->value, bitXorState->valueState, constValue, 1LL);
+            }
+        }
     } else {
-        AddConditional<InType, ResultType, AggValueState, BitXorConditionalOp<InType, ResultType, false>>(
-                        &bitXorState->value, bitXorState->valueState, ptr, rowCount, *nullMap);
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
+        ptr += rowOffset;
+        if (nullMap == nullptr) {
+            Add<InType, ResultType, AggValueState, BitXorOp<InType, ResultType>>(&bitXorState->value,
+                            bitXorState->valueState, ptr, rowCount);
+        } else {
+            AddConditional<InType, ResultType, AggValueState, BitXorConditionalOp<InType, ResultType, false>>(
+                            &bitXorState->value, bitXorState->valueState, ptr, rowCount, *nullMap);
+        }
     }
 }
 
@@ -94,13 +103,22 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void BitXorAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
     const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
-    auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
-    ptr += rowOffset;
-    if (nullMap == nullptr) {
-        AddUseRowIndex<InType, BitXorState::template UpdateState<InType, ResultType>>(rowStates, aggStateOffset, ptr);
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        if (nullMap == nullptr) {
+            auto constValue = static_cast<vec::ConstVector<InType> *>(vector)->GetConstValue();
+            for (size_t i = 0; i < rowStates.size(); ++i) {
+                BitXorState::template UpdateState<InType, ResultType>(rowStates[i] + aggStateOffset, constValue);
+            }
+        }
     } else {
-        AddConditionalUseRowIndex<InType, BitXorState::template UpdateStateWithCondition<InType, ResultType, false>>(
-            rowStates, aggStateOffset, ptr, *nullMap);
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
+        ptr += rowOffset;
+        if (nullMap == nullptr) {
+            AddUseRowIndex<InType, BitXorState::template UpdateState<InType, ResultType>>(rowStates, aggStateOffset, ptr);
+        } else {
+            AddConditionalUseRowIndex<InType, BitXorState::template UpdateStateWithCondition<InType, ResultType, false>>(
+                rowStates, aggStateOffset, ptr, *nullMap);
+        }
     }
 }
 

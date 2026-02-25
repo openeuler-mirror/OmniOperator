@@ -37,6 +37,20 @@ inline void MaxDictCharOp(VarcharState *state, BaseVector *vector, const int32_t
     }
 }
 
+inline void MaxConstCharOp(VarcharState *state, BaseVector *vector, const int32_t idx)
+{
+    auto *constVector = reinterpret_cast<ConstVector<std::string_view> *>(vector);
+    auto strView = constVector->GetConstValue();
+    int32_t curLen = strView.size();
+    auto *curVal = strView.data();
+    auto result = memcmp(reinterpret_cast<const char *>(state->realValue), curVal, std::min(state->len, curLen));
+    if (result < 0 || (result == 0 && state->len < curLen)) {
+        state->len = curLen;
+        state->needUpdate = true;
+        state->realValue = reinterpret_cast<int64_t>(curVal);
+    }
+}
+
 template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxVarcharAggregator : public TypedAggregator {
 public:
     ~MaxVarcharAggregator() override = default;

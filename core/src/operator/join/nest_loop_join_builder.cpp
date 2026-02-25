@@ -76,6 +76,30 @@ void CopyVectorToVector(BaseVector *destVector, int32_t index, BaseVector *sourc
     using T = typename NativeType<typeId>::type;
     using VectorVarchar = Vector<LargeStringContainer<std::string_view>>;
     int32_t rows = sourceVector->GetSize();
+
+    if (sourceVector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        if (sourceVector->IsNull(0)) {
+            for (int32_t i = 0; i < rows; i++) {
+                destVector->SetNull(index + i);
+            }
+        } else {
+            auto constVec = static_cast<vec::ConstVector<T> *>(sourceVector);
+            T value = constVec->GetConstValue();
+            if constexpr (std::is_same_v<T, std::string_view>) {
+                auto dest = static_cast<VectorVarchar *>(destVector);
+                for (int32_t i = 0; i < rows; i++) {
+                    dest->SetValue(index + i, value);
+                }
+            } else {
+                auto dest = static_cast<Vector<T> *>(destVector);
+                for (int32_t i = 0; i < rows; i++) {
+                    dest->SetValue(index + i, value);
+                }
+            }
+        }
+        return;
+    }
+
     if constexpr (std::is_same_v<T, std::string_view>) {
         static_cast<VectorVarchar *>(destVector)->Append(sourceVector, index, rows);
     } else {

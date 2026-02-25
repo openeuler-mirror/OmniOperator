@@ -245,12 +245,51 @@ void CorrAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state,
     if (inputRaw) {
         auto *col1 = curVectorBatch->Get(channels[0]);
         auto *col2 = curVectorBatch->Get(channels[1]);
-        auto *p1 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col1));
-        auto *p2 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col2));
-        p1 += rowOffset;
-        p2 += rowOffset;
-        std::shared_ptr<NullsHelper> nm = nullMap ? nullMap : std::make_shared<NullsHelper>(std::make_shared<NullsBuffer>(rowCount));
-        CorrAccumulateRaw<InType, false>(s->count, s->sum_x, s->sum_y, s->sum_xx, s->sum_yy, s->sum_xy, s->valueState, p1, p2, rowCount, *nm);
+        bool col1Const = (col1->GetEncoding() == vec::OMNI_ENCODING_CONST);
+        bool col2Const = (col2->GetEncoding() == vec::OMNI_ENCODING_CONST);
+        if (col1Const || col2Const) {
+            InType constVal1{}, constVal2{};
+            InType *p1 = nullptr, *p2 = nullptr;
+            if (col1Const) {
+                constVal1 = static_cast<vec::ConstVector<InType> *>(col1)->GetConstValue();
+            } else {
+                p1 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col1)) + rowOffset;
+            }
+            if (col2Const) {
+                constVal2 = static_cast<vec::ConstVector<InType> *>(col2)->GetConstValue();
+            } else {
+                p2 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col2)) + rowOffset;
+            }
+            for (int32_t i = 0; i < rowCount; i++) {
+                if (nullMap && (*nullMap)[i]) continue;
+                if (col1->IsNull(rowOffset + i) || col2->IsNull(rowOffset + i)) continue;
+                InType v1 = col1Const ? constVal1 : p1[i];
+                InType v2 = col2Const ? constVal2 : p2[i];
+                double x, y;
+                if constexpr (std::is_same_v<InType, type::Decimal128>) {
+                    x = static_cast<double>(type::Decimal128Wrapper(v1));
+                    y = static_cast<double>(type::Decimal128Wrapper(v2));
+                } else {
+                    x = static_cast<double>(v1);
+                    y = static_cast<double>(v2);
+                }
+                s->count += 1;
+                s->sum_x += x; s->sum_y += y;
+                s->sum_xx += x * x; s->sum_yy += y * y; s->sum_xy += x * y;
+                if (!std::isfinite(s->sum_x) || !std::isfinite(s->sum_y) || !std::isfinite(s->sum_xx) ||
+                    !std::isfinite(s->sum_yy) || !std::isfinite(s->sum_xy)) {
+                    s->valueState = AggValueState::OVERFLOWED;
+                    break;
+                }
+            }
+        } else {
+            auto *p1 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col1));
+            auto *p2 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col2));
+            p1 += rowOffset;
+            p2 += rowOffset;
+            std::shared_ptr<NullsHelper> nm = nullMap ? nullMap : std::make_shared<NullsHelper>(std::make_shared<NullsBuffer>(rowCount));
+            CorrAccumulateRaw<InType, false>(s->count, s->sum_x, s->sum_y, s->sum_xx, s->sum_yy, s->sum_xy, s->valueState, p1, p2, rowCount, *nm);
+        }
         if (s->count > 0 && s->valueState != AggValueState::OVERFLOWED) {
             s->valueState = AggValueState::NORMAL;
         }
@@ -294,22 +333,34 @@ void CorrAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSt
     if (inputRaw) {
         auto *col1 = curVectorBatch->Get(channels[0]);
         auto *col2 = curVectorBatch->Get(channels[1]);
-        auto *p1 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col1));
-        auto *p2 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col2));
-        p1 += rowOffset;
-        p2 += rowOffset;
+        bool col1Const = (col1->GetEncoding() == vec::OMNI_ENCODING_CONST);
+        bool col2Const = (col2->GetEncoding() == vec::OMNI_ENCODING_CONST);
+        InType constVal1{}, constVal2{};
+        InType *p1 = nullptr, *p2 = nullptr;
+        if (col1Const) {
+            constVal1 = static_cast<vec::ConstVector<InType> *>(col1)->GetConstValue();
+        } else {
+            p1 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col1)) + rowOffset;
+        }
+        if (col2Const) {
+            constVal2 = static_cast<vec::ConstVector<InType> *>(col2)->GetConstValue();
+        } else {
+            p2 = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(col2)) + rowOffset;
+        }
         const size_t rowCount = rowStates.size();
         for (size_t i = 0; i < rowCount; i++) {
             if (nullMap && (*nullMap)[i]) continue;
             if (col1->IsNull(rowOffset + i) || col2->IsNull(rowOffset + i)) continue;
             auto *s = CorrPartialState::CastState(rowStates[i] + aggStateOffset);
+            InType v1 = col1Const ? constVal1 : p1[i];
+            InType v2 = col2Const ? constVal2 : p2[i];
             double x, y;
             if constexpr (std::is_same_v<InType, type::Decimal128>) {
-                x = static_cast<double>(type::Decimal128Wrapper(p1[i]));
-                y = static_cast<double>(type::Decimal128Wrapper(p2[i]));
+                x = static_cast<double>(type::Decimal128Wrapper(v1));
+                y = static_cast<double>(type::Decimal128Wrapper(v2));
             } else {
-                x = static_cast<double>(p1[i]);
-                y = static_cast<double>(p2[i]);
+                x = static_cast<double>(v1);
+                y = static_cast<double>(v2);
             }
             s->count += 1;
             s->sum_x += x; s->sum_y += y;

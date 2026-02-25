@@ -135,7 +135,15 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, 
     const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
     auto *sumState = SumState::CastState(state);
-    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        if (nullMap == nullptr) {
+            auto constValue = static_cast<vec::ConstVector<InType> *>(vector)->GetConstValue();
+            for (int32_t i = 0; i < rowCount; ++i) {
+                SumOp<InType, ResultType, int64_t, StateCountHandler>(
+                    reinterpret_cast<ResultType *>(&sumState->value), sumState->count, constValue, 1LL);
+            }
+        }
+    } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
@@ -169,7 +177,14 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
     const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
-    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        if (nullMap == nullptr) {
+            auto constValue = static_cast<vec::ConstVector<InType> *>(vector)->GetConstValue();
+            for (size_t i = 0; i < rowStates.size(); ++i) {
+                SumState::template UpdateState<InType, ResultType>(rowStates[i] + aggStateOffset, constValue);
+            }
+        }
+    } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {

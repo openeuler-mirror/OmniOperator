@@ -149,8 +149,22 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
 
-    auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
-    col2ptr += rowOffset;
+    bool col1Const = (col1Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+    bool col2Const = (col2Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+    targetValueType constVal1{};
+    sortKeyType constVal2{};
+    targetValueType *col1ptr = nullptr;
+    sortKeyType *col2ptr = nullptr;
+    if (col1Const) {
+        constVal1 = static_cast<vec::ConstVector<targetValueType> *>(col1Vector)->GetConstValue();
+    } else {
+        col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector)) + rowOffset;
+    }
+    if (col2Const) {
+        constVal2 = static_cast<vec::ConstVector<sortKeyType> *>(col2Vector)->GetConstValue();
+    } else {
+        col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector)) + rowOffset;
+    }
 
     int col1Size = col1Vector->GetSize();
     int col2Size = col2Vector->GetSize();
@@ -160,18 +174,17 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
         throw omniruntime::exception::OmniException("Error in MinByAggregator::ProcessSingleInternal(): ", omniExceptionInfo);
     }
 
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
-    col1ptr += rowOffset;
     for (int i = 0; i < col2Size; i++) {
         if (col2Vector->IsNull(rowOffset + i)) {
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
-        if (col2ptr[i] <= minByState->sortKey) {
+        sortKeyType key = col2Const ? constVal2 : col2ptr[i];
+        if (key <= minByState->sortKey) {
             minByState->isEmpty = false;
-            minByState->sortKey = col2ptr[i];
+            minByState->sortKey = key;
             minByState->targetIsNull = col1Vector->IsNull(rowOffset + i);
             if (!minByState->targetIsNull) {
-                minByState->targetValue = col1ptr[i];
+                minByState->targetValue = col1Const ? constVal1 : col1ptr[i];
             }
         }
     }
@@ -185,8 +198,22 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
 
-    auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
-    col2ptr += rowOffset;
+    bool col1Const = (col1Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+    bool col2Const = (col2Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+    targetValueType constVal1{};
+    sortKeyType constVal2{};
+    targetValueType *col1ptr = nullptr;
+    sortKeyType *col2ptr = nullptr;
+    if (col1Const) {
+        constVal1 = static_cast<vec::ConstVector<targetValueType> *>(col1Vector)->GetConstValue();
+    } else {
+        col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector)) + rowOffset;
+    }
+    if (col2Const) {
+        constVal2 = static_cast<vec::ConstVector<sortKeyType> *>(col2Vector)->GetConstValue();
+    } else {
+        col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector)) + rowOffset;
+    }
 
     const size_t rowCount = rowStates.size();
     if (rowCount != col1Vector->GetSize() || rowCount != col2Vector->GetSize()) {
@@ -199,19 +226,18 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
         return;
     }
 
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
-    col1ptr += rowOffset;
     for (size_t i = 0; i < rowCount; i++) {
         if (col2Vector->IsNull(rowOffset + i)) {
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
         auto *minByState = MinByState<targetValueType, sortKeyType>::CastState(rowStates[i] + aggStateOffset);
-        if (col2ptr[i] <= minByState->sortKey) {
+        sortKeyType key = col2Const ? constVal2 : col2ptr[i];
+        if (key <= minByState->sortKey) {
             minByState->isEmpty = false;
-            minByState->sortKey = col2ptr[i];
+            minByState->sortKey = key;
             minByState->targetIsNull = col1Vector->IsNull(rowOffset + i);
             if (!minByState->targetIsNull) {
-                minByState->targetValue = col1ptr[i];
+                minByState->targetValue = col1Const ? constVal1 : col1ptr[i];
             }
         }
     }

@@ -169,11 +169,27 @@ void CollectSetAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *
     }
 
     bool isDictionary = vector->GetEncoding() == vec::OMNI_DICTIONARY;
+    bool isConst = vector->GetEncoding() == vec::OMNI_ENCODING_CONST;
     using stateType = typename AggNativeAndVectorType<IN_ID>::type;
     // Caller (TypedAggregator::ProcessGroup) already passes state + aggStateOffset for this aggregator.
     SetState<stateType> *setState = SetState<stateType>::CastState(state);
     if (IsInputRaw()) {
-        setState->UpdatePartialState(vector, rowCount, nullMap, isDictionary, rowOffset);
+        if (isConst) {
+            auto constVector = static_cast<ConstVector<stateType> *>(vector);
+            if (constVector->IsNull(0)) {
+                return;
+            }
+            stateType value = constVector->GetConstValue();
+            DefaultHashMap<stateType, int8_t>* uniqueValues =
+                reinterpret_cast<DefaultHashMap<stateType, int8_t> *>(setState->uniqueValuesAddr);
+            for (int32_t i = 0; i < rowCount; i++) {
+                if (nullMap == nullptr || !(*nullMap)[i]) {
+                    uniqueValues->Emplace(value);
+                }
+            }
+        } else {
+            setState->UpdatePartialState(vector, rowCount, nullMap, isDictionary, rowOffset);
+        }
     } else {
         auto arrayVector = static_cast<ArrayVector *>(vector);
         setState->UpdateFinalState(arrayVector, rowCount, nullMap, isDictionary, rowOffset);
@@ -197,6 +213,25 @@ void CollectSetAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
     }
 
     bool isDictionary = vector->GetEncoding() == vec::OMNI_DICTIONARY;
+    bool isConst = vector->GetEncoding() == vec::OMNI_ENCODING_CONST;
+
+    if (IsInputRaw() && isConst) {
+        using stateType = typename AggNativeAndVectorType<IN_ID>::type;
+        auto constVector = static_cast<ConstVector<stateType> *>(vector);
+        if (constVector->IsNull(0)) {
+            return;
+        }
+        stateType value = constVector->GetConstValue();
+        for (size_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            SetState<stateType> *setState = SetState<stateType>::CastState(rowStates[rowIndex] + aggStateOffset);
+            DefaultHashMap<stateType, int8_t>* uniqueValues =
+                reinterpret_cast<DefaultHashMap<stateType, int8_t> *>(setState->uniqueValuesAddr);
+            if (nullMap == nullptr || !(*nullMap)[rowIndex]) {
+                uniqueValues->Emplace(value);
+            }
+        }
+        return;
+    }
 
     // basically rowOffset is fix 0 now.
     int32_t offset = rowOffset;

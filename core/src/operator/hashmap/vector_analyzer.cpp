@@ -133,13 +133,14 @@ bool VectorAnalyzer::HandleInputValues(omniruntime::vec::VectorBatch *&vectorBat
     auto vector = vectorBatch->Get(idx);
 
     auto rowCount = vectorBatch->GetRowCount();
-    if (vector->GetEncoding() != OMNI_DICTIONARY) {
+    if (vector->GetEncoding() == OMNI_FLAT) {
         if (!CheckArrayMap<RawDataType>(static_cast<Vector<RawDataType> *>(vector), rowCount)) {
             hashMode = HashTableType::NORMAL_HASH_TABLE;
             return false;
         }
         return true;
     } else {
+        // Dictionary and ConstVector encodings fall back to normal hash table
         hashMode = HashTableType::NORMAL_HASH_TABLE;
         return false;
     }

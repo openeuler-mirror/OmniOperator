@@ -143,7 +143,19 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateSt
     auto *maxByVarcharState = MaxByVarcharState<targetValueType>::CastState(state);
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
-    auto *col2ptr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(col2Vector);
+
+    bool col1IsConst = (col1Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+    bool col2IsConst = (col2Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+
+    Vector<LargeStringContainer<std::string_view>> *col2ptr = nullptr;
+    std::string_view col2ConstVal;
+    if (col2IsConst) {
+        if (!col2Vector->IsNull(0)) {
+            col2ConstVal = static_cast<vec::ConstVector<std::string_view> *>(col2Vector)->GetConstValue();
+        }
+    } else {
+        col2ptr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(col2Vector);
+    }
 
     for (int32_t i = rowOffset; i < rowCount; i++) {
         if (nullMap != nullptr && (*nullMap)[i]) {
@@ -153,15 +165,17 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateSt
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
         bool targetNull = col1Vector->IsNull(i);
-        targetValueType targetVal;
-        if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+        targetValueType targetVal{};
+        if (col1IsConst) {
+            targetVal = static_cast<vec::ConstVector<targetValueType> *>(col1Vector)->GetConstValue();
+        } else if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
             auto *col1StrVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(col1Vector);
             targetVal = col1StrVec->GetValue(i);
         } else {
             auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
             targetVal = col1ptr[i];
         }
-        auto strView = col2ptr->GetValue(i);
+        auto strView = col2IsConst ? col2ConstVal : col2ptr->GetValue(i);
         if (maxByVarcharState->GetStrKeyAddress() == 0) {
             maxByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), strView.size());
             maxByVarcharState->targetIsNull = targetNull;
@@ -222,7 +236,9 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
 {
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
-    auto *col2ptr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(col2Vector);
+
+    bool col1IsConst = (col1Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+    bool col2IsConst = (col2Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
 
     const size_t rowCount = rowStates.size();
     if (rowCount != col1Vector->GetSize() || rowCount != col2Vector->GetSize()) {
@@ -231,6 +247,16 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
     }
     if (rowCount <= 0) {
         return;
+    }
+
+    Vector<LargeStringContainer<std::string_view>> *col2ptr = nullptr;
+    std::string_view col2ConstVal;
+    if (col2IsConst) {
+        if (!col2Vector->IsNull(0)) {
+            col2ConstVal = static_cast<vec::ConstVector<std::string_view> *>(col2Vector)->GetConstValue();
+        }
+    } else {
+        col2ptr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(col2Vector);
     }
 
     for (size_t i = 0; i < rowCount; i++) {
@@ -242,8 +268,10 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
         bool targetNull = col1Vector->IsNull(rowIdx);
-        targetValueType targetVal;
-        if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+        targetValueType targetVal{};
+        if (col1IsConst) {
+            targetVal = static_cast<vec::ConstVector<targetValueType> *>(col1Vector)->GetConstValue();
+        } else if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
             auto *col1StrVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(col1Vector);
             targetVal = col1StrVec->GetValue(rowIdx);
         } else {
@@ -251,7 +279,7 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
             targetVal = col1ptr[rowIdx];
         }
         auto *maxByVarcharState = MaxByVarcharState<targetValueType>::CastState(rowStates[i] + aggStateOffset);
-        auto strView = col2ptr->GetValue(rowIdx);
+        auto strView = col2IsConst ? col2ConstVal : col2ptr->GetValue(rowIdx);
         if (maxByVarcharState->GetStrKeyAddress() == 0) {
             maxByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), strView.size());
             maxByVarcharState->targetIsNull = targetNull;

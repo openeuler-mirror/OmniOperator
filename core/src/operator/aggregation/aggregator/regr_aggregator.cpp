@@ -12,6 +12,18 @@ namespace op {
 // Read one numeric value from vector at row as double (for regr (y,x) multi-type support).
 static double RegrGetDoubleAt(BaseVector *vec, int32_t row)
 {
+    if (vec->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        switch (vec->GetTypeId()) {
+            case OMNI_BOOLEAN: return static_cast<vec::ConstVector<bool> *>(vec)->GetConstValue() ? 1.0 : 0.0;
+            case OMNI_BYTE: return static_cast<double>(static_cast<vec::ConstVector<int8_t> *>(vec)->GetConstValue());
+            case OMNI_SHORT: return static_cast<double>(static_cast<vec::ConstVector<int16_t> *>(vec)->GetConstValue());
+            case OMNI_INT: return static_cast<double>(static_cast<vec::ConstVector<int32_t> *>(vec)->GetConstValue());
+            case OMNI_LONG: return static_cast<double>(static_cast<vec::ConstVector<int64_t> *>(vec)->GetConstValue());
+            case OMNI_FLOAT: return static_cast<double>(static_cast<vec::ConstVector<float> *>(vec)->GetConstValue());
+            case OMNI_DOUBLE: return static_cast<vec::ConstVector<double> *>(vec)->GetConstValue();
+            default: return 0.0;
+        }
+    }
     switch (vec->GetTypeId()) {
         case OMNI_BOOLEAN: {
             auto *p = reinterpret_cast<bool *>(GetValuesFromVector<OMNI_BOOLEAN>(vec));

@@ -206,13 +206,21 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
     if (isBooleanInput_) {
         // Boolean: accumulate seen false/true in 2-byte state [0, state]
         int8_t st = aggState->len >= 2 ? HllBooleanDeserialize(buf) : 0;
-        auto *boolVec = reinterpret_cast<Vector<bool> *>(vector);
-        for (int32_t i = 0; i < rowCount; ++i) {
-            if (nullMap && (*nullMap)[i]) {
-                continue;
+        if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            bool val = static_cast<vec::ConstVector<bool> *>(vector)->GetConstValue();
+            for (int32_t i = 0; i < rowCount; ++i) {
+                if (nullMap && (*nullMap)[i]) continue;
+                st |= (1 << (val ? 1 : 0));
             }
-            bool val = boolVec->GetValue(rowOffset + i);
-            st |= (1 << (val ? 1 : 0));
+        } else {
+            auto *boolVec = reinterpret_cast<Vector<bool> *>(vector);
+            for (int32_t i = 0; i < rowCount; ++i) {
+                if (nullMap && (*nullMap)[i]) {
+                    continue;
+                }
+                bool val = boolVec->GetValue(rowOffset + i);
+                st |= (1 << (val ? 1 : 0));
+            }
         }
         HllBooleanSerialize(st, buf);
         aggState->len = kHllBooleanSerializedSize;
@@ -239,6 +247,7 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
     }
 
     const bool isDict = (vector->GetEncoding() == vec::OMNI_DICTIONARY);
+    const bool isConst = (vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
     if (isDict) {
         const int32_t *ids = GetIdsFromDict<IN_ID>(vector);
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR || IN_ID == OMNI_VARBINARY) {
@@ -259,6 +268,25 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
                 int32_t id = ids[rowOffset + i];
                 if (id < 0) continue;
                 acc.insertHash(HllHashBytes(dict + static_cast<size_t>(id) * valueSize, valueSize));
+            }
+        }
+    } else if (isConst) {
+        if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR || IN_ID == OMNI_VARBINARY) {
+            auto constValue = static_cast<vec::ConstVector<std::string_view> *>(vector)->GetConstValue();
+            uint64_t hash = static_cast<uint64_t>(HashUtil::HashValue(
+                const_cast<int8_t *>(reinterpret_cast<const int8_t *>(constValue.data())),
+                static_cast<int32_t>(constValue.size())));
+            for (int32_t i = 0; i < rowCount; ++i) {
+                if (nullMap && (*nullMap)[i]) continue;
+                acc.insertHash(hash);
+            }
+        } else {
+            auto constValue = static_cast<vec::ConstVector<InType> *>(vector)->GetConstValue();
+            constexpr int32_t valueSize = (IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE) ? 8 : (IN_ID == OMNI_INT || IN_ID == OMNI_FLOAT) ? 4 : (IN_ID == OMNI_SHORT) ? 2 : 1;
+            uint64_t hash = HllHashBytes(&constValue, valueSize);
+            for (int32_t i = 0; i < rowCount; ++i) {
+                if (nullMap && (*nullMap)[i]) continue;
+                acc.insertHash(hash);
             }
         }
     } else {

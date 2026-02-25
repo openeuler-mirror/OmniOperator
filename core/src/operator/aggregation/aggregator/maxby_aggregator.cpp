@@ -149,8 +149,22 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
 
-    auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
-    col2ptr += rowOffset;
+    bool col1Const = (col1Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+    bool col2Const = (col2Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+    targetValueType constVal1{};
+    sortKeyType constVal2{};
+    targetValueType *col1ptr = nullptr;
+    sortKeyType *col2ptr = nullptr;
+    if (col1Const) {
+        constVal1 = static_cast<vec::ConstVector<targetValueType> *>(col1Vector)->GetConstValue();
+    } else {
+        col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector)) + rowOffset;
+    }
+    if (col2Const) {
+        constVal2 = static_cast<vec::ConstVector<sortKeyType> *>(col2Vector)->GetConstValue();
+    } else {
+        col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector)) + rowOffset;
+    }
 
     int col1Size = col1Vector->GetSize();
     int col2Size = col2Vector->GetSize();
@@ -160,18 +174,17 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
         throw omniruntime::exception::OmniException("Error in MaxByAggregator::ProcessSingleInternal():", omniExceptionInfo);
     }
 
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
-    col1ptr += rowOffset;
     for (int i = 0; i < col2Size; i++) {
         if (col2Vector->IsNull(rowOffset + i)) {
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
-        if (col2ptr[i] >= maxByState->sortKey) {
+        sortKeyType key = col2Const ? constVal2 : col2ptr[i];
+        if (key >= maxByState->sortKey) {
             maxByState->isEmpty = false;
-            maxByState->sortKey = col2ptr[i];
+            maxByState->sortKey = key;
             maxByState->targetIsNull = col1Vector->IsNull(rowOffset + i);
             if (!maxByState->targetIsNull) {
-                maxByState->targetValue = col1ptr[i];
+                maxByState->targetValue = col1Const ? constVal1 : col1ptr[i];
             }
         }
     }
@@ -185,11 +198,22 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
 
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
-    auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
-
-    col1ptr += rowOffset;
-    col2ptr += rowOffset;
+    bool col1Const = (col1Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+    bool col2Const = (col2Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+    targetValueType constVal1{};
+    sortKeyType constVal2{};
+    targetValueType *col1ptr = nullptr;
+    sortKeyType *col2ptr = nullptr;
+    if (col1Const) {
+        constVal1 = static_cast<vec::ConstVector<targetValueType> *>(col1Vector)->GetConstValue();
+    } else {
+        col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector)) + rowOffset;
+    }
+    if (col2Const) {
+        constVal2 = static_cast<vec::ConstVector<sortKeyType> *>(col2Vector)->GetConstValue();
+    } else {
+        col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector)) + rowOffset;
+    }
 
     const size_t rowCount = rowStates.size();
     if (rowCount != col1Vector->GetSize() || rowCount != col2Vector->GetSize()) {
@@ -207,12 +231,13 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
         auto *maxByState = MaxByState<targetValueType, sortKeyType>::CastState(rowStates[i] + aggStateOffset);
-        if (col2ptr[i] >= maxByState->sortKey) {
+        sortKeyType key = col2Const ? constVal2 : col2ptr[i];
+        if (key >= maxByState->sortKey) {
             maxByState->isEmpty = false;
-            maxByState->sortKey = col2ptr[i];
+            maxByState->sortKey = key;
             maxByState->targetIsNull = col1Vector->IsNull(rowOffset + i);
             if (!maxByState->targetIsNull) {
-                maxByState->targetValue = col1ptr[i];
+                maxByState->targetValue = col1Const ? constVal1 : col1ptr[i];
             }
         }
     }

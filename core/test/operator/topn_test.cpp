@@ -1820,4 +1820,132 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
 }
+
+// TopN with ConstVector as non-sort data column
+TEST(NativeOmniTopNTest, TestTopNWithConstVectorDataColumn)
+{
+    const int32_t dataSize = 6;
+    const int32_t expectedDataSize = 3;
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
+
+    // col0: ConstVector (all 5), col1: regular vector
+    auto *constCol0 = new ConstVector<int32_t>(5, OMNI_INT, dataSize);
+    int64_t data1[dataSize] = {30, 10, 50, 20, 40, 60};
+    auto *col1 = new Vector<int64_t>(dataSize);
+    for (int32_t i = 0; i < dataSize; i++) {
+        col1->SetValue(i, data1[i]);
+    }
+    auto *vecBatch = new VectorBatch(dataSize);
+    vecBatch->Append(constCol0);
+    vecBatch->Append(col1);
+
+    int32_t sortCols[] = {1};
+    int32_t ascendings[] = {true};
+    int32_t nullFirsts[] = {false};
+
+    TopNOperatorFactory *topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    topNOperator->GetOutput(&outputVecBatch);
+
+    // Top 3 by col1 ascending: (5, 10), (5, 20), (5, 30)
+    int32_t expectData0[] = {5, 5, 5};
+    int64_t expectData1[] = {10, 20, 30};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(topNOperator);
+    DeleteTopNOperatorFactory(topNOperatorFactory);
+}
+
+// TopN with ConstVector as sort key column
+TEST(NativeOmniTopNTest, TestTopNWithConstVectorAsSortKey)
+{
+    const int32_t dataSize = 6;
+    const int32_t expectedDataSize = 3;
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
+
+    // col0: ConstVector (all 3, primary sort key), col1: regular vector (secondary sort key)
+    auto *constCol0 = new ConstVector<int32_t>(3, OMNI_INT, dataSize);
+    int64_t data1[dataSize] = {50, 30, 10, 40, 20, 60};
+    auto *col1 = new Vector<int64_t>(dataSize);
+    for (int32_t i = 0; i < dataSize; i++) {
+        col1->SetValue(i, data1[i]);
+    }
+    auto *vecBatch = new VectorBatch(dataSize);
+    vecBatch->Append(constCol0);
+    vecBatch->Append(col1);
+
+    int32_t sortCols[] = {0, 1};
+    int32_t ascendings[] = {true, true};
+    int32_t nullFirsts[] = {false, false};
+
+    TopNOperatorFactory *topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    topNOperator->GetOutput(&outputVecBatch);
+
+    // All col0=3, sorted by col1 ascending, top 3: (3, 10), (3, 20), (3, 30)
+    int32_t expectData0[] = {3, 3, 3};
+    int64_t expectData1[] = {10, 20, 30};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(topNOperator);
+    DeleteTopNOperatorFactory(topNOperatorFactory);
+}
+
+// TopN with ConstVector varchar data column
+TEST(NativeOmniTopNTest, TestTopNWithConstVectorVarchar)
+{
+    const int32_t dataSize = 5;
+    const int32_t expectedDataSize = 3;
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType() }));
+
+    // col0: ConstVector varchar (all "abc"), col1: regular long vector (sort key)
+    std::string_view constStr = "abc";
+    auto *constCol0 = new ConstVector<std::string_view>(constStr, OMNI_VARCHAR, dataSize);
+    int64_t data1[dataSize] = {50, 20, 40, 10, 30};
+    auto *col1 = new Vector<int64_t>(dataSize);
+    for (int32_t i = 0; i < dataSize; i++) {
+        col1->SetValue(i, data1[i]);
+    }
+    auto *vecBatch = new VectorBatch(dataSize);
+    vecBatch->Append(constCol0);
+    vecBatch->Append(col1);
+
+    int32_t sortCols[] = {1};
+    int32_t ascendings[] = {true};
+    int32_t nullFirsts[] = {false};
+
+    TopNOperatorFactory *topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    topNOperator->GetOutput(&outputVecBatch);
+
+    // Top 3 by col1 ascending: (abc, 10), (abc, 20), (abc, 30)
+    std::string expectData0[] = {"abc", "abc", "abc"};
+    int64_t expectData1[] = {10, 20, 30};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(topNOperator);
+    DeleteTopNOperatorFactory(topNOperatorFactory);
+}
+
 }

@@ -65,17 +65,23 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *
     const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
     VarcharState *varcharState = VarcharState::CastState(state);
-    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
         if (nullMap == nullptr) {
-            AddChar<MaxCharOp>(state, vector, rowOffset, rowCount);
+            AddConstChar<MaxConstCharOp>(state, vector, rowOffset, rowCount);
         } else {
-            AddConditionalChar<MaxCharOp>(state, vector, rowOffset, rowCount, *nullMap);
+            AddConstConditionalChar<MaxConstCharOp>(state, vector, rowOffset, rowCount, *nullMap);
         }
-    } else {
+    } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
             AddDictChar<MaxDictCharOp>(state, vector, rowOffset, rowCount);
         } else {
             AddDictConditionalChar<MaxDictCharOp>(state, vector, rowOffset, rowCount, *nullMap);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddChar<MaxCharOp>(state, vector, rowOffset, rowCount);
+        } else {
+            AddConditionalChar<MaxCharOp>(state, vector, rowOffset, rowCount, *nullMap);
         }
     }
     SaveState(varcharState);
@@ -85,17 +91,23 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
     BaseVector *vector, const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
-    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
         if (nullMap == nullptr) {
-            AddUseRowIndexChar<MaxCharOp>(rowStates, aggStateOffset, vector, rowOffset);
+            AddConstUseRowIndexChar<MaxConstCharOp>(rowStates, aggStateOffset, vector, rowOffset);
         } else {
-            AddConditionalUseRowIndexChar<MaxCharOp>(rowStates, aggStateOffset, vector, rowOffset, *nullMap);
+            AddConstConditionalUseRowIndexChar<MaxConstCharOp>(rowStates, aggStateOffset, vector, rowOffset, *nullMap);
         }
-    } else {
+    } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
             AddDictUseRowIndexChar<MaxDictCharOp>(rowStates, aggStateOffset, rowOffset, vector);
         } else {
             AddDictConditionalUseRowIndexChar<MaxDictCharOp>(rowStates, aggStateOffset, rowOffset, vector, *nullMap);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddUseRowIndexChar<MaxCharOp>(rowStates, aggStateOffset, vector, rowOffset);
+        } else {
+            AddConditionalUseRowIndexChar<MaxCharOp>(rowStates, aggStateOffset, vector, rowOffset, *nullMap);
         }
     }
 

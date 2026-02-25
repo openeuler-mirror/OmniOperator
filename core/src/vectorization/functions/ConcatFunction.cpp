@@ -52,8 +52,6 @@ void ConcatFunction::ApplyConcat(const std::vector<BaseVector *> &argVectors, Ba
 
     // Process each row
     for (int32_t row = 0; row < size; ++row) {
-        // Check if any argument is NULL
-        // For ConstVector, null flag is stored at index 0
         bool hasNull = false;
         for (auto *argVec : argVectors) {
             int32_t nullCheckIdx = (argVec->GetEncoding() == OMNI_ENCODING_CONST) ? 0 : row;

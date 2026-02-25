@@ -62,6 +62,21 @@ inline void MinDictCharOp(VarcharState *state, BaseVector *vector, const int32_t
     }
 }
 
+inline void MinConstCharOp(VarcharState *state, BaseVector *vector, const int32_t idx)
+{
+    auto *constVector = reinterpret_cast<ConstVector<std::string_view> *>(vector);
+    auto strView = constVector->GetConstValue();
+    const auto *curVal = strView.data();
+    int32_t curLen = strView.size();
+    auto len = state->len;
+    auto result = memcmp((const char *)state->realValue, curVal, std::min(len, curLen));
+    if (result > 0 || (result == 0 && len > curLen)) {
+        state->len = curLen;
+        state->needUpdate = true;
+        state->realValue = reinterpret_cast<int64_t>(curVal);
+    }
+}
+
 template <void (*OP)(VarcharState *, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddChar(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
     const int32_t rowCount)
@@ -98,6 +113,28 @@ VECTORIZE_LOOP inline void AddDictChar(AggregateState *state, BaseVector *vector
             varcharState->len = strView.size();
             varcharState->realValue = reinterpret_cast<int64_t>(strView.data());
             varcharState->needUpdate = true;
+        }
+        while (idx < end) {
+            OP(varcharState, vector, idx++);
+        }
+    }
+}
+
+template <void (*OP)(VarcharState *, BaseVector *, const int32_t)>
+VECTORIZE_LOOP inline void AddConstChar(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
+    const int32_t rowCount)
+{
+    auto *constVector = reinterpret_cast<ConstVector<std::string_view> *>(vector);
+    if (rowCount > 0) {
+        int32_t idx = rowOffset;
+        const auto end = rowOffset + rowCount;
+        auto *varcharState = VarcharState::CastState(state);
+        if (varcharState->realValue == 0) {
+            auto strView = constVector->GetConstValue();
+            varcharState->realValue = reinterpret_cast<int64_t>(strView.data());
+            varcharState->len = strView.size();
+            varcharState->needUpdate = true;
+            idx++;
         }
         while (idx < end) {
             OP(varcharState, vector, idx++);
@@ -171,6 +208,43 @@ VECTORIZE_LOOP inline void AddDictConditionalChar(AggregateState *state, BaseVec
             if (!condition[idx]) {
                 OP(varcharState, vector, idx);
             }
+            ++idx;
+        }
+    }
+}
+
+template <void (*OP)(VarcharState *, BaseVector *, const int32_t)>
+VECTORIZE_LOOP inline void AddConstConditionalChar(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
+    const int32_t rowCount, const NullsHelper &condition)
+{
+    if (rowCount > 0) {
+        auto *constVector = reinterpret_cast<ConstVector<std::string_view> *>(vector);
+        auto *varcharState = VarcharState::CastState(state);
+        int32_t idx = rowOffset;
+        const auto end = rowOffset + rowCount;
+
+        int32_t index = 0;
+        if (varcharState->realValue == 0) {
+            while (idx < end) {
+                if (!condition[index]) {
+                    auto strView = constVector->GetConstValue();
+                    varcharState->realValue = reinterpret_cast<int64_t>(strView.data());
+                    varcharState->len = strView.size();
+                    varcharState->needUpdate = true;
+                    ++index;
+                    ++idx;
+                    break;
+                }
+                ++index;
+                ++idx;
+            }
+        }
+
+        while (idx < end) {
+            if (!condition[index]) {
+                OP(varcharState, vector, idx);
+            }
+            ++index;
             ++idx;
         }
     }
@@ -270,6 +344,54 @@ VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexChar(std::vector<Aggrega
                 }
             }
             rowIdx++;
+        }
+    }
+}
+
+template <void (*OP)(VarcharState *, BaseVector *, const int32_t)>
+VECTORIZE_LOOP inline void AddConstUseRowIndexChar(std::vector<AggregateState *> &rowStates,
+    const size_t aggStateOffset, BaseVector *vector, const int32_t rowOffset)
+{
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+        auto *constVector = reinterpret_cast<ConstVector<std::string_view> *>(vector);
+        int32_t rowIdx = rowOffset;
+        for (size_t i = 0; i < rowCount; ++i) {
+            auto *state = VarcharState::CastState(rowStates[i] + aggStateOffset);
+            if (state->realValue == 0) {
+                auto strView = constVector->GetConstValue();
+                state->realValue = reinterpret_cast<int64_t>(strView.data());
+                state->len = strView.size();
+                state->needUpdate = true;
+            } else {
+                OP(state, vector, rowIdx);
+            }
+            ++rowIdx;
+        }
+    }
+}
+
+template <void (*OP)(VarcharState *, BaseVector *, const int32_t)>
+VECTORIZE_LOOP inline void AddConstConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates,
+    const size_t aggStateOffset, BaseVector *vector, const int32_t rowOffset, const NullsHelper &condition)
+{
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+        auto *constVector = reinterpret_cast<ConstVector<std::string_view> *>(vector);
+        int32_t rowIdx = rowOffset;
+        for (size_t i = 0; i < rowCount; ++i) {
+            if (!condition[i]) {
+                auto *state = VarcharState::CastState(rowStates[i] + aggStateOffset);
+                if (state->realValue == 0) {
+                    auto strView = constVector->GetConstValue();
+                    state->realValue = reinterpret_cast<int64_t>(strView.data());
+                    state->len = strView.size();
+                    state->needUpdate = true;
+                } else {
+                    OP(state, vector, rowIdx);
+                }
+            }
+            ++rowIdx;
         }
     }
 }

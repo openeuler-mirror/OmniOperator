@@ -13,6 +13,12 @@ namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT void BatchGetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, int32_t *output)
 {
+    auto baseVec = reinterpret_cast<BaseVector *>(dictionaryVectorAddr);
+    if (baseVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto val = reinterpret_cast<ConstVector<int32_t> *>(dictionaryVectorAddr)->GetConstValue();
+        for (int i = 0; i < rowCnt; ++i) { output[i] = val; }
+        return;
+    }
     auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
@@ -22,6 +28,12 @@ extern "C" DLLEXPORT void BatchGetIntFromDictionaryVector(int64_t dictionaryVect
 extern "C" DLLEXPORT void BatchGetLongFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, int64_t *output)
 {
+    auto baseVec = reinterpret_cast<BaseVector *>(dictionaryVectorAddr);
+    if (baseVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto val = reinterpret_cast<ConstVector<int64_t> *>(dictionaryVectorAddr)->GetConstValue();
+        for (int i = 0; i < rowCnt; ++i) { output[i] = val; }
+        return;
+    }
     auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
@@ -31,6 +43,12 @@ extern "C" DLLEXPORT void BatchGetLongFromDictionaryVector(int64_t dictionaryVec
 extern "C" DLLEXPORT void BatchGetDoubleFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, double *output)
 {
+    auto baseVec = reinterpret_cast<BaseVector *>(dictionaryVectorAddr);
+    if (baseVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto val = reinterpret_cast<ConstVector<double> *>(dictionaryVectorAddr)->GetConstValue();
+        for (int i = 0; i < rowCnt; ++i) { output[i] = val; }
+        return;
+    }
     auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<double>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
@@ -40,6 +58,12 @@ extern "C" DLLEXPORT void BatchGetDoubleFromDictionaryVector(int64_t dictionaryV
 extern "C" DLLEXPORT void BatchGetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, bool *output)
 {
+    auto baseVec = reinterpret_cast<BaseVector *>(dictionaryVectorAddr);
+    if (baseVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto val = reinterpret_cast<ConstVector<bool> *>(dictionaryVectorAddr)->GetConstValue();
+        for (int i = 0; i < rowCnt; ++i) { output[i] = val; }
+        return;
+    }
     auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<bool>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
@@ -49,6 +73,18 @@ extern "C" DLLEXPORT void BatchGetBooleanFromDictionaryVector(int64_t dictionary
 extern "C" DLLEXPORT void BatchGetVarcharFromDictionaryVector(int64_t contextPtr, int64_t dictionaryVectorAddr,
     int32_t *rowIdxArray, int32_t rowCnt, uint8_t **str, int32_t *length)
 {
+    auto baseVec = reinterpret_cast<BaseVector *>(dictionaryVectorAddr);
+    if (baseVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<ConstVector<std::string_view> *>(dictionaryVectorAddr);
+        auto sv = constVec->GetConstValue();
+        auto svLen = static_cast<int32_t>(sv.length());
+        auto svData = reinterpret_cast<uint8_t *>(const_cast<char *>(sv.data()));
+        for (int i = 0; i < rowCnt; ++i) {
+            length[i] = svLen;
+            str[i] = svData;
+        }
+        return;
+    }
     auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
         auto stringView = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
@@ -60,6 +96,12 @@ extern "C" DLLEXPORT void BatchGetVarcharFromDictionaryVector(int64_t contextPtr
 extern "C" DLLEXPORT void BatchGetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, Decimal128 *output)
 {
+    auto baseVec = reinterpret_cast<BaseVector *>(dictionaryVectorAddr);
+    if (baseVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto val = reinterpret_cast<ConstVector<type::Decimal128> *>(dictionaryVectorAddr)->GetConstValue();
+        for (int i = 0; i < rowCnt; ++i) { output[i] = val; }
+        return;
+    }
     auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<type::Decimal128>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);

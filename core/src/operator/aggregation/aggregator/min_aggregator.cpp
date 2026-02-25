@@ -101,7 +101,12 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, 
     const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
     auto *minState = MinState::CastState(state);
-    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        if (nullMap == nullptr) {
+            auto constValue = static_cast<vec::ConstVector<InType> *>(vector)->GetConstValue();
+            MinOp<InType, ResultType>(&minState->value, minState->valueState, constValue, 1LL);
+        }
+    } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
@@ -152,7 +157,14 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
     const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
-    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        if (nullMap == nullptr) {
+            auto constValue = static_cast<vec::ConstVector<InType> *>(vector)->GetConstValue();
+            for (size_t i = 0; i < rowStates.size(); ++i) {
+                MinState::template UpdateState<InType, ResultType>(rowStates[i] + aggStateOffset, constValue);
+            }
+        }
+    } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {

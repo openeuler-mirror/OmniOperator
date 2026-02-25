@@ -107,7 +107,8 @@ public:
     {
         if constexpr (IS_SIMPLE_KEY) {
             return hashTableTypes[partition] == HashTableImplementationType::ARRAY_HASH_TABLE &&
-                   probeHashColCount == 1 && probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY;
+                   probeHashColCount == 1 && probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY &&
+                   probeHashColumns[0]->GetEncoding() != OMNI_ENCODING_CONST;
         }
         return false;
     }

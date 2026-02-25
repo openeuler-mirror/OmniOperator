@@ -562,12 +562,16 @@ public:
         if (leftVector->GetEncoding() == vec::OMNI_DICTIONARY) {
             left = static_cast<omniruntime::vec::Vector<vec::DictionaryContainer<T>> *>(leftVector)
                        ->GetValue(leftPosition);
+        } else if (leftVector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            left = static_cast<vec::ConstVector<T> *>(leftVector)->GetConstValue();
         } else {
             left = static_cast<omniruntime::vec::Vector<T> *>(leftVector)->GetValue(leftPosition);
         }
         if (rightVector->GetEncoding() == vec::OMNI_DICTIONARY) {
             right = static_cast<omniruntime::vec::Vector<vec::DictionaryContainer<T>> *>(rightVector)
                         ->GetValue(rightPosition);
+        } else if (rightVector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            right = static_cast<vec::ConstVector<T> *>(rightVector)->GetConstValue();
         } else {
             right = static_cast<omniruntime::vec::Vector<T> *>(rightVector)->GetValue(rightPosition);
         }
@@ -583,12 +587,16 @@ public:
         if (leftColumn->GetEncoding() == vec::OMNI_DICTIONARY) {
             leftDouble = static_cast<omniruntime::vec::Vector<vec::DictionaryContainer<double>> *>(leftColumn)
                              ->GetValue(leftColumnPosition);
+        } else if (leftColumn->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            leftDouble = static_cast<vec::ConstVector<double> *>(leftColumn)->GetConstValue();
         } else {
             leftDouble = static_cast<omniruntime::vec::Vector<double> *>(leftColumn)->GetValue(leftColumnPosition);
         };
         if (rightColumn->GetEncoding() == vec::OMNI_DICTIONARY) {
             rightDouble = static_cast<omniruntime::vec::Vector<vec::DictionaryContainer<double>> *>(rightColumn)
                               ->GetValue(rightColumnPosition);
+        } else if (rightColumn->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            rightDouble = static_cast<vec::ConstVector<double> *>(rightColumn)->GetConstValue();
         } else {
             rightDouble = static_cast<omniruntime::vec::Vector<double> *>(rightColumn)->GetValue(rightColumnPosition);
         };
@@ -611,6 +619,8 @@ public:
                 reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view, vec::LargeStringContainer>> *>(
                 leftColumn)
                     ->GetValue(leftColumnPosition);
+        } else if (leftColumn->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            leftValue = reinterpret_cast<vec::ConstVector<std::string_view> *>(leftColumn)->GetConstValue();
         } else {
             leftValue = reinterpret_cast<VarcharVector *>(leftColumn)->GetValue(leftColumnPosition);
         }
@@ -621,6 +631,8 @@ public:
                 reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view, vec::LargeStringContainer>> *>(
                 rightColumn)
                     ->GetValue(rightColumnPosition);
+        } else if (rightColumn->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            rightValue = reinterpret_cast<vec::ConstVector<std::string_view> *>(rightColumn)->GetConstValue();
         } else {
             rightValue = reinterpret_cast<VarcharVector *>(rightColumn)->GetValue(rightColumnPosition);
         }
@@ -648,6 +660,8 @@ public:
         if (leftColumn->GetEncoding() == vec::OMNI_DICTIONARY) {
             leftDecimalValue = static_cast<omniruntime::vec::Vector<vec::DictionaryContainer<Decimal128>> *>(leftColumn)
                                    ->GetValue(leftColumnPosition);
+        } else if (leftColumn->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            leftDecimalValue = static_cast<vec::ConstVector<Decimal128> *>(leftColumn)->GetConstValue();
         } else {
             leftDecimalValue =
                 static_cast<omniruntime::vec::Vector<Decimal128> *>(leftColumn)->GetValue(leftColumnPosition);
@@ -657,6 +671,8 @@ public:
             rightDecimalValue =
                 static_cast<omniruntime::vec::Vector<vec::DictionaryContainer<Decimal128>> *>(rightColumn)
                     ->GetValue(rightColumnPosition);
+        } else if (rightColumn->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            rightDecimalValue = static_cast<vec::ConstVector<Decimal128> *>(rightColumn)->GetConstValue();
         } else {
             rightDecimalValue =
                 static_cast<omniruntime::vec::Vector<Decimal128> *>(rightColumn)->GetValue(rightColumnPosition);

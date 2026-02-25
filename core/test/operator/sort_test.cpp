@@ -3668,4 +3668,131 @@ TEST(NativeOmniSortTest, TestSortStructNestedArrayAsc)
     DeleteSortOperatorFactory(operatorFactory);
 }
 
+// Sort with ConstVector as non-sort data column
+TEST(NativeOmniSortTest, TestSortWithConstVectorDataColumn)
+{
+    const int32_t dataSize = 6;
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
+
+    // col0: ConstVector (all 5), col1: regular vector
+    auto *constCol0 = new ConstVector<int32_t>(5, OMNI_INT, dataSize);
+    int64_t data1[dataSize] = {30, 10, 50, 20, 40, 60};
+    auto *col1 = new Vector<int64_t>(dataSize);
+    for (int32_t i = 0; i < dataSize; i++) {
+        col1->SetValue(i, data1[i]);
+    }
+    auto *vecBatch = new VectorBatch(dataSize);
+    vecBatch->Append(constCol0);
+    vecBatch->Append(col1);
+
+    int32_t outputCols[] = {0, 1};
+    int32_t sortCols[] = {1};
+    int32_t ascendings[] = {true};
+    int32_t nullFirsts[] = {true};
+
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+    auto sortOperator = CreateTestOperator(operatorFactory);
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    // col0 all 5, col1 sorted ascending: 10, 20, 30, 40, 50, 60
+    int32_t expectData0[] = {5, 5, 5, 5, 5, 5};
+    int64_t expectData1[] = {10, 20, 30, 40, 50, 60};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData0, expectData1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+// Sort with ConstVector as sort key column
+TEST(NativeOmniSortTest, TestSortWithConstVectorAsSortKey)
+{
+    const int32_t dataSize = 4;
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
+
+    // col0: ConstVector (all 3, used as primary sort key), col1: regular vector (secondary sort key)
+    auto *constCol0 = new ConstVector<int32_t>(3, OMNI_INT, dataSize);
+    int64_t data1[dataSize] = {40, 10, 30, 20};
+    auto *col1 = new Vector<int64_t>(dataSize);
+    for (int32_t i = 0; i < dataSize; i++) {
+        col1->SetValue(i, data1[i]);
+    }
+    auto *vecBatch = new VectorBatch(dataSize);
+    vecBatch->Append(constCol0);
+    vecBatch->Append(col1);
+
+    int32_t outputCols[] = {0, 1};
+    int32_t sortCols[] = {0, 1};
+    int32_t ascendings[] = {true, true};
+    int32_t nullFirsts[] = {true, true};
+
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    auto sortOperator = CreateTestOperator(operatorFactory);
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    // All col0=3, so sorted by col1: 10, 20, 30, 40
+    int32_t expectData0[] = {3, 3, 3, 3};
+    int64_t expectData1[] = {10, 20, 30, 40};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData0, expectData1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+// Sort with ConstVector varchar column
+TEST(NativeOmniSortTest, TestSortWithConstVectorVarchar)
+{
+    const int32_t dataSize = 4;
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType() }));
+
+    // col0: ConstVector varchar (all "hello"), col1: regular long vector
+    std::string_view constStr = "hello";
+    auto *constCol0 = new ConstVector<std::string_view>(constStr, OMNI_VARCHAR, dataSize);
+    int64_t data1[dataSize] = {40, 10, 30, 20};
+    auto *col1 = new Vector<int64_t>(dataSize);
+    for (int32_t i = 0; i < dataSize; i++) {
+        col1->SetValue(i, data1[i]);
+    }
+    auto *vecBatch = new VectorBatch(dataSize);
+    vecBatch->Append(constCol0);
+    vecBatch->Append(col1);
+
+    int32_t outputCols[] = {0, 1};
+    int32_t sortCols[] = {1};
+    int32_t ascendings[] = {true};
+    int32_t nullFirsts[] = {true};
+
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+    auto sortOperator = CreateTestOperator(operatorFactory);
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    // Sorted by col1: 10, 20, 30, 40; col0 all "hello"
+    std::string expectData0[] = {"hello", "hello", "hello", "hello"};
+    int64_t expectData1[] = {10, 20, 30, 40};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData0, expectData1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
 } // namespace SortTest

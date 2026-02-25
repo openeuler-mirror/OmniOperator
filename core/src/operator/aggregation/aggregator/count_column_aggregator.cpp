@@ -65,7 +65,14 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(Aggrega
     } else {
         int64_t noUsed{};
 
-        if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+        if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            if (nullMap == nullptr) {
+                auto constValue = static_cast<vec::ConstVector<int64_t> *>(vector)->GetConstValue();
+                for (int32_t i = 0; i < rowCount; ++i) {
+                    CountAllOp(&(countState->count), noUsed, constValue, 1LL);
+                }
+            }
+        } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
             auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vector));
             ptr += rowOffset;
             if (nullMap == nullptr) {
@@ -126,7 +133,20 @@ VECTORIZE_LOOP void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFu
         size_t rowCount = rowStates.size();
         int64_t unsedFlag = 0;
 
-        if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+        if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            auto constValue = static_cast<vec::ConstVector<int64_t> *>(vector)->GetConstValue();
+            if (nullMap == nullptr) {
+                for (size_t i = 0; i < rowCount; ++i) {
+                    auto *countState = CountState::CastState(rowStates[i] + aggStateOffset);
+                    CountAllOp(&(countState->count), unsedFlag, constValue, 1LL);
+                }
+            } else {
+                for (size_t i = 0; i < rowCount; ++i) {
+                    auto *countState = CountState::CastState(rowStates[i] + aggStateOffset);
+                    CountAllConditionalOp<false>(&(countState->count), unsedFlag, constValue, 1LL, (*nullMap)[i]);
+                }
+            }
+        } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
             auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vector));
             ptr += rowOffset;
             if (nullMap == nullptr) {

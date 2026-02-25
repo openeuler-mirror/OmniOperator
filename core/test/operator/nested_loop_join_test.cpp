@@ -1201,4 +1201,105 @@ TEST(NestedLoopJoinTest, TestFullBuildRightNoEqualityJoinOnChar)
     omniruntime::op::Operator::DeleteOperator(lookupOp);
     DeleteNestedLoopJoinOperatorFactory(factory, lookupFactory);
 }
+
+// NestLoopJoin with ConstVector in build side
+TEST(NestedLoopJoinTest, TestCrossJoinWithBuildConstVector)
+{
+    // Build side: col0 (ConstVector int, all 20), col1 (regular varchar)
+    DataTypes buildDataTypes(std::vector<DataTypePtr>({ IntType(), VarcharType(5) }));
+    const int32_t buildDataSize = 3;
+    auto *buildCol0 = new ConstVector<int32_t>(20, OMNI_INT, buildDataSize);
+    auto *buildCol1 = new Vector<LargeStringContainer<std::string_view>>(buildDataSize);
+    std::string buildStrings[] = {"aaa", "bbb", "ccc"};
+    for (int32_t i = 0; i < buildDataSize; i++) {
+        buildCol1->SetValue(i, std::string_view(buildStrings[i]));
+    }
+    auto *buildVecBatch = new VectorBatch(buildDataSize);
+    buildVecBatch->Append(buildCol0);
+    buildVecBatch->Append(buildCol1);
+
+    // Probe side: regular vectors
+    DataTypes probeDataTypes(std::vector<DataTypePtr>({ IntType(), VarcharType(5) }));
+    const int32_t probeDataSize = 2;
+    int32_t probeData0[probeDataSize] = {10, 30};
+    std::string probeData1[probeDataSize] = {"xxx", "yyy"};
+    auto probeVecBatch = CreateVectorBatch(probeDataTypes, probeDataSize, probeData0, probeData1);
+
+    int32_t buildColumns[2] = {0, 1};
+    int32_t probeColumns[2] = {0, 1};
+
+    auto factory = new NestedLoopJoinBuildOperatorFactory(buildDataTypes, buildColumns, 2);
+    auto buildOp = static_cast<NestedLoopJoinBuildOperator *>(factory->CreateOperator());
+    buildOp->AddInput(buildVecBatch);
+    VectorBatch *buildOutput = nullptr;
+    buildOp->GetOutput(&buildOutput);
+
+    int64_t factoryAddr = (int64_t)factory;
+    JoinType &&joinTypePtr = OMNI_JOIN_TYPE_INNER;
+    auto lookupFactory = NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(
+        joinTypePtr, probeDataTypes, probeColumns, 2, nullptr, factoryAddr, nullptr);
+    auto lookupOp = dynamic_cast<NestLoopJoinLookupOperator *>(lookupFactory->CreateOperator());
+    lookupOp->AddInput(probeVecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    lookupOp->GetOutput(&outputVecBatch);
+
+    // Cross join: 2 probe rows * 3 build rows = 6 result rows
+    EXPECT_EQ(outputVecBatch->GetRowCount(), 6);
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(buildOp);
+    omniruntime::op::Operator::DeleteOperator(lookupOp);
+    DeleteNestedLoopJoinOperatorFactory(factory, lookupFactory);
+}
+
+// NestLoopJoin with ConstVector in probe side
+TEST(NestedLoopJoinTest, TestCrossJoinWithProbeConstVector)
+{
+    // Build side: regular vectors
+    DataTypes buildDataTypes(std::vector<DataTypePtr>({ IntType(), VarcharType(5) }));
+    const int32_t buildDataSize = 2;
+    int32_t buildData0[buildDataSize] = {10, 30};
+    std::string buildData1[buildDataSize] = {"aaa", "bbb"};
+    auto buildVecBatch = CreateVectorBatch(buildDataTypes, buildDataSize, buildData0, buildData1);
+
+    // Probe side: col0 (ConstVector int, all 99), col1 (regular varchar)
+    DataTypes probeDataTypes(std::vector<DataTypePtr>({ IntType(), VarcharType(5) }));
+    const int32_t probeDataSize = 3;
+    auto *probeCol0 = new ConstVector<int32_t>(99, OMNI_INT, probeDataSize);
+    auto *probeCol1 = new Vector<LargeStringContainer<std::string_view>>(probeDataSize);
+    std::string probeStrings[] = {"xxx", "yyy", "zzz"};
+    for (int32_t i = 0; i < probeDataSize; i++) {
+        probeCol1->SetValue(i, std::string_view(probeStrings[i]));
+    }
+    auto *probeVecBatch = new VectorBatch(probeDataSize);
+    probeVecBatch->Append(probeCol0);
+    probeVecBatch->Append(probeCol1);
+
+    int32_t buildColumns[2] = {0, 1};
+    int32_t probeColumns[2] = {0, 1};
+
+    auto factory = new NestedLoopJoinBuildOperatorFactory(buildDataTypes, buildColumns, 2);
+    auto buildOp = static_cast<NestedLoopJoinBuildOperator *>(factory->CreateOperator());
+    buildOp->AddInput(buildVecBatch);
+    VectorBatch *buildOutput = nullptr;
+    buildOp->GetOutput(&buildOutput);
+
+    int64_t factoryAddr = (int64_t)factory;
+    JoinType &&joinTypePtr = OMNI_JOIN_TYPE_INNER;
+    auto lookupFactory = NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(
+        joinTypePtr, probeDataTypes, probeColumns, 2, nullptr, factoryAddr, nullptr);
+    auto lookupOp = dynamic_cast<NestLoopJoinLookupOperator *>(lookupFactory->CreateOperator());
+    lookupOp->AddInput(probeVecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    lookupOp->GetOutput(&outputVecBatch);
+
+    // Cross join: 3 probe rows * 2 build rows = 6 result rows
+    EXPECT_EQ(outputVecBatch->GetRowCount(), 6);
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(buildOp);
+    omniruntime::op::Operator::DeleteOperator(lookupOp);
+    DeleteNestedLoopJoinOperatorFactory(factory, lookupFactory);
+}
+
 }

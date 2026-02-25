@@ -890,4 +890,49 @@ TEST(ApproxCountDistinctAggregationTest, approx_count_distinct_partial_final_dic
     op::Operator::DeleteOperator(aggFinal);
     VectorHelper::FreeVecBatch(finalOutput);
 }
+
+// approx_count_distinct with ConstVector input: all same values should give count ~1
+TEST(ApproxCountDistinctAggregationTest, approx_count_distinct_partial_final_const_vector)
+{
+    const int32_t rowCount = 100;
+    std::vector<DataTypePtr> aggInputTypes = { LongType() };
+    std::vector<DataTypePtr> partialOutputTypes = { VarBinaryType(65536) };
+    std::vector<DataTypePtr> finalOutputTypes = { LongType() };
+
+    // ConstVector: all 100 rows have value 42
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    auto *constCol = new ConstVector<int64_t>(42L, OMNI_LONG, rowCount);
+    vecBatch->Append(constCol);
+
+    auto partialFactory = CreateAggregationOperatorFactory(
+        std::vector<uint32_t>({ OMNI_AGGREGATION_TYPE_APPROX_COUNT_DISTINCT }),
+        std::vector<uint32_t>({ 0 }), aggInputTypes, partialOutputTypes,
+        std::vector<uint32_t>(), true, true, false);
+    auto aggPartial = partialFactory->CreateOperator();
+    aggPartial->AddInput(vecBatch);
+
+    VectorBatch *partialOutput = nullptr;
+    (void)aggPartial->GetOutput(&partialOutput);
+    ASSERT_NE(partialOutput, nullptr);
+    EXPECT_EQ(partialOutput->GetRowCount(), 1);
+
+    auto finalFactory = CreateAggregationOperatorFactory(
+        std::vector<uint32_t>({ OMNI_AGGREGATION_TYPE_APPROX_COUNT_DISTINCT }),
+        std::vector<uint32_t>({ 0 }), partialOutputTypes, finalOutputTypes,
+        std::vector<uint32_t>(), false, false, false);
+    auto aggFinal = finalFactory->CreateOperator();
+    aggFinal->AddInput(partialOutput);
+    op::Operator::DeleteOperator(aggPartial);
+
+    VectorBatch *finalOutput = nullptr;
+    (void)aggFinal->GetOutput(&finalOutput);
+    ASSERT_NE(finalOutput, nullptr);
+    auto *resultVec = static_cast<Vector<int64_t> *>(finalOutput->Get(0));
+    int64_t approxDistinct = resultVec->GetValue(0);
+    // All values are the same, so approx distinct count should be 1
+    EXPECT_EQ(approxDistinct, 1);
+
+    op::Operator::DeleteOperator(aggFinal);
+    VectorHelper::FreeVecBatch(finalOutput);
+}
 }

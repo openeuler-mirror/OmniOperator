@@ -116,7 +116,17 @@ void CollectListVarcharAggregator::ExtractValuesForSpill(std::vector<AggregateSt
 
 static void UpdatePartialStateVarchar(std::vector<std::string> *list, BaseVector *vector,
     int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap, bool isDictionary, int32_t baseRowIndex) {
-    if (isDictionary) {
+    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        if (vector->IsNull(0)) {
+            return;
+        }
+        std::string_view constVal = static_cast<vec::ConstVector<std::string_view> *>(vector)->GetConstValue();
+        for (int32_t i = 0; i < rowCount; i++) {
+            if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
+                list->push_back(std::string(constVal));
+            }
+        }
+    } else if (isDictionary) {
         auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vector);
         for (int32_t i = 0; i < rowCount; i++) {
             if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {

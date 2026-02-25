@@ -34,7 +34,6 @@ void CastFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outp
 }
 
 bool CastFunction::IsNullAt(BaseVector *vec, int32_t row) const {
-    // For ConstVector, null flag is stored at index 0
     int32_t nullCheckIdx = (vec->GetEncoding() == OMNI_ENCODING_CONST) ? 0 : row;
     return vec->IsNull(nullCheckIdx);
 }

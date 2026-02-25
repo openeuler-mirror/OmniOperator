@@ -640,3 +640,62 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_addOffsetsNati
         arrayVec->SetOffset(i, elements[i]);
     }
 }
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ConstVec_getConstValueAsLongNative(JNIEnv *env, jclass jcls,
+    jlong jNativeVector)
+{
+    BaseVector *nativeVector = TransformVector(jNativeVector);
+    switch (nativeVector->GetTypeId()) {
+        case omniruntime::type::OMNI_BYTE:
+            return static_cast<jlong>(reinterpret_cast<ConstVector<int8_t> *>(nativeVector)->GetConstValue());
+        case omniruntime::type::OMNI_SHORT:
+            return static_cast<jlong>(reinterpret_cast<ConstVector<int16_t> *>(nativeVector)->GetConstValue());
+        case omniruntime::type::OMNI_INT:
+        case omniruntime::type::OMNI_DATE32:
+            return static_cast<jlong>(reinterpret_cast<ConstVector<int32_t> *>(nativeVector)->GetConstValue());
+        case omniruntime::type::OMNI_LONG:
+        case omniruntime::type::OMNI_TIMESTAMP:
+        case omniruntime::type::OMNI_DATE64:
+        case omniruntime::type::OMNI_DECIMAL64:
+            return static_cast<jlong>(reinterpret_cast<ConstVector<int64_t> *>(nativeVector)->GetConstValue());
+        case omniruntime::type::OMNI_BOOLEAN:
+            return static_cast<jlong>(reinterpret_cast<ConstVector<bool> *>(nativeVector)->GetConstValue() ? 1 : 0);
+        case omniruntime::type::OMNI_FLOAT: {
+            float val = reinterpret_cast<ConstVector<float> *>(nativeVector)->GetConstValue();
+            int32_t bits;
+            memcpy(&bits, &val, sizeof(bits));
+            return static_cast<jlong>(bits);
+        }
+        case omniruntime::type::OMNI_DOUBLE: {
+            double val = reinterpret_cast<ConstVector<double> *>(nativeVector)->GetConstValue();
+            int64_t bits;
+            memcpy(&bits, &val, sizeof(bits));
+            return static_cast<jlong>(bits);
+        }
+        default:
+            return 0;
+    }
+}
+
+JNIEXPORT jbyteArray JNICALL Java_nova_hetu_omniruntime_vector_ConstVec_getConstValueAsBytesNative(JNIEnv *env,
+    jclass jcls, jlong jNativeVector)
+{
+    BaseVector *nativeVector = TransformVector(jNativeVector);
+    // ConstVector for VARCHAR/CHAR is instantiated as ConstVector<std::string_view>,
+    // NOT ConstVector<std::string>. They have different memory layouts!
+    auto sv = reinterpret_cast<ConstVector<std::string_view> *>(nativeVector)->GetConstValue();
+    jbyteArray result = env->NewByteArray(static_cast<jsize>(sv.size()));
+    env->SetByteArrayRegion(result, 0, static_cast<jsize>(sv.size()),
+        reinterpret_cast<const jbyte *>(sv.data()));
+    return result;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_nova_hetu_omniruntime_vector_ConstVec_getConstDecimal128BytesNative(JNIEnv *env,
+    jclass jcls, jlong jNativeVector)
+{
+    BaseVector *nativeVector = TransformVector(jNativeVector);
+    auto val = reinterpret_cast<ConstVector<Decimal128> *>(nativeVector)->GetConstValue();
+    jbyteArray result = env->NewByteArray(16);
+    env->SetByteArrayRegion(result, 0, 16, reinterpret_cast<const jbyte *>(&val));
+    return result;
+}

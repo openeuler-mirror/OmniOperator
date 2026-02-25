@@ -870,4 +870,89 @@ TEST(CollectListAggregatorTest, TwoCollectListSharedStateBufferOffsets)
     }
 }
 
+// ---- ConstVector tests ----
+
+// CollectList with ConstVector<int32_t> input: all same value should produce list with all elements
+TEST(CollectListAggregatorTest, PartialProcessGroupConstVectorInt)
+{
+    CollectListAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 4 rows have value 42
+    const int32_t rowCount = 4;
+    auto *constCol = new ConstVector<int32_t>(42, OMNI_INT, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+    ASSERT_EQ(vecBatch->GetRowCount(), rowCount);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    Vector<int32_t> *outputElements = new Vector<int32_t>(0);
+    BaseVector *outputVector = new ArrayVector(1, std::shared_ptr<BaseVector>(outputElements));
+    std::vector<BaseVector *> extractVectors = {outputVector};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    auto *arrayVec = static_cast<ArrayVector *>(extractVectors[0]);
+    EXPECT_FALSE(arrayVec->IsNull(0));
+    std::shared_ptr<BaseVector> elemVec = arrayVec->GetArrayAt(0, false);
+    ASSERT_NE(elemVec, nullptr);
+    auto *intVec = static_cast<Vector<int32_t> *>(elemVec.get());
+    // List preserves all elements: [42, 42, 42, 42]
+    EXPECT_EQ(intVec->GetSize(), 4);
+    for (int32_t i = 0; i < 4; ++i) {
+        EXPECT_EQ(intVec->GetValue(i), 42);
+    }
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outputVector;
+}
+
+// CollectList with ConstVector<int64_t> input
+TEST(CollectListAggregatorTest, PartialProcessGroupConstVectorLong)
+{
+    CollectListAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{LongType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(LongType())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg->SetExecutionContext(executionContext.get());
+
+    const int32_t rowCount = 3;
+    auto *constCol = new ConstVector<int64_t>(100L, OMNI_LONG, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+
+    auto state = NewAndInitState(agg.get());
+    agg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+
+    Vector<int64_t> *outputElements = new Vector<int64_t>(0);
+    BaseVector *outputVector = new ArrayVector(1, std::shared_ptr<BaseVector>(outputElements));
+    std::vector<BaseVector *> extractVectors = {outputVector};
+    agg->ExtractValues(state.get(), extractVectors, 0);
+
+    auto *arrayVec = static_cast<ArrayVector *>(extractVectors[0]);
+    EXPECT_FALSE(arrayVec->IsNull(0));
+    std::shared_ptr<BaseVector> elemVec = arrayVec->GetArrayAt(0, false);
+    ASSERT_NE(elemVec, nullptr);
+    auto *longVec = static_cast<Vector<int64_t> *>(elemVec.get());
+    EXPECT_EQ(longVec->GetSize(), 3);
+    for (int32_t i = 0; i < 3; ++i) {
+        EXPECT_EQ(longVec->GetValue(i), 100L);
+    }
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outputVector;
+}
+
 }  // namespace omniruntime
