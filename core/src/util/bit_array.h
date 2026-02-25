@@ -47,6 +47,7 @@ public:
     {
         wordsNum = (reinterpret_cast<int32_t *>(dataInput))[0]; // numWords is 4 Bytes
         data = dataInput + 4;                                   // offset is 4 Bytes
+        isRelease = false;
     }
 
     /**
@@ -58,6 +59,13 @@ public:
     {
         data = new int8_t[wordsNum * sizeof(uint64_t)];
         memset(data, 0, wordsNum * sizeof(uint64_t));
+    }
+
+    ~BitArray()
+    {
+        if (isRelease && data != nullptr) {
+            delete[] data;
+        }
     }
 
     /**
@@ -84,6 +92,7 @@ public:
 private:
     int8_t *data;
     int32_t wordsNum;
+    bool isRelease = true;
 }; // class bitbarray
 } // namespace omniruntime
 

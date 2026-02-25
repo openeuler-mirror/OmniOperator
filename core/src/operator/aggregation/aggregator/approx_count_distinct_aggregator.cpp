@@ -245,7 +245,7 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
             auto *dictStrVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(
                 GetValuesFromDict<IN_ID>(vector));
             for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && !(*nullMap)[i]) continue;
+                if (nullMap && (*nullMap)[i]) continue;
                 int32_t id = ids[rowOffset + i];
                 if (id < 0) continue;
                 std::string_view sv = dictStrVec->GetValue(id);
@@ -255,7 +255,7 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
             const char *dict = reinterpret_cast<const char *>(GetValuesFromDict<IN_ID>(vector));
             constexpr int32_t valueSize = (IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE) ? 8 : (IN_ID == OMNI_INT || IN_ID == OMNI_FLOAT) ? 4 : (IN_ID == OMNI_SHORT) ? 2 : 1;
             for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && !(*nullMap)[i]) continue;
+                if (nullMap && (*nullMap)[i]) continue;
                 int32_t id = ids[rowOffset + i];
                 if (id < 0) continue;
                 acc.insertHash(HllHashBytes(dict + static_cast<size_t>(id) * valueSize, valueSize));
@@ -265,7 +265,7 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR || IN_ID == OMNI_VARBINARY) {
             auto *strVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
             for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && !(*nullMap)[i]) continue;
+                if (nullMap && (*nullMap)[i]) continue;
                 std::string_view sv = strVec->GetValue(rowOffset + i);
                 acc.insertHash(static_cast<uint64_t>(HashUtil::HashValue(const_cast<int8_t *>(reinterpret_cast<const int8_t *>(sv.data())), static_cast<int32_t>(sv.size()))));
             }
@@ -273,7 +273,7 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
             const char *ptr = reinterpret_cast<const char *>(GetValuesFromVector<IN_ID>(vector));
             constexpr int32_t valueSize = (IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE) ? 8 : (IN_ID == OMNI_INT || IN_ID == OMNI_FLOAT) ? 4 : (IN_ID == OMNI_SHORT) ? 2 : 1;
             for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && !(*nullMap)[i]) continue;
+                if (nullMap && (*nullMap)[i]) continue;
                 acc.insertHash(HllHashBytes(ptr + static_cast<size_t>(rowOffset + i) * valueSize, valueSize));
             }
         }
@@ -307,7 +307,7 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessFinalMerge(AggregateSt
     auto *strVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
     for (int32_t i = 0; i < rowCount; ++i) {
         int32_t row = rowOffset + i;
-        if (nullMap && !(*nullMap)[row]) {
+        if (nullMap && (*nullMap)[row]) {
             continue;
         }
         std::string_view sv = strVec->GetValue(row);

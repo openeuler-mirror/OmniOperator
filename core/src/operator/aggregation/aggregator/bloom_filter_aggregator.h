@@ -66,8 +66,8 @@ VECTORIZE_LOOP inline void BloomFilterPartialOp(
     auto bloomFilter = std::make_shared<omniruntime::op::BloomFilter>(serializeChar);
 
     for (int32_t i = 0; i < rowCount; i++) {
-        // If nullMap is empty, or if there is a value marked in nullMap indicating that this position is not empty, then iterate over bloomFilter.
-        if (nullMap == nullptr || (*nullMap)[i]) {
+        // If nullMap is empty, or if there is a value marked in nullMap indicating that this position is empty, then iterate over bloomFilter.
+        if (nullMap == nullptr || !(*nullMap)[i]) {
             auto value = valuePtr[i];
             bloomFilter->PutLong(reinterpret_cast<int64_t>(value));
         }
@@ -104,8 +104,8 @@ VECTORIZE_LOOP inline void BloomFilterFinalOp(
     auto bloomFilter = std::make_shared<omniruntime::op::BloomFilter>(serializeChar);
 
     for (int32_t i = 0; i < rowCount; i++) {
-        // If nullMap is empty, or if there is a value marked in nullMap indicating that this position is not empty, then iterate over bloomFilter.
-        if (nullMap == nullptr || (*nullMap)[i]) {
+        // If nullMap is empty, or if there is a value marked in nullMap indicating that this position is empty, then iterate over bloomFilter.
+        if (nullMap == nullptr || !(*nullMap)[i]) {
             auto value = largeStringVector->GetValue(i);
             char *newSerializeChar = const_cast<char *>(value.data());
             // Merge two bloom filters
@@ -127,7 +127,21 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class BloomFilterAggregator : pub
 
 public:
     // todo release BloomFilterAggStete serializePtr, now will coredump
-    ~BloomFilterAggregator() override = default;
+    ~BloomFilterAggregator()
+    {
+        for (auto stringPtr : stateSerializeStringPtrs) {
+            if (stringPtr == 0) {
+                continue;
+            }
+
+            uintptr_t rawPtr = static_cast<uintptr_t>(stringPtr);
+            char* data = reinterpret_cast<char *>(rawPtr);
+
+            delete[] data;
+        }
+
+        stateSerializeStringPtrs.clear();
+    }
 
     void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
     void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
@@ -179,6 +193,10 @@ protected:
     template <typename T>
     void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
         const std::shared_ptr<NullsHelper> nullMap);
+
+private:
+    // store all ptr of char* from BloomFilterAggState when initState / initStates
+    std::vector<int64_t> stateSerializeStringPtrs;
 };
 }
 }

@@ -71,7 +71,9 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> void BloomFilterAggregator<IN_ID,
     // Serializing bloomFilter
     bloomFilter->Serialize(serializeChar);
     // Update bloomFilterAggState
-    bloomFilterAggState->serializePtr = reinterpret_cast<int64_t>(serializeChar);
+    int64_t serializeCharPtr = reinterpret_cast<int64_t>(serializeChar);
+    bloomFilterAggState->serializePtr = serializeCharPtr;
+    stateSerializeStringPtrs.push_back(serializeCharPtr);
     bloomFilterAggState->len = static_cast<int32_t>(serializedSize);
 }
 
