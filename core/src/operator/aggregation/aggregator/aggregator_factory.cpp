@@ -237,6 +237,12 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
         case OMNI_AGGREGATION_TYPE_COLLECT_LIST: {
             return std::make_unique<CollectListAggregatorFactory>();
         }
+        case OMNI_AGGREGATION_TYPE_KURTOSIS: {
+                    return std::make_unique<KurtosisAggregatorFactory>();
+        }
+        case OMNI_AGGREGATION_TYPE_SKEWNESS: {
+                    return std::make_unique<SkewnessAggregatorFactory>();
+        }
         default: {
             std::string omniExceptionInfo =
                 "In function CreateAggregatorFactory, no such aggregate type " + std::to_string(aggType);

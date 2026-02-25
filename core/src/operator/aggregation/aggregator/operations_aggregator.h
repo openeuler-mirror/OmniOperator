@@ -349,5 +349,146 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddMomentStatsDictConditional(double &__
     }
 }
 
+template <typename MOMENT_VALUE, typename VALUE, typename FLAG, void (*OP)(uint64_t*, MOMENT_VALUE*, MOMENT_VALUE*, MOMENT_VALUE*, MOMENT_VALUE*, long*,
+                                                                     FLAG&, const VALUE&)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddCentralMoment(uint64_t *count_, MOMENT_VALUE *centralMoment1_, MOMENT_VALUE *centralMoment2_,
+                                                         MOMENT_VALUE *centralMoment3_, MOMENT_VALUE *centralMoment4_, long *momentOrder_,
+                                                         FLAG &flag_, const VALUE *__restrict ptr, const size_t rowCount)
+{
+    if (rowCount > 0) {
+        ptr = (const VALUE *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        FLAG flag = flag_;
+        uint64_t count = *count_;
+        MOMENT_VALUE centralMoment1 = *centralMoment1_;
+        MOMENT_VALUE centralMoment2 = *centralMoment2_;
+        MOMENT_VALUE centralMoment3 = *centralMoment3_;
+        MOMENT_VALUE centralMoment4 = *centralMoment4_;
+        long momentOrder = *momentOrder_;
+        for (size_t i = 0; i < rowCount; ++i) {
+            OP(&count, &centralMoment1, &centralMoment2, &centralMoment3, &centralMoment4, &momentOrder, flag, ptr[i]);
+        }
+        *count_ = count;
+        *centralMoment1_ = centralMoment1;
+        *centralMoment2_ = centralMoment2;
+        *centralMoment3_ = centralMoment3;
+        *centralMoment4_ = centralMoment4;
+        *momentOrder_ = momentOrder;
+        flag_ = flag;
+    }
+}
+
+template<typename MOMENT_VALUE, typename VALUE, typename FLAG, void (*OP)(uint64_t *, MOMENT_VALUE *, MOMENT_VALUE *, MOMENT_VALUE *, MOMENT_VALUE *, long *,FLAG &, const VALUE &, const uint8_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddCentralMomentConditional(uint64_t *count_, MOMENT_VALUE *centralMoment1_, MOMENT_VALUE *centralMoment2_,
+                                                                    MOMENT_VALUE *centralMoment3_, MOMENT_VALUE *centralMoment4_, long *momentOrder_, FLAG &flag_,
+                                                                    const VALUE *__restrict ptr, const size_t rowCount, const NullsHelper &condition)
+{
+    if (rowCount > 0) {
+        ptr = (const VALUE *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        FLAG flag = flag_;
+        uint64_t count = *count_;
+        MOMENT_VALUE centralMoment1 = *centralMoment1_;
+        MOMENT_VALUE centralMoment2 = *centralMoment2_;
+        MOMENT_VALUE centralMoment3 = *centralMoment3_;
+        MOMENT_VALUE centralMoment4 = *centralMoment4_;
+        long momentOrder = *momentOrder_;
+        for (size_t i = 0; i < rowCount; ++i) {
+            OP(&count, &centralMoment1, &centralMoment2, &centralMoment3, &centralMoment4, &momentOrder, flag, ptr[i], condition[i]);
+        }
+        *count_ = count;
+        *centralMoment1_ = centralMoment1;
+        *centralMoment2_ = centralMoment2;
+        *centralMoment3_ = centralMoment3;
+        *centralMoment4_ = centralMoment4;
+        *momentOrder_ = momentOrder;
+        flag_ = flag;
+    }
+}
+
+template <typename VALUE, typename FLAG, void (*OP)(uint64_t *, VALUE *, VALUE *, VALUE *, VALUE *, long *, FLAG &, const VALUE & ,
+                                     const VALUE &, const VALUE &, const VALUE &, const VALUE &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void MergeCentralMoment(uint64_t *count_, VALUE *centralMoment1_, VALUE *centralMoment2_,
+                                                           VALUE *centralMoment3_, VALUE *centralMoment4_,
+                                                           long *momentOrder_, FLAG &flag_,
+                                                           const VALUE *__restrict countPtr,
+                                                           const VALUE *__restrict m1Ptr, const VALUE *__restrict m2Ptr,
+                                                           const VALUE *__restrict m3Ptr, const VALUE *__restrict m4Ptr,
+                                                           const size_t rowCount)
+{
+    if (rowCount > 0) {
+        countPtr = (const VALUE *)__builtin_assume_aligned(countPtr, ARRAY_ALIGNMENT);
+        m1Ptr = (const VALUE *)__builtin_assume_aligned(m1Ptr, ARRAY_ALIGNMENT);
+        m2Ptr = (const VALUE *)__builtin_assume_aligned(m2Ptr, ARRAY_ALIGNMENT);
+        m3Ptr = (const VALUE *)__builtin_assume_aligned(m3Ptr, ARRAY_ALIGNMENT);
+        m4Ptr = (const VALUE *)__builtin_assume_aligned(m4Ptr, ARRAY_ALIGNMENT);
+        FLAG flag = flag_;
+        uint64_t count = *count_;
+        VALUE centralMoment1 = *centralMoment1_;
+        VALUE centralMoment2 = *centralMoment2_;
+        VALUE centralMoment3 = *centralMoment3_;
+        VALUE centralMoment4 = *centralMoment4_;
+        long momentOrder = *momentOrder_;
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            if (countPtr[i] > 0) {
+                OP(&count, &centralMoment1, &centralMoment2, &centralMoment3, &centralMoment4, &momentOrder, flag, countPtr[i],
+                   m1Ptr[i], m2Ptr[i], m3Ptr[i], m4Ptr[i]);
+            } else if (countPtr[i] < 0) {
+                flag = AggValueState::OVERFLOWED;
+                break;
+            }
+        }
+        *count_ = count;
+        *centralMoment1_ = centralMoment1;
+        *centralMoment2_ = centralMoment2;
+        *centralMoment3_ = centralMoment3;
+        *centralMoment4_ = centralMoment4;
+        *momentOrder_ = momentOrder;
+        flag_ = flag;
+    }
+}
+
+template <typename VALUE, typename FLAG, void (*OP)(uint64_t *, VALUE *, VALUE *, VALUE *, VALUE *, long *, FLAG &, const VALUE & ,
+                                                    const VALUE &, const VALUE &, const VALUE &, const VALUE &, const uint8_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void MergeCentralMomentConditional(uint64_t *count_, VALUE *centralMoment1_, VALUE *centralMoment2_,
+                                                           VALUE *centralMoment3_, VALUE *centralMoment4_,
+                                                           long *momentOrder_, FLAG &flag_,
+                                                           const VALUE *__restrict countPtr,
+                                                           const VALUE *__restrict m1Ptr, const VALUE *__restrict m2Ptr,
+                                                           const VALUE *__restrict m3Ptr, const VALUE *__restrict m4Ptr,
+                                                           const size_t rowCount, const NullsHelper &condition)
+{
+    if (rowCount > 0) {
+        countPtr = (const VALUE *)__builtin_assume_aligned(countPtr, ARRAY_ALIGNMENT);
+        m1Ptr = (const VALUE *)__builtin_assume_aligned(m1Ptr, ARRAY_ALIGNMENT);
+        m2Ptr = (const VALUE *)__builtin_assume_aligned(m2Ptr, ARRAY_ALIGNMENT);
+        m3Ptr = (const VALUE *)__builtin_assume_aligned(m3Ptr, ARRAY_ALIGNMENT);
+        m4Ptr = (const VALUE *)__builtin_assume_aligned(m4Ptr, ARRAY_ALIGNMENT);
+        FLAG flag = flag_;
+        uint64_t count = *count_;
+        VALUE centralMoment1 = *centralMoment1_;
+        VALUE centralMoment2 = *centralMoment2_;
+        VALUE centralMoment3 = *centralMoment3_;
+        VALUE centralMoment4 = *centralMoment4_;
+        long momentOrder = *momentOrder_;
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            if (countPtr[i] > 0) {
+                OP(&count, &centralMoment1, &centralMoment2, &centralMoment3, &centralMoment4, &momentOrder, flag, countPtr[i],
+                   m1Ptr[i], m2Ptr[i], m3Ptr[i], m4Ptr[i], condition[i]);
+            } else if (countPtr[i] < 0) {
+                flag = AggValueState::OVERFLOWED;
+                break;
+            }
+        }
+        *count_ = count;
+        *centralMoment1_ = centralMoment1;
+        *centralMoment2_ = centralMoment2;
+        *centralMoment3_ = centralMoment3;
+        *centralMoment4_ = centralMoment4;
+        *momentOrder_ = momentOrder;
+        flag_ = flag;
+    }
+}
+
 } // end of namespace op
 } // end of namespace omniruntime

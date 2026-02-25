@@ -5014,4 +5014,200 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_first_null_record_include
     };
     TestHashAggSpillWithNullRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
 }
+
+TEST(HashAggregationWithExprOperatorTest, kurtosis)
+{
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
+    const int32_t dataSize = 5;
+
+    const int32_t groupByNum = 1;
+
+    int data1[] = {1, 1, 1, 1, 1};
+    double data2[] = {1, 10, 100, 10, 1};
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({IntType(), DoubleType()}));
+
+    DataTypes partialAggOutputTypes(std::vector<DataTypePtr>({DoubleType(),DoubleType(),DoubleType(),DoubleType(),DoubleType()}));
+    std::vector<DataTypes> partialAggOutputTypesVec = {partialAggOutputTypes};
+
+    VectorBatch *sourceVecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+
+    std::vector<Expr *> partialGroupByKeys = {new FieldExpr(0, IntType())};
+
+    std::vector<Expr *> partialAggKeys = {new FieldExpr(1, DoubleType())};
+    std::vector<std::vector<omniruntime::expressions::Expr *>> partialAggAllKeys = {partialAggKeys};
+
+    std::vector<uint32_t> aggFuncTypes = {OMNI_AGGREGATION_TYPE_KURTOSIS};
+    std::vector<uint32_t> maskCols = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
+
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), true);
+
+    std::vector<omniruntime::expressions::Expr *> aggFilters;
+    aggFilters.reserve(2);
+    aggFilters.push_back(nullptr);
+    aggFilters.push_back(nullptr);
+
+    auto *hashAggWithExprOperatorFactory =
+            new HashAggregationWithExprOperatorFactory(partialGroupByKeys, groupByNum, partialAggAllKeys, aggFilters, sourceTypes,
+                                                       partialAggOutputTypesVec, aggFuncTypes, maskCols, inputRawWrap,
+                                                       outputPartialWrap, OperatorConfig());
+    auto *hashAggWithExprOperator =
+            dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
+
+    hashAggWithExprOperator->AddInput(sourceVecBatch);
+
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
+
+    std::vector<Expr *> finalGroupByKeys = {new FieldExpr(0, IntType())};
+
+    std::vector<Expr*> finalAggKeys = {
+        new FieldExpr(1, DoubleType()), new FieldExpr(2, DoubleType()), new FieldExpr(3, DoubleType()),
+        new FieldExpr(4, DoubleType()), new FieldExpr(5, DoubleType())
+    };
+    std::vector<std::vector<omniruntime::expressions::Expr *>> finalAggAllKeys = {finalAggKeys};
+
+    DataTypes finalSourceTypes(std::vector<DataTypePtr>({
+        IntType(), LongType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()
+    }));
+
+    auto inputRawFinalWrap = std::vector<bool>(aggFuncTypes.size(), false);
+    auto outputFinalWrap = std::vector<bool>(aggFuncTypes.size(), false);
+
+    DataTypes finalAggOutputTypes(std::vector<DataTypePtr>({DoubleType()}));
+    std::vector<DataTypes> finalAggOutputTypesVec = {finalAggOutputTypes};
+
+    auto *hashAggWithExprOperatorFactoryFinal =
+        new HashAggregationWithExprOperatorFactory(finalGroupByKeys, groupByNum, finalAggAllKeys, aggFilters,
+            finalSourceTypes, finalAggOutputTypesVec, aggFuncTypes, maskCols, inputRawFinalWrap, outputFinalWrap,
+            OperatorConfig());
+    auto *hashAggWithExprOperatorFinal =
+        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactoryFinal));
+
+    hashAggWithExprOperatorFinal->AddInput(outputVecBatch);
+    VectorBatch *outputVecBatchFinal = nullptr;
+    hashAggWithExprOperatorFinal->GetOutput(&outputVecBatchFinal);
+
+    int expData1[] = {1};
+    double expData2[] = {0.19432323191698986};
+    DataTypes expectTypes(std::vector<DataTypePtr>({IntType(), DoubleType()}));
+    VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, 1, expData1, expData2);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatchFinal, expectVectorBatch));
+
+    // clear memory
+    Expr::DeleteExprs(partialGroupByKeys);
+    Expr::DeleteExprs(partialAggAllKeys);
+    Expr::DeleteExprs(finalGroupByKeys);
+    Expr::DeleteExprs(finalAggAllKeys);
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperatorFinal);
+    delete hashAggWithExprOperatorFactory;
+    delete hashAggWithExprOperatorFactoryFinal;
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVecBatchFinal);
+
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
+}
+
+TEST(HashAggregationWithExprOperatorTest, skewness)
+{
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
+    const int32_t dataSize = 5;
+
+    const int32_t groupByNum = 1;
+
+    int data1[] = {1, 1, 1, 1, 1};
+    double data2[] = {1, 10, 100, 10, 1};
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({IntType(), DoubleType()}));
+
+    DataTypes partialAggOutputTypes(std::vector<DataTypePtr>({DoubleType(),DoubleType(),DoubleType(),DoubleType()}));
+    std::vector<DataTypes> partialAggOutputTypesVec = {partialAggOutputTypes};
+
+    VectorBatch *sourceVecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+
+    std::vector<Expr *> partialGroupByKeys = {new FieldExpr(0, IntType())};
+
+    std::vector<Expr *> partialAggKeys = {new FieldExpr(1, DoubleType())};
+    std::vector<std::vector<omniruntime::expressions::Expr *>> partialAggAllKeys = {partialAggKeys};
+
+    std::vector<uint32_t> aggFuncTypes = {OMNI_AGGREGATION_TYPE_SKEWNESS};
+    std::vector<uint32_t> maskCols = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
+
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), true);
+
+    std::vector<omniruntime::expressions::Expr *> aggFilters;
+    aggFilters.reserve(2);
+    aggFilters.push_back(nullptr);
+    aggFilters.push_back(nullptr);
+
+    auto *hashAggWithExprOperatorFactory =
+            new HashAggregationWithExprOperatorFactory(partialGroupByKeys, groupByNum, partialAggAllKeys, aggFilters, sourceTypes,
+                                                       partialAggOutputTypesVec, aggFuncTypes, maskCols, inputRawWrap,
+                                                       outputPartialWrap, OperatorConfig());
+    auto *hashAggWithExprOperator =
+            dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
+
+    hashAggWithExprOperator->AddInput(sourceVecBatch);
+
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
+
+    std::vector<Expr *> finalGroupByKeys = {new FieldExpr(0, IntType())};
+
+    std::vector<Expr*> finalAggKeys = {
+        new FieldExpr(1, DoubleType()), new FieldExpr(2, DoubleType()), new FieldExpr(3, DoubleType()),
+        new FieldExpr(4, DoubleType())
+    };
+    std::vector<std::vector<omniruntime::expressions::Expr *>> finalAggAllKeys = {finalAggKeys};
+
+    DataTypes finalSourceTypes(std::vector<DataTypePtr>({
+        IntType(), LongType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()
+    }));
+
+    auto inputRawFinalWrap = std::vector<bool>(aggFuncTypes.size(), false);
+    auto outputFinalWrap = std::vector<bool>(aggFuncTypes.size(), false);
+
+    // final output col type
+    DataTypes finalAggOutputTypes(std::vector<DataTypePtr>({DoubleType()}));
+    std::vector<DataTypes> finalAggOutputTypesVec = {finalAggOutputTypes};
+
+    // construct final aggregator
+    auto *hashAggWithExprOperatorFactoryFinal =
+        new HashAggregationWithExprOperatorFactory(finalGroupByKeys, groupByNum, finalAggAllKeys, aggFilters,
+            finalSourceTypes, finalAggOutputTypesVec, aggFuncTypes, maskCols, inputRawFinalWrap, outputFinalWrap,
+            OperatorConfig());
+    auto *hashAggWithExprOperatorFinal =
+        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactoryFinal));
+
+    // input data
+    hashAggWithExprOperatorFinal->AddInput(outputVecBatch);
+    VectorBatch *outputVecBatchFinal = nullptr;
+    hashAggWithExprOperatorFinal->GetOutput(&outputVecBatchFinal);
+
+    int expData1[] = {1};
+    double expData2[] = {1.4581249961461293};
+    DataTypes expectTypes(std::vector<DataTypePtr>({IntType(), DoubleType()}));
+    VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, 1, expData1, expData2);
+
+    // compare the result
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatchFinal, expectVectorBatch));
+
+    // clear memory
+    Expr::DeleteExprs(partialGroupByKeys);
+    Expr::DeleteExprs(partialAggAllKeys);
+    Expr::DeleteExprs(finalGroupByKeys);
+    Expr::DeleteExprs(finalAggAllKeys);
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperatorFinal);
+    delete hashAggWithExprOperatorFactory;
+    delete hashAggWithExprOperatorFactoryFinal;
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVecBatchFinal);
+
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
+}
 }

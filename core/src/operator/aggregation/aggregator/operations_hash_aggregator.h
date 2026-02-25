@@ -396,5 +396,174 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexMomentStatsFinal(std::vec
         }
     }
 }
+
+    template <typename VALUE, void (*UPDATER)(AggregateState *, const VALUE &)>
+    VECTORIZE_LOOP NO_INLINE void AddCentralMomentUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggStateOffset,
+                                                 const VALUE *__restrict ptr)
+{
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+        ptr = (const VALUE *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        for (size_t i = 0; i < rowCount; ++i) {
+            UPDATER(rowStates[i] + aggStateOffset, ptr[i]);
+        }
+    }
+}
+
+    template <typename VALUE, void (*UPDATER)(AggregateState *, const VALUE &, const uint8_t &)>
+    VECTORIZE_LOOP NO_INLINE void AddCentralMomentConditionalUseRowIndex(std::vector<AggregateState *> &rowStates,
+                                                                         const size_t aggStateOffset, const VALUE *__restrict ptr,
+                                                                         const NullsHelper &condition)
+{
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+        ptr = (const VALUE *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            AggregateState *state = rowStates[i] + aggStateOffset;
+            UPDATER(state, ptr[i], condition[i]);
+        }
+    }
+}
+
+template <typename VALUE, typename STATE, typename FLAG, void (*OP)(uint64_t *, VALUE *, VALUE *, VALUE *, VALUE *, long *, FLAG &, const VALUE & ,
+                                     const VALUE &, const VALUE &, const VALUE &, const VALUE &)>
+    VECTORIZE_LOOP FAST_MATH NO_INLINE void MergeCentralMomentUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggStateOffset,
+                                                           const VALUE *__restrict countPtr,
+                                                           const VALUE *__restrict m1Ptr, const VALUE *__restrict m2Ptr,
+                                                           const VALUE *__restrict m3Ptr, const VALUE *__restrict m4Ptr) {
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+        countPtr = (const VALUE *)__builtin_assume_aligned(countPtr, ARRAY_ALIGNMENT);
+        m1Ptr = (const VALUE *)__builtin_assume_aligned(m1Ptr, ARRAY_ALIGNMENT);
+        m2Ptr = (const VALUE *)__builtin_assume_aligned(m2Ptr, ARRAY_ALIGNMENT);
+        m3Ptr = (const VALUE *)__builtin_assume_aligned(m3Ptr, ARRAY_ALIGNMENT);
+        m4Ptr = (const VALUE *)__builtin_assume_aligned(m4Ptr, ARRAY_ALIGNMENT);
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            STATE *state = STATE::CastState(rowStates[i] + aggStateOffset);
+            auto &centralMomentState = state->centralMomentState;
+            auto count = reinterpret_cast<uint64_t *>(&centralMomentState.count);
+            auto m1 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment1);
+            auto m2 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment2);
+            auto m3 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment3);
+            auto m4 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment4);
+            auto momentOrder = reinterpret_cast<long *>(&centralMomentState.momentOrder);
+            if (countPtr[i] > 0) {
+                OP(count, m1, m2, m3, m4, momentOrder, state->valueState, countPtr[i],
+                   m1Ptr[i], m2Ptr[i], m3Ptr[i], m4Ptr[i]);
+            } else if (countPtr[i] < 0) {
+                state->valueState = AggValueState::OVERFLOWED;
+                break;
+            }
+        }
+    }
+}
+
+template <typename VALUE, typename STATE, typename FLAG, void (*OP)(uint64_t *, VALUE *, VALUE *, VALUE *, VALUE *, long *, FLAG &, const VALUE & ,
+                                     const VALUE &, const VALUE &, const VALUE &, const VALUE &)>
+    VECTORIZE_LOOP FAST_MATH NO_INLINE void MergeCentralMomentWithCountLongUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggStateOffset,
+                                                           const long *__restrict countPtr,
+                                                           const VALUE *__restrict m1Ptr, const VALUE *__restrict m2Ptr,
+                                                           const VALUE *__restrict m3Ptr, const VALUE *__restrict m4Ptr) {
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+        countPtr = (const long *)__builtin_assume_aligned(countPtr, ARRAY_ALIGNMENT);
+        m1Ptr = (const VALUE *)__builtin_assume_aligned(m1Ptr, ARRAY_ALIGNMENT);
+        m2Ptr = (const VALUE *)__builtin_assume_aligned(m2Ptr, ARRAY_ALIGNMENT);
+        m3Ptr = (const VALUE *)__builtin_assume_aligned(m3Ptr, ARRAY_ALIGNMENT);
+        m4Ptr = (const VALUE *)__builtin_assume_aligned(m4Ptr, ARRAY_ALIGNMENT);
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            STATE *state = STATE::CastState(rowStates[i] + aggStateOffset);
+            auto &centralMomentState = state->centralMomentState;
+            auto count = reinterpret_cast<uint64_t *>(&centralMomentState.count);
+            auto m1 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment1);
+            auto m2 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment2);
+            auto m3 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment3);
+            auto m4 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment4);
+            auto momentOrder = reinterpret_cast<long *>(&centralMomentState.momentOrder);
+            double countValue = countPtr[i];
+            if (countPtr[i] > 0) {
+                OP(count, m1, m2, m3, m4, momentOrder, state->valueState, countValue,
+                   m1Ptr[i], m2Ptr[i], m3Ptr[i], m4Ptr[i]);
+            } else if (countPtr[i] < 0) {
+                state->valueState = AggValueState::OVERFLOWED;
+                break;
+            }
+        }
+    }
+}
+
+template <typename VALUE, typename STATE, typename FLAG, void (*OP)(uint64_t *, VALUE *, VALUE *, VALUE *, VALUE *, long *, FLAG &, const VALUE & ,
+                                         const VALUE &, const VALUE &, const VALUE &, const VALUE &, const uint8_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void MergeCentralMomentConditionalWithCountLongUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggStateOffset,
+                                                           const long *__restrict countPtr,
+                                                           const VALUE *__restrict m1Ptr, const VALUE *__restrict m2Ptr,
+                                                           const VALUE *__restrict m3Ptr, const VALUE *__restrict m4Ptr,
+                                                           const NullsHelper &condition) {
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+        countPtr = (const long *)__builtin_assume_aligned(countPtr, ARRAY_ALIGNMENT);
+        m1Ptr = (const VALUE *)__builtin_assume_aligned(m1Ptr, ARRAY_ALIGNMENT);
+        m2Ptr = (const VALUE *)__builtin_assume_aligned(m2Ptr, ARRAY_ALIGNMENT);
+        m3Ptr = (const VALUE *)__builtin_assume_aligned(m3Ptr, ARRAY_ALIGNMENT);
+        m4Ptr = (const VALUE *)__builtin_assume_aligned(m4Ptr, ARRAY_ALIGNMENT);
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            STATE *state = STATE::CastState(rowStates[i] + aggStateOffset);
+            auto &centralMomentState = state->centralMomentState;
+            auto count = reinterpret_cast<uint64_t *>(&centralMomentState.count);
+            auto m1 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment1);
+            auto m2 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment2);
+            auto m3 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment3);
+            auto m4 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment4);
+            auto momentOrder = reinterpret_cast<long *>(&centralMomentState.momentOrder);
+            if (countPtr[i] > 0) {
+                OP(count, m1, m2, m3, m4, momentOrder, state->valueState, countPtr[i],
+                   m1Ptr[i], m2Ptr[i], m3Ptr[i], m4Ptr[i], condition[i]);
+            } else if (countPtr[i] < 0) {
+                state->valueState = AggValueState::OVERFLOWED;
+                break;
+            }
+        }
+    }
+}
+
+template <typename VALUE, typename STATE, typename FLAG, void (*OP)(uint64_t *, VALUE *, VALUE *, VALUE *, VALUE *, long *, FLAG &, const VALUE & ,
+                                         const VALUE &, const VALUE &, const VALUE &, const VALUE &, const uint8_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void MergeCentralMomentConditionalUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggStateOffset,
+                                                           const VALUE *__restrict countPtr,
+                                                           const VALUE *__restrict m1Ptr, const VALUE *__restrict m2Ptr,
+                                                           const VALUE *__restrict m3Ptr, const VALUE *__restrict m4Ptr,
+                                                           const NullsHelper &condition) {
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+        countPtr = (const VALUE *)__builtin_assume_aligned(countPtr, ARRAY_ALIGNMENT);
+        m1Ptr = (const VALUE *)__builtin_assume_aligned(m1Ptr, ARRAY_ALIGNMENT);
+        m2Ptr = (const VALUE *)__builtin_assume_aligned(m2Ptr, ARRAY_ALIGNMENT);
+        m3Ptr = (const VALUE *)__builtin_assume_aligned(m3Ptr, ARRAY_ALIGNMENT);
+        m4Ptr = (const VALUE *)__builtin_assume_aligned(m4Ptr, ARRAY_ALIGNMENT);
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            STATE *state = STATE::CastState(rowStates[i] + aggStateOffset);
+            auto &centralMomentState = state->centralMomentState;
+            auto count = reinterpret_cast<uint64_t *>(&centralMomentState.count);
+            auto m1 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment1);
+            auto m2 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment2);
+            auto m3 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment3);
+            auto m4 = reinterpret_cast<VALUE *>(&centralMomentState.centralMoment4);
+            auto momentOrder = reinterpret_cast<long *>(&centralMomentState.momentOrder);
+            double countValue = countPtr[i];
+            if (countPtr[i] > 0) {
+                OP(count, m1, m2, m3, m4, momentOrder, state->valueState, countValue,
+                   m1Ptr[i], m2Ptr[i], m3Ptr[i], m4Ptr[i], condition[i]);
+            } else if (countPtr[i] < 0) {
+                state->valueState = AggValueState::OVERFLOWED;
+                break;
+            }
+        }
+    }
+}
 } // end of namespace op
 } // end of namespace omniruntime
