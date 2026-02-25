@@ -50,38 +50,45 @@ int32_t UnnestOperator::AddInput(omniruntime::vec::VectorBatch* vecBatch)
     }
     int32_t numElements = 0;
     rawMaxSizes_.resize(vecBatch->Get(0)->GetSize());
-    // Initialize based on outer parameter: 1 for outer (preserve null/empty rows), 0 for non-outer (filter null/empty rows)
-    std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), outer_ ? 1 : 0);
-    for (size_t channel = 0; channel < unnestChannels_.size(); ++channel) {
-        const auto& unnestVector = vecBatch->Get(unnestChannels_[channel]);
-
-        auto processVector = [&](auto* inputVector) {
-            for (auto row = 0; row < unnestVector->GetSize(); ++row) {
-                // Only update rawMaxSizes_ if the array is not null (similar to Velox)
-                if (!unnestVector->IsNull(row)) {
-                    auto rowSize = inputVector->GetSize(row);
-                    rawMaxSizes_[row] = (rowSize > rawMaxSizes_[row]) ? rowSize : rawMaxSizes_[row];
-                }
-                // If null and outer=false, rawMaxSizes_[row] remains 0 (will be filtered)
-                // If null and outer=true, rawMaxSizes_[row] remains 1 (will be preserved)
-            }
-        };
-
-        if (auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(unnestVector)) {
-            processVector(arrayVector);
-        } else if (auto mapVector = dynamic_cast<omniruntime::vec::MapVector*>(unnestVector)) {
-            processVector(mapVector);
-        }
-    }
-
-    // Calculate numElements: sum of all rawMaxSizes_, but for outer mode, ensure at least input size
-    int32_t totalSizes = std::accumulate(rawMaxSizes_.begin(), rawMaxSizes_.end(), 0);
-    if (outer_) {
-        // For outer mode, ensure we have at least one row per input row (for null/empty arrays)
-        numElements = std::max(totalSizes, vecBatch->Get(0)->GetSize());
+    
+    // Special case: if there are no unnest variables, just replicate all rows
+    if (unnestChannels_.empty()) {
+        std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), 1);
+        numElements = vecBatch->Get(0)->GetSize();
     } else {
-        // For non-outer mode, only count actual elements (null/empty arrays contribute 0)
-        numElements = totalSizes;
+        // Initialize based on outer parameter: 1 for outer (preserve null/empty rows), 0 for non-outer (filter null/empty rows)
+        std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), outer_ ? 1 : 0);
+        for (size_t channel = 0; channel < unnestChannels_.size(); ++channel) {
+            const auto& unnestVector = vecBatch->Get(unnestChannels_[channel]);
+
+            auto processVector = [&](auto* inputVector) {
+                for (auto row = 0; row < unnestVector->GetSize(); ++row) {
+                    // Only update rawMaxSizes_ if the array is not null (similar to Velox)
+                    if (!unnestVector->IsNull(row)) {
+                        auto rowSize = inputVector->GetSize(row);
+                        rawMaxSizes_[row] = (rowSize > rawMaxSizes_[row]) ? rowSize : rawMaxSizes_[row];
+                    }
+                    // If null and outer=false, rawMaxSizes_[row] remains 0 (will be filtered)
+                    // If null and outer=true, rawMaxSizes_[row] remains 1 (will be preserved)
+                }
+            };
+
+            if (auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(unnestVector)) {
+                processVector(arrayVector);
+            } else if (auto mapVector = dynamic_cast<omniruntime::vec::MapVector*>(unnestVector)) {
+                processVector(mapVector);
+            }
+        }
+
+        // Calculate numElements: sum of all rawMaxSizes_, but for outer mode, ensure at least input size
+        int32_t totalSizes = std::accumulate(rawMaxSizes_.begin(), rawMaxSizes_.end(), 0);
+        if (outer_) {
+            // For outer mode, ensure we have at least one row per input row (for null/empty arrays)
+            numElements = std::max(totalSizes, vecBatch->Get(0)->GetSize());
+        } else {
+            // For non-outer mode, only count actual elements (null/empty arrays contribute 0)
+            numElements = totalSizes;
+        }
     }
     generateOutput(numElements, vecBatch);
     return 0;
@@ -235,18 +242,37 @@ void UnnestOperator::generateComplexRepeatedValues(int32_t inputSize, auto* inpu
     int32_t index = 0;
     int32_t elementIndex = 0;
     for (auto i = 0; i < inputSize; ++i) {
-        int64_t start = inputVector->GetOffset(i);
-        int64_t end = inputVector->GetOffset(i + 1);
-        for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-            for (auto k = start; k < end; ++k) {
-                if (inputElementVector->IsNull(k)) {
-                    outputElementVector->SetNull(elementIndex++);
-                } else {
-                    auto value = inputElementVector->GetValue(k);
-                    outputElementVector->SetValue(elementIndex++, value);
+        // Only process if rawMaxSizes_[i] > 0 (row will be in output)
+        if (rawMaxSizes_[i] > 0) {
+            if (inputVector->IsNull(i)) {
+                // For null arrays, create empty arrays in output
+                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                    outputVector->SetSize(index++, 0);
+                }
+            } else {
+                int64_t start = inputVector->GetOffset(i);
+                int64_t end = inputVector->GetOffset(i + 1);
+                int64_t length = end - start;
+                
+                // Generate arrays: for each output row, generate one element from the array
+                // If the array has fewer elements than rawMaxSizes_[i], pad with NULL
+                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                    if (j < length) {
+                        // Generate actual array element
+                        if (inputElementVector->IsNull(start + j)) {
+                            outputElementVector->SetNull(elementIndex++);
+                        } else {
+                            auto value = inputElementVector->GetValue(start + j);
+                            outputElementVector->SetValue(elementIndex++, value);
+                        }
+                        outputVector->SetSize(index++, 1);
+                    } else {
+                        // Pad with NULL element (for multi-array unnest when arrays have different sizes)
+                        outputElementVector->SetNull(elementIndex++);
+                        outputVector->SetSize(index++, 1);
+                    }
                 }
             }
-            outputVector->SetSize(index++, end - start);
         }
     }
 }
