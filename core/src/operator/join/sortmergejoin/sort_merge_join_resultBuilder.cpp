@@ -10,6 +10,8 @@
 #include "sort_merge_join_scanner.h"
 #include "util/compiler_util.h"
 #include "vector/array_vector.h"
+#include "vector/row_vector.h"
+#include "type/data_type.h"
 
 namespace omniruntime {
 namespace op {
@@ -218,6 +220,20 @@ void AddValueToBuildVector(BaseVector *inputVector, const DataTypePtr &inputData
         }
         return;
     }
+    if (typeId == type::OMNI_ROW) {
+        const auto *rowType = static_cast<const RowType *>(inputDataType.get());
+        auto *inputRow = static_cast<RowVector *>(inputVector);
+        auto *outputRow = static_cast<RowVector *>(outputVector);
+        if (UNLIKELY(inputRow->IsNull(inputRowId))) {
+            outputRow->SetNull(outputRowId);
+        } else {
+            for (uint32_t i = 0; i < rowType->Size(); i++) {
+                AddValueToBuildVector(inputRow->ChildAt(i).get(), rowType->childAt(i), inputRowId,
+                    outputRow->ChildAt(i).get(), outputRowId);
+            }
+        }
+        return;
+    }
     DYNAMIC_TYPE_DISPATCH(AddValueToVector, typeId, inputVector, inputRowId, outputVector, outputRowId);
 }
 
@@ -236,6 +252,24 @@ void AddValuesToBuildVector(BaseVector *inputVector, const DataTypePtr &inputDat
                 BaseVector *slice = inputArr->GetValue(inputRowId);
                 outputArr->SetValue(outputRowId, slice);
                 delete slice;
+            }
+            ++outputRowId;
+        }
+        return;
+    }
+    if (typeId == type::OMNI_ROW) {
+        const auto *rowType = static_cast<const RowType *>(inputDataType.get());
+        auto *inputRow = static_cast<RowVector *>(inputVector);
+        auto *outputRow = static_cast<RowVector *>(outputVector);
+        for (size_t i = 0; i < rows.size(); i++) {
+            int32_t inputRowId = rows[i];
+            if (UNLIKELY(inputRow->IsNull(inputRowId))) {
+                outputRow->SetNull(outputRowId);
+            } else {
+                for (uint32_t j = 0; j < rowType->Size(); j++) {
+                    AddValueToBuildVector(inputRow->ChildAt(j).get(), rowType->childAt(j), inputRowId,
+                        outputRow->ChildAt(j).get(), outputRowId);
+                }
             }
             ++outputRowId;
         }

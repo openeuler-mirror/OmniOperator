@@ -13,6 +13,8 @@
 #include "operator/join/sortmergejoin/sort_merge_join.h"
 #include "util/test_util.h"
 #include "expression/jsonparser/jsonparser.h"
+#include "type/data_type.h"
+#include "vector/row_vector.h"
 
 using namespace omniruntime::op;
 using namespace std;
@@ -1988,6 +1990,108 @@ TEST(NativeSortMergeJoinTest, TestSmjFullOperatorArrayKey)
     ASSERT_EQ(rightArrCol->GetSize(1), 1);
     std::unique_ptr<vec::BaseVector> rightSlice1(rightArrCol->GetValue(1));
     ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(rightSlice1.get())->GetValue(0), 2);
+    ASSERT_EQ(rightPayloadCol->GetValue(1), 22);
+
+    VectorHelper::FreeVecBatch(result);
+    omniruntime::op::Operator::DeleteOperator(smjOp);
+}
+
+// Full SMJ operator test with struct (ROW<INT, INT>) as join key and output column.
+// Streamed keys (1,1), (1,2), (2,0), (3,0); buffered keys (1,1), (2,0), (4,0), (5,0). Inner match: (1,1) and (2,0) -> 2 rows.
+TEST(NativeSortMergeJoinTest, TestSmjFullOperatorStructKey)
+{
+    using namespace omniruntime::type;
+    std::string blank = "";
+    auto *smjOp = new SortMergeJoinOperator(JoinType::OMNI_JOIN_TYPE_INNER, blank);
+
+    std::vector<DataTypePtr> fieldTypes = { IntType(), IntType() };
+    auto structType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0", "c1"});
+    std::vector<DataTypePtr> streamTypesVector = { structType, IntType() };
+    DataTypes streamedTblTypes(streamTypesVector);
+    std::vector<int32_t> streamedKeysCols = {0};
+    std::vector<int32_t> streamedOutputCols = {0, 1};
+    smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols, streamedTblTypes.GetSize());
+
+    std::vector<DataTypePtr> bufferTypesVector = { structType, IntType() };
+    DataTypes bufferedTblTypes(bufferTypesVector);
+    std::vector<int32_t> bufferedKeysCols = {0};
+    std::vector<int32_t> bufferedOutputCols = {0, 1};
+    smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols, bufferedTblTypes.GetSize());
+    smjOp->InitScannerAndResultBuilder(nullptr);
+
+    const int32_t dataSize = 4;
+    // Streamed: key (1,1), (1,2), (2,0), (3,0); payload 111, 11, 1, 0
+    int32_t streamKeyCol0[] = {1, 1, 2, 3};
+    int32_t streamKeyCol1[] = {1, 2, 0, 0};
+    auto *streamKeyChild0 = CreateVector<int32_t>(dataSize, streamKeyCol0);
+    auto *streamKeyChild1 = CreateVector<int32_t>(dataSize, streamKeyCol1);
+    auto *streamKeyRowVec = new vec::RowVector(dataSize);
+    streamKeyRowVec->AddChild(std::shared_ptr<vec::BaseVector>(streamKeyChild0));
+    streamKeyRowVec->AddChild(std::shared_ptr<vec::BaseVector>(streamKeyChild1));
+    int32_t streamedPayload[] = {111, 11, 1, 0};
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(streamKeyRowVec);
+    streamedVecBatch->Append(CreateVector<int32_t>(dataSize, streamedPayload));
+
+    // Buffered: key (1,1), (2,0), (4,0), (5,0); payload 11, 22, 33, 44
+    int32_t bufferKeyCol0[] = {1, 2, 4, 5};
+    int32_t bufferKeyCol1[] = {1, 0, 0, 0};
+    auto *bufferKeyChild0 = CreateVector<int32_t>(dataSize, bufferKeyCol0);
+    auto *bufferKeyChild1 = CreateVector<int32_t>(dataSize, bufferKeyCol1);
+    auto *bufferKeyRowVec = new vec::RowVector(dataSize);
+    bufferKeyRowVec->AddChild(std::shared_ptr<vec::BaseVector>(bufferKeyChild0));
+    bufferKeyRowVec->AddChild(std::shared_ptr<vec::BaseVector>(bufferKeyChild1));
+    int32_t bufferPayload[] = {11, 22, 33, 44};
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(bufferKeyRowVec);
+    bufferedVecBatch->Append(CreateVector<int32_t>(dataSize, bufferPayload));
+
+    int32_t addInputRetCode = smjOp->AddStreamedTableInput(streamedVecBatch);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    addInputRetCode = smjOp->AddBufferedTableInput(bufferedVecBatch);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
+
+    VectorBatch *streamedEof = CreateEmptyVectorBatch(streamedTblTypes);
+    addInputRetCode = smjOp->AddStreamedTableInput(streamedEof);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    VectorBatch *bufferedEof = CreateEmptyVectorBatch(bufferedTblTypes);
+    addInputRetCode = smjOp->AddBufferedTableInput(bufferedEof);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH));
+    ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
+
+    VectorBatch *result = nullptr;
+    smjOp->GetOutput(&result);
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(result->GetVectorCount(), 4);
+    ASSERT_EQ(result->GetRowCount(), 2);
+
+    // Result columns: left struct, left int, right struct, right int. Row 0: (1,1), 111, (1,1), 11; Row 1: (2,0), 1, (2,0), 22
+    auto *leftStructCol = reinterpret_cast<vec::RowVector *>(result->Get(0));
+    auto *leftPayloadCol = reinterpret_cast<vec::Vector<int32_t> *>(result->Get(1));
+    auto *rightStructCol = reinterpret_cast<vec::RowVector *>(result->Get(2));
+    auto *rightPayloadCol = reinterpret_cast<vec::Vector<int32_t> *>(result->Get(3));
+
+    ASSERT_FALSE(leftStructCol->IsNull(0));
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(leftStructCol->ChildAt(0).get())->GetValue(0), 1);
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(leftStructCol->ChildAt(1).get())->GetValue(0), 1);
+    ASSERT_EQ(leftPayloadCol->GetValue(0), 111);
+    ASSERT_FALSE(rightStructCol->IsNull(0));
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(rightStructCol->ChildAt(0).get())->GetValue(0), 1);
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(rightStructCol->ChildAt(1).get())->GetValue(0), 1);
+    ASSERT_EQ(rightPayloadCol->GetValue(0), 11);
+
+    ASSERT_FALSE(leftStructCol->IsNull(1));
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(leftStructCol->ChildAt(0).get())->GetValue(1), 2);
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(leftStructCol->ChildAt(1).get())->GetValue(1), 0);
+    ASSERT_EQ(leftPayloadCol->GetValue(1), 1);
+    ASSERT_FALSE(rightStructCol->IsNull(1));
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(rightStructCol->ChildAt(0).get())->GetValue(1), 2);
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(rightStructCol->ChildAt(1).get())->GetValue(1), 0);
     ASSERT_EQ(rightPayloadCol->GetValue(1), 22);
 
     VectorHelper::FreeVecBatch(result);
