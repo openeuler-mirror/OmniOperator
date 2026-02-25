@@ -56,6 +56,8 @@ public class FunctionType extends Constant {
     public static final FunctionType OMNI_AGGREGATION_TYPE_COVAR_SAMP = next();
     public static final FunctionType OMNI_AGGREGATION_TYPE_COLLECT_SET = next();
     public static final FunctionType OMNI_AGGREGATION_TYPE_COLLECT_LIST = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_KURTOSIS = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_SKEWNESS = next();
 
     public FunctionType(int value) {
         super(value);

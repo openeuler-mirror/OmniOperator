@@ -38,4 +38,6 @@
 #include "operator/aggregation/aggregator/covar_samp_aggregator.h"
 #include "operator/aggregation/aggregator/collect_set_aggregator.h"
 #include "operator/aggregation/aggregator/collect_list_aggregator.h"
+#include "operator/aggregation/aggregator/kurtosis_aggregator.h"
+#include "operator/aggregation/aggregator/skewness_aggregator.h"
 #endif // OMNI_RUNTIME_ALL_AGGREGATORS_H

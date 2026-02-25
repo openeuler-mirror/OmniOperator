@@ -590,6 +590,18 @@ class ApproxCountDistinctAggregatorFactory : public AggregatorFactory {
         bool isOverflowAsNull = true) override;
 };
 
+class KurtosisAggregatorFactory : public TypedAggregatorFactory<KurtosisAggregator> {
+public:
+    KurtosisAggregatorFactory() : TypedAggregatorFactory<KurtosisAggregator>() {}
+    ~KurtosisAggregatorFactory() override = default;
+};
+
+class SkewnessAggregatorFactory : public TypedAggregatorFactory<SkewnessAggregator> {
+public:
+    SkewnessAggregatorFactory() : TypedAggregatorFactory<SkewnessAggregator>() {}
+    ~SkewnessAggregatorFactory() override = default;
+};
+
 template <class T> class MaskAggregatorFactory : public AggregatorFactory {
 public:
     explicit MaskAggregatorFactory(int32_t maskCol) : maskColumnId(maskCol), realFactory(std::make_unique<T>()) {}
