@@ -84,6 +84,9 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
             case OMNI_BYTE:
                 keyCompareFuncs[i] = (OperatorUtil::CompareValue<int8_t, true, false, true>);
                 break;
+            case OMNI_ARRAY:
+                keyCompareFuncs[i] = (OperatorUtil::CompareArrayValue);
+                break;
             default:
                 throw omniruntime::exception::OmniException("sort merge join scanner",
                     "unsupport compare funct in smj");

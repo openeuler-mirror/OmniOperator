@@ -801,7 +801,12 @@ VectorBatch *CreateEmptyVectorBatch(const DataTypes &dataTypes)
     auto vectorCnt = dataTypes.GetSize();
     BaseVector *vectors[vectorCnt];
     for (int32_t i = 0; i < vectorCnt; ++i) {
-        vectors[i] = VectorHelper::CreateVector(OMNI_FLAT, dataTypeIds[i], 0);
+        int32_t typeId = dataTypeIds[i];
+        if (typeId == OMNI_ARRAY || typeId == OMNI_MAP || typeId == OMNI_ROW) {
+            vectors[i] = VectorHelper::CreateComplexVector(dataTypes.GetType(i).get(), 0);
+        } else {
+            vectors[i] = VectorHelper::CreateVector(OMNI_FLAT, typeId, 0);
+        }
         vectorBatch->Append(std::move(vectors[i]));
     }
     return vectorBatch;

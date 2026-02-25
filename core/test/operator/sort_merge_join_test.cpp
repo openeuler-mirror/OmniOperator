@@ -3,6 +3,7 @@
  * Description: ...
  */
 
+#include <memory>
 #include <vector>
 #include "gtest/gtest.h"
 #include "vector/vector_helper.h"
@@ -1879,6 +1880,117 @@ TEST(NativeSortMergeJoinTest, TestSmjOneLeftEqualMultiRight)
     }
     VectorHelper::FreeVecBatch(result);
 
+    omniruntime::op::Operator::DeleteOperator(smjOp);
+}
+
+// Full SMJ operator test with array as join key and output column.
+// Streamed keys [1], [1,2], [2], [3]; buffered keys [1], [2], [4], [5]. Inner match: [1] and [2] -> 2 rows.
+TEST(NativeSortMergeJoinTest, TestSmjFullOperatorArrayKey)
+{
+    std::string blank = "";
+    auto *smjOp = new SortMergeJoinOperator(JoinType::OMNI_JOIN_TYPE_INNER, blank);
+
+    std::vector<DataTypePtr> streamTypesVector = { ArrayDataType(IntType()), IntType() };
+    DataTypes streamedTblTypes(streamTypesVector);
+    std::vector<int32_t> streamedKeysCols = {0};
+    std::vector<int32_t> streamedOutputCols = {0, 1};
+    smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols, streamedTblTypes.GetSize());
+
+    std::vector<DataTypePtr> bufferTypesVector = { ArrayDataType(IntType()), IntType() };
+    DataTypes bufferedTblTypes(bufferTypesVector);
+    std::vector<int32_t> bufferedKeysCols = {0};
+    std::vector<int32_t> bufferedOutputCols = {0, 1};
+    smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols, bufferedTblTypes.GetSize());
+    smjOp->InitScannerAndResultBuilder(nullptr);
+
+    const int32_t dataSize = 4;
+    // Streamed: key [1], [1,2], [2], [3]; payload 111, 11, 1, 0
+    int32_t streamKeyElements[] = {1, 1, 2, 2, 3};
+    auto *streamKeyElemVec = CreateVector<int32_t>(5, streamKeyElements);
+    auto *streamKeyArrayVec = new vec::ArrayVector(dataSize, std::shared_ptr<vec::BaseVector>(streamKeyElemVec));
+    streamKeyArrayVec->SetOffset(0, 0);
+    streamKeyArrayVec->SetSize(0, 1);
+    streamKeyArrayVec->SetOffset(1, 1);
+    streamKeyArrayVec->SetSize(1, 2);
+    streamKeyArrayVec->SetOffset(2, 3);
+    streamKeyArrayVec->SetSize(2, 1);
+    streamKeyArrayVec->SetOffset(3, 4);
+    streamKeyArrayVec->SetSize(3, 1);
+    int32_t streamedPayload[] = {111, 11, 1, 0};
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(streamKeyArrayVec);
+    streamedVecBatch->Append(CreateVector<int32_t>(dataSize, streamedPayload));
+
+    // Buffered: key [1], [2], [4], [5]; payload 11, 22, 33, 44
+    int32_t bufferKeyElements[] = {1, 2, 4, 5};
+    auto *bufferKeyElemVec = CreateVector<int32_t>(4, bufferKeyElements);
+    auto *bufferKeyArrayVec = new vec::ArrayVector(dataSize, std::shared_ptr<vec::BaseVector>(bufferKeyElemVec));
+    bufferKeyArrayVec->SetOffset(0, 0);
+    bufferKeyArrayVec->SetSize(0, 1);
+    bufferKeyArrayVec->SetOffset(1, 1);
+    bufferKeyArrayVec->SetSize(1, 1);
+    bufferKeyArrayVec->SetOffset(2, 2);
+    bufferKeyArrayVec->SetSize(2, 1);
+    bufferKeyArrayVec->SetOffset(3, 3);
+    bufferKeyArrayVec->SetSize(3, 1);
+    int32_t bufferPayload[] = {11, 22, 33, 44};
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(bufferKeyArrayVec);
+    bufferedVecBatch->Append(CreateVector<int32_t>(dataSize, bufferPayload));
+
+    int32_t addInputRetCode = smjOp->AddStreamedTableInput(streamedVecBatch);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    addInputRetCode = smjOp->AddBufferedTableInput(bufferedVecBatch);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
+
+    VectorBatch *streamedEof = CreateEmptyVectorBatch(streamedTblTypes);
+    addInputRetCode = smjOp->AddStreamedTableInput(streamedEof);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    VectorBatch *bufferedEof = CreateEmptyVectorBatch(bufferedTblTypes);
+    addInputRetCode = smjOp->AddBufferedTableInput(bufferedEof);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH));
+    ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
+
+    VectorBatch *result = nullptr;
+    smjOp->GetOutput(&result);
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(result->GetVectorCount(), 4);
+    ASSERT_EQ(result->GetRowCount(), 2);
+
+    // Result columns: left array, left int, right array, right int. Row 0: [1], 111, [1], 11; Row 1: [2], 1, [2], 22
+    auto *leftArrCol = reinterpret_cast<vec::ArrayVector *>(result->Get(0));
+    auto *leftPayloadCol = reinterpret_cast<vec::Vector<int32_t> *>(result->Get(1));
+    auto *rightArrCol = reinterpret_cast<vec::ArrayVector *>(result->Get(2));
+    auto *rightPayloadCol = reinterpret_cast<vec::Vector<int32_t> *>(result->Get(3));
+
+    ASSERT_FALSE(leftArrCol->IsNull(0));
+    ASSERT_EQ(leftArrCol->GetSize(0), 1);
+    std::unique_ptr<vec::BaseVector> slice0(leftArrCol->GetValue(0));
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(slice0.get())->GetValue(0), 1);
+    ASSERT_EQ(leftPayloadCol->GetValue(0), 111);
+    ASSERT_FALSE(rightArrCol->IsNull(0));
+    ASSERT_EQ(rightArrCol->GetSize(0), 1);
+    std::unique_ptr<vec::BaseVector> rightSlice0(rightArrCol->GetValue(0));
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(rightSlice0.get())->GetValue(0), 1);
+    ASSERT_EQ(rightPayloadCol->GetValue(0), 11);
+
+    ASSERT_FALSE(leftArrCol->IsNull(1));
+    ASSERT_EQ(leftArrCol->GetSize(1), 1);
+    std::unique_ptr<vec::BaseVector> slice1(leftArrCol->GetValue(1));
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(slice1.get())->GetValue(0), 2);
+    ASSERT_EQ(leftPayloadCol->GetValue(1), 1);
+    ASSERT_FALSE(rightArrCol->IsNull(1));
+    ASSERT_EQ(rightArrCol->GetSize(1), 1);
+    std::unique_ptr<vec::BaseVector> rightSlice1(rightArrCol->GetValue(1));
+    ASSERT_EQ(reinterpret_cast<vec::Vector<int32_t> *>(rightSlice1.get())->GetValue(0), 2);
+    ASSERT_EQ(rightPayloadCol->GetValue(1), 22);
+
+    VectorHelper::FreeVecBatch(result);
     omniruntime::op::Operator::DeleteOperator(smjOp);
 }
 }
