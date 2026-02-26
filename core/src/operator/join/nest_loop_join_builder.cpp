@@ -100,12 +100,16 @@ int32_t NestedLoopJoinBuildOperator::GetOutput(omniruntime::vec::VectorBatch **o
         int32_t batchCnt = inputVectorBatches.size();
         for (int32_t i = 0; i < vecCnt; i++) {
             BaseVector *vector = inputVectorBatches[0]->Get(i);
-            DataTypeId vectorDateTypeId = vector->GetTypeId();
-            BaseVector *destVector = VectorHelper::CreateVector(OMNI_FLAT, vectorDateTypeId, inputRowCnt);
+            DataTypeId vectorDataTypeId = vector->GetTypeId();
+            BaseVector *destVector = VectorHelper::CreateComplexVector(buildTypes.Get()[i].get(), inputRowCnt);
             int32_t index = 0;
             for (int32_t j = 0; j < batchCnt; j++) {
                 BaseVector *sourceVector = inputVectorBatches[j]->Get(i);
-                DYNAMIC_TYPE_DISPATCH(CopyVectorToVector, vectorDateTypeId, destVector, index, sourceVector);
+                if (vectorDataTypeId == OMNI_ARRAY || vectorDataTypeId == OMNI_MAP || vectorDataTypeId == OMNI_ROW) {
+                    VectorHelper::AppendVector(destVector, index, sourceVector, inputVectorBatches[j]->GetRowCount());
+                } else {
+                    DYNAMIC_TYPE_DISPATCH(CopyVectorToVector, vectorDataTypeId, destVector, index, sourceVector);
+                }
                 index += inputVectorBatches[j]->GetRowCount();
             }
             vectorBatchPtr->Append(destVector);
@@ -117,8 +121,7 @@ int32_t NestedLoopJoinBuildOperator::GetOutput(omniruntime::vec::VectorBatch **o
     } else {
         auto &buildTypeList = buildTypes.Get();
         for (const DataTypePtr &dataTypePtr : buildTypeList) {
-            DataTypeId vectorDateTypeId = dataTypePtr->GetId();
-            BaseVector *destVector = VectorHelper::CreateVector(OMNI_FLAT, vectorDateTypeId, 0);
+            BaseVector *destVector = VectorHelper::CreateComplexVector(dataTypePtr.get(), 0);
             vectorBatchPtr->Append(destVector);
         }
     }

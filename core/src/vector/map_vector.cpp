@@ -61,7 +61,8 @@ namespace omniruntime::vec {
         return newMapVector;
     }
 
-    void MapVector::Append(MapVector* other, int32_t offset) {
+    void MapVector::Append(MapVector* other, int32_t offset)
+    {
         if (other == nullptr) {
             return;
         }
@@ -80,5 +81,94 @@ namespace omniruntime::vec {
 
         VectorHelper::ExpandElementVector(values.get(), values->GetTypeId(), offset + keyLength);
         VectorHelper::AppendVector(values.get(), offset,other->values.get(), static_cast<int32_t>(keyLength));
+    }
+
+    /* *
+     * Append another mapVector to the current mapVector starting at a specified offset
+     *
+     * @param other Source MapVector to copy from
+     * @param positionOffset Starting index in this vector where data will be written
+     * @param length Number of map entries to copy from source MapVector
+     */
+    void MapVector::Append(BaseVector *other, int positionOffset, int length)
+    {
+        auto *otherMapVector = static_cast<MapVector *>(other);
+
+        if (length <= 0) {
+            return;
+        }
+        if (positionOffset < 0) {
+            std::string message = "Invalid append position";
+            throw OmniException("MAPVECTOR_APPEND_ERROR", message);
+        }
+
+        int32_t newSize = positionOffset + length;
+        Expand(newSize);
+
+        // calculate the total number of key-value pairs that need to be added
+        int64_t totalKeyValuePairs = 0;
+        for (int i = 0; i < length; i++) {
+            int destIndex = positionOffset + i;
+            if (!otherMapVector->IsNull(i)) {
+                totalKeyValuePairs += otherMapVector->GetSize(i);
+            }
+        }
+
+        // obtain the size of the current keys/values
+        int64_t keysSize = GetOffset(positionOffset);
+
+        // if there are any key-value pairs that need to be added
+        if (totalKeyValuePairs > 0) {
+            int64_t newKeysSize = keysSize + totalKeyValuePairs;
+
+            // expand the capacity all at once, and then add the data
+            keys->Expand(newKeysSize);
+            values->Expand(newKeysSize);
+
+            // record the writing position of the current keys/values
+            int64_t currentKeysWritePos = keysSize;
+
+            // traverse each entry of the map
+            for (int i = 0; i < length; i++) {
+                int newIndex = positionOffset + i;
+
+                if (otherMapVector->IsNull(i)) {
+                    SetNull(newIndex);
+                } else {
+                    // obtain the size and offset of the source entry
+                    int64_t sourceSize = otherMapVector->GetSize(i);
+                    int64_t sourceOffset = otherMapVector->GetOffset(i);
+
+                    // set the size and offset of the current map entry
+                    SetSize(newIndex, sourceSize);
+
+                    // add the specific entries to the keys and values
+                    if (sourceSize > 0) {
+                        // obtain the slices of keys and values of the source map
+                        auto sourceKeys = otherMapVector->GetKeyVector();
+                        auto sourceKeysSlice = sourceKeys->Slice(sourceOffset, sourceSize, false);
+                        auto sourceValues = otherMapVector->GetValueVector();
+                        auto sourceValuesSlice = sourceValues->Slice(sourceOffset, sourceSize, false);
+
+                        // append the slices to the current keys and values
+                        VectorHelper::AppendVector(keys.get(), currentKeysWritePos, sourceKeysSlice, sourceSize);
+                        VectorHelper::AppendVector(values.get(), currentKeysWritePos, sourceValuesSlice, sourceSize);
+
+                        // update write position
+                        currentKeysWritePos += sourceSize;
+                    }
+                }
+            }
+        } else {
+            // there is no key-value pair, so just set null or an empty entry.
+            for (int i = 0; i < length; i++) {
+                int newIndex = positionOffset + i;
+                if (otherMapVector->IsNull(i)) {
+                    SetNull(newIndex);
+                } else {
+                    SetSize(newIndex, 0);
+                }
+            }
+        }
     }
 }

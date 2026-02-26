@@ -85,28 +85,6 @@ namespace omniruntime::vec {
             return sliced;
         }
 
-        BaseVector* CopyPositions(const int *positions, int positionOffset, int length)
-        {
-            if (UNLIKELY((positions == nullptr) || (length < 0))) {
-                std::string message("StructVector positions is null or the input length is incorrect: %d.", length);
-                throw OmniException("OPERATOR_RUNTIME_ERROR", message);
-            }
-
-            RowVector* newRowVector = new RowVector(static_cast<int32_t>(length));
-            const int* startPositions = positions + positionOffset;
-            for (int32_t i = 0; i < length; i++) {
-                int position = startPositions[i];
-                if (UNLIKELY(IsNull(position))) {
-                    newRowVector->SetNull(i);
-                }
-            }
-
-            for (int i = 0; i < children_.size(); i++) {
-                newRowVector->AddChild(children_[i]->CopyPositions(positions, positionOffset, length));
-            }
-            return newRowVector;
-        }
-
         void Expand(int32_t needCapacity) override
         {
             if (needCapacity <= size) {
@@ -132,6 +110,14 @@ namespace omniruntime::vec {
             capacity = newCapacity;
             size = needCapacity;
         }
+
+        /* *
+         * Copies the values of the vector at the indicated positions
+         * @param positions
+         * @param offset
+         * @param length
+         */
+        RowVector* CopyPositions(const int *positions, int positionOffset, int length);
 
         void Append(BaseVector *other, int positionOffset, int length);
 
