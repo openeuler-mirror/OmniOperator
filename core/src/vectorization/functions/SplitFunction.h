@@ -22,13 +22,13 @@ public:
     explicit SplitFunction() {}
 
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
-        ExecutionContext *context) const override
+               ExecutionContext *context) const override
     {
-        auto limitArg = args.top();
+        auto limitArg = args.top(); // The limited number of segments
         args.pop();
-        auto delimiterArg = args.top();
+        auto delimiterArg = args.top(); // Separator
         args.pop();
-        auto inputArg = args.top();
+        auto inputArg = args.top(); // The input string vector to be split
         args.pop();
 
         int32_t rowSize = inputArg->GetSize();
@@ -49,15 +49,27 @@ public:
     }
 
 private:
+    /*
+     * Process all rows in batches:
+     *   1. Traverse each input string row
+     *   2. Perform the splitting operation on each non-empty string
+     *   3. Collect all the split elements
+     *   4. Build the final result array
+     */
     void ProcessAllRows(ArrayVector *arrayResult, int32_t rowSize, BaseVector *inputVector,
-        const std::string_view &delimiter, const int32_t limit) const
+                        const std::string_view &delimiter, const int32_t limit) const
     {
-        std::vector<std::string_view> allElements;
-        std::vector<int64_t> offsets = {0};
-
         if (limit < -1) {
             OMNI_THROW("SplitFunction Error:", "Limit must be positive or 0/-1 (got " + std::to_string(limit) + ")");
         }
+
+        // Pre-calculate the offsets, the total number of elements, and the total number of bytes
+        std::vector<int64_t> offsets;
+        offsets.reserve(rowSize + 1);
+        offsets.push_back(0);
+
+        int64_t totalElements = 0;
+        size_t totalBytesNeeded = 0;
 
         for (int32_t row = 0; row < rowSize; ++row) {
             if (inputVector->IsNull(row)) {
@@ -67,16 +79,120 @@ private:
             }
 
             std::string_view inputStr = GetStringValue(inputVector, row);
-            std::vector<std::string_view> splitParts = SplitString(inputStr, delimiter, limit);
 
-            int64_t currentOffset = offsets.back();
-            offsets.push_back(currentOffset + splitParts.size());
-            allElements.insert(allElements.end(), splitParts.begin(), splitParts.end());
+            int32_t count = 0;
+            size_t bytes = 0;
+            CalcSplitInfo(inputStr, delimiter, limit, count, bytes);
+
+            totalElements += count;
+            totalBytesNeeded += bytes;
+            offsets.push_back(offsets.back() + count);
         }
 
-        auto elementVector = CreateElementVector(allElements);
+        // Add a small amount of redundancy (64 bytes) to prevent boundary calculation errors
+        int32_t estimatedCapacity = static_cast<int32_t>(std::min(totalBytesNeeded + 64, static_cast<size_t>(INT32_MAX)));
+
+        // Allocate the element vector in one go to avoid resizing
+        auto elementVector = std::make_shared<Vector<LargeStringContainer<std::string_view>>>(totalElements, estimatedCapacity);
+
+        int64_t currentInsertIndex = 0;
+        for (int32_t row = 0; row < rowSize; ++row) {
+            if (inputVector->IsNull(row)) {
+                continue;
+            }
+
+            std::string_view inputStr = GetStringValue(inputVector, row);
+            FillSplitParts(elementVector.get(), currentInsertIndex, inputStr, delimiter, limit);
+
+            currentInsertIndex = offsets[row + 1];
+        }
+
         SetupArrayVector(arrayResult, offsets, elementVector, rowSize, inputVector);
     }
+
+    // Calculate the total number of elements and the total number of bytes
+    void CalcSplitInfo(std::string_view str, std::string_view delimiter, int32_t limit,
+                       int32_t &outCount, size_t &outBytes) const {
+        outCount = 0;
+        outBytes = 0;
+
+        if (str.empty()) {
+            outCount = 1;
+            outBytes = 0;
+            return;
+        }
+
+        if (delimiter.empty()) {
+            int32_t len = static_cast<int32_t>(str.length());
+            if (limit == -1 || limit >= len) {
+                outCount = len;
+                outBytes = len;
+            } else {
+                outCount = limit;
+                outBytes = limit;
+            }
+            return;
+        }
+
+        size_t start = 0;
+        size_t end = str.find(delimiter);
+        size_t limitSize = static_cast<size_t>(limit);
+
+        while (end != std::string_view::npos && (limit == -1 || outCount < static_cast<int32_t>(limitSize) - 1)) {
+            outBytes += (end - start);
+            outCount++;
+            start = end + delimiter.length();
+            end = str.find(delimiter, start);
+        }
+
+        if (start <= str.length() && (limit == -1 || outCount < static_cast<int32_t>(limitSize))) {
+            outBytes += (str.length() - start);
+            outCount++;
+        }
+
+        if (outCount == 0) outCount = 1;
+    }
+
+    void FillSplitParts(Vector<LargeStringContainer<std::string_view>> *targetVec, int64_t startIndex,
+                        std::string_view str, std::string_view delimiter, int32_t limit) const {
+        if (str.empty()) {
+            std::string_view emptyStr("", 0);
+            targetVec->SetValue(static_cast<int>(startIndex), emptyStr);
+            return;
+        }
+
+        if (delimiter.empty()) {
+            int32_t len = static_cast<int32_t>(str.length());
+            int32_t countToProcess = (limit == -1 || limit == 0 || limit >= len) ? len : limit;
+
+            for (int32_t i = 0; i < countToProcess; ++i) {
+                std::string_view singleChar = str.substr(i, 1);
+                targetVec->SetValue(static_cast<int>(startIndex + i), singleChar);
+            }
+            return;
+        }
+
+        int32_t count = 0;
+        size_t start = 0;
+        size_t end = str.find(delimiter);
+        size_t limitSize = static_cast<size_t>(limit);
+
+        auto setElement = [&](std::string_view part) {
+            targetVec->SetValue(startIndex + count, part);
+            count++;
+        };
+
+        while (end != std::string_view::npos && (limit == -1 || count < limitSize - 1)) {
+            setElement(str.substr(start, end - start));
+            start = end + delimiter.length();
+            end = str.find(delimiter, start);
+        }
+
+        if (start <= str.length() && (limit == -1 || count < limitSize)) {
+            setElement(str.substr(start));
+        }
+    }
+
 
     std::string_view GetStringValue(BaseVector *vector, int32_t row) const
     {
@@ -87,7 +203,7 @@ private:
             }
             case OMNI_DICTIONARY: {
                 auto *dictVector = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(
-                    vector);
+                        vector);
                 return dictVector->GetValue(row);
             }
             case OMNI_ENCODING_CONST: {
@@ -98,22 +214,8 @@ private:
         }
     }
 
-    std::shared_ptr<BaseVector> CreateElementVector(const std::vector<std::string_view> &allElements) const
-    {
-        auto elementVector = std::make_shared<Vector<LargeStringContainer<std::string_view>>>(allElements.size());
-        for (size_t i = 0; i < allElements.size(); ++i) {
-            auto element = allElements[i];
-            if (element.data() == nullptr || element.data()[0] == '\0') {
-                elementVector->SetNull(i);
-            } else {
-                elementVector->SetValue(i, element);
-            }
-        }
-        return elementVector;
-    }
-
     void SetupArrayVector(ArrayVector *arrayResult, const std::vector<int64_t> &offsets,
-        const std::shared_ptr<BaseVector> &elementVector, int32_t rowSize, BaseVector *inputVector) const
+                          const std::shared_ptr<BaseVector> &elementVector, int32_t rowSize, BaseVector *inputVector) const
     {
         for (size_t i = 0; i < offsets.size(); ++i) {
             arrayResult->SetOffset(i, offsets[i]);
@@ -126,59 +228,6 @@ private:
                 arrayResult->SetNotNull(row);
             }
         }
-    }
-
-    std::vector<std::string_view> SplitString(std::string_view str, std::string_view delimiter, int32_t limit) const
-    {
-        if (delimiter.empty()) {
-            return SplitSingleCharacters(str, limit);
-        }
-        return SplitWithDelimiter(str, delimiter, limit);
-    }
-
-    std::vector<std::string_view> SplitSingleCharacters(std::string_view str, int32_t limit) const
-    {
-        std::vector<std::string_view> result;
-        if (limit == -1 || limit > static_cast<int32_t>(str.length())) {
-            for (size_t i = 0; i < str.length(); ++i) {
-                result.push_back(str.substr(i, 1));
-            }
-        } else {
-            for (int32_t i = 0; i < limit - 1 && i < static_cast<int32_t>(str.length()); ++i) {
-                result.push_back(str.substr(i, 1));
-            }
-            if (limit - 1 < static_cast<int32_t>(str.length())) {
-                result.push_back(str.substr(limit - 1));
-            }
-        }
-
-        if (limit == -1 || result.size() < static_cast<size_t>(limit)) {
-            result.push_back(std::string_view(""));
-        }
-
-        return result;
-    }
-
-    std::vector<std::string_view> SplitWithDelimiter(std::string_view str, std::string_view delimiter,
-        int32_t limit) const
-    {
-        std::vector<std::string_view> result;
-        size_t start = 0;
-        size_t end = str.find(delimiter);
-        size_t limitSize = static_cast<size_t>(limit);
-
-        while (end != std::string_view::npos && (limit == -1 || result.size() < limitSize - 1)) {
-            result.push_back(str.substr(start, end - start));
-            start = end + delimiter.length();
-            end = str.find(delimiter, start);
-        }
-
-        if (start <= str.length() && (limit == -1 || result.size() < limitSize)) {
-            std::string_view remaining = str.substr(start);
-            result.push_back(remaining);
-        }
-
-        return result;
     }
 };
 }
