@@ -5549,4 +5549,460 @@ TEST(NativeOmniWindowOperatorTest, testArrayPartitionKeyWithNullElements)
     delete operatorFactory;
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
+
+// =====================================================================================
+// Struct type window function tests
+// =====================================================================================
+
+// Test 1: Basic struct as partition key
+// ROW_NUMBER() OVER (PARTITION BY struct<int,varchar> ORDER BY sort_col)
+// 2 partitions: (1,"A") and (2,"B"), 3 rows each.
+// Expected: each partition gets row_number 1, 2, 3.
+TEST(NativeOmniWindowOperatorTest, testRowNumberWithStructPartition)
+{
+    const int32_t ROW_COUNT = 6;
+    DataTypePtr structType = std::make_shared<RowType>(
+        std::vector<DataTypePtr>{IntType(), VarcharType(10)},
+        std::vector<std::string>());
+    DataTypes sourceTypes(std::vector<DataTypePtr>{structType, LongType(), DoubleType()});
+
+    int32_t structK1[ROW_COUNT] = {1, 2, 1, 2, 1, 2};
+    const char *structTag[ROW_COUNT] = {"A", "B", "A", "B", "A", "B"};
+    int64_t sortKeys[ROW_COUNT] = {10, 20, 30, 40, 50, 60};
+    double payload[ROW_COUNT] = {1.1, 2.2, 3.3, 4.4, 5.5, 6.6};
+
+    auto *vecBatch = new VectorBatch(ROW_COUNT);
+
+    auto *field1Vec = new Vector<int32_t>(ROW_COUNT);
+    auto *field2Vec = new Vector<LargeStringContainer<std::string_view>>(ROW_COUNT);
+    for (int i = 0; i < ROW_COUNT; i++) {
+        field1Vec->SetValue(i, structK1[i]);
+        field2Vec->SetValue(i, std::string_view(structTag[i]));
+    }
+    std::vector<std::shared_ptr<BaseVector>> structChildren;
+    structChildren.push_back(std::shared_ptr<BaseVector>(field1Vec));
+    structChildren.push_back(std::shared_ptr<BaseVector>(field2Vec));
+    vecBatch->Append(new RowVector(ROW_COUNT, structChildren));
+
+    auto *sortVec = new Vector<int64_t>(ROW_COUNT);
+    auto *payloadVec = new Vector<double>(ROW_COUNT);
+    for (int i = 0; i < ROW_COUNT; i++) {
+        sortVec->SetValue(i, sortKeys[i]);
+        payloadVec->SetValue(i, payload[i]);
+    }
+    vecBatch->Append(sortVec);
+    vecBatch->Append(payloadVec);
+
+    int32_t outputCols[3] = {0, 1, 2};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {0};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>{structType, LongType(), DoubleType(), LongType()});
+    int32_t argumentChannels[0] = {};
+
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(
+        sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 1,
+        preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0,
+        windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels,
+        windowFrameEndTypes, windowFrameEndChannels);
+
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    ASSERT_NE(outputVecBatch, nullptr);
+    EXPECT_EQ(outputVecBatch->GetRowCount(), ROW_COUNT);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 4);
+
+    auto *outStruct = static_cast<RowVector *>(outputVecBatch->Get(0));
+    auto *outK1 = static_cast<Vector<int32_t> *>(outStruct->ChildAt(0).get());
+    auto *outTag = static_cast<Vector<LargeStringContainer<std::string_view>> *>(outStruct->ChildAt(1).get());
+    auto *outSort = static_cast<Vector<int64_t> *>(outputVecBatch->Get(1));
+    auto *outRowNum = static_cast<Vector<int64_t> *>(outputVecBatch->Get(3));
+
+    std::map<std::pair<int32_t, std::string>, std::vector<std::pair<int64_t, int64_t>>> partitionRows;
+    for (int i = 0; i < ROW_COUNT; i++) {
+        int32_t k1 = outK1->GetValue(i);
+        std::string tag(outTag->GetValue(i));
+        int64_t sk = outSort->GetValue(i);
+        int64_t rn = outRowNum->GetValue(i);
+        partitionRows[{k1, tag}].push_back({sk, rn});
+    }
+
+    EXPECT_EQ(partitionRows.size(), 2u);
+
+    for (auto &kv : partitionRows) {
+        std::sort(kv.second.begin(), kv.second.end(),
+                  [](const std::pair<int64_t, int64_t> &a, const std::pair<int64_t, int64_t> &b) {
+                      return a.first < b.first;
+                  });
+        EXPECT_EQ(kv.second.size(), 3u) << "Partition (" << kv.first.first << "," << kv.first.second << ")";
+        for (size_t j = 0; j < kv.second.size(); j++) {
+            EXPECT_EQ(kv.second[j].second, static_cast<int64_t>(j + 1))
+                << "Partition (" << kv.first.first << "," << kv.first.second << ") sort_key=" << kv.second[j].first;
+        }
+    }
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
+// Test 2: RANK with basic struct partition (single-field struct, ties in sort key)
+// RANK() OVER (PARTITION BY struct<int> ORDER BY sort_col)
+// Partition 1 (k=1): sort 10,10,20,20 -> rank 1,1,3,3
+// Partition 2 (k=2): sort 30,30,40,40 -> rank 1,1,3,3
+TEST(NativeOmniWindowOperatorTest, testRankWithStructPartitionAndSort)
+{
+    const int32_t ROW_COUNT = 8;
+    DataTypePtr structType = std::make_shared<RowType>(
+        std::vector<DataTypePtr>{IntType()},
+        std::vector<std::string>());
+    DataTypes sourceTypes(std::vector<DataTypePtr>{structType, LongType(), DoubleType()});
+
+    int32_t structK[ROW_COUNT] = {1, 1, 1, 1, 2, 2, 2, 2};
+    int64_t sortKeys[ROW_COUNT] = {10, 10, 20, 20, 30, 30, 40, 40};
+    double payload[ROW_COUNT] = {1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 4.1, 4.2};
+
+    auto *vecBatch = new VectorBatch(ROW_COUNT);
+
+    auto *fieldVec = new Vector<int32_t>(ROW_COUNT);
+    for (int i = 0; i < ROW_COUNT; i++) {
+        fieldVec->SetValue(i, structK[i]);
+    }
+    std::vector<std::shared_ptr<BaseVector>> structChildren;
+    structChildren.push_back(std::shared_ptr<BaseVector>(fieldVec));
+    vecBatch->Append(new RowVector(ROW_COUNT, structChildren));
+
+    auto *sortVec = new Vector<int64_t>(ROW_COUNT);
+    auto *payloadVec = new Vector<double>(ROW_COUNT);
+    for (int i = 0; i < ROW_COUNT; i++) {
+        sortVec->SetValue(i, sortKeys[i]);
+        payloadVec->SetValue(i, payload[i]);
+    }
+    vecBatch->Append(sortVec);
+    vecBatch->Append(payloadVec);
+
+    int32_t outputCols[3] = {0, 1, 2};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {0};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_RANK};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>{structType, LongType(), DoubleType(), LongType()});
+    int32_t argumentChannels[0] = {};
+
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(
+        sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 1,
+        preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0,
+        windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels,
+        windowFrameEndTypes, windowFrameEndChannels);
+
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    ASSERT_NE(outputVecBatch, nullptr);
+    EXPECT_EQ(outputVecBatch->GetRowCount(), ROW_COUNT);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 4);
+
+    auto *outStruct = static_cast<RowVector *>(outputVecBatch->Get(0));
+    auto *outK = static_cast<Vector<int32_t> *>(outStruct->ChildAt(0).get());
+    auto *outSort = static_cast<Vector<int64_t> *>(outputVecBatch->Get(1));
+    auto *outRank = static_cast<Vector<int64_t> *>(outputVecBatch->Get(3));
+
+    std::map<int32_t, std::vector<std::pair<int64_t, int64_t>>> partitionRows;
+    for (int i = 0; i < ROW_COUNT; i++) {
+        int32_t k = outK->GetValue(i);
+        int64_t sk = outSort->GetValue(i);
+        int64_t r = outRank->GetValue(i);
+        partitionRows[k].push_back({sk, r});
+    }
+
+    EXPECT_EQ(partitionRows.size(), 2u);
+
+    const int64_t expectedRanksByPartition[2][4] = {{1, 1, 3, 3}, {1, 1, 3, 3}};
+    int idx = 0;
+    for (auto &kv : partitionRows) {
+        std::sort(kv.second.begin(), kv.second.end(),
+                  [](const std::pair<int64_t, int64_t> &a, const std::pair<int64_t, int64_t> &b) {
+                      return a.first < b.first;
+                  });
+        EXPECT_EQ(kv.second.size(), 4u) << "Partition k=" << kv.first;
+        for (size_t j = 0; j < 4; j++) {
+            EXPECT_EQ(kv.second[j].second, expectedRanksByPartition[idx][j])
+                << "Partition k=" << kv.first << " sort_key=" << kv.second[j].first << " j=" << j;
+        }
+        idx++;
+    }
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
+// Test 3: Nested struct (struct-in-struct) as partition key
+// ROW_NUMBER() OVER (PARTITION BY struct<int, struct<int, varchar>> ORDER BY sort_col)
+// Outer struct field 0: int group_id
+// Outer struct field 1: inner struct<int sub_id, varchar tag>
+// Partition A: (1, (10, "X")), Partition B: (2, (20, "Y")), 3 rows each.
+TEST(NativeOmniWindowOperatorTest, testRowNumberWithNestedStructPartition)
+{
+    const int32_t ROW_COUNT = 6;
+
+    DataTypePtr innerStructType = std::make_shared<RowType>(
+        std::vector<DataTypePtr>{IntType(), VarcharType(10)},
+        std::vector<std::string>());
+    DataTypePtr outerStructType = std::make_shared<RowType>(
+        std::vector<DataTypePtr>{IntType(), innerStructType},
+        std::vector<std::string>());
+    DataTypes sourceTypes(std::vector<DataTypePtr>{outerStructType, LongType()});
+
+    // Row layout: rows 0,2,4 -> partition A; rows 1,3,5 -> partition B
+    int32_t outerGroupId[ROW_COUNT] = {1, 2, 1, 2, 1, 2};
+    int32_t innerSubId[ROW_COUNT] = {10, 20, 10, 20, 10, 20};
+    const char *innerTag[ROW_COUNT] = {"X", "Y", "X", "Y", "X", "Y"};
+    int64_t sortKeys[ROW_COUNT] = {100, 200, 300, 400, 500, 600};
+
+    auto *vecBatch = new VectorBatch(ROW_COUNT);
+
+    // Build inner struct children
+    auto *innerField1 = new Vector<int32_t>(ROW_COUNT);
+    auto *innerField2 = new Vector<LargeStringContainer<std::string_view>>(ROW_COUNT);
+    for (int i = 0; i < ROW_COUNT; i++) {
+        innerField1->SetValue(i, innerSubId[i]);
+        innerField2->SetValue(i, std::string_view(innerTag[i]));
+    }
+    std::vector<std::shared_ptr<BaseVector>> innerChildren;
+    innerChildren.push_back(std::shared_ptr<BaseVector>(innerField1));
+    innerChildren.push_back(std::shared_ptr<BaseVector>(innerField2));
+    auto *innerRow = new RowVector(ROW_COUNT, innerChildren);
+
+    // Build outer struct children
+    auto *outerField1 = new Vector<int32_t>(ROW_COUNT);
+    for (int i = 0; i < ROW_COUNT; i++) {
+        outerField1->SetValue(i, outerGroupId[i]);
+    }
+    std::vector<std::shared_ptr<BaseVector>> outerChildren;
+    outerChildren.push_back(std::shared_ptr<BaseVector>(outerField1));
+    outerChildren.push_back(std::shared_ptr<BaseVector>(innerRow));
+    vecBatch->Append(new RowVector(ROW_COUNT, outerChildren));
+
+    auto *sortVec = new Vector<int64_t>(ROW_COUNT);
+    for (int i = 0; i < ROW_COUNT; i++) {
+        sortVec->SetValue(i, sortKeys[i]);
+    }
+    vecBatch->Append(sortVec);
+
+    int32_t outputCols[2] = {0, 1};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {0};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>{outerStructType, LongType(), LongType()});
+    int32_t argumentChannels[0] = {};
+
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(
+        sourceTypes, outputCols, 2, windowFunctionTypes, 1, partitionCols, 1,
+        preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0,
+        windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels,
+        windowFrameEndTypes, windowFrameEndChannels);
+
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    ASSERT_NE(outputVecBatch, nullptr);
+    EXPECT_EQ(outputVecBatch->GetRowCount(), ROW_COUNT);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 3);
+
+    auto *outOuterStruct = static_cast<RowVector *>(outputVecBatch->Get(0));
+    auto *outGroupId = static_cast<Vector<int32_t> *>(outOuterStruct->ChildAt(0).get());
+    auto *outInnerStruct = static_cast<RowVector *>(outOuterStruct->ChildAt(1).get());
+    auto *outSubId = static_cast<Vector<int32_t> *>(outInnerStruct->ChildAt(0).get());
+    auto *outInnerTag = static_cast<Vector<LargeStringContainer<std::string_view>> *>(outInnerStruct->ChildAt(1).get());
+    auto *outSort = static_cast<Vector<int64_t> *>(outputVecBatch->Get(1));
+    auto *outRowNum = static_cast<Vector<int64_t> *>(outputVecBatch->Get(2));
+
+    // Collect results keyed by (group_id, sub_id, tag)
+    using PartKey = std::tuple<int32_t, int32_t, std::string>;
+    std::map<PartKey, std::vector<std::pair<int64_t, int64_t>>> partitionRows;
+    for (int i = 0; i < ROW_COUNT; i++) {
+        PartKey key{outGroupId->GetValue(i), outSubId->GetValue(i), std::string(outInnerTag->GetValue(i))};
+        partitionRows[key].push_back({outSort->GetValue(i), outRowNum->GetValue(i)});
+    }
+
+    EXPECT_EQ(partitionRows.size(), 2u);
+
+    for (auto &kv : partitionRows) {
+        std::sort(kv.second.begin(), kv.second.end(),
+                  [](const std::pair<int64_t, int64_t> &a, const std::pair<int64_t, int64_t> &b) {
+                      return a.first < b.first;
+                  });
+        EXPECT_EQ(kv.second.size(), 3u)
+            << "Partition (" << std::get<0>(kv.first) << ",(" << std::get<1>(kv.first)
+            << ",\"" << std::get<2>(kv.first) << "\"))";
+        for (size_t j = 0; j < kv.second.size(); j++) {
+            EXPECT_EQ(kv.second[j].second, static_cast<int64_t>(j + 1))
+                << "sort_key=" << kv.second[j].first;
+        }
+    }
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
+// Test 4: Struct containing an array field as partition key
+// ROW_NUMBER() OVER (PARTITION BY struct<int, array<int>> ORDER BY sort_col)
+// Partition A: (1, [10,20]), Partition B: (2, [30,40]), 3 rows each.
+TEST(NativeOmniWindowOperatorTest, testRowNumberWithStructContainingArrayPartition)
+{
+    const int32_t ROW_COUNT = 6;
+
+    DataTypePtr arrayType = std::make_shared<omniruntime::type::ArrayType>(IntType());
+    DataTypePtr structType = std::make_shared<RowType>(
+        std::vector<DataTypePtr>{IntType(), arrayType},
+        std::vector<std::string>());
+    DataTypes sourceTypes(std::vector<DataTypePtr>{structType, LongType()});
+
+    // Rows 0,2,4 -> partition A (group=1, arr=[10,20])
+    // Rows 1,3,5 -> partition B (group=2, arr=[30,40])
+    int32_t groupIds[ROW_COUNT] = {1, 2, 1, 2, 1, 2};
+    int32_t arrDataA[2] = {10, 20};
+    int32_t arrDataB[2] = {30, 40};
+    int64_t sortKeys[ROW_COUNT] = {100, 200, 300, 400, 500, 600};
+
+    auto *vecBatch = new VectorBatch(ROW_COUNT);
+
+    // Build array field: ArrayVector with int element vector
+    auto *elemVec = new Vector<int32_t>(0);
+    auto arrField = new ArrayVector(ROW_COUNT, std::shared_ptr<BaseVector>(elemVec));
+    for (int i = 0; i < ROW_COUNT; i++) {
+        auto *slice = new Vector<int32_t>(2);
+        if (groupIds[i] == 1) {
+            slice->SetValue(0, arrDataA[0]);
+            slice->SetValue(1, arrDataA[1]);
+        } else {
+            slice->SetValue(0, arrDataB[0]);
+            slice->SetValue(1, arrDataB[1]);
+        }
+        arrField->SetValue(i, slice);
+        delete slice;
+    }
+
+    // Build struct children: (int group_id, array<int>)
+    auto *groupVec = new Vector<int32_t>(ROW_COUNT);
+    for (int i = 0; i < ROW_COUNT; i++) {
+        groupVec->SetValue(i, groupIds[i]);
+    }
+    std::vector<std::shared_ptr<BaseVector>> structChildren;
+    structChildren.push_back(std::shared_ptr<BaseVector>(groupVec));
+    structChildren.push_back(std::shared_ptr<BaseVector>(arrField));
+    vecBatch->Append(new RowVector(ROW_COUNT, structChildren));
+
+    auto *sortVec = new Vector<int64_t>(ROW_COUNT);
+    for (int i = 0; i < ROW_COUNT; i++) {
+        sortVec->SetValue(i, sortKeys[i]);
+    }
+    vecBatch->Append(sortVec);
+
+    int32_t outputCols[2] = {0, 1};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {1};
+    int32_t nullFirsts[1] = {0};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>{structType, LongType(), LongType()});
+    int32_t argumentChannels[0] = {};
+
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(
+        sourceTypes, outputCols, 2, windowFunctionTypes, 1, partitionCols, 1,
+        preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0,
+        windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels,
+        windowFrameEndTypes, windowFrameEndChannels);
+
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    ASSERT_NE(outputVecBatch, nullptr);
+    EXPECT_EQ(outputVecBatch->GetRowCount(), ROW_COUNT);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 3);
+
+    auto *outStruct = static_cast<RowVector *>(outputVecBatch->Get(0));
+    auto *outGroupId = static_cast<Vector<int32_t> *>(outStruct->ChildAt(0).get());
+    auto *outSort = static_cast<Vector<int64_t> *>(outputVecBatch->Get(1));
+    auto *outRowNum = static_cast<Vector<int64_t> *>(outputVecBatch->Get(2));
+
+    std::map<int32_t, std::vector<std::pair<int64_t, int64_t>>> partitionRows;
+    for (int i = 0; i < ROW_COUNT; i++) {
+        partitionRows[outGroupId->GetValue(i)].push_back({outSort->GetValue(i), outRowNum->GetValue(i)});
+    }
+
+    EXPECT_EQ(partitionRows.size(), 2u);
+
+    for (auto &kv : partitionRows) {
+        std::sort(kv.second.begin(), kv.second.end(),
+                  [](const std::pair<int64_t, int64_t> &a, const std::pair<int64_t, int64_t> &b) {
+                      return a.first < b.first;
+                  });
+        EXPECT_EQ(kv.second.size(), 3u) << "Partition group=" << kv.first;
+        for (size_t j = 0; j < kv.second.size(); j++) {
+            EXPECT_EQ(kv.second[j].second, static_cast<int64_t>(j + 1))
+                << "Partition group=" << kv.first << " sort_key=" << kv.second[j].first;
+        }
+    }
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
 }

@@ -33,6 +33,12 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
                 return new LiteralExpr(new string(DECIMAL128_DEFAULT_VALUE), std::move(destType));
             }
         }
+    } else if (destTypeId == 32 || destTypeId == 30 || destTypeId == 31) { // OMNI_ROW(32)/OMNI_ARRAY(30)/OMNI_MAP(31)
+        // For complex types, fallback to None type to avoid crash
+        destType = std::make_shared<DataType>(OMNI_NONE);
+        auto expr = new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
+        expr->isNull = true;
+        return expr;
     } else {
         destType = std::make_shared<DataType>(destTypeId);
         switch (destTypeId) {
@@ -61,6 +67,27 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
                                        std::make_shared<VarBinaryDataType>(CHAR_DEFAULT_WIDTH));
             case OMNI_NONE:
                 return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
+            case OMNI_ROW: {
+                // For ROW/STRUCT type, fallback to None type to avoid crash
+                destType = std::make_shared<DataType>(OMNI_NONE);
+                auto expr = new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
+                expr->isNull = true;
+                return expr;
+            }
+            case OMNI_ARRAY: {
+                // For ARRAY type, fallback to None type to avoid crash
+                destType = std::make_shared<DataType>(OMNI_NONE);
+                auto expr = new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
+                expr->isNull = true;
+                return expr;
+            }
+            case OMNI_MAP: {
+                // For MAP type, fallback to None type to avoid crash
+                destType = std::make_shared<DataType>(OMNI_NONE);
+                auto expr = new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
+                expr->isNull = true;
+                return expr;
+            }
             default:
                 return nullptr;
         }

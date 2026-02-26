@@ -143,6 +143,9 @@ bool ValueEqualsValueIgnoreNulls(int32_t dataType, BaseVector *leftVector, uint3
         case OMNI_ARRAY:
             return OperatorUtil::CompareArrayValue(leftVector, static_cast<int32_t>(leftRowIndex),
                 rightVector, static_cast<int32_t>(rightRowIndex)) == OperatorUtil::COMPARE_STATUS_EQUAL;
+        case OMNI_ROW:
+            return OperatorUtil::CompareStructValue(leftVector, static_cast<int32_t>(leftRowIndex),
+                rightVector, static_cast<int32_t>(rightRowIndex)) == OperatorUtil::COMPARE_STATUS_EQUAL;
         default:
             return false;
     }
