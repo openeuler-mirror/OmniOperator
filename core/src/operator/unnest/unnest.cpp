@@ -503,10 +503,10 @@ void UnnestOperator::generateOrdinalityColumns(int32_t numElements, omniruntime:
     auto ordVector = dynamic_cast<omniruntime::vec::Vector<int64_t>*>(baseVector);
     for (size_t i = 0; i < rawMaxSizes_.size(); ++i) {
         // 只为有输出的行生成序号（rawMaxSizes_[i] > 0）
-        // Spark SQL的posexplode使用0-indexed序号
+        // Spark SQL的posexplode使用1-indexed序号（从1开始），与Velox保持一致
         if (rawMaxSizes_[i] > 0) {
             for (int64_t j = 0; j < rawMaxSizes_[i]; ++j) {
-                ordVector->SetValue(index++, j);
+                ordVector->SetValue(index++, j + 1);  // 1-indexed: 1, 2, 3, ...
             }
         }
     }
