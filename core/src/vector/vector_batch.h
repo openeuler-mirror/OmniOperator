@@ -58,7 +58,7 @@ public:
 
     uint64_t CalculateTotalSize() const;
 
-private:
+protected:
     int32_t flatSize = 0;
     size_t capacity; // max row count that can be held
     size_t rowCnt;
