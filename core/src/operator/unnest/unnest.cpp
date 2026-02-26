@@ -51,25 +51,25 @@ int32_t UnnestOperator::AddInput(omniruntime::vec::VectorBatch* vecBatch)
     int32_t numElements = 0;
     rawMaxSizes_.resize(vecBatch->Get(0)->GetSize());
     
-    // Special case: if there are no unnest variables, just replicate all rows
+    // 特殊情况：如果没有unnest变量，直接复制所有行
     if (unnestChannels_.empty()) {
         std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), 1);
         numElements = vecBatch->Get(0)->GetSize();
     } else {
-        // Initialize based on outer parameter: 1 for outer (preserve null/empty rows), 0 for non-outer (filter null/empty rows)
+        // 根据outer参数初始化：outer=true时初始化为1（保留null/empty行），outer=false时初始化为0（过滤null/empty行）
         std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), outer_ ? 1 : 0);
         for (size_t channel = 0; channel < unnestChannels_.size(); ++channel) {
             const auto& unnestVector = vecBatch->Get(unnestChannels_[channel]);
 
             auto processVector = [&](auto* inputVector) {
                 for (auto row = 0; row < unnestVector->GetSize(); ++row) {
-                    // Only update rawMaxSizes_ if the array is not null (similar to Velox)
+                    // 只有当数组不为null时才更新rawMaxSizes_（类似Velox的实现）
                     if (!unnestVector->IsNull(row)) {
                         auto rowSize = inputVector->GetSize(row);
                         rawMaxSizes_[row] = (rowSize > rawMaxSizes_[row]) ? rowSize : rawMaxSizes_[row];
                     }
-                    // If null and outer=false, rawMaxSizes_[row] remains 0 (will be filtered)
-                    // If null and outer=true, rawMaxSizes_[row] remains 1 (will be preserved)
+                    // 如果为null且outer=false，rawMaxSizes_[row]保持为0（将被过滤）
+                    // 如果为null且outer=true，rawMaxSizes_[row]保持为1（将被保留）
                 }
             };
 
@@ -80,13 +80,13 @@ int32_t UnnestOperator::AddInput(omniruntime::vec::VectorBatch* vecBatch)
             }
         }
 
-        // Calculate numElements: sum of all rawMaxSizes_, but for outer mode, ensure at least input size
+        // 计算numElements：所有rawMaxSizes_的总和，但对于outer模式，确保至少等于输入行数
         int32_t totalSizes = std::accumulate(rawMaxSizes_.begin(), rawMaxSizes_.end(), 0);
         if (outer_) {
-            // For outer mode, ensure we have at least one row per input row (for null/empty arrays)
+            // 对于outer模式，确保每个输入行至少生成一行输出（用于null/empty数组）
             numElements = std::max(totalSizes, vecBatch->Get(0)->GetSize());
         } else {
-            // For non-outer mode, only count actual elements (null/empty arrays contribute 0)
+            // 对于非outer模式，只计算实际元素数（null/empty数组贡献0）
             numElements = totalSizes;
         }
     }
@@ -131,8 +131,8 @@ void UnnestOperator::generateRepeatedValues(VectorType* inputVector, VectorType*
     int32_t index = 0;
     int32_t inputSize = inputVector->GetSize();
     for (auto i = 0; i < inputSize; ++i) {
-        // Only generate repeated values if rawMaxSizes_[i] > 0
-        // For null/empty arrays with outer=false, rawMaxSizes_[i] is 0, so no output is generated
+        // 只有当rawMaxSizes_[i] > 0时才生成repeated值
+        // 对于outer=false的null/empty数组，rawMaxSizes_[i]为0，因此不会生成输出
         if (rawMaxSizes_[i] > 0) {
             if (inputVector->IsNull(i)) {
                 for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
@@ -242,10 +242,10 @@ void UnnestOperator::generateComplexRepeatedValues(int32_t inputSize, auto* inpu
     int32_t index = 0;
     int32_t elementIndex = 0;
     for (auto i = 0; i < inputSize; ++i) {
-        // Only process if rawMaxSizes_[i] > 0 (row will be in output)
+        // 只有当rawMaxSizes_[i] > 0时才处理（该行会在输出中）
         if (rawMaxSizes_[i] > 0) {
             if (inputVector->IsNull(i)) {
-                // For null arrays, create empty arrays in output
+                // 对于null数组，在输出中创建空数组
                 for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
                     outputVector->SetSize(index++, 0);
                 }
@@ -254,10 +254,10 @@ void UnnestOperator::generateComplexRepeatedValues(int32_t inputSize, auto* inpu
                 int64_t end = inputVector->GetOffset(i + 1);
                 int64_t length = end - start;
                 
-                // For repeated columns (arrays), copy the entire array rawMaxSizes_[i] times
-                // Each output row gets a copy of the entire array
+                // 对于repeated列（数组），将整个数组复制rawMaxSizes_[i]次
+                // 每个输出行都获得整个数组的副本
                 for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-                    // Copy the entire array for this output row
+                    // 为这个输出行复制整个数组
                     for (auto k = start; k < end; ++k) {
                         if (inputElementVector->IsNull(k)) {
                             outputElementVector->SetNull(elementIndex++);
@@ -282,25 +282,24 @@ void UnnestOperator::generateUnrepeatedValues(omniruntime::vec::BaseVector* inpu
     auto insetVector = [&](auto* unrepeatVector, auto* outputVector) {
         for (auto i = 0; i < inputSize; ++i) {
             if (unrepeatVector->IsNull(i)) {
-                // For null arrays, only generate null values if outer=true
+                // 对于null数组，只有当outer=true时才生成null值
                 if (outer_ && rawMaxSizes_[i] > 0) {
                     for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
                         outputVector->SetNull(index++);
                     }
                 }
-                // If outer=false, rawMaxSizes_[i] is 0, so no output is generated (filtered)
+                // 如果outer=false，rawMaxSizes_[i]为0，因此不会生成输出（被过滤）
             } else {
                 auto start = unrepeatVector->GetOffset(i);
                 auto length = unrepeatVector->GetSize(i);
-                // Generate actual array elements
+                // 生成实际的数组元素
                 for (auto j = 0; j < length; ++j) {
                     auto value = elementVector->GetValue(start + j);
                     outputVector->SetValue(index++, value);
                 }
-                // Generate null padding when rawMaxSizes_[i] > length
-                // This is needed for multi-array unnest when arrays have different sizes
-                // Note: This padding is independent of outer parameter - it's needed to align
-                // all unnest columns to the same number of output rows
+                // 当rawMaxSizes_[i] > length时生成null填充
+                // 这在多数组unnest且数组大小不同时是必需的
+                // 注意：此填充与outer参数无关 - 它用于对齐所有unnest列到相同的输出行数
                 if (rawMaxSizes_[i] > length) {
                     for (auto j = length; j < rawMaxSizes_[i]; ++j) {
                         outputVector->SetNull(index++);
@@ -503,10 +502,11 @@ void UnnestOperator::generateOrdinalityColumns(int32_t numElements, omniruntime:
     BaseVector* baseVector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_LONG, numElements);
     auto ordVector = dynamic_cast<omniruntime::vec::Vector<int64_t>*>(baseVector);
     for (size_t i = 0; i < rawMaxSizes_.size(); ++i) {
-        // Only generate ordinality for rows that have output (rawMaxSizes_[i] > 0)
+        // 只为有输出的行生成序号（rawMaxSizes_[i] > 0）
+        // Spark SQL的posexplode使用0-indexed序号
         if (rawMaxSizes_[i] > 0) {
             for (int64_t j = 0; j < rawMaxSizes_[i]; ++j) {
-                ordVector->SetValue(index++, j + 1);
+                ordVector->SetValue(index++, j);
             }
         }
     }
