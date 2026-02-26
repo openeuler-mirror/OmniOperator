@@ -675,6 +675,26 @@ namespace omniruntime::reader {
         int32_t byte_width_;
     };
 
+    class ParquetByteRecordReader : public ParquetTypedRecordReader<OMNI_BYTE, ::parquet::Int32Type> {
+    public:
+        using BASE = ParquetTypedRecordReader<OMNI_BYTE, ::parquet::Int32Type>;
+        ParquetByteRecordReader(const ::parquet::ColumnDescriptor* descr, ::parquet::internal::LevelInfo leaf_info,
+                                ::arrow::MemoryPool* pool)
+                : BASE(descr, leaf_info, pool) {}
+
+        BaseVector* GetBaseVec() override {
+            if (vec_ == nullptr) {
+                throw ::parquet::ParquetException("GetBaseVec() is nullptr!");
+            }
+            auto res = dynamic_cast<Vector<V> *>(vec_);
+            auto values = Values<int32_t>();
+            for (int i = 0; i < values_written_; i++) {
+                res->SetValue(i, static_cast<int8_t>(values[i]));
+            }
+            return vec_;
+        }
+    };
+
     class ParquetShortRecordReader : public ParquetTypedRecordReader<OMNI_SHORT, ::parquet::Int32Type> {
     public:
         using BASE = ParquetTypedRecordReader<OMNI_SHORT, ::parquet::Int32Type>;
