@@ -5,8 +5,9 @@
 #define OMNI_RUNTIME_STRING_REF_H
 #include <string>
 #include <cstring>
+#ifdef __aarch64__
 #include <arm_neon.h>
-
+#endif
 namespace omniruntime {
 namespace type {
 // replace stringRef with std::string_view
@@ -30,15 +31,17 @@ struct StringRef {
     {
         auto leftSize = lhs.size;
         auto rightSize = rhs.size;
+        #ifdef __aarch64__
         const char* leftData = lhs.data;
         const char* rightData = rhs.data;
+        #endif
         if (leftSize != rightSize) {
             return false;
         }
         if (leftSize == 0) {
             return true;
         }
-
+        #ifdef __aarch64__
         constexpr size_t simd_size = 16;
         size_t i = 0;
 
@@ -59,6 +62,9 @@ struct StringRef {
             }
         }
         return true;
+        #else
+        return (0 == memcmp(lhs.data, rhs.data, leftSize));
+        #endif
     }
 
     friend bool operator != (const StringRef &lhs, const StringRef &rhs)

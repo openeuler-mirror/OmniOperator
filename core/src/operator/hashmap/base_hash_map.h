@@ -61,7 +61,9 @@
 #include <unordered_map>
 #include <functional>
 #include <jemalloc/jemalloc.h>
+#ifdef __aarch64__
 #include <arm_neon.h>
+#endif
 #include "simd/func/match.h"
 
 #include "operator/hash_util.h"

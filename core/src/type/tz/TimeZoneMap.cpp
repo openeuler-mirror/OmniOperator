@@ -32,6 +32,19 @@ const tzdb::time_zone *locateZoneImpl(std::string_view tz_name)
 }
 
 template <typename TDuration>
+tzdb::zoned_time<TDuration> getZonedTime(const tzdb::time_zone *tz, date::local_time<TDuration> timestamp,
+        TimeZone::TChoose choose)
+{
+    if (choose == TimeZone::TChoose::kFail) {
+        // By default, throws.
+        return tzdb::zoned_time{tz, timestamp};
+    }
+
+    auto dateChoose = (choose == TimeZone::TChoose::kEarliest) ? tzdb::choose::earliest : tzdb::choose::latest;
+    return tzdb::zoned_time{tz, timestamp, dateChoose};
+}
+
+template <typename TDuration>
 TDuration toSysImpl(const TDuration &timestamp, const TimeZone::TChoose choose, const tzdb::time_zone *tz,
     const std::chrono::minutes offset)
 {
@@ -44,19 +57,6 @@ TDuration toSysImpl(const TDuration &timestamp, const TimeZone::TChoose choose, 
     }
 
     return getZonedTime(tz, timePoint, choose).get_sys_time().time_since_epoch();
-}
-
-template <typename TDuration>
-tzdb::zoned_time<TDuration> getZonedTime(const tzdb::time_zone *tz, date::local_time<TDuration> timestamp,
-    TimeZone::TChoose choose)
-{
-    if (choose == TimeZone::TChoose::kFail) {
-        // By default, throws.
-        return tzdb::zoned_time{tz, timestamp};
-    }
-
-    auto dateChoose = (choose == TimeZone::TChoose::kEarliest) ? tzdb::choose::earliest : tzdb::choose::latest;
-    return tzdb::zoned_time{tz, timestamp, dateChoose};
 }
 
 template <typename TDuration>

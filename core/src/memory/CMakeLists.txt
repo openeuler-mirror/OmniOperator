@@ -4,5 +4,9 @@ add_library(${MEM_TARGET} ${MEM_POOL_LIST})
 
 # dependent include
 target_include_directories(${MEM_TARGET} PUBLIC /usr/local/include/jemalloc/)
-target_link_libraries(${MEM_TARGET} PUBLIC jemalloc cpu_checker)
 
+target_link_libraries(${MEM_TARGET} PUBLIC jemalloc)
+
+if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    target_link_libraries(${MEM_TARGET} PUBLIC cpu_checker)
+endif()
