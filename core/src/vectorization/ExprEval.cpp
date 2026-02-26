@@ -514,7 +514,8 @@ void ExprEval::Visit(const SwitchExpr &e) {}
 void ExprEval::Visit(const ParamRefExpr &e) {
     int32_t paramIdx = paramNameToIdxMap[e.paramName_];
     vec::BaseVector *paramVec = lambdaParams_.at(paramIdx);
-    inputValues_.push(paramVec);
+    vec::BaseVector *toPush = paramVec->Slice(0, paramVec->GetSize());
+    inputValues_.push(toPush != nullptr ? toPush : paramVec);
 }
 
 void ExprEval::Visit(const LambdaExpr &e) {
