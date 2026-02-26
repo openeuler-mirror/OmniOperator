@@ -41,6 +41,8 @@ constexpr int32_t DECIMAL64_LEN = 8;
                 return new ParquetPlainDecoder<::parquet::Int64Type>(descr);
             case ::parquet::Type::INT96:
                 return new ParquetPlainDecoder<::parquet::Int96Type>(descr);
+            case ::parquet::Type::FLOAT:
+                return new ParquetPlainDecoder<::parquet::FloatType>(descr);
             case ::parquet::Type::DOUBLE:
                 return new ParquetPlainDecoder<::parquet::DoubleType>(descr);
             case ::parquet::Type::BYTE_ARRAY:
@@ -74,6 +76,8 @@ constexpr int32_t DECIMAL64_LEN = 8;
             return new ParquetDictDecoderImpl<::parquet::Int64Type>(descr, pool);
         case ::parquet::Type::INT96:
             return new ParquetDictDecoderImpl<::parquet::Int96Type>(descr, pool);
+        case ::parquet::Type::FLOAT:
+            return new ParquetDictDecoderImpl<::parquet::FloatType>(descr, pool);
         case ::parquet::Type::DOUBLE:
             return new ParquetDictDecoderImpl<::parquet::DoubleType>(descr, pool);
         case ::parquet::Type::BYTE_ARRAY:
@@ -323,6 +327,9 @@ std::shared_ptr<OmniRecordReader> MakeRecordReader(const ColumnDescriptor* descr
             return std::make_shared<ParquetTypedRecordReader<OMNI_BOOLEAN, ::parquet::BooleanType>>(descr,
                 leaf_info, pool);
         }
+        case ::arrow::Type::INT8: {
+            return std::make_shared<ParquetByteRecordReader>(descr, leaf_info, pool);
+        }
         case ::arrow::Type::INT16: {
             return std::make_shared<ParquetShortRecordReader>(descr, leaf_info, pool);
         }
@@ -354,6 +361,10 @@ std::shared_ptr<OmniRecordReader> MakeRecordReader(const ColumnDescriptor* descr
         }
         case ::arrow::Type::DATE64: {
             return std::make_shared<ParquetTypedRecordReader<OMNI_DATE64, ::parquet::Int64Type>>(descr,
+                leaf_info, pool);
+        }
+        case ::arrow::Type::FLOAT: {
+            return std::make_shared<ParquetTypedRecordReader<OMNI_FLOAT, ::parquet::FloatType>>(descr,
                 leaf_info, pool);
         }
         case ::arrow::Type::DOUBLE: {
