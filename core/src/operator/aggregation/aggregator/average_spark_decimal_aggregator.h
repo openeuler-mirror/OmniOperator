@@ -572,9 +572,8 @@ private:
         if (sumStatus) {
             return true;
         }
-        int128_t countRescale;
-        bool countStatus = MulCheckedOverflow(count, TenOfInt128[widerScale - COUNT_SCALE], countRescale);
-        return countStatus;
+        // count is an integer, no need to rescale it
+        return false;
     }
 
 private:
