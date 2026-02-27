@@ -46,7 +46,7 @@ BaseVector *ApplyMapTyped(const SelectivityVector &rows, BaseVector *mapArg, Bas
             // auto rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(mapVector->
             //     GetValueVector().get())->Slice(0, rowSize);
             auto rawVector = VectorHelper::SliceVector(mapVector->GetValueVector().get(), 0, rowSize);
-            auto result = VectorHelper::CreateDictionaryVector(dicIndex, rowSize, rawVector, rawVector->GetTypeId());
+            auto result = VectorHelper::CreateDictionaryVector(dicIndex, rowSize, rawVector, rawVector->GetTypeId(), true);
             return result;
         } else {
             OMNI_THROW("ApplyMapTyped Error:", "Not support Key type!");

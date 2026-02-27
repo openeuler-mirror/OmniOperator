@@ -46,11 +46,11 @@ public:
     }
 
     static BaseVector *CreateStringDictionary(const int32_t *values, int32_t valueSize,
-        Vector<LargeStringContainer<std::string_view>> *vector)
+        Vector<LargeStringContainer<std::string_view>> *vector, bool valueAsNullifyIndices = false)
     {
         auto nullsBuffer = std::make_unique<NullsBuffer>(valueSize);
         for (int i = 0; i < valueSize; i++) {
-            if (UNLIKELY(vector->IsNull(values[i]))) {
+            if (UNLIKELY(vector->IsNull(values[i]) || (valueAsNullifyIndices && values[i] == -1))) {
                 nullsBuffer->SetNull(i);
             }
         }
@@ -63,11 +63,11 @@ public:
         return new Vector<DictionaryContainer<std::string_view>>(valueSize, dictionary, nullsBuffer.get(), OMNI_CHAR);
     }
 
-    template <typename T> static BaseVector *CreateDictionary(int32_t *values, int32_t valueSize, Vector<T> *vector)
+    template <typename T> static BaseVector *CreateDictionary(int32_t *values, int32_t valueSize, Vector<T> *vector, bool valueAsNullifyIndices = false)
     {
         auto nullsBuffer = std::make_unique<NullsBuffer>(valueSize);
         for (int i = 0; i < valueSize; i++) {
-            if (UNLIKELY(vector->IsNull(values[i]))) {
+            if (UNLIKELY(vector->IsNull(values[i]) || (valueAsNullifyIndices && values[i] == -1))) {
                 nullsBuffer->SetNull(i);
             }
         }
@@ -497,40 +497,41 @@ public:
         }
     }
 
-    static BaseVector *CreateDictionaryVector(int *values, int valueSize, BaseVector *vector, int dataTypeId)
+    // valueAsNullifyIndices means that if values[i] is -1, then the corresponding dictionary value should be set to null
+    static BaseVector *CreateDictionaryVector(int *values, int valueSize, BaseVector *vector, int dataTypeId, bool valueAsNullifyIndices = false)
     {
         switch (dataTypeId) {
             case type::OMNI_INT:
             case type::OMNI_DATE32: {
-                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int32_t> *>(vector));
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int32_t> *>(vector), valueAsNullifyIndices);
             }
             case type::OMNI_SHORT:
-                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int16_t> *>(vector));
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int16_t> *>(vector), valueAsNullifyIndices);
             case type::OMNI_BYTE:
-                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int8_t> *>(vector));
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int8_t> *>(vector), valueAsNullifyIndices);
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
-                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int64_t> *>(vector));
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int64_t> *>(vector), valueAsNullifyIndices);
             }
             case type::OMNI_DECIMAL128: {
-                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<type::Decimal128> *>(vector));
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<type::Decimal128> *>(vector), valueAsNullifyIndices);
             }
             case type::OMNI_DOUBLE: {
-                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<double> *>(vector));
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<double> *>(vector), valueAsNullifyIndices);
             }
             case type::OMNI_FLOAT: {
-                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<float> *>(vector));
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<float> *>(vector), valueAsNullifyIndices);
             }
             case type::OMNI_BOOLEAN: {
-                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<bool> *>(vector));
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<bool> *>(vector), valueAsNullifyIndices);
             }
             case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return CreateStringDictionary(values, valueSize,
-                    reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector));
+                    reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector), valueAsNullifyIndices);
             }
             default: {
                 std::string omniExceptionInfo =
