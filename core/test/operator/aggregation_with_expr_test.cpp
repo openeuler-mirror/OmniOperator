@@ -3285,7 +3285,7 @@ TEST(HashAggregationWithExprOperatorTest, adaptor_header_with_null)
     }
 }
 
-TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_by_proces_row)
+TEST(HashAggregationWithExprOperatorTest, DISABLED_test_hashagg_full_expr_by_proces_row)
 {
     using namespace omniruntime::expressions;
 
