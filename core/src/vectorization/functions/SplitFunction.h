@@ -22,11 +22,11 @@ public:
     explicit SplitFunction() {}
 
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
-               ExecutionContext *context) const override
+        ExecutionContext *context) const override
     {
         auto limitArg = args.top(); // The limited number of segments
         args.pop();
-        auto delimiterArg = args.top(); // Separator
+        auto delimiterArg = args.top(); // The separator
         args.pop();
         auto inputArg = args.top(); // The input string vector to be split
         args.pop();
@@ -57,11 +57,10 @@ private:
      *   4. Build the final result array
      */
     void ProcessAllRows(ArrayVector *arrayResult, int32_t rowSize, BaseVector *inputVector,
-                        const std::string_view &delimiter, const int32_t limit) const
+        const std::string_view &delimiter, const int32_t limit) const
     {
-        if (limit < -1) {
-            OMNI_THROW("SplitFunction Error:", "Limit must be positive or 0/-1 (got " + std::to_string(limit) + ")");
-        }
+        // limit <= 0 means no limit
+        int32_t effectiveLimit = (limit <= 0) ? -1 : limit;
 
         // Pre-calculate the offsets, the total number of elements, and the total number of bytes
         std::vector<int64_t> offsets;
@@ -82,7 +81,7 @@ private:
 
             int32_t count = 0;
             size_t bytes = 0;
-            CalcSplitInfo(inputStr, delimiter, limit, count, bytes);
+            CalcSplitInfo(inputStr, delimiter, effectiveLimit, count, bytes);
 
             totalElements += count;
             totalBytesNeeded += bytes;
@@ -102,7 +101,7 @@ private:
             }
 
             std::string_view inputStr = GetStringValue(inputVector, row);
-            FillSplitParts(elementVector.get(), currentInsertIndex, inputStr, delimiter, limit);
+            FillSplitParts(elementVector.get(), currentInsertIndex, inputStr, delimiter, effectiveLimit);
 
             currentInsertIndex = offsets[row + 1];
         }
@@ -112,7 +111,8 @@ private:
 
     // Calculate the total number of elements and the total number of bytes
     void CalcSplitInfo(std::string_view str, std::string_view delimiter, int32_t limit,
-                       int32_t &outCount, size_t &outBytes) const {
+        int32_t &outCount, size_t &outBytes) const
+    {
         outCount = 0;
         outBytes = 0;
 
@@ -154,7 +154,8 @@ private:
     }
 
     void FillSplitParts(Vector<LargeStringContainer<std::string_view>> *targetVec, int64_t startIndex,
-                        std::string_view str, std::string_view delimiter, int32_t limit) const {
+        std::string_view str, std::string_view delimiter, int32_t limit) const
+    {
         if (str.empty()) {
             std::string_view emptyStr("", 0);
             targetVec->SetValue(static_cast<int>(startIndex), emptyStr);
@@ -163,7 +164,7 @@ private:
 
         if (delimiter.empty()) {
             int32_t len = static_cast<int32_t>(str.length());
-            int32_t countToProcess = (limit == -1 || limit == 0 || limit >= len) ? len : limit;
+            int32_t countToProcess = (limit == -1 || limit >= len) ? len : limit;
 
             for (int32_t i = 0; i < countToProcess; ++i) {
                 std::string_view singleChar = str.substr(i, 1);
@@ -215,7 +216,7 @@ private:
     }
 
     void SetupArrayVector(ArrayVector *arrayResult, const std::vector<int64_t> &offsets,
-                          const std::shared_ptr<BaseVector> &elementVector, int32_t rowSize, BaseVector *inputVector) const
+        const std::shared_ptr<BaseVector> &elementVector, int32_t rowSize, BaseVector *inputVector) const
     {
         for (size_t i = 0; i < offsets.size(); ++i) {
             arrayResult->SetOffset(i, offsets[i]);
