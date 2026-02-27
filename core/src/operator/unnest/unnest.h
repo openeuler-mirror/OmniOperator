@@ -84,6 +84,7 @@ private:
     std::vector<int32_t> rawMaxSizes_;
 
     const bool withOrdinality_;
+    const bool outer_;
     std::vector<uint32_t> unnestChannels_;
     std::vector<IdentityProjection> identityProjections_;
 

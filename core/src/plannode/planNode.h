@@ -1096,16 +1096,16 @@ public:
     /// @param unnestVariables Inputs that are unnested. Must be of type ARRAY
     /// or MAP.
     UnnestNode(const PlanNodeId& id, std::vector<ExprPtr> replicateVariables,
-        std::vector<ExprPtr> unnestVariables, const PlanNodePtr& source, bool withOrdinality = false)
+        std::vector<ExprPtr> unnestVariables, const PlanNodePtr& source, bool withOrdinality = false, bool outer = false)
         : PlanNode(id), replicateVariables_(std::move(replicateVariables)),
-        unnestVariables_(std::move(unnestVariables)), sources_{source}, withOrdinality_(withOrdinality),
-        outputType_(MakeOutputType(replicateVariables_, unnestVariables_, withOrdinality_)) {}
+        unnestVariables_(std::move(unnestVariables)), sources_{source}, withOrdinality_(withOrdinality), outer_(outer),
+        outputType_(MakeOutputType(replicateVariables_, unnestVariables_, withOrdinality_, outer_)) {}
 
     /// The order of columns in the output is: replicated columns (in the order
     /// specified), unnested columns (in the order specified, for maps: key
     /// comes before value), optional ordinality column.
     static DataTypesPtr MakeOutputType(const std::vector<ExprPtr>& replicateVariables,
-                                       const std::vector<ExprPtr>& unnestVariables, bool withOrdinality = false)
+                                       const std::vector<ExprPtr>& unnestVariables, bool withOrdinality = false, bool outer = false)
     {
         std::vector<DataTypePtr> dataTypes;
         for (const auto &variable : replicateVariables) {
@@ -1128,6 +1128,7 @@ public:
         if (withOrdinality) {
             dataTypes.push_back(LongType());
         }
+        // Note: outer parameter doesn't affect output type, but we keep it for consistency
         return std::make_shared<DataTypes>(std::move(dataTypes));
     }
 
@@ -1156,6 +1157,11 @@ public:
         return withOrdinality_;
     }
 
+    bool outer() const
+    {
+        return outer_;
+    }
+
     std::string_view Name() const override
     {
         return "Unnest";
@@ -1165,10 +1171,10 @@ private:
     const std::vector<ExprPtr> replicateVariables_;
     const std::vector<ExprPtr> unnestVariables_;
     const bool withOrdinality_;
+    const bool outer_;
     const std::vector<PlanNodePtr> sources_;
     const DataTypesPtr outputType_;
 };
-
 
 /// Calculates partition number for each row of the specified vector.
 class PartitionFunction {

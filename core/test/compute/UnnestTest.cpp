@@ -803,4 +803,235 @@ TEST(PipelineTest, TestUnestMap)
     VectorHelper::FreeVecBatch(vectorBatch);
 }
 
+// ==================== Outer Support Tests ====================
+
+// Test explode (outer=false): null and empty arrays should be filtered
+VectorBatch *CreateTestExplodeVecBatchWithNullEmpty()
+{
+    const int32_t dataSize = 4;
+    int32_t data1[dataSize] = {1, 2, 3, 4};
+    
+    std::vector<DataTypePtr> types = { IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch* batch = CreateVectorBatch(sourceTypes, dataSize, data1);
+    
+    // Create array vector: [null, [], [1, 2], [3]]
+    int32_t elementSize = 3;
+    auto elementVector = std::make_shared<vec::Vector<int32_t>>(elementSize);
+    elementVector->SetValue(0, 1);
+    elementVector->SetValue(1, 2);
+    elementVector->SetValue(2, 3);
+    
+    vec::ArrayVector* arrayVector = new vec::ArrayVector(dataSize, elementVector);
+    // Row 0: null array
+    arrayVector->SetNull(0);
+    arrayVector->SetOffset(0, 0);
+    arrayVector->SetOffset(1, 0);  // null array: offset stays at 0
+    // Row 1: empty array []
+    arrayVector->SetNotNull(1);
+    arrayVector->SetOffset(1, 0);
+    arrayVector->SetOffset(2, 0);  // empty array: offset stays at 0
+    // Row 2: [1, 2]
+    arrayVector->SetNotNull(2);
+    arrayVector->SetOffset(2, 0);
+    arrayVector->SetOffset(3, 2);  // [1, 2]: offset goes from 0 to 2
+    // Row 3: [3]
+    arrayVector->SetNotNull(3);
+    arrayVector->SetOffset(3, 2);
+    arrayVector->SetOffset(4, 3);  // [3]: offset goes from 2 to 3
+    
+    batch->Append(arrayVector);
+    return batch;
+}
+
+VectorBatch *CreateTestExplodeOutputVecBatchWithNullEmpty()
+{
+    // Expected output: only rows with non-empty arrays
+    // Row 2: [1, 2] -> 2 output rows (id=3)
+    // Row 3: [3] -> 1 output row (id=4)
+    const int32_t dataSize = 3;
+    int32_t data1[dataSize] = {3, 3, 4};  // Replicated id column (from input row 2 and 3)
+    int32_t data2[dataSize] = {1, 2, 3};  // Unnested array elements
+    
+    std::vector<DataTypePtr> types = { IntType(), IntType() };
+    DataTypes sourceTypes(types);
+    return CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+}
+
+TEST(PipelineTest, TestExplodeFilterNullEmpty)
+{
+    std::vector<DataTypePtr> types = { 
+        IntType(), 
+        std::make_shared<OmniArrayType>(IntType()) 
+    };
+    VectorBatch *vecBatch = CreateTestExplodeVecBatchWithNullEmpty();
+    std::vector<VectorBatch*> inputVector;
+    inputVector.push_back(vecBatch);
+    
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(types);
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+    
+    auto expr1 = new FieldExpr(0, IntType());
+    auto expr2 = new FieldExpr(1, std::make_shared<OmniArrayType>(IntType()));
+    auto replicateVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr1) };
+    auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr2) };
+    
+    // outer=false (default)
+    auto unnestNode = std::make_shared<const UnnestNode>("unnest", replicateVariables, unnestVariables, valueStreamNode, false, false);
+    std::unordered_set<PlanNodeId> emptySet;
+    PlanFragment planFragment{unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
+    VectorBatch *vectorBatch = nullptr;
+    while (true) {
+        auto future = OmniFuture::makeEmpty();
+        auto out = task->Next(&future);
+        if (!future.valid()) {
+            vectorBatch = out;
+            break;
+        }
+        OMNI_CHECK(out == nullptr, "Expected to wait but still got non-null output from Omni task");
+        future.wait();
+    }
+    
+    VectorBatch *expVecBatch = CreateTestExplodeOutputVecBatchWithNullEmpty();
+    EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
+    std::vector<Expr*> exprsToDelete = {expr1, expr2};
+    Expr::DeleteExprs(exprsToDelete);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+}
+
+// Test explode_outer (outer=true): null and empty arrays should be preserved
+VectorBatch *CreateTestExplodeOuterOutputVecBatchWithNullEmpty()
+{
+    // Expected output: all rows, with null values for null/empty arrays
+    // Row 0: null -> 1 output row with null
+    // Row 1: [] -> 1 output row with null
+    // Row 2: [1, 2] -> 2 output rows
+    // Row 3: [3] -> 1 output row
+    const int32_t dataSize = 5;
+    int32_t data1[dataSize] = {1, 2, 3, 3, 4};  // Replicated id column
+    int32_t data2[dataSize] = {0, 0, 1, 2, 3};  // Unnested array elements (0 means null)
+    bool nullMask[dataSize] = {true, true, false, false, false};  // First two are null
+    
+    std::vector<DataTypePtr> types = { IntType(), IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch* batch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    
+    // Set null mask for the unnested column
+    auto* unnestCol = dynamic_cast<vec::Vector<int32_t>*>(batch->Get(1));
+    for (int32_t i = 0; i < dataSize; ++i) {
+        if (nullMask[i]) {
+            unnestCol->SetNull(i);
+        }
+    }
+    
+    return batch;
+}
+
+TEST(PipelineTest, TestExplodeOuterPreserveNullEmpty)
+{
+    std::vector<DataTypePtr> types = { 
+        IntType(), 
+        std::make_shared<OmniArrayType>(IntType()) 
+    };
+    VectorBatch *vecBatch = CreateTestExplodeVecBatchWithNullEmpty();
+    std::vector<VectorBatch*> inputVector;
+    inputVector.push_back(vecBatch);
+    
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(types);
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+    
+    auto expr1 = new FieldExpr(0, IntType());
+    auto expr2 = new FieldExpr(1, std::make_shared<OmniArrayType>(IntType()));
+    auto replicateVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr1) };
+    auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr2) };
+    
+    // outer=true
+    auto unnestNode = std::make_shared<const UnnestNode>("unnest", replicateVariables, unnestVariables, valueStreamNode, false, true);
+    std::unordered_set<PlanNodeId> emptySet;
+    PlanFragment planFragment{unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
+    VectorBatch *vectorBatch = nullptr;
+    while (true) {
+        auto future = OmniFuture::makeEmpty();
+        auto out = task->Next(&future);
+        if (!future.valid()) {
+            vectorBatch = out;
+            break;
+        }
+        OMNI_CHECK(out == nullptr, "Expected to wait but still got non-null output from Omni task");
+        future.wait();
+    }
+    
+    VectorBatch *expVecBatch = CreateTestExplodeOuterOutputVecBatchWithNullEmpty();
+    EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
+    std::vector<Expr*> exprsToDelete = {expr1, expr2};
+    Expr::DeleteExprs(exprsToDelete);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+}
+
+// Test posexplode with ordinality
+VectorBatch *CreateTestPosexplodeOutputVecBatch()
+{
+    const int32_t dataSize = 3;
+    int32_t data1[dataSize] = {3, 3, 4};  // Replicated id
+    int32_t data2[dataSize] = {1, 2, 3};  // Unnested elements
+    int64_t data3[dataSize] = {1, 2, 1};  // Ordinality (1-indexed, as per current implementation)
+    
+    std::vector<DataTypePtr> types = { IntType(), IntType(), LongType() };
+    DataTypes sourceTypes(types);
+    return CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
+}
+
+TEST(PipelineTest, TestPosexplodeWithOrdinality)
+{
+    std::vector<DataTypePtr> types = { 
+        IntType(), 
+        std::make_shared<OmniArrayType>(IntType()) 
+    };
+    VectorBatch *vecBatch = CreateTestExplodeVecBatchWithNullEmpty();
+    std::vector<VectorBatch*> inputVector;
+    inputVector.push_back(vecBatch);
+    
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(types);
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+    
+    auto expr1 = new FieldExpr(0, IntType());
+    auto expr2 = new FieldExpr(1, std::make_shared<OmniArrayType>(IntType()));
+    auto replicateVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr1) };
+    auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr2) };
+    
+    // withOrdinality=true, outer=false
+    auto unnestNode = std::make_shared<const UnnestNode>("unnest", replicateVariables, unnestVariables, valueStreamNode, true, false);
+    std::unordered_set<PlanNodeId> emptySet;
+    PlanFragment planFragment{unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
+    VectorBatch *vectorBatch = nullptr;
+    while (true) {
+        auto future = OmniFuture::makeEmpty();
+        auto out = task->Next(&future);
+        if (!future.valid()) {
+            vectorBatch = out;
+            break;
+        }
+        OMNI_CHECK(out == nullptr, "Expected to wait but still got non-null output from Omni task");
+        future.wait();
+    }
+    
+    VectorBatch *expVecBatch = CreateTestPosexplodeOutputVecBatch();
+    EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
+    std::vector<Expr*> exprsToDelete = {expr1, expr2};
+    Expr::DeleteExprs(exprsToDelete);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+}
+
 }

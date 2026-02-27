@@ -21,6 +21,7 @@ Operator* UnnestOperatorFactory::CreateOperator()
 
 UnnestOperator::UnnestOperator(std::shared_ptr<const UnnestNode> planNode)
     : withOrdinality_(planNode->withOrdinality()),
+      outer_(planNode->outer()),
       outputVecBatch(nullptr)
 {
     const auto& unnestVariables = planNode->unnestVariables();
@@ -49,25 +50,46 @@ int32_t UnnestOperator::AddInput(omniruntime::vec::VectorBatch* vecBatch)
     }
     int32_t numElements = 0;
     rawMaxSizes_.resize(vecBatch->Get(0)->GetSize());
-    std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), 1);
-    for (size_t channel = 0; channel < unnestChannels_.size(); ++channel) {
-        const auto& unnestVector = vecBatch->Get(unnestChannels_[channel]);
+    
+    // 特殊情况：如果没有unnest变量，直接复制所有行
+    if (unnestChannels_.empty()) {
+        std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), 1);
+        numElements = vecBatch->Get(0)->GetSize();
+    } else {
+        // 根据outer参数初始化：outer=true时初始化为1（保留null/empty行），outer=false时初始化为0（过滤null/empty行）
+        std::fill(rawMaxSizes_.begin(), rawMaxSizes_.end(), outer_ ? 1 : 0);
+        for (size_t channel = 0; channel < unnestChannels_.size(); ++channel) {
+            const auto& unnestVector = vecBatch->Get(unnestChannels_[channel]);
 
-        auto processVector = [&](auto* inputVector) {
-            for (auto row = 0; row < unnestVector->GetSize(); ++row) {
-                auto rowSize = inputVector->GetSize(row);
-                rawMaxSizes_[row] = (rowSize > rawMaxSizes_[row]) ? rowSize : rawMaxSizes_[row];
+            auto processVector = [&](auto* inputVector) {
+                for (auto row = 0; row < unnestVector->GetSize(); ++row) {
+                    // 只有当数组不为null时才更新rawMaxSizes_（类似Velox的实现）
+                    if (!unnestVector->IsNull(row)) {
+                        auto rowSize = inputVector->GetSize(row);
+                        rawMaxSizes_[row] = (rowSize > rawMaxSizes_[row]) ? rowSize : rawMaxSizes_[row];
+                    }
+                    // 如果为null且outer=false，rawMaxSizes_[row]保持为0（将被过滤）
+                    // 如果为null且outer=true，rawMaxSizes_[row]保持为1（将被保留）
+                }
+            };
+
+            if (auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(unnestVector)) {
+                processVector(arrayVector);
+            } else if (auto mapVector = dynamic_cast<omniruntime::vec::MapVector*>(unnestVector)) {
+                processVector(mapVector);
             }
-        };
+        }
 
-        if (auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(unnestVector)) {
-            processVector(arrayVector);
-        } else if (auto mapVector = dynamic_cast<omniruntime::vec::MapVector*>(unnestVector)) {
-            processVector(mapVector);
+        // 计算numElements：所有rawMaxSizes_的总和，但对于outer模式，确保至少等于输入行数
+        int32_t totalSizes = std::accumulate(rawMaxSizes_.begin(), rawMaxSizes_.end(), 0);
+        if (outer_) {
+            // 对于outer模式，确保每个输入行至少生成一行输出（用于null/empty数组）
+            numElements = std::max(totalSizes, vecBatch->Get(0)->GetSize());
+        } else {
+            // 对于非outer模式，只计算实际元素数（null/empty数组贡献0）
+            numElements = totalSizes;
         }
     }
-
-    numElements = std::max(std::accumulate(rawMaxSizes_.begin(), rawMaxSizes_.end(), 0), vecBatch->Get(0)->GetSize());
     generateOutput(numElements, vecBatch);
     return 0;
 }
@@ -109,14 +131,18 @@ void UnnestOperator::generateRepeatedValues(VectorType* inputVector, VectorType*
     int32_t index = 0;
     int32_t inputSize = inputVector->GetSize();
     for (auto i = 0; i < inputSize; ++i) {
-        if (inputVector->IsNull(i)) {
-            for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-                outputVector->SetNull(index++);
-            }
-        } else {
-            auto value = inputVector->GetValue(i);
-            for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-                outputVector->SetValue(index++, value);
+        // 只有当rawMaxSizes_[i] > 0时才生成repeated值
+        // 对于outer=false的null/empty数组，rawMaxSizes_[i]为0，因此不会生成输出
+        if (rawMaxSizes_[i] > 0) {
+            if (inputVector->IsNull(i)) {
+                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                    outputVector->SetNull(index++);
+                }
+            } else {
+                auto value = inputVector->GetValue(i);
+                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                    outputVector->SetValue(index++, value);
+                }
             }
         }
     }
@@ -216,18 +242,33 @@ void UnnestOperator::generateComplexRepeatedValues(int32_t inputSize, auto* inpu
     int32_t index = 0;
     int32_t elementIndex = 0;
     for (auto i = 0; i < inputSize; ++i) {
-        int64_t start = inputVector->GetOffset(i);
-        int64_t end = inputVector->GetOffset(i + 1);
-        for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-            for (auto k = start; k < end; ++k) {
-                if (inputElementVector->IsNull(k)) {
-                    outputElementVector->SetNull(elementIndex++);
-                } else {
-                    auto value = inputElementVector->GetValue(k);
-                    outputElementVector->SetValue(elementIndex++, value);
+        // 只有当rawMaxSizes_[i] > 0时才处理（该行会在输出中）
+        if (rawMaxSizes_[i] > 0) {
+            if (inputVector->IsNull(i)) {
+                // 对于null数组，在输出中创建空数组
+                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                    outputVector->SetSize(index++, 0);
+                }
+            } else {
+                int64_t start = inputVector->GetOffset(i);
+                int64_t end = inputVector->GetOffset(i + 1);
+                int64_t length = end - start;
+                
+                // 对于repeated列（数组），将整个数组复制rawMaxSizes_[i]次
+                // 每个输出行都获得整个数组的副本
+                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                    // 为这个输出行复制整个数组
+                    for (auto k = start; k < end; ++k) {
+                        if (inputElementVector->IsNull(k)) {
+                            outputElementVector->SetNull(elementIndex++);
+                        } else {
+                            auto value = inputElementVector->GetValue(k);
+                            outputElementVector->SetValue(elementIndex++, value);
+                        }
+                    }
+                    outputVector->SetSize(index++, length);
                 }
             }
-            outputVector->SetSize(index++, end - start);
         }
     }
 }
@@ -241,16 +282,24 @@ void UnnestOperator::generateUnrepeatedValues(omniruntime::vec::BaseVector* inpu
     auto insetVector = [&](auto* unrepeatVector, auto* outputVector) {
         for (auto i = 0; i < inputSize; ++i) {
             if (unrepeatVector->IsNull(i)) {
-                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-                    outputVector->SetNull(index++);
+                // 对于null数组，只有当outer=true时才生成null值
+                if (outer_ && rawMaxSizes_[i] > 0) {
+                    for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                        outputVector->SetNull(index++);
+                    }
                 }
+                // 如果outer=false，rawMaxSizes_[i]为0，因此不会生成输出（被过滤）
             } else {
                 auto start = unrepeatVector->GetOffset(i);
                 auto length = unrepeatVector->GetSize(i);
+                // 生成实际的数组元素
                 for (auto j = 0; j < length; ++j) {
                     auto value = elementVector->GetValue(start + j);
                     outputVector->SetValue(index++, value);
                 }
+                // 当rawMaxSizes_[i] > length时生成null填充
+                // 这在多数组unnest且数组大小不同时是必需的
+                // 注意：此填充与outer参数无关 - 它用于对齐所有unnest列到相同的输出行数
                 if (rawMaxSizes_[i] > length) {
                     for (auto j = length; j < rawMaxSizes_[i]; ++j) {
                         outputVector->SetNull(index++);
