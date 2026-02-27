@@ -254,6 +254,11 @@ public:
     void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) override
     {
         int32_t rowCount = inputVecBatch->GetRowCount();
+        if (rowCount == 0) {
+            // Empty input: avoid GetVector which would call inputVecBatch->Get(channel) when batch may have no vectors
+            ProcessAlignAggSchema(result, nullptr, nullptr, false);
+            return;
+        }
         std::shared_ptr<NullsHelper> nullMap = nullptr;
         BaseVector *originVector = GetVector(inputVecBatch, 0, rowCount, &nullMap);
         ProcessAlignAggSchema(result, originVector, nullMap, false);
