@@ -18,6 +18,8 @@
 #include "../functions/DateSub.h"
 #include "../functions/DateArithmetic.h"
 #include "../functions/TimestampConversion.h"
+#include "../functions/MakeDate.h"
+#include "../functions/MakeTimestamp.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -41,5 +43,8 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterTimestampMicrosFunction(prefix + "timestamp_micros");
     RegisterTimestampMillisFunction(prefix + "timestamp_millis");
     RegisterTimestampSecondsFunction(prefix + "timestamp_seconds");
+
+    RegisterMakeDateFunction(prefix + "make_date");
+    RegisterMakeTimestampFunction(prefix + "make_timestamp");
 }
 }
