@@ -9,6 +9,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string_view>
+#include <unordered_map>
 #include "vectorization/Status.h"
 #include "vectorization/functions/Base64Util.h"
 #include "type/string_Impl.h"
@@ -711,4 +712,108 @@ struct SplitPartFunction {
     }
 };
 
+
+/// translate function
+/// translate(string, match, replace) -> varchar
+/// Returns a new translated string. It translates the character in `string`
+/// by a character in `replace`. The character in `replace` is corresponding
+/// to the character in `match`. The translation will happen when any character
+/// in `string` matches with a character in `match`.
+/// - If match is longer than replace, extra characters in match are deleted from result.
+/// - If replace is longer than match, extra characters in replace are ignored.
+/// - Only the first occurrence of each character in match is considered.
+/// Supports both ASCII and Unicode (UTF-8) strings.
+template <typename T>
+struct TranslateFunction {
+private:
+    /// Returns the length of a UTF-8 character starting at 'offset'.
+    /// Returns 1 for invalid UTF-8 character.
+    ALWAYS_INLINE int32_t getUtf8CharLength(const std::string_view& input, int32_t offset) const
+    {
+        if (offset >= static_cast<int32_t>(input.size())) {
+            return 1;
+        }
+        int byteLen = 0;
+        int32_t codepoint = Utf8FirstCodepoint(input.data() + offset, input.size() - offset, byteLen);
+        // For invalid UTF-8, return 1 (treat as single byte)
+        if (codepoint < 0 || byteLen <= 0) {
+            return 1;
+        }
+        return byteLen;
+    }
+
+    /// Builds a dictionary mapping each character in match to the corresponding character in replace.
+    /// If match is longer than replace, extra characters map to empty string (deletion).
+    /// Only the first occurrence of each character in match is considered.
+    std::unordered_map<std::string, std::string> buildDictionary(
+        const std::string_view& match, const std::string_view& replace) const
+    {
+        std::unordered_map<std::string, std::string> dictionary;
+        int32_t matchIdx = 0;
+        int32_t replaceIdx = 0;
+
+        while (matchIdx < static_cast<int32_t>(match.size())) {
+            std::string replaceChar;
+            // If match's character size is larger than replace's, the extra
+            // characters in match will be removed from input string.
+            if (replaceIdx < static_cast<int32_t>(replace.size())) {
+                int32_t replaceCharLength = getUtf8CharLength(replace, replaceIdx);
+                replaceChar = std::string(replace.data() + replaceIdx, replaceCharLength);
+                replaceIdx += replaceCharLength;
+            }
+
+            int32_t matchCharLength = getUtf8CharLength(match, matchIdx);
+            std::string matchChar = std::string(match.data() + matchIdx, matchCharLength);
+            // Only considers the first occurrence of a character in match.
+            dictionary.emplace(matchChar, replaceChar);
+            matchIdx += matchCharLength;
+        }
+        return dictionary;
+    }
+
+public:
+    ALWAYS_INLINE bool call(std::string& result, const std::string_view& input,
+        const std::string_view& match, const std::string_view& replace)
+    {
+        // Build the translation dictionary
+        auto dictionary = buildDictionary(match, replace);
+
+        // No need to do the translation if dictionary is empty
+        if (dictionary.empty()) {
+            result.assign(input.data(), input.size());
+            return true;
+        }
+
+        // Reserve initial capacity (input size, may grow for Unicode replacements)
+        result.clear();
+        result.reserve(input.size());
+
+        int32_t inputIdx = 0;
+        while (inputIdx < static_cast<int32_t>(input.size())) {
+            int32_t charLength = getUtf8CharLength(input, inputIdx);
+            std::string inputChar(input.data() + inputIdx, charLength);
+
+            auto it = dictionary.find(inputChar);
+            if (it == dictionary.end()) {
+                // Character not in match, append as-is
+                result.append(inputChar);
+            } else {
+                // Character in match, append replacement (may be empty for deletion)
+                result.append(it->second);
+            }
+            inputIdx += charLength;
+        }
+
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string& result, const std::string_view* input,
+        const std::string_view* match, const std::string_view* replace)
+    {
+        if (input == nullptr || match == nullptr || replace == nullptr) {
+            return false;
+        }
+        return call(result, *input, *match, *replace);
+    }
+};
 }

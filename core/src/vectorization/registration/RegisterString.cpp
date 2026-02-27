@@ -162,5 +162,25 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "split_part", {OMNI_CHAR, OMNI_VARCHAR, OMNI_LONG}, OMNI_VARCHAR);
     RegisterFunction<SplitPartFunction, std::string, std::string_view, std::string_view, int64_t>(
         prefix + "split_part", {OMNI_CHAR, OMNI_CHAR, OMNI_LONG}, OMNI_VARCHAR);
+
+    // translate(string, match, replace) -> varchar
+    // Translates characters in string that match characters in match to corresponding characters in replace.
+    // Support all combinations of VARCHAR/CHAR string types
+    RegisterFunction<TranslateFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "translate", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<TranslateFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "translate", {OMNI_CHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<TranslateFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "translate", {OMNI_VARCHAR, OMNI_CHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<TranslateFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "translate", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<TranslateFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "translate", {OMNI_CHAR, OMNI_CHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<TranslateFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "translate", {OMNI_CHAR, OMNI_VARCHAR, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<TranslateFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "translate", {OMNI_VARCHAR, OMNI_CHAR, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<TranslateFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "translate", {OMNI_CHAR, OMNI_CHAR, OMNI_CHAR}, OMNI_VARCHAR);
 }
 }
