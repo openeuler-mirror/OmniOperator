@@ -125,6 +125,8 @@ namespace omniruntime::vec {
 
         void Append(BaseVector *other, int positionOffset, int length);
 
+        std::vector<BaseVector*> GetValue(int index);
+
     private:
         std::vector<std::shared_ptr<BaseVector>> children_;
         // rawChildren_ elements no needs to release, this only use for immutable view, like string and string_view

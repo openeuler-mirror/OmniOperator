@@ -9,24 +9,49 @@
 #include "vector.h"
 #include "omni_row.h"
 #include "array_vector.h"
+#include "map_vector.h"
+#include "row_vector.h"
 #include "type/data_types.h"
 #include "type/data_types.h"
 #include "vector_batch.h"
 #include "util/debug.h"
 /*
  * row format:
- * whichType 000：fixType
- * whichType 001: varChar
- * whichType 010: array
  * 
- * | whichType(3bit 000) + isNull(1bit) + neg(1bit) + sizeLength(3bit) | fixValue |
- * | whichType(3bit 001) + isNull(1bit) + sizeLength(4bit) | realLength(n bytes) | varcharValue |
- * | whichType(3bit 010) + isNull(1bit) + real_num_ele_size(4bit) | real_num_ele(n bytes) | element1 | element2 | ... |
- *
+ * FixType: isNull(1bit) + neg(1bit) + sizeLength(4bit) | fixValue |
+ * Char/Varchar: isNull(1bit) + sizeLength(4bit) | realLength(n bytes) | varcharValue |
+ * Array: isNull(1bit) + real_num_ele_size(4bit) | real_num_ele(n bytes) | element1 | element2 | ... |
+ * Map: isNull(1bit) | keyArrayEncoding | mapArrayEncoding |
+ * Struct: isNull(1bit) + struct_child_size(4bit) | childArrayEncoding | ... |
  */
 namespace omniruntime {
 namespace vec {
 class RowBuffer;
+
+template <typename T>
+struct TypeTraits {
+    using type = Vector<T>;
+};
+
+template<>
+struct TypeTraits<std::string_view> {
+    using type = Vector<LargeStringContainer<std::string_view>>;
+};
+
+template<>
+struct TypeTraits<BaseVector*> {
+    using type = ArrayVector;
+};
+
+template<>
+struct TypeTraits<std::pair<BaseVector*, BaseVector*>> {
+    using type = MapVector;
+};
+
+template<>
+struct TypeTraits<std::vector<BaseVector*>> {
+    using type = RowVector;
+};
 
 class BaseSerialize {
 public:
@@ -35,8 +60,6 @@ public:
     static constexpr int32_t BIT_8 = 8;
     static constexpr int32_t BIT_1 = 1;
     static constexpr int32_t BIT_16 = 16;
-    static constexpr int8_t VARCHAR_BIT = 1 << 6;
-    static constexpr int8_t ARRAY_BIT = 1 << 7;
     static constexpr int8_t FIX_BIT = 0;
     static constexpr int8_t NULL_POS = 5;
     static constexpr int8_t NEG_POS = 4;
@@ -125,6 +148,10 @@ public:
                 value = reinterpret_cast<DicVectorType *>(baseVector)->GetValue(rowIndex);
             } else if constexpr (encoding == OMNI_ENCODING_ARRAY) {
                 value = reinterpret_cast<ArrayVector *>(baseVector)->GetValue(rowIndex);
+            } else if constexpr (encoding == OMNI_ENCODING_MAP) {
+                value = reinterpret_cast<MapVector *>(baseVector)->GetValue(rowIndex);
+            } else if constexpr (encoding == OMNI_ENCODING_STRUCT) {
+                value = reinterpret_cast<RowVector *>(baseVector)->GetValue(rowIndex);
             } else {
                 // OMNI_ENCODING_CONTAINER is only used for the agg avg partial in olk. row shuffle is not supported.
                 std::string message = encoding + "encoding type is not supported for omni row";
@@ -155,7 +182,12 @@ public:
             uint8_t rowLenSize = CalMetaSize();
             return PrefixLen + rowLenSize + value.length();
         } else if constexpr (std::is_same_v<T, BaseVector*>) {
-            return CompactArrayLength();
+            return CompactArrayLength(value);
+        } else if constexpr (std::is_same_v<T, std::pair<BaseVector*, BaseVector*>>) {
+            // for map, there is two array
+            return CompactMapLength();
+        } else if constexpr (std::is_same_v<T, std::vector<BaseVector*>>) {
+            return CompactStructLength();
         } else {
             return PrefixLen + CalMetaSize();
         }
@@ -164,51 +196,82 @@ public:
     /**
      * Compute the array final length
      */
-    int32_t CompactArrayLength()
+    int32_t CompactArrayLength(BaseVector* bv)
     {
         if (isNull) {
             return PrefixLen;
         }
-        DataTypeId arrayDataTypeId = value->GetTypeId();
+        int32_t arraySize = bv->GetSize();
+        uint8_t arrayMetaSize = (BIT_64 - __builtin_clzll(arraySize) + BIT_8) / BIT_8;
+        return PrefixLen + arrayMetaSize + CompactBaseVectorLength(bv);
+    }
+
+    /**
+     * Compute the map final length
+     */
+    int32_t CompactMapLength()
+    {
+        if (isNull) {
+            return PrefixLen;
+        }
+        return PrefixLen + CompactArrayLength(value.first) + CompactArrayLength(value.second);
+    }
+
+    int32_t CompactStructLength()
+    {
+        if (isNull) {
+            return PrefixLen;
+        }
+        uint8_t structMetaSize = (BIT_64 - __builtin_clzll(value.size()) + BIT_8) / BIT_8;
+        int32_t total_length = PrefixLen + structMetaSize;
+        for (auto i = 0; i < value.size(); i++) {
+            total_length += CompactArrayLength(value[i]);
+        }
+        return total_length;
+    }
+
+    int32_t CompactBaseVectorLength(BaseVector* bv)
+    {
+        DataTypeId arrayDataTypeId = bv->GetTypeId();
         switch (arrayDataTypeId) {
             case OMNI_BYTE:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_BYTE>();
+                return CalElementSize<OMNI_BYTE>(bv);
                 break;
             case OMNI_SHORT:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_SHORT>();
+                return CalElementSize<OMNI_SHORT>(bv);
                 break;
             case OMNI_INT:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_INT>();
+                return CalElementSize<OMNI_INT>(bv);
                 break;
             case OMNI_DATE32:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_DATE32>();
+                return CalElementSize<OMNI_DATE32>(bv);
                 break;
             case OMNI_LONG:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_LONG>();
+                return CalElementSize<OMNI_LONG>(bv);
                 break;
             case OMNI_TIMESTAMP:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_TIMESTAMP>();
+                return CalElementSize<OMNI_TIMESTAMP>(bv);
                 break;
             case OMNI_DECIMAL64:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_DECIMAL64>();
+                return CalElementSize<OMNI_DECIMAL64>(bv);
                 break;
             case OMNI_DECIMAL128:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_DECIMAL128>();
+                return CalElementSize<OMNI_DECIMAL128>(bv);
                 break;
             case OMNI_CHAR:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_CHAR>();
+                return CalElementSize<OMNI_CHAR>(bv);
                 break;
             case OMNI_VARCHAR:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_VARCHAR>();
+                return CalElementSize<OMNI_VARCHAR>(bv);
                 break;
             case OMNI_DOUBLE:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_DOUBLE>();
+                return CalElementSize<OMNI_DOUBLE>(bv);
                 break;
             case OMNI_BOOLEAN:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_BOOLEAN>();
+                return CalElementSize<OMNI_BOOLEAN>(bv);
                 break;
             case OMNI_ARRAY:
-                return PrefixLen + CalMetaSize() + CalElementSize<OMNI_ARRAY>();
+                return CalElementSize<OMNI_ARRAY>(bv);
                 break;
             default:
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
@@ -216,13 +279,14 @@ public:
     }
 
     template <DataTypeId id>
-    uint8_t CalElementSize()
+    uint8_t CalElementSize(BaseVector* bv)
     {
         int32_t elementSize = 0;
-        int32_t arraySize = value->GetSize();
+        int32_t arraySize = bv->GetSize();
         using elementT = typename NativeType<id>::type;
         SerializedValue<elementT> serializedValue;
-        auto elementVector = reinterpret_cast<Vector<elementT> *>(value);
+        using ElementVectorType = typename TypeTraits<elementT>::type;
+        auto elementVector = reinterpret_cast<ElementVectorType *>(bv);
         for (int32_t index = 0; index < arraySize; index++) {
             elementT elementValue = elementVector->GetValue(index);
             serializedValue.SetValue(elementValue);
@@ -259,9 +323,6 @@ public:
         } else if constexpr (std::is_same_v<T, bool>) {
             // bool value is in meta data
             return 0;
-        } else if constexpr (std::is_same_v<T, BaseVector*>) {
-            int32_t arraySize = value->GetSize();
-            return (BIT_64 - __builtin_clzll(arraySize) + BIT_8) / BIT_8;
         } else {
             auto tmp = value;
             if (value < 0) {
@@ -283,6 +344,10 @@ public:
             return WriteVarcharBuffer(writeBuffer);
         } else if constexpr (std::is_same_v<T, BaseVector*>) {
             return WriteArrayBuffer(writeBuffer);
+        } else if constexpr (std::is_same_v<T, std::pair<BaseVector*, BaseVector*>>) {
+            return WriteMapBuffer(writeBuffer);
+        } else if constexpr (std::is_same_v<T, std::vector<BaseVector*>>) {
+            return WriteStructBuffer(writeBuffer);
         } else {
             if (isNull) {
                 *writeBuffer = (FIX_BIT | (0x1 << NULL_POS));
@@ -338,13 +403,13 @@ private:
     uint8_t *WriteVarcharBuffer(uint8_t *writeBuffer)
     {
         if (isNull) {
-            *writeBuffer = (VARCHAR_BIT | (0x1 << NULL_POS));
+            *writeBuffer = (FIX_BIT | (0x1 << NULL_POS));
             ++writeBuffer;
             return writeBuffer;
         }
         int32_t len = value.length();
         uint8_t rowLenSize = CalMetaSize();
-        *writeBuffer = (VARCHAR_BIT | (isNull << NULL_POS) | rowLenSize);
+        *writeBuffer = (FIX_BIT | (isNull << NULL_POS) | rowLenSize);
         ++writeBuffer;
         std::copy(reinterpret_cast<uint8_t *>(&len), reinterpret_cast<uint8_t *>(&len) + rowLenSize, writeBuffer);
         writeBuffer += rowLenSize;
@@ -358,60 +423,69 @@ private:
 
     uint8_t *WriteArrayBuffer(uint8_t *writeBuffer)
     {
-        if (isNull) {
-            *writeBuffer = (ARRAY_BIT | (0x1 << NULL_POS));
+        return WriteBaseVectorBuffer(writeBuffer, value);
+    }
+
+    uint8_t *WriteBaseVectorBuffer(uint8_t *writeBuffer, BaseVector* bv)
+    {
+        if (isNull || bv == nullptr) {
+            *writeBuffer = (FIX_BIT | (0x1 << NULL_POS));
             ++writeBuffer;
             return writeBuffer;
         }
 
-        int32_t arraySize = value->GetSize();
-        uint8_t rowArraySize = CalMetaSize();
-        *writeBuffer = (ARRAY_BIT | (isNull << NULL_POS) | rowArraySize);
+        int32_t arraySize = bv->GetSize();
+        uint8_t rowArraySize = (BIT_64 - __builtin_clzll(arraySize) + BIT_8) / BIT_8;
+        *writeBuffer = (FIX_BIT | (isNull << NULL_POS) | rowArraySize);
         ++writeBuffer;
         std::copy(reinterpret_cast<uint8_t *>(&arraySize), reinterpret_cast<uint8_t *>(&arraySize) + rowArraySize, writeBuffer);
         writeBuffer += rowArraySize;
+        return SerializedVector(writeBuffer, bv);
+    }
 
-        Encoding arrayEncoding = value->GetEncoding();
-        DataTypeId arrayDataTypeId = value->GetTypeId();
+    uint8_t *SerializedVector(uint8_t *writeBuffer, BaseVector* bv)
+    {
+        Encoding arrayEncoding = bv->GetEncoding();
+        DataTypeId arrayDataTypeId = bv->GetTypeId();
         switch (arrayDataTypeId) {
             case OMNI_BYTE:
-                return SerializeArrayElements<OMNI_BYTE>(writeBuffer);
+                return SerializeArrayElements<OMNI_BYTE>(writeBuffer, bv);
                 break;
             case OMNI_SHORT:
-                return SerializeArrayElements<OMNI_SHORT>(writeBuffer);
+                return SerializeArrayElements<OMNI_SHORT>(writeBuffer, bv);
                 break;
             case OMNI_INT:
-                return SerializeArrayElements<OMNI_INT>(writeBuffer);
+                return SerializeArrayElements<OMNI_INT>(writeBuffer, bv);
                 break;
             case OMNI_DATE32:
-                return SerializeArrayElements<OMNI_DATE32>(writeBuffer);
+                return SerializeArrayElements<OMNI_DATE32>(writeBuffer, bv);
                 break;
             case OMNI_LONG:
-                return SerializeArrayElements<OMNI_LONG>(writeBuffer);
+                return SerializeArrayElements<OMNI_LONG>(writeBuffer, bv);
                 break;
             case OMNI_TIMESTAMP:
-                return SerializeArrayElements<OMNI_TIMESTAMP>(writeBuffer);
+                return SerializeArrayElements<OMNI_TIMESTAMP>(writeBuffer, bv);
                 break;
             case OMNI_DECIMAL64:
-                return SerializeArrayElements<OMNI_DECIMAL64>(writeBuffer);
+                return SerializeArrayElements<OMNI_DECIMAL64>(writeBuffer, bv);
                 break;
             case OMNI_DECIMAL128:
-                return SerializeArrayElements<OMNI_DECIMAL128>(writeBuffer);
+                return SerializeArrayElements<OMNI_DECIMAL128>(writeBuffer, bv);
                 break;
             case OMNI_CHAR:
-                return SerializeArrayElements<OMNI_CHAR>(writeBuffer);
+                return SerializeArrayElements<OMNI_CHAR>(writeBuffer, bv);
                 break;
             case OMNI_VARCHAR:
-                return SerializeArrayElements<OMNI_VARCHAR>(writeBuffer);
+                return SerializeArrayElements<OMNI_VARCHAR>(writeBuffer, bv);
                 break;
             case OMNI_DOUBLE:
-                return SerializeArrayElements<OMNI_DOUBLE>(writeBuffer);
+                return SerializeArrayElements<OMNI_DOUBLE>(writeBuffer, bv);
                 break;
             case OMNI_BOOLEAN:
-                return SerializeArrayElements<OMNI_BOOLEAN>(writeBuffer);
+                return SerializeArrayElements<OMNI_BOOLEAN>(writeBuffer, bv);
                 break;
             case OMNI_ARRAY:
-                return SerializeArrayElements<OMNI_ARRAY>(writeBuffer);
+                return SerializeArrayElements<OMNI_ARRAY>(writeBuffer, bv);
                 break;
             default:
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
@@ -419,12 +493,13 @@ private:
     }
 
     template <DataTypeId id>
-    uint8_t* SerializeArrayElements(uint8_t* writeBuffer)
+    uint8_t* SerializeArrayElements(uint8_t* writeBuffer, BaseVector* bv)
     {
-        int32_t arraySize = value->GetSize();
+        int32_t arraySize = bv->GetSize();
         using elementT = typename NativeType<id>::type;
         SerializedValue<elementT> serializedValue;
-        auto elementVector = reinterpret_cast<Vector<elementT> *>(value);
+        using ElementVectorType = typename TypeTraits<elementT>::type;
+        auto elementVector = reinterpret_cast<ElementVectorType *>(bv);
         for (int32_t index = 0; index < arraySize; index++) {
             elementT elementValue = elementVector->GetValue(index);
             serializedValue.SetValue(elementValue);
@@ -433,7 +508,98 @@ private:
                 delete elementValue;
             }
         }
-        delete value;
+        delete bv;
+        return writeBuffer;
+    }
+
+    uint8_t *WriteMapBuffer(uint8_t *writeBuffer)
+    {
+        if (isNull) {
+            *writeBuffer = (FIX_BIT | (0x1 << NULL_POS));
+            ++writeBuffer;
+            return writeBuffer;
+        }
+
+        *writeBuffer = FIX_BIT;
+        ++writeBuffer;
+        writeBuffer = WriteBaseVectorBuffer(writeBuffer, value.first);
+        writeBuffer = WriteBaseVectorBuffer(writeBuffer, value.second);
+        return writeBuffer;
+    }
+
+    uint8_t *WriteStructBuffer(uint8_t *writeBuffer)
+    {
+        if (isNull) {
+            *writeBuffer = (FIX_BIT | (0x1 << NULL_POS));
+            ++writeBuffer;
+            return writeBuffer;
+        }
+
+        int32_t structSize = value.size();
+        uint8_t rowStructSize = (BIT_64 - __builtin_clzll(structSize) + BIT_8) / BIT_8;
+        *writeBuffer = (FIX_BIT | rowStructSize);
+        ++writeBuffer;
+        std::copy(reinterpret_cast<uint8_t *>(&structSize), reinterpret_cast<uint8_t *>(&structSize) + rowStructSize, writeBuffer);
+        writeBuffer += rowStructSize;
+
+        // For struct, consider as multi ARRAY to serialize.
+        for (auto i = 0; i < structSize; i++) {
+            auto typeId = value[i]->GetTypeId();
+            switch (typeId) {
+                case OMNI_BYTE:
+                    writeBuffer = WriteStructChildBuffer<OMNI_BYTE>(writeBuffer, value[i]);
+                    break;
+                case OMNI_SHORT:
+                    writeBuffer = WriteStructChildBuffer<OMNI_SHORT>(writeBuffer, value[i]);
+                    break;
+                case OMNI_INT:
+                    writeBuffer = WriteStructChildBuffer<OMNI_INT>(writeBuffer, value[i]);
+                    break;
+                case OMNI_DATE32:
+                    writeBuffer = WriteStructChildBuffer<OMNI_DATE32>(writeBuffer, value[i]);
+                    break;
+                case OMNI_LONG:
+                    writeBuffer = WriteStructChildBuffer<OMNI_LONG>(writeBuffer, value[i]);
+                    break;
+                case OMNI_TIMESTAMP:
+                    writeBuffer = WriteStructChildBuffer<OMNI_TIMESTAMP>(writeBuffer, value[i]);
+                    break;
+                case OMNI_DECIMAL64:
+                    writeBuffer = WriteStructChildBuffer<OMNI_DECIMAL64>(writeBuffer, value[i]);
+                    break;
+                case OMNI_DECIMAL128:
+                    writeBuffer = WriteStructChildBuffer<OMNI_DECIMAL128>(writeBuffer, value[i]);
+                    break;
+                case OMNI_CHAR:
+                    writeBuffer = WriteStructChildBuffer<OMNI_CHAR>(writeBuffer, value[i]);
+                    break;
+                case OMNI_VARCHAR:
+                    writeBuffer = WriteStructChildBuffer<OMNI_VARCHAR>(writeBuffer, value[i]);
+                    break;
+                case OMNI_DOUBLE:
+                    writeBuffer = WriteStructChildBuffer<OMNI_DOUBLE>(writeBuffer, value[i]);
+                    break;
+                case OMNI_BOOLEAN:
+                    writeBuffer = WriteStructChildBuffer<OMNI_BOOLEAN>(writeBuffer, value[i]);
+                    break;
+                case OMNI_ARRAY:
+                    writeBuffer = WriteStructChildBuffer<OMNI_ARRAY>(writeBuffer, value[i]);
+                    break;
+                default:
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
+            }
+        }
+        return writeBuffer;
+    }
+
+    template <DataTypeId id>
+    uint8_t *WriteStructChildBuffer(uint8_t *writeBuffer, BaseVector* bv)
+    {
+        using elementT = typename NativeType<id>::type;
+        SerializedValue<elementT> serializedValue;
+        using vectorType = typename TypeTraits<elementT>::type;
+        serializedValue.SetValue(reinterpret_cast<vectorType*>(bv)->GetValue(0));
+        writeBuffer = serializedValue.WriteBuffer(writeBuffer);
         return writeBuffer;
     }
 
