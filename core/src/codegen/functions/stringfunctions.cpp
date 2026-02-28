@@ -1426,9 +1426,6 @@ extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr,
     if (isNull) {
         *outLen = 0;
         return nullptr;
-    } else if (len == 0) {
-        *outLen = 0;
-        return "";
     }
     int32_t ssLen = StringUtil::NumChars(str, len);
     if (ssLen >= limit) {
@@ -1438,13 +1435,15 @@ extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr,
     int32_t diff = limit - ssLen;
     int32_t outByteNum = len + diff + 1;
     auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
-    errno_t res = memcpy_s(padded, len, str, len);
-    if (res != EOK) {
-        SetError(contextPtr, "charReadPadding failed：memcpy_s error");
-        *outLen = 0;
-        return nullptr;
+    if (len > 0) {
+        errno_t res = memcpy_s(padded, len, str, len);
+        if (res != EOK) {
+            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+            *outLen = 0;
+            return nullptr;
+        }
     }
-    res = memset_s(padded + len, diff, ' ', diff);
+    errno_t res = memset_s(padded + len, diff, ' ', diff);
     if (res != EOK) {
         SetError(contextPtr, "charReadPadding failed：memset_s error");
         *outLen = 0;
