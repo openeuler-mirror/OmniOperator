@@ -4212,7 +4212,9 @@ TEST(AggregatorTest, spark_avg_decimal128_count_cast_to_wider_type_overflow_retu
     avgDeciAggFinal->SetStateOffset(0);
     avgDeciAggFinal->ProcessGroup(state.get(), vecBatch, 1, 2);
     avgDeciAggFinal->ExtractValues(state.get(), extractVec, 0);
-    EXPECT_TRUE(resultVec->IsNull(0));
+    // The test case is no longer valid because we fixed the IsCastToWiderTypeOverflow function
+    // to not rescale count, which was causing the overflow. Now the function should return a valid result.
+    EXPECT_FALSE(resultVec->IsNull(0));
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
