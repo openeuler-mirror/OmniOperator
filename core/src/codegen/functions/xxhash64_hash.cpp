@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2026. All rights reserved.
  * Description: registry  function  implementation
  */
 #include "xxhash64_hash.h"
@@ -73,6 +73,18 @@ extern "C" DLLEXPORT int64_t XxH64String(const char *val, int32_t valLen, bool i
 
     auto data = reinterpret_cast<int8_t *>(const_cast<char *>(val));
     return HashUtil::XxHash64Hash(seed, data, 0, valLen);
+}
+
+extern "C" DLLEXPORT int64_t XxH64Float(float val, bool isValNull, int64_t seed, bool isSeedNull)
+{
+    if (isSeedNull) {
+        seed = 0;
+    }
+    if (isValNull) {
+        return seed;
+    }
+
+    return HashLong(HashUtil::FloatToIntBits(val), seed);
 }
 
 extern "C" DLLEXPORT int64_t XxH64Double(double val, bool isValNull, int64_t seed, bool isSeedNull)
