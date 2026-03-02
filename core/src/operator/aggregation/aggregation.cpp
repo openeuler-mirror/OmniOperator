@@ -154,6 +154,10 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 CreateAggregatorFactory<SkewnessAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
+            case OMNI_AGGREGATION_TYPE_APPROX_PERCENTILE: {
+                CreateAggregatorFactory<ApproxPercentileAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
             default: {
                 std::string omniExceptionInfo = "In function CreateAggregatorFactories, No such agg func type " +
                     std::to_string(funcTypesContext[i]);

@@ -243,6 +243,9 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
         case OMNI_AGGREGATION_TYPE_SKEWNESS: {
                     return std::make_unique<SkewnessAggregatorFactory>();
         }
+        case OMNI_AGGREGATION_TYPE_APPROX_PERCENTILE: {
+            return std::make_unique<ApproxPercentileAggregatorFactory>();
+        }
         default: {
             std::string omniExceptionInfo =
                 "In function CreateAggregatorFactory, no such aggregate type " + std::to_string(aggType);
