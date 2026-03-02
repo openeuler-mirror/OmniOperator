@@ -98,7 +98,6 @@ TEST(JsonObjectKeysTest, BasicObject) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateArrayResult(result, 0, {"name", "age", "id"});
-    delete inputVec;
     delete result;
 }
 
@@ -108,7 +107,6 @@ TEST(JsonObjectKeysTest, EmptyObject) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateArrayResult(result, 0, {});
-    delete inputVec;
     delete result;
 }
 
@@ -118,7 +116,6 @@ TEST(JsonObjectKeysTest, NonObjectNumber) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -128,7 +125,6 @@ TEST(JsonObjectKeysTest, NonObjectString) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -138,7 +134,6 @@ TEST(JsonObjectKeysTest, InvalidJson) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -148,7 +143,6 @@ TEST(JsonObjectKeysTest, EmptyString) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -158,7 +152,6 @@ TEST(JsonObjectKeysTest, JsonArray) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -170,7 +163,6 @@ TEST(JsonObjectKeysTest, NullPropagation) {
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateNullResult(result, 0);
     JsonObjectKeysTestHelper::ValidateArrayResult(result, 1, {"a"});
-    delete inputVec;
     delete result;
 }
 
@@ -180,7 +172,6 @@ TEST(JsonObjectKeysTest, NestedObject) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateArrayResult(result, 0, {"outer", "list"});
-    delete inputVec;
     delete result;
 }
 
@@ -198,7 +189,6 @@ TEST(JsonObjectKeysTest, MultipleRows) {
     JsonObjectKeysTestHelper::ValidateArrayResult(result, 1, {});
     JsonObjectKeysTestHelper::ValidateNullResult(result, 2);
     JsonObjectKeysTestHelper::ValidateArrayResult(result, 3, {"x"});
-    delete inputVec;
     delete result;
 }
 
@@ -208,7 +198,6 @@ TEST(JsonObjectKeysTest, MalformedJsonObject) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -218,7 +207,6 @@ TEST(JsonObjectKeysTest, UnclosedString) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -228,6 +216,5 @@ TEST(JsonObjectKeysTest, IncompleteArrayInObject) {
     BaseVector* result = nullptr;
     JsonObjectKeysTestHelper::ExecuteJsonObjectKeys(inputVec, result);
     JsonObjectKeysTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
