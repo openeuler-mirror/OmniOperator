@@ -1,0 +1,584 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Description: ToTimestamp and ToUnixTimestamp functions implementation for vectorized execution
+ */
+
+#include "ToTimestamp.h"
+#include "vector/vector.h"
+#include "../VectorFunction.h"
+#include "vectorization/SelectivityVector.h"
+#include "type/Timestamp.h"
+#include "type/tz/TimeZoneMap.h"
+#include "vector/vector_helper.h"
+#include "util/bit_util.h"
+#include "util/config/QueryConfig.h"
+#include <ctime>
+#include <cstring>
+#include <string>
+#include <string_view>
+
+namespace omniruntime::vectorization {
+using namespace omniruntime::vec;
+using namespace omniruntime::type;
+
+namespace {
+
+const tz::TimeZone *getTimeZoneFromConfig(const config::QueryConfig &config)
+{
+    if (config.AdjustTimestampToTimezone()) {
+        const auto sessionTzName = config.SessionTimezone();
+        if (!sessionTzName.empty()) {
+            return tz::locateZone(sessionTzName);
+        }
+    }
+    return nullptr;
+}
+
+std::string ConvertJodaToStrptime(const std::string &jodaFormat)
+{
+    std::string result;
+    result.reserve(jodaFormat.size() * 2);
+    size_t i = 0;
+    size_t len = jodaFormat.size();
+    while (i < len) {
+        char c = jodaFormat[i];
+        if (c == '\'') {
+            ++i;
+            while (i < len && jodaFormat[i] != '\'') {
+                result += jodaFormat[i];
+                ++i;
+            }
+            if (i < len) {
+                ++i;
+            }
+        } else if (c == 'y' || c == 'Y') {
+            size_t count = 0;
+            while (i < len && (jodaFormat[i] == 'y' || jodaFormat[i] == 'Y')) {
+                ++count;
+                ++i;
+            }
+            result += "%Y";
+        } else if (c == 'M') {
+            size_t count = 0;
+            while (i < len && jodaFormat[i] == 'M') {
+                ++count;
+                ++i;
+            }
+            result += "%m";
+        } else if (c == 'd') {
+            size_t count = 0;
+            while (i < len && jodaFormat[i] == 'd') {
+                ++count;
+                ++i;
+            }
+            result += "%d";
+        } else if (c == 'H') {
+            size_t count = 0;
+            while (i < len && jodaFormat[i] == 'H') {
+                ++count;
+                ++i;
+            }
+            result += "%H";
+        } else if (c == 'h') {
+            size_t count = 0;
+            while (i < len && jodaFormat[i] == 'h') {
+                ++count;
+                ++i;
+            }
+            result += "%I";
+        } else if (c == 'm') {
+            size_t count = 0;
+            while (i < len && jodaFormat[i] == 'm') {
+                ++count;
+                ++i;
+            }
+            result += "%M";
+        } else if (c == 's') {
+            size_t count = 0;
+            while (i < len && jodaFormat[i] == 's') {
+                ++count;
+                ++i;
+            }
+            result += "%S";
+        } else if (c == 'S') {
+            size_t count = 0;
+            while (i < len && jodaFormat[i] == 'S') {
+                ++count;
+                ++i;
+            }
+            if (!result.empty() && result.back() == '.') {
+                result.pop_back();
+            }
+        } else if (c == 'a') {
+            while (i < len && jodaFormat[i] == 'a') {
+                ++i;
+            }
+            result += "%p";
+        } else {
+            result += c;
+            ++i;
+        }
+    }
+    return result;
+}
+
+int32_t ParseMillisFromString(const std::string_view &input, const std::string &jodaFormat)
+{
+    size_t sssPos = jodaFormat.find('S');
+    if (sssPos == std::string::npos) {
+        return 0;
+    }
+
+    size_t dotInInput = input.rfind('.');
+    if (dotInInput == std::string_view::npos) {
+        return 0;
+    }
+
+    std::string fracStr(input.substr(dotInInput + 1));
+    while (fracStr.size() < 3) {
+        fracStr += '0';
+    }
+    if (fracStr.size() > 3) {
+        fracStr = fracStr.substr(0, 3);
+    }
+
+    int32_t millis = 0;
+    for (size_t ci = 0; ci < fracStr.size(); ++ci) {
+        if (fracStr[ci] < '0' || fracStr[ci] > '9') {
+            return 0;
+        }
+        millis = millis * 10 + (fracStr[ci] - '0');
+    }
+    return millis;
+}
+
+bool ParseDateTimeString(const std::string_view &input, const std::string &jodaFormat,
+    int64_t &resultMicros)
+{
+    if (input.empty() || jodaFormat.empty()) {
+        return false;
+    }
+
+    std::string strptimeFormat = ConvertJodaToStrptime(jodaFormat);
+
+    std::string inputStr(input);
+
+    std::string strptimeInput = inputStr;
+    size_t dotPos = std::string::npos;
+    bool hasFractional = (jodaFormat.find('S') != std::string::npos);
+    if (hasFractional) {
+        dotPos = inputStr.rfind('.');
+        if (dotPos != std::string::npos) {
+            strptimeInput = inputStr.substr(0, dotPos);
+        }
+    }
+
+    struct tm timeInfo = {};
+    timeInfo.tm_year = 70;
+    timeInfo.tm_mday = 1;
+    timeInfo.tm_isdst = -1;
+
+    char *parseEnd = strptime(strptimeInput.c_str(), strptimeFormat.c_str(), &timeInfo);
+    if (parseEnd == nullptr) {
+        return false;
+    }
+
+    size_t parsedLen = static_cast<size_t>(parseEnd - strptimeInput.c_str());
+    if (parsedLen != strptimeInput.size()) {
+        return false;
+    }
+
+    int64_t seconds = Timestamp::calendarUtcToEpoch(timeInfo);
+
+    int32_t millis = 0;
+    if (hasFractional) {
+        millis = ParseMillisFromString(input, jodaFormat);
+    }
+
+    resultMicros = seconds * Timestamp::kMicrosecondsInSecond +
+        static_cast<int64_t>(millis) * Timestamp::kMicrosecondsInMillisecond;
+    return true;
+}
+
+std::string_view GetStringValueFromVector(BaseVector *vec, int32_t row)
+{
+    Encoding encoding = vec->GetEncoding();
+
+    if (encoding == OMNI_ENCODING_CONST) {
+        auto *constVec = static_cast<ConstVector<std::string_view> *>(vec);
+        return constVec->GetConstValue();
+    } else if (encoding == OMNI_FLAT) {
+        auto *flatVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
+        return flatVec->GetValue(row);
+    } else if (encoding == OMNI_DICTIONARY) {
+        auto *dictVec = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vec);
+        return dictVec->GetValue(row);
+    } else {
+        return std::string_view();
+    }
+}
+
+/// get_timestamp(string, format) -> timestamp
+/// Converts a date string to Timestamp type using the specified format.
+/// Returns NULL if parsing fails or input is NULL.
+class ToTimestampFunction : public VectorFunction {
+public:
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
+        op::ExecutionContext *context) const override
+    {
+        if (args.size() < 2) {
+            OMNI_THROW("ToTimestamp function Error", "Expected 2 arguments (input, format)");
+        }
+
+        auto formatArg = args.top();
+        args.pop();
+        auto inputArg = args.top();
+        args.pop();
+
+        const auto size = inputArg->GetSize();
+
+        if (result == nullptr) {
+            result = VectorHelper::CreateFlatVector(OMNI_TIMESTAMP, size);
+        }
+
+        bool formatIsConst = (formatArg->GetEncoding() == OMNI_ENCODING_CONST);
+        std::string constFormat;
+
+        if (formatIsConst) {
+            auto *constFormatVec = static_cast<ConstVector<std::string_view> *>(formatArg);
+            std::string_view formatView = constFormatVec->GetConstValue();
+            constFormat = std::string(formatView);
+        }
+
+        const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+
+        for (int32_t row = 0; row < size; ++row) {
+            if (inputArg->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+
+            if (!formatIsConst && formatArg->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+
+            std::string_view inputStr = GetStringValueFromVector(inputArg, row);
+
+            std::string format;
+            if (formatIsConst) {
+                format = constFormat;
+            } else {
+                std::string_view formatView = GetStringValueFromVector(formatArg, row);
+                format = std::string(formatView);
+            }
+
+            int64_t resultMicros = 0;
+            if (ParseDateTimeString(inputStr, format, resultMicros)) {
+                if (sessionTz != nullptr) {
+                    Timestamp ts = Timestamp::fromMicros(resultMicros);
+                    auto sysSeconds = sessionTz->to_sys(
+                        std::chrono::seconds(ts.getSeconds()),
+                        tz::TimeZone::TChoose::kEarliest);
+                    resultMicros = sysSeconds.count() * Timestamp::kMicrosecondsInSecond +
+                        (resultMicros % Timestamp::kMicrosecondsInSecond);
+                }
+                auto *resultVec = static_cast<Vector<int64_t> *>(result);
+                resultVec->SetValue(row, resultMicros);
+                result->SetNotNull(row);
+            } else {
+                result->SetNull(row);
+            }
+        }
+
+        if (inputArg != nullptr) {
+            delete inputArg;
+        }
+        if (formatArg != nullptr) {
+            delete formatArg;
+        }
+    }
+};
+
+/// to_unix_timestamp(string) -> int64
+/// Parses a date string with default format "yyyy-MM-dd HH:mm:ss" and returns unix seconds.
+/// to_unix_timestamp(string, format) -> int64
+/// Parses a date string with specified format and returns unix seconds.
+/// to_unix_timestamp(timestamp) -> int64
+/// Extracts seconds from a timestamp value.
+/// to_unix_timestamp(date) -> int64
+/// Converts a date value to unix seconds.
+class ToUnixTimestampFunction : public VectorFunction {
+public:
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
+        op::ExecutionContext *context) const override
+    {
+        if (args.empty()) {
+            OMNI_THROW("ToUnixTimestamp function Error", "No input arguments");
+        }
+
+        size_t argCount = args.size();
+
+        if (argCount == 2) {
+            auto formatArg = args.top();
+            args.pop();
+            auto inputArg = args.top();
+            DataTypeId inputTypeId = inputArg->GetTypeId();
+
+            if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
+                delete formatArg;
+                ApplyTimestamp(args, outputType, result);
+            } else if (inputTypeId == OMNI_DATE32 || inputTypeId == OMNI_INT) {
+                delete formatArg;
+                ApplyDate(args, outputType, result);
+            } else {
+                args.push(formatArg);
+                ApplyStringWithFormat(args, outputType, result, context);
+            }
+        } else if (argCount == 1) {
+            auto inputArg = args.top();
+            DataTypeId inputTypeId = inputArg->GetTypeId();
+
+            if (inputTypeId == OMNI_VARCHAR || inputTypeId == OMNI_CHAR) {
+                ApplyStringDefault(args, outputType, result, context);
+            } else if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
+                ApplyTimestamp(args, outputType, result);
+            } else if (inputTypeId == OMNI_DATE32 || inputTypeId == OMNI_INT) {
+                ApplyDate(args, outputType, result);
+            } else {
+                args.pop();
+                OMNI_THROW("ToUnixTimestamp function Error",
+                    "Unsupported input type: " + TypeUtil::TypeToString(inputTypeId));
+            }
+        } else {
+            OMNI_THROW("ToUnixTimestamp function Error",
+                "Unexpected number of arguments: " + std::to_string(argCount));
+        }
+    }
+
+private:
+    static constexpr const char *kDefaultFormat = "yyyy-MM-dd HH:mm:ss";
+
+    void ApplyStringDefault(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
+        BaseVector *&result, op::ExecutionContext *context) const
+    {
+        auto inputArg = args.top();
+        args.pop();
+
+        const auto size = inputArg->GetSize();
+
+        if (result == nullptr) {
+            result = VectorHelper::CreateFlatVector(OMNI_LONG, size);
+        }
+
+        std::string defaultFormat(kDefaultFormat);
+        const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+
+        for (int32_t row = 0; row < size; ++row) {
+            if (inputArg->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+
+            std::string_view inputStr = GetStringValueFromVector(inputArg, row);
+            int64_t resultMicros = 0;
+            if (ParseDateTimeString(inputStr, defaultFormat, resultMicros)) {
+                if (sessionTz != nullptr) {
+                    Timestamp ts = Timestamp::fromMicros(resultMicros);
+                    auto sysSeconds = sessionTz->to_sys(
+                        std::chrono::seconds(ts.getSeconds()),
+                        tz::TimeZone::TChoose::kEarliest);
+                    resultMicros = sysSeconds.count() * Timestamp::kMicrosecondsInSecond +
+                        (resultMicros % Timestamp::kMicrosecondsInSecond);
+                }
+                int64_t seconds = resultMicros / Timestamp::kMicrosecondsInSecond;
+                auto *resultVec = static_cast<Vector<int64_t> *>(result);
+                resultVec->SetValue(row, seconds);
+                result->SetNotNull(row);
+            } else {
+                result->SetNull(row);
+            }
+        }
+
+        if (inputArg != nullptr) {
+            delete inputArg;
+        }
+    }
+
+    void ApplyStringWithFormat(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
+        BaseVector *&result, op::ExecutionContext *context) const
+    {
+        auto formatArg = args.top();
+        args.pop();
+        auto inputArg = args.top();
+        args.pop();
+
+        const auto size = inputArg->GetSize();
+
+        if (result == nullptr) {
+            result = VectorHelper::CreateFlatVector(OMNI_LONG, size);
+        }
+
+        bool formatIsConst = (formatArg->GetEncoding() == OMNI_ENCODING_CONST);
+        std::string constFormat;
+
+        if (formatIsConst) {
+            auto *constFormatVec = static_cast<ConstVector<std::string_view> *>(formatArg);
+            std::string_view formatView = constFormatVec->GetConstValue();
+            constFormat = std::string(formatView);
+        }
+
+        const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+
+        for (int32_t row = 0; row < size; ++row) {
+            if (inputArg->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+
+            if (!formatIsConst && formatArg->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+
+            std::string_view inputStr = GetStringValueFromVector(inputArg, row);
+
+            std::string format;
+            if (formatIsConst) {
+                format = constFormat;
+            } else {
+                std::string_view formatView = GetStringValueFromVector(formatArg, row);
+                format = std::string(formatView);
+            }
+
+            int64_t resultMicros = 0;
+            if (ParseDateTimeString(inputStr, format, resultMicros)) {
+                if (sessionTz != nullptr) {
+                    Timestamp ts = Timestamp::fromMicros(resultMicros);
+                    auto sysSeconds = sessionTz->to_sys(
+                        std::chrono::seconds(ts.getSeconds()),
+                        tz::TimeZone::TChoose::kEarliest);
+                    resultMicros = sysSeconds.count() * Timestamp::kMicrosecondsInSecond +
+                        (resultMicros % Timestamp::kMicrosecondsInSecond);
+                }
+                int64_t seconds = resultMicros / Timestamp::kMicrosecondsInSecond;
+                auto *resultVec = static_cast<Vector<int64_t> *>(result);
+                resultVec->SetValue(row, seconds);
+                result->SetNotNull(row);
+            } else {
+                result->SetNull(row);
+            }
+        }
+
+        if (inputArg != nullptr) {
+            delete inputArg;
+        }
+        if (formatArg != nullptr) {
+            delete formatArg;
+        }
+    }
+
+    void ApplyTimestamp(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
+        BaseVector *&result) const
+    {
+        auto inputArg = args.top();
+        args.pop();
+
+        const auto size = inputArg->GetSize();
+
+        if (result == nullptr) {
+            result = VectorHelper::CreateFlatVector(OMNI_LONG, size);
+        }
+
+        for (int32_t row = 0; row < size; ++row) {
+            if (inputArg->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+
+            auto *inputVec = static_cast<Vector<int64_t> *>(inputArg);
+            int64_t micros = inputVec->GetValue(row);
+            int64_t seconds = micros / Timestamp::kMicrosecondsInSecond;
+
+            auto *resultVec = static_cast<Vector<int64_t> *>(result);
+            resultVec->SetValue(row, seconds);
+            result->SetNotNull(row);
+        }
+
+        if (inputArg != nullptr) {
+            delete inputArg;
+        }
+    }
+
+    void ApplyDate(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
+        BaseVector *&result) const
+    {
+        auto inputArg = args.top();
+        args.pop();
+
+        const auto size = inputArg->GetSize();
+
+        if (result == nullptr) {
+            result = VectorHelper::CreateFlatVector(OMNI_LONG, size);
+        }
+
+        for (int32_t row = 0; row < size; ++row) {
+            if (inputArg->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+
+            auto *inputVec = static_cast<Vector<int32_t> *>(inputArg);
+            int32_t daysSinceEpoch = inputVec->GetValue(row);
+            int64_t seconds = static_cast<int64_t>(daysSinceEpoch) * Timestamp::kSecondsInDay;
+
+            auto *resultVec = static_cast<Vector<int64_t> *>(result);
+            resultVec->SetValue(row, seconds);
+            result->SetNotNull(row);
+        }
+
+        if (inputArg != nullptr) {
+            delete inputArg;
+        }
+    }
+};
+
+} // namespace
+
+void RegisterToTimestampFunction(const std::string &name)
+{
+    auto toTimestampFunction = std::make_shared<ToTimestampFunction>();
+    VectorFunction::RegisterVectorFunction(name, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_TIMESTAMP,
+        toTimestampFunction);
+}
+
+void RegisterToUnixTimestampFunction(const std::string &name)
+{
+    auto toUnixTimestampFunction = std::make_shared<ToUnixTimestampFunction>();
+    // string input with default format
+    VectorFunction::RegisterVectorFunction(name, {OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    // string input with custom format
+    VectorFunction::RegisterVectorFunction(name, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    // timestamp input (with optional format arg from Spark)
+    VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP}, OMNI_LONG,
+        toUnixTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_LONG}, OMNI_LONG,
+        toUnixTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_LONG, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    // date input (with optional format arg from Spark)
+    VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32}, OMNI_LONG,
+        toUnixTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_INT}, OMNI_LONG,
+        toUnixTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_INT, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+}
+
+}

@@ -26,6 +26,8 @@
 #include "../functions/UnixMillis.h"
 #include "../functions/UnixMicros.h"
 #include "../functions/UnixDate.h"
+#include "../functions/ToTimestamp.h"
+#include "../functions/ToUtcTimestamp.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -58,5 +60,12 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterUnixMillisFunction(prefix + "unix_millis");
     RegisterUnixMicrosFunction(prefix + "unix_micros");
     RegisterUnixDateFunction(prefix + "unix_date");
+
+    RegisterToTimestampFunction(prefix + "get_timestamp");
+    RegisterToUnixTimestampFunction(prefix + "to_unix_timestamp");
+    RegisterToUnixTimestampFunction(prefix + "unix_timestamp");
+
+    RegisterToUtcTimestampFunction(prefix + "to_utc_timestamp");
+    RegisterFromUtcTimestampFunction(prefix + "from_utc_timestamp");
 }
 }
