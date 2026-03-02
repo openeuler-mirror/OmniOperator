@@ -4,6 +4,7 @@
  */
 
 #include "collect_list_aggregator.h"
+#include "vector/vector_helper.h"
 #include <algorithm>
 
 namespace omniruntime::op {
@@ -150,7 +151,8 @@ void CollectListAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState 
     }
     bool isDictionary = vector->GetEncoding() == vec::OMNI_DICTIONARY;
     using stateType = typename AggNativeAndVectorType<IN_ID>::type;
-    ListState<stateType> *listState = ListState<stateType>::CastState(state + aggStateOffset);
+    // Caller (TypedAggregator::ProcessGroup) already passes state + aggStateOffset for this aggregator.
+    ListState<stateType> *listState = ListState<stateType>::CastState(state);
     if (IsInputRaw()) {
         listState->UpdatePartialState(vector, rowCount, nullMap, isDictionary, rowOffset);
     } else {
@@ -234,22 +236,74 @@ void CollectListAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<Unspi
 }
 
 /**
- * Aligns partial aggregate result schema (e.g. for skipping partial aggregation). Not supported for CollectList now.
+ * Aligns partial aggregate result schema (Skip Partial): converts input column into the intermediate
+ * aggregation state format (array of values per row) and appends it to result.
+ * - When input is raw (scalar column): each row's value becomes a single-element array [value].
+ * - When input is partial (array column): each row is already partial state, so we pass through.
  */
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void CollectListAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *vecBatch, BaseVector *originVector, const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) {
-    throw omniruntime::exception::OmniException("CollectListAggregator::ProcessAlignAggSchema",
-        "CollectListAggregator does not support ProcessAlignAggSchema.");
+    const int32_t rowCount = (originVector != nullptr) ? originVector->GetSize() : 0;
+    if (rowCount == 0) {
+        auto *emptyArr = static_cast<ArrayVector *>(VectorHelper::CreateComplexVector(GetOutputTypes().GetType(0).get(), 0));
+        vecBatch->Append(emptyArr);
+        return;
+    }
+    if (!IsInputRaw()) {
+        vecBatch->Append(VectorHelper::SliceVector(originVector, 0, rowCount));
+        return;
+    }
+    if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+        ProcessAlignAggSchemaInteranal<Vector<DictionaryContainer<InType>>>(vecBatch, originVector, nullMap);
+    } else {
+        ProcessAlignAggSchemaInteranal<Vector<InType>>(vecBatch, originVector, nullMap);
+    }
 }
 
 /**
- * Internal helper for schema alignment. Not supported for CollectList now.
+ * Internal: for raw input, builds an ArrayVector where each row is a single-element array [originVector[i]],
+ * or null if nullMap[i] is set. This is the partial state format (one value per row).
  */
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <typename U>
 void CollectListAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInteranal(VectorBatch *result, BaseVector *originVector, const std::shared_ptr<NullsHelper> nullMap) {
-    throw omniruntime::exception::OmniException("CollectListAggregator::ProcessAlignAggSchemaInteranal",
-        "CollectListAggregator does not support ProcessAlignAggSchemaInteranal.");
+    using stateType = typename AggNativeAndVectorType<IN_ID>::type;
+    const int32_t rowCount = originVector->GetSize();
+    auto *arrayVector = static_cast<ArrayVector *>(VectorHelper::CreateComplexVector(GetOutputTypes().GetType(0).get(), rowCount));
+
+    int32_t nonNullCount = 0;
+    for (int32_t i = 0; i < rowCount; i++) {
+        if (nullMap == nullptr || !(*nullMap)[i]) {
+            nonNullCount++;
+        }
+    }
+
+    auto *elementVector = static_cast<Vector<stateType> *>(VectorHelper::CreateVector(OMNI_FLAT, IN_ID, nonNullCount));
+    int32_t elemIdx = 0;
+    auto *vector = reinterpret_cast<U *>(originVector);
+
+    for (int32_t i = 0; i < rowCount; i++) {
+        if (nullMap != nullptr && (*nullMap)[i]) {
+            arrayVector->SetNull(i);
+            arrayVector->SetSize(i, 0);
+        } else {
+            stateType val;
+            if constexpr (std::is_same_v<U, Vector<stateType>>) {
+                val = vector->GetValue(i);
+            } else {
+                auto *dictVector = reinterpret_cast<Vector<DictionaryContainer<stateType>> *>(originVector);
+                stateType *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictVector);
+                const int32_t *ids = unsafe::UnsafeDictionaryVector::GetIds(dictVector);
+                val = valuePtr[ids[i]];
+            }
+            elementVector->SetValue(elemIdx, val);
+            elemIdx++;
+            arrayVector->SetSize(i, 1);
+        }
+    }
+
+    arrayVector->SetElementVector(std::shared_ptr<BaseVector>(elementVector));
+    result->Append(arrayVector);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>

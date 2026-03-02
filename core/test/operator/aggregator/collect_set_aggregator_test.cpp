@@ -771,4 +771,242 @@ TEST(CollectSetAggregatorTest, ProcessGroupUnspillSkipsNullRow)
     VectorHelper::FreeVecBatch(spillBatch);
     delete outputVector;
 }
+
+// ---- ProcessAlignAggSchema (Skip Partial) tests ----
+
+TEST(CollectSetAggregatorTest, ProcessAlignAggSchemaRawInputSingleElementArrayPerRow)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+
+    const int32_t rowCnt = 4;
+    int32_t data[rowCnt] = {10, 20, 30, 40};
+    VectorBatch *inputBatch = CreateVectorBatch(DataTypes(std::vector<DataTypePtr>{IntType()}), rowCnt, data);
+    ASSERT_EQ(inputBatch->GetRowCount(), rowCnt);
+    ASSERT_EQ(inputBatch->GetVectorCount(), 1);
+
+    VectorBatch *result = new VectorBatch(rowCnt);
+    agg->AlignAggSchema(result, inputBatch);
+
+    ASSERT_EQ(result->GetVectorCount(), 1);
+    ASSERT_EQ(result->GetRowCount(), rowCnt);
+    BaseVector *outCol = result->Get(0);
+    ASSERT_NE(outCol, nullptr);
+    ASSERT_EQ(outCol->GetTypeId(), OMNI_ARRAY);
+    auto *arrayVec = static_cast<ArrayVector *>(outCol);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        EXPECT_FALSE(arrayVec->IsNull(i));
+        std::shared_ptr<BaseVector> elemVec = arrayVec->GetArrayAt(i, false);
+        ASSERT_NE(elemVec, nullptr);
+        EXPECT_EQ(elemVec->GetSize(), 1);
+        EXPECT_EQ(static_cast<Vector<int32_t> *>(elemVec.get())->GetValue(0), data[i]);
+    }
+
+    VectorHelper::FreeVecBatch(inputBatch);
+    VectorHelper::FreeVecBatch(result);
+}
+
+TEST(CollectSetAggregatorTest, ProcessAlignAggSchemaRawInputWithNullMap)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+
+    const int32_t rowCnt = 3;
+    int32_t data[rowCnt] = {1, 2, 3};
+    VectorBatch *inputBatch = CreateVectorBatch(DataTypes(std::vector<DataTypePtr>{IntType()}), rowCnt, data);
+    inputBatch->Get(0)->SetNull(1);
+
+    VectorBatch *result = new VectorBatch(rowCnt);
+    agg->AlignAggSchema(result, inputBatch);
+
+    ASSERT_EQ(result->GetVectorCount(), 1);
+    ASSERT_EQ(result->GetRowCount(), rowCnt);
+    auto *arrayVec = static_cast<ArrayVector *>(result->Get(0));
+    EXPECT_FALSE(arrayVec->IsNull(0));
+    EXPECT_TRUE(arrayVec->IsNull(1));
+    EXPECT_FALSE(arrayVec->IsNull(2));
+    std::shared_ptr<BaseVector> elem0 = arrayVec->GetArrayAt(0, false);
+    ASSERT_NE(elem0, nullptr);
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(elem0.get())->GetValue(0), 1);
+    std::shared_ptr<BaseVector> elem2 = arrayVec->GetArrayAt(2, false);
+    ASSERT_NE(elem2, nullptr);
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(elem2.get())->GetValue(0), 3);
+
+    VectorHelper::FreeVecBatch(inputBatch);
+    VectorHelper::FreeVecBatch(result);
+}
+
+TEST(CollectSetAggregatorTest, ProcessAlignAggSchemaEmptyInput)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{IntType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+
+    VectorBatch *inputBatch = new VectorBatch(0);
+    VectorBatch *result = new VectorBatch(0);
+    agg->AlignAggSchema(result, inputBatch);
+
+    ASSERT_EQ(result->GetVectorCount(), 1);
+    ASSERT_EQ(result->GetRowCount(), 0);
+
+    VectorHelper::FreeVecBatch(inputBatch);
+    VectorHelper::FreeVecBatch(result);
+}
+
+// Two collect_set in same aggregation: state buffer has two slots; offsets must not overlap.
+TEST(CollectSetAggregatorTest, TwoCollectSetSharedStateBufferOffsets)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> ch0 = {0};
+    std::vector<int32_t> ch1 = {1};
+    DataTypes inputTypes(std::vector<DataTypePtr>{IntType(), IntType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(IntType()), ArrayOf(IntType())});
+
+    auto agg0 = factory.CreateAggregator(
+        DataTypes(std::vector<DataTypePtr>{IntType()}), DataTypes(std::vector<DataTypePtr>{ArrayOf(IntType())}),
+        ch0, true, true, false);
+    auto agg1 = factory.CreateAggregator(
+        DataTypes(std::vector<DataTypePtr>{IntType()}), DataTypes(std::vector<DataTypePtr>{ArrayOf(IntType())}),
+        ch1, true, true, false);
+    ASSERT_NE(agg0, nullptr);
+    ASSERT_NE(agg1, nullptr);
+
+    agg0->SetStateOffset(0);
+    agg1->SetStateOffset(static_cast<int32_t>(agg0->GetStateSize()));
+    size_t totalSize = agg0->GetStateSize() + agg1->GetStateSize();
+    ASSERT_GE(totalSize, sizeof(int64_t) * 2);
+
+    auto stateBuffer = std::make_unique<AggregateState[]>(totalSize);
+    agg0->InitState(stateBuffer.get());
+    agg1->InitState(stateBuffer.get());
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg0->SetExecutionContext(executionContext.get());
+    agg1->SetExecutionContext(executionContext.get());
+
+    const int32_t rowCnt = 4;
+    int32_t col0[rowCnt] = {1, 2, 1, 3};
+    int32_t col1[rowCnt] = {10, 20, 10, 40};
+    VectorBatch *vecBatch = CreateVectorBatch(
+        DataTypes(std::vector<DataTypePtr>{IntType(), IntType()}), rowCnt, col0, col1);
+    ASSERT_EQ(vecBatch->GetVectorCount(), 2);
+
+    agg0->ProcessGroup(stateBuffer.get(), vecBatch, 0, rowCnt);
+    agg1->ProcessGroup(stateBuffer.get(), vecBatch, 0, rowCnt);
+
+    std::vector<AggregateState *> groupStates = {stateBuffer.get()};
+    Vector<int32_t> *outElem0 = new Vector<int32_t>(0);
+    Vector<int32_t> *outElem1 = new Vector<int32_t>(0);
+    BaseVector *outArr0 = new ArrayVector(1, std::shared_ptr<BaseVector>(outElem0));
+    BaseVector *outArr1 = new ArrayVector(1, std::shared_ptr<BaseVector>(outElem1));
+    std::vector<BaseVector *> vecs0 = {outArr0};
+    std::vector<BaseVector *> vecs1 = {outArr1};
+    agg0->ExtractValuesBatch(groupStates, vecs0, 0, 1);
+    agg1->ExtractValuesBatch(groupStates, vecs1, 0, 1);
+
+    auto *arr0 = static_cast<ArrayVector *>(vecs0[0]);
+    auto *arr1 = static_cast<ArrayVector *>(vecs1[0]);
+    EXPECT_FALSE(arr0->IsNull(0));
+    EXPECT_FALSE(arr1->IsNull(0));
+    std::shared_ptr<BaseVector> e0 = arr0->GetArrayAt(0, false);
+    std::shared_ptr<BaseVector> e1 = arr1->GetArrayAt(0, false);
+    ASSERT_NE(e0, nullptr);
+    ASSERT_NE(e1, nullptr);
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(e0.get())->GetSize(), 3);
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(e1.get())->GetSize(), 3);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outArr0;
+    delete outArr1;
+    if (auto *p = dynamic_cast<CollectSetAggregator<OMNI_INT, OMNI_INT> *>(agg0.get())) {
+        p->DestroyState(stateBuffer.get());
+    }
+    if (auto *q = dynamic_cast<CollectSetAggregator<OMNI_INT, OMNI_INT> *>(agg1.get())) {
+        q->DestroyState(stateBuffer.get());
+    }
+}
+
+// collect_set(int_col) + collect_set(boolean_col): different element types must use same state slot size (8).
+TEST(CollectSetAggregatorTest, TwoCollectSetDifferentTypesIntAndBoolean)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> ch0 = {0};
+    std::vector<int32_t> ch1 = {1};
+    auto agg0 = factory.CreateAggregator(
+        DataTypes(std::vector<DataTypePtr>{IntType()}), DataTypes(std::vector<DataTypePtr>{ArrayOf(IntType())}),
+        ch0, true, true, false);
+    auto agg1 = factory.CreateAggregator(
+        DataTypes(std::vector<DataTypePtr>{BooleanType()}), DataTypes(std::vector<DataTypePtr>{ArrayOf(BooleanType())}),
+        ch1, true, true, false);
+    ASSERT_NE(agg0, nullptr);
+    ASSERT_NE(agg1, nullptr);
+
+    EXPECT_EQ(agg0->GetStateSize(), 8u);
+    EXPECT_EQ(agg1->GetStateSize(), 8u);
+
+    agg0->SetStateOffset(0);
+    agg1->SetStateOffset(static_cast<int32_t>(agg0->GetStateSize()));
+    size_t totalSize = agg0->GetStateSize() + agg1->GetStateSize();
+    ASSERT_EQ(totalSize, 16u);
+
+    auto stateBuffer = std::make_unique<AggregateState[]>(totalSize);
+    agg0->InitState(stateBuffer.get());
+    agg1->InitState(stateBuffer.get());
+
+    auto executionContext = std::make_unique<ExecutionContext>();
+    agg0->SetExecutionContext(executionContext.get());
+    agg1->SetExecutionContext(executionContext.get());
+
+    const int32_t rowCnt = 4;
+    int32_t col0[rowCnt] = {1, 2, 1, 3};
+    bool col1[rowCnt] = {true, false, true, true};
+    VectorBatch *vecBatch = CreateVectorBatch(
+        DataTypes(std::vector<DataTypePtr>{IntType(), BooleanType()}), rowCnt, col0, col1);
+    ASSERT_EQ(vecBatch->GetVectorCount(), 2);
+
+    agg0->ProcessGroup(stateBuffer.get(), vecBatch, 0, rowCnt);
+    agg1->ProcessGroup(stateBuffer.get(), vecBatch, 0, rowCnt);
+
+    std::vector<AggregateState *> groupStates = {stateBuffer.get()};
+    Vector<int32_t> *outElem0 = new Vector<int32_t>(0);
+    Vector<int8_t> *outElem1 = new Vector<int8_t>(0);
+    BaseVector *outArr0 = new ArrayVector(1, std::shared_ptr<BaseVector>(outElem0));
+    BaseVector *outArr1 = new ArrayVector(1, std::shared_ptr<BaseVector>(outElem1));
+    std::vector<BaseVector *> vecs0 = {outArr0};
+    std::vector<BaseVector *> vecs1 = {outArr1};
+    agg0->ExtractValuesBatch(groupStates, vecs0, 0, 1);
+    agg1->ExtractValuesBatch(groupStates, vecs1, 0, 1);
+
+    auto *arr0 = static_cast<ArrayVector *>(vecs0[0]);
+    auto *arr1 = static_cast<ArrayVector *>(vecs1[0]);
+    EXPECT_FALSE(arr0->IsNull(0));
+    EXPECT_FALSE(arr1->IsNull(0));
+    std::shared_ptr<BaseVector> e0 = arr0->GetArrayAt(0, false);
+    std::shared_ptr<BaseVector> e1 = arr1->GetArrayAt(0, false);
+    ASSERT_NE(e0, nullptr);
+    ASSERT_NE(e1, nullptr);
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(e0.get())->GetSize(), 3);
+    EXPECT_EQ(static_cast<Vector<int8_t> *>(e1.get())->GetSize(), 2);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete outArr0;
+    delete outArr1;
+    if (auto *p = dynamic_cast<CollectSetAggregator<OMNI_INT, OMNI_INT> *>(agg0.get())) {
+        p->DestroyState(stateBuffer.get());
+    }
+    if (auto *q = dynamic_cast<CollectSetAggregator<OMNI_BOOLEAN, OMNI_BOOLEAN> *>(agg1.get())) {
+        q->DestroyState(stateBuffer.get());
+    }
+}
 }

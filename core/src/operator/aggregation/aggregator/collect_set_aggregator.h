@@ -116,9 +116,12 @@ public:
     void DestroyState(AggregateState *state);
     std::vector<DataTypePtr> GetSpillType() override;
 
+    // Fixed 8 bytes so that collect_set(col_a) and collect_set(col_b) with different element types
+    // share the same state layout (one int64_t address per slot); avoids layout mismatch when
+    // mixing e.g. collect_set(int_val) and collect_set(boolean_val).
     size_t GetStateSize() override
     {
-        return sizeof(SetState<InType>);
+        return 8u;
     }
 
     // Factory always creates CollectSetAggregator<T, T>: partial input T -> T, final input Array<T> -> element T.
