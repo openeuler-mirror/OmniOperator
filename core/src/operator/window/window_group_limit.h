@@ -195,6 +195,7 @@ private:
     std::unordered_map<type::StringRef, LimitPartitionValue *, WindowGroupLimitPartitionHash>::iterator
         currentIter;
     std::vector<vec::VectorBatch *> inputs;
+    bool useOptimizedPath = false; 
 };
 
 class WindowGroupLimitOperatorFactory : public OperatorFactory {

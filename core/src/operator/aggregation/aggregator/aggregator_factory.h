@@ -341,6 +341,27 @@ public:
         std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override;
 };
 
+class RegrAggregatorFactory : public AggregatorFactory {
+public:
+    explicit RegrAggregatorFactory(FunctionType aggregateType) : aggregateType(aggregateType) {}
+    ~RegrAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+
+private:
+    FunctionType aggregateType;
+};
+
+class RegrReplacementAggregatorFactory : public AggregatorFactory {
+public:
+    RegrReplacementAggregatorFactory() = default;
+    ~RegrReplacementAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+};
+
 class MinAggregatorFactory : public TypedAggregatorFactory<MinAggregator> {
 public:
     MinAggregatorFactory() : TypedAggregatorFactory<MinAggregator>() {}
@@ -584,6 +605,16 @@ class ApproxCountDistinctAggregatorFactory : public AggregatorFactory {
   public:
     ApproxCountDistinctAggregatorFactory() = default;
     ~ApproxCountDistinctAggregatorFactory() override = default;
+
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+};
+
+class ApproxPercentileAggregatorFactory : public AggregatorFactory {
+public:
+    ApproxPercentileAggregatorFactory() = default;
+    ~ApproxPercentileAggregatorFactory() override = default;
 
     std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,

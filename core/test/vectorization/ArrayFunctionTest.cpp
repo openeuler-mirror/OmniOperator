@@ -42,7 +42,6 @@ TEST(ArrayFunctionTest, GetArrayItemTest)
     auto context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
 
-    int intputTypes[] = {30};
     ExprEval e(input, context);
     e.VisitExpr(expr);
     auto result = e.GetResult();

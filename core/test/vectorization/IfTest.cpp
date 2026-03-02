@@ -129,7 +129,6 @@ public:
             VectorHelper::CreateFlatVector(OMNI_INT, totalElements));
         auto* arrayVec = new ArrayVector(arrays.size(), elemVec);
 
-        int32_t elemIdx = 0;
         for (size_t row = 0; row < arrays.size(); ++row) {
             const auto& arr = arrays[row];
             auto* tempElem = VectorHelper::CreateFlatVector(OMNI_INT, arr.size());

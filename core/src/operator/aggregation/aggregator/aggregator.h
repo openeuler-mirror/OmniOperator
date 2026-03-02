@@ -246,7 +246,10 @@ public:
     virtual void InitStates(std::vector<AggregateState *> &groupStates)
     {
         throw OmniException("not implement", "InitStates");
-    };
+    }
+
+    // Optional: free state-owned resources before state buffer is freed. Default no-op; overridden by collect_set/collect_list style aggregators.
+    virtual void DestroyState(AggregateState *state) {}
 
     // set result to output vector
     virtual void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors,

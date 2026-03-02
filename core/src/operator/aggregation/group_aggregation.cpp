@@ -63,7 +63,7 @@ static constexpr SetVector GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     SetVarcharVector,
     SetVarcharVector,
     SetContainerVector,
-    nullptr,
+    SetVectorImpl<Vector<int8_t>>,  // OMNI_BYTE (tinyint), e.g. approx_percentile(byte_col,...) with GROUP BY
     SetVectorImpl<Vector<float>>,
     SetVarcharVector,
     nullptr,
@@ -466,10 +466,13 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
             break;
         case type::OMNI_INT:
         case type::OMNI_DATE32:
+        case type::OMNI_TIME32:
             elementVector = std::make_shared<Vector<int32_t>>(0);
             break;
         case type::OMNI_LONG:
         case type::OMNI_DATE64:
+        case type::OMNI_TIME64:
+        case type::OMNI_TIMESTAMP:
         case type::OMNI_DECIMAL64:
             elementVector = std::make_shared<Vector<int64_t>>(0);
             break;
@@ -490,6 +493,7 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
             break;
         case type::OMNI_CHAR:
         case type::OMNI_VARCHAR:
+        case type::OMNI_VARBINARY:
             elementVector = std::make_shared<Vector<LargeStringContainer<std::string_view>>>(0);
             break;
         default:

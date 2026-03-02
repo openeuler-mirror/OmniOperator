@@ -4,6 +4,7 @@
  */
 
 #include "window.h"
+#include "lead_lag_function.h"
 
 using namespace std;
 using namespace omniruntime::vec;
@@ -187,6 +188,24 @@ OmniStatus WindowOperator::Init()
                 windowFunctions.push_back(std::move(make_unique<PercentRankFunction>(std::move(windowFrame),
                     NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
                 break;
+            case OMNI_WINDOW_TYPE_LEAD: {
+                int64_t leadOffset = windowFrameStartChannels[i];
+                int32_t leadDefaultChannel = windowFrameEndChannels[i];
+                bool leadHasDefault = (leadDefaultChannel >= 0);
+                windowFunctions.push_back(std::move(make_unique<LeadFunction>(std::move(windowFrame),
+                    sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i),
+                    argumentChannels[i], leadOffset, leadHasDefault, leadDefaultChannel)));
+                break;
+            }
+            case OMNI_WINDOW_TYPE_LAG: {
+                int64_t lagOffset = windowFrameStartChannels[i];
+                int32_t lagDefaultChannel = windowFrameEndChannels[i];
+                bool lagHasDefault = (lagDefaultChannel >= 0);
+                windowFunctions.push_back(std::move(make_unique<LagFunction>(std::move(windowFrame),
+                    sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i),
+                    argumentChannels[i], lagOffset, lagHasDefault, lagDefaultChannel)));
+                break;
+            }
             // for aggregate function we use AggregateType
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_COUNT_COLUMN:
