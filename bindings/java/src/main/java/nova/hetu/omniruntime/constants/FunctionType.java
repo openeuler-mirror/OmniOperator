@@ -58,6 +58,7 @@ public class FunctionType extends Constant {
     public static final FunctionType OMNI_AGGREGATION_TYPE_COLLECT_LIST = next();
     public static final FunctionType OMNI_AGGREGATION_TYPE_KURTOSIS = next();
     public static final FunctionType OMNI_AGGREGATION_TYPE_SKEWNESS = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_APPROX_PERCENTILE = next();
 
     public FunctionType(int value) {
         super(value);

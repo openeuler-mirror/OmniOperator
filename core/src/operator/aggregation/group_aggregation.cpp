@@ -63,7 +63,7 @@ static constexpr SetVector GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     SetVarcharVector,
     SetVarcharVector,
     SetContainerVector,
-    nullptr,
+    SetVectorImpl<Vector<int8_t>>,  // OMNI_BYTE (tinyint), e.g. approx_percentile(byte_col,...) with GROUP BY
     SetVectorImpl<Vector<float>>,
     SetVarcharVector,
     nullptr,

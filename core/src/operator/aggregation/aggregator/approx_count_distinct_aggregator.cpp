@@ -208,7 +208,7 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
         int8_t st = aggState->len >= 2 ? HllBooleanDeserialize(buf) : 0;
         auto *boolVec = reinterpret_cast<Vector<bool> *>(vector);
         for (int32_t i = 0; i < rowCount; ++i) {
-            if (nullMap && !(*nullMap)[i]) {
+            if (nullMap && (*nullMap)[i]) {
                 continue;
             }
             bool val = boolVec->GetValue(rowOffset + i);
@@ -399,7 +399,7 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorB
     if (isBooleanInput_) {
         auto *boolVec = reinterpret_cast<Vector<bool> *>(originVector);
         for (int32_t i = 0; i < rowCount; ++i) {
-            if (nullMap != nullptr && !(*nullMap)[i]) {
+            if (nullMap != nullptr && (*nullMap)[i]) {
                 outVec->SetNull(i);
             } else {
                 bool val = boolVec->GetValue(i);
@@ -411,7 +411,7 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorB
         }
     } else {
         for (int32_t i = 0; i < rowCount; ++i) {
-            if (nullMap != nullptr && !(*nullMap)[i]) {
+            if (nullMap != nullptr && (*nullMap)[i]) {
                 outVec->SetNull(i);
             } else {
                 uint64_t hash = 0;

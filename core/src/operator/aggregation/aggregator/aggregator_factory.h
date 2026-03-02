@@ -590,6 +590,16 @@ class ApproxCountDistinctAggregatorFactory : public AggregatorFactory {
         bool isOverflowAsNull = true) override;
 };
 
+class ApproxPercentileAggregatorFactory : public AggregatorFactory {
+public:
+    ApproxPercentileAggregatorFactory() = default;
+    ~ApproxPercentileAggregatorFactory() override = default;
+
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+};
+
 class KurtosisAggregatorFactory : public TypedAggregatorFactory<KurtosisAggregator> {
 public:
     KurtosisAggregatorFactory() : TypedAggregatorFactory<KurtosisAggregator>() {}
