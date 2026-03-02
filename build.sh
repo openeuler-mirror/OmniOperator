@@ -6,8 +6,8 @@ set -e
 
 source $(cd $(dirname ${BASH_SOURCE[0]}) && pwd)/env_check.sh
 
-TARGZ_NAME=boostkit-omniop-operator-2.0.0-aarch64
-ZIP_NAME=BoostKit-omniop_2.0.0
+TARGZ_NAME=boostkit-omniop-operator-2.1.0-aarch64
+ZIP_NAME=BoostKit-omniop_2.1.0
 
 # if either help or --help is provided, the usage should be printed prior to exit
 if [ "$1" = 'help' ] || [ "$1" = '--help' ]; then
