@@ -3,6 +3,7 @@
  * Description: visitor class for expressions
  */
 
+#include <mutex>
 #include "Register.h"
 #include "SimpleFunctionRegistry.h"
 
@@ -74,5 +75,14 @@ void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
     RegisterCollectionFunctions(prefix);
 }
 
-void link_register_functions() {}
+// Called from CreateProjections/ProjectionOperatorFactory so that ProjectVec can resolve
+// VectorFunction::Find (e.g. element_at). Not done in RegisterFunctions::state_ static
+// init because: (1) state_ only runs when RegisterFunctions is odr-used, and the operator
+// path (sort/join/window) never references it; (2) explicit call avoids static init order
+// issues with VectorFunction::functionMap_. call_once ensures registration runs exactly once.
+void link_register_functions()
+{
+    static std::once_flag once;
+    std::call_once(once, []() { RegisterFunctions::RegisterAllFunctions(""); });
+}
 }

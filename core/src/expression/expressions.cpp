@@ -1047,7 +1047,9 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
         return expr->GetReturnTypeId();
     });
     auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
-    this->function = FunctionRegistry::LookupFunction(signature.get());
+    if (this->function == nullptr) {
+        this->function = FunctionRegistry::LookupFunction(signature.get());
+    }
     vectorFunction = VectorFunction::Find(signature);
     if (vectorFunction == nullptr && funcName == "name_struct" && dataType->GetId() == OMNI_ROW) {
         vectorFunction = std::make_shared<vectorization::NameStructFunction>();

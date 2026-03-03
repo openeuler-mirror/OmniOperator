@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "operator/sort/sort_expr.h"
 #include "vector/vector_helper.h"
+#include "vector/map_vector.h"
 #include "util/test_util.h"
 
 using namespace omniruntime::vec;
@@ -15,6 +16,28 @@ using namespace TestUtil;
 
 namespace SortWithExprTest {
 const uint64_t MAX_SPILL_BYTES = (1L << 20);
+using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+
+static omniruntime::vec::MapVector *CreateStringIntMapVector(
+    const std::vector<int32_t> &offsets, const std::vector<std::string> &keys,
+    const std::vector<int32_t> &values)
+{
+    auto keyVector = std::make_shared<VarcharVector>(static_cast<int32_t>(keys.size()));
+    for (int32_t i = 0; i < static_cast<int32_t>(keys.size()); ++i) {
+        std::string_view keyView(keys[i].data(), keys[i].size());
+        keyVector->SetValue(i, keyView);
+    }
+    auto valueVector = std::make_shared<Vector<int32_t>>(static_cast<int32_t>(values.size()));
+    for (int32_t i = 0; i < static_cast<int32_t>(values.size()); ++i) {
+        valueVector->SetValue(i, values[i]);
+    }
+    auto *mapVector = new omniruntime::vec::MapVector(
+        static_cast<int32_t>(offsets.size() - 1), keyVector, valueVector);
+    for (int32_t i = 0; i < static_cast<int32_t>(offsets.size()); ++i) {
+        mapVector->SetOffset(i, offsets[i]);
+    }
+    return mapVector;
+}
 
 TEST(SortWithExprTest, TestSortZeroExprColumns)
 {
@@ -474,6 +497,94 @@ TEST(SortWithExprTest, TestSortSpillWithDiffDataSize)
     Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    delete operatorFactory;
+}
+
+TEST(SortWithExprTest, TestSortMapElementAtExprAsc)
+{
+    const int32_t rowCount = 3;
+    auto *idVector = new Vector<int32_t>(rowCount);
+    idVector->SetValue(0, 10);
+    idVector->SetValue(1, 20);
+    idVector->SetValue(2, 30);
+    auto *mapVector = CreateStringIntMapVector({0, 2, 3, 4}, {"k0", "k1", "k0", "k0"}, {3, 9, 1, 2});
+    auto *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(idVector);
+    vecBatch->Append(mapVector);
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), std::make_shared<MapType>(VarcharType(10), IntType()) }));
+    int32_t outputCols[2] = {0, 1};
+    auto mapField = new FieldExpr(1, std::make_shared<MapType>(VarcharType(10), IntType()));
+    auto keyLiteral = new LiteralExpr(new std::string("k0"), VarcharType(10));
+    auto elementAtExpr = new FuncExpr("element_at", std::vector<Expr *> { mapField, keyLiteral }, IntType());
+    std::vector<Expr *> sortExprs { elementAtExpr };
+    int32_t ascendings[1] = {true};
+    int32_t nullFirsts[1] = {true};
+
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
+        sortExprs, ascendings, nullFirsts, 1, OperatorConfig());
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    auto *expectIdVector = new Vector<int32_t>(rowCount);
+    expectIdVector->SetValue(0, 20);
+    expectIdVector->SetValue(1, 30);
+    expectIdVector->SetValue(2, 10);
+    auto *expectMapVector = CreateStringIntMapVector({0, 1, 2, 4}, {"k0", "k0", "k0", "k1"}, {1, 2, 3, 9});
+    auto *expectVecBatch = new VectorBatch(rowCount);
+    expectVecBatch->Append(expectIdVector);
+    expectVecBatch->Append(expectMapVector);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    Expr::DeleteExprs(sortExprs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    delete operatorFactory;
+}
+
+TEST(SortWithExprTest, TestSortMapElementAtExprMissingFunctionNoCrash)
+{
+    // Simulate planner-style expression where FuncExpr exists but codegen function metadata is missing.
+    // It should fail with OmniException instead of crashing.
+    const int32_t rowCount = 2;
+    auto *idVector = new Vector<int32_t>(rowCount);
+    idVector->SetValue(0, 1);
+    idVector->SetValue(1, 2);
+    auto *mapVector = CreateStringIntMapVector({0, 1, 2}, {"k0", "k0"}, {10, 20});
+    auto *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(idVector);
+    vecBatch->Append(mapVector);
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), std::make_shared<MapType>(VarcharType(10), IntType()) }));
+    int32_t outputCols[2] = {0, 1};
+    auto mapField = new FieldExpr(1, std::make_shared<MapType>(VarcharType(10), IntType()));
+    auto keyLiteral = new LiteralExpr(new std::string("k0"), VarcharType(10));
+    auto missingFuncExpr = new FuncExpr("element_at", std::vector<Expr *> { mapField, keyLiteral }, IntType(),
+        static_cast<const omniruntime::codegen::Function *>(nullptr));
+    std::vector<Expr *> sortExprs { missingFuncExpr };
+    int32_t ascendings[1] = {true};
+    int32_t nullFirsts[1] = {true};
+
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
+        sortExprs, ascendings, nullFirsts, 1, OperatorConfig());
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+
+    // Missing codegen metadata for element_at should not crash. It should fall back
+    // to vectorized evaluation path (ProjectVec) instead of throwing.
+    EXPECT_NO_THROW({
+        sortOperator->AddInput(vecBatch);
+        VectorBatch *outputVecBatch = nullptr;
+        sortOperator->GetOutput(&outputVecBatch);
+        if (outputVecBatch != nullptr) {
+            VectorHelper::FreeVecBatch(outputVecBatch);
+        }
+    });
+
+    Expr::DeleteExprs(sortExprs);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     delete operatorFactory;
 }

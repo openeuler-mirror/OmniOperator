@@ -395,7 +395,18 @@ void ExprEval::Visit(const FuncExpr &e)
 
     BaseVector *result = nullptr;
     if (e.vectorFunction == nullptr) {
-        OMNI_THROW("Vectorization Error:", "Vector function not found for function: " + e.funcName);
+        // vectorFunction may be null when VectorFunction registry was not yet initialized
+        // at FuncExpr construction time. Try a lazy lookup now.
+        std::vector<DataTypeId> argTypes(e.arguments.size());
+        std::transform(e.arguments.begin(), e.arguments.end(), argTypes.begin(),
+            [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
+        auto signature = std::make_shared<codegen::FunctionSignature>(e.funcName, argTypes, e.dataType->GetId());
+        auto resolved = VectorFunction::Find(signature);
+        if (resolved != nullptr) {
+            const_cast<FuncExpr &>(e).vectorFunction = resolved;
+        } else {
+            OMNI_THROW("Vectorization Error:", "Vector function not found for function: " + e.funcName);
+        }
     }
     
     // Special handling for CAST from Decimal types to preserve scale information

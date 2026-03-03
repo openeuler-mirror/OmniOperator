@@ -679,6 +679,9 @@ public:
         std::vector<std::unique_ptr<Projection>> &projections, std::vector<int32_t> &projectCols,
         OverflowConfig *overflowConfig)
     {
+        // Ensure vectorization functions (e.g. element_at) are registered so ProjectVec can
+        // resolve VectorFunction::Find when codegen is not available.
+        omniruntime::vectorization::link_register_functions();
         newInputTypes.insert(newInputTypes.end(), inputTypes.Get().begin(), inputTypes.Get().end());
         int32_t inputTypesCount = inputTypes.GetSize();
         int32_t projectOutIdx = 0;
@@ -723,6 +726,7 @@ public:
         std::vector<std::unique_ptr<Projection>> &projections, std::vector<int32_t> &allCols,
         OverflowConfig &overflowConfig)
     {
+        omniruntime::vectorization::link_register_functions();
         auto &inputTypeVec = inputTypes.Get();
         int32_t newProjectCol = 0;
         std::unordered_map<int32_t, int32_t> colIdMap;
@@ -780,6 +784,18 @@ public:
         auto projectionCount = projections.size();
         for (size_t i = 0; i < projectionCount; i++) {
             if (!projections[i]->IsColumnProjection()) {
+                if (!projections[i]->IsSupported()) {
+                    // Fallback to ExpressionEvaluator (vectorized path) when codegen projection
+                    // is not supported for this expression.
+                    auto projectVec = projections[i]->ProjectVec(inputVecBatch, executionContext);
+                    if (executionContext->HasError()) {
+                        executionContext->GetArena()->Reset();
+                        std::string errorMessage = executionContext->GetError();
+                        throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+                    }
+                    newInputVecBatch->Append(projectVec);
+                    continue;
+                }
                 if (!hasSetAddr) {
                     GetAddr(*inputVecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaryVectors, inputTypes);
                     hasSetAddr = true;
