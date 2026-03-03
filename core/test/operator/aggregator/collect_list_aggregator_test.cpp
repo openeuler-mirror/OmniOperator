@@ -73,6 +73,59 @@ TEST(CollectListAggregatorTest, FactoryPartialDecimal128)
     ASSERT_NE(agg, nullptr);
 }
 
+TEST(CollectListAggregatorTest, FactoryPartialDate32)
+{
+    CollectListAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{Date32Type()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Date32Type())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+    EXPECT_TRUE(agg->IsInputRaw());
+    EXPECT_GT(agg->GetStateSize(), 0u);
+}
+
+TEST(CollectListAggregatorTest, FactoryPartialDate64)
+{
+    CollectListAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{Date64Type()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Date64Type())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+}
+
+TEST(CollectListAggregatorTest, FactoryPartialTimestamp)
+{
+    CollectListAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{TimestampType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(TimestampType())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+}
+
+TEST(CollectListAggregatorTest, FactoryFinalArrayDate32)
+{
+    CollectListAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{ArrayOf(Date32Type())});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Date32Type())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, false, false, false);
+    ASSERT_NE(agg, nullptr);
+    EXPECT_FALSE(agg->IsInputRaw());
+}
+
+TEST(CollectListAggregatorTest, FactoryFinalArrayTimestamp)
+{
+    CollectListAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{ArrayOf(TimestampType())});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(TimestampType())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, false, false, false);
+    ASSERT_NE(agg, nullptr);
+}
+
 TEST(CollectListAggregatorTest, FactoryFinalArrayInt)
 {
     CollectListAggregatorFactory factory;

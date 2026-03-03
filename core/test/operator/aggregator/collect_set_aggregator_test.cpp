@@ -52,6 +52,12 @@ static void DestroyCollectSetState(Aggregator *agg, AggregateState *state)
         s->DestroyState(state);
     } else if (auto *t = dynamic_cast<CollectSetAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64> *>(agg)) {
         t->DestroyState(state);
+    } else if (auto *d32 = dynamic_cast<CollectSetAggregator<OMNI_DATE32, OMNI_DATE32> *>(agg)) {
+        d32->DestroyState(state);
+    } else if (auto *d64 = dynamic_cast<CollectSetAggregator<OMNI_DATE64, OMNI_DATE64> *>(agg)) {
+        d64->DestroyState(state);
+    } else if (auto *ts = dynamic_cast<CollectSetAggregator<OMNI_TIMESTAMP, OMNI_TIMESTAMP> *>(agg)) {
+        ts->DestroyState(state);
     }
 }
 
@@ -137,6 +143,59 @@ TEST(CollectSetAggregatorTest, FactoryPartialDecimal128)
     DataTypes inputTypes(std::vector<DataTypePtr>{Decimal128Type()});
     DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Decimal128Type())});
     auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+}
+
+TEST(CollectSetAggregatorTest, FactoryPartialDate32)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{Date32Type()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Date32Type())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+    EXPECT_TRUE(agg->IsInputRaw());
+    EXPECT_GT(agg->GetStateSize(), 0u);
+}
+
+TEST(CollectSetAggregatorTest, FactoryPartialDate64)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{Date64Type()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Date64Type())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+}
+
+TEST(CollectSetAggregatorTest, FactoryPartialTimestamp)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{TimestampType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(TimestampType())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, true, true, false);
+    ASSERT_NE(agg, nullptr);
+}
+
+TEST(CollectSetAggregatorTest, FactoryFinalArrayDate32)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{ArrayOf(Date32Type())});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(Date32Type())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, false, false, false);
+    ASSERT_NE(agg, nullptr);
+    EXPECT_FALSE(agg->IsInputRaw());
+}
+
+TEST(CollectSetAggregatorTest, FactoryFinalArrayTimestamp)
+{
+    CollectSetAggregatorFactory factory;
+    std::vector<int32_t> channels = {0};
+    DataTypes inputTypes(std::vector<DataTypePtr>{ArrayOf(TimestampType())});
+    DataTypes outputTypes(std::vector<DataTypePtr>{ArrayOf(TimestampType())});
+    auto agg = factory.CreateAggregator(inputTypes, outputTypes, channels, false, false, false);
     ASSERT_NE(agg, nullptr);
 }
 

@@ -466,10 +466,13 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
             break;
         case type::OMNI_INT:
         case type::OMNI_DATE32:
+        case type::OMNI_TIME32:
             elementVector = std::make_shared<Vector<int32_t>>(0);
             break;
         case type::OMNI_LONG:
         case type::OMNI_DATE64:
+        case type::OMNI_TIME64:
+        case type::OMNI_TIMESTAMP:
         case type::OMNI_DECIMAL64:
             elementVector = std::make_shared<Vector<int64_t>>(0);
             break;

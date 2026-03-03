@@ -135,9 +135,8 @@ public:
             return nullptr;
         }
         if constexpr (IN_ID == OMNI_BOOLEAN || IN_ID == OMNI_BYTE || IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG ||
+            IN_ID == OMNI_DATE32 || IN_ID == OMNI_DATE64 || IN_ID == OMNI_TIMESTAMP ||
             IN_ID == OMNI_FLOAT || IN_ID == OMNI_DOUBLE || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_DECIMAL128) {
-            LogInfo("Create CollectListAggregator<%s, %s>.", TypeUtil::TypeToStringLog(IN_ID).c_str(),
-                TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return std::make_unique<CollectListAggregator<IN_ID, OUT_ID>>(inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull);
         }
         LogError("CollectListAggregator::Create: Unsupported input type %s", TypeUtil::TypeToStringLog(IN_ID).c_str());
