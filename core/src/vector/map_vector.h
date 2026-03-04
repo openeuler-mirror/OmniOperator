@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: MapVector  implementation
  */
 
@@ -46,6 +46,8 @@ public:
     {
         return offsets[index];
     }
+
+    using BaseVector::GetSize;
 
     int64_t GetSize(int64_t index)
     {

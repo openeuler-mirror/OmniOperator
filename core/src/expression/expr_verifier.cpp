@@ -335,6 +335,12 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
             return;
         }
     }
+    if (funcExpr.vectorFunction != nullptr && (funcExpr.funcName == "transform" || funcExpr.funcName == "filter" ||
+            funcExpr.funcName == "zip_with" || funcExpr.funcName == "forall" || funcExpr.funcName == "exists" ||
+            funcExpr.funcName == "transform_keys" || funcExpr.funcName == "transform_values")) {
+        this->isSupportCodegen_ = false;
+        return;
+    }
     auto signature = std::make_shared<FunctionSignature>(funcExpr.funcName, params, funcExpr.GetReturnTypeId());
     auto function = codegen::FunctionRegistry::LookupFunction(signature.get());
     if (function == nullptr) {
