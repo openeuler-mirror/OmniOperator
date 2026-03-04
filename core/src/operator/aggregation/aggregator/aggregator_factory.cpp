@@ -100,8 +100,11 @@ std::unique_ptr<Aggregator> CollectSetAggregatorFactory::CreateAggregator(const 
         case type::OMNI_DECIMAL128:
             return CollectSetAggregator<type::OMNI_DECIMAL128, type::OMNI_DECIMAL128>::Create(inputTypes, outputTypes,
                 channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_VARCHAR:
+        case type::OMNI_CHAR:
+        case type::OMNI_VARBINARY:
+            return std::make_unique<CollectSetVarcharAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
         default: {
-            // CHAR/VARCHAR/VARBINARY/ARRAY: key type has no GroupbyHashCalculator (e.g. DecimalPartialResult/ArrayType), DefaultHashMap not supported. Factory throws for these.
             std::string omniExceptionInfo =
                 "CollectSet unsupported element type " + std::to_string(elementTypeId);
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
@@ -154,6 +157,10 @@ std::unique_ptr<Aggregator> CollectListAggregatorFactory::CreateAggregator(const
         case type::OMNI_DECIMAL128:
             return CollectListAggregator<type::OMNI_DECIMAL128, type::OMNI_DECIMAL128>::Create(inputTypes, outputTypes,
                 channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_VARCHAR:
+        case type::OMNI_CHAR:
+        case type::OMNI_VARBINARY:
+            return std::make_unique<CollectListVarcharAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
         default: {
             std::string omniExceptionInfo =
                 "CollectList unsupported element type " + std::to_string(elementTypeId);

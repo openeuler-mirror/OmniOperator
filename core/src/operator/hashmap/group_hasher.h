@@ -8,6 +8,7 @@
 #include <type/string_ref.h>
 #include <type/decimal128.h>
 #include <functional>
+#include <string>
 #include "crc_hasher.h"
 
 namespace omniruntime {
@@ -23,6 +24,15 @@ template <> struct GroupbyHashCalculator<omniruntime::type::StringRef> {
     size_t operator () (const omniruntime::type::StringRef &str) const
     {
         return omniruntime::op::HashUtil::HashValue((int8_t *)str.data, str.size);
+    }
+};
+
+// For collect_set_varchar_aggregator: key stored as std::string.
+template <> struct GroupbyHashCalculator<std::string> {
+    size_t operator () (const std::string &str) const
+    {
+        return static_cast<size_t>(omniruntime::op::HashUtil::HashValue(
+            reinterpret_cast<int8_t *>(const_cast<char *>(str.data())), static_cast<int32_t>(str.size())));
     }
 };
 

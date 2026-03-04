@@ -252,19 +252,20 @@ TEST(CollectSetAggregatorTest, FactoryUnsupportedElementTypeThrows)
         omniruntime::exception::OmniException);
 }
 
-TEST(CollectSetAggregatorTest, FactoryVarcharVarBinaryNotImplemented)
+// VARCHAR/CHAR/VARBINARY are handled by CollectSetVarcharAggregator (see collect_set_varchar_aggregator_test.cpp).
+TEST(CollectSetAggregatorTest, FactoryVarcharVarBinaryUsesVarcharAggregator)
 {
     CollectSetAggregatorFactory factory;
     std::vector<int32_t> channels = {0};
     DataTypes inputVarchar(std::vector<DataTypePtr>{VarcharType(100)});
     DataTypes outputVarchar(std::vector<DataTypePtr>{ArrayOf(VarcharType(100))});
-    EXPECT_THROW(factory.CreateAggregator(inputVarchar, outputVarchar, channels, true, true, false),
-        omniruntime::exception::OmniException);
+    auto aggVarchar = factory.CreateAggregator(inputVarchar, outputVarchar, channels, true, true, false);
+    ASSERT_NE(aggVarchar, nullptr);
 
     DataTypes inputVarbinary(std::vector<DataTypePtr>{VarBinaryType(100)});
     DataTypes outputVarbinary(std::vector<DataTypePtr>{ArrayOf(VarBinaryType(100))});
-    EXPECT_THROW(factory.CreateAggregator(inputVarbinary, outputVarbinary, channels, true, true, false),
-        omniruntime::exception::OmniException);
+    auto aggVarbinary = factory.CreateAggregator(inputVarbinary, outputVarbinary, channels, true, true, false);
+    ASSERT_NE(aggVarbinary, nullptr);
 }
 
 // ---- CollectSetAggregator direct Create / behaviour tests ----

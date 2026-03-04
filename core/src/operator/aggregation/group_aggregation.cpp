@@ -493,6 +493,7 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
             break;
         case type::OMNI_CHAR:
         case type::OMNI_VARCHAR:
+        case type::OMNI_VARBINARY:
             elementVector = std::make_shared<Vector<LargeStringContainer<std::string_view>>>(0);
             break;
         default:
