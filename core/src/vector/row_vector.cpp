@@ -10,7 +10,7 @@ namespace omniruntime::vec {
     RowVector *RowVector::CopyPositions(const int *positions, int positionOffset, int length)
     {
         if (UNLIKELY((positions == nullptr) || (length < 0))) {
-            std::string message("StructVector positions is null or the input length is incorrect: %d.", length);
+            std::string message = "StructVector positions is null or the input length is incorrect: " + std::to_string(length) + ".";
             throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 

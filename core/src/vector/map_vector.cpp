@@ -16,7 +16,7 @@ namespace omniruntime::vec {
     MapVector *MapVector::CopyPositions(const int *positions, int positionOffset, int length)
     {
         if ((positions == nullptr) || (length < 0)) {
-            std::string message("MapVector positions is null or the input length is incorrect: %d.", length);
+            std::string message = "MapVector positions is null or the input length is incorrect: " + std::to_string(length) + ".";
             throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
@@ -92,7 +92,11 @@ namespace omniruntime::vec {
      */
     void MapVector::Append(BaseVector *other, int positionOffset, int length)
     {
-        auto *otherMapVector = static_cast<MapVector *>(other);
+        auto *otherMapVector = dynamic_cast<MapVector *>(other);
+        if (otherMapVector == nullptr) {
+            std::string message = "Invalid vector type: expected MapVector for append operation.";
+            throw OmniException("MAPVECTOR_TYPE_MISMATCH", message);
+        }
 
         if (length <= 0) {
             return;
@@ -156,6 +160,9 @@ namespace omniruntime::vec {
 
                         // update write position
                         currentKeysWritePos += sourceSize;
+
+                        delete sourceKeysSlice;
+                        delete sourceValuesSlice;
                     }
                 }
             }
