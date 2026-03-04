@@ -149,7 +149,7 @@ VectorBatch *CreateTestUnnestOutputVecBatchWithArray()
     int32_t data1[dataSize] = {0, 1, 1, 2, 2, 0, 1, 2, 2, 2};
     double data2[dataSize] = {6.6, 5.5, 5.5, 4.4, 4.4, 3.3, 2.2, 1.1, 1.1, 1.1};
     int32_t data3[dataSize] = {1, 2, 2, 3, 3, 4, 5, 6, 6, 6};
-    int64_t data4[dataSize] = {1, 1, 2, 1, 2, 1, 1, 1, 2, 3};
+    int64_t data4[dataSize] = {0, 0, 1, 0, 1, 0, 0, 0, 1, 2};  // Ordinality starts from 0 (Spark SQL convention)
 
     std::vector<DataTypePtr> types = { IntType(), DoubleType(), IntType(), LongType() };
     DataTypes sourceTypes(types);
@@ -982,7 +982,7 @@ VectorBatch *CreateTestPosexplodeOutputVecBatch()
     const int32_t dataSize = 3;
     int32_t data1[dataSize] = {3, 3, 4};  // Replicated id
     int32_t data2[dataSize] = {1, 2, 3};  // Unnested elements
-    int64_t data3[dataSize] = {1, 2, 1};  // Ordinality (1-indexed, as per current implementation)
+    int64_t data3[dataSize] = {0, 1, 0};  // Ordinality (0-indexed, Spark SQL convention)
     
     std::vector<DataTypePtr> types = { IntType(), IntType(), LongType() };
     DataTypes sourceTypes(types);
@@ -1027,6 +1027,198 @@ TEST(PipelineTest, TestPosexplodeWithOrdinality)
     }
     
     VectorBatch *expVecBatch = CreateTestPosexplodeOutputVecBatch();
+    EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
+    std::vector<Expr*> exprsToDelete = {expr1, expr2};
+    Expr::DeleteExprs(exprsToDelete);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+}
+
+// Test posexplode_outer (withOrdinality=true, outer=true): null array should have NULL pos and NULL val
+VectorBatch *CreateTestPosexplodeOuterOutputVecBatchWithNullArray()
+{
+    // Expected output: all rows, with NULL pos and NULL val for null arrays only
+    // Row 0: null -> 1 output row with NULL pos and NULL val
+    // Row 1: [] -> 1 output row with pos=0 and val=NULL (empty array, not null array)
+    // Row 2: [1, 2] -> 2 output rows with pos=0,1 and val=1,2
+    // Row 3: [3] -> 1 output row with pos=0 and val=3
+    // According to Spark SQL: only null arrays have NULL pos, empty arrays have pos=0
+    const int32_t dataSize = 5;
+    int32_t data1[dataSize] = {1, 2, 3, 3, 4};  // Replicated id column
+    int32_t data2[dataSize] = {0, 0, 1, 2, 3};  // Unnested array elements
+    int64_t data3[dataSize] = {0, 0, 0, 1, 0};  // Ordinality (0-indexed, NULL for null array only)
+    bool nullMaskVal[dataSize] = {true, true, false, false, false};  // First two are null (null array and empty array both have null val)
+    bool nullMaskPos[dataSize] = {true, false, false, false, false};  // Only first pos is NULL (null array), second is 0 (empty array)
+    
+    std::vector<DataTypePtr> types = { IntType(), IntType(), LongType() };
+    DataTypes sourceTypes(types);
+    VectorBatch* batch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
+    
+    // Set null mask for the unnested column (val)
+    auto* unnestCol = dynamic_cast<vec::Vector<int32_t>*>(batch->Get(1));
+    for (int32_t i = 0; i < dataSize; ++i) {
+        if (nullMaskVal[i]) {
+            unnestCol->SetNull(i);
+        }
+    }
+    
+    // Set null mask for the ordinality column (pos) - only null array has NULL pos
+    auto* ordCol = dynamic_cast<vec::Vector<int64_t>*>(batch->Get(2));
+    for (int32_t i = 0; i < dataSize; ++i) {
+        if (nullMaskPos[i]) {
+            ordCol->SetNull(i);
+        }
+    }
+    
+    return batch;
+}
+
+TEST(PipelineTest, TestPosexplodeOuterWithNullArray)
+{
+    std::vector<DataTypePtr> types = { 
+        IntType(), 
+        std::make_shared<OmniArrayType>(IntType()) 
+    };
+    VectorBatch *vecBatch = CreateTestExplodeVecBatchWithNullEmpty();
+    std::vector<VectorBatch*> inputVector;
+    inputVector.push_back(vecBatch);
+    
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(types);
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+    
+    auto expr1 = new FieldExpr(0, IntType());
+    auto expr2 = new FieldExpr(1, std::make_shared<OmniArrayType>(IntType()));
+    auto replicateVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr1) };
+    auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr2) };
+    
+    // withOrdinality=true, outer=true
+    auto unnestNode = std::make_shared<const UnnestNode>("unnest", replicateVariables, unnestVariables, valueStreamNode, true, true);
+    std::unordered_set<PlanNodeId> emptySet;
+    PlanFragment planFragment{unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
+    VectorBatch *vectorBatch = nullptr;
+    while (true) {
+        auto future = OmniFuture::makeEmpty();
+        auto out = task->Next(&future);
+        if (!future.valid()) {
+            vectorBatch = out;
+            break;
+        }
+        OMNI_CHECK(out == nullptr, "Expected to wait but still got non-null output from Omni task");
+        future.wait();
+    }
+    
+    VectorBatch *expVecBatch = CreateTestPosexplodeOuterOutputVecBatchWithNullArray();
+    EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
+    std::vector<Expr*> exprsToDelete = {expr1, expr2};
+    Expr::DeleteExprs(exprsToDelete);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+}
+
+// Test stack with NULL values: NULL values should be output as NULL, not empty strings
+VectorBatch *CreateTestStackVecBatchWithNull()
+{
+    const int32_t dataSize = 1;
+    int32_t data1[dataSize] = {1};
+    
+    std::vector<DataTypePtr> types = { IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch* batch = CreateVectorBatch(sourceTypes, dataSize, data1);
+    
+    // Create array vector: [['A', 'B', NULL, 'D']]
+    // This simulates stack(4, 'A', 'B', NULL, 'D')
+    int32_t elementSize = 4;
+    auto elementVector = std::make_shared<vec::Vector<vec::LargeStringContainer<std::string_view>>>(elementSize);
+    std::string_view svA("A");
+    std::string_view svB("B");
+    std::string_view svD("D");
+    elementVector->SetValue(0, svA);
+    elementVector->SetValue(1, svB);
+    elementVector->SetNull(2);  // NULL value
+    elementVector->SetValue(3, svD);
+    
+    vec::ArrayVector* arrayVector = new vec::ArrayVector(dataSize, elementVector);
+    arrayVector->SetOffset(0, 0);
+    arrayVector->SetOffset(1, 4);
+    batch->Append(arrayVector);
+    return batch;
+}
+
+VectorBatch *CreateTestStackOutputVecBatchWithNull()
+{
+    const int32_t dataSize = 4;
+    
+    // Create batch manually
+    VectorBatch* batch = new VectorBatch(dataSize);
+    
+    // Create int column
+    int32_t data1[dataSize] = {1, 1, 1, 1};  // Replicated id
+    std::vector<DataTypePtr> intTypes = { IntType() };
+    DataTypes intSourceTypes(intTypes);
+    VectorBatch* intBatch = CreateVectorBatch(intSourceTypes, dataSize, data1);
+    batch->Append(intBatch->Get(0));
+    intBatch->ClearVectors();
+    VectorHelper::FreeVecBatch(intBatch);
+    
+    // Create string column manually
+    // VectorBatch will take ownership and delete it in destructor
+    BaseVector* stringVector = VectorHelper::CreateStringVector(dataSize);
+    auto* stackCol = dynamic_cast<vec::Vector<vec::LargeStringContainer<std::string_view>>*>(stringVector);
+    
+    std::string_view svA("A");
+    std::string_view svB("B");
+    std::string_view svD("D");
+    stackCol->SetValue(0, svA);
+    stackCol->SetValue(1, svB);
+    stackCol->SetNull(2);  // Third value is NULL
+    stackCol->SetValue(3, svD);
+    
+    batch->Append(stringVector);  // Ownership transferred to batch
+    
+    return batch;
+}
+
+TEST(PipelineTest, TestStackWithNullValues)
+{
+    std::vector<DataTypePtr> types = { 
+        IntType(), 
+        std::make_shared<OmniArrayType>(VarcharType(10)) 
+    };
+    VectorBatch *vecBatch = CreateTestStackVecBatchWithNull();
+    std::vector<VectorBatch*> inputVector;
+    inputVector.push_back(vecBatch);
+    
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(types);
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+    
+    auto expr1 = new FieldExpr(0, IntType());
+    auto expr2 = new FieldExpr(1, std::make_shared<OmniArrayType>(VarcharType(10)));
+    auto replicateVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr1) };
+    auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr2) };
+    
+    // outer=false (default for stack)
+    auto unnestNode = std::make_shared<const UnnestNode>("unnest", replicateVariables, unnestVariables, valueStreamNode, false, false);
+    std::unordered_set<PlanNodeId> emptySet;
+    PlanFragment planFragment{unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
+    VectorBatch *vectorBatch = nullptr;
+    while (true) {
+        auto future = OmniFuture::makeEmpty();
+        auto out = task->Next(&future);
+        if (!future.valid()) {
+            vectorBatch = out;
+            break;
+        }
+        OMNI_CHECK(out == nullptr, "Expected to wait but still got non-null output from Omni task");
+        future.wait();
+    }
+    
+    VectorBatch *expVecBatch = CreateTestStackOutputVecBatchWithNull();
     EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
     std::vector<Expr*> exprsToDelete = {expr1, expr2};
     Expr::DeleteExprs(exprsToDelete);
