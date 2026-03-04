@@ -1054,6 +1054,11 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         CallHiveUdfFunction(fExpr);
         return;
     }
+    if (UNLIKELY(fExpr.function == nullptr || fExpr.function->GetSignatures().empty())) {
+        LogWarn("Skip codegen for function '%s': missing codegen signature.", fExpr.funcName.c_str());
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
 
     if (this->overflowConfig != nullptr &&
         this->overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {

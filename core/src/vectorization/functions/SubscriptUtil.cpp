@@ -18,42 +18,47 @@ BaseVector *ApplyMapTyped(const SelectivityVector &rows, BaseVector *mapArg, Bas
     ExecutionContext *context)
 {
     using KeyType = typename NativeType<kind>::type;
-    auto rowSize = mapArg->GetSize();
-    int32_t dicIndex[rowSize];
-    memset(dicIndex, -1, sizeof(dicIndex));
-
     auto mapVector = reinterpret_cast<MapVector *>(mapArg);
+    auto rowSize = mapArg->GetSize();
+
+    // Current element_at(map, key) registration only uses string keys. For
+    // safety and simplicity we materialize a new flat vector instead of a
+    // dictionary; correctness is preferred over zero-copy here.
     if (indexArg->GetEncoding() == OMNI_ENCODING_CONST) {
-        auto offset = mapVector->GetOffsets();
-        int32_t index = 0;
         if constexpr (kind == OMNI_VARCHAR || kind == OMNI_CHAR) {
             auto constKeyVector = dynamic_cast<ConstVector<std::string_view> *>(indexArg);
             auto key = constKeyVector->GetConstValue();
             auto keyVector = dynamic_cast<Vector<LargeStringContainer<KeyType>> *>(mapVector->GetKeyVector().get());
-            int32_t i = 0;
-            while (i < keyVector->GetSize()) {
-                if (keyVector->GetValue(i) == key) {
-                    dicIndex[index] = i;
-                    i = offset[index + 1];
-                    ++index;
-                    continue;
+            auto valueVector = mapVector->GetValueVector().get();
+            auto valueTypeId = valueVector->GetTypeId();
+            auto offsets = mapVector->GetOffsets();
+
+            // Create output flat vector of map value type.
+            auto *outVec = VectorHelper::CreateVector(OMNI_FLAT, static_cast<int32_t>(valueTypeId), rowSize);
+
+            for (int32_t row = 0; row < rowSize; ++row) {
+                int32_t start = offsets[row];
+                int32_t end = offsets[row + 1];
+                int32_t foundIndex = -1;
+                for (int32_t i = start; i < end; ++i) {
+                    if (keyVector->GetValue(i) == key) {
+                        foundIndex = i;
+                        break;
+                    }
                 }
-                ++i;
-                if (i >= offset[index + 1]) {
-                    ++index;
+                if (foundIndex >= 0) {
+                    VectorHelper::CopyValue(valueVector, foundIndex, outVec, row);
+                } else {
+                    outVec->SetNull(row);
                 }
             }
-            // auto rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(mapVector->
-            //     GetValueVector().get())->Slice(0, rowSize);
-            auto rawVector = VectorHelper::SliceVector(mapVector->GetValueVector().get(), 0, rowSize);
-            auto result = VectorHelper::CreateDictionaryVector(dicIndex, rowSize, rawVector, rawVector->GetTypeId(), true);
-            return result;
+            return outVec;
         } else {
             OMNI_THROW("ApplyMapTyped Error:", "Not support Key type!");
         }
-    } else {
-        OMNI_THROW("ApplyMapTyped Error:", "Not support Key type!");
     }
+
+    OMNI_THROW("ApplyMapTyped Error:", "Not support Key type!");
 }
 
 BaseVector *SubscriptImpl::applyMap(const SelectivityVector &rows, std::vector<BaseVector *> &args,
