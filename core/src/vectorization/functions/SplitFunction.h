@@ -42,14 +42,10 @@ public:
         auto *constVec = dynamic_cast<ConstVector<std::string_view> *>(delimiterArg);
         std::string_view delimiter = constVec->GetConstValue();
 
-        {
-            ConstVectorReader<int32_t> limitReader(limitArg);
-            int32_t limit = limitReader[0];
+        ConstVectorReader<int32_t> limitReader(limitArg);
+        int32_t limit = limitReader[0];
 
-            ProcessAllRows(arrayResult, rowSize, inputArg, delimiter, limit);
-            // limitReader is destructed here, so the limitArg remains valid
-        }
-
+        ProcessAllRows(arrayResult, rowSize, inputArg, delimiter, limit);
 
         // Clean up arguments
         if (limitArg != nullptr) {
