@@ -14,6 +14,8 @@
 #include "vectorization/functions/ArrayContainsFunction.h"
 #include "vectorization/functions/ArrayRepeatFunction.h"
 #include "vectorization/functions/ArrayRemoveFunction.h"
+#include "vectorization/functions/ArrayDistinctFunction.h"
+#include "vectorization/functions/ArrayExceptFunction.h"
 
 namespace omniruntime::vectorization {
 
@@ -198,5 +200,15 @@ void RegisterArrayFunctions(const std::string &prefix)
         std::make_shared<ArrayRemoveFunction>());
     VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_NONE}, OMNI_ARRAY,
         std::make_shared<ArrayRemoveFunction>());
+
+    // Register array_distinct function
+    // array_distinct(array<T>) -> array<T>: Removes duplicate elements from the array
+    VectorFunction::RegisterVectorFunction("array_distinct", {OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayDistinctFunction>());
+
+    // Register array_except function
+    // array_except(array<T>, array<T>) -> array<T>: Returns elements in first array but not in second
+    VectorFunction::RegisterVectorFunction("array_except", {OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayExceptFunction>());
 }
 }
