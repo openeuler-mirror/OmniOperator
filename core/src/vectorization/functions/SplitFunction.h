@@ -46,6 +46,17 @@ public:
         int32_t limit = limitReader[0];
 
         ProcessAllRows(arrayResult, rowSize, inputArg, delimiter, limit);
+
+        // Clean up arguments
+        if (limitArg != nullptr) {
+            delete limitArg;
+        }
+        if (delimiterArg != nullptr) {
+            delete delimiterArg;
+        }
+        if (inputArg != nullptr) {
+            delete inputArg;
+        }
     }
 
 private:
