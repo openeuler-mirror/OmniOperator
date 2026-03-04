@@ -246,6 +246,30 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
         case OMNI_AGGREGATION_TYPE_APPROX_PERCENTILE: {
             return std::make_unique<ApproxPercentileAggregatorFactory>();
         }
+        case OMNI_AGGREGATION_TYPE_REGR_COUNT: {
+            return std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_COUNT);
+        }
+        case OMNI_AGGREGATION_TYPE_REGR_INTERCEPT: {
+            return std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_INTERCEPT);
+        }
+        case OMNI_AGGREGATION_TYPE_REGR_R2: {
+            return std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_R2);
+        }
+        case OMNI_AGGREGATION_TYPE_REGR_SLOPE: {
+            return std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_SLOPE);
+        }
+        case OMNI_AGGREGATION_TYPE_REGR_SXX: {
+            return std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_SXX);
+        }
+        case OMNI_AGGREGATION_TYPE_REGR_SXY: {
+            return std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_SXY);
+        }
+        case OMNI_AGGREGATION_TYPE_REGR_SYY: {
+            return std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_SYY);
+        }
+        case OMNI_AGGREGATION_TYPE_REGR_REPLACEMENT: {
+            return std::make_unique<RegrReplacementAggregatorFactory>();
+        }
         default: {
             std::string omniExceptionInfo =
                 "In function CreateAggregatorFactory, no such aggregate type " + std::to_string(aggType);
@@ -374,6 +398,161 @@ std::unique_ptr<Aggregator> CovarSampAggregatorFactory::CreateAggregator(const D
     const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
     bool isOverflowAsNull) {
     return CreateCovarianceAggregator(OMNI_AGGREGATION_TYPE_COVAR_SAMP, inputTypes, outputTypes, channels,
+        inputRaw, outputPartial, isOverflowAsNull);
+}
+
+// Regr merge input type checks (per-case error messages).
+static void CheckRegrSxxSyyPartialTypes(const DataTypes &inputTypes)
+{
+    if (inputTypes.GetSize() != 3) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Regr aggregate merge with 3 columns expects exactly 3 columns (count Long or Double, avg Double, m2 Double), got " +
+                std::to_string(inputTypes.GetSize()));
+    }
+    auto id0 = inputTypes.GetType(0)->GetId();
+    auto id1 = inputTypes.GetType(1)->GetId();
+    auto id2 = inputTypes.GetType(2)->GetId();
+    if (id0 != OMNI_LONG && id0 != OMNI_DOUBLE) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Regr aggregate merge 3-column: column 0 expected Long or Double, got " + std::to_string(id0));
+    }
+    if (id1 != OMNI_DOUBLE || id2 != OMNI_DOUBLE) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Regr aggregate merge 3-column: columns 1 and 2 must be Double, got " + std::to_string(id1) + ", " + std::to_string(id2));
+    }
+}
+
+static void CheckSparkRegrSxyPartialTypes(const DataTypes &inputTypes)
+{
+    if (inputTypes.GetSize() != 4) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Regr aggregate merge with 4 columns (Spark regr_sxy partial) expects (n, xAvg, yAvg, ck), got " +
+                std::to_string(inputTypes.GetSize()) + " columns");
+    }
+    auto id0 = inputTypes.GetType(0)->GetId();
+    for (size_t j = 1; j < 4; j++) {
+        if (inputTypes.GetType(j)->GetId() != OMNI_DOUBLE) {
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "Regr aggregate merge 4-column: column " + std::to_string(j) + " expected Double, got " +
+                    std::to_string(inputTypes.GetType(j)->GetId()));
+        }
+    }
+    if (id0 != OMNI_LONG && id0 != OMNI_DOUBLE) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Regr aggregate merge 4-column: column 0 expected Long or Double, got " + std::to_string(id0));
+    }
+}
+
+static void CheckNativePartialTypes(const DataTypes &inputTypes)
+{
+    if (inputTypes.GetSize() != 6) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Regr aggregate merge with 6 columns (native partial) expects (count Long/Int/Double, meanX, meanY, c2, m2X, m2Y Double), got " +
+                std::to_string(inputTypes.GetSize()) + " columns");
+    }
+    auto id0 = inputTypes.GetType(0)->GetId();
+    if (id0 != OMNI_LONG && id0 != OMNI_INT && id0 != OMNI_DOUBLE) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Regr aggregate merge 6-column: column 0 expected Long, Int, or Double, got " + std::to_string(id0));
+    }
+    for (size_t j = 1; j < 6; j++) {
+        if (inputTypes.GetType(j)->GetId() != OMNI_DOUBLE) {
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "Regr aggregate merge 6-column: column " + std::to_string(j) + " expected Double, got " +
+                    std::to_string(inputTypes.GetType(j)->GetId()));
+        }
+    }
+}
+
+static void CheckSparkCovarianceVarPopPartialTypes(const DataTypes &inputTypes)
+{
+    if (inputTypes.GetSize() != 7) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Regr aggregate merge with 7 columns (Spark Covariance+VarPop partial) expects 7 columns, got " +
+                std::to_string(inputTypes.GetSize()) + " columns");
+    }
+    auto id0 = inputTypes.GetType(0)->GetId();
+    if (id0 != OMNI_LONG && id0 != OMNI_INT && id0 != OMNI_DOUBLE) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Regr aggregate merge 7-column: column 0 expected Long, Int, or Double, got " + std::to_string(id0));
+    }
+    for (size_t j = 1; j < 7; j++) {
+        if (inputTypes.GetType(j)->GetId() != OMNI_DOUBLE) {
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "Regr aggregate merge 7-column: column " + std::to_string(j) + " expected Double, got " +
+                    std::to_string(inputTypes.GetType(j)->GetId()));
+        }
+    }
+}
+
+std::unique_ptr<Aggregator> RegrAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
+{
+    if (inputRaw) {
+        if (inputTypes.GetSize() != 2) {
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "Regr aggregate requires exactly two input columns (y, x) for raw input");
+        }
+        auto id0 = inputTypes.GetType(0)->GetId();
+        auto id1 = inputTypes.GetType(1)->GetId();
+        auto isRegrNumeric = [](type::DataTypeId id) {
+            return id == OMNI_BOOLEAN || id == OMNI_BYTE || id == OMNI_SHORT || id == OMNI_INT ||
+                   id == OMNI_LONG || id == OMNI_FLOAT || id == OMNI_DOUBLE;
+        };
+        if (!isRegrNumeric(id0) || !isRegrNumeric(id1)) {
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "Regr aggregate (y, x) inputs must be numeric: boolean, byte, short, int, long, float, or double");
+        }
+    } else {
+        size_t n = inputTypes.GetSize();
+        bool allow3 = (aggregateType == OMNI_AGGREGATION_TYPE_REGR_SXX || aggregateType == OMNI_AGGREGATION_TYPE_REGR_SYY);
+        switch (n) {
+            case 3:
+                if (!allow3) {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                        "Regr aggregate merge: 3 columns only allowed for regr_sxx/regr_syy (n, avg, m2)");
+                }
+                CheckRegrSxxSyyPartialTypes(inputTypes);
+                break;
+            case 4:
+                CheckSparkRegrSxyPartialTypes(inputTypes);
+                break;
+            case 6:
+                CheckNativePartialTypes(inputTypes);
+                break;
+            case 7:
+                CheckSparkCovarianceVarPopPartialTypes(inputTypes);
+                break;
+            default:
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                    "Regr aggregate merge requires 3, 4, 6, or 7 columns, got " + std::to_string(n));
+        }
+    }
+    return std::make_unique<RegrAggregator>(aggregateType, inputTypes, outputTypes, channels,
+        inputRaw, outputPartial, isOverflowAsNull);
+}
+
+std::unique_ptr<Aggregator> RegrReplacementAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
+{
+    if (inputRaw) {
+        if (inputTypes.GetSize() != 1) {
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "RegrReplacement requires exactly one input column (the replacement expression value) for raw input");
+        }
+        if (inputTypes.GetType(0)->GetId() != OMNI_DOUBLE) {
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "RegrReplacement supports double type only for raw input");
+        }
+    } else {
+        if (inputTypes.GetSize() != 3) {
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "RegrReplacement merge requires 3 input columns (n, avg, m2)");
+        }
+    }
+    return std::make_unique<RegrReplacementAggregator>(inputTypes, outputTypes, channels,
         inputRaw, outputPartial, isOverflowAsNull);
 }
 

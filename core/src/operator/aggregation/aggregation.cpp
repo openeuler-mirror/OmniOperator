@@ -158,6 +158,70 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 CreateAggregatorFactory<ApproxPercentileAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
+            case OMNI_AGGREGATION_TYPE_REGR_COUNT: {
+                if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
+                    aggregatorFactories.push_back(std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_COUNT));
+                } else {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Regr aggregate does not support mask column");
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_REGR_INTERCEPT: {
+                if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
+                    aggregatorFactories.push_back(std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_INTERCEPT));
+                } else {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Regr aggregate does not support mask column");
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_REGR_R2: {
+                if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
+                    aggregatorFactories.push_back(std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_R2));
+                } else {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Regr aggregate does not support mask column");
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_REGR_SLOPE: {
+                if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
+                    aggregatorFactories.push_back(std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_SLOPE));
+                } else {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Regr aggregate does not support mask column");
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_REGR_SXX: {
+                if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
+                    aggregatorFactories.push_back(std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_SXX));
+                } else {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Regr aggregate does not support mask column");
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_REGR_SXY: {
+                if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
+                    aggregatorFactories.push_back(std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_SXY));
+                } else {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Regr aggregate does not support mask column");
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_REGR_SYY: {
+                if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
+                    aggregatorFactories.push_back(std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_SYY));
+                } else {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Regr aggregate does not support mask column");
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_REGR_REPLACEMENT: {
+                if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
+                    aggregatorFactories.push_back(std::make_unique<RegrReplacementAggregatorFactory>());
+                } else {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "RegrReplacement aggregate does not support mask column");
+                }
+                break;
+            }
             default: {
                 std::string omniExceptionInfo = "In function CreateAggregatorFactories, No such agg func type " +
                     std::to_string(funcTypesContext[i]);
