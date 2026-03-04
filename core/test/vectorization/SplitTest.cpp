@@ -135,9 +135,7 @@ TEST(VectorizationTest, SplitFunctionTest) {
 
     SplitFunctionTestHelper::ExecuteSplitFunction(inputVec, delimiterVec, limitVec, rowSize);
 
-    delete inputVec;
-    delete delimiterVec;
-
+    // Apply() takes ownership and deletes limitArg, delimiterArg, inputArg; do not delete here
     std::cout << "=== Direct Test Completed ===" << std::endl;
 }
 
@@ -157,8 +155,6 @@ TEST(VectorizationTest, SplitFunctionLimitTest) {
 
     SplitFunctionTestHelper::ExecuteSplitFunction(inputVec, delimiterVec, limitVec, rowSize);
 
-    delete inputVec;
-    delete delimiterVec;
-
+    // Apply() takes ownership and deletes limitArg, delimiterArg, inputArg; do not delete here
     std::cout << "=== Multi-Row Test Completed ===" << std::endl;
 }
