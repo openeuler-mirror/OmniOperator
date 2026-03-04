@@ -6,6 +6,7 @@
 #include "operator/omni_id_type_vector_traits.h"
 #include "vector/unsafe_vector.h"
 #include "vector/array_vector.h"
+#include "vector/row_vector.h"
 #include "vector/vector.h"
 #include <unordered_map>
 
@@ -92,6 +93,15 @@ void NullArrayVectorSerializer(mem::SimpleArenaAllocator &arenaAllocator, String
     result.size += resSize;
 }
 
+void NullRowVectorSerializer(mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
+{
+    auto resSize = sizeof(uint8_t);
+    auto *&data = result.data;
+    auto *pos = arenaAllocator.AllocateContinue(resSize, reinterpret_cast<const uint8_t *&>(data));
+    (*pos) = 0; // value is null
+    result.size += resSize;
+}
+
 uint8_t GetCompactLengthSize(uint64_t value) {
     if (value == 0) {
         return 1;
@@ -132,6 +142,38 @@ void ALWAYS_INLINE ArrayVectorSerializer(ArrayVector &arrayVector, int32_t rowId
 
     for (int64_t i = start; i < end; i++) {
         serializer(elementVec, static_cast<int32_t>(i), arenaAllocator, result);
+    }
+}
+
+void ALWAYS_INLINE RowVectorSerializer(RowVector &rowVector, int32_t rowIdx, mem::SimpleArenaAllocator
+    &arenaAllocator, StringRef &result) {
+    int32_t childCount = rowVector.ChildSize();
+
+    // Serialize field count
+    uint8_t countLenSize = GetCompactLengthSize(static_cast<uint64_t>(childCount));
+    auto *&dataRef = result.data;
+    auto pos = arenaAllocator.AllocateContinue(sizeof(uint8_t) + countLenSize, reinterpret_cast<const uint8_t *&>(dataRef));
+    *pos = countLenSize;
+    memcpy(pos + 1, &childCount, countLenSize);
+    result.size += sizeof(uint8_t) + countLenSize;
+
+    // Serialize each field
+    for (int32_t i = 0; i < childCount; i++) {
+        auto &childVec = rowVector.ChildAt(i);
+        auto childTypeId = static_cast<type::DataTypeId>(childVec->GetTypeId());
+
+        auto serializer = vectorSerializerCenter[childTypeId];
+        if (serializer == nullptr) {
+            // Try complex type serializers
+            auto it = complexVectorSerializerCenter.find(childTypeId);
+            if (it != complexVectorSerializerCenter.end()) {
+                serializer = it->second;
+            } else {
+                auto message = "Finding serializer for RowVector field failed, typeId=" + std::to_string(childTypeId);
+                throw OmniException("SERIALIZED FAILED : ", message);
+            }
+        }
+        serializer(childVec.get(), rowIdx, arenaAllocator, result);
     }
 }
 
@@ -191,6 +233,63 @@ const char *ArrayVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, cons
 
     for (int64_t i = start; i < end; i++) {
         begin = DeserializeElementByType(elementTypeId, elementVec, static_cast<int32_t>(i), begin);
+    }
+
+    return begin;
+}
+
+const char *RowVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, const char *begin) {
+    auto rowVector = dynamic_cast<RowVector *>(baseVector);
+    rowVector->Expand(rowIdx + 1);
+
+    uint8_t countLenSize = *reinterpret_cast<const uint8_t *>(begin);
+    begin += sizeof(uint8_t);
+
+    if (countLenSize == 0) {
+        rowVector->SetNull(rowIdx);
+        return begin;
+    }
+
+    int32_t childCount = 0;
+    switch (countLenSize) {
+        case BYTE_1:
+            childCount = *reinterpret_cast<const int8_t *>(begin);
+            break;
+        case BYTE_2:
+            childCount = *reinterpret_cast<const int16_t *>(begin);
+            break;
+        case BYTE_4:
+            childCount = *reinterpret_cast<const int32_t *>(begin);
+            break;
+        default:
+            throw OmniException("RowVector Deserializer failed: ", "Invalid Field Count");
+    }
+    begin += countLenSize;
+
+    OMNI_CHECK(childCount == rowVector->ChildSize(), "RowVector field count mismatch in deserialization");
+
+    rowVector->SetNotNull(rowIdx);
+
+    // Deserialize each field
+    for (int32_t i = 0; i < childCount; i++) {
+        auto &childVec = rowVector->ChildAt(i);
+        auto childTypeId = static_cast<type::DataTypeId>(childVec->GetTypeId());
+
+        if (childTypeId < 0 || childTypeId >= vectorDeSerializerCenter.size()) {
+            throw OmniException("RowVector's field Deserializer failed : Invalid childTypeId", std::to_string(childTypeId));
+        }
+
+        auto deser = vectorDeSerializerCenter[childTypeId];
+        if (deser == nullptr) {
+            // Try complex type deserializers
+            auto it = complexVectorDeSerializerCenter.find(childTypeId);
+            if (it != complexVectorDeSerializerCenter.end()) {
+                deser = it->second;
+            } else {
+                throw OmniException("RowVector's field Deserializer failed : Unsupport childTypeId", std::to_string(childTypeId));
+            }
+        }
+        begin = deser(childVec.get(), rowIdx, begin);
     }
 
     return begin;
@@ -343,6 +442,10 @@ void SerializeValueIntoArena(BaseVector *baseVector, int32_t rowIdx, mem::Simple
         } else if constexpr (std::is_same_v<RawDataType, ArrayType>) {
             auto *arrayVector = dynamic_cast<ArrayVector *>(baseVector);
             ArrayVectorSerializer(*arrayVector, rowIdx, arenaAllocator, result);
+        } else if constexpr (std::is_same_v<RawDataType, RowType>) {
+            // OMNI_ROW - Struct type
+            auto *rowVector = dynamic_cast<RowVector *>(baseVector);
+            RowVectorSerializer(*rowVector, rowIdx, arenaAllocator, result);
         } else {
             auto value = rawVector->GetValue(rowIdx);
             FixedLenTypeSerializer<RawDataType>(value, arenaAllocator, result);
@@ -354,6 +457,9 @@ void SerializeValueIntoArena(BaseVector *baseVector, int32_t rowIdx, mem::Simple
             NullDecimal128Serializer(arenaAllocator, result);
         } else if constexpr (std::is_same_v<RawDataType, ArrayType>) {
             NullArrayVectorSerializer(arenaAllocator, result);
+        } else if constexpr (std::is_same_v<RawDataType, RowType>) {
+            // OMNI_ROW - Struct type null
+            NullRowVectorSerializer(arenaAllocator, result);
         } else {
             NullFixedLenTypeSerializer(arenaAllocator, result);
         }
@@ -400,17 +506,22 @@ const char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const
         return Decimal128Deserializer(baseVector, rowIdx, begin);
     } else if constexpr (std::is_same_v<RawDataType, ArrayType>) {
         return ArrayVectorDeserializer(baseVector, rowIdx, begin);
+    } else if constexpr (std::is_same_v<RawDataType, RowType>) {
+        // OMNI_ROW - Struct type
+        return RowVectorDeserializer(baseVector, rowIdx, begin);
     } else {
         return FixedLenTypeDeserializer<id>(baseVector, rowIdx, begin);
     }
 }
 
 std::unordered_map<DataTypeId, SerializerFunc> complexVectorSerializerCenter = {
-        {type::OMNI_ARRAY, &SerializeValueIntoArena<type::OMNI_ARRAY>}
+        {type::OMNI_ARRAY, &SerializeValueIntoArena<type::OMNI_ARRAY>},
+        {type::OMNI_ROW, &SerializeValueIntoArena<type::OMNI_ROW>}
 };
 
 std::unordered_map<DataTypeId, DeSerializerFunc> complexVectorDeSerializerCenter = {
-        {type::OMNI_ARRAY, &DeserializeFromPointer<type::OMNI_ARRAY>}
+        {type::OMNI_ARRAY, &DeserializeFromPointer<type::OMNI_ARRAY>},
+        {type::OMNI_ROW, &DeserializeFromPointer<type::OMNI_ROW>}
 };
 
 std::vector<VectorSerializer> vectorSerializerCenter = {
@@ -441,7 +552,12 @@ std::vector<VectorSerializer> vectorSerializerCenter = {
     nullptr,                                        // OMNI_UNKNOWN
     nullptr,                                        // OMNI_FUNCTION
     nullptr,                                        // OMNI_OPAQUE
-    nullptr                                         // OMNI_INVALID
+    nullptr,                                        // OMNI_INVALID
+    nullptr,                                        // reserved for future
+    nullptr,                                        // reserved for future
+    SerializeValueIntoArena<type::OMNI_ARRAY>,      // OMNI_ARRAY
+    nullptr,                                        // OMNI_MMAP
+    SerializeValueIntoArena<type::OMNI_ROW>         // OMNI_ROW
 };
 
 std::vector<VectorSerializer> dicVectorSerializerCenter = {

@@ -6,6 +6,8 @@
 #include "window_group_limit.h"
 #include "operator/util/operator_util.h"
 #include "type/data_type.h"
+#include "vector/array_vector.h"
+#include "vector/row_vector.h"
 #include "vector/vector_helper.h"
 
 using namespace omniruntime::op;
@@ -94,6 +96,54 @@ void SetPartitionValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec:
         auto value = static_cast<Vector<RawDataType> *>(inputVec)->GetValue(inputPos);
         static_cast<Vector<RawDataType> *>(outputVec)->SetValue(outputPos, value);
     }
+}
+
+static void SetPartitionArrayValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec,
+    int32_t outputPos)
+{
+    auto *inputArrayVec = static_cast<ArrayVector *>(inputVec);
+    auto *outputArrayVec = static_cast<ArrayVector *>(outputVec);
+
+    if (inputArrayVec->IsNull(inputPos)) {
+        outputArrayVec->SetNull(outputPos);
+        return;
+    }
+
+    BaseVector *arrayValue = inputArrayVec->GetValue(inputPos);
+    outputArrayVec->SetValue(outputPos, arrayValue);
+    delete arrayValue;
+}
+
+// Forward declaration for SetPartitionStructValueFromFlat
+static void SetPartitionStructValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec,
+    int32_t outputPos);
+
+static int32_t CompareArrayFromFlat(vec::BaseVector *leftVec, int32_t leftPos, vec::BaseVector *rightVec,
+    int32_t rightPos)
+{
+    // Top-level null handling for sort columns is done in CompareForSortCols / CompareForSortColsOptimize.
+    // Here we only compare non-null array values using the generic array comparison utility.
+    return OperatorUtil::CompareArrayValue(leftVec, leftPos, rightVec, rightPos, true);
+}
+
+static bool EqualArrayFromFlat(vec::BaseVector *leftVec, int32_t leftPos, vec::BaseVector *rightVec, int32_t rightPos)
+{
+    return OperatorUtil::CompareArrayValue(leftVec, leftPos, rightVec, rightPos, true)
+        == OperatorUtil::COMPARE_STATUS_EQUAL;
+}
+
+static int32_t CompareStructFromFlat(vec::BaseVector *leftVec, int32_t leftPos, vec::BaseVector *rightVec,
+    int32_t rightPos)
+{
+    // Top-level null handling for sort columns is done in CompareForSortCols / CompareForSortColsOptimize.
+    // Here we only compare non-null struct values using the generic struct comparison utility.
+    return OperatorUtil::CompareStructValue(leftVec, leftPos, rightVec, rightPos, true);
+}
+
+static bool EqualStructFromFlat(vec::BaseVector *leftVec, int32_t leftPos, vec::BaseVector *rightVec, int32_t rightPos)
+{
+    return OperatorUtil::CompareStructValue(leftVec, leftPos, rightVec, rightPos, true)
+        == OperatorUtil::COMPARE_STATUS_EQUAL;
 }
 
 template <type::DataTypeId typeId>
@@ -231,51 +281,90 @@ static std::vector<GetValueFunc> getValueFromFlatFuncs = {
     GetPartitionValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     GetPartitionValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                    // OMNI_CONTAINER,
-    GetPartitionValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    GetPartitionValueFromFlat<OMNI_BYTE>,       // OMNI_BYTE
+    GetPartitionValueFromFlat<OMNI_FLOAT>,      // OMNI_FLOAT
+    nullptr,                                    // OMNI_VARBINARY = 20
+    nullptr,                                    // OMNI_TIME_WITHOUT_TIME_ZONE = 21
+    nullptr,                                    // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22
+    nullptr,                                    // OMNI_TIMESTAMP_WITH_TIME_ZONE = 23
+    nullptr,                                    // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE = 24
+    nullptr,                                    // OMNI_MULTISET = 25
+    nullptr,                                    // reserved
+    nullptr,                                    // reserved
+    nullptr,                                    // reserved
+    nullptr,                                    // reserved
+    nullptr,                                    // OMNI_ARRAY = 30
+    nullptr,                                    // OMNI_MAP = 31
+    nullptr,                                    // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr          // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
 static std::vector<CompareOptimizeFunc> compareOptimizeFromFlatFuncs = {
-    nullptr,                                       // OMNI_NONE,
-    CompareValueOptimizeFromFlat<OMNI_INT>,        // OMNI_INT
-    CompareValueOptimizeFromFlat<OMNI_LONG>,       // OMNI_LONG
-    CompareValueOptimizeFromFlat<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    CompareValueOptimizeFromFlat<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    CompareValueOptimizeFromFlat<OMNI_SHORT>,      // OMNI_SHORT
-    CompareValueOptimizeFromFlat<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    CompareValueOptimizeFromFlat<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    CompareValueOptimizeFromFlat<OMNI_DATE32>,     // OMNI_DATE32
-    CompareValueOptimizeFromFlat<OMNI_DATE64>,     // OMNI_DATE64
-    CompareValueOptimizeFromFlat<OMNI_TIME32>,     // OMNI_TIME32
-    CompareValueOptimizeFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    CompareValueOptimizeFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
-    nullptr,                                       // OMNI_INTERVAL_MONTHS
-    nullptr,                                       // OMNI_INTERVAL_DAY_TIME
-    CompareValueOptimizeFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    CompareValueOptimizeFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                                       // OMNI_CONTAINER,
-    CompareValueOptimizeFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    nullptr,                                       // OMNI_NONE = 0
+    CompareValueOptimizeFromFlat<OMNI_INT>,        // OMNI_INT = 1
+    CompareValueOptimizeFromFlat<OMNI_LONG>,       // OMNI_LONG = 2
+    CompareValueOptimizeFromFlat<OMNI_DOUBLE>,     // OMNI_DOUBLE = 3
+    CompareValueOptimizeFromFlat<OMNI_BOOLEAN>,    // OMNI_BOOLEAN = 4
+    CompareValueOptimizeFromFlat<OMNI_SHORT>,      // OMNI_SHORT = 5
+    CompareValueOptimizeFromFlat<OMNI_DECIMAL64>,  // OMNI_DECIMAL64 = 6
+    CompareValueOptimizeFromFlat<OMNI_DECIMAL128>, // OMNI_DECIMAL128 = 7
+    CompareValueOptimizeFromFlat<OMNI_DATE32>,     // OMNI_DATE32 = 8
+    CompareValueOptimizeFromFlat<OMNI_DATE64>,     // OMNI_DATE64 = 9
+    CompareValueOptimizeFromFlat<OMNI_TIME32>,     // OMNI_TIME32 = 10
+    CompareValueOptimizeFromFlat<OMNI_TIME64>,     // OMNI_TIME64 = 11
+    CompareValueOptimizeFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP = 12
+    nullptr,                                       // OMNI_INTERVAL_MONTHS = 13
+    nullptr,                                       // OMNI_INTERVAL_DAY_TIME = 14
+    CompareValueOptimizeFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR = 15
+    CompareValueOptimizeFromFlat<OMNI_CHAR>,       // OMNI_CHAR = 16
+    nullptr,                                       // OMNI_CONTAINER = 17
+    CompareValueOptimizeFromFlat<OMNI_BYTE>,       // OMNI_BYTE = 18
+    CompareValueOptimizeFromFlat<OMNI_FLOAT>,     // OMNI_FLOAT = 19
+    nullptr,                                       // OMNI_VARBINARY = 20
+    nullptr,                                       // OMNI_TIME_WITHOUT_TIME_ZONE = 21
+    nullptr,                                       // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22
+    nullptr,                                       // OMNI_TIMESTAMP_WITH_TIME_ZONE = 23
+    nullptr,                                       // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE = 24
+    nullptr,                                       // OMNI_MULTISET = 25
+    nullptr, nullptr, nullptr, nullptr,           // reserved (26-29)
+    nullptr,                                      // OMNI_ARRAY = 30 
+    nullptr,                                      // OMNI_MAP = 31
+    nullptr,                                      // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr            // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
 static std::vector<CompareFunc> compareFromFlatFuncs = {
-    nullptr,                               // OMNI_NONE,
-    CompareValueFromFlat<OMNI_INT>,        // OMNI_INT
-    CompareValueFromFlat<OMNI_LONG>,       // OMNI_LONG
-    CompareValueFromFlat<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    CompareValueFromFlat<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    CompareValueFromFlat<OMNI_SHORT>,      // OMNI_SHORT
-    CompareValueFromFlat<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    CompareValueFromFlat<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    CompareValueFromFlat<OMNI_DATE32>,     // OMNI_DATE32
-    CompareValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64
-    CompareValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32
-    CompareValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    CompareValueFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
-    nullptr,                               // OMNI_INTERVAL_MONTHS
-    nullptr,                               // OMNI_INTERVAL_DAY_TIME
-    CompareValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    CompareValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                               // OMNI_CONTAINER,
-    CompareValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    nullptr,                                 // OMNI_NONE = 0
+    CompareValueFromFlat<OMNI_INT>,        // OMNI_INT = 1
+    CompareValueFromFlat<OMNI_LONG>,       // OMNI_LONG = 2
+    CompareValueFromFlat<OMNI_DOUBLE>,     // OMNI_DOUBLE = 3
+    CompareValueFromFlat<OMNI_BOOLEAN>,    // OMNI_BOOLEAN = 4
+    CompareValueFromFlat<OMNI_SHORT>,      // OMNI_SHORT = 5
+    CompareValueFromFlat<OMNI_DECIMAL64>,  // OMNI_DECIMAL64 = 6
+    CompareValueFromFlat<OMNI_DECIMAL128>, // OMNI_DECIMAL128 = 7
+    CompareValueFromFlat<OMNI_DATE32>,     // OMNI_DATE32 = 8
+    CompareValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64 = 9
+    CompareValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32 = 10
+    CompareValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64 = 11
+    CompareValueFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP = 12
+    nullptr,                               // OMNI_INTERVAL_MONTHS = 13
+    nullptr,                               // OMNI_INTERVAL_DAY_TIME = 14
+    CompareValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR = 15
+    CompareValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR = 16
+    nullptr,                               // OMNI_CONTAINER = 17
+    CompareValueFromFlat<OMNI_BYTE>,       // OMNI_BYTE = 18
+    CompareValueFromFlat<OMNI_FLOAT>,      // OMNI_FLOAT = 19
+    nullptr,                               // OMNI_VARBINARY = 20
+    nullptr,                               // OMNI_TIME_WITHOUT_TIME_ZONE = 21
+    nullptr,                               // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22
+    nullptr,                               // OMNI_TIMESTAMP_WITH_TIME_ZONE = 23
+    nullptr,                               // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE = 24
+    nullptr,                               // OMNI_MULTISET = 25
+    nullptr, nullptr, nullptr, nullptr,   // reserved (26-29)
+    CompareArrayFromFlat,                  // OMNI_ARRAY = 30
+    nullptr,                              // OMNI_MAP = 31
+    CompareStructFromFlat,                  // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr      // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
 static std::vector<CompareFunc> compareFromDictionaryFuncs = {
@@ -301,25 +390,37 @@ static std::vector<CompareFunc> compareFromDictionaryFuncs = {
 };
 
 static std::vector<EqualFunc> equalFromFlatFuncs = {
-    nullptr,                                      // OMNI_NONE,
-    EqualPartitionValueTemplate<OMNI_INT>,        // OMNI_INT
-    EqualPartitionValueTemplate<OMNI_LONG>,       // OMNI_LONG
-    EqualPartitionValueTemplate<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    EqualPartitionValueTemplate<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    EqualPartitionValueTemplate<OMNI_SHORT>,      // OMNI_SHORT
-    EqualPartitionValueTemplate<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    EqualPartitionValueTemplate<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    EqualPartitionValueTemplate<OMNI_DATE32>,     // OMNI_DATE32
-    EqualPartitionValueTemplate<OMNI_DATE64>,     // OMNI_DATE64
-    EqualPartitionValueTemplate<OMNI_TIME32>,     // OMNI_TIME32
-    EqualPartitionValueTemplate<OMNI_TIME64>,     // OMNI_TIME64
-    EqualPartitionValueTemplate<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
-    nullptr,                                      // OMNI_INTERVAL_MONTHS
-    nullptr,                                      // OMNI_INTERVAL_DAY_TIME
-    EqualPartitionValueTemplate<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    EqualPartitionValueTemplate<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                                      // OMNI_CONTAINER,
-    EqualPartitionValueTemplate<OMNI_BYTE>        // OMNI_BYTE
+    nullptr,                                      // OMNI_NONE = 0
+    EqualPartitionValueTemplate<OMNI_INT>,        // OMNI_INT = 1
+    EqualPartitionValueTemplate<OMNI_LONG>,       // OMNI_LONG = 2
+    EqualPartitionValueTemplate<OMNI_DOUBLE>,     // OMNI_DOUBLE = 3
+    EqualPartitionValueTemplate<OMNI_BOOLEAN>,    // OMNI_BOOLEAN = 4
+    EqualPartitionValueTemplate<OMNI_SHORT>,     // OMNI_SHORT = 5
+    EqualPartitionValueTemplate<OMNI_DECIMAL64>, // OMNI_DECIMAL64 = 6
+    EqualPartitionValueTemplate<OMNI_DECIMAL128>, // OMNI_DECIMAL128 = 7
+    EqualPartitionValueTemplate<OMNI_DATE32>,    // OMNI_DATE32 = 8
+    EqualPartitionValueTemplate<OMNI_DATE64>,    // OMNI_DATE64 = 9
+    EqualPartitionValueTemplate<OMNI_TIME32>,    // OMNI_TIME32 = 10
+    EqualPartitionValueTemplate<OMNI_TIME64>,    // OMNI_TIME64 = 11
+    EqualPartitionValueTemplate<OMNI_TIMESTAMP>, // OMNI_TIMESTAMP = 12
+    nullptr,                                      // OMNI_INTERVAL_MONTHS = 13
+    nullptr,                                      // OMNI_INTERVAL_DAY_TIME = 14
+    EqualPartitionValueTemplate<OMNI_VARCHAR>,   // OMNI_VARCHAR = 15
+    EqualPartitionValueTemplate<OMNI_CHAR>,      // OMNI_CHAR = 16
+    nullptr,                                      // OMNI_CONTAINER = 17
+    EqualPartitionValueTemplate<OMNI_BYTE>,      // OMNI_BYTE = 18
+    EqualPartitionValueTemplate<OMNI_FLOAT>,     // OMNI_FLOAT = 19
+    nullptr,                                      // OMNI_VARBINARY = 20
+    nullptr,                                      // OMNI_TIME_WITHOUT_TIME_ZONE = 21
+    nullptr,                                      // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22
+    nullptr,                                      // OMNI_TIMESTAMP_WITH_TIME_ZONE = 23
+    nullptr,                                      // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE = 24
+    nullptr,                                      // OMNI_MULTISET = 25
+    nullptr, nullptr, nullptr, nullptr,          // reserved (26-29)
+    EqualArrayFromFlat,                           // OMNI_ARRAY = 30
+    nullptr,                                      // OMNI_MAP = 31
+    EqualStructFromFlat,                          // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr            // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
 static std::vector<CreateVectorFunc> createVectorFromFlatFuncs = {
@@ -341,7 +442,17 @@ static std::vector<CreateVectorFunc> createVectorFromFlatFuncs = {
     CreateVectorFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CreateVectorFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                               // OMNI_CONTAINER,
-    CreateVectorFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    CreateVectorFromFlat<OMNI_BYTE>,       // OMNI_BYTE
+    nullptr,                               // OMNI_VARBINARY
+    nullptr,                               // OMNI_TIME_WITHOUT_TIME_ZONE
+    nullptr,                               // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE
+    nullptr,                               // OMNI_TIMESTAMP_WITH_TIME_ZONE
+    nullptr,                               // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE
+    nullptr,                               // OMNI_MULTISET
+    nullptr, nullptr, nullptr, nullptr,      // reserved (26-29)
+    nullptr,                               // OMNI_ARRAY = 30
+    nullptr,                               // OMNI_MAP = 31
+    nullptr                                // OMNI_ROW = 32
 };
 
 static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
@@ -363,30 +474,47 @@ static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
     CreateVectorFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CreateVectorFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                     // OMNI_CONTAINER,
-    CreateVectorFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    CreateVectorFromDictionary<OMNI_BYTE>,       // OMNI_BYTE
+    nullptr,                                     // OMNI_VARBINARY
+    nullptr,                                     // OMNI_TIME_WITHOUT_TIME_ZONE
+    nullptr,                                     // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE
+    nullptr,                                     // OMNI_TIMESTAMP_WITH_TIME_ZONE
+    nullptr,                                     // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE
+    nullptr,                                     // OMNI_MULTISET
+    nullptr, nullptr, nullptr, nullptr,          // reserved (26-29)
+    nullptr,                                     // OMNI_ARRAY = 30
+    nullptr,                                     // OMNI_MAP = 31
+    nullptr                                      // OMNI_ROW = 32
 };
 
-static std::vector<SetValueFunc> setValueFromFlatFuncs = {
-    nullptr,                                    // OMNI_NONE,
-    SetPartitionValueFromFlat<OMNI_INT>,        // OMNI_INT
-    SetPartitionValueFromFlat<OMNI_LONG>,       // OMNI_LONG
-    SetPartitionValueFromFlat<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    SetPartitionValueFromFlat<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    SetPartitionValueFromFlat<OMNI_SHORT>,      // OMNI_SHORT
-    SetPartitionValueFromFlat<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    SetPartitionValueFromFlat<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    SetPartitionValueFromFlat<OMNI_DATE32>,     // OMNI_DATE32
-    SetPartitionValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64
-    SetPartitionValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32
-    SetPartitionValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    SetPartitionValueFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
-    nullptr,                                    // OMNI_INTERVAL_MONTHS
-    nullptr,                                    // OMNI_INTERVAL_DAY_TIME
-    SetPartitionValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    SetPartitionValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                                    // OMNI_CONTAINER,
-    SetPartitionValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
-};
+static std::vector<SetValueFunc> InitSetValueFromFlatFuncs()
+{
+    // Support scalar types plus array and struct types; other complex types remain unsupported (nullptr).
+    std::vector<SetValueFunc> funcs(OMNI_ROW + 1, nullptr);
+
+    funcs[OMNI_INT] = SetPartitionValueFromFlat<OMNI_INT>;
+    funcs[OMNI_LONG] = SetPartitionValueFromFlat<OMNI_LONG>;
+    funcs[OMNI_DOUBLE] = SetPartitionValueFromFlat<OMNI_DOUBLE>;
+    funcs[OMNI_BOOLEAN] = SetPartitionValueFromFlat<OMNI_BOOLEAN>;
+    funcs[OMNI_SHORT] = SetPartitionValueFromFlat<OMNI_SHORT>;
+    funcs[OMNI_DECIMAL64] = SetPartitionValueFromFlat<OMNI_DECIMAL64>;
+    funcs[OMNI_DECIMAL128] = SetPartitionValueFromFlat<OMNI_DECIMAL128>;
+    funcs[OMNI_DATE32] = SetPartitionValueFromFlat<OMNI_DATE32>;
+    funcs[OMNI_DATE64] = SetPartitionValueFromFlat<OMNI_DATE64>;
+    funcs[OMNI_TIME32] = SetPartitionValueFromFlat<OMNI_TIME32>;
+    funcs[OMNI_TIME64] = SetPartitionValueFromFlat<OMNI_TIME64>;
+    funcs[OMNI_TIMESTAMP] = SetPartitionValueFromFlat<OMNI_TIMESTAMP>;
+    funcs[OMNI_VARCHAR] = SetPartitionValueFromFlat<OMNI_VARCHAR>;
+    funcs[OMNI_CHAR] = SetPartitionValueFromFlat<OMNI_CHAR>;
+    funcs[OMNI_BYTE] = SetPartitionValueFromFlat<OMNI_BYTE>;
+    funcs[OMNI_FLOAT] = SetPartitionValueFromFlat<OMNI_FLOAT>;
+    funcs[OMNI_ARRAY] = SetPartitionArrayValueFromFlat;
+    funcs[OMNI_ROW] = SetPartitionStructValueFromFlat;
+
+    return funcs;
+}
+
+static std::vector<SetValueFunc> setValueFromFlatFuncs = InitSetValueFromFlatFuncs();
 
 static std::vector<SetValueFunc> setValueFromDictionaryFuncs = {
     nullptr,                                          // OMNI_NONE,
@@ -407,8 +535,47 @@ static std::vector<SetValueFunc> setValueFromDictionaryFuncs = {
     SetPartitionValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     SetPartitionValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                          // OMNI_CONTAINER,
-    SetPartitionValueFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    SetPartitionValueFromDictionary<OMNI_BYTE>,       // OMNI_BYTE
+    nullptr,                                          // OMNI_VARBINARY
+    nullptr,                                          // OMNI_TIME_WITHOUT_TIME_ZONE
+    nullptr,                                          // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE
+    nullptr,                                          // OMNI_TIMESTAMP_WITH_TIME_ZONE
+    nullptr,                                          // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE
+    nullptr,                                          // OMNI_MULTISET
+    nullptr, nullptr, nullptr, nullptr,               // reserved (26-29)
+    nullptr,                                          // OMNI_ARRAY = 30
+    nullptr,                                          // OMNI_MAP = 31
+    nullptr                                           // OMNI_ROW = 32
 };
+
+// Actual implementation of SetPartitionStructValueFromFlat (after setValueFromFlatFuncs is initialized)
+static void SetPartitionStructValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec,
+    int32_t outputPos)
+{
+    auto *inputRowVec = static_cast<RowVector *>(inputVec);
+    auto *outputRowVec = static_cast<RowVector *>(outputVec);
+
+    if (inputRowVec->IsNull(inputPos)) {
+        outputRowVec->SetNull(outputPos);
+        return;
+    }
+
+    int32_t childCount = inputRowVec->ChildSize();
+    for (int32_t i = 0; i < childCount; ++i) {
+        auto &inputChild = inputRowVec->ChildAt(i);
+        auto &outputChild = outputRowVec->ChildAt(i);
+        auto childTypeId = static_cast<type::DataTypeId>(inputChild->GetTypeId());
+
+        if (inputChild->IsNull(inputPos)) {
+            outputChild->SetNull(outputPos);
+        } else if (childTypeId == type::OMNI_VARCHAR || childTypeId == type::OMNI_CHAR) {
+            auto value = static_cast<VarcharVector *>(inputChild.get())->GetValue(inputPos);
+            static_cast<VarcharVector *>(outputChild.get())->SetValue(outputPos, value);
+        } else {
+            setValueFromFlatFuncs[childTypeId](inputChild.get(), inputPos, outputChild.get(), outputPos);
+        }
+    }
+}
 
 WindowGroupLimitOperator::WindowGroupLimitOperator(const type::DataTypes &sourceTypes, int32_t n,
     const std::string funcName, const std::vector<int32_t> &partitionCols, const std::vector<int32_t> &sortCols,
@@ -428,9 +595,12 @@ WindowGroupLimitOperator::WindowGroupLimitOperator(const type::DataTypes &source
         auto type = sourceTypeIds[sortCols[i]];
         sortColTypes.emplace_back(type);
     }
-    if (sortColNum > 1) {
+    // Always allocate compare function slots for sort columns.
+    if (sortColNum >= 1) {
         sortCompareFuncs.resize(sortColNum);
-    } else {
+    }
+    // For single-column sort we may use fast-path optimization.
+    if (sortColNum == 1) {
         sortGetValueFuncs.resize(sortColNum);
         sortCompareOptimizeFuncs.resize(sortColNum);
     }
@@ -441,7 +611,12 @@ WindowGroupLimitOperator::WindowGroupLimitOperator(const type::DataTypes &source
     createVectorFuncs.resize(inputColNum);
     setOutputValueFuncs.resize(inputColNum);
     for (int32_t i = 0; i < inputColNum; i++) {
-        setOutputValueFuncs[i] = setValueFromFlatFuncs[sourceTypeIds[i]];
+        auto typeId = sourceTypeIds[i];
+        if (typeId < 0 || typeId >= static_cast<int32_t>(setValueFromFlatFuncs.size())
+            || setValueFromFlatFuncs[typeId] == nullptr) {
+            OMNI_THROW("WindowGroupLimit Error", "Unsupported data type for windowGroupLimit output column.");
+        }
+        setOutputValueFuncs[i] = setValueFromFlatFuncs[typeId];
     }
 
     int32_t eachRowSize = OperatorUtil::GetRowSize(sourceTypes.Get());
@@ -501,9 +676,26 @@ void WindowGroupLimitOperator::Prepare(BaseVector **inputVectors)
         serializers[i] = vectorSerializerCenter[curTypeId];
     }
 
-    if (sortColNum == 1) {
+    useOptimizedPath = (sortColNum == 1);
+    if (useOptimizedPath) {
         auto sortCol = sortCols[0];
         auto curTypeId = sourceTypeIds[sortCol];
+        if (curTypeId == type::OMNI_ARRAY || curTypeId == type::OMNI_ROW) {
+            useOptimizedPath = false;
+        }
+    }
+
+    if (useOptimizedPath) {
+        auto sortCol = sortCols[0];
+        auto curTypeId = sourceTypeIds[sortCol];
+        if (curTypeId < 0 || curTypeId >= static_cast<int32_t>(getValueFromFlatFuncs.size())
+            || getValueFromFlatFuncs[curTypeId] == nullptr
+            || curTypeId >= static_cast<int32_t>(compareOptimizeFromFlatFuncs.size())
+            || compareOptimizeFromFlatFuncs[curTypeId] == nullptr
+            || curTypeId >= static_cast<int32_t>(equalFromFlatFuncs.size())
+            || equalFromFlatFuncs[curTypeId] == nullptr) {
+            OMNI_THROW("WindowGroupLimit Error", "Unsupported data type for windowGroupLimit sort column.");
+        }
         sortGetValueFuncs[0] = getValueFromFlatFuncs[curTypeId];
         sortCompareOptimizeFuncs[0] = compareOptimizeFromFlatFuncs[curTypeId];
         equalFuncs[0] = equalFromFlatFuncs[curTypeId];
@@ -513,6 +705,12 @@ void WindowGroupLimitOperator::Prepare(BaseVector **inputVectors)
     for (int32_t i = 0; i < sortColNum; i++) {
         auto sortCol = sortCols[i];
         auto curTypeId = sourceTypeIds[sortCol];
+        if (curTypeId < 0 || curTypeId >= static_cast<int32_t>(compareFromFlatFuncs.size())
+            || compareFromFlatFuncs[curTypeId] == nullptr
+            || curTypeId >= static_cast<int32_t>(equalFromFlatFuncs.size())
+            || equalFromFlatFuncs[curTypeId] == nullptr) {
+            OMNI_THROW("WindowGroupLimit Error", "Unsupported data type for windowGroupLimit sort column.");
+        }
         sortCompareFuncs[i] = compareFromFlatFuncs[curTypeId];
         equalFuncs[i] = equalFromFlatFuncs[curTypeId];
     }
@@ -745,7 +943,7 @@ int32_t WindowGroupLimitOperator::AddInput(omniruntime::vec::VectorBatch *inputV
     auto &arenaAllocator = *(executionContext->GetArena());
     auto inputRowCount = inputVecBatch->GetRowCount();
 
-    if (funcName == "rank" && sortColNum == 1) {
+    if (funcName == "rank" && useOptimizedPath) {
         for (int32_t rowIdx = 0; rowIdx < inputRowCount; rowIdx++) {
             type::StringRef key = GenerateWindowPartitionKey(partitionVectors, partitionColNum, rowIdx, arenaAllocator);
             auto keyPos = partitionedMap.find(key);
@@ -761,7 +959,7 @@ int32_t WindowGroupLimitOperator::AddInput(omniruntime::vec::VectorBatch *inputV
                 UpdatePartitionValueOptimizeRank(*value, inputVecBatch, sortVectors, rowIdx);
             }
         }
-    } else if (funcName == "rank" && sortColNum > 1) {
+    } else if (funcName == "rank" && !useOptimizedPath) {
         for (int32_t rowIdx = 0; rowIdx < inputRowCount; rowIdx++) {
             type::StringRef key = GenerateWindowPartitionKey(partitionVectors, partitionColNum, rowIdx, arenaAllocator);
             auto keyPos = partitionedMap.find(key);
@@ -777,7 +975,7 @@ int32_t WindowGroupLimitOperator::AddInput(omniruntime::vec::VectorBatch *inputV
                 UpdatePartitionValueRank(*value, inputVecBatch, sortVectors, rowIdx);
             }
         }
-    } else if (funcName == "row_number" && sortColNum == 1) {
+    } else if (funcName == "row_number" && useOptimizedPath) {
         for (int32_t rowIdx = 0; rowIdx < inputRowCount; rowIdx++) {
             type::StringRef key = GenerateWindowPartitionKey(partitionVectors, partitionColNum, rowIdx, arenaAllocator);
             auto keyPos = partitionedMap.find(key);
