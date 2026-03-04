@@ -16,6 +16,8 @@
 #include "vectorization/functions/ArrayRemoveFunction.h"
 #include "vectorization/functions/ArrayDistinctFunction.h"
 #include "vectorization/functions/ArrayExceptFunction.h"
+#include "vectorization/functions/ArrayPositionFunction.h"
+#include "vectorization/functions/ArrayUnionFunction.h"
 
 namespace omniruntime::vectorization {
 
@@ -210,5 +212,27 @@ void RegisterArrayFunctions(const std::string &prefix)
     // array_except(array<T>, array<T>) -> array<T>: Returns elements in first array but not in second
     VectorFunction::RegisterVectorFunction("array_except", {OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
         std::make_shared<ArrayExceptFunction>());
+
+    // Register array_position function for all supported element types
+    // array_position(array<T>, T) -> bigint: Returns 1-based position of element in array, 0 if not found
+    VectorFunction::RegisterVectorFunction("array_position", {OMNI_ARRAY, OMNI_BYTE}, OMNI_LONG,
+        std::make_shared<ArrayPositionFunction>());
+    VectorFunction::RegisterVectorFunction("array_position", {OMNI_ARRAY, OMNI_SHORT}, OMNI_LONG,
+        std::make_shared<ArrayPositionFunction>());
+    VectorFunction::RegisterVectorFunction("array_position", {OMNI_ARRAY, OMNI_INT}, OMNI_LONG,
+        std::make_shared<ArrayPositionFunction>());
+    VectorFunction::RegisterVectorFunction("array_position", {OMNI_ARRAY, OMNI_LONG}, OMNI_LONG,
+        std::make_shared<ArrayPositionFunction>());
+    VectorFunction::RegisterVectorFunction("array_position", {OMNI_ARRAY, OMNI_FLOAT}, OMNI_LONG,
+        std::make_shared<ArrayPositionFunction>());
+    VectorFunction::RegisterVectorFunction("array_position", {OMNI_ARRAY, OMNI_DOUBLE}, OMNI_LONG,
+        std::make_shared<ArrayPositionFunction>());
+    VectorFunction::RegisterVectorFunction("array_position", {OMNI_ARRAY, OMNI_BOOLEAN}, OMNI_LONG,
+        std::make_shared<ArrayPositionFunction>());
+
+    // Register array_union function
+    // array_union(array<T>, array<T>) -> array<T>: Returns the union of two arrays without duplicates
+    VectorFunction::RegisterVectorFunction("array_union", {OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayUnionFunction>());
 }
 }
