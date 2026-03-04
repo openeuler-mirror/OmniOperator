@@ -6,6 +6,7 @@
 #pragma once
 #include "util/compiler_util.h"
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <stdexcept>
 #include <string_view>
@@ -958,4 +959,254 @@ public:
         return call(result, *input, *match, *replace);
     }
 };
+
+
+/// find_in_set function
+/// find_in_set(str, strArray) -> int32
+/// Returns the 1-based index of the first occurrence of str in strArray where
+/// strArray is a comma-delimited string. Returns 0 if str is not found or if
+/// str contains a comma. Both arguments are VARCHAR (string_view).
+/// Aligned with Spark/Velox semantics:
+///   - find_in_set("ab", "abc,b,ab,c,def") = 3
+///   - find_in_set("ab,", "abc,b,ab,c,def") = 0 (needle contains comma)
+///   - find_in_set("", "") = 1
+///   - find_in_set("", "123") = 0
+///   - find_in_set("", ",123") = 1
+///   - NULL propagation handled by SimpleFunction framework.
+template <typename T>
+struct FindInSetFunction {
+    ALWAYS_INLINE bool call(int32_t &result, const std::string_view &str,
+        const std::string_view &strArray)
+    {
+        if (str.find(',') != std::string_view::npos) {
+            result = 0;
+            return true;
+        }
+
+        int32_t index = 1;
+        int32_t lastComma = -1;
+        const char *arrayData = strArray.data();
+        const char *matchData = str.data();
+        size_t arraySize = strArray.size();
+        size_t matchSize = str.size();
+
+        for (size_t i = 0; i < arraySize; i++) {
+            if (arrayData[i] == ',') {
+                if (i - static_cast<size_t>(lastComma + 1) == matchSize &&
+                    std::memcmp(arrayData + (lastComma + 1), matchData, matchSize) == 0) {
+                    result = index;
+                    return true;
+                }
+                lastComma = static_cast<int32_t>(i);
+                index++;
+            }
+        }
+
+        if (arraySize - static_cast<size_t>(lastComma + 1) == matchSize &&
+            std::memcmp(arrayData + (lastComma + 1), matchData, matchSize) == 0) {
+            result = index;
+            return true;
+        }
+
+        result = 0;
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *str,
+        const std::string_view *strArray)
+    {
+        if (str == nullptr || strArray == nullptr) {
+            return false;
+        }
+        return call(result, *str, *strArray);
+    }
+};
+
+/// levenshtein distance function
+/// levenshtein(left, right) -> int32
+/// levenshtein(left, right, threshold) -> int32
+/// Computes the Levenshtein edit distance between two strings.
+/// The distance is the minimum number of single-character edits (insertions,
+/// deletions, or substitutions) required to change one string into the other.
+/// When a threshold is provided, returns -1 if the distance exceeds the threshold.
+/// Supports Unicode strings (measures distance in code points, not bytes).
+/// Implementation based on Velox sparksql LevenshteinDistanceFunction and
+/// org.apache.commons.text.similarity.LevenshteinDistance.limitedCompare.
+template <typename T>
+struct LevenshteinDistanceFunction {
+    ALWAYS_INLINE bool call(int32_t &result, const std::string_view &left, const std::string_view &right)
+    {
+        return callWithThreshold(result, left, right, std::numeric_limits<int32_t>::max());
+    }
+
+    ALWAYS_INLINE bool call(int32_t &result, const std::string_view &left, const std::string_view &right,
+        const int32_t &threshold)
+    {
+        return callWithThreshold(result, left, right, threshold);
+    }
+
+    ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *left, const std::string_view *right)
+    {
+        if (left == nullptr || right == nullptr) {
+            return false;
+        }
+        return call(result, *left, *right);
+    }
+
+    ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *left, const std::string_view *right,
+        const int32_t *threshold)
+    {
+        if (left == nullptr || right == nullptr || threshold == nullptr) {
+            return false;
+        }
+        return call(result, *left, *right, *threshold);
+    }
+
+private:
+    static std::vector<int32_t> StringToCodePoints(const std::string_view &str)
+    {
+        std::vector<int32_t> codePoints;
+        codePoints.reserve(str.size());
+        size_t i = 0;
+        while (i < str.size()) {
+            int byteLen = 0;
+            int32_t cp = Utf8FirstCodepoint(str.data() + i, str.size() - i, byteLen);
+            if (byteLen <= 0) {
+                byteLen = 1;
+            }
+            codePoints.push_back(cp);
+            i += static_cast<size_t>(byteLen);
+        }
+        return codePoints;
+    }
+
+    bool callWithThreshold(int32_t &result, const std::string_view &left, const std::string_view &right,
+        int32_t threshold)
+    {
+        auto leftCodePoints = StringToCodePoints(left);
+        auto rightCodePoints = StringToCodePoints(right);
+        doCall(result, leftCodePoints.data(), rightCodePoints.data(),
+            leftCodePoints.size(), rightCodePoints.size(), threshold);
+        return true;
+    }
+
+    void doCall(int32_t &result, const int32_t *leftCodePoints, const int32_t *rightCodePoints,
+        size_t leftCodePointsSize, size_t rightCodePointsSize, int32_t threshold)
+    {
+        if (leftCodePointsSize < rightCodePointsSize) {
+            doCall(result, rightCodePoints, leftCodePoints,
+                rightCodePointsSize, leftCodePointsSize, threshold);
+            return;
+        }
+
+        if (static_cast<int64_t>(leftCodePointsSize) - static_cast<int64_t>(rightCodePointsSize) > threshold) {
+            result = -1;
+            return;
+        }
+        if (rightCodePointsSize == 0) {
+            result = static_cast<int32_t>(leftCodePointsSize);
+            return;
+        }
+
+        std::vector<int32_t> distances;
+        distances.reserve(rightCodePointsSize);
+        int32_t boundary = std::min(static_cast<int32_t>(rightCodePointsSize), threshold);
+        int32_t idx = 0;
+        for (; idx < boundary; idx++) {
+            distances.push_back(idx + 1);
+        }
+        for (; idx < static_cast<int32_t>(rightCodePointsSize); idx++) {
+            distances.push_back(std::numeric_limits<int32_t>::max());
+        }
+
+        for (size_t i = 0; i < leftCodePointsSize; i++) {
+            int32_t lower = std::max(0, static_cast<int32_t>(i) - threshold);
+            int32_t maxValueWithThreshold = 0;
+            int32_t upper = static_cast<int32_t>(rightCodePointsSize);
+            bool overflow = __builtin_add_overflow(static_cast<int32_t>(i) + 1, threshold, &maxValueWithThreshold);
+            if (!overflow) {
+                upper = std::min(static_cast<int32_t>(rightCodePointsSize), maxValueWithThreshold);
+            }
+            if (lower > upper) {
+                result = -1;
+                return;
+            }
+            int32_t leftUpDistance = 0;
+            if (lower == 0) {
+                leftUpDistance = distances[lower];
+                if (leftCodePoints[i] == rightCodePoints[0]) {
+                    distances[0] = static_cast<int32_t>(i);
+                } else {
+                    distances[0] = std::min(static_cast<int32_t>(i), distances[0]) + 1;
+                }
+                lower = 1;
+            } else {
+                leftUpDistance = distances[lower - 1];
+                distances[lower - 1] = std::numeric_limits<int32_t>::max();
+            }
+            for (int32_t j = lower; j < upper; j++) {
+                int32_t leftUpDistanceNext = distances[j];
+                if (leftCodePoints[i] == rightCodePoints[j]) {
+                    distances[j] = leftUpDistance;
+                } else {
+                    distances[j] =
+                        std::min(distances[j - 1], std::min(leftUpDistance, distances[j])) + 1;
+                }
+                leftUpDistance = leftUpDistanceNext;
+            }
+        }
+        result = distances[rightCodePointsSize - 1];
+        if (result > threshold) {
+            result = -1;
+        }
+    }
+};
+
+/// initcap function
+/// initcap(string) -> string
+/// Converts the first letter of each word to uppercase and the rest to lowercase.
+/// Word boundaries are determined by whitespace characters (space, tab, newline,
+/// carriage return, form feed, vertical tab) following Spark SQL semantics.
+/// Non-whitespace characters like hyphens, dots, and @ are NOT word separators.
+/// Examples:
+///   initcap("hello world") = "Hello World"
+///   initcap("HELLO WORLD") = "Hello World"
+///   initcap("hello-world") = "Hello-world"
+///   initcap("") = ""
+///   initcap(NULL) = NULL
+template <typename T>
+struct InitCapFunction {
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input)
+    {
+        if (input.empty()) {
+            result.clear();
+            return true;
+        }
+
+        result.resize(input.size());
+        bool isStartOfWord = true;
+        for (size_t i = 0; i < input.size(); ++i) {
+            unsigned char c = static_cast<unsigned char>(input[i]);
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v') {
+                isStartOfWord = true;
+                result[i] = input[i];
+            } else if (isStartOfWord) {
+                result[i] = static_cast<char>(std::toupper(c));
+                isStartOfWord = false;
+            } else {
+                result[i] = static_cast<char>(std::tolower(c));
+            }
+        }
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *input)
+    {
+        if (input == nullptr) {
+            return false;
+        }
+        return call(result, *input);
+    }
+};
+
 }
