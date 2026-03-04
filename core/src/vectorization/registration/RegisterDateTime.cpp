@@ -20,6 +20,10 @@
 #include "../functions/TimestampConversion.h"
 #include "../functions/MakeDate.h"
 #include "../functions/MakeTimestamp.h"
+#include "../functions/UnixSeconds.h"
+#include "../functions/UnixMillis.h"
+#include "../functions/UnixMicros.h"
+#include "../functions/UnixDate.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -46,5 +50,9 @@ void RegisterDatetimeFunctions(const std::string &prefix)
 
     RegisterMakeDateFunction(prefix + "make_date");
     RegisterMakeTimestampFunction(prefix + "make_timestamp");
+    RegisterUnixSecondsFunction(prefix + "unix_seconds");
+    RegisterUnixMillisFunction(prefix + "unix_millis");
+    RegisterUnixMicrosFunction(prefix + "unix_micros");
+    RegisterUnixDateFunction(prefix + "unix_date");
 }
 }
