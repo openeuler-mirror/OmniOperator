@@ -15,7 +15,6 @@
 #include "type/string_Impl.h"
 
 namespace omniruntime::vectorization {
-
 /// Returns the Unicode code point of the first character in UTF-8 string (aligned with
 /// Velox utf8proc_codepoint). Returns 0 if empty, -1 on invalid/incomplete UTF-8.
 inline int32_t Utf8FirstCodepoint(const char* data, size_t size, int& byteLen) {
@@ -362,6 +361,88 @@ struct LowerFunction {
         }
         return call(result, *input);
     }
+};
+
+/// soundex function
+/// soundex(string) -> string
+/// Returns the Soundex code using US English mapping (Spark/Velox semantics).
+/// If input is empty, returns empty string. If first character is not alphabetic,
+/// returns the original input unchanged.
+template <typename T>
+struct SoundexFunction {
+    ALWAYS_INLINE bool call(std::string& result, const std::string_view& input)
+    {
+        const size_t inputSize = input.size();
+        if (inputSize == 0) {
+            result.clear();
+            return true;
+        }
+
+        const unsigned char firstChar = static_cast<unsigned char>(input[0]);
+        if (!IsAsciiAlpha(firstChar)) {
+            result.assign(input.data(), input.size());
+            return true;
+        }
+
+        result.resize(4);
+        const char firstUpper = ToAsciiUpper(firstChar);
+        result[0] = firstUpper;
+
+        int32_t soundexIndex = 1;
+        int32_t dataIndex = firstUpper - 'A';
+        char lastCode = kUSEnglishMapping[dataIndex];
+        for (size_t i = 1; i < inputSize; ++i) {
+            const unsigned char currentChar = static_cast<unsigned char>(input[i]);
+            if (!IsAsciiAlpha(currentChar)) {
+                lastCode = '0';
+                continue;
+            }
+
+            dataIndex = static_cast<int32_t>(ToAsciiUpper(currentChar)) - 'A';
+            const char code = kUSEnglishMapping[dataIndex];
+            if (code != kBridgeCode) {
+                if (code != '0' && code != lastCode) {
+                    result[soundexIndex++] = code;
+                    if (soundexIndex > 3) {
+                        break;
+                    }
+                }
+                lastCode = code;
+            }
+        }
+
+        for (; soundexIndex < 4; ++soundexIndex) {
+            result[soundexIndex] = '0';
+        }
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string& result, const std::string_view* input)
+    {
+        if (input == nullptr) {
+            return false;
+        }
+        return call(result, *input);
+    }
+
+private:
+    // Soundex mapping uses '7' as bridge marker (for letters like H/W).
+    // It is not emitted to output, but affects adjacency dedup behavior.
+    static constexpr char kBridgeCode = '7';
+
+    ALWAYS_INLINE static bool IsAsciiAlpha(unsigned char c)
+    {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+    }
+
+    ALWAYS_INLINE static char ToAsciiUpper(unsigned char c)
+    {
+        return (c >= 'a' && c <= 'z') ? static_cast<char>(c - ('a' - 'A')) : static_cast<char>(c);
+    }
+
+    static constexpr char kUSEnglishMapping[26] = {
+        '0', '1', '2', '3', '0', '1', '2', '7', '0', '2', '2', '4', '5',
+        '5', '0', '1', '2', '6', '2', '3', '0', '1', '7', '2', '0', '2'};
 };
 
 /// unbase64(string) -> varbinary (as string)
