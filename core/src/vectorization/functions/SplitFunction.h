@@ -47,10 +47,8 @@ public:
 
         ProcessAllRows(arrayResult, rowSize, inputArg, delimiter, limit);
 
-        // Clean up arguments
-        if (limitArg != nullptr) {
-            delete limitArg;
-        }
+        // Clean up arguments. Do not delete limitArg: ConstVectorReader's destructor owns and
+        // will delete it when limitReader goes out of scope.
         if (delimiterArg != nullptr) {
             delete delimiterArg;
         }
