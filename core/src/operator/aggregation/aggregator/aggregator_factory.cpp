@@ -72,14 +72,20 @@ std::unique_ptr<Aggregator> CollectSetAggregatorFactory::CreateAggregator(const 
             return CollectSetAggregator<type::OMNI_SHORT, type::OMNI_SHORT>::Create(inputTypes, outputTypes,
                 channels, inputRaw, outputPartial, isOverflowAsNull);
         case type::OMNI_DATE32:
+            return CollectSetAggregator<type::OMNI_DATE32, type::OMNI_DATE32>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
         case type::OMNI_TIME32:
         case type::OMNI_INT:
             return CollectSetAggregator<type::OMNI_INT, type::OMNI_INT>::Create(inputTypes, outputTypes,
                 channels, inputRaw, outputPartial, isOverflowAsNull);
-        case type::OMNI_LONG:
         case type::OMNI_DATE64:
-        case type::OMNI_TIME64:
+            return CollectSetAggregator<type::OMNI_DATE64, type::OMNI_DATE64>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
         case type::OMNI_TIMESTAMP:
+            return CollectSetAggregator<type::OMNI_TIMESTAMP, type::OMNI_TIMESTAMP>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_LONG:
+        case type::OMNI_TIME64:
             return CollectSetAggregator<type::OMNI_LONG, type::OMNI_LONG>::Create(inputTypes, outputTypes,
                 channels, inputRaw, outputPartial, isOverflowAsNull);
         case type::OMNI_FLOAT:
@@ -120,14 +126,20 @@ std::unique_ptr<Aggregator> CollectListAggregatorFactory::CreateAggregator(const
             return CollectListAggregator<type::OMNI_SHORT, type::OMNI_SHORT>::Create(inputTypes, outputTypes,
                 channels, inputRaw, outputPartial, isOverflowAsNull);
         case type::OMNI_DATE32:
+            return CollectListAggregator<type::OMNI_DATE32, type::OMNI_DATE32>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
         case type::OMNI_TIME32:
         case type::OMNI_INT:
             return CollectListAggregator<type::OMNI_INT, type::OMNI_INT>::Create(inputTypes, outputTypes,
                 channels, inputRaw, outputPartial, isOverflowAsNull);
-        case type::OMNI_LONG:
         case type::OMNI_DATE64:
-        case type::OMNI_TIME64:
+            return CollectListAggregator<type::OMNI_DATE64, type::OMNI_DATE64>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
         case type::OMNI_TIMESTAMP:
+            return CollectListAggregator<type::OMNI_TIMESTAMP, type::OMNI_TIMESTAMP>::Create(inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_LONG:
+        case type::OMNI_TIME64:
             return CollectListAggregator<type::OMNI_LONG, type::OMNI_LONG>::Create(inputTypes, outputTypes,
                 channels, inputRaw, outputPartial, isOverflowAsNull);
         case type::OMNI_FLOAT:
