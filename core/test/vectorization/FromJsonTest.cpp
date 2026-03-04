@@ -103,7 +103,6 @@ TEST(FromJsonTest, BasicStringField) {
     BaseVector* result = nullptr;
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     FromJsonTestHelper::ValidateStringField(result, 0, 0, "hello");
-    delete inputVec;
     delete result;
 }
 
@@ -114,7 +113,6 @@ TEST(FromJsonTest, EmptyString) {
     BaseVector* result = nullptr;
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     FromJsonTestHelper::ValidateStringField(result, 0, 0, "");
-    delete inputVec;
     delete result;
 }
 
@@ -125,7 +123,6 @@ TEST(FromJsonTest, MissingField) {
     BaseVector* result = nullptr;
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     FromJsonTestHelper::ValidateNullField(result, 0, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -136,7 +133,6 @@ TEST(FromJsonTest, NullField) {
     BaseVector* result = nullptr;
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     FromJsonTestHelper::ValidateNullField(result, 0, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -147,7 +143,6 @@ TEST(FromJsonTest, NumberToString) {
     BaseVector* result = nullptr;
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     FromJsonTestHelper::ValidateStringField(result, 0, 0, "123");
-    delete inputVec;
     delete result;
 }
 
@@ -158,7 +153,6 @@ TEST(FromJsonTest, BooleanToString) {
     BaseVector* result = nullptr;
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     FromJsonTestHelper::ValidateStringField(result, 0, 0, "true");
-    delete inputVec;
     delete result;
 }
 
@@ -171,7 +165,6 @@ TEST(FromJsonTest, InvalidJson) {
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     // Row should not be null, but field should be null
     FromJsonTestHelper::ValidateNullField(result, 0, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -184,7 +177,6 @@ TEST(FromJsonTest, NotAnObject) {
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     // Row should not be null, but field should be null
     FromJsonTestHelper::ValidateNullField(result, 0, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -197,7 +189,6 @@ TEST(FromJsonTest, InvalidJsonString) {
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     // Row should not be null, but field should be null
     FromJsonTestHelper::ValidateNullField(result, 0, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -209,7 +200,6 @@ TEST(FromJsonTest, NullInput) {
     BaseVector* result = nullptr;
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     FromJsonTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -220,7 +210,6 @@ TEST(FromJsonTest, CaseInsensitiveFieldName) {
     BaseVector* result = nullptr;
     FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
     FromJsonTestHelper::ValidateStringField(result, 0, 0, "hello");
-    delete inputVec;
     delete result;
 }
 
@@ -239,6 +228,5 @@ TEST(FromJsonTest, MultipleRows) {
     FromJsonTestHelper::ValidateStringField(result, 1, 0, "world");
     FromJsonTestHelper::ValidateNullField(result, 2, 0);
     FromJsonTestHelper::ValidateNullField(result, 3, 0);
-    delete inputVec;
     delete result;
 }

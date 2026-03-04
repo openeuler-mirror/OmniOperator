@@ -81,7 +81,6 @@ TEST(JsonArrayLengthTest, BasicArray) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateIntResult(result, 0, 4);
-    delete inputVec;
     delete result;
 }
 
@@ -91,7 +90,6 @@ TEST(JsonArrayLengthTest, EmptyArray) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateIntResult(result, 0, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -101,7 +99,6 @@ TEST(JsonArrayLengthTest, SingleElement) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateIntResult(result, 0, 1);
-    delete inputVec;
     delete result;
 }
 
@@ -112,7 +109,6 @@ TEST(JsonArrayLengthTest, NestedArray) {
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     // Should return 5 (only counts outermost array elements)
     JsonArrayLengthTestHelper::ValidateIntResult(result, 0, 5);
-    delete inputVec;
     delete result;
 }
 
@@ -122,7 +118,6 @@ TEST(JsonArrayLengthTest, NonArrayNumber) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -132,7 +127,6 @@ TEST(JsonArrayLengthTest, NonArrayString) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -142,7 +136,6 @@ TEST(JsonArrayLengthTest, NonArrayObject) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -152,7 +145,6 @@ TEST(JsonArrayLengthTest, NonArrayBoolean) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -162,7 +154,6 @@ TEST(JsonArrayLengthTest, InvalidJson) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -172,7 +163,6 @@ TEST(JsonArrayLengthTest, EmptyString) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -184,7 +174,6 @@ TEST(JsonArrayLengthTest, NullPropagation) {
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateNullResult(result, 0);
     JsonArrayLengthTestHelper::ValidateIntResult(result, 1, 2);
-    delete inputVec;
     delete result;
 }
 
@@ -204,7 +193,6 @@ TEST(JsonArrayLengthTest, MultipleRows) {
     JsonArrayLengthTestHelper::ValidateNullResult(result, 2);
     JsonArrayLengthTestHelper::ValidateIntResult(result, 3, 5);
     JsonArrayLengthTestHelper::ValidateNullResult(result, 4);
-    delete inputVec;
     delete result;
 }
 
@@ -216,7 +204,6 @@ TEST(JsonArrayLengthTest, LargeArray) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateIntResult(result, 0, 20);
-    delete inputVec;
     delete result;
 }
 
@@ -226,7 +213,6 @@ TEST(JsonArrayLengthTest, MalformedJsonArray) {
     BaseVector* result = nullptr;
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     JsonArrayLengthTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
 
@@ -237,6 +223,5 @@ TEST(JsonArrayLengthTest, ObjectWithArrayField) {
     JsonArrayLengthTestHelper::ExecuteJsonArrayLength(inputVec, result);
     // Object is not an array, should return NULL
     JsonArrayLengthTestHelper::ValidateNullResult(result, 0);
-    delete inputVec;
     delete result;
 }
