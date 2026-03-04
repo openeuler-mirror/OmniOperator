@@ -61,6 +61,14 @@ public class FunctionType extends Constant {
     public static final FunctionType OMNI_AGGREGATION_TYPE_KURTOSIS = next();
     public static final FunctionType OMNI_AGGREGATION_TYPE_SKEWNESS = next();
     public static final FunctionType OMNI_AGGREGATION_TYPE_APPROX_PERCENTILE = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_COUNT = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_INTERCEPT = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_R2 = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_SLOPE = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_SXX = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_SXY = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_SYY = next();
+    public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_REPLACEMENT = next();
 
     public FunctionType(int value) {
         super(value);
