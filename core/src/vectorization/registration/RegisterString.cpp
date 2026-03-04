@@ -216,5 +216,9 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "levenshtein", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_INT);
     RegisterFunction<LevenshteinDistanceFunction, int32_t, std::string_view, std::string_view, int64_t>(
         prefix + "levenshtein", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_LONG}, OMNI_INT);
+
+    RegisterFunction<Sha1HexStringFunction, std::string, std::string_view>(prefix + "sha1", {OMNI_VARBINARY}, OMNI_VARCHAR);
+    RegisterFunction<Sha2HexStringFunction, std::string, std::string_view, int32_t>(prefix + "sha2", {OMNI_VARBINARY, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<Md5Function, std::string, std::string_view>(prefix + "Md5", {OMNI_VARBINARY}, OMNI_VARCHAR);
 }
 }

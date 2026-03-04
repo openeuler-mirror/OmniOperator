@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2026. All rights reserved.
  * @Description: hash util implementations
  */
 #ifndef __HASH_UTIL_H__
@@ -264,6 +264,19 @@ public:
 
         int32_t index = static_cast<uint32_t>(length) & static_cast<uint32_t>(0xFFFFFFE0);
         return XxHash64UpdateTail(hash, address, index, length);
+    }
+
+    static ALWAYS_INLINE int32_t FloatToIntBits(float value)
+    {
+        uint32_t bits;
+        std::memcpy(&bits, &value, sizeof(value));
+        constexpr uint32_t EXP_MASK = 0x7F800000U;
+        constexpr uint32_t MANTISSA_MASK = 0x007FFFFFU;
+        constexpr uint32_t CANONICAL_NAN = 0x7FC00000U;
+        if ((bits & EXP_MASK) == EXP_MASK && (bits & MANTISSA_MASK) != 0U) {
+            bits = CANONICAL_NAN;
+        }
+        return static_cast<int32_t>(bits);
     }
 
     static ALWAYS_INLINE int64_t DoubleToLongBits(double value)

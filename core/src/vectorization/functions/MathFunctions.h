@@ -18,6 +18,16 @@
 
 namespace omniruntime::vectorization {
     template <typename T>
+    struct AbsFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = std::abs(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
     struct AcoshFunction {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput &result, const TInput &a)

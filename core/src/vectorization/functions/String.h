@@ -14,6 +14,8 @@
 #include "vectorization/Status.h"
 #include "vectorization/functions/Base64Util.h"
 #include "type/string_Impl.h"
+#include "folly/ssl/OpenSSLHash.h"
+#include "codegen/functions/md5.h"
 
 namespace omniruntime::vectorization {
 /// Returns the Unicode code point of the first character in UTF-8 string (aligned with
@@ -1209,4 +1211,80 @@ struct InitCapFunction {
     }
 };
 
+inline void encodeDigestToBase16(uint8_t* output, int digestSize) {
+    static unsigned char const kHexCodes[] = "0123456789abcdef";
+    for (int i = digestSize - 1; i >= 0; --i) {
+        int digestChar = output[i];
+        output[i * 2] = kHexCodes[(digestChar >> 4) & 0xf];
+        output[i * 2 + 1] = kHexCodes[digestChar & 0xf];
+    }
+}
+
+template <typename T>
+struct Sha1HexStringFunction {
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *input)
+    {
+        if (input == nullptr) {
+            return false;
+        }
+        static const int kSha1Length = 20;
+        result.resize(kSha1Length * 2);
+        folly::ssl::OpenSSLHash::sha1(
+            folly::MutableByteRange((uint8_t*)result.data(), 20),
+            folly::ByteRange((const uint8_t*)input->data(), input->size()));
+        encodeDigestToBase16((uint8_t*)result.data(), kSha1Length);
+        return true;
+    }
+};
+
+template <typename T>
+struct Sha2HexStringFunction {
+    ALWAYS_INLINE bool callNullable( std::string& result, const std::string_view *input, const int32_t *bitLength) {
+        if (input == nullptr || bitLength == nullptr) {
+            return false;
+        }
+        const int32_t nonzeroBitLength = (*bitLength == 0) ? 256 : *bitLength;
+        const EVP_MD* hashAlgorithm;
+        switch (nonzeroBitLength) {
+        case 224:
+            hashAlgorithm = EVP_sha224();
+            break;
+        case 256:
+            hashAlgorithm = EVP_sha256();
+            break;
+        case 384:
+            hashAlgorithm = EVP_sha384();
+            break;
+        case 512:
+            hashAlgorithm = EVP_sha512();
+            break;
+        default:
+            // For an unsupported bitLength, the return value is NULL.
+                return false;
+        }
+        const int32_t digestLength = nonzeroBitLength >> 3;
+        result.resize(digestLength * 2);
+        auto resultBuffer =
+            folly::MutableByteRange((uint8_t*)result.data(), digestLength);
+        auto inputBuffer =
+            folly::ByteRange((const uint8_t*)input->data(), input->size());
+        folly::ssl::OpenSSLHash::hash(resultBuffer, hashAlgorithm, inputBuffer);
+        encodeDigestToBase16((uint8_t*)result.data(), digestLength);
+        return true;
+    }
+};
+
+template <typename T>
+struct Md5Function {
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *input) {
+        if (input == nullptr) {
+            return false;
+        }
+        codegen::function::Md5Function md5(input->data(), input->size());
+        char resultBuffer[32];
+        md5.FinishHex(resultBuffer);
+        result = std::string(resultBuffer, 32);
+        return true;
+    }
+};
 }

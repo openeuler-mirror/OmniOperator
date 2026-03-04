@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2026. All rights reserved.
  * Description: registry  function  implementation
  */
 #ifndef OMNI_RUNTIME_XXHASH64_HASH_H
@@ -23,6 +23,8 @@ extern "C" DLLEXPORT int64_t XxH64Int64(int64_t val, bool isValNull, int64_t see
 
 extern "C" DLLEXPORT int64_t XxH64String(const char *val, int32_t valLen, bool isValNull, int64_t seed,
     bool isSeedNull);
+
+extern "C" DLLEXPORT int64_t XxH64Float(float val, bool isValNull, int64_t seed, bool isSeedNull);
 
 extern "C" DLLEXPORT int64_t XxH64Double(double val, bool isValNull, int64_t seed, bool isSeedNull);
 
