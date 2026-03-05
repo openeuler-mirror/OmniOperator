@@ -38,14 +38,25 @@ void BitOrAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateSta
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID> std::vector<DataTypePtr> BitOrAggregator<IN_ID, OUT_ID>::GetSpillType()
 {
-    throw OmniException("OPERATOR_RUNTIME_ERROR", "Data overflow processing is not supported.");
+    std::vector<DataTypePtr> spillTypes;
+    spillTypes.emplace_back(std::make_shared<DataType>(OUT_ID));
+    return spillTypes;
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void BitOrAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
     std::vector<BaseVector *> &vectors)
 {
-    throw OmniException("OPERATOR_RUNTIME_ERROR", "Data overflow processing is not supported.");
+    const int32_t rowCount = static_cast<int32_t>(groupStates.size());
+    auto *v = static_cast<OutVector *>(vectors[0]);
+    for (int32_t i = 0; i < rowCount; i++) {
+        auto *s = BitOrState::CastState(groupStates[i] + aggStateOffset);
+        if (s->IsEmpty()) {
+            v->SetNull(i);
+        } else {
+            v->SetValue(i, s->value);
+        }
+    }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID> void BitOrAggregator<IN_ID, OUT_ID>::InitState(AggregateState *state)

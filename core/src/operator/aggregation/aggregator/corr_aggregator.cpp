@@ -187,7 +187,41 @@ std::vector<DataTypePtr> CorrAggregator<IN_ID, OUT_ID>::GetSpillType() {
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void CorrAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
     std::vector<BaseVector *> &vectors) {
-    throw OmniException("OPERATOR_RUNTIME_ERROR", "Corr aggregator spill not supported.");
+    const int32_t rowCount = static_cast<int32_t>(groupStates.size());
+    auto *vN = reinterpret_cast<Vector<double> *>(vectors[0]);
+    auto *vXAvg = reinterpret_cast<Vector<double> *>(vectors[1]);
+    auto *vYAvg = reinterpret_cast<Vector<double> *>(vectors[2]);
+    auto *vCk = reinterpret_cast<Vector<double> *>(vectors[3]);
+    auto *vXMk = reinterpret_cast<Vector<double> *>(vectors[4]);
+    auto *vYMk = reinterpret_cast<Vector<double> *>(vectors[5]);
+    for (int32_t i = 0; i < rowCount; i++) {
+        auto *s = CorrPartialState::CastState(groupStates[i] + aggStateOffset);
+        if (s->IsEmpty()) {
+            vN->SetNull(i);
+            vXAvg->SetNull(i);
+            vYAvg->SetNull(i);
+            vCk->SetNull(i);
+            vXMk->SetNull(i);
+            vYMk->SetNull(i);
+        } else if (s->IsOverFlowed()) {
+            vN->SetNull(i);
+            vXAvg->SetNull(i);
+            vYAvg->SetNull(i);
+            vCk->SetNull(i);
+            vXMk->SetNull(i);
+            vYMk->SetNull(i);
+        } else {
+            double n = static_cast<double>(s->count);
+            double xAvg = s->sum_x / n;
+            double yAvg = s->sum_y / n;
+            vN->SetValue(i, n);
+            vXAvg->SetValue(i, xAvg);
+            vYAvg->SetValue(i, yAvg);
+            vCk->SetValue(i, s->sum_xy - s->sum_x * s->sum_y / n);
+            vXMk->SetValue(i, s->sum_xx - s->sum_x * s->sum_x / n);
+            vYMk->SetValue(i, s->sum_yy - s->sum_y * s->sum_y / n);
+        }
+    }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
