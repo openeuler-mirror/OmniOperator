@@ -109,7 +109,8 @@ NestLoopJoinLookupOperator::NestLoopJoinLookupOperator(JoinType joinType, std::v
       probeOutputCols(probeOutputCols),
       filter(filter),
       curProbePosition(curProbePosition),
-      joinedTypes(joinedTypes)
+      joinedTypes(joinedTypes),
+      buildTypes(buildTypes)
 {
     SetOperatorName(metricsNameNestedLoopJoinLookup);
     int32_t leftRowSize =
@@ -124,8 +125,9 @@ NestLoopJoinLookupOperator::NestLoopJoinLookupOperator(JoinType joinType, std::v
     if ((joinType == OMNI_JOIN_TYPE_RIGHT || joinType == OMNI_JOIN_TYPE_FULL) && this->filter != nullptr) {
         buildMatchedRows.assign(buildRowCount, 0);
         for (int32_t j = 0; j < probeOutputCols.size(); j++) {
-            DataTypeId vectorDateTypeId = probeTypes.GetType(probeOutputCols[j])->GetId();
-            probeOutputDataTypeIds.push_back(vectorDateTypeId);
+            DataTypeId vectorDataTypeId = probeTypes.GetType(probeOutputCols[j])->GetId();
+            probeOutputDataTypeIds.push_back(vectorDataTypeId);
+            probeOutputDataTypes.push_back(probeTypes.GetType(probeOutputCols[j]));
         }
     }
 }
@@ -354,8 +356,7 @@ void NestLoopJoinLookupOperator::BuildOutput(VectorBatch **outputVecBatch)
     } else if (buildRowCount == 0) {
         for (int32_t j = 0; j < buildOutputColsSize; j++) {
             BaseVector *vector = buildVectorBatch->Get(buildOutputCols[j]);
-            DataTypeId vectorDateTypeId = vector->GetTypeId();
-            BaseVector *outputVector = VectorHelper::CreateVector(OMNI_FLAT, vectorDateTypeId, outputRows);
+            BaseVector *outputVector = VectorHelper::CreateComplexVector(buildTypes.GetType(buildOutputCols[j]).get(), outputRows);
             for (int32_t i = 0; i < buildNullPositionSize; ++i) {
                 outputVector->SetNull(buildNullPosition[i]);
             }
@@ -392,8 +393,7 @@ void NestLoopJoinLookupOperator::BuildNotMatchOutput(VectorBatch **outputVecBatc
 
     // probe side set null
     for (int32_t j = 0; j < probeOutputColsSize; j++) {
-        DataTypeId vectorDateTypeId = probeOutputDataTypeIds[probeOutputCols[j]];
-        BaseVector *outputVector = VectorHelper::CreateVector(OMNI_FLAT, vectorDateTypeId, outputRows);
+        BaseVector *outputVector = VectorHelper::CreateComplexVector(probeOutputDataTypes[probeOutputCols[j]].get(), outputRows);
         for (int32_t i = 0; i < outputRows; ++i) {
             outputVector->SetNull(i);
         }

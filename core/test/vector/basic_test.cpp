@@ -755,7 +755,7 @@ TEST(vector, append_array_with_null)
     int elementSize = 11;
 
     auto* dstElements = new vec::Vector<int32_t>(elementSize);
-    auto* srcElements = new vec::Vector<int32_t>(elementSize + 1);
+    auto* srcElements = new vec::Vector<int32_t>(elementSize);
 
     for (int i = 0; i < elementSize; i++) {
         dstElements->SetValue(i, i);
@@ -807,6 +807,164 @@ TEST(vector, append_array_with_null)
 
     delete dstArrayVec;
     delete srcArrayVec;
+}
+
+TEST(vector, append_map)
+{
+    int mapSize = 4;
+    int keySize = 11;
+
+    auto* dstKeys = new vec::Vector<double>(keySize);
+    auto* dstValues = new vec::Vector<int32_t>(keySize);
+    auto* srcKeys = new vec::Vector<double>(keySize);
+    auto* srcValues = new vec::Vector<int32_t>(keySize);
+
+    for (int i = 0; i < keySize; i++) {
+        dstKeys->SetValue(i, 0.1 * i);
+        dstValues->SetValue(i, i);
+
+        srcKeys->SetValue(i, 0.2 * i);
+        srcValues->SetValue(i, i * 2);
+    }
+
+    auto* dstMapVec = new MapVector(mapSize);
+    auto* srcMapVec = new MapVector(mapSize);
+
+    dstMapVec->SetOffset(0, 0);
+    dstMapVec->SetOffset(1, 3);
+    dstMapVec->SetOffset(2, 5);
+    dstMapVec->SetOffset(3, 9);
+    dstMapVec->SetOffset(4, 11);
+    dstMapVec->AddKeys(dstKeys);
+    dstMapVec->AddValues(dstValues);
+    srcMapVec->SetOffset(0, 0);
+    srcMapVec->SetOffset(1, 3);
+    srcMapVec->SetOffset(2, 5);
+    srcMapVec->SetOffset(3, 9);
+    srcMapVec->SetOffset(4, 11);
+    srcMapVec->AddKeys(srcKeys);
+    srcMapVec->AddValues(srcValues);
+
+    dstMapVec->Append(srcMapVec, mapSize, 1);
+    EXPECT_EQ(dstMapVec->GetOffset(0), 0);
+    EXPECT_EQ(dstMapVec->GetOffset(1), 3);
+    EXPECT_EQ(dstMapVec->GetOffset(2), 5);
+    EXPECT_EQ(dstMapVec->GetOffset(3), 9);
+    EXPECT_EQ(dstMapVec->GetOffset(4), 11);
+    EXPECT_EQ(dstMapVec->GetOffset(5), 14);
+    EXPECT_EQ(dstKeys->GetValue(11), 0);
+    EXPECT_EQ(dstValues->GetValue(11), 0);
+    EXPECT_EQ(dstKeys->GetValue(12), 0.2);
+    EXPECT_EQ(dstValues->GetValue(12), 2);
+    EXPECT_EQ(dstKeys->GetValue(13), 0.4);
+    EXPECT_EQ(dstValues->GetValue(13), 4);
+
+    delete dstMapVec;
+    delete srcMapVec;
+}
+
+TEST(vector, append_map_empty)
+{
+    int mapSize = 4;
+    int keySize = 11;
+
+    auto* dstKeys = new vec::Vector<double>(0);
+    auto* dstValues = new vec::Vector<int32_t>(0);
+    auto* srcKeys = new vec::Vector<double>(keySize);
+    auto* srcValues = new vec::Vector<int32_t>(keySize);
+
+    for (int i = 0; i < keySize; i++) {
+        srcKeys->SetValue(i, 0.2 * i);
+        srcValues->SetValue(i, i * 2);
+    }
+
+    auto* dstMapVec = new MapVector(mapSize);
+    auto* srcMapVec = new MapVector(mapSize);
+
+    dstMapVec->AddKeys(dstKeys);
+    dstMapVec->AddValues(dstValues);
+    srcMapVec->SetOffset(0, 0);
+    srcMapVec->SetOffset(1, 3);
+    srcMapVec->SetOffset(2, 5);
+    srcMapVec->SetOffset(3, 9);
+    srcMapVec->SetOffset(4, 11);
+    srcMapVec->AddKeys(srcKeys);
+    srcMapVec->AddValues(srcValues);
+
+    dstMapVec->Append(srcMapVec, 0, mapSize);
+    EXPECT_EQ(dstMapVec->GetOffset(0), 0);
+    EXPECT_EQ(dstMapVec->GetOffset(1), 3);
+    EXPECT_EQ(dstMapVec->GetOffset(2), 5);
+    EXPECT_EQ(dstMapVec->GetOffset(3), 9);
+    EXPECT_EQ(dstMapVec->GetOffset(4), 11);
+    EXPECT_EQ(dstKeys->GetValue(0), 0);
+    EXPECT_EQ(dstValues->GetValue(0), 0);
+    EXPECT_EQ(dstKeys->GetValue(1), 0.2);
+    EXPECT_EQ(dstValues->GetValue(1), 2);
+    EXPECT_EQ(dstKeys->GetValue(2), 0.4);
+    EXPECT_EQ(dstValues->GetValue(2), 4);
+
+    delete dstMapVec;
+    delete srcMapVec;
+}
+
+TEST(vector, append_map_with_null)
+{
+    int mapSize = 4;
+    int keySize = 11;
+
+    auto* dstKeys = new vec::Vector<double>(keySize);
+    auto* dstValues = new vec::Vector<int32_t>(keySize);
+    auto* srcKeys = new vec::Vector<double>(keySize);
+    auto* srcValues = new vec::Vector<int32_t>(keySize);
+
+    for (int i = 0; i < keySize; i++) {
+        dstKeys->SetValue(i, 0.1 * i);
+        dstValues->SetValue(i, i);
+
+        srcKeys->SetValue(i, 0.2 * i);
+        srcValues->SetValue(i, i * 2);
+    }
+
+    auto* dstMapVec = new MapVector(mapSize);
+    auto* srcMapVec = new MapVector(mapSize + 1);
+
+    dstMapVec->SetOffset(0, 0);
+    dstMapVec->SetOffset(1, 3);
+    dstMapVec->SetOffset(2, 5);
+    dstMapVec->SetOffset(3, 9);
+    dstMapVec->SetOffset(4, 11);
+    dstMapVec->AddKeys(dstKeys);
+    dstMapVec->AddValues(dstValues);
+    srcMapVec->SetOffset(0, 0);
+    srcMapVec->SetOffset(1, 3);
+    srcMapVec->SetOffset(2, 5);
+    srcMapVec->SetOffset(3, 9);
+    srcMapVec->SetOffset(4, 11);
+    srcMapVec->SetNull(4);
+    srcMapVec->AddKeys(srcKeys);
+    srcMapVec->AddValues(srcValues);
+
+    dstMapVec->Append(srcMapVec, mapSize, 5);
+    EXPECT_EQ(dstMapVec->GetOffset(0), 0);
+    EXPECT_EQ(dstMapVec->GetOffset(1), 3);
+    EXPECT_EQ(dstMapVec->GetOffset(2), 5);
+    EXPECT_EQ(dstMapVec->GetOffset(3), 9);
+    EXPECT_EQ(dstMapVec->GetOffset(4), 11);
+    EXPECT_EQ(dstMapVec->GetOffset(5), 14);
+    EXPECT_EQ(dstMapVec->GetOffset(6), 16);
+    EXPECT_EQ(dstMapVec->GetOffset(7), 20);
+    EXPECT_EQ(dstMapVec->GetOffset(8), 22);
+    EXPECT_EQ(dstMapVec->IsNull(8), true);
+    EXPECT_EQ(dstKeys->GetValue(11), 0);
+    EXPECT_EQ(dstValues->GetValue(11), 0);
+    EXPECT_EQ(dstKeys->GetValue(12), 0.2);
+    EXPECT_EQ(dstValues->GetValue(12), 2);
+    EXPECT_EQ(dstKeys->GetValue(13), 0.4);
+    EXPECT_EQ(dstValues->GetValue(13), 4);
+
+    delete dstMapVec;
+    delete srcMapVec;
 }
 
 TEST(vector, append_struct)

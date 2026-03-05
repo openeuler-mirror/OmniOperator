@@ -100,6 +100,9 @@ private:
     // 0:not match, 1:matched
     std::vector<char> buildMatchedRows;
     std::vector<DataTypeId> probeOutputDataTypeIds;
+
+    std::vector<DataTypePtr> probeOutputDataTypes;
+    DataTypes buildTypes;
 };
 } // namespace op
 } // namespace omniruntime

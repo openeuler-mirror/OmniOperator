@@ -956,8 +956,24 @@ public:
             case type::OMNI_DECIMAL128: {
                 return reinterpret_cast<Vector<type::Decimal128> *>(vector)->CopyPositions(positions, offset, length);
             }
-            case type::OMNI_CONTAINER:
+            case type::OMNI_CONTAINER: {
                 return reinterpret_cast<ContainerVector *>(vector)->CopyPositions(positions, offset, length);
+            }
+            case type::OMNI_ARRAY: {
+                ArrayVector* arrayVector = reinterpret_cast<ArrayVector*>(vector);
+                ArrayVector* result = arrayVector->CopyPositions(positions, offset, length);
+                return reinterpret_cast<BaseVector*>(result);
+            }
+            case type::OMNI_MAP: {
+                MapVector* mapVector = reinterpret_cast<MapVector*>(vector);
+                MapVector* result = mapVector->CopyPositions(positions, offset, length);
+                return reinterpret_cast<BaseVector*>(result);
+            }
+            case type::OMNI_ROW: {
+                RowVector* rowVector = reinterpret_cast<RowVector*>(vector);
+                RowVector* result = rowVector->CopyPositions(positions, offset, length);
+                return reinterpret_cast<BaseVector*>(result);
+            }
             default: {
                 std::string omniExceptionInfo =
                     "In function CopyPositionsVector, no such data type " + std::to_string(dataTypeId);
@@ -1073,6 +1089,9 @@ public:
                 break;
             case type::OMNI_ARRAY:
                 reinterpret_cast<ArrayVector *>(destVector)->Append(srcVector, offset, length);
+                break;
+            case type::OMNI_MAP:
+                reinterpret_cast<MapVector *>(destVector)->Append(srcVector, offset, length);
                 break;
             case type::OMNI_ROW:
                 reinterpret_cast<RowVector *>(destVector)->Append(srcVector, offset, length);
