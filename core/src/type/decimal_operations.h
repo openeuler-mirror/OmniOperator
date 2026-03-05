@@ -1860,8 +1860,11 @@ public:
             }
             return;
         }
-
-        result = x.ReScale(resultScale).Add(y.ReScale(resultScale)).SetScale(resultScale);
+        if (maxInputScale + maxInputScale <= MAX_SCALE) {
+            result = x.ReScale(maxInputScale).Add(y.ReScale(maxInputScale)).SetScale(maxInputScale).ReScale(resultScale);
+        } else {
+            result = x.ReScale(resultScale).Add(y.ReScale(resultScale)).SetScale(resultScale);
+        }
     }
 
     template<typename Decimal>
