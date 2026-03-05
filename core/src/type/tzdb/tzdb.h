@@ -16,6 +16,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include "exception.h"
 #include "leap_second.h"
 #include "time_zone.h"
 #include "time_zone_link.h"
@@ -45,7 +46,7 @@ struct tzdb {
     {
         if (const time_zone *__result = __locate_zone(__name)) return __result;
 
-        std::__throw_runtime_error("tzdb: requested time zone not found");
+        __throw_invalid_time_zone(__name);
     }
 
     [[nodiscard]] const time_zone *current_zone() const

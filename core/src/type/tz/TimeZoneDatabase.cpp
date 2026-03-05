@@ -36,6 +36,11 @@ const std::vector<std::pair<int16_t, std::string>> &getTimeZoneEntries()
         // with -fsanitize=fuzzer
         // https://github.com/llvm/llvm-project/issues/75666
         return std::vector<std::pair<int16_t, std::string>>{
+            {0, "+00:00"},
+            {1, "-14:00"},
+            {2, "-13:59"},
+            {3, "-13:58"},
+            {4, "-13:57"},
             {5, "-13:56"},
             {6, "-13:55"},
             {7, "-13:54"},

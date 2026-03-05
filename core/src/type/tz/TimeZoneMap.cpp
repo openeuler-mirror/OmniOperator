@@ -104,7 +104,22 @@ TTimeZoneDatabase buildTimeZoneDatabase(const std::vector<std::pair<int16_t, std
         std::unique_ptr<TimeZone> timeZonePtr;
 
         if (entry.first == 0) {
-            timeZonePtr = std::make_unique<TimeZone>("UTC", entry.first, locateZoneImpl("UTC"));
+            const tzdb::time_zone *utcZone = nullptr;
+            try {
+                utcZone = locateZoneImpl("UTC");
+            } catch (const tzdb::invalid_time_zone &) {
+                // Some tz databases name it "Etc/UTC" instead of "UTC".
+                try {
+                    utcZone = locateZoneImpl("Etc/UTC");
+                } catch (const tzdb::invalid_time_zone &) {
+                    // Cannot resolve UTC at all – create an offset-based UTC (offset = 0).
+                }
+            }
+            if (utcZone != nullptr) {
+                timeZonePtr = std::make_unique<TimeZone>("UTC", entry.first, utcZone);
+            } else {
+                timeZonePtr = std::make_unique<TimeZone>("UTC", entry.first, std::chrono::minutes(0));
+            }
         } else if (entry.first <= 1680) {
             std::chrono::minutes offset = getTimeZoneOffset(entry.first);
             timeZonePtr = std::make_unique<TimeZone>(entry.second, entry.first, offset);
@@ -314,6 +329,23 @@ TimeZone::seconds TimeZone::to_local(TimeZone::seconds timestamp) const
 TimeZone::milliseconds TimeZone::to_local(TimeZone::milliseconds timestamp) const
 {
     return toLocalImpl(timestamp, tz_, offset_);
+}
+
+TimeZone::seconds TimeZone::correct_nonexistent_time(TimeZone::seconds timestamp) const
+{
+    if (tz_ == nullptr) {
+        return timestamp;
+    }
+
+    const auto localInfo = tz_->get_info(date::local_time<seconds>{timestamp});
+
+    if (localInfo.result != tzdb::local_info::nonexistent) {
+        return timestamp;
+    }
+
+    const auto adjustment = localInfo.second.offset - localInfo.first.offset;
+
+    return timestamp + adjustment;
 }
 
 const TimeZone *locateZone(std::string_view timeZone, bool failOnError)
