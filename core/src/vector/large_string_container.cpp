@@ -14,6 +14,8 @@ LargeStringContainer<RAW_DATA_TYPE>::LargeStringContainer(int valueSize, int cap
     }
     bufferSupplier = std::make_unique<LargeStringBuffer>(capacityInBytes);
     offsets.resize(valueSize + 1);
+    // Initialize offsets to zero to ensure correct string position calculations
+    std::fill(offsets.begin(), offsets.end(), 0);
 }
 
 template<typename RAW_DATA_TYPE>
