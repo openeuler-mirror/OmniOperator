@@ -56,6 +56,10 @@ namespace omniruntime::vec {
 
         void Set(int32_t index, BaseVector* setVec)
         {
+            // if the index exceeds the current size, expand children_
+            if (index >= children_.size()) {
+                children_.resize(index + 1);
+            }
             children_[index] = std::shared_ptr<BaseVector>(setVec);
         }
 
