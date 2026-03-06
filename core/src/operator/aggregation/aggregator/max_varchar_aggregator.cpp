@@ -134,8 +134,8 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
     const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
 {
-    // note: type relationship matches only (IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR) and
-    // (OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)
+    // note: type relationship matches (IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR || IN_ID == OMNI_VARBINARY) and
+    // (OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_VARBINARY)
     if (!aggFilter) {
         int rowCount = originVector->GetSize();
         auto *maxVector = VectorHelper::SliceVector(originVector, 0, rowCount);
@@ -204,5 +204,7 @@ template class MaxVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;
 template class MaxVarcharAggregator<OMNI_VARCHAR, OMNI_CHAR>;
 
 template class MaxVarcharAggregator<OMNI_VARCHAR, OMNI_VARCHAR>;
+
+template class MaxVarcharAggregator<OMNI_VARBINARY, OMNI_VARBINARY>;
 }
 }
