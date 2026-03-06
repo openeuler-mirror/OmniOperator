@@ -504,6 +504,24 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
     vecBatch->Append(arrayVector);
 }
 
+void SetMapVector(VectorBatch *vecBatch, DataTypePtr keyType, DataTypePtr valueType, int32_t rowCount)
+{
+    std::shared_ptr<BaseVector> keyVector(VectorHelper::CreateComplexVector(keyType.get(), 0));
+    std::shared_ptr<BaseVector> valueVector(VectorHelper::CreateComplexVector(valueType.get(), 0));
+    auto *mapVector = new MapVector(rowCount, keyVector, valueVector);
+    vecBatch->Append(mapVector);
+}
+
+void SetRowVector(VectorBatch *vecBatch, const std::vector<DataTypePtr> &fieldTypes, int32_t rowCount)
+{
+    std::vector<std::shared_ptr<BaseVector>> children;
+    for (const auto &fieldType : fieldTypes) {
+        children.push_back(std::shared_ptr<BaseVector>(VectorHelper::CreateComplexVector(fieldType.get(), rowCount)));
+    }
+    auto *rowVector = new RowVector(rowCount, children);
+    vecBatch->Append(rowVector);
+}
+
 void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount)
 {
     auto colSize = types.size();
@@ -516,6 +534,16 @@ void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<
             auto arrayType = std::static_pointer_cast<ArrayType>(type);
             DataTypePtr elementType = arrayType->ElementType();
             SetArrayVector(output, elementType, rowCount);
+        } else if (typeId == OMNI_MAP) {
+            auto mapType = std::static_pointer_cast<MapType>(type);
+            SetMapVector(output, mapType->Key(), mapType->Value(), rowCount);
+        } else if (typeId == OMNI_ROW) {
+            auto rowType = std::static_pointer_cast<RowType>(type);
+            std::vector<DataTypePtr> fieldTypes;
+            for (size_t i = 0; i < rowType->Size(); i++) {
+                fieldTypes.push_back(rowType->Type(i));
+            }
+            SetRowVector(output, fieldTypes, rowCount);
         }
     }
 }

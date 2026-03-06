@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: Min_by aggregate
  */
 
@@ -16,22 +16,30 @@ void MinByAggregator<COL1_ID, COL2_ID>::ExtractValues(const AggregateState *stat
     if (this->outputPartial) {
         auto *minByState = MinByState<targetValueType, sortKeyType>::ConstCastState(state + aggStateOffset);
 
+        auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
+        auto sortKeyVector = static_cast<sortKeyTypeVec *>(vectors[1]);
         if (minByState->isEmpty) {
-            // no partial result
+            targetValueVector->SetNull(rowIndex);
+            sortKeyVector->SetNull(rowIndex);
             return;
         }
 
-        auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
-        auto sortKeyVector = static_cast<sortKeyTypeVec *>(vectors[1]);
-
-        targetValueVector->SetValue(rowIndex, minByState->targetValue);
+        if (minByState->targetIsNull) {
+            targetValueVector->SetNull(rowIndex);
+        } else {
+            targetValueVector->SetValue(rowIndex, minByState->targetValue);
+        }
         sortKeyVector->SetValue(rowIndex, minByState->sortKey);
     } else {
-        // output filan result, only one col
+        // output final result, only one col
         auto *minByState = MinByState<targetValueType, sortKeyType>::ConstCastState(state + aggStateOffset);
         auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
         if (minByState->isEmpty) {
             // min_by empty table，final result is null
+            targetValueVector->SetNull(rowIndex);
+            return;
+        }
+        if (minByState->targetIsNull) {
             targetValueVector->SetNull(rowIndex);
             return;
         }
@@ -49,19 +57,28 @@ void MinByAggregator<COL1_ID, COL2_ID>::ExtractValuesBatch(std::vector<Aggregate
         for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
             auto *minByState = MinByState<targetValueType, sortKeyType>::ConstCastState(groupStates[rowIndex] + aggStateOffset);
             if (minByState->isEmpty) {
-                // no partial result
+                targetValueVector->SetNull(rowIndex);
+                sortKeyVector->SetNull(rowIndex);
                 continue;
             }
-            targetValueVector->SetValue(rowIndex, minByState->targetValue);
+            if (minByState->targetIsNull) {
+                targetValueVector->SetNull(rowIndex);
+            } else {
+                targetValueVector->SetValue(rowIndex, minByState->targetValue);
+            }
             sortKeyVector->SetValue(rowIndex, minByState->sortKey);
         }
     } else {
-        // output final resule，only one col
+        // output final result, only one col
         auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
         for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
             auto *minByState = MinByState<targetValueType, sortKeyType>::ConstCastState(groupStates[rowIndex] + aggStateOffset);
             if (minByState->isEmpty) {
                 // min_by empty table，final result is null
+                targetValueVector->SetNull(rowIndex);
+                continue;
+            }
+            if (minByState->targetIsNull) {
                 targetValueVector->SetNull(rowIndex);
                 continue;
             }
@@ -95,7 +112,11 @@ void MinByAggregator<COL1_ID, COL2_ID>::ExtractValuesForSpill(std::vector<Aggreg
 			targetValueVector->SetNull(rowIndex);
             continue;
         }
-        targetValueVector->SetValue(rowIndex, minByState->targetValue);
+        if (minByState->targetIsNull) {
+            targetValueVector->SetNull(rowIndex);
+        } else {
+            targetValueVector->SetValue(rowIndex, minByState->targetValue);
+        }
         sortKeyVector->SetValue(rowIndex, minByState->sortKey);
     }
 }
@@ -104,6 +125,7 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> void MinByAggregator<COL1_ID, 
 {
     auto *minByState = MinByState<targetValueType, sortKeyType>::CastState(state + aggStateOffset);
     minByState->isEmpty = true;
+    minByState->targetIsNull = false;
     minByState->sortKey = GetSortKeyMax<sortKeyType>();
 }
 
@@ -113,6 +135,7 @@ void MinByAggregator<COL1_ID, COL2_ID>::InitStates(std::vector<AggregateState *>
     for (auto groupState : groupStates) {
         auto *minByState = MinByState<targetValueType, sortKeyType>::CastState(groupState + aggStateOffset);
         minByState->isEmpty = true;
+        minByState->targetIsNull = false;
         minByState->sortKey = GetSortKeyMax<sortKeyType>();
     }
 }
@@ -126,10 +149,7 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
 
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
     auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
-
-    col1ptr += rowOffset;
     col2ptr += rowOffset;
 
     int col1Size = col1Vector->GetSize();
@@ -140,11 +160,19 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
         throw omniruntime::exception::OmniException("Error in MinByAggregator::ProcessSingleInternal(): ", omniExceptionInfo);
     }
 
+    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
+    col1ptr += rowOffset;
     for (int i = 0; i < col2Size; i++) {
+        if (col2Vector->IsNull(rowOffset + i)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
         if (col2ptr[i] <= minByState->sortKey) {
             minByState->isEmpty = false;
             minByState->sortKey = col2ptr[i];
-            minByState->targetValue = col1ptr[i];
+            minByState->targetIsNull = col1Vector->IsNull(rowOffset + i);
+            if (!minByState->targetIsNull) {
+                minByState->targetValue = col1ptr[i];
+            }
         }
     }
 }
@@ -157,10 +185,7 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
 
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
     auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
-
-    col1ptr += rowOffset;
     col2ptr += rowOffset;
 
     const size_t rowCount = rowStates.size();
@@ -174,12 +199,20 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
         return;
     }
 
+    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
+    col1ptr += rowOffset;
     for (size_t i = 0; i < rowCount; i++) {
+        if (col2Vector->IsNull(rowOffset + i)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
         auto *minByState = MinByState<targetValueType, sortKeyType>::CastState(rowStates[i] + aggStateOffset);
         if (col2ptr[i] <= minByState->sortKey) {
             minByState->isEmpty = false;
             minByState->sortKey = col2ptr[i];
-            minByState->targetValue = col1ptr[i];
+            minByState->targetIsNull = col1Vector->IsNull(rowOffset + i);
+            if (!minByState->targetIsNull) {
+                minByState->targetValue = col1ptr[i];
+            }
         }
     }
 }
@@ -195,22 +228,20 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessGroupUnspill(std::vector<UnspillR
         auto batch = row.batch;
         auto index = row.rowIdx;
         auto targetValueVector = static_cast<targetValueTypeVec *>(batch->Get(targetValueVecIdx));
-        if (!targetValueVector->IsNull(index)) {
-            // take value from state
-            auto targetValue = targetValueVector->GetValue(index);
-            auto sortKeyVector = static_cast<sortKeyTypeVec *>(batch->Get(sortKeyVecIdx));
-
-            // take key from state
-            auto sortKey = sortKeyVector->GetValue(index);
-
-            auto *state = MinByState<targetValueType, sortKeyType>::CastState(row.state + aggStateOffset);
-
-            // construct state
-            if (sortKey <= state->sortKey) {
-                state->isEmpty = false;
-                state->sortKey = sortKey;
-                state->targetValue = targetValue;
-            }
+        auto *state = MinByState<targetValueType, sortKeyType>::CastState(row.state + aggStateOffset);
+        auto sortKeyVector = static_cast<sortKeyTypeVec *>(batch->Get(sortKeyVecIdx));
+        if (sortKeyVector->IsNull(index)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
+        if (targetValueVector->IsNull(index)) {
+            continue;  // Spark: only consider rows with non-null target; skip null target row
+        }
+        auto sortKey = sortKeyVector->GetValue(index);
+        if (sortKey <= state->sortKey) {
+            state->isEmpty = false;
+            state->sortKey = sortKey;
+            state->targetIsNull = false;
+            state->targetValue = targetValueVector->GetValue(index);
         }
     }
 }
@@ -371,6 +402,25 @@ template class MinByAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>;
 template class MinByAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>;
 
 template class MinByAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>;
+
+// COL2 = OMNI_BYTE
+template class MinByAggregator<OMNI_BOOLEAN, OMNI_BYTE>;
+template class MinByAggregator<OMNI_BYTE, OMNI_BOOLEAN>;
+template class MinByAggregator<OMNI_BYTE, OMNI_BYTE>;
+template class MinByAggregator<OMNI_BYTE, OMNI_SHORT>;
+template class MinByAggregator<OMNI_BYTE, OMNI_INT>;
+template class MinByAggregator<OMNI_BYTE, OMNI_LONG>;
+template class MinByAggregator<OMNI_BYTE, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_BYTE, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_BYTE, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_BYTE, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_SHORT, OMNI_BYTE>;
+template class MinByAggregator<OMNI_INT, OMNI_BYTE>;
+template class MinByAggregator<OMNI_LONG, OMNI_BYTE>;
+template class MinByAggregator<OMNI_FLOAT, OMNI_BYTE>;
+template class MinByAggregator<OMNI_DOUBLE, OMNI_BYTE>;
+template class MinByAggregator<OMNI_DECIMAL64, OMNI_BYTE>;
+template class MinByAggregator<OMNI_DECIMAL128, OMNI_BYTE>;
 
 } // namespace op
 } // namespace omniruntime

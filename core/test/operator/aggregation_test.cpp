@@ -21,8 +21,8 @@
 #include "util/test_agg_util.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "operator/aggregation/aggregator/corr_aggregator.h"
-#include "operator/aggregation/container_vector.h"
 #include "type/decimal128.h"
+#include "util/type_util.h"
 
 namespace omniruntime {
 using namespace omniruntime::vec;

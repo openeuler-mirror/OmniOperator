@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: Min_by aggregate
  */
 #ifndef OMNI_RUNTIME_MINBY_AGGREGATOR_H
@@ -48,6 +48,7 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByAggregator : public
         targetValueType targetValue;
         sortKeyType sortKey;
         bool isEmpty = true;
+        bool targetIsNull = false;  // true when the winning row has null target (Spark semantics)
         static const MinByAggregator<COL1_ID, COL2_ID>::MinByState<targetValueType, sortKeyType> *ConstCastState(const AggregateState *state)
         {
             return reinterpret_cast<const MinByAggregator<COL1_ID, COL2_ID>::MinByState<targetValueType, sortKeyType> *>(state);
@@ -76,6 +77,7 @@ public:
     static constexpr bool IsSupportedBasicMinByType(DataTypeId type_id)
     {
         switch (type_id) {
+            case OMNI_BYTE:
             case OMNI_SHORT:
             case OMNI_INT:
             case OMNI_LONG:
@@ -90,6 +92,12 @@ public:
         }
     }
 
+    static constexpr bool IsSupportedOutputType(DataTypeId type_id)
+    {
+        // Only scalar types; ARRAY/MAP/ROW are handled by MinByComplexAggregator (factory routes there).
+        return IsSupportedBasicMinByType(type_id);
+    }
+
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
         if (inputTypes.GetType(0)->GetId() != outputTypes.GetType(0)->GetId()) {
@@ -102,7 +110,7 @@ public:
                 isOverflowAsNull);
         }
 
-        if constexpr (!IsSupportedBasicMinByType(COL1_ID)) {
+        if constexpr (!IsSupportedOutputType(COL1_ID)) {
             std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID);
             throw omniruntime::exception::OmniException("Error in minby aggregator: : ", omniExceptionInfo);
         } else if constexpr (!IsSupportedBasicMinByType(COL2_ID)) {

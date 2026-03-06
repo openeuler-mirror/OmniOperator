@@ -4,11 +4,14 @@
  */
 
 #include "group_aggregation_sort.h"
+#include "vector/vector_helper.h"
 
 using namespace omniruntime::op;
 
 void AggregationSort::SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint64_t rowOffset, bool compareWithHashVal)
 {
+    vec::VectorHelper::ResetVarcharVectorsForReuse(spillVecBatch);
+
     // first set hash values
     Vector<LargeStringContainer<std::string_view>> * keyVector = nullptr;
     Vector<int64_t> * hashVector = nullptr;

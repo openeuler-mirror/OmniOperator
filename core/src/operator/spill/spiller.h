@@ -53,6 +53,10 @@ private:
 
     ErrorCode WriteArrayVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
 
+    ErrorCode WriteMapVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
+
+    ErrorCode WriteRowVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
+
     ErrorCode WriteComplexVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
 
     ErrorCode WriteVecBatchToFile(vec::VectorBatch *vectorBatch);
@@ -60,6 +64,10 @@ private:
     template <typename T> ErrorCode WriteVector(omniruntime::vec::BaseVector *vector, int32_t rowCount);
 
     ErrorCode WriteArrayVector(const DataTypePtr& dataType, omniruntime::vec::BaseVector* vector, int32_t rowCount);
+
+    ErrorCode WriteMapVector(const DataTypePtr &dataType, omniruntime::vec::BaseVector *vector, int32_t rowCount);
+
+    ErrorCode WriteRowVector(const DataTypePtr &dataType, omniruntime::vec::BaseVector *vector, int32_t rowCount);
 
     ErrorCode WriteComplexVector(const DataTypePtr& dataType, omniruntime::vec::BaseVector* vector, int32_t rowCount);
 
@@ -167,6 +175,10 @@ private:
     uint64_t CollectComplexVectorSize(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
 
     uint64_t CollectArrayVectorSize(const DataTypePtr &arrayType, vec::BaseVector *vector, int32_t rowCount);
+
+    uint64_t CollectMapVectorSize(const DataTypePtr &mapType, vec::BaseVector *vector, int32_t rowCount);
+
+    uint64_t CollectRowVectorSize(const DataTypePtr &rowType, vec::BaseVector *vector, int32_t rowCount);
 
     DataTypes dataTypes;
     std::vector<int32_t> sortCols;

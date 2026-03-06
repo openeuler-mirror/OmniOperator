@@ -68,5 +68,14 @@ namespace omniruntime::vec {
             child->Expand(newSize);
             VectorHelper::AppendVector(child, positionOffset, otherChild, length);
         }
+        // When source row is null, parent was SetNull but children got copied; clear children at null rows to avoid residual data.
+        for (int i = 0; i < length; i++) {
+            if (otherRowVector->IsNull(i)) {
+                int destIndex = positionOffset + i;
+                for (int c = 0; c < static_cast<int>(children_.size()); c++) {
+                    children_[c]->SetNull(destIndex);
+                }
+            }
+        }
     }
 }

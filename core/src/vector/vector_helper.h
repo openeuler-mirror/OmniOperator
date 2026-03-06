@@ -238,7 +238,32 @@ public:
     static void SetValue(vec::BaseVector *vector, int32_t index, void *value)
     {
         using namespace omniruntime::type;
-        return DYNAMIC_TYPE_DISPATCH(VectorSetValue, vector->GetTypeId(), vector, index, value);
+        DataTypeId typeId = vector->GetTypeId();
+        if (typeId == OMNI_ROW) {
+            if (value == nullptr) {
+                vector->SetNull(index);
+            } else {
+                static_cast<RowVector *>(vector)->Append(static_cast<BaseVector *>(value), index, 1);
+            }
+            return;
+        }
+        if (typeId == OMNI_MAP) {
+            if (value == nullptr) {
+                vector->SetNull(index);
+            } else {
+                static_cast<MapVector *>(vector)->SetValue(index, static_cast<MapVector *>(value));
+            }
+            return;
+        }
+        if (typeId == OMNI_ARRAY) {
+            if (value == nullptr) {
+                vector->SetNull(index);
+            } else {
+                static_cast<ArrayVector *>(vector)->SetValue(index, static_cast<BaseVector *>(value));
+            }
+            return;
+        }
+        return DYNAMIC_TYPE_DISPATCH(VectorSetValue, typeId, vector, index, value);
     }
 
     template <type::DataTypeId typeId>
@@ -257,7 +282,47 @@ public:
     static void CopyValue(vec::BaseVector *srcVector, int32_t srcIndex, vec::BaseVector *dstVector, int32_t dstIndex)
     {
         using namespace omniruntime::type;
-        return DYNAMIC_TYPE_DISPATCH(VectorCopyValue, srcVector->GetTypeId(), srcVector, srcIndex, dstVector, dstIndex);
+        DataTypeId typeId = srcVector->GetTypeId();
+        if (typeId == OMNI_NONE || typeId == OMNI_INVALID) {
+            dstVector->SetNull(dstIndex);
+            return;
+        }
+        if (typeId == OMNI_ROW) {
+            auto *srcRow = static_cast<RowVector *>(srcVector);
+            auto *dstRow = static_cast<RowVector *>(dstVector);
+            if (srcRow->IsNull(srcIndex)) {
+                dstRow->SetNull(dstIndex);
+            } else {
+                for (int32_t c = 0; c < srcRow->ChildSize(); ++c) {
+                    CopyValue(srcRow->ChildAt(c).get(), srcIndex, dstRow->ChildAt(c).get(), dstIndex);
+                }
+            }
+            return;
+        }
+        if (typeId == OMNI_MAP) {
+            auto *srcMap = static_cast<MapVector *>(srcVector);
+            auto *dstMap = static_cast<MapVector *>(dstVector);
+            if (srcMap->IsNull(srcIndex)) {
+                dstMap->SetNull(dstIndex);
+            } else {
+                BaseVector *oneRow = srcMap->Slice(srcIndex, 1, true);
+                dstMap->SetValue(dstIndex, static_cast<MapVector *>(oneRow));
+                delete oneRow;
+            }
+            return;
+        }
+        if (typeId == OMNI_ARRAY) {
+            auto *srcArr = static_cast<ArrayVector *>(srcVector);
+            auto *dstArr = static_cast<ArrayVector *>(dstVector);
+            if (srcArr->IsNull(srcIndex)) {
+                dstArr->SetNull(dstIndex);
+            } else {
+                std::shared_ptr<BaseVector> slice = srcArr->GetArrayAt(srcIndex, true);
+                dstArr->SetValue(dstIndex, slice.get());
+            }
+            return;
+        }
+        return DYNAMIC_TYPE_DISPATCH(VectorCopyValue, typeId, srcVector, srcIndex, dstVector, dstIndex);
     }
 
     static void PrintVecBatch(VectorBatch *vecBatch)
@@ -1168,6 +1233,23 @@ public:
         const std::vector<omniruntime::type::DataTypePtr> &types = sourceTypes.Get();
         for (int i = 0; i < sourceTypes.GetSize(); i++) {
             vectorBatch->Append(CreateComplexVector(types[i].get(), positionCount));
+        }
+    }
+
+    /** Reset varchar/char vectors in the batch so that reuse (e.g. spill row split) starts with clean offsets. */
+    static ALWAYS_INLINE void ResetVarcharVectorsForReuse(VectorBatch *vectorBatch)
+    {
+        if (vectorBatch == nullptr) {
+            return;
+        }
+        int32_t vecCount = vectorBatch->GetVectorCount();
+        for (int32_t i = 0; i < vecCount; i++) {
+            BaseVector *vec = vectorBatch->Get(i);
+            auto typeId = vec->GetTypeId();
+            if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR) {
+                auto *varcharVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
+                varcharVec->ResetForReuse();
+            }
         }
     }
 
