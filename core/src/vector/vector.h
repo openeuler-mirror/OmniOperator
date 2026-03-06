@@ -687,6 +687,14 @@ public:
         return container->GetValue(index + this->offset);
     }
 
+    /** Reset string content so next SetValue starts from offset 0. Used when reusing vector for spill. */
+    void ResetForReuse()
+    {
+        if (container && !this->isSliced) {
+            container->ResetForReuse(this->size);
+        }
+    }
+
     /* *
      * append data to the current vector
      *

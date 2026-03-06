@@ -105,6 +105,14 @@ template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_ARRAY> {
     using type =ArrayType;
     using vector = ArrayVector;
 };
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_MAP> {
+    using type = MapType;
+    using vector = MapVector;
+};
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_ROW> {
+    using type = RowType;
+    using vector = RowVector;
+};
 template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_NONE> {
     using type = void;
     using vector = void;

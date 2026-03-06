@@ -117,5 +117,17 @@ void LargeStringContainer<RAW_DATA_TYPE>::Expand(int32_t needSize)
     offsets.resize(needSize + 1);
 }
 
+template<typename RAW_DATA_TYPE>
+void LargeStringContainer<RAW_DATA_TYPE>::ResetForReuse(int32_t rowCount)
+{
+    if (rowCount + 1 > static_cast<int32_t>(offsets.size())) {
+        offsets.resize(rowCount + 1);
+    }
+    for (int32_t i = 0; i <= rowCount; i++) {
+        offsets[i] = 0;
+    }
+    lastOffsetPosition = -1;
+}
+
 template class LargeStringContainer<std::string_view>;
 }

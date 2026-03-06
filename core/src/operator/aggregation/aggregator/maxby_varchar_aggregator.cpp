@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: Max_by varchar aggregate
  */
 
@@ -16,18 +16,28 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValues(const AggregateStat
     auto *maxByVarcharState = MaxByVarcharState<targetValueType>::ConstCastState(state + aggStateOffset);
 
     if (this->outputPartial) {
-        if (maxByVarcharState->GetStrKeyAddress() == 0) {
-            return;
-        }
         auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
         auto sortKeyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[1]);
+        if (maxByVarcharState->GetStrKeyAddress() == 0) {
+            targetValueVector->SetNull(rowIndex);
+            sortKeyVector->SetNull(rowIndex);
+            return;
+        }
         std::string_view val(reinterpret_cast<char *>(maxByVarcharState->GetStrKeyAddress()), maxByVarcharState->GetStrKeyLen());
         sortKeyVector->SetValue(rowIndex, val);
-        targetValueVector->SetValue(rowIndex, maxByVarcharState->targetValue);
+        if (maxByVarcharState->targetIsNull) {
+            targetValueVector->SetNull(rowIndex);
+        } else {
+            targetValueVector->SetValue(rowIndex, maxByVarcharState->targetValue);
+        }
         maxByVarcharState->ReleaseSortKey();
     } else {
         auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
         if (maxByVarcharState->GetStrKeyAddress() == 0) {
+            targetValueVector->SetNull(rowIndex);
+            return;
+        }
+        if (maxByVarcharState->targetIsNull) {
             targetValueVector->SetNull(rowIndex);
             return;
         }
@@ -46,11 +56,17 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValuesBatch(std::vector<Ag
         for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
             auto *maxByVarcharState = MaxByVarcharState<targetValueType>::ConstCastState(groupStates[rowIndex] + aggStateOffset);
             if (maxByVarcharState->GetStrKeyAddress() == 0) {
+                targetValueVector->SetNull(rowIndex);
+                sortKeyVector->SetNull(rowIndex);
                 continue;
             }
             std::string_view val(reinterpret_cast<char *>(maxByVarcharState->GetStrKeyAddress()), maxByVarcharState->GetStrKeyLen());
             sortKeyVector->SetValue(rowIndex, val);
-            targetValueVector->SetValue(rowIndex, maxByVarcharState->targetValue);
+            if (maxByVarcharState->targetIsNull) {
+                targetValueVector->SetNull(rowIndex);
+            } else {
+                targetValueVector->SetValue(rowIndex, maxByVarcharState->targetValue);
+            }
             maxByVarcharState->ReleaseSortKey();
         }
     } else {
@@ -58,6 +74,10 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValuesBatch(std::vector<Ag
         for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
             auto *maxByVarcharState = MaxByVarcharState<targetValueType>::ConstCastState(groupStates[rowIndex] + aggStateOffset);
             if (maxByVarcharState->GetStrKeyAddress() == 0) {
+                targetValueVector->SetNull(rowIndex);
+                continue;
+            }
+            if (maxByVarcharState->targetIsNull) {
                 targetValueVector->SetNull(rowIndex);
                 continue;
             }
@@ -70,8 +90,8 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValuesBatch(std::vector<Ag
 template <DataTypeId COL1_ID, DataTypeId COL2_ID> std::vector<DataTypePtr> MaxByVarcharAggregator<COL1_ID, COL2_ID>::GetSpillType()
 {
     std::vector<DataTypePtr> spillTypes;
-    spillTypes.emplace_back(std::make_shared<DataType>(COL1_ID));
-    spillTypes.emplace_back(std::make_shared<DataType>(OMNI_VARCHAR));
+    spillTypes.emplace_back(GetOutputTypes().GetType(0));
+    spillTypes.emplace_back(GetInputTypes().GetType(1));
     return spillTypes;
 }
 
@@ -89,7 +109,12 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValuesForSpill(std::vector
             targetValueVector->SetNull(rowIndex);
             continue;
         }
-        targetValueVector->SetValue(rowIndex, maxByVarcharState->targetValue);
+        maxByVarcharState->SaveSortKey();
+        if (maxByVarcharState->targetIsNull) {
+            targetValueVector->SetNull(rowIndex);
+        } else {
+            targetValueVector->SetValue(rowIndex, maxByVarcharState->targetValue);
+        }
         std::string_view val(reinterpret_cast<char *>(maxByVarcharState->GetStrKeyAddress()), maxByVarcharState->GetStrKeyLen());
         sortKeyVector->SetValue(rowIndex, val);
     }
@@ -98,7 +123,9 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValuesForSpill(std::vector
 template <DataTypeId COL1_ID, DataTypeId COL2_ID> void MaxByVarcharAggregator<COL1_ID, COL2_ID>::InitState(AggregateState *state)
 {
     auto *maxByVarcharState = MaxByVarcharState<targetValueType>::CastState(state + aggStateOffset);
-    maxByVarcharState->SetStrKey(0, 0);
+    maxByVarcharState->ClearStrKey();
+    maxByVarcharState->ClearTargetValue();
+    maxByVarcharState->targetIsNull = false;
 }
 
 template <DataTypeId COL1_ID, DataTypeId COL2_ID>
@@ -116,24 +143,73 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateSt
     auto *maxByVarcharState = MaxByVarcharState<targetValueType>::CastState(state);
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
     auto *col2ptr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(col2Vector);
 
     for (int32_t i = rowOffset; i < rowCount; i++) {
         if (nullMap != nullptr && (*nullMap)[i]) {
             continue;
         }
+        if (col2Vector->IsNull(i)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
+        bool targetNull = col1Vector->IsNull(i);
+        targetValueType targetVal;
+        if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+            auto *col1StrVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(col1Vector);
+            targetVal = col1StrVec->GetValue(i);
+        } else {
+            auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
+            targetVal = col1ptr[i];
+        }
         auto strView = col2ptr->GetValue(i);
         if (maxByVarcharState->GetStrKeyAddress() == 0) {
             maxByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), strView.size());
-            maxByVarcharState->targetValue = col1ptr[i];
+            maxByVarcharState->targetIsNull = targetNull;
+            if (!targetNull) {
+                if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                    maxByVarcharState->ReleaseTargetValueIfOwned();
+                    if (this->arenaAllocator != nullptr) {
+                        char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        maxByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                        maxByVarcharState->SetTargetValueOwned(false);
+                    } else {
+                        char *copy = new char[targetVal.size() + 1];
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        copy[targetVal.size()] = '\0';
+                        maxByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                        maxByVarcharState->SetTargetValueOwned(true);
+                    }
+                } else {
+                    maxByVarcharState->targetValue = targetVal;
+                }
+            }
         } else {
             const auto *curVal = strView.data();
             int32_t curLen = strView.size();
             auto result = memcmp((const char *)maxByVarcharState->GetStrKeyAddress(), curVal, std::min(maxByVarcharState->GetStrKeyLen(), curLen));
             if (result < 0 || (result == 0 && maxByVarcharState->GetStrKeyLen() < curLen)) {
                 maxByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), curLen);
-                maxByVarcharState->targetValue = col1ptr[i];
+                maxByVarcharState->targetIsNull = targetNull;
+                if (!targetNull) {
+                    if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                        maxByVarcharState->ReleaseTargetValueIfOwned();
+                        if (this->arenaAllocator != nullptr) {
+                            char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
+                            std::memcpy(copy, targetVal.data(), targetVal.size());
+                            maxByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                            maxByVarcharState->SetTargetValueOwned(false);
+                        } else {
+                            char *copy = new char[targetVal.size() + 1];
+                            std::memcpy(copy, targetVal.data(), targetVal.size());
+                            copy[targetVal.size()] = '\0';
+                            maxByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                            maxByVarcharState->SetTargetValueOwned(true);
+                        }
+                    } else {
+                        maxByVarcharState->targetValue = targetVal;
+                    }
+                }
             }
         }
     }
@@ -146,10 +222,7 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
 {
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
     auto *col2ptr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(col2Vector);
-    col1ptr += rowOffset;
-    col2ptr += rowOffset;
 
     const size_t rowCount = rowStates.size();
     if (rowCount != col1Vector->GetSize() || rowCount != col2Vector->GetSize()) {
@@ -164,18 +237,69 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
         if (nullMap != nullptr && (*nullMap)[i]) {
             continue;
         }
+        int32_t rowIdx = static_cast<int32_t>(rowOffset + i);
+        if (col2Vector->IsNull(rowIdx)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
+        bool targetNull = col1Vector->IsNull(rowIdx);
+        targetValueType targetVal;
+        if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+            auto *col1StrVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(col1Vector);
+            targetVal = col1StrVec->GetValue(rowIdx);
+        } else {
+            auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
+            targetVal = col1ptr[rowIdx];
+        }
         auto *maxByVarcharState = MaxByVarcharState<targetValueType>::CastState(rowStates[i] + aggStateOffset);
-        auto strView = col2ptr->GetValue(i);
+        auto strView = col2ptr->GetValue(rowIdx);
         if (maxByVarcharState->GetStrKeyAddress() == 0) {
             maxByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), strView.size());
-            maxByVarcharState->targetValue = col1ptr[i];
+            maxByVarcharState->targetIsNull = targetNull;
+            if (!targetNull) {
+                if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                    maxByVarcharState->ReleaseTargetValueIfOwned();
+                    if (this->arenaAllocator != nullptr) {
+                        char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        maxByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                        maxByVarcharState->SetTargetValueOwned(false);
+                    } else {
+                        char *copy = new char[targetVal.size() + 1];
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        copy[targetVal.size()] = '\0';
+                        maxByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                        maxByVarcharState->SetTargetValueOwned(true);
+                    }
+                } else {
+                    maxByVarcharState->targetValue = targetVal;
+                }
+            }
         } else {
             const auto *curVal = strView.data();
             int32_t curLen = strView.size();
             auto result = memcmp((const char *)maxByVarcharState->GetStrKeyAddress(), curVal, std::min(maxByVarcharState->GetStrKeyLen(), curLen));
             if (result < 0 || (result == 0 && maxByVarcharState->GetStrKeyLen() < curLen)) {
                 maxByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), curLen);
-                maxByVarcharState->targetValue = col1ptr[i];
+                maxByVarcharState->targetIsNull = targetNull;
+                if (!targetNull) {
+                    if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                        maxByVarcharState->ReleaseTargetValueIfOwned();
+                        if (this->arenaAllocator != nullptr) {
+                            char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
+                            std::memcpy(copy, targetVal.data(), targetVal.size());
+                            maxByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                            maxByVarcharState->SetTargetValueOwned(false);
+                        } else {
+                            char *copy = new char[targetVal.size() + 1];
+                            std::memcpy(copy, targetVal.data(), targetVal.size());
+                            copy[targetVal.size()] = '\0';
+                            maxByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                            maxByVarcharState->SetTargetValueOwned(true);
+                        }
+                    } else {
+                        maxByVarcharState->targetValue = targetVal;
+                    }
+                }
             }
         }
     }
@@ -197,25 +321,52 @@ void MaxByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupUnspill(std::vector<U
         auto batch = row.batch;
         auto index = row.rowIdx;
         auto targetValueVector = static_cast<targetValueTypeVec *>(batch->Get(targetValueVecIdx));
-        if (!targetValueVector->IsNull(index)) {
-            auto targetValue = targetValueVector->GetValue(index);
-            auto sortKeyVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(batch->Get(sortKeyVecIdx));
-            auto sortKey = sortKeyVector->GetValue(index);
-            auto *state = MaxByVarcharState<targetValueType>::CastState(row.state + aggStateOffset);
-            if (state->GetStrKeyAddress() == 0) {
-                state->SetStrKey(reinterpret_cast<int64_t>(sortKey.data()), sortKey.size());
-                state->targetValue = targetValue;
-                state->SaveSortKey();
-            } else {
-                const auto *curVal = sortKey.data();
-                int32_t curLen = sortKey.size();
-                auto result = memcmp((const char *)state->GetStrKeyAddress(), curVal, std::min(state->GetStrKeyLen(), curLen));
-                if (result < 0 || (result == 0 && state->GetStrKeyLen() < curLen)) {
-                    state->SetStrKey(reinterpret_cast<int64_t>(sortKey.data()), curLen);
+        auto *state = MaxByVarcharState<targetValueType>::CastState(row.state + aggStateOffset);
+        if (targetValueVector->IsNull(index)) {
+            continue;
+        }
+        auto targetValue = targetValueVector->GetValue(index);
+        auto sortKeyVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(batch->Get(sortKeyVecIdx));
+        if (sortKeyVector->IsNull(index)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
+        auto sortKey = sortKeyVector->GetValue(index);
+        bool shouldUpdate = false;
+        if (state->GetStrKeyAddress() == 0) {
+            shouldUpdate = true;
+        } else {
+            const auto *curVal = sortKey.data();
+            int32_t curLen = static_cast<int32_t>(sortKey.size());
+            int cmp = memcmp(reinterpret_cast<const char *>(state->GetStrKeyAddress()), curVal,
+                std::min(state->GetStrKeyLen(), curLen));
+            if (cmp < 0 || (cmp == 0 && state->GetStrKeyLen() < curLen)) {
+                shouldUpdate = true;
+            }
+        }
+        if (shouldUpdate) {
+            state->targetIsNull = targetValueVector->IsNull(index);
+            if (!state->targetIsNull) {
+                auto targetValue = targetValueVector->GetValue(index);
+                if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                    state->ReleaseTargetValueIfOwned();
+                    if (this->arenaAllocator != nullptr) {
+                        char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetValue.size()));
+                        std::memcpy(copy, targetValue.data(), targetValue.size());
+                        state->targetValue = std::string_view(copy, targetValue.size());
+                        state->SetTargetValueOwned(false);
+                    } else {
+                        char *copy = new char[targetValue.size() + 1];
+                        std::memcpy(copy, targetValue.data(), targetValue.size());
+                        copy[targetValue.size()] = '\0';
+                        state->targetValue = std::string_view(copy, targetValue.size());
+                        state->SetTargetValueOwned(true);
+                    }
+                } else {
                     state->targetValue = targetValue;
-                    state->SaveSortKey();
                 }
             }
+            state->SetStrKey(reinterpret_cast<int64_t>(sortKey.data()), static_cast<int32_t>(sortKey.size()));
+            state->SaveSortKey();
         }
     }
 }
@@ -245,6 +396,7 @@ MaxByVarcharAggregator<COL1_ID, COL2_ID>::MaxByVarcharAggregator(const DataTypes
 {}
 
 template class MaxByVarcharAggregator<OMNI_BOOLEAN, OMNI_VARCHAR>;
+template class MaxByVarcharAggregator<OMNI_BYTE, OMNI_VARCHAR>;
 template class MaxByVarcharAggregator<OMNI_SHORT, OMNI_VARCHAR>;
 template class MaxByVarcharAggregator<OMNI_INT, OMNI_VARCHAR>;
 template class MaxByVarcharAggregator<OMNI_LONG, OMNI_VARCHAR>;
@@ -254,6 +406,7 @@ template class MaxByVarcharAggregator<OMNI_DECIMAL128, OMNI_VARCHAR>;
 template class MaxByVarcharAggregator<OMNI_DECIMAL64, OMNI_VARCHAR>;
 
 template class MaxByVarcharAggregator<OMNI_BOOLEAN, OMNI_CHAR>;
+template class MaxByVarcharAggregator<OMNI_BYTE, OMNI_CHAR>;
 template class MaxByVarcharAggregator<OMNI_SHORT, OMNI_CHAR>;
 template class MaxByVarcharAggregator<OMNI_INT, OMNI_CHAR>;
 template class MaxByVarcharAggregator<OMNI_LONG, OMNI_CHAR>;
@@ -261,6 +414,11 @@ template class MaxByVarcharAggregator<OMNI_FLOAT, OMNI_CHAR>;
 template class MaxByVarcharAggregator<OMNI_DOUBLE, OMNI_CHAR>;
 template class MaxByVarcharAggregator<OMNI_DECIMAL128, OMNI_CHAR>;
 template class MaxByVarcharAggregator<OMNI_DECIMAL64, OMNI_CHAR>;
+
+template class MaxByVarcharAggregator<OMNI_VARCHAR, OMNI_VARCHAR>;
+template class MaxByVarcharAggregator<OMNI_VARCHAR, OMNI_CHAR>;
+template class MaxByVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;
+template class MaxByVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
 
 } // namespace op
 } // namespace omniruntime

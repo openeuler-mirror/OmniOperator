@@ -341,7 +341,11 @@ void AssertBoolEquals(std::vector<bool> &expected, bool *result)
 
 BaseVector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
 {
-    return DYNAMIC_TYPE_DISPATCH(CreateFlatVector, dataType.GetId(), rowCount, args);
+    DataTypeId typeId = dataType.GetId();
+    if (typeId == OMNI_ARRAY || typeId == OMNI_MAP || typeId == OMNI_ROW) {
+        return VectorHelper::CreateEmptyComplexVector(&dataType, rowCount);
+    }
+    return DYNAMIC_TYPE_DISPATCH(CreateFlatVector, typeId, rowCount, args);
 }
 
 vec::BaseVector *SliceVector(vec::BaseVector *vector, int32_t offset, int32_t length)
@@ -1085,6 +1089,10 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
         case OMNI_INT:
         case OMNI_DATE32: {
             isMatched = CompareUnorderedRows<int32_t, int32_t>(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_BYTE: {
+            isMatched = CompareUnorderedRows<int8_t, int8_t>(resultVector, expectedVector, error);
             break;
         }
         case OMNI_SHORT: {

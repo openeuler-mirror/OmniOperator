@@ -5,6 +5,8 @@
 
 #include <unistd.h>
 #include "spill_merger.h"
+#include "vector/map_vector.h"
+#include "vector/row_vector.h"
 
 namespace omniruntime {
 namespace op {
@@ -201,6 +203,80 @@ ErrorCode SpillReader::ReadArrayVector(const DataTypePtr &dataType, BaseVector *
     return ErrorCode::SUCCESS;
 }
 
+ErrorCode SpillReader::ReadMapVector(const DataTypePtr &dataType, BaseVector *vector, int32_t rowCount)
+{
+    auto mapType = std::dynamic_pointer_cast<MapType>(dataType);
+    auto mapVec = static_cast<omniruntime::vec::MapVector *>(vector);
+    if (!mapType) {
+        LogError("ReadMapVector: dataType is not MapType");
+        return ErrorCode::READ_FAILED;
+    }
+
+    uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(mapVec);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+    if (Read(nulls, nullsSize) != ErrorCode::SUCCESS) {
+        LogError("Read map nulls from %s failed.", filePath.c_str());
+        return ErrorCode::READ_FAILED;
+    }
+
+    int64_t *offsets = mapVec->GetOffsets();
+    ssize_t offsetsSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int64_t));
+    if (Read(offsets, offsetsSize) != ErrorCode::SUCCESS) {
+        LogError("Read map offsets from %s failed.", filePath.c_str());
+        return ErrorCode::READ_FAILED;
+    }
+
+    int32_t entryCount = static_cast<int32_t>(offsets[rowCount]);
+    auto keyVec = mapVec->GetKeyVector();
+    if (keyVec) {
+        keyVec->Expand(entryCount);
+        auto res = ReadComplexVector(mapType->Key(), keyVec.get(), entryCount);
+        if (res != ErrorCode::SUCCESS) {
+            LogError("Failed to read map key vector from %s.", filePath.c_str());
+            return res;
+        }
+    }
+    auto valueVec = mapVec->GetValueVector();
+    if (valueVec) {
+        valueVec->Expand(entryCount);
+        auto res = ReadComplexVector(mapType->Value(), valueVec.get(), entryCount);
+        if (res != ErrorCode::SUCCESS) {
+            LogError("Failed to read map value vector from %s.", filePath.c_str());
+            return res;
+        }
+    }
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode SpillReader::ReadRowVector(const DataTypePtr &dataType, BaseVector *vector, int32_t rowCount)
+{
+    auto rowType = std::dynamic_pointer_cast<RowType>(dataType);
+    auto rowVec = static_cast<omniruntime::vec::RowVector *>(vector);
+    if (!rowType) {
+        LogError("ReadRowVector: dataType is not RowType");
+        return ErrorCode::READ_FAILED;
+    }
+
+    uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(rowVec);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+    if (Read(nulls, nullsSize) != ErrorCode::SUCCESS) {
+        LogError("Read row nulls from %s failed.", filePath.c_str());
+        return ErrorCode::READ_FAILED;
+    }
+
+    auto &children = rowVec->Children();
+    for (size_t i = 0; i < children.size(); i++) {
+        if (i < static_cast<size_t>(rowType->Size()) && children[i]) {
+            auto res = ReadComplexVector(rowType->Type(static_cast<int>(i)), children[i].get(), rowCount);
+            if (res != ErrorCode::SUCCESS) {
+                LogError("Failed to read row child vector from %s.", filePath.c_str());
+                return res;
+            }
+        }
+    }
+    return ErrorCode::SUCCESS;
+}
+
 ErrorCode SpillReader::ReadComplexVector(const DataTypePtr &dataType, BaseVector *vector, int32_t rowCount)
 {
     ErrorCode result = ErrorCode::SUCCESS;
@@ -237,6 +313,12 @@ ErrorCode SpillReader::ReadComplexVector(const DataTypePtr &dataType, BaseVector
             break;
         case OMNI_ARRAY:
             result = ReadArrayVector(dataType, vector, rowCount);
+            break;
+        case OMNI_MAP:
+            result = ReadMapVector(dataType, vector, rowCount);
+            break;
+        case OMNI_ROW:
+            result = ReadRowVector(dataType, vector, rowCount);
             break;
         default:
             result = ErrorCode::READ_FAILED;

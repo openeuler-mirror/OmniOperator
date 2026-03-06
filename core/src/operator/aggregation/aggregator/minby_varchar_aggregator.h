@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: Min_by varchar aggregate
  */
 #ifndef OMNI_RUNTIME_MINBY_VARCHAR_AGGREGATOR_H
@@ -7,13 +7,18 @@
 
 #include <cstdint>
 #include <cfloat>
+#include <string_view>
+#include <type_traits>
 #include "typed_aggregator.h"
 
 namespace omniruntime {
 namespace op {
+// When target col is VARCHAR/CHAR, state holds std::string_view (pointing to arena); otherwise use AggNativeAndVectorType.
 template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByVarcharAggregator : public TypedAggregator {
-    using targetValueType = typename AggNativeAndVectorType<COL1_ID>::type;
-    using targetValueTypeVec = typename AggNativeAndVectorType<COL1_ID>::vector;
+    using targetValueType = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR,
+        std::string_view, typename AggNativeAndVectorType<COL1_ID>::type>;
+    using targetValueTypeVec = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR,
+        Vector<LargeStringContainer<std::string_view>>, typename AggNativeAndVectorType<COL1_ID>::vector>;
 
     // inner class for aggregate state, the member depends on targetValueType, sortKeyType of Aggregator
 #pragma pack(push, 1)
@@ -21,6 +26,7 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByVarcharAggregator :
     struct MinByVarcharState {
         // the final output type
         targetValueType targetValue;
+        bool targetIsNull = false;  // true when the winning row has null target (Spark semantics)
 
     private:
         // sortkey: string
@@ -29,6 +35,7 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByVarcharAggregator :
 
         // judge if the string key is copied
         bool saved = false;
+        bool targetValueOwned = false;
 
     public:
         static const MinByVarcharAggregator<COL1_ID, COL2_ID>::MinByVarcharState<targetValueType> *ConstCastState(const AggregateState *state)
@@ -46,6 +53,23 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByVarcharAggregator :
             ReleaseSortKey();
             strKeyAddress = address;
             strKeyLen = len;
+        }
+
+        /** Reset key fields without releasing (for InitState; avoids delete on uninitialized state). */
+        void ClearStrKey()
+        {
+            strKeyAddress = 0;
+            strKeyLen = 0;
+            saved = false;
+        }
+
+        /** Reset target value fields without releasing (for InitState when col1 is varchar/char). */
+        void ClearTargetValue()
+        {
+            if constexpr (std::is_same_v<targetValueType, std::string_view>) {
+                targetValue = std::string_view();
+                targetValueOwned = false;
+            }
         }
 
         bool IsSaved()
@@ -72,7 +96,7 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByVarcharAggregator :
             }
 
             char* copied_data = new char[strKeyLen + 1];
-            std::memcpy(copied_data, strKeyAddress, strKeyLen);
+            std::memcpy(copied_data, reinterpret_cast<const char*>(strKeyAddress), strKeyLen);
             copied_data[strKeyLen] = '\0';
 
             // reassign the address of the copied key to state
@@ -84,23 +108,43 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByVarcharAggregator :
         void ReleaseSortKey()
         {
             if (!saved) {
-                // no copied varchar key, don't need to release
                 return;
             }
-
+            if (strKeyAddress == 0) {
+                saved = false;
+                return;
+            }
             char* strKeyToFree = reinterpret_cast<char*>(strKeyAddress);
-            if (strKeyToFree != nullptr && strKeyLen > 0) {
+            if (strKeyLen > 0) {
                 delete[] strKeyToFree;
-                strKeyToFree = nullptr;
             }
             strKeyAddress = 0;
-
+            strKeyLen = 0;
             saved = false;
         }
+
+        void ReleaseTargetValueIfOwned()
+        {
+            if constexpr (std::is_same_v<targetValueType, std::string_view>) {
+                if (!targetValueOwned) {
+                    return;
+                }
+                if (targetValue.data() == nullptr) {
+                    targetValueOwned = false;
+                    return;
+                }
+                delete[] const_cast<char *>(targetValue.data());
+                targetValue = std::string_view();
+                targetValueOwned = false;
+            }
+        }
+
+        void SetTargetValueOwned(bool owned) { targetValueOwned = owned; }
 
         ~MinByVarcharState()
         {
             ReleaseSortKey();
+            ReleaseTargetValueIfOwned();
         }
     };
 #pragma pack(pop)
@@ -121,6 +165,7 @@ public:
     static constexpr bool IsSupportedBasicMinByType(DataTypeId type_id)
     {
         switch (type_id) {
+            case OMNI_BYTE:
             case OMNI_SHORT:
             case OMNI_INT:
             case OMNI_LONG:
@@ -141,11 +186,11 @@ public:
             throw omniruntime::exception::OmniException("Error in minby varchar aggregator: ", omniExceptionInfo);
         }
 
-        if constexpr (!IsSupportedBasicMinByType(COL1_ID)) {
+        if constexpr (!IsSupportedBasicMinByType(COL1_ID) && COL1_ID != OMNI_VARCHAR && COL1_ID != OMNI_CHAR) {
             std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID);
             throw omniruntime::exception::OmniException("Error in minby varchar aggregator: : ", omniExceptionInfo);
-        } else if constexpr (COL2_ID != OMNI_VARCHAR) {
-            std::string omniExceptionInfo = "sort col type must be varchar";
+        } else if constexpr (COL2_ID != OMNI_VARCHAR && COL2_ID != OMNI_CHAR) {
+            std::string omniExceptionInfo = "sort col type must be varchar or char";
             throw omniruntime::exception::OmniException("Error in minby varchar aggregator: : ", omniExceptionInfo);
         } else {
             return std::unique_ptr<MinByVarcharAggregator<COL1_ID, COL2_ID>>(new MinByVarcharAggregator<COL1_ID, COL2_ID>(inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull));

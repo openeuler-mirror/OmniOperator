@@ -178,4 +178,29 @@ namespace omniruntime::vec {
             }
         }
     }
+
+    void MapVector::SetValue(int index, MapVector* value)
+    {
+        if (value == nullptr) {
+            SetNull(index);
+            return;
+        }
+        if (keys->GetTypeId() != value->keys->GetTypeId() ||
+            values->GetTypeId() != value->values->GetTypeId()) {
+            throw OmniException("OPERATOR_RUNTIME_ERROR", "MapVector type mismatch during SetValue.");
+            }
+        int64_t offset = GetOffset(index);
+        int64_t keyLength = value->GetSize(0);
+        if (keyLength == 0) {
+            SetSize(index, 0);
+            return;
+        }
+        VectorHelper::ExpandElementVector(keys.get(), keys->GetTypeId(), static_cast<int32_t>(offset + keyLength));
+        VectorHelper::AppendVector(keys.get(), static_cast<int32_t>(offset), value->GetKeyVector().get(),
+            static_cast<int32_t>(keyLength));
+        VectorHelper::ExpandElementVector(values.get(), values->GetTypeId(), static_cast<int32_t>(offset + keyLength));
+        VectorHelper::AppendVector(values.get(), static_cast<int32_t>(offset), value->GetValueVector().get(),
+            static_cast<int32_t>(keyLength));
+        SetSize(index, static_cast<int32_t>(keyLength));
+    }
 }

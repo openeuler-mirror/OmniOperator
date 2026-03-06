@@ -6,6 +6,10 @@
 #define OMNI_RUNTIME_AGGREGATOR_FACTORY_H
 
 #include "all_aggregators.h"
+#include "maxby_complex_aggregator.h"
+#include "maxby_complex_varchar_aggregator.h"
+#include "minby_complex_aggregator.h"
+#include "minby_complex_varchar_aggregator.h"
 #include "util/config_util.h"
 #include "operator/util/function_type.h"
 
@@ -478,7 +482,15 @@ protected:
             case OMNI_CHAR:
                 return MinByAggregator<OMNI_CHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_ARRAY:
-                return MinByAggregator<OMNI_ARRAY, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_MAP:
+            case OMNI_ROW:
+                if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR) {
+                    return MinByComplexVarcharAggregator<COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes),
+                        channels, inputRaw, outputPartial, isOverflowAsNull, col1Id);
+                } else {
+                    return MinByComplexAggregator<COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes),
+                        channels, inputRaw, outputPartial, isOverflowAsNull, col1Id);
+                }
             case OMNI_NONE:
                 return MinByAggregator<OMNI_NONE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             default:
@@ -573,7 +585,15 @@ protected:
             case OMNI_CHAR:
                 return MaxByAggregator<OMNI_CHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_ARRAY:
-                return MaxByAggregator<OMNI_ARRAY, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_MAP:
+            case OMNI_ROW:
+                if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR) {
+                    return MaxByComplexVarcharAggregator<COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes),
+                        channels, inputRaw, outputPartial, isOverflowAsNull, col1Id);
+                } else {
+                    return MaxByComplexAggregator<COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes),
+                        channels, inputRaw, outputPartial, isOverflowAsNull, col1Id);
+                }
             case OMNI_NONE:
                 return MaxByAggregator<OMNI_NONE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             default:

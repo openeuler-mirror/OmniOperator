@@ -1,0 +1,263 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
+ * Description: Max_by complex aggregator - template implementations and explicit instantiations.
+ */
+
+#include "maxby_complex_aggregator.h"
+#include "type/data_type.h"
+
+namespace omniruntime {
+namespace op {
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexAggregator<COL2_ID>::InitState(AggregateState *state)
+{
+    using State = typename MaxByComplexAggregator<COL2_ID>::ComplexState;
+    auto *complexState = State::CastState(state + aggStateOffset);
+    complexState->isEmpty = true;
+    complexState->targetValue = nullptr;
+    complexState->sortKey = GetSortKeyMin<sortKeyType>();
+}
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexAggregator<COL2_ID>::InitStates(std::vector<AggregateState *> &groupStates)
+{
+    for (auto *groupState : groupStates) {
+        InitState(groupState);
+    }
+}
+
+template <type::DataTypeId COL2_ID>
+std::vector<DataTypePtr> MaxByComplexAggregator<COL2_ID>::GetSpillType()
+{
+    std::vector<DataTypePtr> spillTypes;
+    spillTypes.emplace_back(GetOutputTypes().GetType(0));
+    spillTypes.emplace_back(std::make_shared<DataType>(COL2_ID));
+    return spillTypes;
+}
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexAggregator<COL2_ID>::ProcessSingleInternal(AggregateState *state, BaseVector *vector,
+    const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
+{
+    (void)nullMap;
+    (void)vector;
+    using State = typename MaxByComplexAggregator<COL2_ID>::ComplexState;
+    auto *complexState = State::CastState(state);
+    BaseVector *col1Vector = this->curVectorBatch->Get(this->channels[0]);
+    BaseVector *col2Vector = this->curVectorBatch->Get(this->channels[1]);
+    auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
+    col2ptr += rowOffset;
+    for (int32_t i = 0; i < rowCount; i++) {
+        int32_t rowIndex = rowOffset + i;
+        if (col2Vector->IsNull(rowIndex)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
+        sortKeyType key = col2ptr[i];
+        if (key >= complexState->sortKey) {
+            complexState->isEmpty = false;
+            complexState->sortKey = key;
+            vec::BaseVector *slice = GetComplexColSlice(col1Vector, targetColTypeId_, rowIndex);
+            if (IsComplexSliceNull(slice, targetColTypeId_)) {
+                if (complexState->targetValue != nullptr) {
+                    ReleaseComplexSliceCopy(complexState->targetValue, targetColTypeId_);
+                }
+                complexState->targetValue = nullptr;
+            } else {
+                if (complexState->targetValue != nullptr) {
+                    ReleaseComplexSliceCopy(complexState->targetValue, targetColTypeId_);
+                }
+                complexState->targetValue = CopyComplexSliceToOwned(slice, targetColTypeId_, targetColDataType_.get());
+            }
+        }
+    }
+}
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexAggregator<COL2_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
+    BaseVector *vector, const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
+{
+    (void)nullMap;
+    (void)vector;
+    using State = typename MaxByComplexAggregator<COL2_ID>::ComplexState;
+    BaseVector *col1Vector = this->curVectorBatch->Get(this->channels[0]);
+    BaseVector *col2Vector = this->curVectorBatch->Get(this->channels[1]);
+    auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
+    col2ptr += rowOffset;
+    const size_t rowCount = rowStates.size();
+    for (size_t i = 0; i < rowCount; i++) {
+        int32_t rowIdx = static_cast<int32_t>(rowOffset + i);
+        if (col2Vector->IsNull(rowIdx)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
+        auto *complexState = State::CastState(rowStates[i] + aggStateOffset);
+        sortKeyType key = col2ptr[i];
+        if (key >= complexState->sortKey) {
+            complexState->isEmpty = false;
+            complexState->sortKey = key;
+            vec::BaseVector *slice = GetComplexColSlice(col1Vector, targetColTypeId_, rowIdx);
+            if (IsComplexSliceNull(slice, targetColTypeId_)) {
+                if (complexState->targetValue != nullptr) {
+                    ReleaseComplexSliceCopy(complexState->targetValue, targetColTypeId_);
+                }
+                complexState->targetValue = nullptr;
+            } else {
+                if (complexState->targetValue != nullptr) {
+                    ReleaseComplexSliceCopy(complexState->targetValue, targetColTypeId_);
+                }
+                complexState->targetValue = CopyComplexSliceToOwned(slice, targetColTypeId_, targetColDataType_.get());
+            }
+        }
+    }
+}
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexAggregator<COL2_ID>::ExtractValues(const AggregateState *state,
+    std::vector<BaseVector *> &vectors, int32_t rowIndex)
+{
+    using State = typename MaxByComplexAggregator<COL2_ID>::ComplexState;
+    const auto *complexState = State::ConstCastState(state + aggStateOffset);
+    if (this->outputPartial) {
+        if (complexState->isEmpty) {
+            return;
+        }
+        if (complexState->targetValue == nullptr) {
+            vectors[0]->SetNull(rowIndex);
+        } else {
+            SetComplexColValue(vectors[0], targetColTypeId_, rowIndex, complexState->targetValue);
+        }
+        static_cast<sortKeyTypeVec *>(vectors[1])->SetValue(rowIndex, complexState->sortKey);
+    } else {
+        if (complexState->isEmpty) {
+            vectors[0]->SetNull(rowIndex);
+            return;
+        }
+        if (complexState->targetValue == nullptr) {
+            vectors[0]->SetNull(rowIndex);
+            return;
+        }
+        SetComplexColValue(vectors[0], targetColTypeId_, rowIndex, complexState->targetValue);
+    }
+}
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexAggregator<COL2_ID>::ExtractValuesBatch(std::vector<AggregateState *> &groupStates,
+    std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
+{
+    (void)rowOffset;
+    using State = typename MaxByComplexAggregator<COL2_ID>::ComplexState;
+    if (this->outputPartial) {
+        auto *sortKeyVector = static_cast<sortKeyTypeVec *>(vectors[1]);
+        for (int32_t i = 0; i < rowCount; i++) {
+            const auto *complexState = State::ConstCastState(groupStates[i] + aggStateOffset);
+            if (complexState->isEmpty) {
+                continue;
+            }
+            if (complexState->targetValue == nullptr) {
+                vectors[0]->SetNull(i);
+            } else {
+                SetComplexColValue(vectors[0], targetColTypeId_, i, complexState->targetValue);
+            }
+            sortKeyVector->SetValue(i, complexState->sortKey);
+        }
+    } else {
+        for (int32_t i = 0; i < rowCount; i++) {
+            const auto *complexState = State::ConstCastState(groupStates[i] + aggStateOffset);
+            if (complexState->isEmpty) {
+                vectors[0]->SetNull(i);
+                continue;
+            }
+            if (complexState->targetValue == nullptr) {
+                vectors[0]->SetNull(i);
+                continue;
+            }
+            SetComplexColValue(vectors[0], targetColTypeId_, i, complexState->targetValue);
+        }
+    }
+}
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexAggregator<COL2_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
+    std::vector<BaseVector *> &vectors)
+{
+    using State = typename MaxByComplexAggregator<COL2_ID>::ComplexState;
+    auto *sortKeyVector = static_cast<sortKeyTypeVec *>(vectors[1]);
+    int32_t rowCount = static_cast<int32_t>(groupStates.size());
+    for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        auto *complexState = State::CastState(groupStates[rowIndex] + aggStateOffset);
+        if (complexState->isEmpty) {
+            sortKeyVector->SetNull(rowIndex);
+            vectors[0]->SetNull(rowIndex);
+            continue;
+        }
+        if (complexState->targetValue == nullptr) {
+            vectors[0]->SetNull(rowIndex);
+        } else {
+            SetComplexColValue(vectors[0], targetColTypeId_, rowIndex, complexState->targetValue);
+        }
+        sortKeyVector->SetValue(rowIndex, complexState->sortKey);
+    }
+}
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexAggregator<COL2_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows,
+    int32_t rowCount, int32_t &vectorIndex)
+{
+    using State = typename MaxByComplexAggregator<COL2_ID>::ComplexState;
+    int32_t targetValueVecIdx = vectorIndex++;
+    int32_t sortKeyVecIdx = vectorIndex++;
+    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        auto &row = unspillRows[rowIdx];
+        VectorBatch *batch = row.batch;
+        int32_t index = row.rowIdx;
+        BaseVector *targetValueVector = batch->Get(targetValueVecIdx);
+        auto *complexState = State::CastState(row.state + aggStateOffset);
+        BaseVector *sortKeyVec = batch->Get(sortKeyVecIdx);
+        if (sortKeyVec->IsNull(index)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
+        sortKeyType sortKey = static_cast<sortKeyTypeVec *>(sortKeyVec)->GetValue(index);
+        if (sortKey >= complexState->sortKey) {
+            complexState->isEmpty = false;
+            complexState->sortKey = sortKey;
+            BaseVector *targetSlice = GetComplexColSlice(targetValueVector, targetColTypeId_, index);
+            if (IsComplexSliceNull(targetSlice, targetColTypeId_)) {
+                if (complexState->targetValue != nullptr) {
+                    ReleaseComplexSliceCopy(complexState->targetValue, targetColTypeId_);
+                }
+                complexState->targetValue = nullptr;
+            } else {
+                if (complexState->targetValue != nullptr) {
+                    ReleaseComplexSliceCopy(complexState->targetValue, targetColTypeId_);
+                }
+                complexState->targetValue = CopyComplexSliceToOwned(targetSlice, targetColTypeId_,
+                    targetColDataType_.get());
+            }
+        }
+    }
+}
+
+// Explicit instantiations for COL2 types used when col1 is ARRAY/MAP/ROW (non-VARCHAR/CHAR col2).
+template class MaxByComplexAggregator<OMNI_BOOLEAN>;
+template class MaxByComplexAggregator<OMNI_BYTE>;
+template class MaxByComplexAggregator<OMNI_SHORT>;
+template class MaxByComplexAggregator<OMNI_INT>;
+template class MaxByComplexAggregator<OMNI_LONG>;
+template class MaxByComplexAggregator<OMNI_FLOAT>;
+template class MaxByComplexAggregator<OMNI_DOUBLE>;
+template class MaxByComplexAggregator<OMNI_DECIMAL64>;
+template class MaxByComplexAggregator<OMNI_DECIMAL128>;
+
+// Force GetSpillType() to be emitted (fixes GetSpillTypeEv undefined symbol when linking).
+template std::vector<DataTypePtr> MaxByComplexAggregator<OMNI_BOOLEAN>::GetSpillType();
+template std::vector<DataTypePtr> MaxByComplexAggregator<OMNI_BYTE>::GetSpillType();
+template std::vector<DataTypePtr> MaxByComplexAggregator<OMNI_SHORT>::GetSpillType();
+template std::vector<DataTypePtr> MaxByComplexAggregator<OMNI_INT>::GetSpillType();
+template std::vector<DataTypePtr> MaxByComplexAggregator<OMNI_LONG>::GetSpillType();
+template std::vector<DataTypePtr> MaxByComplexAggregator<OMNI_FLOAT>::GetSpillType();
+template std::vector<DataTypePtr> MaxByComplexAggregator<OMNI_DOUBLE>::GetSpillType();
+template std::vector<DataTypePtr> MaxByComplexAggregator<OMNI_DECIMAL64>::GetSpillType();
+template std::vector<DataTypePtr> MaxByComplexAggregator<OMNI_DECIMAL128>::GetSpillType();
+
+} // namespace op
+} // namespace omniruntime

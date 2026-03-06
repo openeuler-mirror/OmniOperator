@@ -167,6 +167,10 @@ uint64_t Spiller::CollectComplexVectorSize(const DataTypePtr& dataType, vec::Bas
         return CollectVectorSize<int8_t>(vector);
     case OMNI_ARRAY:
         return CollectArrayVectorSize(dataType, vector, rowCount);
+    case OMNI_MAP:
+        return CollectMapVectorSize(dataType, vector, rowCount);
+    case OMNI_ROW:
+        return CollectRowVectorSize(dataType, vector, rowCount);
     default:
         std::string errStr = "Do not support the data type" + std::to_string(dataType->GetId()) +
             " in CollectComplexVectorSize.";
@@ -197,6 +201,50 @@ uint64_t Spiller::CollectArrayVectorSize(const DataTypePtr &arrayType, vec::Base
     auto elementType = std::dynamic_pointer_cast<ArrayType>(arrayType)->ElementType();
     result += CollectComplexVectorSize(elementType, elementVec.get(), elementRowCount);
 
+    return result;
+}
+
+uint64_t Spiller::CollectMapVectorSize(const DataTypePtr &mapType, vec::BaseVector *vector, int32_t rowCount)
+{
+    auto mapVec = static_cast<omniruntime::vec::MapVector *>(vector);
+    uint64_t result = BitUtil::Nbytes(rowCount);
+    result += (rowCount + 1) * sizeof(int64_t);
+
+    int64_t *rawOffsets = mapVec->GetOffsets();
+    int32_t entryCount = static_cast<int32_t>(rawOffsets[rowCount]);
+
+    auto mapTypePtr = std::dynamic_pointer_cast<MapType>(mapType);
+    if (!mapTypePtr) {
+        LogError("CollectMapVectorSize: dataType is not MapType");
+        return result;
+    }
+    auto keyVec = mapVec->GetKeyVector();
+    auto valueVec = mapVec->GetValueVector();
+    if (keyVec) {
+        result += CollectComplexVectorSize(mapTypePtr->Key(), keyVec.get(), entryCount);
+    }
+    if (valueVec) {
+        result += CollectComplexVectorSize(mapTypePtr->Value(), valueVec.get(), entryCount);
+    }
+    return result;
+}
+
+uint64_t Spiller::CollectRowVectorSize(const DataTypePtr &rowType, vec::BaseVector *vector, int32_t rowCount)
+{
+    auto rowVec = static_cast<omniruntime::vec::RowVector *>(vector);
+    uint64_t result = BitUtil::Nbytes(rowCount);
+
+    auto rowTypePtr = std::dynamic_pointer_cast<RowType>(rowType);
+    if (!rowTypePtr) {
+        LogError("CollectRowVectorSize: dataType is not RowType");
+        return result;
+    }
+    auto &children = rowVec->Children();
+    for (size_t i = 0; i < children.size(); i++) {
+        if (i < static_cast<size_t>(rowTypePtr->Size()) && children[i]) {
+            result += CollectComplexVectorSize(rowTypePtr->Type(i), children[i].get(), rowCount);
+        }
+    }
     return result;
 }
 
@@ -364,20 +412,14 @@ ErrorCode SpillWriter::WriteArrayVectorToBuffer(const DataTypePtr &dataType, vec
     // nulls
     uint8_t* nulls = unsafe::UnsafeBaseVector::GetNulls(arrayVec);
     int32_t nullsSize = BitUtil::Nbytes(rowCount);
-    if (auto ret = memcpy_s(writeBuffer + writeOffset, nullsSize, nulls, nullsSize); ret != EOK) {
-        LogError("array nulls", ret);
-        return ErrorCode::WRITE_FAILED;
-    }
+    memcpy(writeBuffer + writeOffset, nulls, nullsSize);
     writeOffset += nullsSize;
 
     // offsets (int64_t[RowCount + 1])
     int64_t* offsets = arrayVec->GetOffsets();
     ssize_t offsetsSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int64_t));
 
-    if (auto ret = memcpy_s(writeBuffer + writeOffset, offsetsSize, offsets, offsetsSize); ret != EOK) {
-        LogError("array offsets", ret);
-        return ErrorCode::WRITE_FAILED;
-    }
+    memcpy(writeBuffer + writeOffset, offsets, static_cast<size_t>(offsetsSize));
     writeOffset += offsetsSize;
 
     // element vector
@@ -390,6 +432,64 @@ ErrorCode SpillWriter::WriteArrayVectorToBuffer(const DataTypePtr &dataType, vec
     int32_t elementRowCount = static_cast<int32_t>(offsets[rowCount]);
     auto res = WriteComplexVectorToBuffer(arrayType->ElementType(), elementVec.get(), elementRowCount, writeOffset);
     return res;
+}
+
+ErrorCode SpillWriter::WriteMapVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset)
+{
+    auto mapType = std::dynamic_pointer_cast<MapType>(dataType);
+    auto mapVec = static_cast<omniruntime::vec::MapVector *>(vector);
+    if (!mapType) {
+        LogError("WriteMapVectorToBuffer: dataType is not MapType");
+        return ErrorCode::WRITE_FAILED;
+    }
+    uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(mapVec);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+    memcpy(writeBuffer + writeOffset, nulls, nullsSize);
+    writeOffset += nullsSize;
+
+    int64_t *offsets = mapVec->GetOffsets();
+    ssize_t offsetsSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int64_t));
+    memcpy(writeBuffer + writeOffset, offsets, static_cast<size_t>(offsetsSize));
+    writeOffset += offsetsSize;
+
+    int32_t entryCount = static_cast<int32_t>(offsets[rowCount]);
+    auto keyVec = mapVec->GetKeyVector();
+    auto valueVec = mapVec->GetValueVector();
+    if (keyVec) {
+        auto res = WriteComplexVectorToBuffer(mapType->Key(), keyVec.get(), entryCount, writeOffset);
+        if (res != ErrorCode::SUCCESS) {
+            return res;
+        }
+    }
+    if (valueVec) {
+        return WriteComplexVectorToBuffer(mapType->Value(), valueVec.get(), entryCount, writeOffset);
+    }
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode SpillWriter::WriteRowVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset)
+{
+    auto rowType = std::dynamic_pointer_cast<RowType>(dataType);
+    auto rowVec = static_cast<omniruntime::vec::RowVector *>(vector);
+    if (!rowType) {
+        LogError("WriteRowVectorToBuffer: dataType is not RowType");
+        return ErrorCode::WRITE_FAILED;
+    }
+    uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(rowVec);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+    memcpy(writeBuffer + writeOffset, nulls, nullsSize);
+    writeOffset += nullsSize;
+
+    auto &children = rowVec->Children();
+    for (size_t i = 0; i < children.size(); i++) {
+        if (i < static_cast<size_t>(rowType->Size()) && children[i]) {
+            auto res = WriteComplexVectorToBuffer(rowType->Type(static_cast<int>(i)), children[i].get(), rowCount, writeOffset);
+            if (res != ErrorCode::SUCCESS) {
+                return res;
+            }
+        }
+    }
+    return ErrorCode::SUCCESS;
 }
 
 ErrorCode SpillWriter::WriteComplexVectorToBuffer(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset)
@@ -427,6 +527,12 @@ ErrorCode SpillWriter::WriteComplexVectorToBuffer(const DataTypePtr &dataType, v
             break;
         case OMNI_ARRAY:
             result = WriteArrayVectorToBuffer(dataType, vector, rowCount, writeOffset);
+            break;
+        case OMNI_MAP:
+            result = WriteMapVectorToBuffer(dataType, vector, rowCount, writeOffset);
+            break;
+        case OMNI_ROW:
+            result = WriteRowVectorToBuffer(dataType, vector, rowCount, writeOffset);
             break;
         default: {
             std::string errStr = "Do not support the data type" + std::to_string(dataType->GetId()) +
@@ -599,6 +705,64 @@ ErrorCode SpillWriter::WriteArrayVector(const DataTypePtr& dataType, omniruntime
     return ErrorCode::SUCCESS;
 }
 
+ErrorCode SpillWriter::WriteMapVector(const DataTypePtr &dataType, omniruntime::vec::BaseVector *vector, int32_t rowCount)
+{
+    auto mapType = std::dynamic_pointer_cast<MapType>(dataType);
+    auto mapVec = static_cast<omniruntime::vec::MapVector *>(vector);
+    if (!mapType) {
+        LogError("WriteMapVector: dataType is not MapType");
+        return ErrorCode::WRITE_FAILED;
+    }
+    uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(mapVec);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+    if (Write(nulls, nullsSize) != ErrorCode::SUCCESS) {
+        return ErrorCode::WRITE_FAILED;
+    }
+    int64_t *offsets = mapVec->GetOffsets();
+    ssize_t offsetsSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int64_t));
+    if (Write(offsets, offsetsSize) != ErrorCode::SUCCESS) {
+        return ErrorCode::WRITE_FAILED;
+    }
+    int32_t entryCount = static_cast<int32_t>(offsets[rowCount]);
+    auto keyVec = mapVec->GetKeyVector();
+    auto valueVec = mapVec->GetValueVector();
+    if (keyVec) {
+        auto res = WriteComplexVector(mapType->Key(), keyVec.get(), entryCount);
+        if (res != ErrorCode::SUCCESS) {
+            return res;
+        }
+    }
+    if (valueVec) {
+        return WriteComplexVector(mapType->Value(), valueVec.get(), entryCount);
+    }
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode SpillWriter::WriteRowVector(const DataTypePtr &dataType, omniruntime::vec::BaseVector *vector, int32_t rowCount)
+{
+    auto rowType = std::dynamic_pointer_cast<RowType>(dataType);
+    auto rowVec = static_cast<omniruntime::vec::RowVector *>(vector);
+    if (!rowType) {
+        LogError("WriteRowVector: dataType is not RowType");
+        return ErrorCode::WRITE_FAILED;
+    }
+    uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(rowVec);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+    if (Write(nulls, nullsSize) != ErrorCode::SUCCESS) {
+        return ErrorCode::WRITE_FAILED;
+    }
+    auto &children = rowVec->Children();
+    for (size_t i = 0; i < children.size(); i++) {
+        if (i < static_cast<size_t>(rowType->Size()) && children[i]) {
+            auto res = WriteComplexVector(rowType->Type(static_cast<int>(i)), children[i].get(), rowCount);
+            if (res != ErrorCode::SUCCESS) {
+                return res;
+            }
+        }
+    }
+    return ErrorCode::SUCCESS;
+}
+
 ErrorCode SpillWriter::WriteComplexVector(const DataTypePtr &dataType, omniruntime::vec::BaseVector* vector, int32_t rowCount)
 {
     auto result = ErrorCode::SUCCESS;
@@ -634,6 +798,12 @@ ErrorCode SpillWriter::WriteComplexVector(const DataTypePtr &dataType, omnirunti
         break;
     case OMNI_ARRAY:
         result = WriteArrayVector(dataType, vector, rowCount);
+        break;
+    case OMNI_MAP:
+        result = WriteMapVector(dataType, vector, rowCount);
+        break;
+    case OMNI_ROW:
+        result = WriteRowVector(dataType, vector, rowCount);
         break;
     default:
         {

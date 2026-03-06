@@ -37,6 +37,9 @@ public:
 
     void Expand(int needSize);
 
+    /** Reset internal offsets so that the next SetValue(0, ...) starts from offset 0. Used when reusing vector for spill. */
+    void ResetForReuse(int32_t rowCount);
+
 private:
     char *GetBufferWithSpace(uint32_t needCapacityInBytes);
 

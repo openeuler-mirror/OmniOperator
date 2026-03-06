@@ -64,6 +64,8 @@ public:
         return values;
     }
 
+    void SetValue(int index, MapVector* value);
+
     std::vector<DataTypeId> ALWAYS_INLINE GetTypeIds() const override
     {
         return {keys->GetTypeId(), values->GetTypeId()};

@@ -87,6 +87,10 @@ private:
 
     ErrorCode ReadArrayVector(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
 
+    ErrorCode ReadMapVector(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
+
+    ErrorCode ReadRowVector(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
+
     ErrorCode ReadComplexVector(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
 
     ErrorCode Read(void *buf, size_t bufSize);
