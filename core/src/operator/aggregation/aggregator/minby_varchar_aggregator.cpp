@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: Min_by aggregate
  */
 
@@ -16,18 +16,22 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValues(const AggregateStat
     auto *minByVarcharState = MinByVarcharState<targetValueType>::ConstCastState(state + aggStateOffset);
 
     if (this->outputPartial) {
-        if (minByVarcharState->GetStrKeyAddress() == 0) {
-            // no partial result
-            return;
-        }
-
         auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
         auto sortKeyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[1]);
+        if (minByVarcharState->GetStrKeyAddress() == 0) {
+            targetValueVector->SetNull(rowIndex);
+            sortKeyVector->SetNull(rowIndex);
+            return;
+        }
 
         std::string_view val(reinterpret_cast<char *>(minByVarcharState->GetStrKeyAddress()), minByVarcharState->GetStrKeyLen());
         sortKeyVector->SetValue(rowIndex, val);
 
-        targetValueVector->SetValue(rowIndex, minByVarcharState->targetValue);
+        if (minByVarcharState->targetIsNull) {
+            targetValueVector->SetNull(rowIndex);
+        } else {
+            targetValueVector->SetValue(rowIndex, minByVarcharState->targetValue);
+        }
 
         // release data after extracting
         minByVarcharState->ReleaseSortKey();
@@ -35,7 +39,10 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValues(const AggregateStat
     } else {
         auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
         if (minByVarcharState->GetStrKeyAddress() == 0) {
-            // min_by empty table, final result is null
+            targetValueVector->SetNull(rowIndex);
+            return;
+        }
+        if (minByVarcharState->targetIsNull) {
             targetValueVector->SetNull(rowIndex);
             return;
         }
@@ -57,25 +64,33 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValuesBatch(std::vector<Ag
         for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
             auto *minByVarcharState = MinByVarcharState<targetValueType>::ConstCastState(groupStates[rowIndex] + aggStateOffset);
             if (minByVarcharState->GetStrKeyAddress() == 0) {
-                // no partial result
+                targetValueVector->SetNull(rowIndex);
+                sortKeyVector->SetNull(rowIndex);
                 continue;
             }
 
             std::string_view val(reinterpret_cast<char *>(minByVarcharState->GetStrKeyAddress()), minByVarcharState->GetStrKeyLen());
             sortKeyVector->SetValue(rowIndex, val);
-            targetValueVector->SetValue(rowIndex, minByVarcharState->targetValue);
+            if (minByVarcharState->targetIsNull) {
+                targetValueVector->SetNull(rowIndex);
+            } else {
+                targetValueVector->SetValue(rowIndex, minByVarcharState->targetValue);
+            }
 
             // release data after extracting
             minByVarcharState->ReleaseSortKey();
         }
 
     } else {
-        // output final resule，only one col
+        // output final result, only one col
         auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
         for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
             auto *minByVarcharState = MinByVarcharState<targetValueType>::ConstCastState(groupStates[rowIndex] + aggStateOffset);
             if (minByVarcharState->GetStrKeyAddress() == 0) {
-                // min_by empty table, final result is null
+                targetValueVector->SetNull(rowIndex);
+                continue;
+            }
+            if (minByVarcharState->targetIsNull) {
                 targetValueVector->SetNull(rowIndex);
                 continue;
             }
@@ -90,8 +105,8 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValuesBatch(std::vector<Ag
 template <DataTypeId COL1_ID, DataTypeId COL2_ID> std::vector<DataTypePtr> MinByVarcharAggregator<COL1_ID, COL2_ID>::GetSpillType()
 {
     std::vector<DataTypePtr> spillTypes;
-    spillTypes.emplace_back(std::make_shared<DataType>(COL1_ID));
-    spillTypes.emplace_back(std::make_shared<DataType>(OMNI_VARCHAR));
+    spillTypes.emplace_back(GetOutputTypes().GetType(0));
+    spillTypes.emplace_back(GetInputTypes().GetType(1));
     return spillTypes;
 }
 
@@ -107,13 +122,16 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValuesForSpill(std::vector
     for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
         auto *minByVarcharState = MinByVarcharState<targetValueType>::CastState(groupStates[rowIndex] + aggStateOffset);
         if (minByVarcharState->GetStrKeyAddress() == 0) {
-            // dont need spill any states
             sortKeyVector->SetNull(rowIndex);
             targetValueVector->SetNull(rowIndex);
             continue;
         }
-        targetValueVector->SetValue(rowIndex, minByVarcharState->targetValue);
-
+        minByVarcharState->SaveSortKey();
+        if (minByVarcharState->targetIsNull) {
+            targetValueVector->SetNull(rowIndex);
+        } else {
+            targetValueVector->SetValue(rowIndex, minByVarcharState->targetValue);
+        }
         std::string_view val(reinterpret_cast<char *>(minByVarcharState->GetStrKeyAddress()), minByVarcharState->GetStrKeyLen());
         sortKeyVector->SetValue(rowIndex, val);
     }
@@ -122,7 +140,9 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ExtractValuesForSpill(std::vector
 template <DataTypeId COL1_ID, DataTypeId COL2_ID> void MinByVarcharAggregator<COL1_ID, COL2_ID>::InitState(AggregateState *state)
 {
     auto *minByVarcharState = MinByVarcharState<targetValueType>::CastState(state + aggStateOffset);
-    minByVarcharState->SetStrKey(0, 0);
+    minByVarcharState->ClearStrKey();
+    minByVarcharState->targetIsNull = false;
+    minByVarcharState->ClearTargetValue();
 }
 
 template <DataTypeId COL1_ID, DataTypeId COL2_ID>
@@ -138,43 +158,78 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateSt
     const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
     auto *minByVarcharState = MinByVarcharState<targetValueType>::CastState(state);
-
-    // data vector
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
-
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
     auto *col2ptr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(col2Vector);
 
     for (int32_t i = rowOffset; i < rowCount; i++) {
         if (nullMap != nullptr && (*nullMap)[i]) {
             continue;
         }
+        if (col2Vector->IsNull(i)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
+        bool targetNull = col1Vector->IsNull(i);
+        targetValueType targetVal;
+        if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+            auto *col1StrVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(col1Vector);
+            targetVal = col1StrVec->GetValue(i);
+        } else {
+            auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
+            targetVal = col1ptr[i];
+        }
         auto strView = col2ptr->GetValue(i);
         if (minByVarcharState->GetStrKeyAddress() == 0) {
-
-            // set sort key (varchar)
             minByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), strView.size());
-
-            // set target value
-            minByVarcharState->targetValue = col1ptr[i];
-
+            minByVarcharState->targetIsNull = targetNull;
+            if (!targetNull) {
+                if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                    minByVarcharState->ReleaseTargetValueIfOwned();
+                    if (this->arenaAllocator != nullptr) {
+                        char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        minByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                        minByVarcharState->SetTargetValueOwned(false);
+                    } else {
+                        char *copy = new char[targetVal.size() + 1];
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        copy[targetVal.size()] = '\0';
+                        minByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                        minByVarcharState->SetTargetValueOwned(true);
+                    }
+                } else {
+                    minByVarcharState->targetValue = targetVal;
+                }
+            }
         } else {
             const auto *curVal = strView.data();
             int32_t curLen = strView.size();
             auto result = memcmp((const char *)minByVarcharState->GetStrKeyAddress(), curVal, std::min(minByVarcharState->GetStrKeyLen(), curLen));
-
             if (result > 0 || (result == 0 && minByVarcharState->GetStrKeyLen() > curLen)) {
-                // current key is smaller
                 minByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), curLen);
-
-                // set target value
-                minByVarcharState->targetValue = col1ptr[i];
-
+                minByVarcharState->targetIsNull = targetNull;
+                if (!targetNull) {
+                    if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                        minByVarcharState->ReleaseTargetValueIfOwned();
+                        if (this->arenaAllocator != nullptr) {
+                            char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
+                            std::memcpy(copy, targetVal.data(), targetVal.size());
+                            minByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                            minByVarcharState->SetTargetValueOwned(false);
+                        } else {
+                            char *copy = new char[targetVal.size() + 1];
+                            std::memcpy(copy, targetVal.data(), targetVal.size());
+                            copy[targetVal.size()] = '\0';
+                            minByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                            minByVarcharState->SetTargetValueOwned(true);
+                        }
+                    } else {
+                        minByVarcharState->targetValue = targetVal;
+                    }
+                }
             }
         }
     }
-
     minByVarcharState->SaveSortKey();
 }
 
@@ -182,24 +237,16 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID>
 void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
     const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
-    // input vector must be <targetValueType, varchar>
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
-
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
     auto *col2ptr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(col2Vector);
-
-    col1ptr += rowOffset;
-    col2ptr += rowOffset;
 
     const size_t rowCount = rowStates.size();
     if (rowCount != col1Vector->GetSize() || rowCount != col2Vector->GetSize()) {
         std::string omniExceptionInfo = "rowStates count must be equal to base vec size";
         throw omniruntime::exception::OmniException("Error in MinByVarcharAggregator::ProcessGroupInternal(): ", omniExceptionInfo);
     }
-
     if (rowCount <= 0) {
-        // empty table, no result
         return;
     }
 
@@ -207,25 +254,69 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
         if (nullMap != nullptr && (*nullMap)[i]) {
             continue;
         }
+        int32_t rowIdx = static_cast<int32_t>(rowOffset + i);
+        if (col2Vector->IsNull(rowIdx)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
         auto *minByVarcharState = MinByVarcharState<targetValueType>::CastState(rowStates[i] + aggStateOffset);
-        auto strView = col2ptr->GetValue(i);
+        bool targetNull = col1Vector->IsNull(rowIdx);
+        targetValueType targetVal;
+        if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+            auto *col1StrVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(col1Vector);
+            targetVal = col1StrVec->GetValue(rowIdx);
+        } else {
+            auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
+            targetVal = col1ptr[rowIdx];
+        }
+        auto strView = col2ptr->GetValue(rowIdx);
         if (minByVarcharState->GetStrKeyAddress() == 0) {
-            // set sort key (varchar)
             minByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), strView.size());
-
-            // set target value
-            minByVarcharState->targetValue = col1ptr[i];
+            minByVarcharState->targetIsNull = targetNull;
+            if (!targetNull) {
+                if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                    minByVarcharState->ReleaseTargetValueIfOwned();
+                    if (this->arenaAllocator != nullptr) {
+                        char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        minByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                        minByVarcharState->SetTargetValueOwned(false);
+                    } else {
+                        char *copy = new char[targetVal.size() + 1];
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        copy[targetVal.size()] = '\0';
+                        minByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                        minByVarcharState->SetTargetValueOwned(true);
+                    }
+                } else {
+                    minByVarcharState->targetValue = targetVal;
+                }
+            }
         } else {
             const auto *curVal = strView.data();
             int32_t curLen = strView.size();
             auto result = memcmp((const char *)minByVarcharState->GetStrKeyAddress(), curVal, std::min(minByVarcharState->GetStrKeyLen(), curLen));
-
             if (result > 0 || (result == 0 && minByVarcharState->GetStrKeyLen() > curLen)) {
-                // current key is smaller
                 minByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), curLen);
-
-                // set target value
-                minByVarcharState->targetValue = col1ptr[i];
+                minByVarcharState->targetIsNull = targetNull;
+                if (!targetNull) {
+                    if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                        minByVarcharState->ReleaseTargetValueIfOwned();
+                        if (this->arenaAllocator != nullptr) {
+                            char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
+                            std::memcpy(copy, targetVal.data(), targetVal.size());
+                            minByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                            minByVarcharState->SetTargetValueOwned(false);
+                        } else {
+                            char *copy = new char[targetVal.size() + 1];
+                            std::memcpy(copy, targetVal.data(), targetVal.size());
+                            copy[targetVal.size()] = '\0';
+                            minByVarcharState->targetValue = std::string_view(copy, targetVal.size());
+                            minByVarcharState->SetTargetValueOwned(true);
+                        }
+                    } else {
+                        minByVarcharState->targetValue = targetVal;
+                    }
+                }
             }
         }
     }
@@ -248,36 +339,48 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupUnspill(std::vector<U
         auto batch = row.batch;
         auto index = row.rowIdx;
         auto targetValueVector = static_cast<targetValueTypeVec *>(batch->Get(targetValueVecIdx));
-        if (!targetValueVector->IsNull(index)) {
-            // take value from state
-            auto targetValue = targetValueVector->GetValue(index);
-            auto sortKeyVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(batch->Get(sortKeyVecIdx));
-
-            auto sortKey = sortKeyVector->GetValue(index);  //string_view
-
-            auto *state = MinByVarcharState<targetValueType>::CastState(row.state + aggStateOffset);
-            if (state->GetStrKeyAddress() == 0) {
-                // set sort kay
-                state->SetStrKey(reinterpret_cast<int64_t>(sortKey.data()), sortKey.size());
-                // set target value
-                state->targetValue = targetValue;
-                // save stage
-                state->SaveSortKey();
-            } else {
-                const auto *curVal = sortKey.data();
-                int32_t curLen = sortKey.size();
-                auto result = memcmp((const char *)state->GetStrKeyAddress(), curVal, std::min(state->GetStrKeyLen(), curLen));
-
-                if (result > 0 || (result == 0 && state->GetStrKeyLen() > curLen)) {
-                    // current key is smaller
-                    // set sort kay
-                    state->SetStrKey(reinterpret_cast<int64_t>(sortKey.data()), curLen);
-                    // set target value
+        auto *state = MinByVarcharState<targetValueType>::CastState(row.state + aggStateOffset);
+        auto sortKeyVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(batch->Get(sortKeyVecIdx));
+        if (sortKeyVector->IsNull(index)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
+        auto sortKey = sortKeyVector->GetValue(index);
+        bool shouldUpdate = false;
+        if (state->GetStrKeyAddress() == 0) {
+            shouldUpdate = true;
+        } else {
+            const auto *curVal = sortKey.data();
+            int32_t curLen = static_cast<int32_t>(sortKey.size());
+            int cmp = memcmp(reinterpret_cast<const char *>(state->GetStrKeyAddress()), curVal,
+                std::min(state->GetStrKeyLen(), curLen));
+            if (cmp > 0 || (cmp == 0 && state->GetStrKeyLen() > curLen)) {
+                shouldUpdate = true;
+            }
+        }
+        if (shouldUpdate) {
+            state->targetIsNull = targetValueVector->IsNull(index);
+            if (!state->targetIsNull) {
+                auto targetValue = targetValueVector->GetValue(index);
+                if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                    state->ReleaseTargetValueIfOwned();
+                    if (this->arenaAllocator != nullptr) {
+                        char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetValue.size()));
+                        std::memcpy(copy, targetValue.data(), targetValue.size());
+                        state->targetValue = std::string_view(copy, targetValue.size());
+                        state->SetTargetValueOwned(false);
+                    } else {
+                        char *copy = new char[targetValue.size() + 1];
+                        std::memcpy(copy, targetValue.data(), targetValue.size());
+                        copy[targetValue.size()] = '\0';
+                        state->targetValue = std::string_view(copy, targetValue.size());
+                        state->SetTargetValueOwned(true);
+                    }
+                } else {
                     state->targetValue = targetValue;
-                    // save stage
-                    state->SaveSortKey();
                 }
             }
+            state->SetStrKey(reinterpret_cast<int64_t>(sortKey.data()), static_cast<int32_t>(sortKey.size()));
+            state->SaveSortKey();
         }
     }
 }
@@ -313,6 +416,8 @@ MinByVarcharAggregator<COL1_ID, COL2_ID>::MinByVarcharAggregator(const DataTypes
 // and used explicit template instantiation to generate template instances
 template class MinByVarcharAggregator<OMNI_BOOLEAN, OMNI_VARCHAR>;
 
+template class MinByVarcharAggregator<OMNI_BYTE, OMNI_VARCHAR>;
+
 template class MinByVarcharAggregator<OMNI_SHORT, OMNI_VARCHAR>;
 
 template class MinByVarcharAggregator<OMNI_INT, OMNI_VARCHAR>;
@@ -329,6 +434,8 @@ template class MinByVarcharAggregator<OMNI_DECIMAL64, OMNI_VARCHAR>;
 
 template class MinByVarcharAggregator<OMNI_BOOLEAN, OMNI_CHAR>;
 
+template class MinByVarcharAggregator<OMNI_BYTE, OMNI_CHAR>;
+
 template class MinByVarcharAggregator<OMNI_SHORT, OMNI_CHAR>;
 
 template class MinByVarcharAggregator<OMNI_INT, OMNI_CHAR>;
@@ -342,6 +449,11 @@ template class MinByVarcharAggregator<OMNI_FLOAT, OMNI_CHAR>;
 template class MinByVarcharAggregator<OMNI_DECIMAL128, OMNI_CHAR>;
 
 template class MinByVarcharAggregator<OMNI_DECIMAL64, OMNI_CHAR>;
+
+template class MinByVarcharAggregator<OMNI_VARCHAR, OMNI_VARCHAR>;
+template class MinByVarcharAggregator<OMNI_VARCHAR, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;
+template class MinByVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
 
 } // namespace op
 } // namespace omniruntime

@@ -7,6 +7,27 @@
 #include "vector_helper.h"
 
 namespace omniruntime::vec {
+    RowVector *RowVector::CopyPositions(const int *positions, int positionOffset, int length)
+    {
+        if (UNLIKELY((positions == nullptr) || (length < 0))) {
+            std::string message = "StructVector positions is null or the input length is incorrect: " + std::to_string(length) + ".";
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+
+        RowVector* newRowVector = new RowVector(static_cast<int32_t>(length));
+        const int* startPositions = positions + positionOffset;
+        for (int32_t i = 0; i < length; i++) {
+            int position = startPositions[i];
+            if (UNLIKELY(IsNull(position))) {
+                newRowVector->SetNull(i);
+            }
+        }
+
+        for (int i = 0; i < children_.size(); i++) {
+            newRowVector->AddChild(children_[i]->CopyPositions(positions, positionOffset, length));
+        }
+        return newRowVector;
+    }
 
     void RowVector::Append(BaseVector *other, int positionOffset, int length) {
         if (UNLIKELY(other == nullptr || positionOffset < 0 || length <= 0)) {
@@ -46,6 +67,15 @@ namespace omniruntime::vec {
 
             child->Expand(newSize);
             VectorHelper::AppendVector(child, positionOffset, otherChild, length);
+        }
+        // When source row is null, parent was SetNull but children got copied; clear children at null rows to avoid residual data.
+        for (int i = 0; i < length; i++) {
+            if (otherRowVector->IsNull(i)) {
+                int destIndex = positionOffset + i;
+                for (int c = 0; c < static_cast<int>(children_.size()); c++) {
+                    children_[c]->SetNull(destIndex);
+                }
+            }
         }
     }
 }

@@ -8,6 +8,7 @@
 #include "expr_evaluator.h"
 #include "vectorization/ExprEval.h"
 #include "expression/expr_verifier.h"
+#include "vector/array_vector.h"
 
 namespace omniruntime::codegen {
 std::mutex mtx;
@@ -55,8 +56,11 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
             return reinterpret_cast<int64_t>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(colVec)));
         case OMNI_ARRAY:
-            // ARRAY has no single raw value buffer; layout is offsets + element vector. Return 0 so callers
-            // that need the column use the vector (e.g. column projection) or offsetAddrs.
+        case OMNI_MAP:
+        case OMNI_ROW:
+            // Complex types have no single raw value buffer; layout is offsets + element vector(s). Return 0 so
+            // callers that need the column use the vector (e.g. column projection) or offsetAddrs.
+            return 0;
         default:
             LogError("Do not support such vector type %d", types.GetIds()[i]);
             return 0;
@@ -205,6 +209,35 @@ bool Projection::Initialize(bool filter, const DataTypes &inputDataTypes, Overfl
         return SetLiteralValue(static_cast<const LiteralExpr *>(expr));
     }
 
+    // OMNI_ARRAY is not supported by codegen (ToLLVMType returns null). Only allow constant-array path.
+    if (expr->GetReturnTypeId() == OMNI_ARRAY) {
+        const auto *f = dynamic_cast<const FuncExpr *>(expr);
+        if (f && f->funcName == "array" && !f->arguments.empty()) {
+            constantArrayValues.clear();
+            bool allNumericLiteral = true;
+            for (const Expr *arg : f->arguments) {
+                const auto *lit = dynamic_cast<const LiteralExpr *>(arg);
+                if (!lit || lit->isNull) {
+                    allNumericLiteral = false;
+                    break;
+                }
+                if (lit->GetReturnTypeId() == OMNI_DOUBLE) {
+                    constantArrayValues.push_back(lit->doubleVal);
+                } else if (lit->GetReturnTypeId() == OMNI_FLOAT) {
+                    constantArrayValues.push_back(static_cast<double>(lit->floatVal));
+                } else {
+                    allNumericLiteral = false;
+                    break;
+                }
+            }
+            if (allNumericLiteral && !constantArrayValues.empty()) {
+                this->isConstantArrayProjection = true;
+                return true;
+            }
+        }
+        return false;
+    }
+
     intptr_t f;
     if (!ConfigUtil::IsEnableBatchExprEvaluate()) {
         auto overflowKey = overflowConfig ? std::to_string(overflowConfig->IsOverflowAsNull()) : "0";
@@ -325,10 +358,45 @@ bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector 
     return true;
 }
 
+BaseVector *Projection::ConstantArrayProjection(int32_t numSelectedRows) const
+{
+    const size_t n = constantArrayValues.size();
+    if (numSelectedRows <= 0) {
+        return new ArrayVector(0);
+    }
+    if (n == 0) {
+        auto *arr = new ArrayVector(numSelectedRows);
+        auto *elemVec = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, 0));
+        arr->SetElementVectorFromRaw(elemVec);
+        for (int32_t i = 0; i < numSelectedRows; i++) {
+            arr->SetSize(i, 0);
+        }
+        return arr;
+    }
+    const int32_t totalElements = numSelectedRows * static_cast<int32_t>(n);
+    auto *elemVec = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, totalElements));
+    double *vals = unsafe::UnsafeVector::GetRawValues(elemVec);
+    for (int32_t row = 0; row < numSelectedRows; row++) {
+        for (size_t j = 0; j < n; j++) {
+            vals[row * static_cast<int32_t>(n) + j] = constantArrayValues[j];
+        }
+    }
+    auto *arrVec = new ArrayVector(numSelectedRows);
+    arrVec->SetElementVectorFromRaw(elemVec);
+    for (int32_t i = 0; i < numSelectedRows; i++) {
+        arrVec->SetSize(i, static_cast<int32_t>(n));
+    }
+    return arrVec;
+}
+
 BaseVector *Projection::Project(VectorBatch *vecBatch, int32_t selectedRows[], int32_t numSelectedRows,
     int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs, ExecutionContext *context,
     int64_t *dictionaryVectors, const int32_t *typeIds)
 {
+    if (!this->isSupported) {
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+            "Unsupported projection (e.g. array type not supported in codegen)");
+    }
     if (this->isColumnProjection) {
         return ColumnProjectionProxy(vecBatch, selectedRows, numSelectedRows, typeIds);
     } else if (this->isConstantProjection) {
@@ -341,6 +409,10 @@ BaseVector *Projection::Project(VectorBatch *vecBatch, int32_t selectedRows[], i
             context->GetArena()->Reset();
             return outVec;
         }
+    } else if (this->isConstantArrayProjection) {
+        BaseVector *outVec = ConstantArrayProjection(numSelectedRows);
+        context->GetArena()->Reset();
+        return outVec;
     } else {
         DataTypeId outTypeId = outType->GetId();
         BaseVector *outVec = VectorHelper::CreateFlatVector(outTypeId, numSelectedRows);

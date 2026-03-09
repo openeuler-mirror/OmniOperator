@@ -24,6 +24,12 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterBinaryNumeric<MultiplyFunction>({prefix + "multiply"});
     RegisterBinaryNumeric<DivideFunction>({prefix + "divide"});
     RegisterBinaryNumeric<RemainderFunction>({prefix + "modulus"});
+    RegisterFunction<AbsFunction, int8_t, int8_t>(prefix + "abs", {OMNI_BYTE}, OMNI_BYTE);
+    RegisterFunction<AbsFunction, int16_t, int16_t>(prefix + "abs", {OMNI_SHORT}, OMNI_SHORT);
+    RegisterFunction<AbsFunction, int32_t, int32_t>(prefix + "abs", {OMNI_INT}, OMNI_INT);
+    RegisterFunction<AbsFunction, int64_t, int64_t>(prefix + "abs", {OMNI_LONG}, OMNI_LONG);
+    RegisterFunction<AbsFunction, float, float>(prefix + "abs", {OMNI_FLOAT}, OMNI_FLOAT);
+    RegisterFunction<AbsFunction, double, double>(prefix + "abs", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<AcoshFunction, double, double>(prefix + "acosh", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<AcosFunction, double, double>(prefix + "acos", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterUnaryNumeric<NegativeFunction>({prefix + "negative"});

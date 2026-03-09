@@ -51,7 +51,7 @@ BaseVector* ArrayVector::GetValue(int index)
 ArrayVector *ArrayVector::CopyPositions(const int *positions, int positionOffset, int length)
 {
     if (UNLIKELY((positions == nullptr) || (length < 0))) {
-        std::string message("ArrayVector positions is null or the input length is incorrect: %d.", length);
+        std::string message = "ArrayVector positions is null or the input length is incorrect: " + std::to_string(length) + ".";
         throw OmniException("OPERATOR_RUNTIME_ERROR", message);
     }
     ArrayVector *newArrayVector = new ArrayVector(length);

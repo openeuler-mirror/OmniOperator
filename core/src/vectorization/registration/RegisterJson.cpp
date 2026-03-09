@@ -6,6 +6,8 @@
 #include <string>
 #include "../functions/ToJson.h"
 #include "../functions/JsonObjectKeys.h"
+#include "../functions/JsonArrayLength.h"
+#include "../functions/FromJson.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -18,5 +20,11 @@ void RegisterJsonFunctions(const std::string &prefix)
 
     VectorFunction::RegisterVectorFunction("json_object_keys", {OMNI_VARCHAR}, OMNI_ARRAY,
         std::make_shared<JsonObjectKeysFunction>());
+
+    VectorFunction::RegisterVectorFunction("json_array_length", {OMNI_VARCHAR}, OMNI_INT,
+        std::make_shared<JsonArrayLengthFunction>());
+
+    VectorFunction::RegisterVectorFunction("from_json", {OMNI_VARCHAR}, OMNI_ROW,
+        std::make_shared<FromJsonFunction>());
 }
 }

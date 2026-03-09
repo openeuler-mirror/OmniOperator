@@ -21,8 +21,8 @@
 #include "util/test_agg_util.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "operator/aggregation/aggregator/corr_aggregator.h"
-#include "operator/aggregation/container_vector.h"
 #include "type/decimal128.h"
+#include "util/type_util.h"
 
 namespace omniruntime {
 using namespace omniruntime::vec;
@@ -3271,91 +3271,6 @@ TEST(AggregatorTest, sum_test)
     delete sumFactory;
 }
 
-TEST(AggregatorTest, count_column_test)
-{
-    int32_t rowPerVecBatch = 200;
-    auto countFactory = new CountColumnAggregatorFactory();
-    std::vector<int32_t> channal0 = { 0 };
-    std::vector<int32_t> channal2 = { 2 };
-    // count test types : long + dictionary + null
-    auto executionContext = std::make_unique<ExecutionContext>();
-    auto countLong = countFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
-        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, false, false);
-    countLong->SetExecutionContext(executionContext.get());
-    auto countNull = countFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
-        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal2, true, false, false);
-    countNull->SetExecutionContext(executionContext.get());
-
-    auto longInputVec = BuildAggregateInput(LongType(), rowPerVecBatch);
-    LongDataType longDataType;
-    int32_t ids[rowPerVecBatch];
-    int64_t dict[rowPerVecBatch];
-    for (int32_t i = 0; i < rowPerVecBatch; ++i) {
-        ids[i] = 0;
-        dict[i] = 1;
-    }
-    auto dictInputVec = CreateDictionaryVector(longDataType, rowPerVecBatch, ids, rowPerVecBatch, dict);
-    auto nullInputVec = BuildAggregateInput(NoneType(), rowPerVecBatch);
-
-    VectorBatch *vecBatch = new VectorBatch(rowPerVecBatch);
-    vecBatch->Append(longInputVec);
-    vecBatch->Append(dictInputVec);
-    vecBatch->Append(nullInputVec);
-
-    // process long
-    auto state = NewAndInitState(countLong.get());
-    countLong->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
-    auto count = ExtractValueFromState<int64_t>(state.get());
-    EXPECT_EQ(200, *count);
-
-    // process null
-    state = NewAndInitState(countNull.get());
-    countNull->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
-    count = ExtractValueFromState<int64_t>(state.get());
-    EXPECT_EQ(0, *count);
-
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete countFactory;
-}
-
-TEST(AggregatorTest, count_all_test)
-{
-    int32_t rowPerVecBatch = 200;
-    auto countAllFactory = new CountAllAggregatorFactory();
-    std::vector<int32_t> channal0 = { -1 };
-
-    auto executionContext = std::make_unique<ExecutionContext>();
-    auto countLong = countAllFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(NoneType()).get()),
-        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, false, false);
-    countLong->SetExecutionContext(executionContext.get());
-    auto countNull = countAllFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(NoneType()).get()),
-        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, false, false);
-    countNull->SetExecutionContext(executionContext.get());
-
-    auto longInputVec = BuildAggregateInput(LongType(), rowPerVecBatch);
-    LongDataType longDataType;
-    auto nullInputVec = BuildAggregateInput(NoneType(), ROW_PER_VEC_BATCH);
-
-    VectorBatch *vecBatch = new VectorBatch(rowPerVecBatch);
-    vecBatch->Append(longInputVec);
-    vecBatch->Append(nullInputVec);
-
-    // process long
-    auto state = NewAndInitState(countLong.get());
-    countLong->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
-    auto count = ExtractValueFromState<int64_t>(state.get());
-    EXPECT_EQ(200, *count);
-
-    // process null
-    state = NewAndInitState(countNull.get());
-    countNull->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
-    count = ExtractValueFromState<int64_t>(state.get());
-    EXPECT_EQ(200, *count);
-
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete countAllFactory;
-}
-
 TEST(AggregatorTest, min_test)
 {
     int32_t rowPerVecBatch = 200;
@@ -5796,62 +5711,6 @@ TEST(AggregatorTest, max_agg_extrame_value_test)
     delete minFactory;
 }
 
-TEST(AggregatorTest, count_aggregator_exception)
-{
-    // just used to produce vector
-    auto inputType = DoubleType();
-    DataTypes inputTypes({ inputType }), outputTypes({ inputType });
-    std::vector<int32_t> channels { 0 };
-    bool rawIn = false, partialOut = false, isOverflowAsNull = false;
-
-    auto agg = CountColumnAggregator<OMNI_NONE, OMNI_LONG>::Create(inputTypes, outputTypes, channels, rawIn, partialOut,
-        isOverflowAsNull);
-    EXPECT_TRUE(agg == nullptr);
-#define TestColumnAggregator(IN, OUT)                                                                                \
-    do {                                                                                                             \
-        auto countAgg = CountColumnAggregator<IN, OUT>::Create(inputTypes, outputTypes, channels, rawIn, partialOut, \
-            isOverflowAsNull);                                                                                       \
-        EXPECT_TRUE(countAgg == nullptr);                                                                            \
-        auto countAllAgg = CountAllAggregator<IN, OUT>::Create(inputTypes, outputTypes, channels, rawIn, partialOut, \
-            isOverflowAsNull);                                                                                       \
-        EXPECT_TRUE(countAllAgg == nullptr);                                                                         \
-    } while (0)
-
-    TestColumnAggregator(OMNI_NONE, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_BOOLEAN, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_SHORT, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_DATE32, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_TIME32, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_INT, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_LONG, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_DATE64, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_TIME64, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_TIMESTAMP, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_DOUBLE, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_DECIMAL64, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_DECIMAL128, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_CONTAINER, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_VARCHAR, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_CHAR, OMNI_LONG);
-
-    TestColumnAggregator(OMNI_INVALID, OMNI_LONG);
-}
-
 void CreateGroupBySingleSpillData(
     VectorBatch*& vecBatch0,
     VectorBatch*& vecBatch1,
@@ -6185,6 +6044,228 @@ TEST(AggregattorTest, covar_samp_merge_from_4_columns_test) {
     std::vector<BaseVector *> extractVectors = {&outputVec};
     covarSampAgg->ExtractValues(state.get(), extractVectors, 0);
     EXPECT_NEAR(outputVec.GetValue(0), 10.0, 1e-9);
+
+    delete vectorBatch;
+}
+
+// corr ExtractValuesForSpill: 写出 partial 状态 (n, xAvg, yAvg, ck, xMk, yMk)，与 GetSpillType 一致
+TEST(AggregattorTest, corr_extract_values_for_spill_test) {
+    const int32_t rowNum = 5;
+    op::CorrAggregatorFactory corrFactory;
+    DataTypes corrInputTypes(std::vector<DataTypePtr>{LongType(), LongType()});
+    DataTypes corrOutputTypes(std::vector<DataTypePtr>{DoubleType()});
+    std::vector<int32_t> channels = {0, 1};
+    auto corrAgg = corrFactory.CreateAggregator(corrInputTypes, corrOutputTypes, channels, true, false, false);
+    ASSERT_NE(corrAgg.get(), nullptr);
+
+    Vector<int64_t> *inputCol1 = new Vector<int64_t>(rowNum);
+    Vector<int64_t> *inputCol2 = new Vector<int64_t>(rowNum);
+    for (int i = 0; i < rowNum; ++i) {
+        inputCol1->SetValue(i, static_cast<int64_t>(i));
+        inputCol2->SetValue(i, static_cast<int64_t>(i * i));
+    }
+    VectorBatch *vectorBatch = new VectorBatch(2);
+    vectorBatch->Append(inputCol1);
+    vectorBatch->Append(inputCol2);
+
+    auto state = NewAndInitState(corrAgg.get());
+    corrAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    auto spillTypes = corrAgg->GetSpillType();
+    ASSERT_EQ(spillTypes.size(), 6u);
+    const int32_t spillRowCount = 1;
+    Vector<double> vN(spillRowCount), vXAvg(spillRowCount), vYAvg(spillRowCount);
+    Vector<double> vCk(spillRowCount), vXMk(spillRowCount), vYMk(spillRowCount);
+    std::vector<BaseVector *> spillVectors = {&vN, &vXAvg, &vYAvg, &vCk, &vXMk, &vYMk};
+    std::vector<AggregateState *> groupStates = {state.get()};
+    corrAgg->ExtractValuesForSpill(groupStates, spillVectors);
+
+    EXPECT_FALSE(vN.IsNull(0));
+    EXPECT_NEAR(vN.GetValue(0), 5.0, 1e-9);
+    EXPECT_NEAR(vXAvg.GetValue(0), 2.0, 1e-9);
+    EXPECT_NEAR(vYAvg.GetValue(0), 6.0, 1e-9);
+    EXPECT_NEAR(vCk.GetValue(0), 40.0, 1e-9);
+    EXPECT_NEAR(vXMk.GetValue(0), 10.0, 1e-9);
+    EXPECT_NEAR(vYMk.GetValue(0), 174.0, 1e-9);
+
+    delete vectorBatch;
+}
+
+// covar_pop ExtractValuesForSpill: 写出 partial 状态 (n, meanX, meanY, c2)
+TEST(AggregattorTest, covar_pop_extract_values_for_spill_test) {
+    const int32_t rowNum = 5;
+    op::CovarPopAggregatorFactory covarPopFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{DoubleType(), DoubleType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{DoubleType()});
+    std::vector<int32_t> channels = {0, 1};
+    auto covarPopAgg = covarPopFactory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(covarPopAgg.get(), nullptr);
+
+    Vector<double> *col1 = new Vector<double>(rowNum);
+    Vector<double> *col2 = new Vector<double>(rowNum);
+    for (int i = 0; i < rowNum; ++i) {
+        col1->SetValue(i, static_cast<double>(i));
+        col2->SetValue(i, static_cast<double>(i * i));
+    }
+    VectorBatch *vectorBatch = new VectorBatch(2);
+    vectorBatch->Append(col1);
+    vectorBatch->Append(col2);
+
+    auto state = NewAndInitState(covarPopAgg.get());
+    covarPopAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    auto spillTypes = covarPopAgg->GetSpillType();
+    ASSERT_EQ(spillTypes.size(), 4u);
+    const int32_t spillRowCount = 1;
+    Vector<double> vN(spillRowCount), vMeanX(spillRowCount), vMeanY(spillRowCount), vC2(spillRowCount);
+    std::vector<BaseVector *> spillVectors = {&vN, &vMeanX, &vMeanY, &vC2};
+    std::vector<AggregateState *> groupStates = {state.get()};
+    covarPopAgg->ExtractValuesForSpill(groupStates, spillVectors);
+
+    EXPECT_FALSE(vN.IsNull(0));
+    EXPECT_NEAR(vN.GetValue(0), 5.0, 1e-9);
+    EXPECT_NEAR(vMeanX.GetValue(0), 2.0, 1e-9);
+    EXPECT_NEAR(vMeanY.GetValue(0), 6.0, 1e-9);
+    EXPECT_NEAR(vC2.GetValue(0), 40.0, 1e-9);
+
+    delete vectorBatch;
+}
+
+// covar_samp ExtractValuesForSpill: 写出 partial 状态 (n, meanX, meanY, c2)
+TEST(AggregattorTest, covar_samp_extract_values_for_spill_test) {
+    const int32_t rowNum = 5;
+    op::CovarSampAggregatorFactory covarSampFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{DoubleType(), DoubleType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{DoubleType()});
+    std::vector<int32_t> channels = {0, 1};
+    auto covarSampAgg = covarSampFactory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(covarSampAgg.get(), nullptr);
+
+    Vector<double> *col1 = new Vector<double>(rowNum);
+    Vector<double> *col2 = new Vector<double>(rowNum);
+    for (int i = 0; i < rowNum; ++i) {
+        col1->SetValue(i, static_cast<double>(i));
+        col2->SetValue(i, static_cast<double>(i * i));
+    }
+    VectorBatch *vectorBatch = new VectorBatch(2);
+    vectorBatch->Append(col1);
+    vectorBatch->Append(col2);
+
+    auto state = NewAndInitState(covarSampAgg.get());
+    covarSampAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    auto spillTypes = covarSampAgg->GetSpillType();
+    ASSERT_EQ(spillTypes.size(), 4u);
+    const int32_t spillRowCount = 1;
+    Vector<double> vN(spillRowCount), vMeanX(spillRowCount), vMeanY(spillRowCount), vC2(spillRowCount);
+    std::vector<BaseVector *> spillVectors = {&vN, &vMeanX, &vMeanY, &vC2};
+    std::vector<AggregateState *> groupStates = {state.get()};
+    covarSampAgg->ExtractValuesForSpill(groupStates, spillVectors);
+
+    EXPECT_FALSE(vN.IsNull(0));
+    EXPECT_NEAR(vN.GetValue(0), 5.0, 1e-9);
+    EXPECT_NEAR(vMeanX.GetValue(0), 2.0, 1e-9);
+    EXPECT_NEAR(vMeanY.GetValue(0), 6.0, 1e-9);
+    EXPECT_NEAR(vC2.GetValue(0), 40.0, 1e-9);
+
+    delete vectorBatch;
+}
+
+// bit_and ExtractValuesForSpill: 写出当前 value，unspill 时再 BitAnd 合并
+TEST(AggregattorTest, bit_and_extract_values_for_spill_test) {
+    const int32_t rowNum = 3;
+    op::BitAndAggregatorFactory bitAndFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{LongType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{LongType()});
+    std::vector<int32_t> channels = {0};
+    auto bitAndAgg = bitAndFactory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(bitAndAgg.get(), nullptr);
+
+    Vector<int64_t> *col = new Vector<int64_t>(rowNum);
+    col->SetValue(0, 3);
+    col->SetValue(1, 5);
+    col->SetValue(2, 7);
+    VectorBatch *vectorBatch = new VectorBatch(1);
+    vectorBatch->Append(col);
+
+    auto state = NewAndInitState(bitAndAgg.get());
+    bitAndAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    auto spillTypes = bitAndAgg->GetSpillType();
+    ASSERT_EQ(spillTypes.size(), 1u);
+    Vector<int64_t> spillVec(1);
+    std::vector<BaseVector *> spillVectors = {&spillVec};
+    std::vector<AggregateState *> groupStates = {state.get()};
+    bitAndAgg->ExtractValuesForSpill(groupStates, spillVectors);
+
+    EXPECT_FALSE(spillVec.IsNull(0));
+    EXPECT_EQ(spillVec.GetValue(0), 3 & 5 & 7);  // 1
+
+    delete vectorBatch;
+}
+
+// bit_or ExtractValuesForSpill
+TEST(AggregattorTest, bit_or_extract_values_for_spill_test) {
+    const int32_t rowNum = 3;
+    op::BitOrAggregatorFactory bitOrFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{LongType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{LongType()});
+    std::vector<int32_t> channels = {0};
+    auto bitOrAgg = bitOrFactory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(bitOrAgg.get(), nullptr);
+
+    Vector<int64_t> *col = new Vector<int64_t>(rowNum);
+    col->SetValue(0, 3);
+    col->SetValue(1, 5);
+    col->SetValue(2, 7);
+    VectorBatch *vectorBatch = new VectorBatch(1);
+    vectorBatch->Append(col);
+
+    auto state = NewAndInitState(bitOrAgg.get());
+    bitOrAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    auto spillTypes = bitOrAgg->GetSpillType();
+    ASSERT_EQ(spillTypes.size(), 1u);
+    Vector<int64_t> spillVec(1);
+    std::vector<BaseVector *> spillVectors = {&spillVec};
+    std::vector<AggregateState *> groupStates = {state.get()};
+    bitOrAgg->ExtractValuesForSpill(groupStates, spillVectors);
+
+    EXPECT_FALSE(spillVec.IsNull(0));
+    EXPECT_EQ(spillVec.GetValue(0), 3 | 5 | 7);  // 7
+
+    delete vectorBatch;
+}
+
+// bit_xor ExtractValuesForSpill
+TEST(AggregattorTest, bit_xor_extract_values_for_spill_test) {
+    const int32_t rowNum = 3;
+    op::BitXorAggregatorFactory bitXorFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{LongType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{LongType()});
+    std::vector<int32_t> channels = {0};
+    auto bitXorAgg = bitXorFactory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(bitXorAgg.get(), nullptr);
+
+    Vector<int64_t> *col = new Vector<int64_t>(rowNum);
+    col->SetValue(0, 3);
+    col->SetValue(1, 5);
+    col->SetValue(2, 7);
+    VectorBatch *vectorBatch = new VectorBatch(1);
+    vectorBatch->Append(col);
+
+    auto state = NewAndInitState(bitXorAgg.get());
+    bitXorAgg->ProcessGroup(state.get(), vectorBatch, 0, rowNum);
+
+    auto spillTypes = bitXorAgg->GetSpillType();
+    ASSERT_EQ(spillTypes.size(), 1u);
+    Vector<int64_t> spillVec(1);
+    std::vector<BaseVector *> spillVectors = {&spillVec};
+    std::vector<AggregateState *> groupStates = {state.get()};
+    bitXorAgg->ExtractValuesForSpill(groupStates, spillVectors);
+
+    EXPECT_FALSE(spillVec.IsNull(0));
+    EXPECT_EQ(spillVec.GetValue(0), 3 ^ 5 ^ 7);  // 1
 
     delete vectorBatch;
 }

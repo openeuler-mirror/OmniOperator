@@ -16,7 +16,7 @@ namespace omniruntime::vec {
     MapVector *MapVector::CopyPositions(const int *positions, int positionOffset, int length)
     {
         if ((positions == nullptr) || (length < 0)) {
-            std::string message("MapVector positions is null or the input length is incorrect: %d.", length);
+            std::string message = "MapVector positions is null or the input length is incorrect: " + std::to_string(length) + ".";
             throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
@@ -61,7 +61,8 @@ namespace omniruntime::vec {
         return newMapVector;
     }
 
-    void MapVector::Append(MapVector* other, int32_t offset) {
+    void MapVector::Append(MapVector* other, int32_t offset)
+    {
         if (other == nullptr) {
             return;
         }
@@ -80,5 +81,126 @@ namespace omniruntime::vec {
 
         VectorHelper::ExpandElementVector(values.get(), values->GetTypeId(), offset + keyLength);
         VectorHelper::AppendVector(values.get(), offset,other->values.get(), static_cast<int32_t>(keyLength));
+    }
+
+    /* *
+     * Append another mapVector to the current mapVector starting at a specified offset
+     *
+     * @param other Source MapVector to copy from
+     * @param positionOffset Starting index in this vector where data will be written
+     * @param length Number of map entries to copy from source MapVector
+     */
+    void MapVector::Append(BaseVector *other, int positionOffset, int length)
+    {
+        auto *otherMapVector = dynamic_cast<MapVector *>(other);
+        if (otherMapVector == nullptr) {
+            std::string message = "Invalid vector type: expected MapVector for append operation.";
+            throw OmniException("MAPVECTOR_TYPE_MISMATCH", message);
+        }
+
+        if (length <= 0) {
+            return;
+        }
+        if (positionOffset < 0) {
+            std::string message = "Invalid append position";
+            throw OmniException("MAPVECTOR_APPEND_ERROR", message);
+        }
+
+        int32_t newSize = positionOffset + length;
+        Expand(newSize);
+
+        // calculate the total number of key-value pairs that need to be added
+        int64_t totalKeyValuePairs = 0;
+        for (int i = 0; i < length; i++) {
+            int destIndex = positionOffset + i;
+            if (!otherMapVector->IsNull(i)) {
+                totalKeyValuePairs += otherMapVector->GetSize(i);
+            }
+        }
+
+        // obtain the size of the current keys/values
+        int64_t keysSize = GetOffset(positionOffset);
+
+        // if there are any key-value pairs that need to be added
+        if (totalKeyValuePairs > 0) {
+            int64_t newKeysSize = keysSize + totalKeyValuePairs;
+
+            // expand the capacity all at once, and then add the data
+            keys->Expand(newKeysSize);
+            values->Expand(newKeysSize);
+
+            // record the writing position of the current keys/values
+            int64_t currentKeysWritePos = keysSize;
+
+            // traverse each entry of the map
+            for (int i = 0; i < length; i++) {
+                int newIndex = positionOffset + i;
+
+                if (otherMapVector->IsNull(i)) {
+                    SetNull(newIndex);
+                } else {
+                    // obtain the size and offset of the source entry
+                    int64_t sourceSize = otherMapVector->GetSize(i);
+                    int64_t sourceOffset = otherMapVector->GetOffset(i);
+
+                    // set the size and offset of the current map entry
+                    SetSize(newIndex, sourceSize);
+
+                    // add the specific entries to the keys and values
+                    if (sourceSize > 0) {
+                        // obtain the slices of keys and values of the source map
+                        auto sourceKeys = otherMapVector->GetKeyVector();
+                        auto sourceKeysSlice = sourceKeys->Slice(sourceOffset, sourceSize, false);
+                        auto sourceValues = otherMapVector->GetValueVector();
+                        auto sourceValuesSlice = sourceValues->Slice(sourceOffset, sourceSize, false);
+
+                        // append the slices to the current keys and values
+                        VectorHelper::AppendVector(keys.get(), currentKeysWritePos, sourceKeysSlice, sourceSize);
+                        VectorHelper::AppendVector(values.get(), currentKeysWritePos, sourceValuesSlice, sourceSize);
+
+                        // update write position
+                        currentKeysWritePos += sourceSize;
+
+                        delete sourceKeysSlice;
+                        delete sourceValuesSlice;
+                    }
+                }
+            }
+        } else {
+            // there is no key-value pair, so just set null or an empty entry.
+            for (int i = 0; i < length; i++) {
+                int newIndex = positionOffset + i;
+                if (otherMapVector->IsNull(i)) {
+                    SetNull(newIndex);
+                } else {
+                    SetSize(newIndex, 0);
+                }
+            }
+        }
+    }
+
+    void MapVector::SetValue(int index, MapVector* value)
+    {
+        if (value == nullptr) {
+            SetNull(index);
+            return;
+        }
+        if (keys->GetTypeId() != value->keys->GetTypeId() ||
+            values->GetTypeId() != value->values->GetTypeId()) {
+            throw OmniException("OPERATOR_RUNTIME_ERROR", "MapVector type mismatch during SetValue.");
+            }
+        int64_t offset = GetOffset(index);
+        int64_t keyLength = value->GetSize(0);
+        if (keyLength == 0) {
+            SetSize(index, 0);
+            return;
+        }
+        VectorHelper::ExpandElementVector(keys.get(), keys->GetTypeId(), static_cast<int32_t>(offset + keyLength));
+        VectorHelper::AppendVector(keys.get(), static_cast<int32_t>(offset), value->GetKeyVector().get(),
+            static_cast<int32_t>(keyLength));
+        VectorHelper::ExpandElementVector(values.get(), values->GetTypeId(), static_cast<int32_t>(offset + keyLength));
+        VectorHelper::AppendVector(values.get(), static_cast<int32_t>(offset), value->GetValueVector().get(),
+            static_cast<int32_t>(keyLength));
+        SetSize(index, static_cast<int32_t>(keyLength));
     }
 }

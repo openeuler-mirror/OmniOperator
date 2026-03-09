@@ -63,7 +63,7 @@ static constexpr SetVector GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     SetVarcharVector,
     SetVarcharVector,
     SetContainerVector,
-    nullptr,
+    SetVectorImpl<Vector<int8_t>>,  // OMNI_BYTE (tinyint), e.g. approx_percentile(byte_col,...) with GROUP BY
     SetVectorImpl<Vector<float>>,
     SetVarcharVector,
     nullptr,
@@ -466,10 +466,13 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
             break;
         case type::OMNI_INT:
         case type::OMNI_DATE32:
+        case type::OMNI_TIME32:
             elementVector = std::make_shared<Vector<int32_t>>(0);
             break;
         case type::OMNI_LONG:
         case type::OMNI_DATE64:
+        case type::OMNI_TIME64:
+        case type::OMNI_TIMESTAMP:
         case type::OMNI_DECIMAL64:
             elementVector = std::make_shared<Vector<int64_t>>(0);
             break;
@@ -490,7 +493,13 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
             break;
         case type::OMNI_CHAR:
         case type::OMNI_VARCHAR:
+        case type::OMNI_VARBINARY:
             elementVector = std::make_shared<Vector<LargeStringContainer<std::string_view>>>(0);
+            break;
+        case type::OMNI_ARRAY:
+        case type::OMNI_MAP:
+        case type::OMNI_ROW:
+            elementVector = std::shared_ptr<BaseVector>(VectorHelper::CreateComplexVector(elementType.get(), 0));
             break;
         default:
             throw omniruntime::exception::OmniException("Set ArrayVector error, unsupport element type:", std::to_string(elemTypeId));
@@ -498,6 +507,24 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
 
     auto arrayVector = new ArrayVector(rowCount, elementVector);
     vecBatch->Append(arrayVector);
+}
+
+void SetMapVector(VectorBatch *vecBatch, DataTypePtr keyType, DataTypePtr valueType, int32_t rowCount)
+{
+    std::shared_ptr<BaseVector> keyVector(VectorHelper::CreateComplexVector(keyType.get(), 0));
+    std::shared_ptr<BaseVector> valueVector(VectorHelper::CreateComplexVector(valueType.get(), 0));
+    auto *mapVector = new MapVector(rowCount, keyVector, valueVector);
+    vecBatch->Append(mapVector);
+}
+
+void SetRowVector(VectorBatch *vecBatch, const std::vector<DataTypePtr> &fieldTypes, int32_t rowCount)
+{
+    std::vector<std::shared_ptr<BaseVector>> children;
+    for (const auto &fieldType : fieldTypes) {
+        children.push_back(std::shared_ptr<BaseVector>(VectorHelper::CreateComplexVector(fieldType.get(), rowCount)));
+    }
+    auto *rowVector = new RowVector(rowCount, children);
+    vecBatch->Append(rowVector);
 }
 
 void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount)
@@ -512,6 +539,16 @@ void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<
             auto arrayType = std::static_pointer_cast<ArrayType>(type);
             DataTypePtr elementType = arrayType->ElementType();
             SetArrayVector(output, elementType, rowCount);
+        } else if (typeId == OMNI_MAP) {
+            auto mapType = std::static_pointer_cast<MapType>(type);
+            SetMapVector(output, mapType->Key(), mapType->Value(), rowCount);
+        } else if (typeId == OMNI_ROW) {
+            auto rowType = std::static_pointer_cast<RowType>(type);
+            std::vector<DataTypePtr> fieldTypes;
+            for (size_t i = 0; i < rowType->Size(); i++) {
+                fieldTypes.push_back(rowType->Type(i));
+            }
+            SetRowVector(output, fieldTypes, rowCount);
         }
     }
 }

@@ -271,6 +271,26 @@ template class MinAggregator<OMNI_BOOLEAN, OMNI_DECIMAL128>;
 
 template class MinAggregator<OMNI_BOOLEAN, OMNI_DECIMAL64>;
 
+template class MinAggregator<OMNI_BOOLEAN, OMNI_BYTE>;
+
+template class MinAggregator<OMNI_BYTE, OMNI_BOOLEAN>;
+
+template class MinAggregator<OMNI_BYTE, OMNI_BYTE>;
+
+template class MinAggregator<OMNI_BYTE, OMNI_SHORT>;
+
+template class MinAggregator<OMNI_BYTE, OMNI_INT>;
+
+template class MinAggregator<OMNI_BYTE, OMNI_LONG>;
+
+template class MinAggregator<OMNI_BYTE, OMNI_FLOAT>;
+
+template class MinAggregator<OMNI_BYTE, OMNI_DOUBLE>;
+
+template class MinAggregator<OMNI_BYTE, OMNI_DECIMAL128>;
+
+template class MinAggregator<OMNI_BYTE, OMNI_DECIMAL64>;
+
 template class MinAggregator<OMNI_SHORT, OMNI_BOOLEAN>;
 
 template class MinAggregator<OMNI_SHORT, OMNI_SHORT>;
@@ -286,6 +306,8 @@ template class MinAggregator<OMNI_SHORT, OMNI_DOUBLE>;
 template class MinAggregator<OMNI_SHORT, OMNI_DECIMAL128>;
 
 template class MinAggregator<OMNI_SHORT, OMNI_DECIMAL64>;
+
+template class MinAggregator<OMNI_SHORT, OMNI_BYTE>;
 
 template class MinAggregator<OMNI_INT, OMNI_BOOLEAN>;
 
@@ -303,6 +325,8 @@ template class MinAggregator<OMNI_INT, OMNI_DECIMAL128>;
 
 template class MinAggregator<OMNI_INT, OMNI_DECIMAL64>;
 
+template class MinAggregator<OMNI_INT, OMNI_BYTE>;
+
 template class MinAggregator<OMNI_LONG, OMNI_BOOLEAN>;
 
 template class MinAggregator<OMNI_LONG, OMNI_SHORT>;
@@ -318,6 +342,8 @@ template class MinAggregator<OMNI_LONG, OMNI_DOUBLE>;
 template class MinAggregator<OMNI_LONG, OMNI_DECIMAL128>;
 
 template class MinAggregator<OMNI_LONG, OMNI_DECIMAL64>;
+
+template class MinAggregator<OMNI_LONG, OMNI_BYTE>;
 
 template class MinAggregator<OMNI_FLOAT, OMNI_BOOLEAN>;
 
@@ -335,6 +361,8 @@ template class MinAggregator<OMNI_FLOAT, OMNI_DECIMAL128>;
 
 template class MinAggregator<OMNI_FLOAT, OMNI_DECIMAL64>;
 
+template class MinAggregator<OMNI_FLOAT, OMNI_BYTE>;
+
 template class MinAggregator<OMNI_DOUBLE, OMNI_BOOLEAN>;
 
 template class MinAggregator<OMNI_DOUBLE, OMNI_SHORT>;
@@ -350,6 +378,8 @@ template class MinAggregator<OMNI_DOUBLE, OMNI_DOUBLE>;
 template class MinAggregator<OMNI_DOUBLE, OMNI_DECIMAL128>;
 
 template class MinAggregator<OMNI_DOUBLE, OMNI_DECIMAL64>;
+
+template class MinAggregator<OMNI_DOUBLE, OMNI_BYTE>;
 
 template class MinAggregator<OMNI_DECIMAL128, OMNI_BOOLEAN>;
 
@@ -367,6 +397,8 @@ template class MinAggregator<OMNI_DECIMAL128, OMNI_DECIMAL128>;
 
 template class MinAggregator<OMNI_DECIMAL128, OMNI_DECIMAL64>;
 
+template class MinAggregator<OMNI_DECIMAL128, OMNI_BYTE>;
+
 template class MinAggregator<OMNI_DECIMAL64, OMNI_BOOLEAN>;
 
 template class MinAggregator<OMNI_DECIMAL64, OMNI_SHORT>;
@@ -382,5 +414,7 @@ template class MinAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>;
 template class MinAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>;
 
 template class MinAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>;
+
+template class MinAggregator<OMNI_DECIMAL64, OMNI_BYTE>;
 }
 }

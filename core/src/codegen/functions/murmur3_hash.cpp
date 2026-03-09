@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2026. All rights reserved.
  * Description: Murmur3 Hash function
  */
 #include "util/compiler_util.h"
@@ -159,6 +159,30 @@ uint32_t HashUnsafeBytes(char *base, uint32_t lengthInBytes, uint32_t seed)
     return Fmix(h1, lengthInBytes);
 }
 
+extern "C" DLLEXPORT int32_t Mm3Int8(int8_t val, bool isValNull, int32_t seed, bool isSeedNull)
+{
+    if (isSeedNull) {
+        seed = 0;
+    }
+    if (isValNull) {
+        return seed;
+    }
+
+    return static_cast<int32_t>(HashByte(static_cast<uint8_t>(val), static_cast<uint32_t>(seed)));
+}
+
+extern "C" DLLEXPORT int32_t Mm3Int16(int16_t val, bool isValNull, int32_t seed, bool isSeedNull)
+{
+    if (isSeedNull) {
+        seed = 0;
+    }
+    if (isValNull) {
+        return seed;
+    }
+
+    return static_cast<int32_t>(HashShort(static_cast<uint16_t>(val), static_cast<uint32_t>(seed)));
+}
+
 extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, bool isValNull, int32_t seed, bool isSeedNull)
 {
     if (isSeedNull) {
@@ -183,6 +207,12 @@ extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, bool isValNull, int32_t seed,
     return static_cast<int32_t>(HashLong(static_cast<uint64_t>(val * !isValNull), static_cast<uint32_t>(seed)));
 }
 
+extern "C" DLLEXPORT int32_t Mm3String1(std::string_view val, bool isValNull, int32_t seed, bool isSeedNull)
+{
+    std::string str(val);
+    return Mm3String(str.data(), str.length(), isValNull, seed, isSeedNull);
+}
+
 extern "C" DLLEXPORT int32_t Mm3String(char *val, int32_t valLen, bool isValNull, int32_t seed, bool isSeedNull)
 {
     if (isSeedNull) {
@@ -194,6 +224,23 @@ extern "C" DLLEXPORT int32_t Mm3String(char *val, int32_t valLen, bool isValNull
 
     valLen = valLen * !isValNull;
     return static_cast<int32_t>(HashUnsafeBytes(val, static_cast<uint32_t>(valLen), static_cast<uint32_t>(seed)));
+}
+
+extern "C" DLLEXPORT int32_t Mm3Float(float val, bool isValNull, int32_t seed, bool isSeedNull)
+{
+    union {
+        uint32_t lVal;
+        float dVal;
+    } uVal = { 0 };
+    uVal.dVal = val * !isValNull;
+    if (isSeedNull) {
+        seed = 0;
+    }
+    if (isValNull) {
+        return seed;
+    }
+
+    return static_cast<int32_t>(HashInt(uVal.lVal, static_cast<uint32_t>(seed)));
 }
 
 extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isValNull, int32_t seed, bool isSeedNull)

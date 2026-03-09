@@ -294,8 +294,13 @@ void UnnestOperator::generateUnrepeatedValues(omniruntime::vec::BaseVector* inpu
                 auto length = unrepeatVector->GetSize(i);
                 // 生成实际的数组元素
                 for (auto j = 0; j < length; ++j) {
-                    auto value = elementVector->GetValue(start + j);
-                    outputVector->SetValue(index++, value);
+                    // Check if the element itself is null (important for stack function with NULL values)
+                    if (elementVector->IsNull(start + j)) {
+                        outputVector->SetNull(index++);
+                    } else {
+                        auto value = elementVector->GetValue(start + j);
+                        outputVector->SetValue(index++, value);
+                    }
                 }
                 // 当rawMaxSizes_[i] > length时生成null填充
                 // 这在多数组unnest且数组大小不同时是必需的
@@ -501,11 +506,59 @@ void UnnestOperator::generateOrdinalityColumns(int32_t numElements, omniruntime:
     int32_t index = 0;
     BaseVector* baseVector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_LONG, numElements);
     auto ordVector = dynamic_cast<omniruntime::vec::Vector<int64_t>*>(baseVector);
-    for (size_t i = 0; i < rawMaxSizes_.size(); ++i) {
-        for (int64_t j = 0; j < rawMaxSizes_[i]; ++j) {
-            ordVector->SetValue(index++, j + 1);
-        }
+    
+    if (unnestChannels_.empty()) {
+        resultVecBatch->SetVector(outputTypeSize_ - 1, baseVector);
+        return;
     }
+    
+    const auto& unnestVector = vecBatch->Get(unnestChannels_[0]);
+    int32_t inputSize = unnestVector->GetSize();
+    
+    // Generate ordinality following the exact same logic as generateUnrepeatedValues
+    auto generateOrdinality = [&](auto* unrepeatVector) {
+        for (auto i = 0; i < inputSize; ++i) {
+            // Skip rows that won't be in output
+            if (rawMaxSizes_[i] == 0) {
+                continue;
+            }
+            
+            if (unrepeatVector->IsNull(i)) {
+                // Null array in outer mode: pos should be NULL
+                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
+                    ordVector->SetNull(index++);
+                }
+                continue;
+            }
+            
+            auto length = unrepeatVector->GetSize(i);
+            
+            // Generate ordinality for actual array elements (0, 1, 2, ...)
+            for (auto j = 0; j < length; ++j) {
+                ordVector->SetValue(index++, j);
+            }
+            
+            // Handle padding rows (when rawMaxSizes_[i] > length)
+            if (rawMaxSizes_[i] > length) {
+                // Empty array case: length=0, outer=true, rawMaxSizes_[i]=1
+                if (length == 0 && outer_ && rawMaxSizes_[i] == 1) {
+                    ordVector->SetValue(index++, 0);
+                } else {
+                    // Padding rows: set to NULL
+                    for (auto j = length; j < rawMaxSizes_[i]; ++j) {
+                        ordVector->SetNull(index++);
+                    }
+                }
+            }
+        }
+    };
+    
+    if (auto arrayVec = dynamic_cast<const vec::ArrayVector*>(unnestVector)) {
+        generateOrdinality(arrayVec);
+    } else if (auto mapVec = dynamic_cast<const vec::MapVector*>(unnestVector)) {
+        generateOrdinality(mapVec);
+    }
+    
     resultVecBatch->SetVector(outputTypeSize_ - 1, baseVector);
 }
 

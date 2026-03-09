@@ -12,6 +12,8 @@
 #include "../functions/Day.h"
 #include "../functions/DayOfWeek.h"
 #include "../functions/DayOfYear.h"
+#include "../functions/WeekOfYear.h"
+#include "../functions/Weekday.h"
 #include "../functions/Trunc.h"
 #include "../functions/AddMonths.h"
 #include "../functions/DateAdd.h"
@@ -20,6 +22,12 @@
 #include "../functions/TimestampConversion.h"
 #include "../functions/MakeDate.h"
 #include "../functions/MakeTimestamp.h"
+#include "../functions/UnixSeconds.h"
+#include "../functions/UnixMillis.h"
+#include "../functions/UnixMicros.h"
+#include "../functions/UnixDate.h"
+#include "../functions/ToTimestamp.h"
+#include "../functions/ToUtcTimestamp.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -34,6 +42,8 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterDayFunction(prefix + "dayofmonth");
     RegisterDayOfWeekFunction(prefix + "dayofweek");
     RegisterDayOfYearFunction(prefix + "dayofyear");
+    RegisterWeekOfYearFunction(prefix + "week_of_year");
+    RegisterWeekdayFunction(prefix + "weekday");
     // Register as "trunc_date" to match Gluten mapping (Substrait "trunc" -> "trunc_date")
     // and codegen layer registration
     RegisterTruncFunction(prefix + "trunc_date");
@@ -46,5 +56,16 @@ void RegisterDatetimeFunctions(const std::string &prefix)
 
     RegisterMakeDateFunction(prefix + "make_date");
     RegisterMakeTimestampFunction(prefix + "make_timestamp");
+    RegisterUnixSecondsFunction(prefix + "unix_seconds");
+    RegisterUnixMillisFunction(prefix + "unix_millis");
+    RegisterUnixMicrosFunction(prefix + "unix_micros");
+    RegisterUnixDateFunction(prefix + "unix_date");
+
+    RegisterToTimestampFunction(prefix + "get_timestamp");
+    RegisterToUnixTimestampFunction(prefix + "to_unix_timestamp");
+    RegisterToUnixTimestampFunction(prefix + "unix_timestamp");
+
+    RegisterToUtcTimestampFunction(prefix + "to_utc_timestamp");
+    RegisterFromUtcTimestampFunction(prefix + "from_utc_timestamp");
 }
 }

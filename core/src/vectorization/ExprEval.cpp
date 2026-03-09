@@ -185,16 +185,39 @@ void ExprEval::Visit(const LiteralExpr &e)
             case OMNI_VARBINARY:
                 constVec = new ConstVector(std::string_view(*e.stringVal), typeId);
                 break;
+            case OMNI_ARRAY:
+            case OMNI_MAP:
+            case OMNI_ROW:
+            case OMNI_NONE: {
+                auto *nullArrayVec = new ArrayVector(1);
+                auto emptyElements = std::shared_ptr<BaseVector>(
+                    VectorHelper::CreateFlatVector(static_cast<int32_t>(OMNI_INT), 0));
+                nullArrayVec->SetElementVector(emptyElements);
+                nullArrayVec->SetNull(0);
+                constVec = nullArrayVec;
+                break;
+            }
             default: LogError("Do not support such vector type %d", typeIds[e.dataType->GetId()]);
         }
-        // Handle NULL literal by setting the null flag on the ConstVector
         if (constVec != nullptr && e.isNull) {
             constVec->SetNull(0);
         }
         inputValues_.push(constVec);
         return;
     }
-    BaseVector *outVec = VectorHelper::CreateFlatVector(e.dataType->GetId(), rowSize);
+    auto typeId = e.dataType->GetId();
+    if (typeId == OMNI_ARRAY || typeId == OMNI_MAP || typeId == OMNI_ROW || typeId == OMNI_NONE) {
+        auto *arrayVec = new ArrayVector(rowSize);
+        auto emptyElements = std::shared_ptr<BaseVector>(
+            VectorHelper::CreateFlatVector(static_cast<int32_t>(OMNI_INT), 0));
+        arrayVec->SetElementVector(emptyElements);
+        for (int32_t i = 0; i < rowSize; ++i) {
+            arrayVec->SetNull(i);
+        }
+        inputValues_.push(arrayVec);
+        return;
+    }
+    BaseVector *outVec = VectorHelper::CreateFlatVector(typeId, rowSize);
     ConstantColumnProjection(context, outVec, e);
     inputValues_.push(outVec);
 }
@@ -395,7 +418,18 @@ void ExprEval::Visit(const FuncExpr &e)
 
     BaseVector *result = nullptr;
     if (e.vectorFunction == nullptr) {
-        OMNI_THROW("Vectorization Error:", "Vector function not found for function: " + e.funcName);
+        // vectorFunction may be null when VectorFunction registry was not yet initialized
+        // at FuncExpr construction time. Try a lazy lookup now.
+        std::vector<DataTypeId> argTypes(e.arguments.size());
+        std::transform(e.arguments.begin(), e.arguments.end(), argTypes.begin(),
+            [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
+        auto signature = std::make_shared<codegen::FunctionSignature>(e.funcName, argTypes, e.dataType->GetId());
+        auto resolved = VectorFunction::Find(signature);
+        if (resolved != nullptr) {
+            const_cast<FuncExpr &>(e).vectorFunction = resolved;
+        } else {
+            OMNI_THROW("Vectorization Error:", "Vector function not found for function: " + e.funcName);
+        }
     }
     
     // Special handling for CAST from Decimal types to preserve scale information
@@ -514,7 +548,8 @@ void ExprEval::Visit(const SwitchExpr &e) {}
 void ExprEval::Visit(const ParamRefExpr &e) {
     int32_t paramIdx = paramNameToIdxMap[e.paramName_];
     vec::BaseVector *paramVec = lambdaParams_.at(paramIdx);
-    inputValues_.push(paramVec);
+    vec::BaseVector *toPush = paramVec->Slice(0, paramVec->GetSize());
+    inputValues_.push(toPush != nullptr ? toPush : paramVec);
 }
 
 void ExprEval::Visit(const LambdaExpr &e) {

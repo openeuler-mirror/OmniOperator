@@ -1,5 +1,5 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: Max by aggregate
  */
 
@@ -16,15 +16,19 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ExtractValues(const AggregateState *stat
     if (this->outputPartial) {
         auto *maxByState = MaxByState<targetValueType, sortKeyType>::ConstCastState(state + aggStateOffset);
 
+        auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
+        auto sortKeyVector = static_cast<sortKeyTypeVec *>(vectors[1]);
         if (maxByState->isEmpty) {
-            // no partial result
+            targetValueVector->SetNull(rowIndex);
+            sortKeyVector->SetNull(rowIndex);
             return;
         }
 
-        auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
-        auto sortKeyVector = static_cast<sortKeyTypeVec *>(vectors[1]);
-
-        targetValueVector->SetValue(rowIndex, maxByState->targetValue);
+        if (maxByState->targetIsNull) {
+            targetValueVector->SetNull(rowIndex);
+        } else {
+            targetValueVector->SetValue(rowIndex, maxByState->targetValue);
+        }
         sortKeyVector->SetValue(rowIndex, maxByState->sortKey);
     } else {
         // final output, only one col
@@ -32,6 +36,10 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ExtractValues(const AggregateState *stat
         auto targetValueVector = static_cast<targetValueTypeVec *>(vectors[0]);
         if (maxByState->isEmpty) {
             // max_by empty table，final result is null
+            targetValueVector->SetNull(rowIndex);
+            return;
+        }
+        if (maxByState->targetIsNull) {
             targetValueVector->SetNull(rowIndex);
             return;
         }
@@ -49,10 +57,15 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ExtractValuesBatch(std::vector<Aggregate
         for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
             auto *maxByState = MaxByState<targetValueType, sortKeyType>::ConstCastState(groupStates[rowIndex] + aggStateOffset);
             if (maxByState->isEmpty) {
-                // no partial result
+                targetValueVector->SetNull(rowIndex);
+                sortKeyVector->SetNull(rowIndex);
                 continue;
             }
-            targetValueVector->SetValue(rowIndex, maxByState->targetValue);
+            if (maxByState->targetIsNull) {
+                targetValueVector->SetNull(rowIndex);
+            } else {
+                targetValueVector->SetValue(rowIndex, maxByState->targetValue);
+            }
             sortKeyVector->SetValue(rowIndex, maxByState->sortKey);
         }
     } else {
@@ -62,6 +75,10 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ExtractValuesBatch(std::vector<Aggregate
             auto *maxByState = MaxByState<targetValueType, sortKeyType>::ConstCastState(groupStates[rowIndex] + aggStateOffset);
             if (maxByState->isEmpty) {
                 // max_by empty table，final result is null
+                targetValueVector->SetNull(rowIndex);
+                continue;
+            }
+            if (maxByState->targetIsNull) {
                 targetValueVector->SetNull(rowIndex);
                 continue;
             }
@@ -95,7 +112,11 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ExtractValuesForSpill(std::vector<Aggreg
 			targetValueVector->SetNull(rowIndex);
             continue;
         }
-        targetValueVector->SetValue(rowIndex, maxByState->targetValue);
+        if (maxByState->targetIsNull) {
+            targetValueVector->SetNull(rowIndex);
+        } else {
+            targetValueVector->SetValue(rowIndex, maxByState->targetValue);
+        }
         sortKeyVector->SetValue(rowIndex, maxByState->sortKey);
     }
 }
@@ -104,6 +125,7 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> void MaxByAggregator<COL1_ID, 
 {
     auto *maxByState = MaxByState<targetValueType, sortKeyType>::CastState(state + aggStateOffset);
     maxByState->isEmpty = true;
+    maxByState->targetIsNull = false;
     maxByState->sortKey = GetSortKeyMin<sortKeyType>();
 }
 
@@ -113,6 +135,7 @@ void MaxByAggregator<COL1_ID, COL2_ID>::InitStates(std::vector<AggregateState *>
     for (auto groupState : groupStates) {
         auto *maxByState = MaxByState<targetValueType, sortKeyType>::CastState(groupState + aggStateOffset);
         maxByState->isEmpty = true;
+        maxByState->targetIsNull = false;
         maxByState->sortKey = GetSortKeyMin<sortKeyType>();
     }
 }
@@ -126,10 +149,7 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
 
-    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
     auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
-
-    col1ptr += rowOffset;
     col2ptr += rowOffset;
 
     int col1Size = col1Vector->GetSize();
@@ -140,11 +160,19 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
         throw omniruntime::exception::OmniException("Error in MaxByAggregator::ProcessSingleInternal():", omniExceptionInfo);
     }
 
+    auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
+    col1ptr += rowOffset;
     for (int i = 0; i < col2Size; i++) {
+        if (col2Vector->IsNull(rowOffset + i)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
         if (col2ptr[i] >= maxByState->sortKey) {
             maxByState->isEmpty = false;
             maxByState->sortKey = col2ptr[i];
-            maxByState->targetValue = col1ptr[i];
+            maxByState->targetIsNull = col1Vector->IsNull(rowOffset + i);
+            if (!maxByState->targetIsNull) {
+                maxByState->targetValue = col1ptr[i];
+            }
         }
     }
 }
@@ -175,11 +203,17 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
     }
 
     for (size_t i = 0; i < rowCount; i++) {
+        if (col2Vector->IsNull(rowOffset + i)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
         auto *maxByState = MaxByState<targetValueType, sortKeyType>::CastState(rowStates[i] + aggStateOffset);
         if (col2ptr[i] >= maxByState->sortKey) {
             maxByState->isEmpty = false;
             maxByState->sortKey = col2ptr[i];
-            maxByState->targetValue = col1ptr[i];
+            maxByState->targetIsNull = col1Vector->IsNull(rowOffset + i);
+            if (!maxByState->targetIsNull) {
+                maxByState->targetValue = col1ptr[i];
+            }
         }
     }
 }
@@ -195,22 +229,20 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessGroupUnspill(std::vector<UnspillR
         auto batch = row.batch;
         auto index = row.rowIdx;
         auto targetValueVector = static_cast<targetValueTypeVec *>(batch->Get(targetValueVecIdx));
-        if (!targetValueVector->IsNull(index)) {
-            // take value from state
-            auto targetValue = targetValueVector->GetValue(index);
-            auto sortKeyVector = static_cast<sortKeyTypeVec *>(batch->Get(sortKeyVecIdx));
-
-            // take key from state
-            auto sortKey = sortKeyVector->GetValue(index);
-
-            auto *state = MaxByState<targetValueType, sortKeyType>::CastState(row.state + aggStateOffset);
-
-            // cunstruct state
-            if (sortKey >= state->sortKey) {
-                state->isEmpty = false;
-                state->sortKey = sortKey;
-                state->targetValue = targetValue;
-            }
+        auto *state = MaxByState<targetValueType, sortKeyType>::CastState(row.state + aggStateOffset);
+        auto sortKeyVector = static_cast<sortKeyTypeVec *>(batch->Get(sortKeyVecIdx));
+        if (sortKeyVector->IsNull(index)) {
+            continue;  // Spark: NULL values are ignored from processing by aggregate functions
+        }
+        if (targetValueVector->IsNull(index)) {
+            continue;  // Spark: only consider rows with non-null target; skip null target row
+        }
+        auto sortKey = sortKeyVector->GetValue(index);
+        if (sortKey >= state->sortKey) {
+            state->isEmpty = false;
+            state->sortKey = sortKey;
+            state->targetIsNull = false;
+            state->targetValue = targetValueVector->GetValue(index);
         }
     }
 }
@@ -372,6 +404,25 @@ template class MaxByAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>;
 template class MaxByAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>;
 
 template class MaxByAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>;
+
+// COL2 = OMNI_BYTE
+template class MaxByAggregator<OMNI_BOOLEAN, OMNI_BYTE>;
+template class MaxByAggregator<OMNI_BYTE, OMNI_BOOLEAN>;
+template class MaxByAggregator<OMNI_BYTE, OMNI_BYTE>;
+template class MaxByAggregator<OMNI_BYTE, OMNI_SHORT>;
+template class MaxByAggregator<OMNI_BYTE, OMNI_INT>;
+template class MaxByAggregator<OMNI_BYTE, OMNI_LONG>;
+template class MaxByAggregator<OMNI_BYTE, OMNI_FLOAT>;
+template class MaxByAggregator<OMNI_BYTE, OMNI_DOUBLE>;
+template class MaxByAggregator<OMNI_BYTE, OMNI_DECIMAL64>;
+template class MaxByAggregator<OMNI_BYTE, OMNI_DECIMAL128>;
+template class MaxByAggregator<OMNI_SHORT, OMNI_BYTE>;
+template class MaxByAggregator<OMNI_INT, OMNI_BYTE>;
+template class MaxByAggregator<OMNI_LONG, OMNI_BYTE>;
+template class MaxByAggregator<OMNI_FLOAT, OMNI_BYTE>;
+template class MaxByAggregator<OMNI_DOUBLE, OMNI_BYTE>;
+template class MaxByAggregator<OMNI_DECIMAL64, OMNI_BYTE>;
+template class MaxByAggregator<OMNI_DECIMAL128, OMNI_BYTE>;
 
 } // namespace op
 } // namespace omniruntime

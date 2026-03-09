@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: visitor class for expressions
  */
 
@@ -66,14 +66,26 @@ namespace omniruntime::vectorization {
             }
 
             if (arrRowSize == 0 || srcArrVec->GetNullCount() == arrRowSize) {
-                VectorHelper::EmptyArrayProjection(dstArrVec, srcEleTypeId);
+                if (srcEleTypeId == OMNI_ARRAY) {
+                    auto emptyInnerVec = new ArrayVector(0);
+                    dstArrVec->SetElementVector(std::shared_ptr<BaseVector>(emptyInnerVec));
+                } else {
+                    VectorHelper::EmptyArrayProjection(dstArrVec, srcEleTypeId);
+                }
+                delete srcArrVec;
                 return;
             }
 
             BaseVector *flatElementVec = srcArrVec->GetElementVector().get();
             flatElementVec->SetIsField(true);
             if (flatElementVec == nullptr || flatElementVec->GetSize() == 0) {
-                VectorHelper::EmptyArrayProjection(dstArrVec, srcEleTypeId);
+                if (srcEleTypeId == OMNI_ARRAY) {
+                    auto emptyInnerVec = new ArrayVector(0);
+                    dstArrVec->SetElementVector(std::shared_ptr<BaseVector>(emptyInnerVec));
+                } else {
+                    VectorHelper::EmptyArrayProjection(dstArrVec, srcEleTypeId);
+                }
+                delete srcArrVec;
                 return;
             }
 
@@ -86,6 +98,7 @@ namespace omniruntime::vectorization {
             context->SetResultRowSize(dstArrVec->GetSize());
             BaseVector *flatResultVec = lambdaEval.GetResult();
             if (flatResultVec == nullptr) {
+                delete srcArrVec;
                 throw OmniException("TRANSFORM_ERROR", "Lambda execute return null result");
             }
 

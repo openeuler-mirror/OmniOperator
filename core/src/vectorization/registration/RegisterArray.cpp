@@ -12,6 +12,8 @@
 #include "vectorization/functions/ArrayMinMaxFunction.h"
 #include "vectorization/functions/ArrayCompactFunction.h"
 #include "vectorization/functions/ArrayContainsFunction.h"
+#include "vectorization/functions/ArrayRepeatFunction.h"
+#include "vectorization/functions/ArrayRemoveFunction.h"
 
 namespace omniruntime::vectorization {
 
@@ -97,5 +99,104 @@ void RegisterArrayFunctions(const std::string &prefix)
         std::make_shared<ArrayContainsFunction>());
     VectorFunction::RegisterVectorFunction("array_contains", {OMNI_ARRAY, OMNI_BOOLEAN}, OMNI_BOOLEAN,
         std::make_shared<ArrayContainsFunction>());
+
+    // Register array_repeat function for all supported element types
+    // array_repeat(element T, count INT) -> array<T>
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_BYTE, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_SHORT, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_INT, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_LONG, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_FLOAT, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_DOUBLE, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_BOOLEAN, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_DECIMAL128, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_VARCHAR, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_CHAR, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_VARBINARY, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_DATE32, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_TIMESTAMP, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_DECIMAL64, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_NONE, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+
+    // Register array_repeat with OMNI_BOOLEAN count type for NULL literal handling
+    // When Substrait encodes NULL count (kNothing type), it maps to OMNI_BOOLEAN
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_BYTE, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_SHORT, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_INT, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_LONG, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_FLOAT, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_DOUBLE, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_BOOLEAN, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_DECIMAL128, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_VARCHAR, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_CHAR, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_VARBINARY, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_DATE32, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_TIMESTAMP, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_DECIMAL64, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+    VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_NONE, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRepeatFunction>());
+
+    // Register array_remove function for all supported element types
+    // array_remove(array<T>, T) -> array<T>: Remove all elements equal to a given value from an array
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_BYTE}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_SHORT}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_LONG}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_FLOAT}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_DOUBLE}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_DECIMAL128}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_VARCHAR}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_CHAR}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_VARBINARY}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_DATE32}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_TIMESTAMP}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_DECIMAL64}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
+    VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_NONE}, OMNI_ARRAY,
+        std::make_shared<ArrayRemoveFunction>());
 }
 }

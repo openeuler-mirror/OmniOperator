@@ -167,9 +167,32 @@ std::vector<DataTypePtr> CovarPopAggregator<IN_ID, OUT_ID>::GetSpillType() {
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CovarPopAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &,
-    std::vector<BaseVector *> &) {
-    throw OmniException("OPERATOR_RUNTIME_ERROR", "CovarPop aggregator spill not supported.");
+void CovarPopAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
+    std::vector<BaseVector *> &vectors) {
+    const int32_t rowCount = static_cast<int32_t>(groupStates.size());
+    auto *vN = reinterpret_cast<Vector<double> *>(vectors[0]);
+    auto *vXAvg = reinterpret_cast<Vector<double> *>(vectors[1]);
+    auto *vYAvg = reinterpret_cast<Vector<double> *>(vectors[2]);
+    auto *vCk = reinterpret_cast<Vector<double> *>(vectors[3]);
+    for (int32_t i = 0; i < rowCount; i++) {
+        auto *s = CovarPartialState::CastState(groupStates[i] + aggStateOffset);
+        if (s->IsEmpty()) {
+            vN->SetNull(i);
+            vXAvg->SetNull(i);
+            vYAvg->SetNull(i);
+            vCk->SetNull(i);
+        } else if (s->IsOverFlowed()) {
+            vN->SetNull(i);
+            vXAvg->SetNull(i);
+            vYAvg->SetNull(i);
+            vCk->SetNull(i);
+        } else {
+            vN->SetValue(i, static_cast<double>(s->count));
+            vXAvg->SetValue(i, s->meanX);
+            vYAvg->SetValue(i, s->meanY);
+            vCk->SetValue(i, s->c2);
+        }
+    }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>

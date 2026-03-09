@@ -18,13 +18,14 @@
 namespace omniruntime::vectorization {
 void RegisterStringFunctions(const std::string &prefix)
 {
-    RegisterString<StartsWithFunction>({prefix + "startswith"});
+    RegisterString<StartsWithFunction>({prefix + "StartsWith"});
     RegisterString<ContainsFunction>({prefix + "Contains"});
     RegisterFunction<TrimFunction, std::string, std::string_view>(prefix + "Trim", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<TrimWithCharsFunction, std::string, std::string_view, std::string_view>(
         prefix + "Trim", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<SoundexFunction, std::string, std::string_view>(prefix + "soundex", {OMNI_VARCHAR}, OMNI_VARCHAR);
 
     // char_length / character_length / length(string) -> integer (character count, Unicode-aware)
     RegisterFunction<CharLengthFunction, int32_t, std::string_view>(prefix + "length", {OMNI_VARCHAR}, OMNI_INT);
@@ -194,5 +195,30 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "translate", {OMNI_VARCHAR, OMNI_CHAR, OMNI_CHAR}, OMNI_VARCHAR);
     RegisterFunction<TranslateFunction, std::string, std::string_view, std::string_view, std::string_view>(
         prefix + "translate", {OMNI_CHAR, OMNI_CHAR, OMNI_CHAR}, OMNI_VARCHAR);
+
+    // find_in_set(str, strArray) -> integer
+    // Returns 1-based index of str in comma-delimited strArray, 0 if not found.
+    RegisterFunction<FindInSetFunction, int32_t, std::string_view, std::string_view>(
+        prefix + "find_in_set", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_INT);
+
+    // initcap(string) -> string
+    // Capitalizes the first letter of each word; lowercases the rest.
+    // Word boundaries are whitespace characters (Spark SQL semantics).
+    RegisterFunction<InitCapFunction, std::string, std::string_view>(prefix + "initcap", {OMNI_VARCHAR}, OMNI_VARCHAR);
+
+    // levenshtein(left, right) -> integer
+    // levenshtein(left, right, threshold) -> integer
+    // Computes Levenshtein edit distance between two strings.
+    RegisterFunction<LevenshteinDistanceFunction, int32_t, std::string_view, std::string_view>(
+        prefix + "levenshtein", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_INT);
+    // 3-arg with threshold
+    RegisterFunction<LevenshteinDistanceFunction, int32_t, std::string_view, std::string_view, int32_t>(
+        prefix + "levenshtein", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_INT);
+    RegisterFunction<LevenshteinDistanceFunction, int32_t, std::string_view, std::string_view, int64_t>(
+        prefix + "levenshtein", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_LONG}, OMNI_INT);
+
+    RegisterFunction<Sha1HexStringFunction, std::string, std::string_view>(prefix + "sha1", {OMNI_VARBINARY}, OMNI_VARCHAR);
+    RegisterFunction<Sha2HexStringFunction, std::string, std::string_view, int32_t>(prefix + "sha2", {OMNI_VARBINARY, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<Md5Function, std::string, std::string_view>(prefix + "Md5", {OMNI_VARBINARY}, OMNI_VARCHAR);
 }
 }

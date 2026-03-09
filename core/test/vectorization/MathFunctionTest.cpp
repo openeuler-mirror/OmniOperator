@@ -303,6 +303,57 @@ TEST(MathFunctionsTest, AcoshDouble) {
     delete context;
 }
 
+// Test abs function
+TEST(MathFunctionsTest, AbsByte) {
+    std::vector<int8_t> inputData = {1, 0, 0, -5, -1};
+    std::vector<int8_t> expectedResults;
+    for (int8_t x : inputData) {
+        expectedResults.push_back(std::abs(x));
+    }
+    TestUnaryMathOperation<int8_t, OMNI_BYTE, OMNI_BYTE>("abs", inputData, expectedResults);
+}
+TEST(MathFunctionsTest, AbsShort) {
+    std::vector<int16_t> inputData = {1, 5, 0, -5, -1};
+    std::vector<int16_t> expectedResults;
+    for (int16_t x : inputData) {
+        expectedResults.push_back(std::abs(x));
+    }
+    TestUnaryMathOperation<int16_t, OMNI_SHORT, OMNI_SHORT>("abs", inputData, expectedResults);
+}
+TEST(MathFunctionsTest, AbsInt) {
+    std::vector<int32_t> inputData = {1, 5, 0, -5, -1};
+    std::vector<int32_t> expectedResults;
+    for (int32_t x : inputData) {
+        expectedResults.push_back(std::abs(x));
+    }
+    TestUnaryMathOperation<int32_t, OMNI_INT, OMNI_INT>("abs", inputData, expectedResults);
+}
+TEST(MathFunctionsTest, AbsLong) {
+    std::vector<int64_t> inputData = {1, 5, 0, -5, -1};
+    std::vector<int64_t> expectedResults;
+    for (int64_t x : inputData) {
+        expectedResults.push_back(std::abs(x));
+    }
+    TestUnaryMathOperation<int64_t, OMNI_LONG, OMNI_LONG>("abs", inputData, expectedResults);
+}
+TEST(MathFunctionsTest, AbsFloat) {
+    std::vector<float> inputData = {1.0, 0.5, 0.0, -0.5, -1.0};
+    std::vector<float> expectedResults;
+    for (float x : inputData) {
+        expectedResults.push_back(std::abs(x));
+    }
+    TestUnaryMathOperation<float, OMNI_FLOAT, OMNI_FLOAT>("abs", inputData, expectedResults);
+}
+
+TEST(MathFunctionsTest, AbsDouble) {
+    std::vector<double> inputData = {1.0, 0.5, 0.0, -0.5, -1.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::abs(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("abs", inputData, expectedResults);
+}
+
 // Test acos function
 TEST(MathFunctionsTest, AcosDouble) {
     std::vector<double> inputData = {1.0, 0.5, 0.0, -0.5, -1.0};

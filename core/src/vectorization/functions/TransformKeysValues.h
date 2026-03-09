@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: visitor class for expressions
  */
 
@@ -56,6 +56,7 @@ namespace omniruntime::vectorization {
 
             if (mapRowSize == 0 || srcMapVec->GetNullCount() == mapRowSize) {
                 VectorHelper::EmptyMapProjection(dstMapVec, srcKeyEleTypeId, srcValueEleTypeId);
+                delete srcMapVec;
                 return;
             }
 
@@ -66,6 +67,7 @@ namespace omniruntime::vectorization {
             if (keyElementVec == nullptr || keyElementVec->GetSize() == 0 ||
                 valueElementVec == nullptr || valueElementVec->GetSize() == 0) {
                 VectorHelper::EmptyMapProjection(dstMapVec, srcKeyEleTypeId, srcValueEleTypeId);
+                delete srcMapVec;
                 return;
             }
             keyElementVec->SetIsField(true);
@@ -81,6 +83,7 @@ namespace omniruntime::vectorization {
             context->SetResultRowSize(mapRowSize);
             BaseVector *flatResultVec = lambdaEval.GetResult();
             if (flatResultVec == nullptr) {
+                delete srcMapVec;
                 throw OmniException("TRANSFORM_ERROR", "Lambda execute return null result");
             }
 

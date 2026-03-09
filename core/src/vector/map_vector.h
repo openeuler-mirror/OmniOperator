@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: MapVector  implementation
  */
 
@@ -47,6 +47,8 @@ public:
         return offsets[index];
     }
 
+    using BaseVector::GetSize;
+
     int64_t GetSize(int64_t index)
     {
         return offsets[index + 1] - offsets[index];
@@ -62,7 +64,7 @@ public:
         return values;
     }
 
-    void Append(MapVector* other, int32_t offset);
+    void SetValue(int index, MapVector* value);
 
     std::vector<DataTypeId> ALWAYS_INLINE GetTypeIds() const override
     {
@@ -87,6 +89,12 @@ public:
     void SetSize(int32_t index, int32_t size)
     {
         offsets[index + 1] = offsets[index] + size;
+    }
+
+    void ALWAYS_INLINE SetNull(int64_t index)
+    {
+        BaseVector::SetNull(index);
+        SetSize(index, 0);
     }
 
     void AddKeys(BaseVector* addedKeys)
@@ -139,12 +147,6 @@ public:
         }
     }
 
-    void ALWAYS_INLINE SetNull(int64_t index)
-    {
-        BaseVector::SetNull(index);
-        SetSize(index, 0);
-    }
-
     void Expand(int32_t needCapacity) override
     {
         if (needCapacity <= size) {
@@ -184,6 +186,9 @@ public:
         capacity = newCapacity;
         size = needCapacity;
     }
+
+    void Append(MapVector* other, int32_t offset);
+    void Append(BaseVector *other, int positionOffset, int length);
 
 protected:
     int64_t* offsets;

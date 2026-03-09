@@ -26,6 +26,8 @@ static bool HasArgument(int32_t functionType)
         case OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL:
         case OMNI_AGGREGATION_TYPE_LAST_INCLUDENULL:
         case OMNI_AGGREGATION_TYPE_LAST_IGNORENULL:
+        case OMNI_WINDOW_TYPE_LEAD:
+        case OMNI_WINDOW_TYPE_LAG:
             return true;
         default:
             return false;
@@ -51,6 +53,12 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     for (int i = 0; i < windowFunctionCount; ++i) {
         if (HasArgument(windowFunctionTypes[i])) {
             fullArgumentChannels.push_back(this->argumentChannels[position++]);
+            if ((windowFunctionTypes[i] == OMNI_WINDOW_TYPE_LEAD ||
+                 windowFunctionTypes[i] == OMNI_WINDOW_TYPE_LAG) &&
+                windowFrameEndChannelsField[i] == -2 &&
+                position < static_cast<int>(this->argumentChannels.size())) {
+                windowFrameEndChannelsField[i] = this->argumentChannels[position++];
+            }
         } else {
             fullArgumentChannels.push_back(-1);
             if (windowFunctionTypes[i] == OMNI_AGGREGATION_TYPE_COUNT_ALL) {

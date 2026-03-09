@@ -83,8 +83,8 @@ template <type::DataTypeId OmniId> ALWAYS_INLINE void NewUniqueComplexVector(Dat
 
 const std::vector<NewUniqueComplexVectorFunction> newUniqueComplexVectorFunctions {
     NewUniqueComplexVector<OMNI_ARRAY>,      // OMNI_ARRAY
-    nullptr,                                 // OMNI_MAP
-    nullptr,                                 // OMNI_ROW
+    NewUniqueComplexVector<OMNI_MAP>,        // OMNI_MAP
+    NewUniqueComplexVector<OMNI_ROW>,        // OMNI_ROW
 };
 
 const std::vector<NewUniqueVectorFunction> newUniqueVectorFunctions {

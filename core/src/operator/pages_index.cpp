@@ -6,6 +6,7 @@
 #include <cstring>
 #include "vector/vector.h"
 #include "vector/array_vector.h"
+#include "vector/map_vector.h"
 #include "type/data_type.h"
 #include "radix_sort.h"
 #include "pages_index.h"
@@ -1760,6 +1761,11 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                     outputIndex);
                 break;
             }
+            case OMNI_MAP: {
+                ConstructVector<OMNI_MAP>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
+                break;
+            }
             default:
                 break;
         }
@@ -1851,7 +1857,29 @@ static ALWAYS_INLINE void SetValueRow(BaseVector *inputVector, int32_t inputInde
     delete slice;
 }
 
-// Scalar/ARRAY path: uses NativeType<dataTypeId>::type. Never instantiated for OMNI_ROW.
+template <bool hasNull, bool hasDictionary>
+static ALWAYS_INLINE void SetValueMap(BaseVector *inputVector, int32_t inputIndex, BaseVector *outputVector,
+    int32_t outputIndex)
+{
+    if constexpr (hasNull) {
+        if (UNLIKELY(inputVector->IsNull(inputIndex))) {
+            static_cast<MapVector *>(outputVector)->SetNull(outputIndex);
+            return;
+        }
+    }
+    auto *inputMap = static_cast<MapVector *>(inputVector);
+    auto *outputMap = static_cast<MapVector *>(outputVector);
+    auto *slice = inputMap->Slice(inputIndex, 1, false);
+    auto keyCount = static_cast<int32_t>(slice->GetOffset(1) - slice->GetOffset(0));
+    auto dstOffset = static_cast<int32_t>(outputMap->GetOffset(outputIndex));
+    outputMap->SetOffset(outputIndex + 1, dstOffset + keyCount);
+    if (keyCount > 0) {
+        outputMap->Append(slice, dstOffset);
+    }
+    delete slice;
+}
+
+// Scalar/ARRAY path: uses NativeType<dataTypeId>::type. Never instantiated for OMNI_ROW or OMNI_MAP.
 template <type::DataTypeId dataTypeId, bool hasNull, bool hasDictionary>
 static ALWAYS_INLINE void SetValueNonRow(BaseVector *inputVector, int32_t inputIndex, BaseVector *outputVector,
     int32_t outputIndex)
@@ -1909,6 +1937,8 @@ static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, 
 {
     if constexpr (dataTypeId == OMNI_ROW) {
         SetValueRow<hasNull, hasDictionary>(inputVector, inputIndex, outputVector, outputIndex);
+    } else if constexpr (dataTypeId == OMNI_MAP) {
+        SetValueMap<hasNull, hasDictionary>(inputVector, inputIndex, outputVector, outputIndex);
     } else {
         SetValueNonRow<dataTypeId, hasNull, hasDictionary>(inputVector, inputIndex, outputVector, outputIndex);
     }

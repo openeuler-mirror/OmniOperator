@@ -6,6 +6,10 @@
 #define OMNI_RUNTIME_AGGREGATOR_FACTORY_H
 
 #include "all_aggregators.h"
+#include "maxby_complex_aggregator.h"
+#include "maxby_complex_varchar_aggregator.h"
+#include "minby_complex_aggregator.h"
+#include "minby_complex_varchar_aggregator.h"
 #include "util/config_util.h"
 #include "operator/util/function_type.h"
 
@@ -134,6 +138,12 @@ protected:
                     outputPartial, isOverflowAsNull);
             case OMNI_ARRAY:
                 return T<OMNI_ARRAY, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_MAP:
+                return T<OMNI_MAP, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_ROW:
+                return T<OMNI_ROW, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
             case OMNI_NONE:
                 return T<OMNI_NONE, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
@@ -341,6 +351,27 @@ public:
         std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override;
 };
 
+class RegrAggregatorFactory : public AggregatorFactory {
+public:
+    explicit RegrAggregatorFactory(FunctionType aggregateType) : aggregateType(aggregateType) {}
+    ~RegrAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+
+private:
+    FunctionType aggregateType;
+};
+
+class RegrReplacementAggregatorFactory : public AggregatorFactory {
+public:
+    RegrReplacementAggregatorFactory() = default;
+    ~RegrReplacementAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+};
+
 class MinAggregatorFactory : public TypedAggregatorFactory<MinAggregator> {
 public:
     MinAggregatorFactory() : TypedAggregatorFactory<MinAggregator>() {}
@@ -457,7 +488,15 @@ protected:
             case OMNI_CHAR:
                 return MinByAggregator<OMNI_CHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_ARRAY:
-                return MinByAggregator<OMNI_ARRAY, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_MAP:
+            case OMNI_ROW:
+                if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR) {
+                    return MinByComplexVarcharAggregator<COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes),
+                        channels, inputRaw, outputPartial, isOverflowAsNull, col1Id);
+                } else {
+                    return MinByComplexAggregator<COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes),
+                        channels, inputRaw, outputPartial, isOverflowAsNull, col1Id);
+                }
             case OMNI_NONE:
                 return MinByAggregator<OMNI_NONE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             default:
@@ -552,7 +591,15 @@ protected:
             case OMNI_CHAR:
                 return MaxByAggregator<OMNI_CHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_ARRAY:
-                return MaxByAggregator<OMNI_ARRAY, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_MAP:
+            case OMNI_ROW:
+                if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR) {
+                    return MaxByComplexVarcharAggregator<COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes),
+                        channels, inputRaw, outputPartial, isOverflowAsNull, col1Id);
+                } else {
+                    return MaxByComplexAggregator<COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes),
+                        channels, inputRaw, outputPartial, isOverflowAsNull, col1Id);
+                }
             case OMNI_NONE:
                 return MaxByAggregator<OMNI_NONE, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             default:
@@ -584,6 +631,16 @@ class ApproxCountDistinctAggregatorFactory : public AggregatorFactory {
   public:
     ApproxCountDistinctAggregatorFactory() = default;
     ~ApproxCountDistinctAggregatorFactory() override = default;
+
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+};
+
+class ApproxPercentileAggregatorFactory : public AggregatorFactory {
+public:
+    ApproxPercentileAggregatorFactory() = default;
+    ~ApproxPercentileAggregatorFactory() override = default;
 
     std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,

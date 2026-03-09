@@ -20,6 +20,8 @@
 #include "util/config_util.h"
 #include "vector/vector_helper.h"
 #include "util/cache_map.h"
+#include "expression/expressions.h"
+#include <vector>
 
 namespace omniruntime::codegen {
 using namespace omniruntime::expressions;
@@ -150,6 +152,8 @@ private:
     bool isColumnProjection = false;
     int columnProjectionIndex = -1;
     bool isConstantProjection = false;
+    bool isConstantArrayProjection = false;
+    std::vector<double> constantArrayValues;
     LiteralValue literalVal;
     DataTypePtr outType;
     ProjFunc projector;
@@ -194,6 +198,8 @@ private:
     bool NullColumnProjection(ExecutionContext *context, BaseVector *outVec);
 
     bool ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec);
+
+    BaseVector *ConstantArrayProjection(int32_t numSelectedRows) const;
 
     template <typename T> void SetConstantValues(T &value, BaseVector *outVec);
 };
