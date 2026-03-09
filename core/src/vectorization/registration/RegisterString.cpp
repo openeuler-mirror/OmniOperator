@@ -18,7 +18,7 @@
 namespace omniruntime::vectorization {
 void RegisterStringFunctions(const std::string &prefix)
 {
-    RegisterString<StartsWithFunction>({prefix + "startswith"});
+    RegisterString<StartsWithFunction>({prefix + "StartsWith"});
     RegisterString<ContainsFunction>({prefix + "Contains"});
     RegisterFunction<TrimFunction, std::string, std::string_view>(prefix + "Trim", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<TrimWithCharsFunction, std::string, std::string_view, std::string_view>(
