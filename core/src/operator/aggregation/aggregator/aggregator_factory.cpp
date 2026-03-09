@@ -34,8 +34,8 @@ static type::DataTypeId GetCollectListElementTypeId(const type::DataTypes &input
     const type::DataTypePtr &inputType = inputTypes.GetType(0);
     type::DataTypeId inputTypeId = inputType->GetId();
     if (inputRaw) {
-        if (inputTypeId == type::OMNI_ARRAY) {
-            return inputType->asArray().ElementType()->GetId();
+        if (inputTypeId == type::OMNI_ARRAY || inputTypeId == type::OMNI_MAP || inputTypeId == type::OMNI_ROW) {
+            return inputTypeId;
         }
         return inputTypeId;
     }
@@ -161,6 +161,10 @@ std::unique_ptr<Aggregator> CollectListAggregatorFactory::CreateAggregator(const
         case type::OMNI_CHAR:
         case type::OMNI_VARBINARY:
             return std::make_unique<CollectListVarcharAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+        case type::OMNI_ARRAY:
+        case type::OMNI_MAP:
+        case type::OMNI_ROW:
+            return CollectListComplexAggregator::Create(inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull, elementTypeId);
         default: {
             std::string omniExceptionInfo =
                 "CollectList unsupported element type " + std::to_string(elementTypeId);

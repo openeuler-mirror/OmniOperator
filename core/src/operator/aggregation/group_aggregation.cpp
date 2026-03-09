@@ -496,6 +496,11 @@ void SetArrayVector(VectorBatch *vecBatch, DataTypePtr elementType, int32_t rowC
         case type::OMNI_VARBINARY:
             elementVector = std::make_shared<Vector<LargeStringContainer<std::string_view>>>(0);
             break;
+        case type::OMNI_ARRAY:
+        case type::OMNI_MAP:
+        case type::OMNI_ROW:
+            elementVector = std::shared_ptr<BaseVector>(VectorHelper::CreateComplexVector(elementType.get(), 0));
+            break;
         default:
             throw omniruntime::exception::OmniException("Set ArrayVector error, unsupport element type:", std::to_string(elemTypeId));
     }
