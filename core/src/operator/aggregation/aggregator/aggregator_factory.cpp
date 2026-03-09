@@ -990,7 +990,8 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateAggregator(const DataT
                 outputPartial, isOverflowAsNull);
         }
         case OMNI_VARCHAR:
-        case OMNI_CHAR: {
+        case OMNI_CHAR:
+        case OMNI_VARBINARY: {
             return CreateFirstAggregatorHelper<std::string_view>(aggregateType, inputTypes, outputTypes, channels,
                 inputRaw, outputPartial, isOverflowAsNull);
         }
@@ -1089,7 +1090,8 @@ std::unique_ptr<Aggregator> LastAggregatorFactory::CreateAggregator(const DataTy
                 outputPartial, isOverflowAsNull);
         }
         case OMNI_VARCHAR:
-        case OMNI_CHAR: {
+        case OMNI_CHAR:
+        case OMNI_VARBINARY: {
             return CreateLastAggregatorHelper<std::string_view>(aggregateType, inputTypes, outputTypes, channels,
                 inputRaw, outputPartial, isOverflowAsNull);
         }

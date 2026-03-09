@@ -76,11 +76,11 @@ public:
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
-        if constexpr (!(IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR)) {
+        if constexpr (!(IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR || IN_ID == OMNI_VARBINARY)) {
             LogError("Error in max_varchar aggregator: Unsupported input type %s",
                 TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
-        } else if constexpr (!(OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)) {
+        } else if constexpr (!(OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_VARBINARY)) {
             LogError("Error in max_varchar aggregator: Unsupported output type %s",
                 TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
