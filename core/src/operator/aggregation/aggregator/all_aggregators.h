@@ -41,6 +41,7 @@
 #include "operator/aggregation/aggregator/collect_set_varchar_aggregator.h"
 #include "operator/aggregation/aggregator/collect_list_aggregator.h"
 #include "operator/aggregation/aggregator/collect_list_varchar_aggregator.h"
+#include "operator/aggregation/aggregator/collect_list_complex_aggregator.h"
 #include "operator/aggregation/aggregator/kurtosis_aggregator.h"
 #include "operator/aggregation/aggregator/skewness_aggregator.h"
 #include "operator/aggregation/aggregator/regr_aggregator.h"
