@@ -185,16 +185,39 @@ void ExprEval::Visit(const LiteralExpr &e)
             case OMNI_VARBINARY:
                 constVec = new ConstVector(std::string_view(*e.stringVal), typeId);
                 break;
+            case OMNI_ARRAY:
+            case OMNI_MAP:
+            case OMNI_ROW:
+            case OMNI_NONE: {
+                auto *nullArrayVec = new ArrayVector(1);
+                auto emptyElements = std::shared_ptr<BaseVector>(
+                    VectorHelper::CreateFlatVector(static_cast<int32_t>(OMNI_INT), 0));
+                nullArrayVec->SetElementVector(emptyElements);
+                nullArrayVec->SetNull(0);
+                constVec = nullArrayVec;
+                break;
+            }
             default: LogError("Do not support such vector type %d", typeIds[e.dataType->GetId()]);
         }
-        // Handle NULL literal by setting the null flag on the ConstVector
         if (constVec != nullptr && e.isNull) {
             constVec->SetNull(0);
         }
         inputValues_.push(constVec);
         return;
     }
-    BaseVector *outVec = VectorHelper::CreateFlatVector(e.dataType->GetId(), rowSize);
+    auto typeId = e.dataType->GetId();
+    if (typeId == OMNI_ARRAY || typeId == OMNI_MAP || typeId == OMNI_ROW || typeId == OMNI_NONE) {
+        auto *arrayVec = new ArrayVector(rowSize);
+        auto emptyElements = std::shared_ptr<BaseVector>(
+            VectorHelper::CreateFlatVector(static_cast<int32_t>(OMNI_INT), 0));
+        arrayVec->SetElementVector(emptyElements);
+        for (int32_t i = 0; i < rowSize; ++i) {
+            arrayVec->SetNull(i);
+        }
+        inputValues_.push(arrayVec);
+        return;
+    }
+    BaseVector *outVec = VectorHelper::CreateFlatVector(typeId, rowSize);
     ConstantColumnProjection(context, outVec, e);
     inputValues_.push(outVec);
 }
