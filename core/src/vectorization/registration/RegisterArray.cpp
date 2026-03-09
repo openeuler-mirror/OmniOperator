@@ -23,6 +23,7 @@
 #include "vectorization/functions/ArrayExceptFunction.h"
 #include "vectorization/functions/ArrayPositionFunction.h"
 #include "vectorization/functions/ArrayUnionFunction.h"
+#include "vectorization/functions/ArraysOverlapFunction.h"
 #include "vectorization/functions/ArrayIdentityFunction.h"
 
 namespace omniruntime::vectorization {
@@ -336,5 +337,11 @@ void RegisterArrayFunctions(const std::string &prefix)
     // array_union(array<T>, array<T>) -> array<T>: Returns the union of two arrays without duplicates
     VectorFunction::RegisterVectorFunction("array_union", {OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
         std::make_shared<ArrayUnionFunction>());
+
+    // Register arrays_overlap function
+    // arrays_overlap(array<T>, array<T>) -> boolean
+    // Returns true if two arrays have any non-null elements in common
+    VectorFunction::RegisterVectorFunction("arrays_overlap", {OMNI_ARRAY, OMNI_ARRAY}, OMNI_BOOLEAN,
+        std::make_shared<ArraysOverlapFunction>());
 }
 }
