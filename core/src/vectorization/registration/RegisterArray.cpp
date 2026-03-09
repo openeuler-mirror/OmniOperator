@@ -10,6 +10,8 @@
 #include "vectorization/functions/SizeFunction.h"
 #include "vectorization/functions/ReverseFunction.h"
 #include "vectorization/functions/ArrayMinMaxFunction.h"
+#include "vectorization/functions/ArrayCompactFunction.h"
+#include "vectorization/functions/ArrayContainsFunction.h"
 #include "vectorization/functions/ArrayRepeatFunction.h"
 #include "vectorization/functions/ArrayRemoveFunction.h"
 
@@ -75,6 +77,28 @@ void RegisterArrayFunctions(const std::string &prefix)
         std::make_shared<ArrayMinFunction>());
     VectorFunction::RegisterVectorFunction("array_min", {OMNI_ARRAY}, OMNI_DECIMAL128,
         std::make_shared<ArrayMinFunction>());
+
+    // Register array_compact function
+    // array_compact(array<T>) -> array<T>: Removes all null elements from the array
+    VectorFunction::RegisterVectorFunction("array_compact", {OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayCompactFunction>());
+
+    // Register array_contains function for all supported element types
+    // array_contains(array<T>, T) -> boolean: Checks if array contains the given value
+    VectorFunction::RegisterVectorFunction("array_contains", {OMNI_ARRAY, OMNI_BYTE}, OMNI_BOOLEAN,
+        std::make_shared<ArrayContainsFunction>());
+    VectorFunction::RegisterVectorFunction("array_contains", {OMNI_ARRAY, OMNI_SHORT}, OMNI_BOOLEAN,
+        std::make_shared<ArrayContainsFunction>());
+    VectorFunction::RegisterVectorFunction("array_contains", {OMNI_ARRAY, OMNI_INT}, OMNI_BOOLEAN,
+        std::make_shared<ArrayContainsFunction>());
+    VectorFunction::RegisterVectorFunction("array_contains", {OMNI_ARRAY, OMNI_LONG}, OMNI_BOOLEAN,
+        std::make_shared<ArrayContainsFunction>());
+    VectorFunction::RegisterVectorFunction("array_contains", {OMNI_ARRAY, OMNI_FLOAT}, OMNI_BOOLEAN,
+        std::make_shared<ArrayContainsFunction>());
+    VectorFunction::RegisterVectorFunction("array_contains", {OMNI_ARRAY, OMNI_DOUBLE}, OMNI_BOOLEAN,
+        std::make_shared<ArrayContainsFunction>());
+    VectorFunction::RegisterVectorFunction("array_contains", {OMNI_ARRAY, OMNI_BOOLEAN}, OMNI_BOOLEAN,
+        std::make_shared<ArrayContainsFunction>());
 
     // Register array_repeat function for all supported element types
     // array_repeat(element T, count INT) -> array<T>
