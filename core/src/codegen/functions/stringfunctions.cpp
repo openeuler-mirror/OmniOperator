@@ -2,6 +2,8 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2025. All rights reserved.
  * Description: registry  function  implementation
  */
+
+#include <re2/re2.h>
 #include "stringfunctions.h"
 #include "md5.h"
 #include "dtoa.h"
@@ -1224,19 +1226,17 @@ extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const c
     if (isNull) {
         return false;
     }
-    if (matchLen == 0) {
-        return true;
+    std::string s = std::string(srcStr, srcLen);
+    std::string r = std::string(matchStr, matchLen);
+
+    thread_local std::string cachedPattern;
+    thread_local std::unique_ptr<RE2> cachedRegex;
+    if (cachedPattern != r) {
+        cachedPattern = r;
+        cachedRegex = std::make_unique<RE2>(re2::StringPiece(matchStr, matchLen), RE2::Quiet);
     }
-    if (srcLen == 0) {
-        return false;
-    }
-    for (int32_t i = 0; i < srcLen; i++) {
-        char c = srcStr[i];
-        if (c < '0' || c > '9') {
-            return false;
-        }
-    }
-    return true;
+
+    return RE2::PartialMatch(re2::StringPiece(srcStr, srcLen), *cachedRegex.get());
 }
 
 extern "C" DLLEXPORT const char *CastDateToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value,
