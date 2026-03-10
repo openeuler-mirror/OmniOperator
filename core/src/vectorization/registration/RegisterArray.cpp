@@ -9,6 +9,9 @@
 #include "vectorization/functions/Slice.h"
 #include "vectorization/functions/SizeFunction.h"
 #include "vectorization/functions/ReverseFunction.h"
+#include "vectorization/functions/ArrayJoin.h"
+#include "vectorization/functions/ArrayZip.h"
+#include "vectorization/functions/ArrayShuffle.h"
 #include "vectorization/functions/ArrayMinMaxFunction.h"
 #include "vectorization/functions/ArrayCompactFunction.h"
 #include "vectorization/functions/ArrayContainsFunction.h"
@@ -39,7 +42,51 @@ void RegisterArrayFunctions(const std::string &prefix)
         std::make_shared<ReverseFunction>());
     VectorFunction::RegisterVectorFunction("flatten", {OMNI_ARRAY}, OMNI_ARRAY,
         std::make_shared<ArrayFlattenFunction>());
-    
+
+    // Register array_join function for all supported element types
+    // array_join(array(T), delimiter) -> varchar
+    // array_join(array(T), delimiter, nullReplacement) -> varchar
+    // Concatenates array elements into a string using the given delimiter
+    // Two-argument version: array_join(array, delimiter)
+    VectorFunction::RegisterVectorFunction("array_join",
+        {OMNI_ARRAY, OMNI_VARCHAR}, OMNI_VARCHAR,
+        std::make_shared<ArrayJoinImpl>());
+    // Three-argument version: array_join(array, delimiter, nullReplacement)
+    VectorFunction::RegisterVectorFunction("array_join",
+        {OMNI_ARRAY, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR,
+        std::make_shared<ArrayJoinImpl>());
+
+    // Register arrays_zip function
+    // arrays_zip(array(T1), array(T2), ...) -> array(row(T1, T2, ...))
+    // Merges arrays element-wise into a single array of structs
+    // Shorter arrays are padded with nulls; arity 2 to 7
+    VectorFunction::RegisterVectorFunction("arrays_zip",
+        {OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayZipImpl>(2));
+    VectorFunction::RegisterVectorFunction("arrays_zip",
+        {OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayZipImpl>(3));
+    VectorFunction::RegisterVectorFunction("arrays_zip",
+        {OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayZipImpl>(4));
+    VectorFunction::RegisterVectorFunction("arrays_zip",
+        {OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayZipImpl>(5));
+    VectorFunction::RegisterVectorFunction("arrays_zip",
+        {OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayZipImpl>(6));
+    VectorFunction::RegisterVectorFunction("arrays_zip",
+        {OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayZipImpl>(7));
+
+    // Register shuffle function
+    // shuffle(array(T)) -> array(T): Shuffles array elements randomly
+    VectorFunction::RegisterVectorFunction("shuffle", {OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayShuffleImpl>());
+    // shuffle(array(T), seed) -> array(T): Shuffles array elements with deterministic seed (Spark)
+    VectorFunction::RegisterVectorFunction("shuffle", {OMNI_ARRAY, OMNI_LONG}, OMNI_ARRAY,
+        std::make_shared<ArrayShuffleImpl>());        
+
     // Register array_max function for all supported element types
     // array_max(array<T>) -> T: Returns the maximum value in the array
     VectorFunction::RegisterVectorFunction("array_max", {OMNI_ARRAY}, OMNI_BYTE,

@@ -164,7 +164,45 @@ VectorPtr CastExpr::applyMap(const SelectivityVector &rows, const MapVector *inp
 VectorPtr CastExpr::applyArray(const SelectivityVector &rows, const ArrayVector *input, ExecutionContext &context,
     const ArrayType &fromType, const ArrayType &toType)
 {
-    OMNI_FAIL("Not implemented yet!");
+    auto fromElementType = fromType.ElementType();
+    auto toElementType = toType.ElementType();
+
+    auto inputElementVector = input->GetElementVector();
+    if (inputElementVector == nullptr) {
+        auto *resultArray = new ArrayVector(input->GetSize());
+        for (int32_t row = 0; row < input->GetSize(); ++row) {
+            if (input->IsNull(row)) {
+                resultArray->SetNull(row);
+            } else {
+                resultArray->SetOffset(row, 0);
+                resultArray->SetSize(row, 0);
+            }
+        }
+        return VectorPtr(resultArray);
+    }
+
+    int32_t elementCount = inputElementVector->GetSize();
+
+    int32_t savedRowSize = context.GetResultRowSize();
+    context.SetResultRowSize(elementCount);
+
+    SelectivityVector elementRows(elementCount);
+    VectorPtr castedElements = nullptr;
+    apply(elementRows, inputElementVector.get(), context, fromElementType, toElementType, castedElements);
+
+    context.SetResultRowSize(savedRowSize);
+
+    auto *resultArray = new ArrayVector(input->GetSize(), std::shared_ptr<BaseVector>(castedElements));
+    for (int32_t row = 0; row <= input->GetSize(); ++row) {
+        resultArray->SetOffset(row, const_cast<ArrayVector *>(input)->GetOffset(row));
+    }
+    for (int32_t row = 0; row < input->GetSize(); ++row) {
+        if (input->IsNull(row)) {
+            resultArray->SetNull(row);
+        }
+    }
+
+    return VectorPtr(resultArray);
 }
 
 VectorPtr CastExpr::applyRow(const SelectivityVector &rows, const RowVector *input, ExecutionContext &context,
