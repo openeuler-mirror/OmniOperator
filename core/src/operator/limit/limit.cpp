@@ -54,12 +54,14 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
     if (remainingLimit < 0) {
         limitSize = remainingRowCount;
     } else {
-        realLimit = remainingLimit - remainingOffset;
+        realLimit = remainingLimit;
         limitSize = realLimit > remainingRowCount ? remainingRowCount : realLimit;
     }
     positionOffset = remainingOffset < rowCount ? remainingOffset : rowCount;
     remainingOffset = remainingOffset < rowCount ? 0 : remainingOffset - rowCount;
-    remainingLimit = realLimit - limitSize + remainingOffset;
+    if (remainingLimit >= 0) {
+        remainingLimit = realLimit - limitSize;
+    }
     auto result = make_unique<VectorBatch>(limitSize);
     for (int32_t i = 0; i < vectorCount; ++i) {
         BaseVector *inputVector = vecBatch->Get(i);

@@ -11,6 +11,7 @@
 #include <climits>
 #include "decimal128.h"
 #include "util/debug.h"
+#include "util/omni_exception.h"
 
 namespace omniruntime {
 namespace vec {
@@ -180,7 +181,8 @@ template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_TIMESTAMP>(__VA_ARGS__);  \
             }                                                                                 \
             default:                                                                          \
-                LogError("Can not handle this type %d", typeId);                              \
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",              \
+                    "Can not handle this type " + std::to_string(typeId));                    \
         }                                                                                     \
     }()
 
