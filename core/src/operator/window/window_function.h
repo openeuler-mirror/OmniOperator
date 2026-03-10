@@ -125,6 +125,19 @@ private:
     int32_t numPartitionRows;
 };
 
+class CumeDistFunction : public RankingWindowFunction {
+public:
+    CumeDistFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType);
+    ~CumeDistFunction() override;
+    void Reset() override;
+    void RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+        int32_t currentPositionIndex) override;
+
+private:
+    int64_t runningTotal;
+    int32_t numPartitionRows;
+};
+
 class AggregateWindowFunction : public WindowFunction {
 public:
     AggregateWindowFunction(int32_t argumentChannel, int32_t aggregationType, DataTypePtr inputType,

@@ -42,6 +42,7 @@ public class FunctionType extends Constant {
     public static final FunctionType OMNI_WINDOW_TYPE_ROW_NUMBER = next();
     public static final FunctionType OMNI_WINDOW_TYPE_RANK = next();
     public static final FunctionType OMNI_WINDOW_TYPE_PERCENT_RANK = next();
+    public static final FunctionType OMNI_WINDOW_TYPE_CUME_DIST = next();
     public static final FunctionType OMNI_WINDOW_TYPE_LEAD = next();
     public static final FunctionType OMNI_WINDOW_TYPE_LAG = next();
     public static final FunctionType OMNI_AGGREGATION_TYPE_TRY_SUM = next();

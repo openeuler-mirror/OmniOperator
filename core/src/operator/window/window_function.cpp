@@ -119,6 +119,42 @@ void PercentRankFunction::RankingProcessRow(BaseVector *column, int32_t index, b
     VectorHelper::SetValue(column, index, &percentRankValue);
 }
 
+CumeDistFunction::CumeDistFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType,
+    DataTypePtr outputType)
+    : RankingWindowFunction(std::move(frame), std::move(inputType), std::move(outputType)), runningTotal(0),
+      numPartitionRows(1)
+{}
+
+CumeDistFunction::~CumeDistFunction() = default;
+
+void CumeDistFunction::Reset()
+{
+    runningTotal = 0;
+    if (windowIndex != nullptr) {
+        numPartitionRows = windowIndex->GetSize();
+    } else {
+        numPartitionRows = 1;
+    }
+}
+
+void CumeDistFunction::RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+    int32_t currentPositionIndex)
+{
+    // When we encounter a new peer group, update runningTotal
+    // runningTotal represents the cumulative count of rows up to and including the current peer group
+    if (newPeerGroup) {
+        runningTotal += peerGroupCount;
+    }
+    
+    double cumeDistValue;
+    if (numPartitionRows == 0) {
+        cumeDistValue = 0.0;
+    } else {
+        cumeDistValue = static_cast<double>(runningTotal) / static_cast<double>(numPartitionRows);
+    }
+    VectorHelper::SetValue(column, index, &cumeDistValue);
+}
+
 AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannel, int32_t aggregationType,
