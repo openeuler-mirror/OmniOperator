@@ -13,30 +13,12 @@ namespace omniruntime::vectorization {
 
 void CoalesceFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
                             BaseVector *&result, ExecutionContext *context) const {
-
-    if (args.empty()) {
-        OMNI_THROW("Coalesce function Error", "No input arguments");
-    }
-
     std::vector<BaseVector *> argVectors;
     while (!args.empty()) {
         argVectors.push_back(args.top());
         args.pop();
     }
-
     std::reverse(argVectors.begin(), argVectors.end());
-
-    if (argVectors.size() < 2) {
-        OMNI_THROW("Coalesce function Error", "Coalesce requires at least 2 arguments");
-    }
-
-    int32_t size = argVectors[0]->GetSize();
-    for (size_t i = 1; i < argVectors.size(); ++i) {
-        if (argVectors[i]->GetSize() != size) {
-            OMNI_THROW("Coalesce function Error", "All arguments must have the same size");
-        }
-    }
-
     DispatchCoalesce(argVectors, outputType, result);
 }
 
