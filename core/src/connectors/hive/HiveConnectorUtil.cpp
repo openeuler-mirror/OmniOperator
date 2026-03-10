@@ -235,7 +235,7 @@ std::shared_ptr <UriInfo> stringToUriInfo(std::string uriString)
     // 3. 从 authority 分离 host 和 port
     size_t port_pos = authority.find(':');
     std::string hostStr;
-    int port;
+    int port =0;
     if (port_pos != std::string::npos) {
         hostStr = authority.substr(0, port_pos);
         std::string port_str = authority.substr(port_pos + 1);
