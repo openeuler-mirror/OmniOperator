@@ -57,6 +57,18 @@ public:
         return hashmap.Emplace(key);
     }
 
+    Result InsertConstValueToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
+                                mem::SimpleArenaAllocator &arenaAllocator)
+    {
+        type::StringRef key;
+        for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
+            auto curVector = groupVectors[groupColIdx];
+            auto &curFunc = serializers[groupColIdx];
+            curFunc(curVector, rowIdx, arenaAllocator, key);
+        }
+        return hashmap.Emplace(key);
+    }
+
     ALWAYS_INLINE void TryToInsertJoinKeysToHashmap(BaseVector **joinVectors, int32_t joinColNum, int32_t rowIdx,
         int32_t i, mem::SimpleArenaAllocator &arenaAllocator, std::vector<type::StringRef> &keys,
         std::vector<int8_t> &isNotNullKeys)
@@ -244,6 +256,18 @@ public:
         auto dictionaryVector = static_cast<Vector<DictionaryContainer<T>> *>(curVector);
         auto value = dictionaryVector->GetValue(rowIdx);
         return hashmap.Emplace(value);
+    }
+
+    Result InsertConstValueToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
+                                mem::SimpleArenaAllocator &arenaAllocator)
+    {
+        auto *curVector = groupVectors[0];
+        if (curVector->IsNull(rowIdx)) {
+            T value = 0;
+            return hashmap.EmplaceNullValue(value);
+        }
+        auto constVector = static_cast<ConstVector<T> *>(curVector);
+        return hashmap.Emplace(constVector->GetConstValue());
     }
 
     template<bool isNull>

@@ -228,7 +228,9 @@ void AppendTo(VectorBatch *vectorBatch, int32_t destCol, int32_t destRowIndex, u
     }
 
     Type value;
-    if (src->GetEncoding() == OMNI_DICTIONARY) {
+    if (src->GetEncoding() == OMNI_ENCODING_CONST) {
+        value = static_cast<vec::ConstVector<Type> *>(src)->GetConstValue();
+    } else if (src->GetEncoding() == OMNI_DICTIONARY) {
         value = static_cast<DictVector *>(src)->GetValue(srcRowIndex);
     } else {
         value = static_cast<Vector *>(src)->GetValue(srcRowIndex);

@@ -104,11 +104,46 @@ void BloomFilterAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState 
     const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
     if (IsInputRaw()) {
-        // Partial phase, iterative bloom filter
-        BloomFilterPartialOp(state, vector, rowCount, nullMap, (vector->GetEncoding() == vec::OMNI_DICTIONARY));
+        if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            auto constVector = static_cast<ConstVector<int64_t> *>(vector);
+            if (constVector->IsNull(0)) {
+                return;
+            }
+            int64_t value = constVector->GetConstValue();
+            auto *bloomFilterAggState = BloomFilterAggState::CastState(state);
+            char *serializeChar = reinterpret_cast<char *>(bloomFilterAggState->serializePtr);
+            auto bloomFilter = std::make_shared<omniruntime::op::BloomFilter>(serializeChar);
+            for (int32_t i = 0; i < rowCount; i++) {
+                if (nullMap == nullptr || !(*nullMap)[i]) {
+                    bloomFilter->PutLong(value);
+                }
+            }
+            bloomFilter->Serialize(serializeChar);
+            bloomFilterAggState->serializePtr = reinterpret_cast<int64_t>(serializeChar);
+        } else {
+            BloomFilterPartialOp(state, vector, rowCount, nullMap, (vector->GetEncoding() == vec::OMNI_DICTIONARY));
+        }
     } else {
-        // Final phase, merging multiple bloom filter
-        BloomFilterFinalOp(state, vector, rowCount, nullMap);
+        if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            auto constVector = static_cast<ConstVector<std::string_view> *>(vector);
+            if (constVector->IsNull(0)) {
+                return;
+            }
+            std::string_view value = constVector->GetConstValue();
+            auto *bloomFilterAggState = BloomFilterAggState::CastState(state);
+            char *serializeChar = reinterpret_cast<char *>(bloomFilterAggState->serializePtr);
+            auto bloomFilter = std::make_shared<omniruntime::op::BloomFilter>(serializeChar);
+            for (int32_t i = 0; i < rowCount; i++) {
+                if (nullMap == nullptr || !(*nullMap)[i]) {
+                    char *newSerializeChar = const_cast<char *>(value.data());
+                    bloomFilter->Merge(newSerializeChar);
+                }
+            }
+            bloomFilter->Serialize(serializeChar);
+            bloomFilterAggState->serializePtr = reinterpret_cast<int64_t>(serializeChar);
+        } else {
+            BloomFilterFinalOp(state, vector, rowCount, nullMap);
+        }
     }
 }
 

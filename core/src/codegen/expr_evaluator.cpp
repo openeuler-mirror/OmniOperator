@@ -78,7 +78,7 @@ void GetAddr(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[],
         auto colVec = vecBatch.Get(i);
         dictVecAddress = 0;
         valuesAddress = 0;
-        if (colVec->GetEncoding() == OMNI_DICTIONARY) {
+        if (colVec->GetEncoding() == OMNI_DICTIONARY || colVec->GetEncoding() == OMNI_ENCODING_CONST) {
             dictVecAddress = reinterpret_cast<intptr_t>(reinterpret_cast<void *>(colVec));
         } else {
             valuesAddress = GetRawAddr(types, i, colVec);
@@ -584,6 +584,15 @@ BaseVector *Projection::ColumnProjectionHelper(VectorBatch *vecBatch, const int3
 {
     auto colVec = vecBatch->Get(this->columnProjectionIndex);
     auto rowCnt = vecBatch->GetRowCount();
+    if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto *constVec = reinterpret_cast<ConstVector<T> *>(colVec);
+        T val = constVec->GetConstValue();
+        auto *newConst = new ConstVector<T>(val, colVec->GetTypeId(), numSelectedRows);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            newConst->SetNulls(0, true, numSelectedRows);
+        }
+        return newConst;
+    }
     if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
         if (colVec->GetEncoding() == OMNI_DICTIONARY) {
             return ColumnProjectionDictionaryVectorSliceHelper<T>(numSelectedRows, colVec);
@@ -608,6 +617,15 @@ BaseVector *Projection::ColumnProjectionVarCharVectorHelper(VectorBatch *vecBatc
 {
     auto colVec = vecBatch->Get(this->columnProjectionIndex);
     auto rowCnt = vecBatch->GetRowCount();
+    if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto *constVec = reinterpret_cast<ConstVector<std::string_view> *>(colVec);
+        auto sv = constVec->GetConstValue();
+        auto *newConst = new ConstVector<std::string_view>(sv, colVec->GetTypeId(), numSelectedRows);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            newConst->SetNulls(0, true, numSelectedRows);
+        }
+        return newConst;
+    }
     if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
         if (colVec->GetEncoding() == OMNI_DICTIONARY) {
             return ColumnProjectionDictionaryVectorSliceHelper<T>(numSelectedRows, colVec);
@@ -827,11 +845,7 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
                 std::string errorMessage = context->GetError();
                 throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
             }
-            if (outCol->GetEncoding() == OMNI_ENCODING_CONST) {
-                projectedVecs->Append(VectorHelper::CastConstVectorToVector(outCol));
-            } else {
-                projectedVecs->Append(outCol);
-            }
+            projectedVecs->Append(outCol);
         }
     } else {
         for (int32_t i = 0; i < projectVecCount; i++) {
@@ -852,6 +866,15 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
 template <typename T>
 BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
 {
+    if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto *constVec = reinterpret_cast<ConstVector<T> *>(colVec);
+        T val = constVec->GetConstValue();
+        auto *newConst = new ConstVector<T>(val, colVec->GetTypeId(), numSelectedRows);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            newConst->SetNulls(0, true, numSelectedRows);
+        }
+        return newConst;
+    }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
         return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
     } else {
@@ -880,6 +903,15 @@ BaseVector *ColumnProjectionArrayVectorSliceHelper(BaseVector *colVec, int32_t n
 template <typename T>
 BaseVector *ColumnProjectionVarCharVectorHelper(BaseVector *colVec, int32_t numSelectedRows)
 {
+    if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto *constVec = reinterpret_cast<ConstVector<std::string_view> *>(colVec);
+        auto sv = constVec->GetConstValue();
+        auto *newConst = new ConstVector<std::string_view>(sv, colVec->GetTypeId(), numSelectedRows);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            newConst->SetNulls(0, true, numSelectedRows);
+        }
+        return newConst;
+    }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
         return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
     } else {

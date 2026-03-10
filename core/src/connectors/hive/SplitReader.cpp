@@ -68,31 +68,25 @@ uint64_t SplitReader::next(vec::VectorBatch **output_, int *omniTypeId, uint64_t
     for (int i = 0; i < recordBatch->size(); ++i) {
         output->Append(recordBatch->at(i));
     }
+    // Schema evolution: fill missing columns (added after the file was written) with all-null ConstVectors
     if (fileRowType_->size() > output->GetVectorCount()) {
         for (int i = output->GetVectorCount(); i < fileRowType_->size(); ++i) {
-            auto missingFieldVec = vec::VectorHelper::CreateFlatVector(fileRowType_->children_()[i]->GetId(),
-                batchRowSize);
-            for (int j = 0; j < batchRowSize; ++j) {
-                omniruntime::vec::VectorHelper::SetValue(missingFieldVec, j, nullptr);
-            }
+            auto missingFieldVec = createNullConstVec(
+                fileRowType_->children_()[i]->GetId(), batchRowSize);
             output->Append(missingFieldVec);
         }
     }
+    // Partition columns: not stored in data files, injected from split metadata
     if (rowType_->size() > fileRowType_->size()) {
         for (int i = fileRowType_->size(); i < rowType_->size(); ++i) {
-            auto partitionVec = vec::VectorHelper::CreateFlatVector(rowType_->children_()[i]->GetId(),
-                                                                    batchRowSize);
+            auto dataTypeId = rowType_->children_()[i]->GetId();
             auto it = hiveSplit_->partitionKeys.find(rowType_->nameOf(i));
-            auto optionalVal = it->second;
-            if (optionalVal.has_value()) {
-                auto val = it->second.value();
-                for (int j = 0; j < batchRowSize; ++j) {
-                    setPartitionVal(partitionVec, j, val);
-                }
+            vec::BaseVector *partitionVec = nullptr;
+            if (it->second.has_value()) {
+                const std::string &val = it->second.value();
+                partitionVec = createConstPartitionVec(dataTypeId, batchRowSize, val);
             } else {
-                for (int j = 0; j < batchRowSize; ++j) {
-                    omniruntime::vec::VectorHelper::SetValue(partitionVec, j, nullptr);
-                }
+                partitionVec = createNullConstVec(dataTypeId, batchRowSize);
             }
             output->Append(partitionVec);
         }

@@ -170,4 +170,41 @@ TEST(RegrAggregatorTest, DISABLED_EmptyInputReturnsNull)
     VectorHelper::FreeVecBatch(batch);
 }
 
+// regr_count with ConstVector<double> input: all same (y,x) values
+TEST(RegrAggregatorTest, ConstVectorRegrCount)
+{
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
+    const int32_t rowCount = 5;
+
+    VectorBatch *batch = new VectorBatch(rowCount);
+    Vector<int64_t> *groupCol = new Vector<int64_t>(rowCount);
+    for (int32_t i = 0; i < rowCount; ++i) {
+        groupCol->SetValue(i, 0);
+    }
+    // ConstVector for y and x: all rows have y=3.0, x=1.0
+    auto *yCol = new ConstVector<double>(3.0, OMNI_DOUBLE, rowCount);
+    auto *xCol = new ConstVector<double>(1.0, OMNI_DOUBLE, rowCount);
+    batch->Append(groupCol);
+    batch->Append(yCol);
+    batch->Append(xCol);
+
+    auto factory = CreateRegrHashAggregationFactory(
+        std::vector<uint32_t>({0}), std::vector<DataTypePtr>({LongType()}),
+        OMNI_AGGREGATION_TYPE_REGR_COUNT, std::vector<uint32_t>({1, 2}),
+        std::vector<DataTypePtr>({DoubleType(), DoubleType()}), LongType(),
+        true, false, false);
+    auto op = factory->CreateOperator();
+    op->Init();
+    op->AddInput(batch);
+    VectorBatch *out = nullptr;
+    op->GetOutput(&out);
+    EXPECT_NE(out, nullptr);
+    EXPECT_EQ(out->GetRowCount(), 1);
+    BaseVector *resVec = out->Get(1);
+    EXPECT_FALSE(resVec->IsNull(0));
+    EXPECT_EQ(static_cast<Vector<int64_t> *>(resVec)->GetValue(0), 5);
+    omniruntime::op::Operator::DeleteOperator(op);
+    VectorHelper::FreeVecBatch(out);
+}
+
 } // namespace omniruntime

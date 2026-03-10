@@ -139,6 +139,8 @@ static void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVec
     Type value;
     if (vector->GetEncoding() == OMNI_DICTIONARY) {
         value = (static_cast<DictVector *>(vector))->GetValue(position);
+    } else if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+        value = (static_cast<ConstVector<Type> *>(vector))->GetConstValue();
     } else {
         value = (static_cast<Vector *>(vector))->GetValue(position);
     }
@@ -162,6 +164,8 @@ static void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowV
     std::string_view value;
     if (vector->GetEncoding() == OMNI_DICTIONARY) {
         value = static_cast<VarcharDictVector *>(vector)->GetValue(position);
+    } else if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+        value = static_cast<ConstVector<std::string_view> *>(vector)->GetConstValue();
     } else {
         value = static_cast<VarcharVector *>(vector)->GetValue(position);
     }
@@ -229,6 +233,8 @@ static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(omniruntime::vec::Vector
         Type value;
         if (vector->GetEncoding() == OMNI_DICTIONARY) {
             value = (static_cast<DictVector *>(vector))->GetValue(position);
+        } else if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+            value = (static_cast<ConstVector<Type> *>(vector))->GetConstValue();
         } else {
             value = (static_cast<Vector *>(vector))->GetValue(position);
         }

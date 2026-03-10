@@ -20,6 +20,7 @@ import nova.hetu.omniruntime.type.MapDataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.BooleanVec;
+import nova.hetu.omniruntime.vector.ConstVec;
 import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DictionaryVec;
@@ -83,6 +84,13 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 Vec dictionary = dictionaryVec.expandDictionary();
                 VecBatchSerde.Vec protoVec = buildProtoVec(dictionary, null);
                 dictionary.close();
+                return protoVec;
+            }
+            case OMNI_VEC_ENCODING_CONST: {
+                ConstVec constVec = (ConstVec) vec;
+                Vec flatVec = constVec.expandToFlat();
+                VecBatchSerde.Vec protoVec = buildProtoVec(flatVec, null);
+                flatVec.close();
                 return protoVec;
             }
             case OMNI_VEC_ENCODING_CONTAINER: {

@@ -84,7 +84,15 @@ public:
         const std::shared_ptr<NullsHelper> nullMap)
     {
         if (inputRaw) {
-            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+            if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+                if (nullMap == nullptr) {
+                    auto constValue = static_cast<vec::ConstVector<InRawType> *>(vector)->GetConstValue();
+                    for (size_t i = 0; i < rowStates.size(); ++i) {
+                        AvgSparkDecimalState::template UpdateState<InRawType, ResultType>(
+                            rowStates[i] + aggStateOffset, constValue);
+                    }
+                }
+            } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
@@ -159,7 +167,15 @@ public:
     {
         AvgSparkDecimalState *avgSparkDecimalState = AvgSparkDecimalState::CastState(state);
         if (inputRaw) {
-            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+            if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+                if (nullMap == nullptr) {
+                    auto constValue = static_cast<vec::ConstVector<InRawType> *>(vector)->GetConstValue();
+                    for (int32_t i = 0; i < rowCount; ++i) {
+                        SumOp<InRawType, ResultType, int64_t, StateCountHandler>(
+                            &avgSparkDecimalState->value, avgSparkDecimalState->count, constValue, 1ULL);
+                    }
+                }
+            } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {

@@ -718,8 +718,11 @@ public:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 auto *col = new Vector<LargeStringContainer<std::string_view>>(1);
-                auto tmp = std::string_view(reinterpret_cast<ConstVector<std::string> *>(vector)->GetConstValue());
+                // ConstVector for VARCHAR/CHAR is instantiated as ConstVector<std::string_view>,
+                // NOT ConstVector<std::string>. They have different memory layouts!
+                auto tmp = reinterpret_cast<ConstVector<std::string_view> *>(vector)->GetConstValue();
                 col->SetValue(0, tmp);
+                delete vector;
                 return col;
             }
             default: {
@@ -732,6 +735,11 @@ public:
 
     static void *UnsafeGetValues(BaseVector *vector)
     {
+        if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+            // ConstVector does not have a flat values buffer.
+            // Return nullptr so callers (e.g. Transform) can handle it safely.
+            return nullptr;
+        }
         if (vector->GetEncoding() == OMNI_DICTIONARY) {
             return UnsafeGetValuesDictionary(vector);
         }
@@ -798,6 +806,11 @@ public:
     {
         DataTypeId dataTypeId = vector->GetTypeId();
         if (dataTypeId == type::OMNI_VARCHAR || dataTypeId == type::OMNI_CHAR) {
+            if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+                // ConstVector has no offsets array; the JIT getter functions handle
+                // constant string values directly via the ConstVector pointer.
+                return nullptr;
+            }
             if (vector->GetEncoding() == OMNI_DICTIONARY) {
                 auto dictVarCharVec = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
                 return unsafe::UnsafeDictionaryVector::GetDictionaryOffsets(dictVarCharVec);
@@ -856,11 +869,59 @@ public:
             }
         }
     }
+    static BaseVector *SliceConstVector(BaseVector *vector, int length)
+    {
+        DataTypeId dataTypeId = vector->GetTypeId();
+        switch (dataTypeId) {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32:
+                return new ConstVector<int32_t>(
+                    reinterpret_cast<ConstVector<int32_t> *>(vector)->GetConstValue(), dataTypeId, length);
+            case type::OMNI_SHORT:
+                return new ConstVector<int16_t>(
+                    reinterpret_cast<ConstVector<int16_t> *>(vector)->GetConstValue(), dataTypeId, length);
+            case type::OMNI_BYTE:
+                return new ConstVector<int8_t>(
+                    reinterpret_cast<ConstVector<int8_t> *>(vector)->GetConstValue(), dataTypeId, length);
+            case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64:
+                return new ConstVector<int64_t>(
+                    reinterpret_cast<ConstVector<int64_t> *>(vector)->GetConstValue(), dataTypeId, length);
+            case type::OMNI_DECIMAL128:
+                return new ConstVector<type::Decimal128>(
+                    reinterpret_cast<ConstVector<type::Decimal128> *>(vector)->GetConstValue(), dataTypeId, length);
+            case type::OMNI_DOUBLE:
+                return new ConstVector<double>(
+                    reinterpret_cast<ConstVector<double> *>(vector)->GetConstValue(), dataTypeId, length);
+            case type::OMNI_FLOAT:
+                return new ConstVector<float>(
+                    reinterpret_cast<ConstVector<float> *>(vector)->GetConstValue(), dataTypeId, length);
+            case type::OMNI_BOOLEAN:
+                return new ConstVector<bool>(
+                    reinterpret_cast<ConstVector<bool> *>(vector)->GetConstValue(), dataTypeId, length);
+            case type::OMNI_VARBINARY:
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR:
+                return new ConstVector<std::string_view>(
+                    reinterpret_cast<ConstVector<std::string_view> *>(vector)->GetConstValue(), dataTypeId, length);
+            default: {
+                std::string omniExceptionInfo =
+                    "In function SliceConstVector, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+            }
+        }
+    }
+
     static BaseVector *SliceVector(BaseVector *vector, int positionOffset, int length)
     {
         auto encoding = vector->GetEncoding();
         if (encoding == OMNI_DICTIONARY) {
             return SliceDictionaryVector(vector, positionOffset, length);
+        }
+        if (encoding == OMNI_ENCODING_CONST) {
+            return SliceConstVector(vector, length);
         }
         if (encoding == OMNI_ENCODING_CONTAINER) {
             auto containerVector = reinterpret_cast<ContainerVector *>(vector);
@@ -982,6 +1043,9 @@ public:
 
     static BaseVector *CopyPositionsVector(BaseVector *vector, int *positions, int offset, int length)
     {
+        if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
+            return SliceConstVector(vector, length);
+        }
         if (vector->GetEncoding() == OMNI_DICTIONARY) {
             return CopyPositionsDictionaryVector(vector, positions, offset, length);
         }

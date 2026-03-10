@@ -18,6 +18,10 @@ using namespace omniruntime::op;
 template <typename T>
 BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
 {
+    if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        return new ConstVector<T>(
+            reinterpret_cast<ConstVector<T> *>(colVec)->GetConstValue(), colVec->GetTypeId(), numSelectedRows);
+    }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
         return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
     }
@@ -27,6 +31,10 @@ BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
 template <typename T>
 BaseVector *ColumnProjectionCopyPositionsHelper(BaseVector *colVec, int32_t *selectedRows, int32_t numSelectedRows)
 {
+    if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        return new ConstVector<T>(
+            reinterpret_cast<ConstVector<T> *>(colVec)->GetConstValue(), colVec->GetTypeId(), numSelectedRows);
+    }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
         return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->CopyPositions(selectedRows, 0,
             numSelectedRows);
@@ -37,6 +45,10 @@ BaseVector *ColumnProjectionCopyPositionsHelper(BaseVector *colVec, int32_t *sel
 template <typename T>
 BaseVector *ColumnProjectionVarCharVectorHelper(BaseVector *colVec, int32_t numSelectedRows)
 {
+    if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        return new ConstVector<T>(
+            reinterpret_cast<ConstVector<T> *>(colVec)->GetConstValue(), colVec->GetTypeId(), numSelectedRows);
+    }
     auto rowCnt = colVec->GetSize();
     if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
         if (colVec->GetEncoding() == OMNI_DICTIONARY) {
@@ -53,6 +65,10 @@ template <typename T>
 BaseVector *ColumnProjectionVarCharCopyPositionsHelper(BaseVector *colVec, const int32_t *selectedRows,
     int32_t numSelectedRows)
 {
+    if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        return new ConstVector<T>(
+            reinterpret_cast<ConstVector<T> *>(colVec)->GetConstValue(), colVec->GetTypeId(), numSelectedRows);
+    }
     if (colVec->GetEncoding() == OMNI_FLAT) {
         auto flatVec = reinterpret_cast<Vector<LargeStringContainer<T>> *>(colVec);
         return flatVec->CopyPositions(selectedRows, 0, numSelectedRows);

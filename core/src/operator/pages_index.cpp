@@ -1035,6 +1035,20 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
         uint32_t vecBatchIdx = DecodeSliceIndex(encodedIndex);
         uint32_t rowIdx = DecodePosition(encodedIndex);
         auto column = sortColumn[vecBatchIdx];
+        // Handle ConstVector first: const value is never null, avoid IsNull on ConstVector's small NullsBuffer
+        if (UNLIKELY(column->GetEncoding() == OMNI_ENCODING_CONST)) {
+            if constexpr (std::is_same_v<RawType, Decimal128>) {
+                values[i] = reinterpret_cast<int64_t>(
+                    &(static_cast<ConstVector<Decimal128> *>(column)->GetConstValueRef()));
+            } else if constexpr (std::is_same_v<RawType, double>) {
+                double value = static_cast<ConstVector<double> *>(column)->GetConstValue();
+                memcpy(values + i, &value, sizeof(double));
+            } else {
+                values[i] = static_cast<ConstVector<RawType> *>(column)->GetConstValue();
+            }
+            ++i;
+            continue;
+        }
         if constexpr (hasNull) {
             if (UNLIKELY(column->IsNull(rowIdx))) {
                 // first, put all nulls at the first or at the last according sortNullFirst
@@ -1103,6 +1117,14 @@ void SortNullAndGetVarcharValue(BaseVector **sortColumn, int64_t *values, std::v
         uint32_t vecBatchIdx = DecodeSliceIndex(encodedIndex);
         uint32_t rowIdx = DecodePosition(encodedIndex);
         auto column = sortColumn[vecBatchIdx];
+        // Handle ConstVector first: const value is never null, avoid IsNull on ConstVector's small NullsBuffer
+        if (UNLIKELY(column->GetEncoding() == OMNI_ENCODING_CONST)) {
+            std::string_view value = static_cast<ConstVector<std::string_view> *>(column)->GetConstValue();
+            values[i] = reinterpret_cast<int64_t>(const_cast<char *>(value.data()));
+            varcharLength[i] = value.length();
+            ++i;
+            continue;
+        }
         if constexpr (hasNull) {
             if (UNLIKELY(column->IsNull(rowIdx))) {
                 // first, put all nulls at the first or at the last according sortNullFirst
@@ -1885,7 +1907,8 @@ static ALWAYS_INLINE void SetValueNonRow(BaseVector *inputVector, int32_t inputI
     int32_t outputIndex)
 {
     if constexpr (hasNull) {
-        if (UNLIKELY(inputVector->IsNull(inputIndex))) {
+        // ConstVector is never null, skip null check for it to avoid NullsBuffer out-of-bounds access
+        if (UNLIKELY(inputVector->GetEncoding() != OMNI_ENCODING_CONST && inputVector->IsNull(inputIndex))) {
             if constexpr (dataTypeId == OMNI_VARCHAR) {
                 static_cast<VarcharVector *>(outputVector)->SetNull(outputIndex);
             } else if constexpr (dataTypeId == OMNI_ARRAY) {
@@ -1900,7 +1923,9 @@ static ALWAYS_INLINE void SetValueNonRow(BaseVector *inputVector, int32_t inputI
     using T = typename NativeType<dataTypeId>::type;
     T value;
     if constexpr (dataTypeId == OMNI_VARCHAR) {
-        if constexpr (hasDictionary) {
+        if (UNLIKELY(inputVector->GetEncoding() == OMNI_ENCODING_CONST)) {
+            value = static_cast<ConstVector<std::string_view> *>(inputVector)->GetConstValue();
+        } else if constexpr (hasDictionary) {
             if (UNLIKELY(inputVector->GetEncoding() == OMNI_DICTIONARY)) {
                 value = static_cast<DictionaryVarcharVector *>(inputVector)->GetValue(inputIndex);
             } else {
@@ -1911,7 +1936,10 @@ static ALWAYS_INLINE void SetValueNonRow(BaseVector *inputVector, int32_t inputI
         }
         static_cast<VarcharVector *>(outputVector)->SetValue(outputIndex, value);
     } else {
-        if constexpr (hasDictionary) {
+        if (UNLIKELY(inputVector->GetEncoding() == OMNI_ENCODING_CONST)) {
+            value = static_cast<ConstVector<T> *>(inputVector)->GetConstValue();
+            static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
+        } else if constexpr (hasDictionary) {
             if (UNLIKELY(inputVector->GetEncoding() == OMNI_DICTIONARY)) {
                 value = static_cast<Vector<DictionaryContainer<T>> *>(inputVector)->GetValue(inputIndex);
             } else {

@@ -912,6 +912,13 @@ bool CompareVarcharUnorderedRows(BaseVector *resultVector, BaseVector *expectedV
             } else {
                 resRows.emplace(leftVector->GetValue(i));
             }
+        } else if (resultVector->GetEncoding() == OMNI_ENCODING_CONST) {
+            auto leftVector = static_cast<ConstVector<std::string_view> *>(resultVector);
+            if (leftVector->IsNull(i)) {
+                resNullCount++;
+            } else {
+                resRows.emplace(leftVector->GetConstValue());
+            }
         } else {
             auto leftVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(resultVector);
             if (leftVector->IsNull(i)) {
@@ -927,6 +934,13 @@ bool CompareVarcharUnorderedRows(BaseVector *resultVector, BaseVector *expectedV
                 expNullCount++;
             } else {
                 expectedRows.emplace(rightVector->GetValue(i));
+            }
+        } else if (expectedVector->GetEncoding() == OMNI_ENCODING_CONST) {
+            auto rightVector = static_cast<ConstVector<std::string_view> *>(expectedVector);
+            if (rightVector->IsNull(i)) {
+                expNullCount++;
+            } else {
+                expectedRows.emplace(rightVector->GetConstValue());
             }
         } else {
             auto rightVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(expectedVector);
@@ -1021,6 +1035,13 @@ bool CompareUnorderedRows(BaseVector *resultVector, BaseVector *expectedVector, 
             } else {
                 resRows.emplace(leftVector->GetValue(i));
             }
+        } else if (resultVector->GetEncoding() == OMNI_ENCODING_CONST) {
+            auto leftVector = static_cast<ConstVector<V> *>(resultVector);
+            if (leftVector->IsNull(i)) {
+                resNullCount++;
+            } else {
+                resRows.emplace(leftVector->GetConstValue());
+            }
         } else {
             auto leftVector = static_cast<Vector<V> *>(resultVector);
             if (leftVector->IsNull(i)) {
@@ -1036,6 +1057,13 @@ bool CompareUnorderedRows(BaseVector *resultVector, BaseVector *expectedVector, 
                 expNullCount++;
             } else {
                 expectedRows.emplace(rightVector->GetValue(i));
+            }
+        } else if (expectedVector->GetEncoding() == OMNI_ENCODING_CONST) {
+            auto rightVector = static_cast<ConstVector<V> *>(expectedVector);
+            if (rightVector->IsNull(i)) {
+                expNullCount++;
+            } else {
+                expectedRows.emplace(rightVector->GetConstValue());
             }
         } else {
             auto rightVector = static_cast<Vector<V> *>(expectedVector);

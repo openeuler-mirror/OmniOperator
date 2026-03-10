@@ -62,7 +62,7 @@ void GetDataFromVecBatch(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t 
         auto colVec = vecBatch.Get(i);
         dictVecAddress = 0;
         valuesAddress = 0;
-        if (colVec->GetEncoding() == OMNI_DICTIONARY) {
+        if (colVec->GetEncoding() == OMNI_DICTIONARY || colVec->GetEncoding() == OMNI_ENCODING_CONST) {
             dictVecAddress = reinterpret_cast<intptr_t>(reinterpret_cast<void *>(colVec));
         } else {
             valuesAddress = GetRawAddr(types, i, colVec);

@@ -41,6 +41,7 @@ template <type::DataTypeId id> char *DeserializeFromPointer(BaseVector *baseVect
 
 extern std::vector<VectorSerializer> vectorSerializerCenter;
 extern std::vector<VectorSerializer> dicVectorSerializerCenter;
+extern std::vector<VectorSerializer> constVectorSerializerCenter;
 extern std::vector<VectorDeSerializer> vectorDeSerializerCenter;
 
 extern std::unordered_map<DataTypeId, SerializerFunc> complexVectorSerializerCenter;
@@ -48,12 +49,15 @@ extern std::unordered_map<DataTypeId, DeSerializerFunc> complexVectorDeSerialize
 
 extern std::vector<VectorSerializerIgnoreNull> vectorSerializerIgnoreNullCenter;
 extern std::vector<VectorSerializerIgnoreNull> dicVectorSerializerIgnoreNullCenter;
+extern std::vector<VectorSerializerIgnoreNull> constVectorSerializerIgnoreNullCenter;
 
 extern std::vector<FixedKeyVectorSerializerIgnoreNull> vectorSerializerFixedKeysIgnoreNullCenter;
 extern std::vector<FixedKeyVectorSerializerIgnoreNull> dicVectorSerializerFixedKeysIgnoreNullCenter;
+extern std::vector<FixedKeyVectorSerializerIgnoreNull> constVectorSerializerFixedKeysIgnoreNullCenter;
 
 extern std::vector<FixedKeyVectorSerializerIgnoreNullSimd> vectorSerializerFixedKeysIgnoreNullCenterSimd;
 extern std::vector<FixedKeyVectorSerializerIgnoreNullSimd> dicVectorSerializerFixedKeysIgnoreNullCenterSimd;
+extern std::vector<FixedKeyVectorSerializerIgnoreNullSimd> constVectorSerializerFixedKeysIgnoreNullCenterSimd;
 }
 }
 #endif // OMNI_RUNTIME_VECTOR_MARSHALLER_H

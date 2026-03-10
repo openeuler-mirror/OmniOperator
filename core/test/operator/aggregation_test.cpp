@@ -6269,4 +6269,518 @@ TEST(AggregattorTest, bit_xor_extract_values_for_spill_test) {
 
     delete vectorBatch;
 }
+
+// ---- ConstVector tests: ProcessGroup with ConstVector input for each aggregator ----
+
+// Sum aggregator with ConstVector<int64_t> input
+TEST(AggregatorTest, sum_const_vector_long_test)
+{
+    const int32_t rowCount = 5;
+    auto sumFactory = new SumAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto sumLong = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    sumLong->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value 10
+    auto *constCol = new ConstVector<int64_t>(10L, OMNI_LONG, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+    EXPECT_EQ(rowCount, vecBatch->GetRowCount());
+
+    auto state = NewAndInitState(sumLong.get());
+    sumLong->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    auto outputVector = VectorHelper::CreateVector(OMNI_FLAT, DataTypeId::OMNI_LONG, 1);
+    std::vector<BaseVector *> extractVectors{outputVector};
+    sumLong->ExtractValues(state.get(), extractVectors, 0);
+
+    // Sum of 5 * 10 = 50
+    EXPECT_FALSE(extractVectors[0]->IsNull(0));
+    EXPECT_EQ(50L, dynamic_cast<Vector<int64_t> *>(extractVectors[0])->GetValue(0));
+
+    delete outputVector;
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete sumFactory;
+}
+
+// Sum aggregator with ConstVector<int32_t> input (Int -> Long)
+TEST(AggregatorTest, sum_const_vector_int_test)
+{
+    const int32_t rowCount = 5;
+    auto sumFactory = new SumAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto sumInt = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    sumInt->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value 7
+    auto *constCol = new ConstVector<int32_t>(7, OMNI_INT, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+    EXPECT_EQ(rowCount, vecBatch->GetRowCount());
+
+    auto state = NewAndInitState(sumInt.get());
+    sumInt->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    auto outputVector = VectorHelper::CreateVector(OMNI_FLAT, DataTypeId::OMNI_LONG, 1);
+    std::vector<BaseVector *> extractVectors{outputVector};
+    sumInt->ExtractValues(state.get(), extractVectors, 0);
+
+    // Sum of 5 * 7 = 35
+    EXPECT_FALSE(extractVectors[0]->IsNull(0));
+    EXPECT_EQ(35L, dynamic_cast<Vector<int64_t> *>(extractVectors[0])->GetValue(0));
+
+    delete outputVector;
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete sumFactory;
+}
+
+// CountColumn aggregator with ConstVector<int64_t> input
+TEST(AggregatorTest, count_column_const_vector_test)
+{
+    const int32_t rowCount = 5;
+    auto countFactory = new CountColumnAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto countLong = countFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    countLong->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value 10 (non-null)
+    auto *constCol = new ConstVector<int64_t>(10L, OMNI_LONG, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+
+    auto state = NewAndInitState(countLong.get());
+    countLong->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    auto count = ExtractValueFromState<int64_t>(state.get());
+    EXPECT_EQ(5, *count);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete countFactory;
+}
+
+// CountAll aggregator with ConstVector<int64_t> input
+TEST(AggregatorTest, count_all_const_vector_test)
+{
+    const int32_t rowCount = 5;
+    auto countAllFactory = new CountAllAggregatorFactory();
+    std::vector<int32_t> channel0 = {-1};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto countAll = countAllFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(NoneType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    countAll->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value 10
+    auto *constCol = new ConstVector<int64_t>(10L, OMNI_LONG, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+
+    auto state = NewAndInitState(countAll.get());
+    countAll->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    auto count = ExtractValueFromState<int64_t>(state.get());
+    EXPECT_EQ(5, *count);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete countAllFactory;
+}
+
+// Min aggregator with ConstVector<int64_t> input
+TEST(AggregatorTest, min_const_vector_long_test)
+{
+    const int32_t rowCount = 5;
+    auto minFactory = new MinAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto minLong = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    minLong->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value 42
+    auto *constCol = new ConstVector<int64_t>(42L, OMNI_LONG, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+
+    auto state = NewAndInitState(minLong.get());
+    minLong->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    Vector<int64_t> longResult(1);
+    std::vector<BaseVector *> result;
+    result.push_back(&longResult);
+    minLong->ExtractValues(state.get(), result, 0);
+
+    EXPECT_FALSE(longResult.IsNull(0));
+    EXPECT_EQ(42L, longResult.GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete minFactory;
+}
+
+// Min aggregator with ConstVector<int32_t> input
+TEST(AggregatorTest, min_const_vector_int_test)
+{
+    const int32_t rowCount = 5;
+    auto minFactory = new MinAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto minInt = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    minInt->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value 7
+    auto *constCol = new ConstVector<int32_t>(7, OMNI_INT, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+
+    auto state = NewAndInitState(minInt.get());
+    minInt->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    Vector<int64_t> longResult(1);
+    std::vector<BaseVector *> result;
+    result.push_back(&longResult);
+    minInt->ExtractValues(state.get(), result, 0);
+
+    EXPECT_FALSE(longResult.IsNull(0));
+    EXPECT_EQ(7L, longResult.GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete minFactory;
+}
+
+// Max aggregator with ConstVector<int64_t> input
+TEST(AggregatorTest, max_const_vector_long_test)
+{
+    const int32_t rowCount = 5;
+    auto maxFactory = new MaxAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto maxLong = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    maxLong->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value 42
+    auto *constCol = new ConstVector<int64_t>(42L, OMNI_LONG, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+
+    auto state = NewAndInitState(maxLong.get());
+    maxLong->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    auto value = ExtractValueFromState<int64_t>(state.get());
+    EXPECT_EQ(42L, *value);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete maxFactory;
+}
+
+// Max aggregator with ConstVector<int32_t> input
+TEST(AggregatorTest, max_const_vector_int_test)
+{
+    const int32_t rowCount = 5;
+    auto maxFactory = new MaxAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto maxInt = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    maxInt->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value 7
+    auto *constCol = new ConstVector<int32_t>(7, OMNI_INT, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+
+    auto state = NewAndInitState(maxInt.get());
+    maxInt->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    auto value = ExtractValueFromState<int32_t>(state.get());
+    EXPECT_EQ(7, *value);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete maxFactory;
+}
+
+// Max aggregator with ConstVector<bool> input
+TEST(AggregatorTest, max_const_vector_boolean_test)
+{
+    const int32_t rowCount = 5;
+    auto maxFactory = new MaxAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto maxBool = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()), channel0, true, false, false);
+    maxBool->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value true
+    auto *constCol = new ConstVector<bool>(true, OMNI_BOOLEAN, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+
+    auto state = NewAndInitState(maxBool.get());
+    maxBool->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    auto value = ExtractValueFromState<bool>(state.get());
+    EXPECT_EQ(true, *value);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete maxFactory;
+}
+
+// Min aggregator with ConstVector<bool> input
+TEST(AggregatorTest, min_const_vector_boolean_test)
+{
+    const int32_t rowCount = 5;
+    auto minFactory = new MinAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto minBool = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()), channel0, true, false, false);
+    minBool->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value false
+    auto *constCol = new ConstVector<bool>(false, OMNI_BOOLEAN, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+
+    auto state = NewAndInitState(minBool.get());
+    minBool->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    Vector<bool> boolResult(1);
+    std::vector<BaseVector *> result;
+    result.push_back(&boolResult);
+    minBool->ExtractValues(state.get(), result, 0);
+
+    EXPECT_FALSE(boolResult.IsNull(0));
+    EXPECT_EQ(false, boolResult.GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete minFactory;
+}
+
+// Average aggregator with ConstVector<int64_t> input
+TEST(AggregatorTest, avg_const_vector_long_test)
+{
+    const int32_t rowCount = 5;
+    auto avgFactory = new AverageAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto avgLong = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channel0, true, false, false);
+    avgLong->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value 10
+    auto *constCol = new ConstVector<int64_t>(10L, OMNI_LONG, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+
+    auto state = NewAndInitState(avgLong.get());
+    avgLong->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    Vector<double> avgOutput(1);
+    std::vector<BaseVector *> avgOutputVector;
+    avgOutputVector.push_back(&avgOutput);
+    avgLong->ExtractValues(state.get(), avgOutputVector, 0);
+
+    // Average of 5 * 10 / 5 = 10.0
+    EXPECT_FALSE(avgOutput.IsNull(0));
+    EXPECT_TRUE(avgOutput.GetValue(0) - 10.0 <= DBL_EPSILON);
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete avgFactory;
+}
+
+// TrySum aggregator with ConstVector<int64_t> input
+TEST(AggregatorTest, try_sum_const_vector_long_test)
+{
+    const int32_t rowCount = 5;
+    auto sumFactory = new TrySumSparkAggregatorFactory();
+    std::vector<int32_t> channel0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto sumAgg = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    sumAgg->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 5 rows have value 10
+    auto *constCol = new ConstVector<int64_t>(10L, OMNI_LONG, rowCount);
+    VectorBatch *vecBatch = new VectorBatch(rowCount);
+    vecBatch->Append(constCol);
+    EXPECT_EQ(rowCount, vecBatch->GetRowCount());
+
+    auto state = NewAndInitState(sumAgg.get());
+    sumAgg->ProcessGroup(state.get(), vecBatch, 0, rowCount);
+    auto outputVector = VectorHelper::CreateVector(OMNI_FLAT, DataTypeId::OMNI_LONG, 1);
+    std::vector<BaseVector *> extractVectors{outputVector};
+    sumAgg->ExtractValues(state.get(), extractVectors, 0);
+
+    // Sum of 5 * 10 = 50
+    EXPECT_FALSE(extractVectors[0]->IsNull(0));
+    EXPECT_EQ(50L, dynamic_cast<Vector<int64_t> *>(extractVectors[0])->GetValue(0));
+
+    delete outputVector;
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete sumFactory;
+}
+
+// BitAnd aggregator with ConstVector<int64_t> input
+TEST(AggregattorTest, bit_and_const_vector_test)
+{
+    const int32_t rowCount = 3;
+    op::BitAndAggregatorFactory bitAndFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{LongType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{LongType()});
+    std::vector<int32_t> channels = {0};
+    auto bitAndAgg = bitAndFactory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(bitAndAgg.get(), nullptr);
+
+    // ConstVector: all 3 rows have value 7 (0b111)
+    auto *constCol = new ConstVector<int64_t>(7L, OMNI_LONG, rowCount);
+    VectorBatch *vectorBatch = new VectorBatch(rowCount);
+    vectorBatch->Append(constCol);
+
+    auto state = NewAndInitState(bitAndAgg.get());
+    bitAndAgg->ProcessGroup(state.get(), vectorBatch, 0, rowCount);
+
+    Vector<int64_t> spillVec(1);
+    std::vector<BaseVector *> spillVectors = {&spillVec};
+    std::vector<AggregateState *> groupStates = {state.get()};
+    bitAndAgg->ExtractValuesForSpill(groupStates, spillVectors);
+
+    EXPECT_FALSE(spillVec.IsNull(0));
+    EXPECT_EQ(spillVec.GetValue(0), 7L);  // 7 & 7 & 7 = 7
+
+    delete vectorBatch;
+}
+
+// BitOr aggregator with ConstVector<int64_t> input
+TEST(AggregattorTest, bit_or_const_vector_test)
+{
+    const int32_t rowCount = 3;
+    op::BitOrAggregatorFactory bitOrFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{LongType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{LongType()});
+    std::vector<int32_t> channels = {0};
+    auto bitOrAgg = bitOrFactory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(bitOrAgg.get(), nullptr);
+
+    // ConstVector: all 3 rows have value 5 (0b101)
+    auto *constCol = new ConstVector<int64_t>(5L, OMNI_LONG, rowCount);
+    VectorBatch *vectorBatch = new VectorBatch(rowCount);
+    vectorBatch->Append(constCol);
+
+    auto state = NewAndInitState(bitOrAgg.get());
+    bitOrAgg->ProcessGroup(state.get(), vectorBatch, 0, rowCount);
+
+    Vector<int64_t> spillVec(1);
+    std::vector<BaseVector *> spillVectors = {&spillVec};
+    std::vector<AggregateState *> groupStates = {state.get()};
+    bitOrAgg->ExtractValuesForSpill(groupStates, spillVectors);
+
+    EXPECT_FALSE(spillVec.IsNull(0));
+    EXPECT_EQ(spillVec.GetValue(0), 5L);  // 5 | 5 | 5 = 5
+
+    delete vectorBatch;
+}
+
+// BitXor aggregator with ConstVector<int64_t> input
+TEST(AggregattorTest, bit_xor_const_vector_test)
+{
+    const int32_t rowCount = 3;
+    op::BitXorAggregatorFactory bitXorFactory;
+    DataTypes inputTypes(std::vector<DataTypePtr>{LongType()});
+    DataTypes outputTypes(std::vector<DataTypePtr>{LongType()});
+    std::vector<int32_t> channels = {0};
+    auto bitXorAgg = bitXorFactory.CreateAggregator(inputTypes, outputTypes, channels, true, false, false);
+    ASSERT_NE(bitXorAgg.get(), nullptr);
+
+    // ConstVector: all 3 rows have value 5 (0b101)
+    auto *constCol = new ConstVector<int64_t>(5L, OMNI_LONG, rowCount);
+    VectorBatch *vectorBatch = new VectorBatch(rowCount);
+    vectorBatch->Append(constCol);
+
+    auto state = NewAndInitState(bitXorAgg.get());
+    bitXorAgg->ProcessGroup(state.get(), vectorBatch, 0, rowCount);
+
+    Vector<int64_t> spillVec(1);
+    std::vector<BaseVector *> spillVectors = {&spillVec};
+    std::vector<AggregateState *> groupStates = {state.get()};
+    bitXorAgg->ExtractValuesForSpill(groupStates, spillVectors);
+
+    EXPECT_FALSE(spillVec.IsNull(0));
+    EXPECT_EQ(spillVec.GetValue(0), 5L);  // 5 ^ 5 ^ 5 = 5 (odd count)
+
+    delete vectorBatch;
+}
+
+// First aggregator (ignore null) with ConstVector<int32_t> input
+TEST(AggregatorTest, first_int_ignorenull_const_vector_test)
+{
+    auto firstIgnoreNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL);
+    std::vector<int32_t> channal0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto firstAgg = firstIgnoreNullFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal0, true, true);
+    firstAgg->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 3 rows have value 42
+    const int32_t rowCount = 3;
+    auto *constCol = new ConstVector<int32_t>(42, OMNI_INT, rowCount);
+    auto *vecBatch = new VectorBatch(1);
+    vecBatch->Append(constCol);
+
+    auto *resultFirstVec = new Vector<int32_t>(1);
+    auto *resultValueSetVec = new Vector<bool>(1);
+    std::vector<BaseVector *> extractVecs = {resultFirstVec, resultValueSetVec};
+
+    auto state = NewAndInitState(firstAgg.get());
+
+    // Process row 0 => first non-null = 42
+    firstAgg->ProcessGroup(state.get(), vecBatch, 0);
+    firstAgg->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_EQ(42, resultFirstVec->GetValue(0));
+    EXPECT_TRUE(resultValueSetVec->GetValue(0));
+
+    // Process row 1 => value should still be 42 (first already set)
+    firstAgg->ProcessGroup(state.get(), vecBatch, 1);
+    firstAgg->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_EQ(42, resultFirstVec->GetValue(0));
+    EXPECT_TRUE(resultValueSetVec->GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete resultFirstVec;
+    delete resultValueSetVec;
+    delete firstIgnoreNullFactory;
+}
+
+// Last aggregator (ignore null) with ConstVector<int32_t> input
+TEST(AggregatorTest, last_int_ignorenull_const_vector_test)
+{
+    auto lastIgnoreNullFactory = new LastAggregatorFactory(OMNI_AGGREGATION_TYPE_LAST_IGNORENULL);
+    std::vector<int32_t> channal0 = {0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto lastAgg = lastIgnoreNullFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal0, true, true);
+    lastAgg->SetExecutionContext(executionContext.get());
+
+    // ConstVector: all 3 rows have value 42
+    const int32_t rowCount = 3;
+    auto *constCol = new ConstVector<int32_t>(42, OMNI_INT, rowCount);
+    auto *vecBatch = new VectorBatch(1);
+    vecBatch->Append(constCol);
+
+    auto *resultLastVec = new Vector<int32_t>(1);
+    auto *resultValueSetVec = new Vector<bool>(1);
+    std::vector<BaseVector *> extractVecs = {resultLastVec, resultValueSetVec};
+
+    auto state = NewAndInitState(lastAgg.get());
+
+    // Process row 0 => last non-null = 42
+    lastAgg->ProcessGroup(state.get(), vecBatch, 0);
+    lastAgg->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_EQ(42, resultLastVec->GetValue(0));
+    EXPECT_TRUE(resultValueSetVec->GetValue(0));
+
+    // Process row 2 => last should still be 42 (all same value)
+    lastAgg->ProcessGroup(state.get(), vecBatch, 2);
+    lastAgg->ExtractValues(state.get(), extractVecs, 0);
+    EXPECT_EQ(42, resultLastVec->GetValue(0));
+    EXPECT_TRUE(resultValueSetVec->GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete resultLastVec;
+    delete resultValueSetVec;
+    delete lastIgnoreNullFactory;
+}
 }

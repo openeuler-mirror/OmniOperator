@@ -320,6 +320,8 @@ void LookupJoinOperator::PrepareSerializers()
         auto curVector = probeHashColumns[i];
         if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
             PushBackProbeSerializer(dicVectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
+        } else if (curVector->GetEncoding() == Encoding::OMNI_ENCODING_CONST) {
+            PushBackProbeSerializer(constVectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
         } else {
             PushBackProbeSerializer(vectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
         }
@@ -1469,7 +1471,19 @@ template <typename T>
 void CalculateColHashes(BaseVector *vec, int32_t rowCount, int64_t *hashes, std::vector<int8_t> &nulls)
 {
     int64_t hash;
-    if (vec->GetEncoding() != OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == OMNI_ENCODING_CONST) {
+        if (vec->IsNull(0)) {
+            for (int32_t i = 0; i < rowCount; ++i) {
+                nulls[i] = 1;
+            }
+        } else {
+            auto constValue = static_cast<ConstVector<T> *>(vec)->GetConstValue();
+            hash = HashUtil::HashValue(constValue);
+            for (int32_t i = 0; i < rowCount; ++i) {
+                hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+            }
+        }
+    } else if (vec->GetEncoding() != OMNI_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsNull(i)) {
                 nulls[i] = 1;
@@ -1493,7 +1507,19 @@ void CalculateColHashes(BaseVector *vec, int32_t rowCount, int64_t *hashes, std:
 void CalculateColDec64Hashes(BaseVector *vec, int32_t rowCount, int64_t *hashes, std::vector<int8_t> &nulls)
 {
     int64_t hash;
-    if (vec->GetEncoding() != OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == OMNI_ENCODING_CONST) {
+        if (vec->IsNull(0)) {
+            for (int32_t i = 0; i < rowCount; ++i) {
+                nulls[i] = 1;
+            }
+        } else {
+            auto constValue = static_cast<ConstVector<int64_t> *>(vec)->GetConstValue();
+            hash = HashUtil::HashDecimal64Value(constValue);
+            for (int32_t i = 0; i < rowCount; ++i) {
+                hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+            }
+        }
+    } else if (vec->GetEncoding() != OMNI_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsNull(i)) {
                 nulls[i] = 1;
@@ -1518,7 +1544,19 @@ void CalculateColDec128Hashes(BaseVector *vec, int32_t rowCount, int64_t *hashes
 {
     int64_t hash;
     Decimal128 decimal128Value;
-    if (vec->GetEncoding() != OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == OMNI_ENCODING_CONST) {
+        if (vec->IsNull(0)) {
+            for (int32_t i = 0; i < rowCount; ++i) {
+                nulls[i] = 1;
+            }
+        } else {
+            decimal128Value = static_cast<ConstVector<Decimal128> *>(vec)->GetConstValue();
+            hash = HashUtil::HashValue(static_cast<int64_t>(decimal128Value.LowBits()), decimal128Value.HighBits());
+            for (int32_t i = 0; i < rowCount; ++i) {
+                hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+            }
+        }
+    } else if (vec->GetEncoding() != OMNI_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsNull(i)) {
                 nulls[i] = 1;
@@ -1544,7 +1582,20 @@ void CalculateColDec128Hashes(BaseVector *vec, int32_t rowCount, int64_t *hashes
 void CalculateColVarcharHashes(BaseVector *vec, int32_t rowCount, int64_t *hashes, std::vector<int8_t> &nulls)
 {
     int64_t hash;
-    if (vec->GetEncoding() != OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == OMNI_ENCODING_CONST) {
+        if (vec->IsNull(0)) {
+            for (int32_t i = 0; i < rowCount; ++i) {
+                nulls[i] = 1;
+            }
+        } else {
+            auto varcharValue = static_cast<ConstVector<std::string_view> *>(vec)->GetConstValue();
+            hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(varcharValue.data())),
+                static_cast<int32_t>(varcharValue.length()));
+            for (int32_t i = 0; i < rowCount; ++i) {
+                hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+            }
+        }
+    } else if (vec->GetEncoding() != OMNI_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsNull(i)) {
                 nulls[i] = 1;
@@ -1668,6 +1719,22 @@ void NO_INLINE LookupJoinOutputBuilder::AppendRow(int32_t probePosition, BaseVec
     }
 }
 
+template <typename T, bool isShuffleExchangeBuildPlan>
+static ALWAYS_INLINE T GetBuildValue(BaseVector *vec, T rowIdx)
+{
+    if constexpr (isShuffleExchangeBuildPlan) {
+        return static_cast<Vector<T> *>(vec)->GetValue(rowIdx);
+    } else {
+        if (vec->GetEncoding() == OMNI_ENCODING_CONST) {
+            return static_cast<ConstVector<T> *>(vec)->GetConstValue();
+        } else if (vec->GetEncoding() == OMNI_DICTIONARY) {
+            return static_cast<Vector<DictionaryContainer<T>> *>(vec)->GetValue(rowIdx);
+        } else {
+            return static_cast<Vector<T> *>(vec)->GetValue(rowIdx);
+        }
+    }
+}
+
 template <typename T, bool isInnerJoin, bool isShuffleExchangeBuildPlan>
 static NO_INLINE BaseVector *ConstructBuildColumn(
     const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp, uint32_t outputCol, int32_t numRows,
@@ -1696,15 +1763,7 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
             for (int32_t j = 0; j < parallelNum; ++j) {
                 auto currRow = i + j - parallelNum;
                 if (!(ret->IsNull(currRow))) {
-                    if constexpr (isShuffleExchangeBuildPlan) {
-                        value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
-                    } else {
-                        if (preVector->GetEncoding() == OMNI_DICTIONARY) {
-                            value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
-                        } else {
-                            value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
-                        }
-                    }
+                    value = GetBuildValue<T, isShuffleExchangeBuildPlan>(preVector, rowIdxes[j]);
                     ret->SetValue(currRow, value);
                 }
             }
@@ -1718,6 +1777,19 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
             rowIdxes[parallelNum] = rowIdx;
             parallelNum++;
             if (parallelNum == parallelism) {
+                if constexpr (!isShuffleExchangeBuildPlan) {
+                    if (buildVector->GetEncoding() == OMNI_ENCODING_CONST) {
+                        value = static_cast<ConstVector<T> *>(buildVector)->GetConstValue();
+                        for (int j = 0; j < parallelNum; ++j) {
+                            getResult[j] = value;
+                        }
+                        ret->SetValues(i - parallelNum + 1, static_cast<void *>(getResult), parallelNum);
+                        parallelNum = 0;
+                        preVecBatchIdx = vecBatchIdx;
+                        preVector = buildVector;
+                        continue;
+                    }
+                }
                 T *buildVecSrc;
                 if (buildVector->GetEncoding() == OMNI_DICTIONARY) {
                     auto dictionaryVector = static_cast<Vector<DictionaryContainer<T>> *>(buildVector);
@@ -1739,15 +1811,7 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
             for (int32_t j = 0; j < parallelNum; ++j) {
                 auto currRow = i + j - parallelNum;
                 if (!(ret->IsNull(currRow))) {
-                    if constexpr (isShuffleExchangeBuildPlan) {
-                        value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
-                    } else {
-                        if (preVector->GetEncoding() == OMNI_DICTIONARY) {
-                            value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
-                        } else {
-                            value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
-                        }
-                    }
+                    value = GetBuildValue<T, isShuffleExchangeBuildPlan>(preVector, rowIdxes[j]);
                     ret->SetValue(currRow, value);
                 }
             }
@@ -1765,15 +1829,7 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
         for (int32_t j = 0; j < parallelNum; ++j) {
             auto currRow = numRows - parallelNum + j;
             if (!(ret->IsNull(currRow))) {
-                if constexpr (isShuffleExchangeBuildPlan) {
-                    value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
-                } else {
-                    if (preVector->GetEncoding() == OMNI_DICTIONARY) {
-                        value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
-                    } else {
-                        value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
-                    }
-                }
+                value = GetBuildValue<T, isShuffleExchangeBuildPlan>(preVector, rowIdxes[j]);
                 ret->SetValue(currRow, value);
             }
         }
@@ -1806,7 +1862,9 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
         if constexpr (isShuffleExchangeBuildPlan) {
             value = static_cast<Vector<T> *>(buildVector)->GetValue(buildRowIdx);
         } else {
-            if (buildVector->GetEncoding() == OMNI_DICTIONARY) {
+            if (buildVector->GetEncoding() == OMNI_ENCODING_CONST) {
+                value = static_cast<ConstVector<T> *>(buildVector)->GetConstValue();
+            } else if (buildVector->GetEncoding() == OMNI_DICTIONARY) {
                 value = static_cast<Vector<DictionaryContainer<T>> *>(buildVector)->GetValue(buildRowIdx);
             } else {
                 value = static_cast<Vector<T> *>(buildVector)->GetValue(buildRowIdx);
@@ -1843,7 +1901,9 @@ static NO_INLINE BaseVector *ConstructBuildVarcharColumn(
         if constexpr (isShuffleExchangeBuildPlan) {
             value = static_cast<VarcharVector *>(buildVector)->GetValue(buildRowIdx);
         } else {
-            if (buildVector->GetEncoding() == OMNI_DICTIONARY) {
+            if (buildVector->GetEncoding() == OMNI_ENCODING_CONST) {
+                value = static_cast<ConstVector<std::string_view> *>(buildVector)->GetConstValue();
+            } else if (buildVector->GetEncoding() == OMNI_DICTIONARY) {
                 value = static_cast<DictionaryVector *>(buildVector)->GetValue(buildRowIdx);
             } else {
                 value = static_cast<VarcharVector *>(buildVector)->GetValue(buildRowIdx);

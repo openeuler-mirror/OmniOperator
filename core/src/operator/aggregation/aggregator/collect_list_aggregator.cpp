@@ -150,11 +150,26 @@ void CollectListAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState 
         return;
     }
     bool isDictionary = vector->GetEncoding() == vec::OMNI_DICTIONARY;
+    bool isConst = vector->GetEncoding() == vec::OMNI_ENCODING_CONST;
     using stateType = typename AggNativeAndVectorType<IN_ID>::type;
     // Caller (TypedAggregator::ProcessGroup) already passes state + aggStateOffset for this aggregator.
     ListState<stateType> *listState = ListState<stateType>::CastState(state);
     if (IsInputRaw()) {
-        listState->UpdatePartialState(vector, rowCount, nullMap, isDictionary, rowOffset);
+        if (isConst) {
+            auto *constVector = static_cast<vec::ConstVector<stateType> *>(vector);
+            if (constVector->IsNull(0)) {
+                return;
+            }
+            stateType value = constVector->GetConstValue();
+            std::vector<stateType> *list = reinterpret_cast<std::vector<stateType> *>(listState->listAddr);
+            for (int32_t i = 0; i < rowCount; i++) {
+                if (nullMap == nullptr || !(*nullMap)[rowOffset + i]) {
+                    list->push_back(value);
+                }
+            }
+        } else {
+            listState->UpdatePartialState(vector, rowCount, nullMap, isDictionary, rowOffset);
+        }
     } else {
         auto arrayVector = static_cast<ArrayVector *>(vector);
         listState->UpdateFinalState(arrayVector, rowCount, nullMap, isDictionary, rowOffset);

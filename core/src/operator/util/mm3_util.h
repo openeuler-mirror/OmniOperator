@@ -380,7 +380,16 @@ static void NeonLong(omniruntime::vec::Vector<int64_t>* currentCol, std::vector<
 
 static void Mm3Byte(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
 {
-    if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<int8_t> *>(vec);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            return;
+        }
+        uint32_t constVal = static_cast<uint32_t>(static_cast<int32_t>(constVec->GetConstValue()));
+        for (auto row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashInt(constVal, partitionIds[row]);
+        }
+    } else if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
         auto currentCol = reinterpret_cast<vec::Vector<vec::DictionaryContainer<int8_t>> *>(vec);
         if (UNLIKELY(currentCol->HasNull())) {
             for (auto row = 0; row < rowCount; row++) {
@@ -412,7 +421,16 @@ static void Mm3Byte(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::v
 
 static void Mm3Short(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
 {
-    if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<int16_t> *>(vec);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            return;
+        }
+        uint32_t constVal = static_cast<uint32_t>(static_cast<int32_t>(constVec->GetConstValue()));
+        for (auto row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashInt(constVal, partitionIds[row]);
+        }
+    } else if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
         auto currentCol = reinterpret_cast<vec::Vector<vec::DictionaryContainer<int16_t>> *>(vec);
         if (UNLIKELY(currentCol->HasNull())) {
             for (auto row = 0; row < rowCount; row++) {
@@ -444,7 +462,18 @@ static void Mm3Short(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::
 
 static void Mm3Float(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
 {
-    if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<float> *>(vec);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            return;
+        }
+        float fval = constVec->GetConstValue();
+        uint32_t intVal;
+        memcpy(&intVal, &fval, sizeof(uint32_t));
+        for (auto row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashInt(intVal, partitionIds[row]);
+        }
+    } else if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
         auto currentCol = reinterpret_cast<vec::Vector<vec::DictionaryContainer<float>> *>(vec);
         if (UNLIKELY(currentCol->HasNull())) {
             for (auto row = 0; row < rowCount; row++) {
@@ -476,7 +505,16 @@ static void Mm3Float(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::
 
 static void Mm3Int(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
 {
-    if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<int32_t> *>(vec);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            return;
+        }
+        uint32_t constVal = static_cast<uint32_t>(constVec->GetConstValue());
+        for (auto row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashInt(constVal, partitionIds[row]);
+        }
+    } else if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
         auto currentCol = reinterpret_cast<vec::Vector<vec::DictionaryContainer<int32_t>> *>(vec);
         if (UNLIKELY(currentCol->HasNull())) {
             for (auto row = 0; row < rowCount; row++) {
@@ -508,7 +546,18 @@ static void Mm3Int(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::ve
 
 static void Mm3Double(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
 {
-    if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<double> *>(vec);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            return;
+        }
+        double dval = constVec->GetConstValue();
+        uint64_t intVal;
+        memcpy(&intVal, &dval, sizeof(uint64_t));
+        for (auto row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashLong(intVal, partitionIds[row]);
+        }
+    } else if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
         auto currentCol = reinterpret_cast<vec::Vector<vec::DictionaryContainer<double>> *>(vec);
         if (UNLIKELY(currentCol->HasNull())) {
             for (auto row = 0; row < rowCount; row++) {
@@ -540,7 +589,16 @@ static void Mm3Double(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std:
 
 static void Mm3Long(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
 {
-    if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<int64_t> *>(vec);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            return;
+        }
+        uint64_t constVal = static_cast<uint64_t>(constVec->GetConstValue());
+        for (auto row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashLong(constVal, partitionIds[row]);
+        }
+    } else if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
         auto currentCol = reinterpret_cast<vec::Vector<vec::DictionaryContainer<int64_t>> *>(vec);
         if (UNLIKELY(currentCol->HasNull())) {
             for (auto row = 0; row < rowCount; row++) {
@@ -572,7 +630,17 @@ static void Mm3Long(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::v
 
 static void Mm3String(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
 {
-    if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<std::string_view> *>(vec);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            return;
+        }
+        std::string_view constValue = constVec->GetConstValue();
+        for (auto row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashUnsafeBytes(
+                const_cast<char *>(constValue.data()), constValue.size(), partitionIds[row]);
+        }
+    } else if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
         auto currentCol = reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view>> *>(vec);
         if (UNLIKELY(currentCol->HasNull())) {
             for (auto row = 0; row < rowCount; row++) {
@@ -611,7 +679,21 @@ static void Mm3String(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std:
 
 static void Mm3Decimal128(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
 {
-    if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<type::Decimal128> *>(vec);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            return;
+        }
+        auto constVal = constVec->GetConstValue();
+        int32_t byteLen = 0;
+        auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(
+            constVal.HighBits(), constVal.LowBits(), byteLen);
+        for (auto row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashUnsafeBytes(
+                reinterpret_cast<char *>(bytes), byteLen, partitionIds[row]);
+        }
+        delete[] bytes;
+    } else if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
         auto currentCol = reinterpret_cast<vec::Vector<vec::DictionaryContainer<type::Decimal128>> *>(vec);
         if (UNLIKELY(currentCol->HasNull())) {
             for (auto row = 0; row < rowCount; row++) {
@@ -666,7 +748,16 @@ static void Mm3Decimal128(omniruntime::vec::BaseVector* vec, int32_t &rowCount, 
 
 static void Mm3Boolean(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
 {
-    if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
+    if (vec->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<bool> *>(vec);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            return;
+        }
+        uint32_t constVal = constVec->GetConstValue() ? 1 : 0;
+        for (auto row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashInt(constVal, partitionIds[row]);
+        }
+    } else if (vec->GetEncoding() == vec::OMNI_DICTIONARY) {
         auto currentCol = reinterpret_cast<vec::Vector<vec::DictionaryContainer<bool>> *>(vec);
         if (UNLIKELY(currentCol->HasNull())) {
             for (auto row = 0; row < rowCount; row++) {

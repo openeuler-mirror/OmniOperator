@@ -89,7 +89,9 @@ private:
             // we want to keep only one level dictionary vector here
             // if the data is non-dictionary, we build dictionary to avoid data copy
             BaseVector *probeColumn = nullptr;
-            if (column->GetEncoding() == vec::OMNI_ENCODING_ARRAY || column->GetEncoding() == vec::OMNI_ENCODING_STRUCT) {
+            if (column->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+                probeColumn = VectorHelper::SliceVector(column, 0, rowCount);
+            } else if (column->GetEncoding() == vec::OMNI_ENCODING_ARRAY || column->GetEncoding() == vec::OMNI_ENCODING_STRUCT) {
                 probeColumn = column->CopyPositions(probePositions, 0, rowCount);
             } else if (column->GetEncoding() == vec::OMNI_DICTIONARY) {
                 probeColumn = VectorHelper::CopyPositionsVector(column, probePositions, 0, rowCount);

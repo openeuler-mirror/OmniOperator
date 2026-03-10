@@ -77,7 +77,14 @@ public:
         const std::shared_ptr<NullsHelper> nullMap)
     {
         if (inputRaw) {
-            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+            if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+                if (nullMap == nullptr) {
+                    auto constValue = static_cast<vec::ConstVector<InType> *>(vector)->GetConstValue();
+                    for (size_t i = 0; i < rowStates.size(); ++i) {
+                        TrySumFlatState::template UpdateState<InType, ResultType>(rowStates[i] + aggStateOffset, constValue);
+                    }
+                }
+            } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
@@ -144,7 +151,15 @@ public:
     {
         TrySumFlatState *trySumFlatState = TrySumFlatState::CastState(state);
         if (inputRaw) {
-            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+            if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+                if (nullMap == nullptr) {
+                    auto constValue = static_cast<vec::ConstVector<InType> *>(vector)->GetConstValue();
+                    for (int32_t i = 0; i < rowCount; ++i) {
+                        SumOp<InType, ResultType, int64_t, StateCountHandler, true>(
+                            &trySumFlatState->value, trySumFlatState->count, constValue, 1ULL);
+                    }
+                }
+            } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {

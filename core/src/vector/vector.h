@@ -8,6 +8,7 @@
 
 #include <cstdlib>
 #include <functional>
+#include <string>
 #include <type_traits>
 #include <jemalloc/jemalloc.h>
 #include <memory>
@@ -246,6 +247,7 @@ public:
         this->dataTypeId = dataTypeId;
         this->encoding = OMNI_ENCODING_CONST;
         this->nullsBuffer = std::make_shared<NullsBuffer>(1, nullptr, 0);
+        MakeOwnedCopy();
     }
 
     ConstVector(std::vector<RAW_DATA_TYPE> array, DataTypeId dataTypeId): array(array)
@@ -256,16 +258,45 @@ public:
     }
 
     ConstVector(RAW_DATA_TYPE value, DataTypeId dataTypeId, int32_t size)
-        : BaseVector(size, OMNI_ENCODING_CONST, dataTypeId), value(value) {}
+        : BaseVector(size, OMNI_ENCODING_CONST, dataTypeId), value(value)
+    {
+        MakeOwnedCopy();
+    }
 
     RAW_DATA_TYPE GetConstValue() const
     {
         return value;
     }
 
+    const RAW_DATA_TYPE& GetConstValueRef() const
+    {
+        return value;
+    }
+
+    // Prevent copy/move to avoid dangling string_view after copy
+    ConstVector(const ConstVector&) = delete;
+    ConstVector& operator=(const ConstVector&) = delete;
+    ConstVector(ConstVector&&) = delete;
+    ConstVector& operator=(ConstVector&&) = delete;
+
 private:
+    /**
+     * For string_view types: copy the referenced string data into ownedData_ so that
+     * the ConstVector owns its data and does not depend on external memory lifetime
+     * (e.g., hiveSplit_->partitionKeys which may be freed between splits).
+     * For all other types: this is a no-op (compiled away by if constexpr).
+     */
+    void MakeOwnedCopy()
+    {
+        if constexpr (std::is_same_v<RAW_DATA_TYPE, std::string_view>) {
+            ownedData_ = std::string(value);
+            value = std::string_view(ownedData_);
+        }
+    }
+
     RAW_DATA_TYPE value;
     std::vector<RAW_DATA_TYPE> array;
+    std::string ownedData_;  // Only meaningful when RAW_DATA_TYPE is std::string_view
 };
 
 /**

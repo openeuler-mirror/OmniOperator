@@ -87,7 +87,15 @@ public:
             ProcessSingleInternalFinal(state, vector, rowOffset, rowCount, nullMap);
             return;
         }
-        if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+        if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+            if (nullMap == nullptr) {
+                auto constValue = static_cast<vec::ConstVector<RawInputType> *>(vector)->GetConstValue();
+                for (int32_t i = 0; i < rowCount; ++i) {
+                    StdDevSampPartialOp(sampState->mean, sampState->m2, sampState->count,
+                        static_cast<double>(constValue));
+                }
+            }
+        } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
             auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromVector<IN_ID>(vector));
             ptr += rowOffset;
             if (nullMap == nullptr) {
@@ -137,7 +145,18 @@ public:
         const std::shared_ptr<NullsHelper> nullMap)
     {
         if (this->inputRaw) {
-            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+            if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+                auto constValue = static_cast<vec::ConstVector<RawInputType> *>(vector)->GetConstValue();
+                if (nullMap == nullptr) {
+                    for (size_t i = 0; i < rowStates.size(); ++i) {
+                        StdDevState::UpdateState(rowStates[i] + aggStateOffset, constValue);
+                    }
+                } else {
+                    for (size_t i = 0; i < rowStates.size(); ++i) {
+                        StdDevState::template UpdateStateWithCondition<false>(rowStates[i] + aggStateOffset, constValue, (*nullMap)[i]);
+                    }
+                }
+            } else if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
