@@ -188,6 +188,10 @@ OmniStatus WindowOperator::Init()
                 windowFunctions.push_back(std::move(make_unique<PercentRankFunction>(std::move(windowFrame),
                     NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
                 break;
+            case OMNI_WINDOW_TYPE_CUME_DIST:
+                windowFunctions.push_back(std::move(make_unique<CumeDistFunction>(std::move(windowFrame),
+                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
+                break;
             case OMNI_WINDOW_TYPE_LEAD: {
                 int64_t leadOffset = windowFrameStartChannels[i];
                 int32_t leadDefaultChannel = windowFrameEndChannels[i];

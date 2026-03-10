@@ -472,6 +472,136 @@ TEST(NativeOmniWindowOperatorTest, testPercentRankPartition)
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
+TEST(NativeOmniWindowOperatorTest, testCumeDist)
+{
+    // construct the input data
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), FloatType() }));
+    int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
+    int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
+    double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int16_t data3[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
+    float data4[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4);
+
+    int32_t outputCols[5] = {1, 2, 0, 3, 4};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {false};
+    int32_t nullFirsts[1] = {false};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_CUME_DIST};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
+    int32_t partitionCols[0] = {};
+    int32_t preGroupedCols[0] = {};
+
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), FloatType(), DoubleType() }));
+    int32_t argumentChannels[0] = {};
+
+    // dealing data with the operator
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
+        5, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    // construct the output data
+    // cume_dist = runningTotal / numPartitionRows, where numPartitionRows = 6
+    // sorted by data1 descending: 8, 8, 5, 4, 2, 1
+    // peer groups: [8,8] (2 rows), [5] (1 row), [4] (1 row), [2] (1 row), [1] (1 row)
+    // runningTotal: 2, 3, 4, 5, 6
+    // cume_dists: 2/6=0.333..., 2/6=0.333..., 3/6=0.5, 4/6=0.666..., 5/6=0.833..., 6/6=1.0
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), DoubleType(), IntType(), ShortType(), FloatType(), DoubleType() }));
+    int64_t expectData1[DATA_SIZE] = {8, 8, 5, 4, 2, 1};
+    double expectData2[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
+    int32_t expectData3[DATA_SIZE] = {0, 0, 2, 1, 2, 1};
+    int16_t expectData4[DATA_SIZE] = {5, 2, 0, 1, 3, 4};
+    float expectData5[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
+    double expectData6[DATA_SIZE] = {2.0/6.0, 2.0/6.0, 3.0/6.0, 4.0/6.0, 5.0/6.0, 6.0/6.0};
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5, expectData6);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
+TEST(NativeOmniWindowOperatorTest, testCumeDistPartition)
+{
+    // construct the input data
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType() }));
+    int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
+    int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
+    double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int16_t data3[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3);
+
+    int32_t outputCols[4] = {0, 1, 2, 3};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {false};
+    int32_t nullFirsts[1] = {false};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_CUME_DIST};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), DoubleType() }));
+    int32_t argumentChannels[0] = {};
+
+    // dealing data with the operator
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
+        4, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
+
+    // construct the output data
+    // partition by data0: partition 0 has 2 rows, partition 1 has 2 rows, partition 2 has 2 rows
+    // For partition 0 (n=2): sorted by data1 descending: 8, 8 -> peer groups: [8,8] (2 rows)
+    //   runningTotal: 2, cume_dists: 2/2=1.0, 2/2=1.0
+    // For partition 1 (n=2): sorted by data1 descending: 4, 1 -> peer groups: [4] (1 row), [1] (1 row)
+    //   runningTotal: 1, 2, cume_dists: 1/2=0.5, 2/2=1.0
+    // For partition 2 (n=2): sorted by data1 descending: 5, 2 -> peer groups: [5] (1 row), [2] (1 row)
+    //   runningTotal: 1, 2, cume_dists: 1/2=0.5, 2/2=1.0
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), DoubleType() }));
+    int32_t expectData0[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
+    int64_t expectData1[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
+    double expectData2[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
+    int16_t expectData3[DATA_SIZE] = {5, 2, 1, 4, 0, 3};
+    double expectData4[DATA_SIZE] = {1.0, 1.0, 0.5, 1.0, 0.5, 1.0};
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2, expectData3, expectData4);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
 {
     // construct the input data
