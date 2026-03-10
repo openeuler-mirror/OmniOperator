@@ -170,6 +170,30 @@ std::unique_ptr<Aggregator> CollectListAggregatorFactory::CreateAggregator(const
 }
 
 
+std::unique_ptr<Aggregator> MinAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
+{
+    auto inputTypeId = inputTypes.GetType(0)->GetId();
+    if (inputTypeId == OMNI_ARRAY || inputTypeId == OMNI_ROW) {
+        return MinComplexAggregator::Create(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+            isOverflowAsNull, inputTypeId);
+    }
+    return typedFactory_.CreateAggregator(inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+}
+
+std::unique_ptr<Aggregator> MaxAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
+{
+    auto inputTypeId = inputTypes.GetType(0)->GetId();
+    if (inputTypeId == OMNI_ARRAY || inputTypeId == OMNI_ROW) {
+        return MaxComplexAggregator::Create(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+            isOverflowAsNull, inputTypeId);
+    }
+    return typedFactory_.CreateAggregator(inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+}
+
 std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
 {
     switch (aggType) {

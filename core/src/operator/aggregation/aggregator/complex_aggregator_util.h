@@ -214,6 +214,16 @@ inline void SetComplexColValue(vec::BaseVector *outputVector, type::DataTypeId c
     }
 }
 
+/**
+ * Compare two complex-type slices for min/max aggregation.
+ * Returns: <0 if sliceA < sliceB, 0 if equal, >0 if sliceA > sliceB.
+ * Supports OMNI_ARRAY (element-by-element) and OMNI_ROW (field-by-field).
+ * OMNI_MAP is not supported (Spark does not order MapType); throws if colTypeId is OMNI_MAP.
+ * @param colDataType optional; for nested types may be used to get element/field schema.
+ */
+int CompareComplexSlice(vec::BaseVector *sliceA, vec::BaseVector *sliceB, type::DataTypeId colTypeId,
+    type::DataType *colDataType = nullptr);
+
 } // namespace op
 } // namespace omniruntime
 

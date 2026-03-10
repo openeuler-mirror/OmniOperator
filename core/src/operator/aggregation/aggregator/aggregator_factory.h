@@ -10,6 +10,8 @@
 #include "maxby_complex_varchar_aggregator.h"
 #include "minby_complex_aggregator.h"
 #include "minby_complex_varchar_aggregator.h"
+#include "min_complex_aggregator.h"
+#include "max_complex_aggregator.h"
 #include "util/config_util.h"
 #include "operator/util/function_type.h"
 
@@ -372,16 +374,26 @@ public:
         bool isOverflowAsNull = true) override;
 };
 
-class MinAggregatorFactory : public TypedAggregatorFactory<MinAggregator> {
+class MinAggregatorFactory : public AggregatorFactory {
 public:
-    MinAggregatorFactory() : TypedAggregatorFactory<MinAggregator>() {}
+    MinAggregatorFactory() : AggregatorFactory() {}
     ~MinAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+private:
+    TypedAggregatorFactory<MinAggregator> typedFactory_;
 };
 
-class MaxAggregatorFactory : public TypedAggregatorFactory<MaxAggregator> {
+class MaxAggregatorFactory : public AggregatorFactory {
 public:
-    MaxAggregatorFactory() : TypedAggregatorFactory<MaxAggregator>() {}
+    MaxAggregatorFactory() : AggregatorFactory() {}
     ~MaxAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+private:
+    TypedAggregatorFactory<MaxAggregator> typedFactory_;
 };
 
 // CollectSet: always use element type T as template param, create CollectSetAggregator<T, T> for both partial and final.
