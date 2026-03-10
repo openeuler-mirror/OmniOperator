@@ -152,7 +152,10 @@ extern "C" DLLEXPORT const char* RegexpExtractRetNull(int64_t contextPtr, const 
 
     if (std::regex_search(ws, match, re) && match.size() > group) {
         int startIdx = match.position(group); // Get start position of group 2
-        *outLen = match.length(group);
+        std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
+        std::wstring matchedWstr = match[group].str();
+        std::string matchedNstr = convert.to_bytes(matchedWstr);
+        *outLen = matchedNstr.size();
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         memcpy_s(ret, *outLen + 1, str + startIdx, *outLen + 1);
         return ret;
@@ -1354,7 +1357,7 @@ extern "C" DLLEXPORT const char *StaticInvokeVarcharTypeWriteSideCheck(int64_t c
         return nullptr;
     }
 
-    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum + 1);
     errno_t res = memcpy_s(padded, outByteNum, str, outByteNum);
     if (res != EOK) {
         SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
@@ -1408,7 +1411,7 @@ extern "C" DLLEXPORT const char *StaticInvokeCharTypeWriteSideCheck(int64_t cont
         return nullptr;
     }
 
-    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum + 1);
     errno_t res = memcpy_s(padded, outByteNum, str, outByteNum);
     if (res != EOK) {
         SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
@@ -1449,7 +1452,7 @@ extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr,
         *outLen = 0;
         return nullptr;
     }
-    padded[outByteNum] = '\0';
+    padded[outByteNum - 1] = '\0';
     *outLen = outByteNum - 1;
     return padded;
 }

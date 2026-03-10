@@ -1299,7 +1299,7 @@ extern "C" DLLEXPORT void BatchStaticInvokeVarcharTypeWriteSideCheck(int64_t con
             outputStr[i] = nullptr;
             continue;
         }
-        auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+        auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum + 1);
         errno_t res = memcpy_s(padded, outByteNum, ss, outByteNum);
         if (res != EOK) {
             SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
@@ -1349,7 +1349,7 @@ extern "C" DLLEXPORT void BatchStaticInvokeCharReadPadding(int64_t contextPtr, c
             outputStr[i] = nullptr;
             continue;
         }
-        padded[outByteNum] = '\0';
+        padded[outByteNum - 1] = '\0';
         outputLen[i] = outByteNum - 1;
         outputStr[i] = padded;
     }

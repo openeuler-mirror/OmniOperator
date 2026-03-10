@@ -120,6 +120,9 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getCapacityInBytesN
     jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
+    if (nativeVector == nullptr) {
+        throw omniruntime::exception::OmniException("getCapacityInBytesNative failed", "native vector is null");
+    }
     DataTypeId typeId = nativeVector->GetTypeId();
     if (typeId != omniruntime::type::OMNI_VARCHAR && typeId != omniruntime::type::OMNI_CHAR) {
         throw omniruntime::exception::OmniException("vector type is no supported",
@@ -486,6 +489,9 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_addOffsetsNati
     auto arrayVec = reinterpret_cast<ArrayVector *>(arrayVecAddr);
     jsize length = env->GetArrayLength(offsetsAddr);
     jint* elements = env->GetIntArrayElements(offsetsAddr, nullptr);
+    if (UNLIKELY(elements == nullptr)) {
+        throw omniruntime::exception::OmniException("GET_ELEMENTS_FAILED","GetIntArrayElements failed");
+    }
     for (jsize i = 0; i < length; i++) {
         arrayVec->SetOffset(i, elements[i]);
     }
