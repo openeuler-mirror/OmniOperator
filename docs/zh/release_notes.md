@@ -26,16 +26,16 @@
 
 ### 软件版本配套说明<a name="ZH-CN_TOPIC_0000002515610832"></a>
 
-|项目|版本|
-|--|--|
-|操作系统|CentOS 7.9openEuler 20.03 LTS SP1openEuler 22.03 LTS SP1|
-|JDK|毕昇JDK 1.8（建议使用毕昇JDK 1.8.0_342）openEuler 22.03 LTS SP1与毕昇JDK 1.8.0_262不兼容，需更换为毕昇JDK 1.8.0_342。|
-|Hadoop|3.2.0|
-|Spark|3.1.1、3.3.1、3.4.3、3.5.2|
-|Hive|3.1.0|
-|Python|3.10.2及以上|
-|文件系统|HDFS|
-|数据格式|ORCPARQUET|
+|项目| 版本                                                                                            |
+|--|-----------------------------------------------------------------------------------------------|
+|操作系统| CentOS 7.9openEuler 20.03 LTS SP1openEuler 22.03 LTS SP1                                      |
+|JDK| 毕昇JDK 1.8（建议使用毕昇JDK 1.8.0_342）openEuler 22.03 LTS SP1与毕昇JDK 1.8.0_262不兼容，需更换为毕昇JDK 1.8.0_342。 |
+|Hadoop| 3.2.0                                                                                         |
+|Spark| 3.1.1、3.3.1、3.4.3、3.5.2                                                                       |
+|Hive| 3.1.0                                                                                         |
+|Python| 3.10.2及以上                                                                                     |
+|文件系统| HDFS                                                                                          |
+|数据格式| ORC、PARQUET                                                                                   |
 
 
 
@@ -189,7 +189,7 @@
 **新增特性<a name="section9559165534817"></a>**
 
 - 新增适配Spark的Gluten 1.3版本适配层。
-- SparkExtension新增支持concat\_ws、regexp、regexp\_replace、trim和floor表达式。
+- SparkExtension新增支持`concat_ws`、regexp、`regexp_replace`、trim和floor表达式。
 
 **修改特性<a name="section299616132492"></a>**
 
@@ -252,9 +252,9 @@
 
 - 支持Spark 3.4.3和Spark 3.5.2版本。
 - Spark 3.4.3和Spark 3.5.2支持LIMIT...OFFSET...语法。
-- 新增表达式：try\_add、try\_divide、try\_multiply、try\_subtract、try\_avg、try\_sum。
+- 新增表达式：`try_add`、`try_divide`、`try_multiply`、`try_subtract`、`try_avg`、`try_sum`。
 - Spark 3.5.2的开源版本中，ShuffledHashJoin新增了JoinType与BuildSide的同向处理逻辑。
-- Spark 3.5.2新增WindowGroupLimit算子，优化了Top-K计算中ROW\_NUMBER和RANK函数的性能。
+- Spark 3.5.2新增WindowGroupLimit算子，优化了Top-K计算中`ROW_NUMBER`和RANK函数的性能。
 
 **修改特性<a name="section299616132492"></a>**
 
@@ -290,8 +290,8 @@
 - Spark算子加速新增ColumnarDataWritingCommandExec列式算子。
 - Spark算子加速新增按Stage级别算子回退，部分场景能减少行列转换带来的性能损耗。
 - Spark算子加速新增支持TIMESTAMP数据类型。
-- Spark算子加速新增支持unix\_timestamp、from\_unixtime表达式。
-- Hive算子加速新增支持SIMPLE\_EDGE的Shuffle，新增支持Filter和Select算子的融合。
+- Spark算子加速新增支持`unix_timestamp`、`from_unixtime`表达式。
+- Hive算子加速新增支持S`IMPLE_EDGE`的Shuffle，新增支持Filter和Select算子的融合。
 - Hive算子加速新增支持POWER表达式。
 
 **修改特性<a name="section299616132492"></a>**
