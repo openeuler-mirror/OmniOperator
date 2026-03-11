@@ -114,6 +114,11 @@ public:
         return &operators_;
     }
 
+    std::vector<OperatorFactory*>* operatorFactories()
+    {
+        return &operatorFactories_;
+    }
+
     ALWAYS_INLINE bool isFinished() const
     {
         return finished_;
@@ -142,6 +147,7 @@ private:
     size_t curOperatorId_;
  
     std::vector<std::shared_ptr<omniruntime::op::Operator>> operators_;
+    std::vector<OperatorFactory*> operatorFactories_;
  
     BlockingReason blockingReason_;
     size_t blockedOperatorId_;

@@ -146,6 +146,7 @@ void planDetail(
     if (!currentOperators) {
         drivers->emplace_back(std::make_unique<OmniDriver>());
         currentOperators = drivers->back()->operators();
+        factories = drivers->back()->operatorFactories();
     }
 
     const auto &sources = planNode->Sources();
@@ -154,8 +155,9 @@ void planDetail(
         drivers->back()->inputDriver = true;
     } else {
         for (int32_t i = 0; i < sources.size(); ++i) {
-            planDetail(sources[i], MustStartNewPipeline(i) ? nullptr : currentOperators,
-                MustStartNewPipeline(i) ? &builderDrivers[i] : drivers, factories, queryConfig, splitsStore);
+            bool newPipeline = MustStartNewPipeline(i);
+            planDetail(sources[i], newPipeline ? nullptr : currentOperators,
+                newPipeline ? &builderDrivers[i] : drivers, newPipeline ? nullptr : factories, queryConfig, splitsStore);
         }
     }
 
@@ -242,14 +244,13 @@ void LocalPlanner::buildOperatorStats(std::vector<std::shared_ptr<OmniDriver>>* 
 void LocalPlanner::plan(
     const PlanFragment& fragment,
     std::vector<std::shared_ptr<OmniDriver>>* drivers,
-    std::vector<OperatorFactory*>* factories,
     const config::QueryConfig& queryConfig,
     std::shared_ptr<SplitsStore> splitsStore)
 {
     planDetail(fragment.planNode,
         nullptr,
         drivers,
-        factories,
+        nullptr,
         queryConfig,
         splitsStore);
     (*drivers)[0]->outputDriver = true;
