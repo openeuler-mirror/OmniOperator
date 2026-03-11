@@ -13,6 +13,8 @@
 #include "vectorization/functions/ArrayZip.h"
 #include "vectorization/functions/ArrayShuffle.h"
 #include "vectorization/functions/ArrayMinMaxFunction.h"
+#include "vectorization/functions/ArrayInsert.h"
+#include "vectorization/functions/ArrayIntersect.h"
 #include "vectorization/functions/ArrayCompactFunction.h"
 #include "vectorization/functions/ArrayContainsFunction.h"
 #include "vectorization/functions/ArrayRepeatFunction.h"
@@ -132,6 +134,55 @@ void RegisterArrayFunctions(const std::string &prefix)
         std::make_shared<ArrayMinFunction>());
     VectorFunction::RegisterVectorFunction("array_min", {OMNI_ARRAY}, OMNI_DECIMAL128,
         std::make_shared<ArrayMinFunction>());
+
+    // Register array_insert function for all supported element types
+    // array_insert(array(E), pos, E, legacyNegativeIndex) -> array(E)
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_BYTE, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_SHORT, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_INT, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_LONG, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_FLOAT, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_DOUBLE, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_BOOLEAN, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_VARCHAR, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_VARBINARY, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_DECIMAL64, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_DECIMAL128, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_DATE32, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+    VectorFunction::RegisterVectorFunction("array_insert",
+        {OMNI_ARRAY, OMNI_INT, OMNI_TIMESTAMP, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayInsertImpl>());
+
+    // Register array_intersect function
+    // array_intersect(array(T), array(T)) -> array(T)
+    // Returns the intersection of two arrays without duplicates
+    VectorFunction::RegisterVectorFunction("array_intersect",
+        {OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayIntersectImpl>());
 
     // Register array_compact function
     // array_compact(array<T>) -> array<T>: Removes all null elements from the array
