@@ -62,6 +62,9 @@ void OmniDriver::close()
         op->Close();
         op = nullptr;
     }
+    for (auto &factory : operatorFactories_) {
+        delete factory;
+    }
     closed_ = true;
 }
 
@@ -212,6 +215,9 @@ StopReason OmniDriver::RunInternal(
                     bool finished{false};
                     finished = op->isFinished();
                     if (finished) {
+                        // For join / union，there is split to multi pipeline.
+                        // When one pipeline finished, just close it.
+                        close();
                         finished_ = true;
                         return StopReason::kAtEnd;
                     }

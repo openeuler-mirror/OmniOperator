@@ -34,7 +34,6 @@ public:
     static void plan(
         const omniruntime::PlanFragment& fragment,
         std::vector<std::shared_ptr<omniruntime::compute::OmniDriver>>* drivers,
-        std::vector<omniruntime::op::OperatorFactory*>* factories,
         const config::QueryConfig& queryConfig,
         std::shared_ptr<SplitsStore> splitsStore);
 };

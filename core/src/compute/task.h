@@ -55,9 +55,6 @@ public:
                 driver->close();
             }
         }
-        for (auto& factory : operatorFactories_) {
-            delete factory;
-        }
     }
 
     vec::VectorBatch* Next(ContinueFuture* future = nullptr);
@@ -84,7 +81,6 @@ public:
 
 private:
     std::vector<std::shared_ptr<OmniDriver>> drivers_;
-    std::vector<OperatorFactory*> operatorFactories_;
     PlanFragment planFragment_;
     OperatorConfig operatorConfig_;
     TaskStats taskStats_;
