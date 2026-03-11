@@ -2,6 +2,8 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2025. All rights reserved.
  * Description: registry  function  implementation
  */
+
+#include <re2/re2.h>
 #include "stringfunctions.h"
 #include "md5.h"
 #include "dtoa.h"
@@ -152,7 +154,10 @@ extern "C" DLLEXPORT const char* RegexpExtractRetNull(int64_t contextPtr, const 
 
     if (std::regex_search(ws, match, re) && match.size() > group) {
         int startIdx = match.position(group); // Get start position of group 2
-        *outLen = match.length(group);
+        std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
+        std::wstring matchedWstr = match[group].str();
+        std::string matchedNstr = convert.to_bytes(matchedWstr);
+        *outLen = matchedNstr.size();
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         memcpy_s(ret, *outLen + 1, str + startIdx, *outLen + 1);
         return ret;
@@ -1221,19 +1226,17 @@ extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const c
     if (isNull) {
         return false;
     }
-    if (matchLen == 0) {
-        return true;
+    std::string s = std::string(srcStr, srcLen);
+    std::string r = std::string(matchStr, matchLen);
+
+    thread_local std::string cachedPattern;
+    thread_local std::unique_ptr<RE2> cachedRegex;
+    if (cachedPattern != r) {
+        cachedPattern = r;
+        cachedRegex = std::make_unique<RE2>(re2::StringPiece(matchStr, matchLen), RE2::Quiet);
     }
-    if (srcLen == 0) {
-        return false;
-    }
-    for (int32_t i = 0; i < srcLen; i++) {
-        char c = srcStr[i];
-        if (c < '0' || c > '9') {
-            return false;
-        }
-    }
-    return true;
+
+    return RE2::PartialMatch(re2::StringPiece(srcStr, srcLen), *cachedRegex.get());
 }
 
 extern "C" DLLEXPORT const char *CastDateToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value,
@@ -1354,7 +1357,7 @@ extern "C" DLLEXPORT const char *StaticInvokeVarcharTypeWriteSideCheck(int64_t c
         return nullptr;
     }
 
-    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum + 1);
     errno_t res = memcpy_s(padded, outByteNum, str, outByteNum);
     if (res != EOK) {
         SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
@@ -1408,7 +1411,7 @@ extern "C" DLLEXPORT const char *StaticInvokeCharTypeWriteSideCheck(int64_t cont
         return nullptr;
     }
 
-    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum + 1);
     errno_t res = memcpy_s(padded, outByteNum, str, outByteNum);
     if (res != EOK) {
         SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
@@ -1449,7 +1452,7 @@ extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr,
         *outLen = 0;
         return nullptr;
     }
-    padded[outByteNum] = '\0';
+    padded[outByteNum - 1] = '\0';
     *outLen = outByteNum - 1;
     return padded;
 }

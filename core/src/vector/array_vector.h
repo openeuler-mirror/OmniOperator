@@ -140,7 +140,13 @@ public:
                 sliced->SetNull(i);
             }
         }
-        sliced->SetElementVector(std::shared_ptr<BaseVector>(GetElementVector()->Slice(startOffset, sliced->GetOffset(length), isCopy)));
+        sliced->SetElementVector(
+            std::shared_ptr(
+                std::unique_ptr<BaseVector>(
+                    GetElementVector()->Slice(startOffset, sliced->GetOffset(length), isCopy)
+                )
+            )
+        );
         return sliced;
     }
 

@@ -346,6 +346,8 @@ void SortOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         pagesIndex->Clear();
         spilledBytes = spiller->GetSpilledBytes();
         if (result != ErrorCode::SUCCESS) {
+            delete spiller;
+            spiller = nullptr;
             throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
         }
         auto spillFiles = spiller->FinishSpill();

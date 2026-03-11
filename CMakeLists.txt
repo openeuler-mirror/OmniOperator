@@ -43,6 +43,8 @@ if (CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif (CCACHE_FOUND)
 
+find_package(re2 REQUIRED)
+
 if (DEFINED COVERAGE AND COVERAGE STREQUAL "ON")
     add_definitions(-DCOVERAGE)
     set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc -fpermissive")

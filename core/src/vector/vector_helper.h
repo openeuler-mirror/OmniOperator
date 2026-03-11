@@ -31,15 +31,20 @@ public:
         auto rowBuffer = std::make_unique<RowBuffer>(typeIds, encodings, typeIds.size() - 1);
 
         auto rowBatch = new RowBatch(vecBatch->GetRowCount());
-        for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
-            // 1.get value from vector batch
-            rowBuffer->TransValueFromVectorBatch(vecBatch, i);
+        try {
+            for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
+                // 1.get value from vector batch
+                rowBuffer->TransValueFromVectorBatch(vecBatch, i);
 
-            // 2.generate one buffer of one row
-            auto oneRowLen = rowBuffer->FillBuffer();
+                // 2.generate one buffer of one row
+                auto oneRowLen = rowBuffer->FillBuffer();
 
-            // 3.set one row
-            rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), oneRowLen));
+                // 3.set one row
+                rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), oneRowLen));
+            }
+        } catch (const std::exception &e) {
+            delete rowBatch;
+            throw std::runtime_error(e.what());
         }
         return rowBatch;
     }
