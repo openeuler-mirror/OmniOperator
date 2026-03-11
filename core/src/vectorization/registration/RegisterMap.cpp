@@ -12,6 +12,7 @@
 #include "vectorization/functions/StrToMapFunction.h"
 #include "vectorization/functions/MapFunction.h"
 #include "vectorization/functions/MapConcatFunction.h"
+#include "vectorization/functions/MapIdentityFunction.h"
 #include "codegen/func_signature.h"
 
 namespace omniruntime::vectorization {
@@ -19,6 +20,9 @@ using namespace omniruntime::codegen;
 
 void RegisterMapFunctions(const std::string &prefix)
 {
+    (void)prefix;
+    VectorFunction::RegisterVectorFunction("map", {OMNI_MAP}, OMNI_MAP,
+        std::make_shared<MapIdentityFunction>());
     VectorFunction::RegisterVectorFunction("size", {OMNI_MAP, OMNI_BOOLEAN}, OMNI_INT,
         std::make_shared<SizeFunction>());
 

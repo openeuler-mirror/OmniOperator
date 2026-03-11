@@ -5823,7 +5823,6 @@ TEST(HashAggregationOperatorTest, test_step) {
         delete hashAggOperatorFactory2;
 }
 
-
 // corr: Pearson correlation. Raw input 2 columns (numeric), output 1 double.
 // Merge: 1 container (Spark order n,xAvg,yAvg,ck,xMk,yMk all Double). Partial output: same Spark order.
 // Test data: x = [0,1,2,3,4], y = [0,1,4,9,16] => corr ≈ 0.9589

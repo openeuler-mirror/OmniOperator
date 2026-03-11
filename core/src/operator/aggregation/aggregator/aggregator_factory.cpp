@@ -311,7 +311,7 @@ std::unique_ptr<Aggregator> CorrAggregatorFactory::CreateAggregator(const DataTy
     if (nInput == 6) {
         for (size_t k = 0; k < 6; k++) {
             if (inputTypes.GetType(k)->GetId() != OMNI_DOUBLE) {
-                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                throw OmniException("UNSUPPORTED_ERROR",
                     "Corr merge expects 6 DOUBLE columns; type[" + std::to_string(k) + "]=" +
                     std::to_string(static_cast<int32_t>(inputTypes.GetType(k)->GetId())));
             }
@@ -324,12 +324,12 @@ std::unique_ptr<Aggregator> CorrAggregatorFactory::CreateAggregator(const DataTy
                 inputRaw, outputPartial, isOverflowAsNull);
     }
     if (nInput != 2) {
-        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+        throw OmniException("UNSUPPORTED_ERROR",
             "Corr requires 2 columns (raw) or 6 DOUBLE (merge). Got size=" + std::to_string(nInput));
     }
     if (!outputPartial && outputTypes.GetType(0)->GetId() != OMNI_DOUBLE) {
-        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
-            "Corr aggregator final output type must be DOUBLE");
+        throw OmniException("UNSUPPORTED_ERROR",
+                            "Corr aggregator final output type must be DOUBLE");
     }
     auto inputTypeId = inputTypes.GetType(0)->GetId();
     switch (inputTypeId) {
@@ -357,7 +357,7 @@ std::unique_ptr<Aggregator> CorrAggregatorFactory::CreateAggregator(const DataTy
         default: {
             std::string omniExceptionInfo =
                     "Corr aggregator does not support input type " + std::to_string(inputTypeId);
-            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+            throw OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
 }
@@ -999,6 +999,12 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateAggregator(const DataT
             return CreateFirstAggregatorHelper<std::string_view>(aggregateType, inputTypes, outputTypes, channels,
                 inputRaw, outputPartial, isOverflowAsNull);
         }
+        case OMNI_ARRAY:
+        case OMNI_MAP:
+        case OMNI_ROW: {
+            return std::make_unique<FirstComplexAggregator>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
         default: {
             std::string omniExceptionInfo =
                 "In function FirstAggregatorFactory::CreateAggregator, no such input type " +
@@ -1098,6 +1104,12 @@ std::unique_ptr<Aggregator> LastAggregatorFactory::CreateAggregator(const DataTy
         case OMNI_VARBINARY: {
             return CreateLastAggregatorHelper<std::string_view>(aggregateType, inputTypes, outputTypes, channels,
                 inputRaw, outputPartial, isOverflowAsNull);
+        }
+        case OMNI_ARRAY:
+        case OMNI_MAP:
+        case OMNI_ROW: {
+            return std::make_unique<LastComplexAggregator>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
         }
         default: {
             std::string omniExceptionInfo =
