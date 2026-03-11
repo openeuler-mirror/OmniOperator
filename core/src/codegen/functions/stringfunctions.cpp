@@ -194,6 +194,36 @@ extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *a
     return ret;
 }
 
+extern "C" DLLEXPORT const char *ConcatWsWithoutStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    bool separatorIsNull, bool *retIsNull, int32_t *outLen)
+{
+    if (separatorIsNull) {
+        *retIsNull = true;
+        *outLen = 0;
+        return nullptr;
+    }
+    *retIsNull = false;
+    *outLen = 0;
+    return reinterpret_cast<const char *>(EMPTY);
+}
+
+extern "C" DLLEXPORT const char *ConcatWsWith1Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull, bool *retIsNull, int32_t *outLen)
+{
+    if (separatorIsNull) {
+        *retIsNull = true;
+        *outLen = 0;
+        return nullptr;
+    }
+    *retIsNull = false;
+    if (s1IsNull) {
+        *outLen = 0;
+        return reinterpret_cast<const char *>(EMPTY);
+    }
+    *outLen = s1Len;
+    return s1;
+}
+
 extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
     bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull, const char *s2, int32_t s2Len, bool s2IsNull,
     bool *retIsNull, int32_t *outLen)
