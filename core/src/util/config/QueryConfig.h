@@ -229,7 +229,7 @@ public:
 
     bool orderBySpillEnabled() const
     {
-        return get<bool>(kOrderBySpillEnabled, false);
+        return get<bool>(kOrderBySpillEnabled, true);
     }
 
     bool windowSpillEnabled() const
