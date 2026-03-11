@@ -5,6 +5,7 @@
 #ifndef OMNI_RUNTIME_CENTRAL_MOMENT_H
 #define OMNI_RUNTIME_CENTRAL_MOMENT_H
 
+#include <cmath>
 #include <cstdint>
 #include "typed_aggregator.h"
 
@@ -82,8 +83,11 @@ namespace omniruntime {
                              const MomentValue &otherCentralMoment1,
                              const MomentValue &otherCentralMoment2,
                              const MomentValue &otherCentralMoment3, const MomentValue &otherCentralMoment4) {
+            if (otherCount <= 0) {
+                return;
+            }
             if (*count == 0) {
-                *count = otherCount;
+                *count = static_cast<uint64_t>(std::round(otherCount));
                 *centralMoment1 = otherCentralMoment1;
                 *centralMoment2 = otherCentralMoment2;
                 *centralMoment3 = otherCentralMoment3;
@@ -119,7 +123,7 @@ namespace omniruntime {
                                     (n1Value * n1Value * otherCentralMoment2 + n2Value * n2Value * m2) +
                                     4.0 * deltaN * (n1Value * otherCentralMoment3 - n2Value * m3);
             }
-            *count = newNValue;
+            *count = static_cast<uint64_t>(std::round(newNValue));
             *centralMoment1 = newCentralMoment1;
             *centralMoment2 = newCentralMoment2;
             *centralMoment3 = newCentralMoment3;

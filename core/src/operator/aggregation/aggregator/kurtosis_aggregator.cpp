@@ -5,6 +5,7 @@
 
 #include "kurtosis_aggregator.h"
 #include "central_moment.h"
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
     namespace op {
@@ -22,7 +23,6 @@ namespace omniruntime {
                 auto kurtosisCentralMoment3Vector = static_cast<Vector<double> *>(vectors[3]);
                 auto kurtosisCentralMoment4Vector = static_cast<Vector<double> *>(vectors[4]);
                 if (centralMomentState.count <= 0) {
-                    // all input are nulls, return 0
                     kurtosisCountVector->SetValue(rowIndex, 0);
                     kurtosisCentralMoment1Vector->SetValue(rowIndex, 0.0);
                     kurtosisCentralMoment2Vector->SetValue(rowIndex, 0.0);
@@ -64,7 +64,6 @@ namespace omniruntime {
                     auto kurtosisCentralMoment3Vector = static_cast<Vector<double> *>(vectors[3]);
                     auto kurtosisCentralMoment4Vector = static_cast<Vector<double> *>(vectors[4]);
                     if (centralMomentState.count <= 0) {
-                        // all input are nulls, return 0
                         kurtosisCountVector->SetValue(rowIndex, 0);
                         kurtosisCentralMoment1Vector->SetValue(rowIndex, 0.0);
                         kurtosisCentralMoment2Vector->SetValue(rowIndex, 0.0);
@@ -96,11 +95,11 @@ namespace omniruntime {
         std::vector<DataTypePtr>
         KurtosisAggregator<IN, OUT>::GetSpillType() {
             std::vector<DataTypePtr> spillTypes;
-            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_LONG)); // count
-            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE)); // m1
-            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE)); // m2
-            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE)); // m3
-            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE)); // m4
+            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_LONG));
+            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));
+            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));
+            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));
+            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));
             return spillTypes;
         }
 
@@ -171,7 +170,6 @@ namespace omniruntime {
             auto *pKurtosisState = KurtosisState::CastState(state);
             auto &centralMomentState = pKurtosisState->centralMomentState;
             if (this->inputRaw) {
-                // add
                 auto *valuePtr = reinterpret_cast<Value *>(GetValuesFromVector<IN>(vector));
                 valuePtr += rowOffset;
                 if (nullMap == nullptr) {
@@ -189,7 +187,6 @@ namespace omniruntime {
                         pKurtosisState->valueState, valuePtr, rowCount, *nullMap);
                 }
             } else {
-                // merge
                 auto *countVector = this->curVectorBatch->Get(this->channels[0]);
                 auto *m1Vector = this->curVectorBatch->Get(this->channels[1]);
                 auto *m2Vector = this->curVectorBatch->Get(this->channels[2]);
@@ -243,7 +240,6 @@ namespace omniruntime {
             std::vector<AggregateState *> &rowStates, BaseVector *vector,
             const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap) {
             if (this->inputRaw) {
-                // add
                 auto *valuePtr = reinterpret_cast<Value *>(GetValuesFromVector<IN>(vector));
                 valuePtr += rowOffset;
                 if (nullMap == nullptr) {
@@ -256,7 +252,6 @@ namespace omniruntime {
                         rowStates, aggStateOffset, valuePtr, *nullMap);
                 }
             } else {
-                // merge
                 auto *countVector = this->curVectorBatch->Get(this->channels[0]);
                 auto *m1Vector = this->curVectorBatch->Get(this->channels[1]);
                 auto *m2Vector = this->curVectorBatch->Get(this->channels[2]);
@@ -332,8 +327,29 @@ namespace omniruntime {
         KurtosisAggregator<IN, OUT>::ProcessAlignAggSchema(
             VectorBatch *result, BaseVector *originVector,
             const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) {
-            throw std::runtime_error(
-                "Error in KurtosisAggregator ProcessAlignAggSchema: Currently not support skipping partial agg");
+            const int32_t rowCount = (originVector != nullptr) ? originVector->GetSize() : 0;
+            if (rowCount == 0) {
+                auto *countVector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, 0));
+                auto *m1Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, 0));
+                auto *m2Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, 0));
+                auto *m3Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, 0));
+                auto *m4Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, 0));
+                result->Append(countVector);
+                result->Append(m1Vector);
+                result->Append(m2Vector);
+                result->Append(m3Vector);
+                result->Append(m4Vector);
+                return;
+            }
+            if (!this->inputRaw) {
+                throw std::runtime_error(
+                    "Error in KurtosisAggregator ProcessAlignAggSchema: Skip partial only supported for raw input");
+            }
+            if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+                ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<Value>>>(result, originVector, nullMap);
+            } else {
+                ProcessAlignAggSchemaInternal<Vector<Value>>(result, originVector, nullMap);
+            }
         }
 
         template<DataTypeId IN, DataTypeId OUT>
@@ -342,8 +358,44 @@ namespace omniruntime {
         KurtosisAggregator<IN, OUT>::ProcessAlignAggSchemaInternal(
             VectorBatch *result, BaseVector *originVector,
             const std::shared_ptr<NullsHelper> nullMap) {
-            throw std::runtime_error(
-                "Error in KurtosisAggregator ProcessAlignAggSchemaInternal: Currently not support skipping partial agg");
+            const int32_t rowCount = originVector->GetSize();
+            auto *countVector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
+            auto *m1Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
+            auto *m2Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
+            auto *m3Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
+            auto *m4Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
+
+            auto *vector = reinterpret_cast<T *>(originVector);
+            for (int32_t i = 0; i < rowCount; ++i) {
+                if (nullMap != nullptr && (*nullMap)[i]) {
+                    countVector->SetValue(i, 0.0);
+                    m1Vector->SetValue(i, 0.0);
+                    m2Vector->SetValue(i, 0.0);
+                    m3Vector->SetValue(i, 0.0);
+                    m4Vector->SetValue(i, 0.0);
+                } else {
+                    Value val;
+                    if constexpr (std::is_same_v<T, Vector<Value>>) {
+                        val = vector->GetValue(i);
+                    } else {
+                        auto *dictVector = reinterpret_cast<Vector<DictionaryContainer<Value>> *>(originVector);
+                        Value *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictVector);
+                        const int32_t *ids = unsafe::UnsafeDictionaryVector::GetIds(dictVector);
+                        val = valuePtr[ids[i]];
+                    }
+                    MomentValue m1 = static_cast<MomentValue>(val);
+                    countVector->SetValue(i, 1.0);
+                    m1Vector->SetValue(i, m1);
+                    m2Vector->SetValue(i, 0.0);
+                    m3Vector->SetValue(i, 0.0);
+                    m4Vector->SetValue(i, 0.0);
+                }
+            }
+            result->Append(countVector);
+            result->Append(m1Vector);
+            result->Append(m2Vector);
+            result->Append(m3Vector);
+            result->Append(m4Vector);
         }
 
         template<DataTypeId IN, DataTypeId OUT>
