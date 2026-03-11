@@ -39,6 +39,7 @@
 #include "operator/aggregation/aggregator/covar_samp_aggregator.h"
 #include "operator/aggregation/aggregator/collect_set_aggregator.h"
 #include "operator/aggregation/aggregator/collect_set_varchar_aggregator.h"
+#include "operator/aggregation/aggregator/collect_set_complex_aggregator.h"
 #include "operator/aggregation/aggregator/collect_list_aggregator.h"
 #include "operator/aggregation/aggregator/collect_list_varchar_aggregator.h"
 #include "operator/aggregation/aggregator/collect_list_complex_aggregator.h"

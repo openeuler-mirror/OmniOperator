@@ -399,8 +399,20 @@ public:
 
         int32_t result = 0;
         if constexpr (std::is_same_v<T, std::string_view>) {
-            std::string_view leftValue = reinterpret_cast<VarcharVector *>(leftVector)->GetValue(leftPosition);
-            std::string_view rightValue = reinterpret_cast<VarcharVector *>(rightVector)->GetValue(rightPosition);
+            std::string_view leftValue;
+            if (leftVector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                leftValue = reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view, vec::LargeStringContainer>> *>(
+                    leftVector)->GetValue(leftPosition);
+            } else {
+                leftValue = reinterpret_cast<VarcharVector *>(leftVector)->GetValue(leftPosition);
+            }
+            std::string_view rightValue;
+            if (rightVector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                rightValue = reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view, vec::LargeStringContainer>> *>(
+                    rightVector)->GetValue(rightPosition);
+            } else {
+                rightValue = reinterpret_cast<VarcharVector *>(rightVector)->GetValue(rightPosition);
+            }
             auto leftLength = leftValue.length();
             auto rightLength = rightValue.length();
             result = memcmp(leftValue.data(), rightValue.data(), std::min(leftLength, rightLength));
