@@ -21,10 +21,12 @@
 #include "vectorization/functions/ArrayRemoveFunction.h"
 #include "vectorization/functions/ArrayDistinctFunction.h"
 #include "vectorization/functions/ArrayExceptFunction.h"
+#include "vectorization/functions/ArrayAppendFunction.h"
 #include "vectorization/functions/ArrayPositionFunction.h"
 #include "vectorization/functions/ArrayUnionFunction.h"
 #include "vectorization/functions/ArraysOverlapFunction.h"
 #include "vectorization/functions/ArrayIdentityFunction.h"
+#include "vectorization/functions/ArrayConstructorFunction.h"
 
 namespace omniruntime::vectorization {
 
@@ -273,6 +275,10 @@ void RegisterArrayFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("array_repeat", {OMNI_NONE, OMNI_BOOLEAN}, OMNI_ARRAY,
         std::make_shared<ArrayRepeatFunction>());
 
+    // Register array constructor function (variadic) for all supported element types
+    // array(T, T, ..., T) -> array<T>: Constructs an array from a variable number of arguments
+    VectorFunction::RegisterVectorFunctionFactory(ArrayConstructorSignatures(), makeArrayConstructor);
+
     // Register array_remove function for all supported element types
     // array_remove(array<T>, T) -> array<T>: Remove all elements equal to a given value from an array
     VectorFunction::RegisterVectorFunction("array_remove", {OMNI_ARRAY, OMNI_BYTE}, OMNI_ARRAY,
@@ -315,6 +321,39 @@ void RegisterArrayFunctions(const std::string &prefix)
     // array_except(array<T>, array<T>) -> array<T>: Returns elements in first array but not in second
     VectorFunction::RegisterVectorFunction("array_except", {OMNI_ARRAY, OMNI_ARRAY}, OMNI_ARRAY,
         std::make_shared<ArrayExceptFunction>());
+
+    // Register array_append function for all supported element types
+    // array_append(array<T>, T) -> array<T>: Append an element to the end of an array
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_BYTE}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_SHORT}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_INT}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_LONG}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_FLOAT}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_DOUBLE}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_DECIMAL128}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_VARCHAR}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_CHAR}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_VARBINARY}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_DATE32}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_TIMESTAMP}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_DECIMAL64}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
+    VectorFunction::RegisterVectorFunction("array_append", {OMNI_ARRAY, OMNI_NONE}, OMNI_ARRAY,
+        std::make_shared<ArrayAppendFunction>());
 
     // Register array_position function for all supported element types
     // array_position(array<T>, T) -> bigint: Returns 1-based position of element in array, 0 if not found
