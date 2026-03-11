@@ -6,6 +6,8 @@
 #define OMNI_RUNTIME_AGGREGATOR_FACTORY_H
 
 #include "all_aggregators.h"
+#include "first_complex_aggregator.h"
+#include "last_complex_aggregator.h"
 #include "maxby_complex_aggregator.h"
 #include "maxby_complex_varchar_aggregator.h"
 #include "minby_complex_aggregator.h"
@@ -81,6 +83,12 @@ protected:
             case OMNI_ARRAY:
                 return FromKnownOutput<OMNI_ARRAY>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                                                   outputPartial, isOverflowAsNull);
+            case OMNI_MAP:
+                return FromKnownOutput<OMNI_MAP>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_ROW:
+                return FromKnownOutput<OMNI_ROW>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
             default:
                 std::string omniExceptionInfo =
                     "In function CreateAggregatorInternal, no such input type " + std::to_string(outputTypeId);

@@ -71,6 +71,9 @@ inline bool ShouldSkipRowTargetNull(vec::BaseVector *slice, type::DataTypeId col
  */
 inline vec::BaseVector *GetComplexColSlice(vec::BaseVector *colVector, type::DataTypeId colTypeId, int32_t rowIndex)
 {
+    if (colVector == nullptr) {
+        return nullptr;
+    }
     switch (colTypeId) {
         case type::OMNI_ARRAY:
             if (colVector->IsNull(rowIndex)) {
@@ -103,6 +106,9 @@ inline vec::BaseVector *GetComplexColSlice(vec::BaseVector *colVector, type::Dat
 inline vec::BaseVector *CopyComplexSliceToOwned(vec::BaseVector *slice, type::DataTypeId colTypeId,
     type::DataType *colDataType = nullptr)
 {
+    if (slice == nullptr) {
+        return nullptr;
+    }
     switch (colTypeId) {
         case type::OMNI_ARRAY: {
             // slice is element-vector slice for one row (from ArrayVector::GetValue).

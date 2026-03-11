@@ -21,11 +21,15 @@
 #include "vectorization/functions/ArrayExceptFunction.h"
 #include "vectorization/functions/ArrayPositionFunction.h"
 #include "vectorization/functions/ArrayUnionFunction.h"
+#include "vectorization/functions/ArrayIdentityFunction.h"
 
 namespace omniruntime::vectorization {
 
 void RegisterArrayFunctions(const std::string &prefix)
 {
+    (void)prefix;
+    VectorFunction::RegisterVectorFunction("array", {OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<ArrayIdentityFunction>());
     VectorFunction::RegisterVectorFunction("get_array_item", {OMNI_ARRAY, OMNI_INT}, OMNI_INT,
         std::make_shared<SubscriptImpl>());
     VectorFunction::RegisterVectorFunction("get_array_item", {OMNI_ARRAY, OMNI_INT}, OMNI_VARCHAR,
@@ -89,7 +93,7 @@ void RegisterArrayFunctions(const std::string &prefix)
         std::make_shared<ArrayShuffleImpl>());
     // shuffle(array(T), seed) -> array(T): Shuffles array elements with deterministic seed (Spark)
     VectorFunction::RegisterVectorFunction("shuffle", {OMNI_ARRAY, OMNI_LONG}, OMNI_ARRAY,
-        std::make_shared<ArrayShuffleImpl>());        
+        std::make_shared<ArrayShuffleImpl>());
 
     // Register array_max function for all supported element types
     // array_max(array<T>) -> T: Returns the maximum value in the array
