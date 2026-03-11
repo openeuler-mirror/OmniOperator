@@ -10,11 +10,17 @@
 #ifndef OMNI_RUNTIME_COMPLEX_AGGREGATOR_UTIL_H
 #define OMNI_RUNTIME_COMPLEX_AGGREGATOR_UTIL_H
 
+#include <set>
+
 #include "vector/array_vector.h"
 #include "vector/map_vector.h"
 #include "vector/row_vector.h"
+#include "vector/vector.h"
 #include "vector/vector_helper.h"
+#include "vector/large_string_container.h"
 #include "type/data_type.h"
+#include "type/decimal128.h"
+#include "operator/util/operator_util.h"
 
 namespace omniruntime {
 namespace op {
@@ -220,15 +226,246 @@ inline void SetComplexColValue(vec::BaseVector *outputVector, type::DataTypeId c
     }
 }
 
-/**
- * Compare two complex-type slices for min/max aggregation.
- * Returns: <0 if sliceA < sliceB, 0 if equal, >0 if sliceA > sliceB.
- * Supports OMNI_ARRAY (element-by-element) and OMNI_ROW (field-by-field).
- * OMNI_MAP is not supported (Spark does not order MapType); throws if colTypeId is OMNI_MAP.
- * @param colDataType optional; for nested types may be used to get element/field schema.
- */
-int CompareComplexSlice(vec::BaseVector *sliceA, vec::BaseVector *sliceB, type::DataTypeId colTypeId,
+// Forward declare for recursive use in detail::CompareArraySlices (array<struct>, array<array>).
+inline int CompareComplexSlice(vec::BaseVector *sliceA, vec::BaseVector *sliceB, type::DataTypeId colTypeId,
     type::DataType *colDataType = nullptr);
+
+namespace detail {
+
+// Compare two scalar elements at the same index in two vectors; returns <0, 0, >0.
+// Null is considered less than non-null (Spark nulls first ordering).
+inline int CompareScalarElementsAt(vec::BaseVector *vecA, vec::BaseVector *vecB, int32_t index,
+    type::DataTypeId elemTypeId)
+{
+    bool nullA = vecA->IsNull(index);
+    bool nullB = vecB->IsNull(index);
+    if (nullA && nullB) {
+        return 0;
+    }
+    if (nullA) {
+        return -1;
+    }
+    if (nullB) {
+        return 1;
+    }
+    using namespace vec;
+    switch (elemTypeId) {
+        case type::OMNI_BOOLEAN: {
+            auto a = reinterpret_cast<Vector<int8_t> *>(vecA)->GetValue(index);
+            auto b = reinterpret_cast<Vector<int8_t> *>(vecB)->GetValue(index);
+            return Compare(a, b);
+        }
+        case type::OMNI_BYTE: {
+            auto a = reinterpret_cast<Vector<int8_t> *>(vecA)->GetValue(index);
+            auto b = reinterpret_cast<Vector<int8_t> *>(vecB)->GetValue(index);
+            return Compare(a, b);
+        }
+        case type::OMNI_SHORT: {
+            auto a = reinterpret_cast<Vector<int16_t> *>(vecA)->GetValue(index);
+            auto b = reinterpret_cast<Vector<int16_t> *>(vecB)->GetValue(index);
+            return Compare(a, b);
+        }
+        case type::OMNI_INT:
+        case type::OMNI_DATE32:
+        case type::OMNI_TIME32: {
+            auto a = reinterpret_cast<Vector<int32_t> *>(vecA)->GetValue(index);
+            auto b = reinterpret_cast<Vector<int32_t> *>(vecB)->GetValue(index);
+            return Compare(a, b);
+        }
+        case type::OMNI_LONG:
+        case type::OMNI_DATE64:
+        case type::OMNI_TIME64:
+        case type::OMNI_TIMESTAMP:
+        case type::OMNI_DECIMAL64: {
+            auto a = reinterpret_cast<Vector<int64_t> *>(vecA)->GetValue(index);
+            auto b = reinterpret_cast<Vector<int64_t> *>(vecB)->GetValue(index);
+            return Compare(a, b);
+        }
+        case type::OMNI_FLOAT: {
+            auto a = reinterpret_cast<Vector<float> *>(vecA)->GetValue(index);
+            auto b = reinterpret_cast<Vector<float> *>(vecB)->GetValue(index);
+            return Compare(a, b);
+        }
+        case type::OMNI_DOUBLE: {
+            auto a = reinterpret_cast<Vector<double> *>(vecA)->GetValue(index);
+            auto b = reinterpret_cast<Vector<double> *>(vecB)->GetValue(index);
+            return Compare(a, b);
+        }
+        case type::OMNI_DECIMAL128: {
+            auto a = reinterpret_cast<Vector<type::Decimal128> *>(vecA)->GetValue(index);
+            auto b = reinterpret_cast<Vector<type::Decimal128> *>(vecB)->GetValue(index);
+            return Compare(a, b);
+        }
+        case type::OMNI_VARCHAR:
+        case type::OMNI_CHAR:
+        case type::OMNI_VARBINARY: {
+            auto *varcharVecA = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vecA);
+            auto *varcharVecB = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vecB);
+            std::string_view sa = varcharVecA->GetValue(index);
+            std::string_view sb = varcharVecB->GetValue(index);
+            int cmp = static_cast<int>(sa.compare(sb));
+            return (cmp < 0 ? -1 : (cmp > 0 ? 1 : 0));
+        }
+        default:
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "CompareComplexSlice: unsupported element type " + std::to_string(static_cast<int>(elemTypeId)));
+    }
+}
+
+// Compare two array slices (element vectors). Lexicographic: element by element, then by length.
+// Supports scalar elements and nested OMNI_ARRAY / OMNI_ROW (struct) for collect_set array<struct> etc.
+inline int CompareArraySlices(vec::BaseVector *sliceA, vec::BaseVector *sliceB, type::DataType *colDataType = nullptr)
+{
+    size_t sizeA = static_cast<size_t>(sliceA->GetSize());
+    size_t sizeB = static_cast<size_t>(sliceB->GetSize());
+    size_t minSize = (sizeA < sizeB) ? sizeA : sizeB;
+    type::DataTypeId elemTypeId = static_cast<type::DataTypeId>(sliceA->GetTypeId());
+    type::DataType *elementDataType = nullptr;
+    if (colDataType != nullptr && colDataType->GetId() == type::OMNI_ARRAY) {
+        elementDataType = static_cast<type::ArrayType *>(colDataType)->ElementType().get();
+    }
+    for (size_t i = 0; i < minSize; i++) {
+        int cmp;
+        if (elemTypeId == type::OMNI_ROW) {
+            vec::BaseVector *subA = static_cast<vec::RowVector *>(sliceA)->Slice(static_cast<int32_t>(i), 1);
+            vec::BaseVector *subB = static_cast<vec::RowVector *>(sliceB)->Slice(static_cast<int32_t>(i), 1);
+            cmp = CompareComplexSlice(subA, subB, type::OMNI_ROW, elementDataType);
+            delete subA;
+            delete subB;
+        } else if (elemTypeId == type::OMNI_ARRAY) {
+            vec::BaseVector *subA = static_cast<vec::ArrayVector *>(sliceA)->GetValue(static_cast<int32_t>(i));
+            vec::BaseVector *subB = static_cast<vec::ArrayVector *>(sliceB)->GetValue(static_cast<int32_t>(i));
+            cmp = CompareComplexSlice(subA, subB, type::OMNI_ARRAY, elementDataType);
+            delete subA;
+            delete subB;
+        } else {
+            cmp = CompareScalarElementsAt(sliceA, sliceB, static_cast<int32_t>(i), elemTypeId);
+        }
+        if (cmp != 0) {
+            return cmp;
+        }
+    }
+    if (sizeA != sizeB) {
+        return (sizeA < sizeB) ? -1 : 1;
+    }
+    return 0;
+}
+
+// Compare two row slices (RowVectors with one row each). Field-by-field. Recursive for nested ARRAY/ROW.
+inline int CompareRowSlices(vec::BaseVector *sliceA, vec::BaseVector *sliceB, type::DataType *colDataType);
+
+} // namespace detail
+
+/**
+ * Compare two complex-type slices for min/max and collect_set.
+ * Returns: <0 if sliceA < sliceB, 0 if equal, >0 if sliceA > sliceB.
+ * (Same as COMPARE_STATUS_LESS_THAN / EQUAL / GREATER_THAN for int32_t.)
+ * Supports OMNI_ARRAY (element-by-element) and OMNI_ROW (field-by-field, recursive).
+ * OMNI_MAP is not supported (Spark does not order MapType); throws if colTypeId is OMNI_MAP.
+ */
+inline int CompareComplexSlice(vec::BaseVector *sliceA, vec::BaseVector *sliceB, type::DataTypeId colTypeId,
+    type::DataType *colDataType = nullptr)
+{
+    if (sliceA == nullptr || sliceB == nullptr) {
+        if (sliceA == sliceB) {
+            return 0;
+        }
+        return (sliceA == nullptr) ? -1 : 1;
+    }
+    switch (colTypeId) {
+        case type::OMNI_ARRAY:
+            return detail::CompareArraySlices(sliceA, sliceB, colDataType);
+        case type::OMNI_ROW:
+            return detail::CompareRowSlices(sliceA, sliceB, colDataType);
+        case type::OMNI_MAP:
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "CompareComplexSlice: Map type is not orderable in Spark; min/max on map not supported");
+        default:
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "CompareComplexSlice: unsupported col type " + std::to_string(static_cast<int>(colTypeId)));
+    }
+}
+
+namespace detail {
+
+inline int CompareRowSlices(vec::BaseVector *sliceA, vec::BaseVector *sliceB, type::DataType *colDataType)
+{
+    auto *rowA = static_cast<vec::RowVector *>(sliceA);
+    auto *rowB = static_cast<vec::RowVector *>(sliceB);
+    int32_t numFields = rowA->ChildSize();
+    if (numFields != rowB->ChildSize()) {
+        return (numFields < rowB->ChildSize()) ? -1 : 1;
+    }
+    int32_t rowIndex = 0;
+    for (int32_t c = 0; c < numFields; c++) {
+        vec::BaseVector *childA = rowA->ChildAt(c).get();
+        vec::BaseVector *childB = rowB->ChildAt(c).get();
+        type::DataTypeId fieldTypeId = static_cast<type::DataTypeId>(childA->GetTypeId());
+        if (fieldTypeId == type::OMNI_ARRAY || fieldTypeId == type::OMNI_ROW) {
+            vec::BaseVector *subA = (fieldTypeId == type::OMNI_ARRAY)
+                ? static_cast<vec::ArrayVector *>(childA)->GetValue(rowIndex)
+                : static_cast<vec::RowVector *>(childA)->Slice(rowIndex, 1);
+            vec::BaseVector *subB = (fieldTypeId == type::OMNI_ARRAY)
+                ? static_cast<vec::ArrayVector *>(childB)->GetValue(rowIndex)
+                : static_cast<vec::RowVector *>(childB)->Slice(rowIndex, 1);
+            type::DataType *fieldDataType = (colDataType != nullptr && colDataType->GetId() == type::OMNI_ROW)
+                ? static_cast<const type::RowType *>(colDataType)->Type(c).get()
+                : nullptr;
+            int cmp = CompareComplexSlice(subA, subB, fieldTypeId, fieldDataType);
+            delete subA;
+            delete subB;
+            if (cmp != 0) {
+                return cmp;
+            }
+        } else {
+            int cmp = CompareScalarElementsAt(childA, childB, rowIndex, fieldTypeId);
+            if (cmp != 0) {
+                return cmp;
+            }
+        }
+    }
+    return 0;
+}
+
+} // namespace detail
+
+/**
+ * Compare two complex-type slices. Returns COMPARE_STATUS_LESS_THAN, COMPARE_STATUS_EQUAL, or COMPARE_STATUS_GREATER_THAN.
+ * Used by collect_set with std::set for deduplication. Unified with CompareComplexSlice (same semantics).
+ */
+inline int32_t ComplexSliceCompare(vec::BaseVector *leftSlice, vec::BaseVector *rightSlice,
+    type::DataTypeId colTypeId, type::DataType *colDataType)
+{
+    return static_cast<int32_t>(CompareComplexSlice(leftSlice, rightSlice, colTypeId, colDataType));
+}
+
+/**
+ * Compare two complex-type slices for equality. Used by collect_set for deduplication.
+ * Unified with CompareComplexSlice (same semantics).
+ */
+inline bool ComplexSliceEquals(vec::BaseVector *leftSlice, vec::BaseVector *rightSlice,
+    type::DataTypeId colTypeId, type::DataType *colDataType)
+{
+    return CompareComplexSlice(leftSlice, rightSlice, colTypeId, colDataType) == 0;
+}
+
+/**
+ * Comparator for std::set<BaseVector*> used by collect_set_complex.
+ * Provides strict weak ordering for array and struct types (avoids Omni defaultHashMap).
+ */
+struct ComplexSliceSetComparator {
+    type::DataTypeId colTypeId;
+    type::DataType *colDataType;
+
+    ComplexSliceSetComparator(type::DataTypeId id, type::DataType *dt) : colTypeId(id), colDataType(dt) {}
+
+    bool operator()(vec::BaseVector *a, vec::BaseVector *b) const
+    {
+        return ComplexSliceCompare(a, b, colTypeId, colDataType) == OperatorUtil::COMPARE_STATUS_LESS_THAN;
+    }
+};
+
+using ComplexSetType = std::set<vec::BaseVector *, ComplexSliceSetComparator>;
 
 } // namespace op
 } // namespace omniruntime

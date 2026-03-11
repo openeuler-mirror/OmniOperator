@@ -465,7 +465,7 @@ public:
     virtual int32_t GetValueColumnIndex() = 0;
 };
 
-template <bool(FilterFunc)(const int32_t *, VectorBatch *, const int32_t, const int32_t),
+template <bool(FilterPredicate)(const int32_t *, VectorBatch *, const int32_t, const int32_t),
     uint8_t *(UpdateFunc)(uint8_t *, int32_t &, uint8_t *, const int32_t)>
 uint8_t *GenerateExpectedResultVarchar(std::vector<VectorBatch *> &vvb, const int32_t valueIndex,
     const int32_t maskIndex, int64_t &count, int32_t &resultLen, const int32_t *filterValue = nullptr,
@@ -493,7 +493,7 @@ uint8_t *GenerateExpectedResultVarchar(std::vector<VectorBatch *> &vvb, const in
                     }
                 }
             }
-            valid &= !vector->IsNull(i) & FilterFunc(filterValue, vb, groupbyColIdx, i);
+            valid &= !vector->IsNull(i) & FilterPredicate(filterValue, vb, groupbyColIdx, i);
             if (valid) {
                 std::string_view str;
                 if (vector->GetEncoding() == OMNI_DICTIONARY) {
@@ -517,7 +517,7 @@ uint8_t *GenerateExpectedResultVarchar(std::vector<VectorBatch *> &vvb, const in
     return result;
 }
 
-template <bool(FilterFunc)(const int32_t *, VectorBatch *, const int32_t, const int32_t), DataTypeId IN, typename T_OUT,
+template <bool(FilterPredicate)(const int32_t *, VectorBatch *, const int32_t, const int32_t), DataTypeId IN, typename T_OUT,
     typename ResultType, typename UpdateFunc>
 bool GenerateExpectedResultNumeric(std::vector<VectorBatch *> &vvb, const int32_t valueIndex, const int32_t maskIndex,
     UpdateFunc updateFunc, int64_t &count, T_OUT &result, const int32_t *filterValue = nullptr,
@@ -548,7 +548,7 @@ bool GenerateExpectedResultNumeric(std::vector<VectorBatch *> &vvb, const int32_
                     }
                 }
             }
-            valid &= !vector->IsNull(i) & FilterFunc(filterValue, vb, groupbyColIdx, i);
+            valid &= !vector->IsNull(i) & FilterPredicate(filterValue, vb, groupbyColIdx, i);
             if (valid) {
                 if (overflow) {
                     count++;
