@@ -1558,6 +1558,66 @@ TEST(FunctionTest, ConcatCharStr)
     delete context;
 }
 
+TEST(FunctionTest, ConcatWsWithoutStr)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outlen = 0;
+    const char *result;
+    std::string actual;
+    bool retIsNull = false;
+
+    // concat_ws("-") => "" (Spark SQL: separator only returns empty string)
+    result = ConcatWsWithoutStr(contextPtr, "-", 1, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "");
+
+    // concat_ws(NULL) => NULL
+    result = ConcatWsWithoutStr(contextPtr, "-", 1, true, &retIsNull, &outlen);
+    EXPECT_TRUE(retIsNull);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+
+    delete context;
+}
+
+TEST(FunctionTest, ConcatWsWith1Str)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outlen = 0;
+    const char *result;
+    std::string actual;
+    bool retIsNull = false;
+
+    // concat_ws("-", "aa") => "aa" (Spark SQL: single string returns as-is)
+    result = ConcatWsWith1Str(contextPtr, "-", 1, false, "aa", 2, false, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 2);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "aa");
+
+    // concat_ws("-", null) => ""
+    result = ConcatWsWith1Str(contextPtr, "-", 1, false, nullptr, 0, true, &retIsNull, &outlen);
+    EXPECT_FALSE(retIsNull);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "");
+
+    // concat_ws(NULL, "aa") => NULL
+    result = ConcatWsWith1Str(contextPtr, "-", 1, true, "aa", 2, false, &retIsNull, &outlen);
+    EXPECT_TRUE(retIsNull);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+
+    delete context;
+}
+
 TEST(FunctionTest, ConcatWsStr)
 {
     auto context = new ExecutionContext();
