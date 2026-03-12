@@ -1332,6 +1332,188 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
+TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderLeftJoin)
+{
+    std::vector<DataTypePtr> leftTypes = { IntType(), DoubleType() };
+    DataTypes leftSourceTypes(leftTypes);
+    std::vector<DataTypePtr> rightTypes = { IntType(), DoubleType(), VarcharType(3) };
+    DataTypes rightSourceTypes(rightTypes);
+
+    int32_t leftCols[] = {0};
+    int32_t rightCols[] = {0};
+    auto *leftPagesIndex = new DynamicPagesIndex(leftSourceTypes, leftCols, 1);
+    auto *rightPagesIndex = new DynamicPagesIndex(rightSourceTypes, rightCols, 1);
+
+    const int32_t dataSize = 6;
+    int32_t leftData1_1[dataSize] = {0, 1, 2, 3, 4, 5};
+    double leftData1_2[dataSize] = {0.0, 1.1, 2.2, 3.3, 4.4, 5.5};
+    auto *leftVecBatch1 = new VectorBatch(dataSize);
+    leftVecBatch1->Append(CreateVector<int32_t>(dataSize, leftData1_1));
+    leftVecBatch1->Append(CreateVector<double>(dataSize, leftData1_2));
+
+    int32_t leftData21[dataSize] = {6, 7, 8, 9, 10, 11};
+    double leftData22[dataSize] = {6.6, 7.7, 8.8, 9.9, 10.1, 11.1};
+    auto *leftVecBatch2 = new VectorBatch(dataSize);
+    leftVecBatch2->Append(CreateVector<int32_t>(dataSize, leftData21));
+    leftVecBatch2->Append(CreateVector<double>(dataSize, leftData22));
+    leftPagesIndex->AddVecBatch(leftVecBatch1);
+    leftPagesIndex->AddVecBatch(leftVecBatch2);
+
+    std::vector<DataTypePtr> leftTableOutputTypes { IntType(), DoubleType() };
+    int32_t leftTableOutputCols[2] = {0, 1};
+    int32_t leftTableOutputColsCount = 2;
+
+    int32_t rightData11[dataSize] = {5, 4, 3, 2, 1, 0};
+    double rightData12[dataSize] = {5.5, 4.4, 3.3, 2.2, 1.1, 0.0};
+    std::string rightData13[dataSize] = {"555", "444", "33", "22", "1", "0"};
+    int32_t rightData21[dataSize] = {11, 10, 9, 8, 7, 6};
+    double rightData22[dataSize] = {11.1, 10.1, 9.9, 8.8, 7.7, 6.6};
+    std::string rightData23[dataSize] = {"111", "101", "99", "88", "7", "6"};
+    VectorBatch *rightVecBatch1 = CreateVectorBatch(rightSourceTypes, dataSize, rightData11, rightData12, rightData13);
+    VectorBatch *rightVecBatch2 = CreateVectorBatch(rightSourceTypes, dataSize, rightData21, rightData22, rightData23);
+    rightPagesIndex->AddVecBatch(rightVecBatch1);
+    rightPagesIndex->AddVecBatch(rightVecBatch2);
+
+    std::vector<DataTypePtr> rightTableOutputTypes { DoubleType(), VarcharType(3) };
+    int32_t rightTableOutputCols[2] = {1, 2};
+    int32_t rightTableOutputColsCount = 2;
+    string filter;
+
+    auto *resultBuilder = new JoinResultBuilder(leftTableOutputTypes, leftTableOutputCols, leftTableOutputColsCount,
+        leftSourceTypes.GetSize(), leftPagesIndex, rightTableOutputTypes, rightTableOutputCols,
+        rightTableOutputColsCount, rightSourceTypes.GetSize(), rightPagesIndex, filter, OMNI_JOIN_TYPE_LEFT, nullptr);
+
+    std::vector<int8_t> isPreMatched(6, 0);
+    std::vector<int64_t> leftAddress1 = {
+        static_cast<int64_t>(EncodeSyntheticAddress(0, 1)), static_cast<int64_t>(EncodeSyntheticAddress(0, 3)),
+        static_cast<int64_t>(EncodeSyntheticAddress(0, 5)), static_cast<int64_t>(EncodeSyntheticAddress(1, 1)),
+        static_cast<int64_t>(EncodeSyntheticAddress(1, 3)), static_cast<int64_t>(EncodeSyntheticAddress(1, 2))
+    };
+    std::vector<int64_t> rightAddress1 = {
+        static_cast<int64_t>(EncodeSyntheticAddress(0, 0)), static_cast<int64_t>(EncodeSyntheticAddress(0, 2)),
+        static_cast<int64_t>(EncodeSyntheticAddress(0, 4)), static_cast<int64_t>(EncodeSyntheticAddress(1, 0)),
+        static_cast<int64_t>(EncodeSyntheticAddress(1, 2)), static_cast<int64_t>(EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG))
+    };
+
+    std::vector<int64_t> &builderBufferedAddress = resultBuilder->GetBufferedTableValueAddresses();
+    std::vector<int64_t> &builderStreamedAddress = resultBuilder->GetStreamedTableValueAddresses();
+    std::vector<int8_t> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
+    builderIsPreMatched.insert(builderIsPreMatched.end(), isPreMatched.begin(), isPreMatched.end());
+    builderBufferedAddress.insert(builderBufferedAddress.end(), rightAddress1.begin(), rightAddress1.end());
+    builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress1.begin(), leftAddress1.end());
+    resultBuilder->AddJoinValueAddresses();
+
+    VectorBatch *outputVecBatch;
+    resultBuilder->GetOutput(&outputVecBatch);
+    resultBuilder->Finish();
+
+    int32_t expectedLeft1[6] = {1, 3, 5, 7, 9, 8};
+    double expectedLeft2[6] = {1.1, 3.3, 5.5, 7.7, 9.9, 8.8};
+    double expectedRight1[5] = {5.5, 3.3, 1.1, 11.1, 9.9};
+    std::string expectedRight2[5] = {"555", "33", "1", "111", "99"};
+
+    ASSERT_EQ(outputVecBatch->GetVectorCount(), 4);
+    ASSERT_EQ(outputVecBatch->GetRowCount(), 6);
+    for (int32_t i = 0; i < 6; i++) {
+        ASSERT_EQ((static_cast<Vector<int32_t> *>(outputVecBatch->Get(0)))->GetValue(i), expectedLeft1[i]);
+        ASSERT_EQ((static_cast<Vector<double> *>(outputVecBatch->Get(1)))->GetValue(i), expectedLeft2[i]);
+        if (i < 5) {
+            ASSERT_EQ((static_cast<Vector<double> *>(outputVecBatch->Get(2)))->GetValue(i), expectedRight1[i]);
+            ASSERT_FALSE(outputVecBatch->Get(2)->IsNull(i));
+            ASSERT_EQ((static_cast<Vector<LargeStringContainer<std::string_view>> *>(outputVecBatch->Get(3)))->GetValue(i),
+                std::string_view(expectedRight2[i]));
+            ASSERT_FALSE(outputVecBatch->Get(3)->IsNull(i));
+        } else {
+            ASSERT_TRUE(outputVecBatch->Get(2)->IsNull(i));
+            ASSERT_TRUE(outputVecBatch->Get(3)->IsNull(i));
+        }
+    }
+
+    leftPagesIndex->FreeAllRemainingVecBatch();
+    rightPagesIndex->FreeAllRemainingVecBatch();
+    delete resultBuilder;
+    delete leftPagesIndex;
+    delete rightPagesIndex;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
+// Regression test for NegativeArraySizeException: Left Join with VARCHAR on right and pad-null row
+// must set LargeStringContainer offsets (via SetNull per row) so reading the batch does not yield negative length.
+TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderLeftJoinVarcharPadNullOnly)
+{
+    std::vector<DataTypePtr> leftTypes = { IntType() };
+    DataTypes leftSourceTypes(leftTypes);
+    std::vector<DataTypePtr> rightTypes = { IntType(), VarcharType(10) };
+    DataTypes rightSourceTypes(rightTypes);
+
+    int32_t leftCols[] = {0};
+    int32_t rightCols[] = {0};
+    auto *leftPagesIndex = new DynamicPagesIndex(leftSourceTypes, leftCols, 1);
+    auto *rightPagesIndex = new DynamicPagesIndex(rightSourceTypes, rightCols, 1);
+
+    int32_t leftData[2] = {1, 2};
+    auto *leftVecBatch = new VectorBatch(2);
+    leftVecBatch->Append(CreateVector<int32_t>(2, leftData));
+    leftPagesIndex->AddVecBatch(leftVecBatch);
+
+    int32_t rightData1[1] = {1};
+    std::string rightData2[1] = {"matched"};
+    VectorBatch *rightVecBatch = CreateVectorBatch(rightSourceTypes, 1, rightData1, rightData2);
+    rightPagesIndex->AddVecBatch(rightVecBatch);
+
+    std::vector<DataTypePtr> leftTableOutputTypes = { IntType() };
+    int32_t leftTableOutputCols[1] = {0};
+    std::vector<DataTypePtr> rightTableOutputTypes = { VarcharType(10) };
+    int32_t rightTableOutputCols[1] = {1};
+    std::string filter;
+
+    auto *resultBuilder = new JoinResultBuilder(leftTableOutputTypes, leftTableOutputCols, 1,
+        leftSourceTypes.GetSize(), leftPagesIndex, rightTableOutputTypes, rightTableOutputCols,
+        1, rightSourceTypes.GetSize(), rightPagesIndex, filter, OMNI_JOIN_TYPE_LEFT, nullptr);
+
+    std::vector<int8_t> isPreMatched(2, 0);
+    std::vector<int64_t> leftAddress = {
+        static_cast<int64_t>(EncodeSyntheticAddress(0, 0)),
+        static_cast<int64_t>(EncodeSyntheticAddress(0, 1))
+    };
+    std::vector<int64_t> rightAddress = {
+        static_cast<int64_t>(EncodeSyntheticAddress(0, 0)),
+        static_cast<int64_t>(EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG))
+    };
+
+    std::vector<int64_t> &builderBufferedAddress = resultBuilder->GetBufferedTableValueAddresses();
+    std::vector<int64_t> &builderStreamedAddress = resultBuilder->GetStreamedTableValueAddresses();
+    std::vector<int8_t> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
+    builderIsPreMatched.insert(builderIsPreMatched.end(), isPreMatched.begin(), isPreMatched.end());
+    builderBufferedAddress.insert(builderBufferedAddress.end(), rightAddress.begin(), rightAddress.end());
+    builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress.begin(), leftAddress.end());
+    resultBuilder->AddJoinValueAddresses();
+
+    VectorBatch *outputVecBatch = nullptr;
+    resultBuilder->GetOutput(&outputVecBatch);
+    resultBuilder->Finish();
+
+    ASSERT_NE(outputVecBatch, nullptr);
+    ASSERT_EQ(outputVecBatch->GetVectorCount(), 2);
+    ASSERT_EQ(outputVecBatch->GetRowCount(), 2);
+
+    ASSERT_FALSE(outputVecBatch->Get(1)->IsNull(0));
+    ASSERT_EQ((static_cast<Vector<LargeStringContainer<std::string_view>> *>(outputVecBatch->Get(1)))->GetValue(0),
+        std::string_view("matched"));
+
+    ASSERT_TRUE(outputVecBatch->Get(1)->IsNull(1));
+    std::string_view padNullVal =
+        (static_cast<Vector<LargeStringContainer<std::string_view>> *>(outputVecBatch->Get(1)))->GetValue(1);
+    ASSERT_EQ(padNullVal.size(), 0u);
+
+    leftPagesIndex->FreeAllRemainingVecBatch();
+    rightPagesIndex->FreeAllRemainingVecBatch();
+    delete resultBuilder;
+    delete leftPagesIndex;
+    delete rightPagesIndex;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
 TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
 {
     std::vector<DataTypePtr> leftTypes = { IntType(), DoubleType() };
