@@ -58,6 +58,7 @@ void OmniDriver::close()
     if (closed_) {
         return;
     }
+    updatePipelineStats();
     for (auto &op : operators_) {
         op->Close();
         op = nullptr;
@@ -263,5 +264,19 @@ void OmniDriver::withDeltaCpuWallTimer(op::Operator* op, TimingMemberPtr opTimin
     DeltaCpuWallTimer<decltype(f)> timer(std::move(f));
 
     opFunction();
+}
+
+void OmniDriver::updatePipelineStats()
+{
+    for (auto& op : operators_) {
+        auto opStatsCopy = op->stats(false);
+        int32_t pipelineId = opStatsCopy.pipelineId;
+        int32_t operatorId = opStatsCopy.operatorId;
+        if (pipelineStats_.operatorStats.size() <= static_cast<size_t>(operatorId)) {
+            pipelineStats_.operatorStats.resize(operatorId + 1);
+        }
+        pipelineStats_.operatorStats[operatorId].Add(opStatsCopy);
+        pipelineStats_.pipelineId = pipelineId;
+    }
 }
 } // end of omniruntime

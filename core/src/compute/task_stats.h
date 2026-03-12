@@ -25,29 +25,10 @@
 
 #include "driver.h"
 #include "operator_stats.h"
+#include "pipeline_stats.h"
 
 namespace omniruntime::compute {
 struct OperatorStats;
-
-    /// Stores execution stats per pipeline.
-struct PipelineStats {
-    /// Cumulative OperatorStats for finished Drivers. The subscript is the
-    /// operator id, which is the initial ordinal position of the operator in the
-    /// DriverFactory.
-    std::vector<OperatorStats> operatorStats;
-
-    /// True if contains the source node for the task.
-    bool inputPipeline;
-
-    /// True if contains the sync node for the task.
-    bool outputPipeline;
-
-    explicit PipelineStats() = default;
-
-    PipelineStats(bool _inputPipeline, bool _outputPipeline)
-        : inputPipeline{_inputPipeline}, outputPipeline{_outputPipeline} {}
-};
-
 /// Stores execution stats per task.
 struct TaskStats {
     int32_t numTotalSplits{0};

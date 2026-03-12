@@ -68,22 +68,12 @@ TaskStats OmniTask::GetTaskStats() const
             ++taskStats.numCompletedDrivers;
             continue;
         }
-        auto operators = driver->operators();
-        for (auto& op : *operators) {
-            auto opStatsCopy = op->stats(false);
-            int32_t pipelineId = opStatsCopy.pipelineId;
-            int32_t operatorId = opStatsCopy.operatorId;
-            PlanNodeId planNodeId = opStatsCopy.planNodeId;
-            if (taskStats.pipelineStats.size() <= static_cast<size_t>(pipelineId)) {
-                taskStats.pipelineStats.resize(pipelineId + 1);
-            }
-            if (taskStats.pipelineStats[pipelineId].operatorStats.size() <= static_cast<size_t>(operatorId)) {
-                taskStats.pipelineStats[pipelineId].operatorStats.resize(operatorId + 1);
-            }
-            taskStats.pipelineStats[pipelineId]
-                .operatorStats[operatorId]
-                .Add(opStatsCopy);
+        auto pipelineStats = driver->pipelineStats();
+        auto pipelineId = pipelineStats.pipelineId;
+        if (taskStats.pipelineStats.size() <= static_cast<size_t>(pipelineId)) {
+            taskStats.pipelineStats.resize(pipelineId + 1);
         }
+        taskStats.pipelineStats[pipelineId] = pipelineStats;
     }
     return taskStats;
 }
