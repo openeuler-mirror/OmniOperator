@@ -26,6 +26,7 @@
 #include "operator/operator_factory.h"
 #include "vector/vector_batch.h"
 #include "compute/reason.h"
+#include "compute/pipeline_stats.h"
 #include "plannode/planNode.h"
 #include "plannode/RowVectorStream.h"
 
@@ -124,6 +125,13 @@ public:
         return finished_;
     }
 
+    void updatePipelineStats();
+
+    PipelineStats pipelineStats()
+    {
+        return pipelineStats_;
+    }
+
 public:
     bool inputDriver{false};
     bool outputDriver{false};
@@ -161,6 +169,8 @@ private:
 
     bool closed_{false};
     bool finished_{false};
+
+    PipelineStats pipelineStats_;
 };
 
 class BlockingState {
