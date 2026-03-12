@@ -370,11 +370,19 @@ namespace omniruntime::reader {
     public:
         void next(omniruntime::vec::BaseVector *vec, uint64_t numValues, 
             uint64_t *incomingNulls, int omniTypeId) override;
-        
+
+        // Output dictionary-encoded strings as DictionaryVector (indices + shared dictionary).
+        omniruntime::vec::BaseVector* nextAsDictionary(
+            uint64_t numValues, uint64_t *incomingNulls, int omniTypeId);
+
         private:
             std::shared_ptr<::orc::StringDictionary> dictionary;
             std::unique_ptr<OmniRleDecoderV2> rle;
             bool isChar = false;
+
+            // ORC dictionary converted to Omni format; built once per stripe and shared across batches.
+            std::shared_ptr<omniruntime::vec::LargeStringContainer<std::string_view>> omniDict_;
+            int32_t omniDictSize_ = 0;
 
         public:
             OmniStringDictionaryColumnReader(const ::orc::Type& type, ::orc::StripeStreams& stipe);

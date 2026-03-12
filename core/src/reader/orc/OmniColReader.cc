@@ -24,6 +24,7 @@
 #include "orc/MemoryPool.hh"
 #include "util/omni_exception.h"
 #include "OrcDecodeUtils.hh"
+#include "vector/dictionary_container.h"
 
 using omniruntime::vec::VectorBatch;
 using omniruntime::vec::BaseVector;
@@ -303,10 +304,20 @@ namespace omniruntime::reader {
         for(auto iter = children.begin(); iter != children.end(); ++iter, ++i) {
             const orc::Type *child = type_->getSubtype(i);
             auto dataTypeId = getDefaultOmniType(child);
-            auto childVec = std::shared_ptr<omniruntime::vec::BaseVector>(makeNewVector(numValues, child, dataTypeId).release());
-            reinterpret_cast<OmniColumnReader*>(&(*iter->get()))->next(childVec.get(), numValues,
-                                                                       hasNull ? reinterpret_cast<uint64_t*>(nulls) : nullptr, dataTypeId);
-            rowVector->AddChild(childVec);
+
+            // For dictionary-encoded string columns, output DictionaryVector directly
+            auto* omniReader = reinterpret_cast<OmniColumnReader*>(&(*iter->get()));
+            auto* dictStrReader = dynamic_cast<OmniStringDictionaryColumnReader*>(omniReader);
+            if (dictStrReader != nullptr) {
+                auto* dictVec = dictStrReader->nextAsDictionary(
+                    numValues, hasNull ? reinterpret_cast<uint64_t*>(nulls) : nullptr, dataTypeId);
+                rowVector->AddChild(std::shared_ptr<omniruntime::vec::BaseVector>(dictVec));
+            } else {
+                auto childVec = std::shared_ptr<omniruntime::vec::BaseVector>(makeNewVector(numValues, child, dataTypeId).release());
+                omniReader->next(childVec.get(), numValues,
+                    hasNull ? reinterpret_cast<uint64_t*>(nulls) : nullptr, dataTypeId);
+                rowVector->AddChild(childVec);
+            }
         }
     }
 
@@ -339,10 +350,20 @@ namespace omniruntime::reader {
             } else {
                 dataTypeId = static_cast<omniruntime::type::DataTypeId>(omniTypeId[i]);
             }
-            auto omnivector = omniruntime::reader::makeNewVector(numValues, orcType, dataTypeId);
-            reinterpret_cast<OmniColumnReader*>(&(*iter->get()))->next(omnivector.get(), numValues,
-                hasNull ? nulls->GetNulls() : nullptr, dataTypeId);
-            vecs.push_back(omnivector.release());
+
+            // For dictionary-encoded string columns, output DictionaryVector directly
+            auto* omniReader = reinterpret_cast<OmniColumnReader*>(&(*iter->get()));
+            auto* dictStrReader = dynamic_cast<OmniStringDictionaryColumnReader*>(omniReader);
+            if (dictStrReader != nullptr) {
+                auto* dictVec = dictStrReader->nextAsDictionary(
+                    numValues, hasNull ? nulls->GetNulls() : nullptr, dataTypeId);
+                vecs.push_back(dictVec);
+            } else {
+                auto omnivector = omniruntime::reader::makeNewVector(numValues, orcType, dataTypeId);
+                omniReader->next(omnivector.get(), numValues,
+                    hasNull ? nulls->GetNulls() : nullptr, dataTypeId);
+                vecs.push_back(omnivector.release());
+            }
         }
     }
 
@@ -859,6 +880,39 @@ namespace omniruntime::reader {
                 varcharVector->SetValue(i, data);
             }
         }
+    }
+
+    BaseVector* OmniStringDictionaryColumnReader::nextAsDictionary(
+        uint64_t numValues, uint64_t *incomingNulls, int omniTypeId) {
+        // Decode indices and return DictionaryVector (indices + shared dictionary).
+        auto nullsBuf = std::make_unique<NullsBuffer>(numValues);
+        auto nullsRaw = reinterpret_cast<uint8_t*>(nullsBuf->GetNulls());
+        readNulls(this, numValues, incomingNulls, nullsRaw);
+        bool hasNull = nullsBuf->HasNull();
+        auto nullsTrans = reinterpret_cast<uint64_t*>(nullsRaw);
+
+        std::vector<int32_t> indices(numValues, 0);
+        rle->next(indices.data(), numValues, nullsTrans);
+        uint64_t dictionaryCount = dictionary->dictionaryOffset.size() - 1;
+
+        for (uint64_t i = 0; i < numValues; ++i) {
+            if (hasNull && BitUtil::IsBitSet(nullsTrans, i)) {
+                continue;
+            }
+            if (indices[i] < 0 || static_cast<uint64_t>(indices[i]) >= dictionaryCount) {
+                throw ::orc::ParseError("Entry index out of range in StringDictionaryColumn");
+            }
+        }
+
+        auto container = std::make_shared<omniruntime::vec::DictionaryContainer<std::string_view>>(
+            indices.data(),
+            static_cast<int32_t>(numValues),
+            omniDict_,
+            omniDictSize_);
+
+        auto dataTypeId = static_cast<omniruntime::type::DataTypeId>(omniTypeId);
+        return new omniruntime::vec::Vector<omniruntime::vec::DictionaryContainer<std::string_view>>(
+            static_cast<int>(numValues), container, nullsBuf.get(), dataTypeId);
     }
 
     void OmniStringDirectColumnReader::next(BaseVector *vec, uint64_t numValues, 
@@ -1393,6 +1447,23 @@ namespace omniruntime::reader {
         omniReadFully(dictionary->dictionaryBlob.data(), blobSize, blobStream.get());
         if (type.getKind() == ::orc::TypeKind::CHAR) {
             isChar = true;
+        }
+
+        // Convert ORC dictionary to Omni format once per stripe; reused by DictionaryVector batches.
+        omniDictSize_ = static_cast<int32_t>(dictSize);
+        int estimatedCapacity = (blobSize > 0) ? static_cast<int>(blobSize) : 1;
+        omniDict_ = std::make_shared<omniruntime::vec::LargeStringContainer<std::string_view>>(
+            omniDictSize_, estimatedCapacity);
+
+        char *blob = dictionary->dictionaryBlob.data();
+        int64_t *offsets = dictionary->dictionaryOffset.data();
+        for (int32_t i = 0; i < omniDictSize_; ++i) {
+            auto len = offsets[i + 1] - offsets[i];
+            char *ptr = blob + offsets[i];
+            if (isChar) {
+                FindLastNotEmpty(ptr, len);
+            }
+            omniDict_->SetValue(i, std::string_view(ptr, static_cast<size_t>(len)));
         }
     }
 
