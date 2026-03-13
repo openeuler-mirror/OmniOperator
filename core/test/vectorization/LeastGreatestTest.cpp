@@ -75,10 +75,9 @@ void ExecuteLeastGreatest(const std::string& funcName,
                            BaseVector*& result) {
     // Build signature for lookup
     std::vector<DataTypeId> inputTypes;
-    for (auto* input : inputs) {
-        inputTypes.push_back(input->GetTypeId());
-    }
-    
+    inputTypes.push_back(inputs[0]->GetTypeId());
+    inputTypes.push_back(inputs[0]->GetTypeId());
+
     auto signature = std::make_shared<FunctionSignature>(funcName, inputTypes, outputTypeId);
     auto function = VectorFunction::Find(signature);
     
@@ -93,10 +92,18 @@ void ExecuteLeastGreatest(const std::string& funcName,
     for (int i = static_cast<int>(inputs.size()) - 1; i >= 0; --i) {
         argStack.push(inputs[i]);
     }
-    
     auto outputType = std::make_shared<DataType>(outputTypeId);
-    function->Apply(argStack, outputType, result, &context);
-    
+    BaseVector* temp = nullptr;
+    while (!argStack.empty()) {
+        function->Apply(argStack, outputType, result, &context);
+        if (temp != nullptr) {
+            delete temp;
+        }
+        if (argStack.size() > 0) {
+            argStack.push(result);
+            temp = result;
+        }
+    }
     ASSERT_NE(result, nullptr) << "Result vector is null";
 }
 

@@ -14,10 +14,10 @@ namespace omniruntime::vectorization {
 void CoalesceFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
                             BaseVector *&result, ExecutionContext *context) const {
     std::vector<BaseVector *> argVectors;
-    while (!args.empty()) {
-        argVectors.push_back(args.top());
-        args.pop();
-    }
+    argVectors.push_back(args.top());
+    args.pop();
+    argVectors.push_back(args.top());
+    args.pop();
     std::reverse(argVectors.begin(), argVectors.end());
     DispatchCoalesce(argVectors, outputType, result);
 

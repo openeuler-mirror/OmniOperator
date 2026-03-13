@@ -48,42 +48,14 @@ template<CompareMode Mode>
 void LeastGreatestFunction<Mode>::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, 
                             BaseVector *&result, ExecutionContext *context) const {
     const char* funcName = (Mode == CompareMode::GREATEST) ? "Greatest" : "Least";
-    LogDebug("[%sFunction] Apply - Entering %s expression", funcName, funcName);
-    
-    if (args.empty()) {
-        OMNI_THROW(std::string(funcName) + " function Error", "No input arguments");
-    }
-    
     // Collect all arguments from stack (they are in reverse order)
     std::vector<BaseVector *> argVectors;
-    while (!args.empty()) {
-        argVectors.push_back(args.top());
-        args.pop();
-    }
-    
-    // Reverse to get correct order (first argument first)
+    argVectors.push_back(args.top());
+    args.pop();
+    argVectors.push_back(args.top());
+    args.pop();
     std::reverse(argVectors.begin(), argVectors.end());
-    
-    if (argVectors.size() < 2) {
-        OMNI_THROW(std::string(funcName) + " function Error", 
-                   std::string(funcName) + " requires at least 2 arguments");
-    }
-    
-    // Check that all arguments have the same size
-    int32_t size = argVectors[0]->GetSize();
-    for (size_t i = 1; i < argVectors.size(); ++i) {
-        if (argVectors[i]->GetSize() != size) {
-            OMNI_THROW(std::string(funcName) + " function Error", 
-                       "All arguments must have the same size");
-        }
-    }
-    
-    LogDebug("[%sFunction] Apply - Processing %zu arguments with %d rows", 
-             funcName, argVectors.size(), size);
-    
     DispatchCompare(argVectors, outputType, result);
-    
-    LogDebug("[%sFunction] Apply - Completed successfully", funcName);
 }
 
 template<CompareMode Mode>

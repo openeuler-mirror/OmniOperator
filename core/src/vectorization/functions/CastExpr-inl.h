@@ -513,6 +513,9 @@ void CastExpr::applyCastPrimitivesDispatch(const DataTypePtr &fromType, const Da
         case OMNI_LONG: {
             return applyCastPrimitives<ToKind, OMNI_LONG>(rows, context, input, result);
         }
+        case OMNI_FLOAT: {
+            return applyCastPrimitives<ToKind, OMNI_FLOAT>(rows, context, input, result);
+        }
         case OMNI_DOUBLE: {
             return applyCastPrimitives<ToKind, OMNI_DOUBLE>(rows, context, input, result);
         }

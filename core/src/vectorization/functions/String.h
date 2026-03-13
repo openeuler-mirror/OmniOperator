@@ -16,6 +16,9 @@
 #include "type/string_Impl.h"
 #include "folly/ssl/OpenSSLHash.h"
 #include "codegen/functions/md5.h"
+#include "codegen/context_helper.h"
+#include "codegen/string_util.h"
+#include "util/type_util.h"
 
 namespace omniruntime::vectorization {
 /// Returns the Unicode code point of the first character in UTF-8 string (aligned with
@@ -80,6 +83,26 @@ struct StartsWithFunction {
         }
 
         result = std::equal(pattern.begin(), pattern.end(), str.begin());
+        return Status::OK();
+    }
+};
+
+/// endsWith function
+/// endsWith(string, string) -> bool
+/// Returns true if the first string ends with the second string
+template <typename T>
+struct EndsWithFunction {
+    ALWAYS_INLINE Status call(bool &result, const std::string_view &str, const std::string_view &pattern)
+    {
+        if (pattern.length() > str.length()) {
+            result = false;
+            return Status::OK();
+        }
+        if (pattern.empty()) {
+            result = true;
+            return Status::OK();
+        }
+        result = std::equal(pattern.rbegin(), pattern.rend(), str.rbegin());
         return Status::OK();
     }
 };
@@ -1304,4 +1327,84 @@ struct Md5Function {
         return true;
     }
 };
+
+template <typename T>
+struct StaticInvokeVarcharTypeWriteSideCheckFunction {
+    ALWAYS_INLINE bool callNullable( std::string& result, const std::string_view *input, const int32_t *limit) {
+        if (input == nullptr) {
+            return false;
+        }
+        auto inputData = input->data();
+        auto inputSize = input->size();
+        int32_t ssLen = codegen::function::StringUtil::NumChars(inputData, inputSize);
+        if (ssLen <= *limit) {
+            result = std::string(*input);
+            return true;
+        }
+        int32_t numTailSpacesToTrim = ssLen - *limit;
+        int32_t endIdx = inputSize - 1;
+        int32_t trimTo = inputSize - numTailSpacesToTrim;
+        while (endIdx >= trimTo && inputData[endIdx] == ' ') {
+            endIdx--;
+        }
+        int32_t outByteNum = endIdx + 1;
+        ssLen = codegen::function::StringUtil::NumChars(inputData, outByteNum);
+        if (ssLen > *limit) {
+            OMNI_THROW("RUNTIME_ERROR:", "Exceeds varchar type length limitation: " + std::to_string(*limit));
+        }
+        result.assign(inputData, outByteNum);
+        return true;
+    }
+};
+
+template <typename T>
+struct StaticInvokeCharTypeWriteSideCheckFunction {
+    ALWAYS_INLINE bool callNullable( std::string& result, const std::string_view *input, const int32_t *limit) {
+        if (input == nullptr) {
+            return false;
+        }
+        auto inputData = input->data();
+        auto inputSize = input->size();
+        int32_t ssLen = codegen::function::StringUtil::NumChars(inputData, inputSize);
+        if (ssLen == *limit) {
+            result = std::string(*input);
+            return true;
+        }
+        if (ssLen < *limit) {
+            int32_t numTailSpacesToAdd = *limit - ssLen;
+            result = std::string(*input);
+            result.append(numTailSpacesToAdd, ' ');
+            return true;
+        }
+        int32_t numTailSpacesToTrim = ssLen - *limit;
+        int32_t endIdx = inputSize - 1;
+        int32_t trimTo = inputSize - numTailSpacesToTrim;
+        while (endIdx >= trimTo && inputData[endIdx] == ' ') {
+            endIdx--;
+        }
+        int32_t outByteNum = endIdx + 1;
+        ssLen = codegen::function::StringUtil::NumChars(inputData, outByteNum);
+        if (ssLen > *limit) {
+            OMNI_THROW("RUNTIME_ERROR:", "Exceeds char type length limitation: " + std::to_string(*limit));
+        }
+        result.assign(inputData, outByteNum);
+        return true;
+    }
+};
+
+template <typename T>
+struct StaticInvokeCharReadPaddingFunction {
+    ALWAYS_INLINE bool callNullable( std::string& result, const std::string_view *input, const int32_t *limit) {
+        if (input == nullptr) {
+            return false;
+        }
+        int32_t ssLen = codegen::function::StringUtil::NumChars(input->data(), input->size());
+        result = std::string(*input);
+        if (ssLen < *limit) {
+            result.append(*limit - ssLen, ' ');
+        }
+        return true;
+    }
+};
+
 }
