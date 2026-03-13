@@ -70,6 +70,9 @@ public class FunctionType extends Constant {
     public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_SXY = next();
     public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_SYY = next();
     public static final FunctionType OMNI_AGGREGATION_TYPE_REGR_REPLACEMENT = next();
+    public static final FunctionType OMNI_WINDOW_TYPE_NTH_VALUE = next();
+    public static final FunctionType OMNI_WINDOW_TYPE_NTILE = next();
+    public static final FunctionType OMNI_WINDOW_TYPE_DENSE_RANK = next();
 
     public FunctionType(int value) {
         super(value);

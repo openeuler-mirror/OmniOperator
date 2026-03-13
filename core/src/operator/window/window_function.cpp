@@ -299,5 +299,204 @@ void CountAllWindowFunction::ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVe
     }
 }
 
+// NthValueFunction implementation
+NthValueFunction::NthValueFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType,
+    DataTypePtr outputType, int32_t valueChannel, int64_t offset)
+    : WindowFunction(std::move(frame), std::move(inputType), std::move(outputType)),
+      valueChannel_(valueChannel),
+      offset_(offset),
+      windowIndex_(nullptr)
+{}
+
+void NthValueFunction::Reset(WindowIndex *pWindowIndex)
+{
+    windowIndex_ = pWindowIndex;
+}
+
+void NthValueFunction::ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index,
+    int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd)
+{
+    if (frameStart < 0 || frameEnd < 0) {
+        column->SetNull(index);
+        return;
+    }
+
+    int32_t targetRow = frameStart + static_cast<int32_t>(offset_) - 1;
+    if (targetRow >= frameStart && targetRow <= frameEnd) {
+        int32_t absoluteRow = windowIndex_->GetStart() + targetRow;
+        CopyValueFromPartition(column, index, absoluteRow);
+    } else {
+        column->SetNull(index);
+    }
+}
+
+void NthValueFunction::CopyValueFromPartition(BaseVector *outputColumn, int32_t outputIndex, int32_t sourceRow)
+{
+    if (windowIndex_ == nullptr || windowIndex_->GetPagesIndex() == nullptr) {
+        outputColumn->SetNull(outputIndex);
+        return;
+    }
+
+    PagesIndex *pagesIndex = windowIndex_->GetPagesIndex();
+    uint64_t *valueAddresses = pagesIndex->GetValueAddresses();
+    BaseVector **vectors = pagesIndex->GetColumns()[valueChannel_];
+
+    uint64_t sliceAddress = valueAddresses[sourceRow];
+    uint32_t vectorIndex = DecodeSliceIndex(sliceAddress);
+    uint32_t vectorPosition = DecodePosition(sliceAddress);
+
+    BaseVector *sourceVector = vectors[vectorIndex];
+
+    if (sourceVector->IsNull(vectorPosition)) {
+        outputColumn->SetNull(outputIndex);
+    } else {
+        CopyValue(outputColumn, outputIndex, sourceVector, vectorPosition);
+    }
+}
+
+void NthValueFunction::CopyValue(BaseVector *destVector, int32_t destIndex, BaseVector *srcVector, int32_t srcIndex)
+{
+    using namespace omniruntime::type;
+    DataTypeId typeId = srcVector->GetTypeId();
+
+    switch (typeId) {
+        case OMNI_BOOLEAN: {
+            auto src = static_cast<vec::Vector<bool> *>(srcVector);
+            auto dst = static_cast<vec::Vector<bool> *>(destVector);
+            dst->SetValue(destIndex, src->GetValue(srcIndex));
+            break;
+        }
+        case OMNI_BYTE: {
+            auto src = static_cast<vec::Vector<int8_t> *>(srcVector);
+            auto dst = static_cast<vec::Vector<int8_t> *>(destVector);
+            dst->SetValue(destIndex, src->GetValue(srcIndex));
+            break;
+        }
+        case OMNI_SHORT: {
+            auto src = static_cast<vec::Vector<int16_t> *>(srcVector);
+            auto dst = static_cast<vec::Vector<int16_t> *>(destVector);
+            dst->SetValue(destIndex, src->GetValue(srcIndex));
+            break;
+        }
+        case OMNI_INT:
+        case OMNI_DATE32: {
+            auto src = static_cast<vec::Vector<int32_t> *>(srcVector);
+            auto dst = static_cast<vec::Vector<int32_t> *>(destVector);
+            dst->SetValue(destIndex, src->GetValue(srcIndex));
+            break;
+        }
+        case OMNI_LONG:
+        case OMNI_TIMESTAMP:
+        case OMNI_DATE64:
+        case OMNI_DECIMAL64: {
+            auto src = static_cast<vec::Vector<int64_t> *>(srcVector);
+            auto dst = static_cast<vec::Vector<int64_t> *>(destVector);
+            dst->SetValue(destIndex, src->GetValue(srcIndex));
+            break;
+        }
+        case OMNI_FLOAT: {
+            auto src = static_cast<vec::Vector<float> *>(srcVector);
+            auto dst = static_cast<vec::Vector<float> *>(destVector);
+            dst->SetValue(destIndex, src->GetValue(srcIndex));
+            break;
+        }
+        case OMNI_DOUBLE: {
+            auto src = static_cast<vec::Vector<double> *>(srcVector);
+            auto dst = static_cast<vec::Vector<double> *>(destVector);
+            dst->SetValue(destIndex, src->GetValue(srcIndex));
+            break;
+        }
+        case OMNI_DECIMAL128: {
+            auto src = static_cast<vec::Vector<Decimal128> *>(srcVector);
+            auto dst = static_cast<vec::Vector<Decimal128> *>(destVector);
+            dst->SetValue(destIndex, src->GetValue(srcIndex));
+            break;
+        }
+        case OMNI_VARCHAR:
+        case OMNI_CHAR: {
+            auto src = static_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(srcVector);
+            auto dst = static_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(destVector);
+            dst->SetValue(destIndex, src->GetValue(srcIndex));
+            break;
+        }
+        default:
+            OMNI_THROW("UNSUPPORTED_ERROR",
+                "NthValueFunction::CopyValue unsupported data type: %d", static_cast<int>(typeId));
+    }
+}
+
+// DenseRankFunction implementation
+DenseRankFunction::DenseRankFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType,
+    DataTypePtr outputType)
+    : RankingWindowFunction(std::move(frame), std::move(inputType), std::move(outputType)), rank(0)
+{}
+
+DenseRankFunction::~DenseRankFunction() = default;
+
+void DenseRankFunction::Reset()
+{
+    rank = 0;
+}
+
+void DenseRankFunction::RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup,
+    int32_t peerGroupCount, int32_t currentPositionIndex)
+{
+    if (newPeerGroup) {
+        rank++;
+    }
+    VectorHelper::SetValue(column, index, &rank);
+}
+
+// NtileFunction implementation
+NtileFunction::NtileFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType,
+    DataTypePtr outputType, int32_t numBuckets)
+    : RankingWindowFunction(std::move(frame), std::move(inputType), std::move(outputType)),
+      numBuckets_(numBuckets),
+      numPartitionRows_(0),
+      rowsPerBucket_(0),
+      bucketsWithExtraRow_(0),
+      extraBucketsBoundary_(0)
+{}
+
+void NtileFunction::Reset()
+{
+    if (windowIndex != nullptr) {
+        numPartitionRows_ = windowIndex->GetSize();
+    } else {
+        numPartitionRows_ = 0;
+    }
+
+    if (numBuckets_ > 0 && numPartitionRows_ > 0) {
+        if (numBuckets_ >= numPartitionRows_) {
+            rowsPerBucket_ = 1;
+            bucketsWithExtraRow_ = 0;
+            extraBucketsBoundary_ = numPartitionRows_;
+        } else {
+            rowsPerBucket_ = numPartitionRows_ / numBuckets_;
+            bucketsWithExtraRow_ = numPartitionRows_ % numBuckets_;
+            extraBucketsBoundary_ = bucketsWithExtraRow_ * (rowsPerBucket_ + 1);
+        }
+    }
+}
+
+void NtileFunction::RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup,
+    int32_t peerGroupCount, int32_t currentPositionIndex)
+{
+    if (numBuckets_ <= 0 || numPartitionRows_ <= 0) {
+        column->SetNull(index);
+        return;
+    }
+
+    int64_t bucketValue;
+    if (numBuckets_ >= numPartitionRows_) {
+        bucketValue = currentPositionIndex + 1;
+    } else if (currentPositionIndex < extraBucketsBoundary_) {
+        bucketValue = currentPositionIndex / (rowsPerBucket_ + 1) + 1;
+    } else {
+        bucketValue = (currentPositionIndex - bucketsWithExtraRow_) / rowsPerBucket_ + 1;
+    }
+    VectorHelper::SetValue(column, index, &bucketValue);
+}
+
 }
 }

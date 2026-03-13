@@ -232,6 +232,34 @@ OmniStatus WindowOperator::Init()
                 windowFunctions.push_back(std::move(make_unique<CountAllWindowFunction>(std::move(windowFrame),
                     NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
                 break;
+            case OMNI_WINDOW_TYPE_NTH_VALUE: {
+                int64_t nthOffset = windowFrameStartChannels[i];
+                if (nthOffset < 1) {
+                    nthOffset = 1;
+                }
+                auto nthFrame = std::make_unique<WindowFrameInfo>(
+                    static_cast<FrameType>(windowFrameTypes[i]),
+                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, -1,
+                    static_cast<FrameBoundType>(windowFrameEndTypes[i]), windowFrameEndChannels[i]);
+                windowFunctions.push_back(std::move(make_unique<NthValueFunction>(std::move(nthFrame),
+                    sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i),
+                    argumentChannels[i], nthOffset)));
+                break;
+            }
+            case OMNI_WINDOW_TYPE_NTILE: {
+                int32_t numBuckets = windowFrameStartChannels[i];
+                if (numBuckets < 1) {
+                    numBuckets = 1;
+                }
+                windowFunctions.push_back(std::move(make_unique<NtileFunction>(std::move(windowFrame),
+                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i),
+                    numBuckets)));
+                break;
+            }
+            case OMNI_WINDOW_TYPE_DENSE_RANK:
+                windowFunctions.push_back(std::move(make_unique<DenseRankFunction>(std::move(windowFrame),
+                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
+                break;
             default:
                 ret = OMNI_STATUS_ERROR;
                 break;

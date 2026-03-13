@@ -8,8 +8,10 @@
 
 #include <memory>
 #include "vector/vector.h"
+#include "vector/vector_helper.h"
 #include "operator/pages_index.h"
 #include "operator/aggregation/aggregator/only_aggregator_factory.h"
+#include "util/omni_exception.h"
 #include "window_frame.h"
 
 namespace omniruntime {
@@ -178,6 +180,53 @@ private:
     int32_t currentEnd;
 
     void Accumulate(BaseVector *column, int32_t index, int32_t start, int32_t end);
+};
+
+class NthValueFunction : public WindowFunction {
+public:
+    NthValueFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType,
+        int32_t valueChannel, int64_t offset);
+    ~NthValueFunction() override = default;
+    void Reset(WindowIndex *pWindowIndex) override;
+    void ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index, int32_t peerGroupStart,
+        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) override;
+
+private:
+    void CopyValueFromPartition(BaseVector *outputColumn, int32_t outputIndex, int32_t sourceRow);
+    void CopyValue(BaseVector *destVector, int32_t destIndex, BaseVector *srcVector, int32_t srcIndex);
+
+    int32_t valueChannel_;
+    int64_t offset_;
+    WindowIndex *windowIndex_;
+};
+
+class DenseRankFunction : public RankingWindowFunction {
+public:
+    DenseRankFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType);
+    ~DenseRankFunction() override;
+    void Reset() override;
+    void RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+        int32_t currentPositionIndex) override;
+
+private:
+    long rank;
+};
+
+class NtileFunction : public RankingWindowFunction {
+public:
+    NtileFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType,
+        int32_t numBuckets);
+    ~NtileFunction() override = default;
+    void Reset() override;
+    void RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+        int32_t currentPositionIndex) override;
+
+private:
+    int32_t numBuckets_;
+    int32_t numPartitionRows_;
+    int32_t rowsPerBucket_;
+    int32_t bucketsWithExtraRow_;
+    int32_t extraBucketsBoundary_;
 };
 
 }
