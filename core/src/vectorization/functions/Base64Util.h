@@ -138,4 +138,71 @@ inline Status Base64DecodedSize(const char* input, size_t inputSize, size_t* dec
     return Status::OK();
 }
 
+/// MIME line length limit (RFC 2045)
+constexpr size_t kMimeMaxLineLength = 76;
+
+/// Compute MIME-encoded output size including CRLF line breaks.
+inline size_t Base64MimeEncodedSize(size_t inputSize) {
+    if (inputSize == 0) {
+        return 0;
+    }
+    size_t encodedSize = Base64EncodedSize(inputSize);
+    encodedSize += (encodedSize - 1) / kMimeMaxLineLength * 2;
+    return encodedSize;
+}
+
+/// Encode binary data to Base64 MIME string (CRLF every 76 chars).
+/// Output buffer must be pre-sized to Base64MimeEncodedSize(inputSize).
+inline void Base64EncodeMime(const char* input, size_t inputSize, char* output) {
+    if (inputSize == 0) {
+        return;
+    }
+
+    const char* readPtr = input;
+    char* writePtr = output;
+    const size_t bytesPerLine = (kMimeMaxLineLength / 4) * 3;
+    size_t remaining = inputSize;
+
+    while (remaining >= 3) {
+        size_t chunk = std::min(bytesPerLine, (remaining / 3) * 3);
+        const char* chunkEnd = readPtr + chunk;
+
+        while (readPtr + 2 < chunkEnd) {
+            uint8_t b0 = static_cast<uint8_t>(*readPtr++);
+            uint8_t b1 = static_cast<uint8_t>(*readPtr++);
+            uint8_t b2 = static_cast<uint8_t>(*readPtr++);
+            uint32_t trio = (static_cast<uint32_t>(b0) << 16) |
+                            (static_cast<uint32_t>(b1) << 8) |
+                            static_cast<uint32_t>(b2);
+            *writePtr++ = kBase64Charset[(trio >> 18) & 0x3F];
+            *writePtr++ = kBase64Charset[(trio >> 12) & 0x3F];
+            *writePtr++ = kBase64Charset[(trio >> 6) & 0x3F];
+            *writePtr++ = kBase64Charset[trio & 0x3F];
+        }
+
+        remaining -= chunk;
+
+        if (chunk == bytesPerLine && remaining > 0) {
+            *writePtr++ = '\r';
+            *writePtr++ = '\n';
+        }
+    }
+
+    if (remaining > 0) {
+        uint8_t b0 = static_cast<uint8_t>(*readPtr++);
+        *writePtr++ = kBase64Charset[b0 >> 2];
+
+        if (remaining == 1) {
+            *writePtr++ = kBase64Charset[(b0 & 0x03) << 4];
+            *writePtr++ = '=';
+            *writePtr = '=';
+        } else {
+            uint8_t b1 = static_cast<uint8_t>(*readPtr);
+            *writePtr++ = kBase64Charset[((b0 & 0x03) << 4) | (b1 >> 4)];
+            *writePtr++ = kBase64Charset[(b1 & 0x0F) << 2];
+            *writePtr = '=';
+        }
+    }
+}
+
 } // namespace omniruntime::vectorization

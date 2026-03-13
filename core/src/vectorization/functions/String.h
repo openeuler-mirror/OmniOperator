@@ -448,6 +448,23 @@ private:
         '5', '0', '1', '2', '6', '2', '3', '0', '1', '7', '2', '0', '2'};
 };
 
+/// base64(binary) -> varchar
+/// Encodes binary data to Base64 MIME string (CRLF every 76 chars).
+/// Aligned with Spark SQL base64 semantics (MIME encoding per RFC 2045).
+/// Empty input returns empty string. NULL input yields NULL via framework propagation.
+template <typename T>
+struct Base64Function {
+    ALWAYS_INLINE void call(std::string& result, const std::string_view& input) {
+        if (input.empty()) {
+            result.clear();
+            return;
+        }
+        size_t encodedSize = Base64MimeEncodedSize(input.size());
+        result.resize(encodedSize);
+        Base64EncodeMime(input.data(), input.size(), &result[0]);
+    }
+};
+
 /// unbase64(string) -> varbinary (as string)
 /// Decodes Base64-encoded string to binary. Returns Status on decode error (row becomes NULL).
 template <typename T>

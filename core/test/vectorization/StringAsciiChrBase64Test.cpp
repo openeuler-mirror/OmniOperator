@@ -146,6 +146,180 @@ TEST_F(StringAsciiChrBase64Test, CharAlias) {
     delete inputVec;
 }
 
+// ---- base64(binary) -> varchar ----
+// Spark MIME encoding: CRLF every 76 output characters.
+TEST_F(StringAsciiChrBase64Test, Base64Basic) {
+    std::string b0 = "Man";
+    std::string b1 = "hello world";
+    std::string b2 = "Spark SQL";
+    std::string b3 = "\x01";
+    std::string b4(57, 'A');
+    std::string b5(58, 'A');
+    constexpr int rowSize = 6;
+    vec::BaseVector* inputVec = VectorHelper::CreateStringVector(rowSize);
+    inputVec->SetIsField(true);
+    auto* strVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(inputVec);
+    ASSERT_NE(strVec, nullptr);
+    std::string_view sv0(b0), sv1(b1), sv2(b2), sv3(b3), sv4(b4), sv5(b5);
+    strVec->SetValue(0, sv0);
+    strVec->SetValue(1, sv1);
+    strVec->SetValue(2, sv2);
+    strVec->SetValue(3, sv3);
+    strVec->SetValue(4, sv4);
+    strVec->SetValue(5, sv5);
+
+    auto signature = std::make_shared<FunctionSignature>("base64",
+        std::vector<DataTypeId>{OMNI_VARBINARY}, OMNI_VARCHAR);
+    auto function = VectorFunction::Find(signature);
+    ASSERT_NE(function, nullptr);
+
+    vec::BaseVector* resultVector = nullptr;
+    auto varcharType = std::make_shared<DataType>(OMNI_VARCHAR);
+    ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    std::stack<vec::BaseVector*> args;
+    args.push(inputVec);
+
+    ASSERT_NO_THROW(function->Apply(args, varcharType, resultVector, &context));
+
+    auto* outStrVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(resultVector);
+    ASSERT_NE(outStrVec, nullptr);
+    EXPECT_EQ(std::string(outStrVec->GetValue(0)), "TWFu");
+    EXPECT_EQ(std::string(outStrVec->GetValue(1)), "aGVsbG8gd29ybGQ=");
+    EXPECT_EQ(std::string(outStrVec->GetValue(2)), "U3BhcmsgU1FM");
+    EXPECT_EQ(std::string(outStrVec->GetValue(3)), "AQ==");
+    // 57 bytes -> exactly 76 Base64 chars (one full MIME line, no CRLF)
+    EXPECT_EQ(std::string(outStrVec->GetValue(4)),
+        "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB");
+    // 58 bytes -> crosses MIME line boundary, includes CRLF
+    EXPECT_EQ(std::string(outStrVec->GetValue(5)),
+        "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB\r\nQQ==");
+
+    delete resultVector;
+    delete inputVec;
+}
+
+// ---- base64: empty input ----
+TEST_F(StringAsciiChrBase64Test, Base64Empty) {
+    std::string b0;
+    constexpr int rowSize = 1;
+    vec::BaseVector* inputVec = VectorHelper::CreateStringVector(rowSize);
+    inputVec->SetIsField(true);
+    auto* strVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(inputVec);
+    ASSERT_NE(strVec, nullptr);
+    std::string_view sv0(b0);
+    strVec->SetValue(0, sv0);
+
+    auto signature = std::make_shared<FunctionSignature>("base64",
+        std::vector<DataTypeId>{OMNI_VARBINARY}, OMNI_VARCHAR);
+    auto function = VectorFunction::Find(signature);
+    ASSERT_NE(function, nullptr);
+
+    vec::BaseVector* resultVector = nullptr;
+    auto varcharType = std::make_shared<DataType>(OMNI_VARCHAR);
+    ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    std::stack<vec::BaseVector*> args;
+    args.push(inputVec);
+
+    ASSERT_NO_THROW(function->Apply(args, varcharType, resultVector, &context));
+
+    auto* outStrVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(resultVector);
+    ASSERT_NE(outStrVec, nullptr);
+    EXPECT_EQ(std::string(outStrVec->GetValue(0)), "");
+
+    delete resultVector;
+    delete inputVec;
+}
+
+// ---- base64: binary data with special characters ----
+TEST_F(StringAsciiChrBase64Test, Base64BinaryData) {
+    std::string b0 = "\xff\xee";
+    std::string b1 = std::string("\x00\x01\x02", 3);
+    constexpr int rowSize = 2;
+    vec::BaseVector* inputVec = VectorHelper::CreateStringVector(rowSize);
+    inputVec->SetIsField(true);
+    auto* strVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(inputVec);
+    ASSERT_NE(strVec, nullptr);
+    std::string_view sv0(b0), sv1(b1.data(), b1.size());
+    strVec->SetValue(0, sv0);
+    strVec->SetValue(1, sv1);
+
+    auto signature = std::make_shared<FunctionSignature>("base64",
+        std::vector<DataTypeId>{OMNI_VARBINARY}, OMNI_VARCHAR);
+    auto function = VectorFunction::Find(signature);
+    ASSERT_NE(function, nullptr);
+
+    vec::BaseVector* resultVector = nullptr;
+    auto varcharType = std::make_shared<DataType>(OMNI_VARCHAR);
+    ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    std::stack<vec::BaseVector*> args;
+    args.push(inputVec);
+
+    ASSERT_NO_THROW(function->Apply(args, varcharType, resultVector, &context));
+
+    auto* outStrVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(resultVector);
+    ASSERT_NE(outStrVec, nullptr);
+    EXPECT_EQ(std::string(outStrVec->GetValue(0)), "/+4=");
+    EXPECT_EQ(std::string(outStrVec->GetValue(1)), "AAEC");
+
+    delete resultVector;
+    delete inputVec;
+}
+
+// ---- base64 + unbase64 roundtrip ----
+TEST_F(StringAsciiChrBase64Test, Base64UnBase64Roundtrip) {
+    std::string original = "Spark SQL roundtrip test!";
+    constexpr int rowSize = 1;
+
+    vec::BaseVector* inputVec = VectorHelper::CreateStringVector(rowSize);
+    inputVec->SetIsField(true);
+    auto* strVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(inputVec);
+    ASSERT_NE(strVec, nullptr);
+    std::string_view sv0(original);
+    strVec->SetValue(0, sv0);
+
+    auto base64Sig = std::make_shared<FunctionSignature>("base64",
+        std::vector<DataTypeId>{OMNI_VARBINARY}, OMNI_VARCHAR);
+    auto base64Func = VectorFunction::Find(base64Sig);
+    ASSERT_NE(base64Func, nullptr);
+
+    vec::BaseVector* encodedVector = nullptr;
+    auto varcharType = std::make_shared<DataType>(OMNI_VARCHAR);
+    ExecutionContext ctx1;
+    ctx1.SetResultRowSize(rowSize);
+    std::stack<vec::BaseVector*> encodeArgs;
+    encodeArgs.push(inputVec);
+
+    ASSERT_NO_THROW(base64Func->Apply(encodeArgs, varcharType, encodedVector, &ctx1));
+    auto* encodedStrVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(encodedVector);
+    ASSERT_NE(encodedStrVec, nullptr);
+    EXPECT_EQ(std::string(encodedStrVec->GetValue(0)), "U3BhcmsgU1FMIHJvdW5kdHJpcCB0ZXN0IQ==");
+
+    encodedVector->SetIsField(true);
+    auto unbase64Sig = std::make_shared<FunctionSignature>("unbase64",
+        std::vector<DataTypeId>{OMNI_VARCHAR}, OMNI_VARBINARY);
+    auto unbase64Func = VectorFunction::Find(unbase64Sig);
+    ASSERT_NE(unbase64Func, nullptr);
+
+    vec::BaseVector* decodedVector = nullptr;
+    auto varbinaryType = std::make_shared<DataType>(OMNI_VARBINARY);
+    ExecutionContext ctx2;
+    ctx2.SetResultRowSize(rowSize);
+    std::stack<vec::BaseVector*> decodeArgs;
+    decodeArgs.push(encodedVector);
+
+    ASSERT_NO_THROW(unbase64Func->Apply(decodeArgs, varbinaryType, decodedVector, &ctx2));
+    auto* decodedStrVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(decodedVector);
+    ASSERT_NE(decodedStrVec, nullptr);
+    EXPECT_EQ(std::string(decodedStrVec->GetValue(0)), original);
+
+    delete decodedVector;
+    delete encodedVector;
+    delete inputVec;
+}
+
 // ---- unbase64(string) -> varbinary ----
 TEST_F(StringAsciiChrBase64Test, Unbase64Basic) {
     std::string u0 = "TWFu";

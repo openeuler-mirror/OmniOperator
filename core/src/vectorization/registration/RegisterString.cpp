@@ -34,6 +34,7 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterFunction<AsciiFunction, int32_t, std::string_view>(prefix + "ascii", {OMNI_VARCHAR}, OMNI_INT);
     RegisterFunction<ChrFunction, std::string, int64_t>(prefix + "chr", {OMNI_LONG}, OMNI_VARCHAR);
     RegisterFunction<ChrFunction, std::string, int64_t>(prefix + "char", {OMNI_LONG}, OMNI_VARCHAR);
+    RegisterFunction<Base64Function, std::string, std::string_view>(prefix + "base64", {OMNI_VARBINARY}, OMNI_VARCHAR);
     RegisterFunction<UnBase64Function, std::string, std::string_view>(prefix + "unbase64", {OMNI_VARCHAR}, OMNI_VARBINARY);
     // unhex(string) -> varbinary: converts hex string to binary data
     RegisterFunction<UnhexFunction, std::string, std::string_view>(prefix + "unhex", {OMNI_VARCHAR}, OMNI_VARBINARY);
