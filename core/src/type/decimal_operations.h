@@ -1887,7 +1887,11 @@ public:
             }
             return;
         }
-        result = x.ReScale(resultScale).Subtract(y.ReScale(resultScale)).SetScale(resultScale);
+        if (maxInputScale + maxInputScale <= MAX_SCALE) {
+            result = x.ReScale(maxInputScale).Subtract(y.ReScale(maxInputScale)).SetScale(maxInputScale).ReScale(resultScale);
+        } else {
+            result = x.ReScale(resultScale).Subtract(y.ReScale(resultScale)).SetScale(resultScale);
+        }
     }
 
     template<typename Decimal>
