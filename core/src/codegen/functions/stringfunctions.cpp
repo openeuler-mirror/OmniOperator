@@ -1256,6 +1256,12 @@ extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const c
     if (isNull) {
         return false;
     }
+    if (matchLen == 0) {
+        return true;
+    }
+    if (srcLen == 0) {
+        return false;
+    }
     std::string s = std::string(srcStr, srcLen);
     std::string r = std::string(matchStr, matchLen);
 
