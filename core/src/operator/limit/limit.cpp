@@ -38,8 +38,8 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
     if (vecBatch == nullptr) {
         return 0;
     }
-    if ((vecBatch->GetRowCount() == 0) || (outputVecBatch != nullptr) ||
-        (remainingLimit == 0) || (remainingLimit < 0 && remainingOffset <= 0)) {
+
+    if (vecBatch->GetRowCount() == 0 || outputVecBatch != nullptr || remainingLimit == 0) {
         VectorHelper::FreeVecBatch(vecBatch);
         ResetInputVecBatch();
         return 0;
@@ -47,28 +47,42 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
 
     int32_t rowCount = vecBatch->GetRowCount();
     int32_t vectorCount = vecBatch->GetVectorCount();
-    int32_t limitSize;
-    int32_t realLimit;
-    int32_t positionOffset;
-    int32_t remainingRowCount = remainingOffset > rowCount ? 0 : rowCount - remainingOffset;
+
+    // 1. calculate how many rows this batch needs to skip
+    int32_t start = remainingOffset < rowCount ? remainingOffset : rowCount;
+
+    // update offset
+    remainingOffset -= start;
+
+    // 2. the number of remaining lines after subtracting the offset
+    int32_t rowsAfterOffset = rowCount - start;
+
+    // 3. the maximum number of rows that can be output this time
+    int32_t take;
     if (remainingLimit < 0) {
-        limitSize = remainingRowCount;
+        take = rowsAfterOffset;  // unlimited
     } else {
-        realLimit = remainingLimit;
-        limitSize = realLimit > remainingRowCount ? remainingRowCount : realLimit;
+        take = rowsAfterOffset < remainingLimit ? rowsAfterOffset : remainingLimit;
+        remainingLimit -= take;
     }
-    positionOffset = remainingOffset < rowCount ? remainingOffset : rowCount;
-    remainingOffset = remainingOffset < rowCount ? 0 : remainingOffset - rowCount;
-    if (remainingLimit >= 0) {
-        remainingLimit = realLimit - limitSize;
+
+    // if there is no data to be output for this batch
+    if (take == 0) {
+        VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
+        return 0;
     }
-    auto result = make_unique<VectorBatch>(limitSize);
+
+    auto result = make_unique<VectorBatch>(take);
+
     for (int32_t i = 0; i < vectorCount; ++i) {
         BaseVector *inputVector = vecBatch->Get(i);
-        result->Append(VectorHelper::SliceVector(inputVector, positionOffset, limitSize));
+        result->Append(VectorHelper::SliceVector(inputVector, start, take));
     }
+
     VectorHelper::FreeVecBatch(vecBatch);
     ResetInputVecBatch();
+
     outputVecBatch = result.release();
     return 0;
 }
