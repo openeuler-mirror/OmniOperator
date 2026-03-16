@@ -164,6 +164,107 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
+TEST(HashAggregationWithExprOperatorTest, test_hashagg_groupby_array)
+{
+    using namespace omniruntime::expressions;
+
+    const int32_t dataSize = 8;
+    const int32_t groupByNum = 1;
+    const int32_t expectDataSize = 1;
+
+    int64_t data1[dataSize];
+    int64_t data2[dataSize];
+    int32_t data3[dataSize];
+    int32_t data4[dataSize];
+    for (int i = 0; i < dataSize; ++i) {
+        data1[i] = 10 + i;
+        data2[i] = 20 + i;
+        data3[i] = 30 + i;
+        data4[i] = 40 + i;
+    }
+
+    auto elementVector = std::make_shared<Vector<int32_t>>(16, OMNI_INT);
+    int vals[16] = {1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2};
+    for (int i = 0; i < 16; i++) {
+        elementVector->SetValue(i, vals[i]);
+    }
+    auto arrayVec = new ArrayVector(dataSize, elementVector);
+    for (int row = 0; row < dataSize; row++) {
+        arrayVec->SetOffset(row, row*2);
+        arrayVec->SetSize(row, 2);
+    }
+
+    auto arrayColType = std::make_shared<ArrayType>(IntType());
+    arrayColType->SetElementSize(8);
+    DataTypes sourceTypes({ LongType(), LongType(), IntType(), IntType() });
+    VectorBatch* vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
+    vecBatch->Append(arrayVec);
+
+    FieldExpr *arrayField = new FieldExpr(4, arrayColType);
+    std::vector<Expr*> groupByKeys = { arrayField };
+
+    FieldExpr *mulLeft = new FieldExpr(0, LongType());
+    LiteralExpr *mulRight = new LiteralExpr(5, LongType());
+    mulRight->longVal = 5;
+    BinaryExpr *mulExpr = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, LongType());
+
+    FieldExpr *addLeft = new FieldExpr(2, IntType());
+    LiteralExpr *addRight = new LiteralExpr(5, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
+
+    std::vector<std::vector<Expr *>> aggAllKeys = { {mulExpr},  {addExpr} };
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM };
+    std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
+
+    DataTypes aggOutputTypes({ LongType(), LongType() });
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
+    std::vector<Expr *> aggFilters;
+    DataTypes sourceTypesFull({ LongType(), LongType(), IntType(), IntType(),  arrayColType });
+
+    auto hashAggWithExprOperatorFactory =
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypesFull,
+        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, OperatorConfig());
+    auto *hashAggWithExprOperator =
+        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
+
+    hashAggWithExprOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
+
+    int64_t expData1[] = { 540 };
+    int32_t expData2[] = { 308 };
+    DataTypes expectTypes({ arrayColType, LongType(), LongType() });
+    auto elementVectorExp = std::make_shared<Vector<int32_t>>(2, OMNI_INT);
+    int valsExp[2] = {1, 2};
+    for(int i = 0; i < 2; i++){
+        elementVectorExp->SetValue(i, valsExp[i]);
+    }
+    auto arrayVecExp = new ArrayVector(expectDataSize, elementVectorExp);
+    arrayVecExp->SetOffset(0, 0);
+    arrayVecExp->SetSize(0, 2);
+
+    auto col1 = new Vector<int64_t>(expectDataSize);
+    auto col2 = new Vector<int64_t>(expectDataSize);
+    col1->SetValue(0, expData1[0]);
+    col2->SetValue(0, expData2[0]);
+
+    auto expectVecBatch = new VectorBatch(expectDataSize);
+    expectVecBatch->Append(arrayVecExp);
+    expectVecBatch->Append(col1);
+    expectVecBatch->Append(col2);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggAllKeys);
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
+    delete hashAggWithExprOperatorFactory;
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
 {
     using namespace omniruntime::expressions;
