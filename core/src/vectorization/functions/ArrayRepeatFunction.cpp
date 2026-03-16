@@ -225,9 +225,9 @@ void ArrayRepeatFunction::ProcessRepeatVarchar(BaseVector *elementVec, BaseVecto
         } else {
             std::string_view value;
             if (elementVec->GetEncoding() == OMNI_ENCODING_CONST) {
-                auto *constVec = dynamic_cast<ConstVector<std::string> *>(elementVec);
+                auto *constVec = dynamic_cast<ConstVector<std::string_view> *>(elementVec);
                 if (constVec != nullptr) {
-                    value = std::string_view(constVec->GetConstValue());
+                    value = constVec->GetConstValue();
                 }
             } else {
                 auto *varcharVec = dynamic_cast<VarcharVector *>(elementVec);

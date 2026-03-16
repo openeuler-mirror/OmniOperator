@@ -242,9 +242,9 @@ void ArrayRemoveFunction::ProcessRemoveVarchar(ArrayVector *arrayVec, BaseVector
 
         std::string_view removeValue;
         if (elementVec->GetEncoding() == OMNI_ENCODING_CONST) {
-            auto *constVec = dynamic_cast<ConstVector<std::string> *>(elementVec);
+            auto *constVec = dynamic_cast<ConstVector<std::string_view> *>(elementVec);
             if (constVec != nullptr) {
-                removeValue = std::string_view(constVec->GetConstValue());
+                removeValue = constVec->GetConstValue();
             }
         } else {
             auto *varcharVec = dynamic_cast<VarcharVector *>(elementVec);
