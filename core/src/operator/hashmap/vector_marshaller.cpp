@@ -29,16 +29,16 @@ template <DataTypeId id> const char *VariableTypeDeserializer(BaseVector *baseVe
 
     if (rowLenSize != 0) {
         // decompress rowLenSize byte to stringLen.
-        auto stringLen = 0;
+        size_t stringLen = 0;
         switch (rowLenSize) {
             case BYTE_1:
-                stringLen = *reinterpret_cast<const int8_t *>(pos + sizeof(uint8_t));
+                stringLen = *reinterpret_cast<const uint8_t *>(pos + sizeof(uint8_t));
                 break;
             case BYTE_2:
-                stringLen = *reinterpret_cast<const int16_t *>(pos + sizeof(uint8_t));
+                stringLen = *reinterpret_cast<const uint16_t *>(pos + sizeof(uint8_t));
                 break;
             case BYTE_4:
-                stringLen = *reinterpret_cast<const int32_t *>(pos + sizeof(uint8_t));
+                stringLen = *reinterpret_cast<const uint32_t *>(pos + sizeof(uint8_t));
                 break;
             default:
                 throw OmniException("DESERIALIZED FAILED", "Invalid String Length");
@@ -102,20 +102,24 @@ void NullRowVectorSerializer(mem::SimpleArenaAllocator &arenaAllocator, StringRe
     result.size += resSize;
 }
 
-uint8_t GetCompactLengthSize(uint64_t value) {
-    if (value == 0) {
-        return 1;
+    uint8_t GetCompactLengthSize(uint64_t value) {
+        if (value == 0) {
+            return BYTE_1;
+        }
+        int bitWidth = 64 - __builtin_clzll(value);
+        int byteSize = (bitWidth + 7) / 8;
+
+        if (byteSize > 4) {
+            return BYTE_8;
+        }
+        if (byteSize > 2) {
+            return BYTE_4;
+        }
+        if (byteSize > 1) {
+            return BYTE_2;
+        }
+        return BYTE_1;
     }
-    int bitWidth = 64 - __builtin_clzll(value);
-    int byteSize = (bitWidth + 7) / 8;
-    if (byteSize <= 1) {
-        return 1;
-    }
-    int x = byteSize - 1;
-    int leadingZeros = __builtin_clzll(static_cast<uint32_t>(x));
-    int shift = 31 - leadingZeros;
-    return static_cast<uint8_t>(1) << shift;
-}
 
 void ALWAYS_INLINE ArrayVectorSerializer(ArrayVector &arrayVector, int32_t rowIdx, mem::SimpleArenaAllocator
     &arenaAllocator, StringRef &result) {
@@ -202,16 +206,16 @@ const char *ArrayVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, cons
         return begin;
     }
 
-    int64_t size = 0;
+    uint64_t size = 0;
     switch (sizeLenSize) {
         case BYTE_1:
-            size = *reinterpret_cast<const int8_t *>(begin);
+            size = *reinterpret_cast<const uint8_t *>(begin);
             break;
         case BYTE_2:
-            size = *reinterpret_cast<const int16_t *>(begin);
+            size = *reinterpret_cast<const uint16_t *>(begin);
             break;
         case BYTE_4:
-            size = *reinterpret_cast<const int32_t *>(begin);
+            size = *reinterpret_cast<const uint32_t *>(begin);
             break;
         default:
             throw OmniException("ArrayVector Deserializer failed: ", "Invalid Array Size");
