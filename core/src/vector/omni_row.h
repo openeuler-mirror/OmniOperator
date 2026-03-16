@@ -65,6 +65,9 @@ struct VectorTypeTraits<std::vector<BaseVector*>> {
 
 template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, int32_t rowIndex);
 
+// Helper macro to wrap template function call for code style compliance
+#define TMP_FUNC_CALL(FUNC, ...) (FUNC<__VA_ARGS__>)
+
 #define FUNC_CENTER_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR) \
     static std::vector<FUNC_NAME> CENTER_NAME = { nullptr,    \
         TMP_FUNC_PTR<type::OMNI_INT>,                         \
@@ -156,6 +159,36 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         nullptr,                                                                   \
         nullptr,                                                                   \
         TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_DICTIONARY>,                   \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        nullptr }
+
+#define FUNC_CENTER_CONST_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR)                \
+    static std::vector<FUNC_NAME> CENTER_NAME = { nullptr,                         \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_INT, Encoding::OMNI_ENCODING_CONST),               \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_LONG, Encoding::OMNI_ENCODING_CONST),              \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_DOUBLE, Encoding::OMNI_ENCODING_CONST),            \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_BOOLEAN, Encoding::OMNI_ENCODING_CONST),           \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_SHORT, Encoding::OMNI_ENCODING_CONST),             \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_LONG, Encoding::OMNI_ENCODING_CONST),              \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_DECIMAL128, Encoding::OMNI_ENCODING_CONST),        \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_INT, Encoding::OMNI_ENCODING_CONST),               \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_LONG, Encoding::OMNI_ENCODING_CONST),              \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_INT, Encoding::OMNI_ENCODING_CONST),               \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_LONG, Encoding::OMNI_ENCODING_CONST),              \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_LONG, Encoding::OMNI_ENCODING_CONST),              \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_VARCHAR, Encoding::OMNI_ENCODING_CONST),           \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_VARCHAR, Encoding::OMNI_ENCODING_CONST),           \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_INT, Encoding::OMNI_ENCODING_CONST),               \
         nullptr,                                                                   \
         nullptr,                                                                   \
         nullptr,                                                                   \
@@ -486,6 +519,8 @@ FUNC_CENTER_FLAT_DEF(GenerateFlatValueFuncCenter, GenFuncPtr, GenerateSerValue);
 FUNC_CENTER_FLAT_DEF(TransFlatValueFuncCenter, TransFuncPtr, TransToValue);
 FUNC_CENTER_DICT_DEF(GenerateDictValueFuncCenter, GenFuncPtr, GenerateSerValue);
 FUNC_CENTER_DICT_DEF(TransDictValueFuncCenter, TransFuncPtr, TransToValue);
+FUNC_CENTER_CONST_DEF(GenerateConstValueFuncCenter, GenFuncPtr, GenerateSerValue);
+FUNC_CENTER_CONST_DEF(TransConstValueFuncCenter, TransFuncPtr, TransToValue);
 /*
  * Row buffer is used to trans one row of VectorBatch to row
  * the basic usage of RowBuffer:
@@ -618,9 +653,12 @@ private:
         } else if (encoding == OMNI_ENCODING_STRUCT) {
             oneRow[i] = GenerateFlatValueFuncCenter[id]();
             transFuns[i] = TransFlatValueFuncCenter[id];
+        } else if (encoding == OMNI_ENCODING_CONST) {
+            oneRow[i] = GenerateConstValueFuncCenter[id]();
+            transFuns[i] = TransConstValueFuncCenter[id];
         } else {
             // OMNI_ENCODING_CONTAINER is only used for the agg avg partial in olk. row shuffle is not supported.
-            std::string message = encoding + "encoding type is not supported for omni row";
+            std::string message = "encoding type " + std::to_string(static_cast<int>(encoding)) + " is not supported for omni row";
             throw omniruntime::exception::OmniException("Encoding Unsupported", message);
         }
     }
