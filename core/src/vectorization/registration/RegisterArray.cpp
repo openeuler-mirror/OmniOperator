@@ -27,6 +27,7 @@
 #include "vectorization/functions/ArraysOverlapFunction.h"
 #include "vectorization/functions/ArrayIdentityFunction.h"
 #include "vectorization/functions/ArrayConstructorFunction.h"
+#include "vectorization/functions/SortArrayFunction.h"
 
 namespace omniruntime::vectorization {
 
@@ -382,5 +383,13 @@ void RegisterArrayFunctions(const std::string &prefix)
     // Returns true if two arrays have any non-null elements in common
     VectorFunction::RegisterVectorFunction("arrays_overlap", {OMNI_ARRAY, OMNI_ARRAY}, OMNI_BOOLEAN,
         std::make_shared<ArraysOverlapFunction>());
+
+    // Register sort_array function
+    // sort_array(array<T>) -> array<T>: Sorts array elements in ascending order (default)
+    // sort_array(array<T>, boolean) -> array<T>: Sorts array elements, boolean controls asc/desc
+    VectorFunction::RegisterVectorFunction("sort_array", {OMNI_ARRAY}, OMNI_ARRAY,
+        std::make_shared<SortArrayFunction>());
+    VectorFunction::RegisterVectorFunction("sort_array", {OMNI_ARRAY, OMNI_BOOLEAN}, OMNI_ARRAY,
+        std::make_shared<SortArrayFunction>());
 }
 }

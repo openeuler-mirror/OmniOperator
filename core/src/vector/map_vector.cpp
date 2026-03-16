@@ -203,4 +203,50 @@ namespace omniruntime::vec {
             static_cast<int32_t>(keyLength));
         SetSize(index, static_cast<int32_t>(keyLength));
     }
+
+    std::pair<BaseVector*, BaseVector*> MapVector::GetValue(int index)
+    {
+        if (UNLIKELY(index < 0 || index >= size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", index,
+                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+ 
+        int64_t startOffset = GetOffset(index);
+        int64_t size = GetSize(index);
+ 
+        BaseVector* k = GetKeyVector()->Slice(startOffset, size, false);
+        BaseVector* v = GetValueVector()->Slice(startOffset, size, false);
+        return std::make_pair(k, v);
+    }
+
+    BaseVector* MapVector::GetKeyValue(int index)
+    {
+        if (UNLIKELY(index < 0 || index >= size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", index,
+                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+ 
+        int64_t startOffset = GetOffset(index);
+        int64_t size = GetSize(index);
+ 
+        BaseVector* k = GetKeyVector()->Slice(startOffset, size, false);
+        return k;
+    }
+
+    BaseVector* MapVector::GetValueValue(int index)
+    {
+        if (UNLIKELY(index < 0 || index >= size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", index,
+                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+ 
+        int64_t startOffset = GetOffset(index);
+        int64_t size = GetSize(index);
+ 
+        BaseVector* v = GetValueVector()->Slice(startOffset, size, false);
+        return v;
+    }
 }

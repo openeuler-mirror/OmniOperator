@@ -78,4 +78,21 @@ namespace omniruntime::vec {
             }
         }
     }
+
+    std::vector<BaseVector*> RowVector::GetValue(int index)
+    {
+        if (UNLIKELY(index < 0 || index >= size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", index,
+                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+        auto childSize = ChildSize();
+        std::vector<BaseVector*> childs(childSize);
+        for (auto i = 0; i < childSize; i++) {
+            auto child = ChildAt(i);
+            BaseVector* baseVector = child.get()->Slice(index, 1, false);
+            childs[i] = baseVector;
+        }
+        return childs;
+    }
 }

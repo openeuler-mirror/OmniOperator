@@ -8,20 +8,21 @@
 
 /*
  * row format:
- * whichType 000：fixType
- * whichType 001: varChar
- * whichType 010: array
  * 
- * | whichType(3bit 000) + isNull(1bit) + neg(1bit) + sizeLength(3bit) | fixValue |
- * | whichType(3bit 001) + isNull(1bit) + sizeLength(4bit) | realLength(n bytes) | varcharValue |
- * | whichType(3bit 010) + isNull(1bit) + real_num_ele_size(4bit) | real_num_ele(n bytes) | element1 | element2 | ... |
- *
+ * FixType: isNull(1bit) + neg(1bit) + sizeLength(4bit) | fixValue |
+ * Char/Varchar: isNull(1bit) + sizeLength(4bit) | realLength(n bytes) | varcharValue |
+ * Array: isNull(1bit) + real_num_ele_size(4bit) | real_num_ele(n bytes) | element1 | element2 | ... |
+ * Map: isNull(1bit) | keyArrayEncoding | mapArrayEncoding |
+ * Struct: isNull(1bit) + struct_child_size(4bit) | childArrayEncoding | ... |
  */
 #include "omni_row_value.h"
 #include "memory/simple_arena_allocator.h"
 
 namespace omniruntime {
 namespace vec {
+// Last four bit is encoding for meta size.
+inline constexpr uint8_t ENCODING_META_SIZE = 0b00001111;
+
 template <type::DataTypeId id, Encoding encoding>
 void TransToValue(BaseVector *vec, int32_t rowIndex, BaseSerialize *value)
 {
@@ -31,20 +32,6 @@ void TransToValue(BaseVector *vec, int32_t rowIndex, BaseSerialize *value)
 
 template <type::DataTypeId id, Encoding encoding>
 std::unique_ptr<BaseSerialize> GenerateSerValue()
-{
-    using T = typename NativeType<id>::type;
-    return std::make_unique<SerializedValue<T, encoding>>();
-}
-
-template <type::DataTypeId id, Encoding encoding>
-void TransArrayToValue(BaseVector *vec, int32_t rowIndex, BaseSerialize *value)
-{
-    using T = typename NativeType<id>::type;
-    reinterpret_cast<SerializedValue<T, encoding> *>(value)->TransValue(vec, rowIndex);
-}
-
-template <type::DataTypeId id, Encoding encoding>
-std::unique_ptr<BaseSerialize> GenerateArraySerValue()
 {
     using T = typename NativeType<id>::type;
     return std::make_unique<SerializedValue<T, encoding>>();
@@ -64,6 +51,17 @@ template<>
 struct VectorTypeTraits<BaseVector*> {
     using type = ArrayVector;
 };
+
+template<>
+struct VectorTypeTraits<std::pair<BaseVector*, BaseVector*>> {
+    using type = MapVector;
+};
+
+template<>
+struct VectorTypeTraits<std::vector<BaseVector*>> {
+    using type = RowVector;
+};
+
 
 template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, int32_t rowIndex);
 
@@ -98,7 +96,9 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         nullptr,                                              \
         nullptr,                                              \
         nullptr,                                              \
-        TMP_FUNC_PTR<type::OMNI_ARRAY> }
+        TMP_FUNC_PTR<type::OMNI_ARRAY>,                       \
+        TMP_FUNC_PTR<type::OMNI_MAP>,                         \
+        TMP_FUNC_PTR<type::OMNI_ROW> }
 
 #define FUNC_CENTER_FLAT_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR)                 \
     static std::vector<FUNC_NAME> CENTER_NAME = { nullptr,                         \
@@ -128,7 +128,12 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         nullptr,                                                                   \
         nullptr,                                                                   \
         nullptr,                                                                   \
-        nullptr }
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        TMP_FUNC_PTR<type::OMNI_ARRAY, Encoding::OMNI_ENCODING_ARRAY>,             \
+        TMP_FUNC_PTR<type::OMNI_MAP, Encoding::OMNI_ENCODING_MAP>,                 \
+        TMP_FUNC_PTR<type::OMNI_ROW, Encoding::OMNI_ENCODING_STRUCT> }
 
 #define FUNC_CENTER_DICT_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR)                 \
     static std::vector<FUNC_NAME> CENTER_NAME = { nullptr,                         \
@@ -159,11 +164,6 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         nullptr,                                                                   \
         nullptr,                                                                   \
         nullptr }
-
-#define FUNC_CENTER_ARRAY_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR)                \
-    static std::vector<FUNC_NAME> CENTER_NAME = {                                  \
-        TMP_FUNC_PTR<type::OMNI_ARRAY, Encoding::OMNI_ENCODING_ARRAY>              \
-    }
 
 using TransFuncPtr = void (*)(BaseVector *vec, int32_t rowIndex, BaseSerialize *value);
 using GenFuncPtr = std::unique_ptr<BaseSerialize> (*)();
@@ -275,7 +275,7 @@ static uint8_t *DoubleRowGetValue(uint8_t *row)
 static uint8_t *StringRowSetVecValue(uint8_t *row, Vector<LargeStringContainer<std::string_view>> *vec,
     int32_t rowIndex)
 {
-    auto valueLen = (*row) & (0b00000111);
+    auto valueLen = (*row) & ENCODING_META_SIZE;
     // point to strLen value
     ++row;
     int32_t strLen = 0;
@@ -296,7 +296,7 @@ static uint8_t *StringRowSetVecValue(uint8_t *row, Vector<LargeStringContainer<s
 
 static uint8_t *StringRowGetValue(uint8_t *row)
 {
-    auto valueLen = (*row) & (0b00000111);
+    auto valueLen = (*row) & ENCODING_META_SIZE;
     // point to strLen value
     ++row;
     int32_t strLen = 0;
@@ -316,7 +316,7 @@ static uint8_t *StringRowGetValue(uint8_t *row)
 
 static uint8_t *ArrayRowSetVecValue(uint8_t *row, ArrayVector *vec, int32_t rowIndex)
 {
-    auto rowArraySize = (*row) & (0b00000111);
+    auto rowArraySize = (*row) & ENCODING_META_SIZE;
     ++row;
     int32_t arraySize = 0;
     std::copy(row, row + rowArraySize, reinterpret_cast<uint8_t*>(&arraySize));
@@ -335,7 +335,7 @@ static uint8_t *ArrayRowSetVecValue(uint8_t *row, ArrayVector *vec, int32_t rowI
 
 static uint8_t *ArrayRowGetValue(uint8_t *row)
 {
-    auto rowArraySize = (*row) & (0b00000111);
+    auto rowArraySize = (*row) & ENCODING_META_SIZE;
     ++row;
     int32_t arraySize = 0;
     std::copy(row, row + rowArraySize, reinterpret_cast<uint8_t*>(&arraySize));
@@ -343,8 +343,88 @@ static uint8_t *ArrayRowGetValue(uint8_t *row)
     return row + arraySize;
 }
 
+static uint8_t *MapRowSetVecValue(uint8_t *row, MapVector *vec, int32_t rowIndex)
+{
+    auto rowMapSize = (*row) & ENCODING_META_SIZE;
+    ++row;
+    int32_t mapSize = 0;
+    std::copy(row, row + rowMapSize, reinterpret_cast<uint8_t*>(&mapSize));
+    row += rowMapSize;
+
+    auto rowKeySize = (*row) & ENCODING_META_SIZE;
+    ++row;
+    int32_t keySize = 0;
+    std::copy(row, row + rowKeySize, reinterpret_cast<uint8_t*>(&keySize));
+    row += rowKeySize;
+    vec->SetOffset(rowIndex + 1, vec->GetOffset(rowIndex) + keySize);
+    auto keyVector = vec->GetKeyVector();
+    keyVector->Expand(vec->GetOffset(rowIndex + 1));
+    DataTypeId keyDataTypeId = keyVector->GetTypeId();
+    auto tmpKeyVector = vec->GetKeyValue(rowIndex);
+    for (int32_t i = 0; i < keySize; i++) {
+        row = Row2VecFuncCenter[keyDataTypeId](row, tmpKeyVector, i);
+    }
+
+    auto rowValueSize = (*row) & ENCODING_META_SIZE;
+    ++row;
+    int32_t valueSize = 0;
+    std::copy(row, row + rowValueSize, reinterpret_cast<uint8_t*>(&valueSize));
+    row += rowValueSize;
+    auto valueVector = vec->GetValueVector();
+    valueVector->Expand(vec->GetOffset(rowIndex + 1));
+    DataTypeId valueDataTypeId = valueVector->GetTypeId();
+    auto tmpValueVector = vec->GetValueValue(rowIndex);
+    for (int32_t i = 0; i < valueSize; i++) {
+        row = Row2VecFuncCenter[valueDataTypeId](row, tmpValueVector, i);
+    }
+
+    delete tmpKeyVector;
+    delete tmpValueVector;
+    return row;
+}
+ 
+static uint8_t *MapRowGetValue(uint8_t *row)
+{
+    auto rowMapSize = (*row) & ENCODING_META_SIZE;
+    ++row;
+    int32_t mapSize = 0;
+    std::copy(row, row + rowMapSize, reinterpret_cast<uint8_t*>(&mapSize));
+    row += rowMapSize;
+    return row + mapSize;
+}
+
+static uint8_t *StructRowSetVecValue(uint8_t *row, RowVector *vec, int32_t rowIndex)
+{
+    auto rowStructSize = (*row) & ENCODING_META_SIZE;
+    ++row;
+    int32_t structSize = 0;
+    std::copy(row, row + rowStructSize, reinterpret_cast<uint8_t*>(&structSize));
+    row += rowStructSize;
+
+    for (int32_t i = 0; i < structSize; i++) {
+        auto childVector = vec->ChildAt(i)->Slice(rowIndex, 1, false);
+        DataTypeId childDataTypeId = childVector->GetTypeId();
+        row = Row2VecFuncCenter[childDataTypeId](row, childVector, rowIndex);
+    }
+    return row;
+}
+
+static uint8_t *StructRowGetValue(uint8_t *row)
+{
+    auto rowStructSize = (*row) & ENCODING_META_SIZE;
+    ++row;
+    int32_t structSize = 0;
+    std::copy(row, row + rowStructSize, reinterpret_cast<uint8_t*>(&structSize));
+    row += rowStructSize;
+    return row + structSize;
+}
+
 template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, int32_t rowIndex)
 {
+    if (row == nullptr || vec == nullptr) {
+        return row;
+    }
+
     using Type = typename NativeType<id>::type;
     using VectorType = typename VectorTypeTraits<Type>::type;
     auto *typeVector = reinterpret_cast<VectorType *>(vec);
@@ -364,6 +444,10 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
             return BoolRowSetVecValue(row, typeVector, rowIndex);
         } else if constexpr (std::is_same_v<Type, BaseVector*>) {
             return ArrayRowSetVecValue(row, typeVector, rowIndex);
+        } else if constexpr (std::is_same_v<Type, std::pair<BaseVector*, BaseVector*>>) {
+            return MapRowSetVecValue(row, typeVector, rowIndex);
+        } else if constexpr (std::is_same_v<Type, std::vector<BaseVector*>>) {
+            return StructRowSetVecValue(row, typeVector, rowIndex);
         } else {
             return FixedRowSetVecValue<Type>(row, typeVector, rowIndex);
         }
@@ -387,6 +471,10 @@ template <type::DataTypeId id> uint8_t *PrintRow(uint8_t *row)
             return DecimalRowGetValue(row);
         } else if constexpr (std::is_same_v<Type, BaseVector*>) {
             return ArrayRowGetValue(row);
+        } else if constexpr (std::is_same_v<Type, std::pair<BaseVector*, BaseVector*>>) {
+            return MapRowGetValue(row);
+        } else if constexpr (std::is_same_v<Type, std::vector<BaseVector*>>) {
+            return StructRowGetValue(row);
         } else {
             return FixedRowGetValue<Type>(row);
         }
@@ -398,8 +486,6 @@ FUNC_CENTER_FLAT_DEF(GenerateFlatValueFuncCenter, GenFuncPtr, GenerateSerValue);
 FUNC_CENTER_FLAT_DEF(TransFlatValueFuncCenter, TransFuncPtr, TransToValue);
 FUNC_CENTER_DICT_DEF(GenerateDictValueFuncCenter, GenFuncPtr, GenerateSerValue);
 FUNC_CENTER_DICT_DEF(TransDictValueFuncCenter, TransFuncPtr, TransToValue);
-FUNC_CENTER_ARRAY_DEF(GenerateArrayFuncCenter, GenFuncPtr, GenerateArraySerValue);
-FUNC_CENTER_ARRAY_DEF(TransArrayValueFuncCenter, TransFuncPtr, TransArrayToValue);
 /*
  * Row buffer is used to trans one row of VectorBatch to row
  * the basic usage of RowBuffer:
@@ -524,8 +610,14 @@ private:
             oneRow[i] = GenerateDictValueFuncCenter[id]();
             transFuns[i] = TransDictValueFuncCenter[id];
         } else if (encoding == OMNI_ENCODING_ARRAY) {
-            oneRow[i] = GenerateArrayFuncCenter[id % OMNI_ARRAY]();
-            transFuns[i] = TransArrayValueFuncCenter[id % OMNI_ARRAY];
+            oneRow[i] = GenerateFlatValueFuncCenter[id]();
+            transFuns[i] = TransFlatValueFuncCenter[id];
+        } else if (encoding == OMNI_ENCODING_MAP) {
+            oneRow[i] = GenerateFlatValueFuncCenter[id]();
+            transFuns[i] = TransFlatValueFuncCenter[id];
+        } else if (encoding == OMNI_ENCODING_STRUCT) {
+            oneRow[i] = GenerateFlatValueFuncCenter[id]();
+            transFuns[i] = TransFlatValueFuncCenter[id];
         } else {
             // OMNI_ENCODING_CONTAINER is only used for the agg avg partial in olk. row shuffle is not supported.
             std::string message = encoding + "encoding type is not supported for omni row";

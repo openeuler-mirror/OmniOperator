@@ -28,6 +28,7 @@ static bool HasArgument(int32_t functionType)
         case OMNI_AGGREGATION_TYPE_LAST_IGNORENULL:
         case OMNI_WINDOW_TYPE_LEAD:
         case OMNI_WINDOW_TYPE_LAG:
+        case OMNI_WINDOW_TYPE_NTH_VALUE:
             return true;
         default:
             return false;
