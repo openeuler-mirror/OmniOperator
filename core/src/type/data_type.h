@@ -206,6 +206,22 @@ template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
     static constexpr bool isFixedWidth = false;
 };
 
+template <> struct NativeType<DataTypeId::OMNI_MAP> {
+    // This is specifically designed for rowShuffle.
+    using type = std::pair<vec::BaseVector*, vec::BaseVector*>;
+    static constexpr const char* name = "MAP";
+    static constexpr bool isPrimitiveType = false;
+    static constexpr bool isFixedWidth = false;
+};
+
+template <> struct NativeType<DataTypeId::OMNI_ROW> {
+    // This is specifically designed for rowShuffle.
+    using type = std::vector<vec::BaseVector*>;
+    static constexpr const char* name = "STRUCT";
+    static constexpr bool isPrimitiveType = false;
+    static constexpr bool isFixedWidth = false;
+};
+
 #define DYNAMIC_TYPE_DISPATCH(CALLBACK, typeId, ...)                                          \
     [&]() {                                                                                   \
         switch (typeId) {                                                                     \

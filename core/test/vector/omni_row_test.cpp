@@ -13,6 +13,7 @@ namespace omniruntime::vec::test {
 using namespace omniruntime::vec;
 using namespace omniruntime::TestUtil;
 using OmniArrayType = omniruntime::type::ArrayType;
+using OmniMapType = omniruntime::type::MapType;
 TEST(omni_row, compact_value_test)
 {
     Vector<int16_t> shortVec(1);
@@ -149,7 +150,7 @@ TEST(omni_row, str_write_buffer)
     uint8_t buffer[len];
     uint8_t *end = serializedValue.WriteBuffer(buffer);
     EXPECT_EQ(buffer + len, end);
-    EXPECT_EQ(buffer[0], 0b01000001);
+    EXPECT_EQ(buffer[0], 0b00000001);
     EXPECT_EQ(buffer[1], 8);
     EXPECT_TRUE(memcmp(value.data(), buffer + 2, value.size()) == 0);
 }
@@ -181,7 +182,7 @@ TEST(omni_row, fill_buffer_no_null)
     double d = *(double *)(buf + 4);
 
     EXPECT_TRUE(memcmp(reinterpret_cast<void *>(&d), reinterpret_cast<void *>(&ori), sizeof(double)) == 0);
-    EXPECT_EQ(buf[12], 0b01000001);
+    EXPECT_EQ(buf[12], 0b00000001);
     EXPECT_EQ(buf[13], 11);
     EXPECT_TRUE(memcmp(reinterpret_cast<void *>(buf + 14), testStr.data(), testStr.length()) == 0);
     mem::Allocator::GetAllocator()->Free(buf, len);
@@ -383,4 +384,105 @@ TEST(omni_row, fill_bool_buffer_and_deserial_to_vector)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(result);
 }
+
+vec::MapVector* createMapVector()
+{
+    int mapSize = 4;
+    int keySize = 11;
+
+    auto* keys = new vec::Vector<double>(keySize);
+    auto* values = new vec::Vector<int32_t>(keySize);
+
+    for (int i = 0; i < keySize; i++) {
+        keys->SetValue(i, 0.1 * i);
+        values->SetValue(i, i);
+    }
+
+    auto* mapVec = new MapVector(mapSize);
+
+    mapVec->SetOffset(0, 0);
+    mapVec->SetOffset(1, 3);
+    mapVec->SetOffset(2, 5);
+    mapVec->SetOffset(3, 9);
+    mapVec->SetOffset(4, 11);
+
+    mapVec->AddKeys(keys);
+    mapVec->AddValues(values);
+    return mapVec;
+}
+
+vec::MapVector* createFakeMapVector()
+{
+    int mapSize = 4;
+    int keySize = 11;
+
+    auto* keys = new vec::Vector<double>(keySize);
+    auto* values = new vec::Vector<int32_t>(keySize);
+
+    for (int i = 0; i < keySize; i++) {
+        keys->SetValue(i, 0.0);
+        values->SetValue(i, 0);
+    }
+
+    auto* mapVec = new MapVector(mapSize);
+
+    mapVec->SetOffset(0, 0);
+    mapVec->SetOffset(1, 3);
+    mapVec->SetOffset(2, 5);
+    mapVec->SetOffset(3, 9);
+    mapVec->SetOffset(4, 11);
+
+    mapVec->AddKeys(keys);
+    mapVec->AddValues(values);
+    return mapVec;
+}
+
+TEST(omni_row, fill_buffer_and_deserial_to_map_vector)
+{
+    std::vector<DataTypePtr> types({ LongDataType::Instance() });
+    int32_t rowNumber = 4;
+    int64_t data1[] = {-111, 222, 333, -444};
+
+    DataTypes dataTypes(types);
+    VectorBatch *vecBatch = CreateVectorBatch(dataTypes, rowNumber, data1);
+    vec::MapVector* mapVector = createMapVector();
+    vecBatch->Append(mapVector);
+
+    int64_t fakeData1[] = {0, 0, 0, 0};
+    VectorBatch *result = CreateVectorBatch(dataTypes, rowNumber, fakeData1);
+    vec::MapVector* fakeMapVector = createFakeMapVector();
+    result->Append(fakeMapVector);
+
+    types.push_back(std::make_shared<OmniMapType>(DoubleType(), IntType()));
+    std::vector<Encoding> encodings({OMNI_FLAT, OMNI_ENCODING_MAP});
+    std::vector<type::DataTypeId> typeIds({
+        type::DataTypeId::OMNI_LONG,
+        type::DataTypeId::OMNI_MAP
+    });
+
+    RowBuffer rowBuffer(typeIds, encodings);
+    std::vector<RowInfo> rows;
+    rows.reserve(rowNumber);
+    for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
+        rowBuffer.TransValueFromVectorBatch(vecBatch, i);
+        auto len = rowBuffer.FillBuffer();
+        rows.emplace_back(rowBuffer.TakeRowBuffer(), len);
+    }
+
+    auto parser = std::make_unique<RowParser>(types);
+    BaseVector *vecs[types.size()];
+    for (int32_t i = 0; i < static_cast<int32_t>(types.size()); ++i) {
+        vecs[i] = result->Get(i);
+    }
+
+    for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
+        parser->ParseOneRow(rows[i].row, vecs, i);
+    }
+
+    // after parse, result should be the same as vecbatch
+    EXPECT_TRUE(VecBatchMatch(result, vecBatch));
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(result);
+}
+
 }
