@@ -9,6 +9,7 @@
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "util/omni_exception.h"
+#include "vector/row_vector.h"
 
 namespace omniruntime {
 namespace op {
@@ -59,6 +60,9 @@ private:
                                    omniruntime::vec::VectorBatch* resultVecBatch);
 
     omniruntime::vec::BaseVector* generateUnrepeatedValuesForType(omniruntime::vec::BaseVector* elementVector,
+                                         omniruntime::vec::BaseVector* inputVector, int32_t numElements);
+
+    omniruntime::vec::BaseVector* generateUnrepeatedRowValues(omniruntime::vec::RowVector* elementVector,
                                          omniruntime::vec::BaseVector* inputVector, int32_t numElements);
 
     void generateComplexRepeatedValuesForType(DataTypeId typeId, int32_t inputSize, auto* inputVector, auto* outputVector,

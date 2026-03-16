@@ -3,9 +3,42 @@
  */
 
 #include "unnest.h"
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {
+
+namespace {
+omniruntime::vec::BaseVector* CreateOutputVectorLike(omniruntime::vec::BaseVector* source, int32_t size)
+{
+    using namespace omniruntime::vec;
+    auto encoding = source->GetEncoding();
+
+    if (encoding == OMNI_ENCODING_STRUCT) {
+        auto* srcRow = dynamic_cast<RowVector*>(source);
+        std::vector<std::shared_ptr<BaseVector>> children;
+        for (int32_t c = 0; c < srcRow->ChildSize(); ++c) {
+            children.push_back(std::shared_ptr<BaseVector>(
+                CreateOutputVectorLike(srcRow->ChildAt(c).get(), size)));
+        }
+        return new RowVector(size, children);
+    } else if (encoding == OMNI_ENCODING_ARRAY) {
+        auto* srcArray = dynamic_cast<ArrayVector*>(source);
+        auto elemChild = std::shared_ptr<BaseVector>(
+            CreateOutputVectorLike(srcArray->GetElementVector().get(), 0));
+        return new ArrayVector(size, elemChild);
+    } else if (encoding == OMNI_ENCODING_MAP) {
+        auto* srcMap = dynamic_cast<MapVector*>(source);
+        auto keyChild = std::shared_ptr<BaseVector>(
+            CreateOutputVectorLike(srcMap->GetKeyVector().get(), 0));
+        auto valueChild = std::shared_ptr<BaseVector>(
+            CreateOutputVectorLike(srcMap->GetValueVector().get(), 0));
+        return new MapVector(size, keyChild, valueChild);
+    } else {
+        return VectorHelper::CreateVector(OMNI_FLAT, source->GetTypeId(), size);
+    }
+}
+} // anonymous namespace
 
 UnnestOperatorFactory* UnnestOperatorFactory::CreateUnnestOperatorFactory(
     std::shared_ptr<const UnnestNode> planNode)
@@ -416,6 +449,66 @@ void UnnestOperator::generateRepeatedColumns(int32_t numElements, omniruntime::v
     }
 }
 
+omniruntime::vec::BaseVector* UnnestOperator::generateUnrepeatedRowValues(
+    omniruntime::vec::RowVector* elementVector, omniruntime::vec::BaseVector* inputVector, int32_t numElements)
+{
+    auto* outputRowVector = dynamic_cast<omniruntime::vec::RowVector*>(
+        CreateOutputVectorLike(elementVector, numElements));
+
+    auto* arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(inputVector);
+    int32_t index = 0;
+    int32_t inputSize = inputVector->GetSize();
+
+    for (int32_t i = 0; i < inputSize; ++i) {
+        if (arrayVector->IsNull(i)) {
+            if (outer_ && rawMaxSizes_[i] > 0) {
+                for (int32_t j = 0; j < rawMaxSizes_[i]; ++j) {
+                    outputRowVector->SetNull(index);
+                    for (int32_t c = 0; c < outputRowVector->ChildSize(); ++c) {
+                        outputRowVector->ChildAt(c)->SetNull(index);
+                    }
+                    index++;
+                }
+            }
+        } else {
+            int32_t start = static_cast<int32_t>(arrayVector->GetOffset(i));
+            int32_t length = static_cast<int32_t>(arrayVector->GetSize(i));
+            for (int32_t j = 0; j < length; ++j) {
+                int32_t srcIdx = start + j;
+                if (elementVector->IsNull(srcIdx)) {
+                    outputRowVector->SetNull(index);
+                    for (int32_t c = 0; c < outputRowVector->ChildSize(); ++c) {
+                        outputRowVector->ChildAt(c)->SetNull(index);
+                    }
+                } else {
+                    outputRowVector->SetNotNull(index);
+                    for (int32_t c = 0; c < elementVector->ChildSize(); ++c) {
+                        auto* srcChild = elementVector->ChildAt(c).get();
+                        auto* dstChild = outputRowVector->ChildAt(c).get();
+                        if (srcChild->IsNull(srcIdx)) {
+                            dstChild->SetNull(index);
+                        } else {
+                            dstChild->SetNotNull(index);
+                            VectorHelper::CopyValue(srcChild, srcIdx, dstChild, index);
+                        }
+                    }
+                }
+                index++;
+            }
+            if (rawMaxSizes_[i] > length) {
+                for (int32_t j = length; j < rawMaxSizes_[i]; ++j) {
+                    outputRowVector->SetNull(index);
+                    for (int32_t c = 0; c < outputRowVector->ChildSize(); ++c) {
+                        outputRowVector->ChildAt(c)->SetNull(index);
+                    }
+                    index++;
+                }
+            }
+        }
+    }
+    return outputRowVector;
+}
+
 void UnnestOperator::generateUnrepeatedColumns(int32_t numElements, omniruntime::vec::VectorBatch* vecBatch,
                                                omniruntime::vec::VectorBatch* resultVecBatch)
 {
@@ -424,7 +517,13 @@ void UnnestOperator::generateUnrepeatedColumns(int32_t numElements, omniruntime:
         omniruntime::vec::BaseVector* inputVector = vecBatch->Get(channel);
         if (auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(inputVector)) {
             auto elementVector = arrayVector->GetElementVector().get();
-            resultVecBatch->SetVector(resultIndex++, generateUnrepeatedValuesForType(elementVector, inputVector, numElements));
+            if (auto rowElementVector = dynamic_cast<omniruntime::vec::RowVector*>(elementVector)) {
+                resultVecBatch->SetVector(resultIndex++,
+                    generateUnrepeatedRowValues(rowElementVector, inputVector, numElements));
+            } else {
+                resultVecBatch->SetVector(resultIndex++,
+                    generateUnrepeatedValuesForType(elementVector, inputVector, numElements));
+            }
         } else if (auto mapVector = dynamic_cast<omniruntime::vec::MapVector*>(inputVector)) {
             auto keyElementVector = mapVector->GetKeyVector().get();
             resultVecBatch->SetVector(resultIndex++, generateUnrepeatedValuesForType(keyElementVector, inputVector, numElements));
