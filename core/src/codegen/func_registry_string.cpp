@@ -159,6 +159,12 @@ const std::string StaticInvokeVarcharTypeWriteSideCheckFnStr()
     return staticInvokeVarcharTypeWriteSideCheckFnStr;
 }
 
+const std::string StaticInvokeCharTypeWriteSideCheckFnStr()
+{
+    const std::string staticInvokeVarcharTypeWriteSideCheckFnStr = "StaticInvokeCharTypeWriteSideCheck";
+    return staticInvokeVarcharTypeWriteSideCheckFnStr;
+}
+
 const std::string StaticInvokeCharReadPaddingFnStr()
 {
     const std::string staticInvokeCharReadPaddingFnStr = "StaticInvokeCharReadPadding";
@@ -343,6 +349,9 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             INPUT_DATA, false),
         Function(reinterpret_cast<void *>(StaticInvokeVarcharTypeWriteSideCheck),
             StaticInvokeVarcharTypeWriteSideCheckFnStr(), {}, { OMNI_VARCHAR, OMNI_INT },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(StaticInvokeCharTypeWriteSideCheck),
+            StaticInvokeCharTypeWriteSideCheckFnStr(), {}, { OMNI_VARCHAR, OMNI_INT },
             OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(StaticInvokeCharReadPadding), StaticInvokeCharReadPaddingFnStr(), {},
             {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),

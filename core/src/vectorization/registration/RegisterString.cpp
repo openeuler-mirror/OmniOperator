@@ -19,6 +19,7 @@ namespace omniruntime::vectorization {
 void RegisterStringFunctions(const std::string &prefix)
 {
     RegisterString<StartsWithFunction>({prefix + "StartsWith"});
+    RegisterString<EndsWithFunction>({prefix + "EndsWith"});
     RegisterString<ContainsFunction>({prefix + "Contains"});
     RegisterFunction<TrimFunction, std::string, std::string_view>(prefix + "Trim", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<TrimWithCharsFunction, std::string, std::string_view, std::string_view>(
@@ -221,5 +222,8 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterFunction<Sha1HexStringFunction, std::string, std::string_view>(prefix + "sha1", {OMNI_VARBINARY}, OMNI_VARCHAR);
     RegisterFunction<Sha2HexStringFunction, std::string, std::string_view, int32_t>(prefix + "sha2", {OMNI_VARBINARY, OMNI_INT}, OMNI_VARCHAR);
     RegisterFunction<Md5Function, std::string, std::string_view>(prefix + "Md5", {OMNI_VARBINARY}, OMNI_VARCHAR);
+    RegisterFunction<StaticInvokeVarcharTypeWriteSideCheckFunction, std::string, std::string_view, int32_t>(prefix + "StaticInvokeCharTypeWriteSideCheck", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<StaticInvokeCharTypeWriteSideCheckFunction, std::string, std::string_view, int32_t>(prefix + "StaticInvokeVarcharTypeWriteSideCheck", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<StaticInvokeCharReadPaddingFunction, std::string, std::string_view, int32_t>(prefix + "StaticInvokeCharReadPadding", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
 }
 }

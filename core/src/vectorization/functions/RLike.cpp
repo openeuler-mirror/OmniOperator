@@ -8,25 +8,14 @@
 #include <limits>
 #include <cstring>
 #include <regex>
+#include <re2/re2.h>
 
 namespace omniruntime::vectorization {
     using namespace omniruntime::type;
     using namespace omniruntime::vec;
 
-static std::wstring ToWideString(std::string &s)
-{
-   std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
-   return convert.from_bytes(s);
-}
-
-thread_local std::unique_ptr<RLikeFunction::RegexTLSCache> RLikeFunction::tlsCache_ = nullptr;
-
 void RLikeFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
                           BaseVector *&result, ExecutionContext *context) const {
-    if (args.size() < 2) {
-        OMNI_THROW("RLike function Error", "RLike requires 2 arguments: string, pattern");
-    }
-
     auto patternVec = args.top();
     args.pop();
     auto strVec = args.top();
@@ -46,7 +35,6 @@ void RLikeFunction::ApplyRLike(BaseVector *strVec, BaseVector *patternVec, BaseV
     if(patternVec->GetEncoding() == OMNI_ENCODING_CONST) {
        std::string_view pattern = reinterpret_cast<ConstVector<std::string_view> *>(patternVec)->GetConstValue();
         for (int32_t row = 0; row < size; ++row) {
-            // If either string or pattern is NULL, result is NULL
             if (strVec->IsNull(row)) {
                 result->SetNull(row);
                 continue;
@@ -59,7 +47,6 @@ void RLikeFunction::ApplyRLike(BaseVector *strVec, BaseVector *patternVec, BaseV
         }
     } else {
         for (int32_t row = 0; row < size; ++row) {
-            // If either string or pattern is NULL, result is NULL
             if (strVec->IsNull(row) || patternVec->IsNull(row)) {
                 result->SetNull(row);
                 continue;
@@ -75,21 +62,21 @@ void RLikeFunction::ApplyRLike(BaseVector *strVec, BaseVector *patternVec, BaseV
 }
 
 bool RLikeFunction::MatchRegex(const std::string_view &sv, const std::string_view &pattern) const {
-    std::string str(sv);
-    std::string patternStr(pattern);
-
-    if (!tlsCache_) {
-        tlsCache_ = std::make_unique<RegexTLSCache>();
+    if (pattern.empty()) {
+        return true;
     }
-    try {
-        if (tlsCache_->lastPattern != patternStr) {
-            tlsCache_->regex = std::wregex(ToWideString(patternStr));
-            tlsCache_->lastPattern = patternStr;
+    std::string s(sv);
+    std::string r(pattern);
+    thread_local std::string cachedPattern;
+    thread_local std::unique_ptr<RE2> cachedRegex;
+    if (cachedPattern != r) {
+        cachedPattern = r;
+        cachedRegex = std::make_unique<RE2>(re2::StringPiece(r.data(), r.length()), RE2::Quiet);
+        if (!cachedRegex->ok()) {
+            OMNI_THROW("RLike regex search Error: ", cachedRegex->error());
         }
-        return std::regex_search(ToWideString(str), tlsCache_->regex);
-    } catch (const std::regex_error &e) {
-         OMNI_THROW("RLike regex search Error: ", e.what());
     }
+    return RE2::PartialMatch(re2::StringPiece(s.data(), s.length()), *cachedRegex.get());
 }
 
 std::string_view RLikeFunction::GetStringValueFromVector(BaseVector *vec, int32_t row) const {

@@ -28,12 +28,6 @@ public:
                ExecutionContext *context) const override;
 
 private:
-   struct RegexTLSCache {
-    std::string lastPattern;
-    std::wregex regex;
-   };
-
-   static thread_local std::unique_ptr<RegexTLSCache> tlsCache_;
 
     // Helper: Get string value from vector with different encodings
     std::string_view GetStringValueFromVector(BaseVector *vec, int32_t row) const;

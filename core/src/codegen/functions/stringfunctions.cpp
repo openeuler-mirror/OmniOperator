@@ -1230,6 +1230,9 @@ extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const c
     if (isNull) {
         return false;
     }
+    if (matchLen == 0) {
+        return true;
+    }
     std::string s = std::string(srcStr, srcLen);
     std::string r = std::string(matchStr, matchLen);
 
@@ -1349,7 +1352,51 @@ extern "C" DLLEXPORT const char *StaticInvokeVarcharTypeWriteSideCheck(int64_t c
         return nullptr;
     }
 
-    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum + 1);
+    memcpy(padded, str, outByteNum);
+    padded[outByteNum] = '\0';
+    *outLen = outByteNum;
+    return padded;
+}
+
+extern "C" DLLEXPORT const char *StaticInvokeCharTypeWriteSideCheck(int64_t contextPtr, const char *str, int32_t len,
+    int32_t limit, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+    int32_t ssLen = StringUtil::NumChars(str, len);
+    if (ssLen == limit) {
+        *outLen = len;
+        return str;
+    }
+    if (ssLen < limit) {
+        int32_t numTailSpacesToAdd = limit - ssLen;
+        *outLen = len + numTailSpacesToAdd;
+        auto resStr = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy(resStr, str, len);
+        memset(resStr + len, ' ', numTailSpacesToAdd);
+        resStr[*outLen] = '\0';
+        return resStr;
+    }
+    int32_t numTailSpacesToTrim = ssLen - limit;
+    int32_t endIdx = len - 1;
+    int32_t trimTo = len - numTailSpacesToTrim;
+    while (endIdx >= trimTo && str[endIdx] == 0x20) {
+        endIdx--;
+    }
+    int32_t outByteNum = endIdx + 1;
+    ssLen = StringUtil::NumChars(str, outByteNum);
+    if (ssLen > limit) {
+        std::ostringstream errorMessage;
+        errorMessage << "Exceeds char type length limitation: " << limit;
+        SetError(contextPtr, errorMessage.str());
+        *outLen = 0;
+        return nullptr;
+    }
+
+    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum + 1);
     memcpy(padded, str, outByteNum);
     padded[outByteNum] = '\0';
     *outLen = outByteNum;
@@ -1362,9 +1409,6 @@ extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr,
     if (isNull) {
         *outLen = 0;
         return nullptr;
-    } else if (len == 0) {
-        *outLen = 0;
-        return "";
     }
     int32_t ssLen = StringUtil::NumChars(str, len);
     if (ssLen >= limit) {
@@ -1374,9 +1418,11 @@ extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr,
     int32_t diff = limit - ssLen;
     int32_t outByteNum = len + diff + 1;
     auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
-    memcpy(padded, str, len);
+    if (len > 0) {
+        memcpy(padded, str, len);
+    }
     memset(padded + len, ' ', diff);
-    padded[outByteNum] = '\0';
+    padded[outByteNum - 1] = '\0';
     *outLen = outByteNum - 1;
     return padded;
 }
