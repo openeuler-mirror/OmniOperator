@@ -163,7 +163,6 @@ public:
             sizeFunc.Apply(args, outputType, resultVec, &context);
         } catch (const std::exception& e) {
             std::cerr << "Exception in SizeFunction: " << e.what() << std::endl;
-            delete boolVector;
             throw;
         }
 
@@ -182,7 +181,6 @@ public:
             delete resultVec;
         }
 
-        delete boolVector;
         return results;
     }
 };
@@ -208,8 +206,6 @@ TEST(SizeTest, ArrayBasicSize) {
             << "Array " << i << " expected size " << expected[i]
             << ", but got " << results[i];
     }
-
-    delete arrayVector;
 }
 
 // Test array with NULL values in legacy mode
@@ -234,8 +230,6 @@ TEST(SizeTest, ArrayWithNullsLegacyMode) {
             << "Array " << i << " expected size " << expected[i]
             << ", but got " << results[i];
     }
-
-    delete arrayVector;
 }
 
 // Test array with NULL values in non-legacy mode
@@ -261,8 +255,6 @@ TEST(SizeTest, ArrayWithNullsNonLegacyMode) {
             << "Array " << i << " expected size " << expected[i]
             << ", but got " << results[i];
     }
-
-    delete arrayVector;
 }
 
 // Test basic map sizes
@@ -286,8 +278,6 @@ TEST(SizeTest, MapBasicSize) {
             << "Map " << i << " expected size " << expected[i]
             << ", but got " << results[i];
     }
-
-    delete mapVector;
 }
 
 // Test map with NULL values in legacy mode
@@ -312,8 +302,6 @@ TEST(SizeTest, MapWithNullsLegacyMode) {
             << "Map " << i << " expected size " << expected[i]
             << ", but got " << results[i];
     }
-
-    delete mapVector;
 }
 
 // Test map with NULL values in non-legacy mode
@@ -339,8 +327,6 @@ TEST(SizeTest, MapWithNullsNonLegacyMode) {
             << "Map " << i << " expected size " << expected[i]
             << ", but got " << results[i];
     }
-
-    delete mapVector;
 }
 
 // Test empty arrays
@@ -362,8 +348,6 @@ TEST(SizeTest, ArrayEmptyArrays) {
         ASSERT_EQ(results[i], expected[i])
             << "Empty array " << i << " expected size 0, but got " << results[i];
     }
-
-    delete arrayVector;
 }
 
 // Test empty maps
@@ -385,8 +369,6 @@ TEST(SizeTest, MapEmptyMaps) {
         ASSERT_EQ(results[i], expected[i])
             << "Empty map " << i << " expected size 0, but got " << results[i];
     }
-
-    delete mapVector;
 }
 
 // Test single element array
@@ -400,8 +382,6 @@ TEST(SizeTest, SingleElementArray) {
 
     ASSERT_EQ(results.size(), 1) << "Result size mismatch";
     ASSERT_EQ(results[0], 1) << "Single element array expected size 1, but got " << results[0];
-
-    delete arrayVector;
 }
 
 // Test single element map
@@ -415,8 +395,6 @@ TEST(SizeTest, SingleElementMap) {
 
     ASSERT_EQ(results.size(), 1) << "Result size mismatch";
     ASSERT_EQ(results[0], 1) << "Single element map expected size 1, but got " << results[0];
-
-    delete mapVector;
 }
 
 // Test all NULL arrays in legacy mode
@@ -440,6 +418,4 @@ TEST(SizeTest, AllNullArrays) {
         ASSERT_EQ(results[i], expected[i])
             << "NULL array " << i << " expected size -1, but got " << results[i];
     }
-
-    delete arrayVector;
 }

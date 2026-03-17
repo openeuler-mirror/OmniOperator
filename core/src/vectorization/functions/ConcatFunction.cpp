@@ -41,6 +41,9 @@ void ConcatFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &ou
     argVectors.push_back(arg2);
 
     ApplyConcat(argVectors, result, outputType, context);
+
+    delete arg1;
+    delete arg2;
 }
 
 void ConcatFunction::ApplyConcat(const std::vector<BaseVector *> &argVectors, BaseVector *&result,

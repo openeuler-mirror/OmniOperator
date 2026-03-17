@@ -106,8 +106,6 @@ TEST(ConcatTest, ConcatFunctionBasicTest) {
     ConcatFunctionTestHelper::ValidateResult(resultStrVec, expectedStrs, rowSize);
 
     delete resultVector;
-    delete inputVec1;
-    delete inputVec2;
 }
 
 TEST(ConcatTest, ConcatFunctionThreeArgsTest) {
@@ -160,10 +158,6 @@ TEST(ConcatTest, ConcatFunctionThreeArgsTest) {
     ConcatFunctionTestHelper::ValidateResult(resultStrVec, expectedStrs, rowSize);
 
     delete finalResult;
-    delete intermediateResult;
-    delete inputVec1;
-    delete inputVec2;
-    delete inputVec3;
 }
 
 TEST(ConcatTest, ConcatFunctionEmptyStringTest) {
@@ -202,8 +196,6 @@ TEST(ConcatTest, ConcatFunctionEmptyStringTest) {
     ConcatFunctionTestHelper::ValidateResult(resultStrVec, expectedStrs, rowSize);
 
     delete resultVector;
-    delete inputVec1;
-    delete inputVec2;
 }
 
 TEST(ConcatTest, ConcatFunctionNullTest) {
@@ -262,8 +254,6 @@ TEST(ConcatTest, ConcatFunctionNullTest) {
     }
 
     delete resultVector;
-    delete inputVec1;
-    delete inputVec2;
 }
 
 TEST(ConcatTest, ConcatFunctionMultipleArgsTest) {
@@ -326,10 +316,4 @@ TEST(ConcatTest, ConcatFunctionMultipleArgsTest) {
     ConcatFunctionTestHelper::ValidateResult(resultStrVec, expectedStrs, rowSize);
 
     delete finalResult;
-    delete result2;
-    delete result1;
-    delete inputVec1;
-    delete inputVec2;
-    delete inputVec3;
-    delete inputVec4;
 }

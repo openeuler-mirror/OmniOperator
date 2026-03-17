@@ -35,9 +35,14 @@ void NanvlFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &out
             NanvlNumeric<double>(expr1Vec, expr2Vec, result, outputType);
             break;
         default:
+            delete expr1Vec;
+            delete expr2Vec;
             OMNI_THROW("Nanvl function Error",
                         "Unsupported output type, nanvl only supports FLOAT and DOUBLE");
     }
+
+    delete expr1Vec;
+    delete expr2Vec;
 }
 
 template<typename T>

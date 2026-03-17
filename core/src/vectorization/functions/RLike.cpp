@@ -33,6 +33,9 @@ void RLikeFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &out
     args.pop();
 
     ApplyRLike(strVec, patternVec, result, outputType);
+
+    delete patternVec;
+    delete strVec;
 }
 
 void RLikeFunction::ApplyRLike(BaseVector *strVec, BaseVector *patternVec, BaseVector *&result,

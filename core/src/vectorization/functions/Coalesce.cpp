@@ -20,6 +20,10 @@ void CoalesceFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &
     }
     std::reverse(argVectors.begin(), argVectors.end());
     DispatchCoalesce(argVectors, outputType, result);
+
+    for (auto* vec : argVectors) {
+        delete vec;
+    }
 }
 
 void CoalesceFunction::DispatchCoalesce(const std::vector<BaseVector *> &argVectors,

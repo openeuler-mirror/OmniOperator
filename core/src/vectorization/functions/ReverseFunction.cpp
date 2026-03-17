@@ -39,6 +39,8 @@ void ReverseFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &o
         // Default: string type processing (VARCHAR, CHAR, etc.)
         ApplyReverseString(argVector, result, outputType, context);
     }
+
+    delete argVector;
 }
 
 void ReverseFunction::ApplyReverseString(BaseVector *argVector, BaseVector *&result,

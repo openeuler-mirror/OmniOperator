@@ -31,6 +31,12 @@ void CastFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outp
     }
     
     DispatchCast(inputArg, inputTypeId, outputType, result, context);
+
+    // Clean up input argument if it's not being used as the result
+    // (same type cast or string-to-string sets result = inputArg)
+    if (inputArg != result) {
+        delete inputArg;
+    }
 }
 
 bool CastFunction::IsNullAt(BaseVector *vec, int32_t row) const {

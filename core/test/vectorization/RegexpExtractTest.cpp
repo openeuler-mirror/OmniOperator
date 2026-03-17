@@ -118,9 +118,6 @@ TEST(RegexpExtractTest, RegexpExtractSimplePattern) {
     RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);
     RegexpExtractFunctionTestHelper::ValidateStringResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
-    delete groupIdxVec;
     delete resultVec;
 }
 
@@ -141,9 +138,6 @@ TEST(RegexpExtractTest, RegexpExtractGroupZero) {
     RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);
     RegexpExtractFunctionTestHelper::ValidateStringResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
-    delete groupIdxVec;
     delete resultVec;
 }
 
@@ -164,9 +158,6 @@ TEST(RegexpExtractTest, RegexpExtractCaptureGroups) {
     RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);
     RegexpExtractFunctionTestHelper::ValidateStringResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
-    delete groupIdxVec;
     delete resultVec;
 }
 
@@ -190,8 +181,7 @@ TEST(RegexpExtractTest, RegexpExtractNoMatch) {
         EXPECT_TRUE(resultVec->IsNull(i)) << "Row " << i << " should be NULL (no match)";
     }
 
-    delete strVec;
-    delete patternVec;
+    // groupIdxVec was not passed to Apply (nullptr was passed instead), so must delete here
     delete groupIdxVec;
     delete resultVec;
 }
@@ -219,9 +209,6 @@ TEST(RegexpExtractTest, RegexpExtractWithNullString) {
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (string is NULL)";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
 
-    delete strVec;
-    delete patternVec;
-    delete groupIdxVec;
     delete resultVec;
 }
 
@@ -248,9 +235,6 @@ TEST(RegexpExtractTest, RegexpExtractWithNullPattern) {
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (pattern is NULL)";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
 
-    delete strVec;
-    delete patternVec;
-    delete groupIdxVec;
     delete resultVec;
 }
 
@@ -276,9 +260,6 @@ TEST(RegexpExtractTest, RegexpExtractWithNullGroupIndex) {
     EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (group index is NULL)";
 
-    delete strVec;
-    delete patternVec;
-    delete groupIdxVec;
     delete resultVec;
 }
 
@@ -300,9 +281,6 @@ TEST(RegexpExtractTest, RegexpExtractEmailPattern) {
     RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);
     RegexpExtractFunctionTestHelper::ValidateStringResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
-    delete groupIdxVec;
     delete resultVec;
 }
 
@@ -324,9 +302,6 @@ TEST(RegexpExtractTest, RegexpExtractOutOfRangeGroup) {
     // When group index is out of range, result should be NULL
     EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL (group index out of range)";
 
-    delete strVec;
-    delete patternVec;
-    delete groupIdxVec;
     delete resultVec;
 }
 
@@ -347,6 +322,7 @@ TEST(RegexpExtractTest, RegexpExtractInvalidPattern) {
     ASSERT_THROW({RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);}, omniruntime::exception::OmniException)
          << "RegexpExtract should handle invalid regex through throw exception";
 
+    // Apply threw before reaching its delete statements, so args are leaked - clean up here
     delete strVec;
     delete patternVec;
     delete groupIdxVec;
@@ -370,8 +346,5 @@ TEST(RegexpExtractTest, RegexpExtractDatePattern) {
     RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);
     RegexpExtractFunctionTestHelper::ValidateStringResult(resultVec, expected, strValues.size());
 
-    delete strVec;
-    delete patternVec;
-    delete groupIdxVec;
     delete resultVec;
 }

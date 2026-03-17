@@ -119,8 +119,6 @@ TEST(NanvlTest, DoubleNormalValue) {
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(expr1Values.size()));
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -140,8 +138,6 @@ TEST(NanvlTest, DoubleNanExpr1) {
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(expr1Values.size()));
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -164,8 +160,6 @@ TEST(NanvlTest, DoubleNullExpr1) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 3);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -189,8 +183,6 @@ TEST(NanvlTest, DoubleNanExpr1NullExpr2) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 2);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -209,8 +201,6 @@ TEST(NanvlTest, DoubleNanBothArgs) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 1);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -230,8 +220,6 @@ TEST(NanvlTest, DoubleInfinityExpr1) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 2);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -249,8 +237,6 @@ TEST(NanvlTest, DoubleZeroValues) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 2);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -284,8 +270,6 @@ TEST(NanvlTest, DoubleMixedValues) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 7);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -308,8 +292,6 @@ TEST(NanvlTest, FloatNormalValue) {
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(expr1Values.size()));
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -329,8 +311,6 @@ TEST(NanvlTest, FloatNanExpr1) {
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(expr1Values.size()));
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -353,8 +333,6 @@ TEST(NanvlTest, FloatNullExpr1) {
     NanvlFunctionTestHelper::ExecuteNanvl<float>(expr1Vec, expr2Vec, OMNI_FLOAT, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 3);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -378,8 +356,6 @@ TEST(NanvlTest, FloatNanExpr1NullExpr2) {
     NanvlFunctionTestHelper::ExecuteNanvl<float>(expr1Vec, expr2Vec, OMNI_FLOAT, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 2);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -398,8 +374,6 @@ TEST(NanvlTest, FloatNanBothArgs) {
     NanvlFunctionTestHelper::ExecuteNanvl<float>(expr1Vec, expr2Vec, OMNI_FLOAT, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 1);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -419,8 +393,6 @@ TEST(NanvlTest, FloatInfinityExpr1) {
     NanvlFunctionTestHelper::ExecuteNanvl<float>(expr1Vec, expr2Vec, OMNI_FLOAT, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 2);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -454,8 +426,6 @@ TEST(NanvlTest, FloatMixedValues) {
     NanvlFunctionTestHelper::ExecuteNanvl<float>(expr1Vec, expr2Vec, OMNI_FLOAT, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 7);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -478,8 +448,6 @@ TEST(NanvlTest, SparkRef_NormalValueWithNullExpr2) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 1);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -498,8 +466,6 @@ TEST(NanvlTest, SparkRef_NullWithNormalExpr2) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 1);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -519,8 +485,6 @@ TEST(NanvlTest, SparkRef_NullWithNanExpr2) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 1);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -539,8 +503,6 @@ TEST(NanvlTest, SparkRef_NanWithNormalExpr2) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 1);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -560,8 +522,6 @@ TEST(NanvlTest, SparkRef_NanWithNullExpr2) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 1);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -584,8 +544,6 @@ TEST(NanvlTest, SparkRef_NanWithNanExpr2) {
     auto* resultVector = dynamic_cast<Vector<double>*>(resultVec);
     ASSERT_NE(resultVector, nullptr);
     EXPECT_TRUE(std::isnan(resultVector->GetValue(0))) << "Result should be NaN";
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -613,8 +571,6 @@ TEST(NanvlTest, DoubleBoundaryValues) {
     NanvlFunctionTestHelper::ExecuteNanvl<double>(expr1Vec, expr2Vec, OMNI_DOUBLE, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 4);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }
 
@@ -642,7 +598,5 @@ TEST(NanvlTest, FloatBoundaryValues) {
     NanvlFunctionTestHelper::ExecuteNanvl<float>(expr1Vec, expr2Vec, OMNI_FLOAT, resultVec);
     NanvlFunctionTestHelper::ValidateNumericResult(resultVec, expected, expectedNulls, 4);
 
-    delete expr1Vec;
-    delete expr2Vec;
     delete resultVec;
 }

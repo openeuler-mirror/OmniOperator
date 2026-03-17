@@ -70,6 +70,9 @@ void LikeFunction::Apply(std::stack<BaseVector*>& args, const DataTypePtr& outpu
     BaseVector* strVec = args.top();
     args.pop();
     ApplyLike(strVec, patternVec, result, outputType);
+
+    delete patternVec;
+    delete strVec;
 }
 
 void LikeFunction::ApplyLike(BaseVector* strVec, BaseVector* patternVec, BaseVector*& result,
