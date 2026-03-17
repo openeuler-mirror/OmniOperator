@@ -4,6 +4,7 @@
  */
 
 #include <string>
+#include "../functions/Hour.h"
 #include "../functions/Minute.h"
 #include "../functions/Second.h"
 #include "../functions/Month.h"
@@ -35,6 +36,7 @@
 namespace omniruntime::vectorization {
 void RegisterDatetimeFunctions(const std::string &prefix)
 {
+    RegisterHourFunction(prefix + "hour");
     RegisterMinuteFunction(prefix + "minute");
     RegisterSecondFunction(prefix + "second");
     RegisterMonthFunction(prefix + "month");
