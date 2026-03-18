@@ -28,6 +28,7 @@ void IsNanFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &out
         default:
             OMNI_THROW("IsNan function Error", "Unsupported input type, isnan only supports FLOAT and DOUBLE");
     }
+    delete inputVec;
 }
 
 template<typename T>

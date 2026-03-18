@@ -138,9 +138,7 @@ TEST(DateAddTest, DateAddPositive) {
     
     DateAddFunctionTestHelper::ExecuteDateAdd(dateVec, numDaysVec, resultVec);
     DateAddFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numDaysVec;
+
     delete resultVec;
 }
 
@@ -169,9 +167,7 @@ TEST(DateAddTest, DateAddNegative) {
     
     DateAddFunctionTestHelper::ExecuteDateAdd(dateVec, numDaysVec, resultVec);
     DateAddFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numDaysVec;
+
     delete resultVec;
 }
 
@@ -198,9 +194,7 @@ TEST(DateAddTest, DateAddZero) {
     
     DateAddFunctionTestHelper::ExecuteDateAdd(dateVec, numDaysVec, resultVec);
     DateAddFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numDaysVec;
+
     delete resultVec;
 }
 
@@ -227,9 +221,7 @@ TEST(DateAddTest, DateAddLeapYear) {
     
     DateAddFunctionTestHelper::ExecuteDateAdd(dateVec, numDaysVec, resultVec);
     DateAddFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numDaysVec;
+
     delete resultVec;
 }
 
@@ -258,9 +250,7 @@ TEST(DateAddTest, DateAddYearBoundary) {
     
     DateAddFunctionTestHelper::ExecuteDateAdd(dateVec, numDaysVec, resultVec);
     DateAddFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numDaysVec;
+
     delete resultVec;
 }
 
@@ -287,9 +277,7 @@ TEST(DateAddTest, DateAddSmallint) {
     
     DateAddFunctionTestHelper::ExecuteDateAdd(dateVec, numDaysVec, resultVec);
     DateAddFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numDaysVec;
+
     delete resultVec;
 }
 
@@ -316,9 +304,7 @@ TEST(DateAddTest, DateAddTinyint) {
     
     DateAddFunctionTestHelper::ExecuteDateAdd(dateVec, numDaysVec, resultVec);
     DateAddFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numDaysVec;
+
     delete resultVec;
 }
 
@@ -347,9 +333,7 @@ TEST(DateAddTest, DateAddWithNullDate) {
     EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
-    
-    delete dateVec;
-    delete numDaysVec;
+
     delete resultVec;
 }
 
@@ -378,8 +362,6 @@ TEST(DateAddTest, DateAddWithNullNumDays) {
     EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (numDays is NULL)";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
-    
-    delete dateVec;
-    delete numDaysVec;
+
     delete resultVec;
 }

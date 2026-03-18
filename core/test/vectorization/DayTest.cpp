@@ -126,8 +126,7 @@ TEST(DayTest, Date32Basic) {
     BaseVector* resultVec = nullptr;
     DayFunctionTestHelper::ExecuteDay(inputVec, OMNI_DATE32, resultVec);
     DayFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -147,8 +146,7 @@ TEST(DayTest, IntBasic) {
     BaseVector* resultVec = nullptr;
     DayFunctionTestHelper::ExecuteDay(inputVec, OMNI_INT, resultVec);
     DayFunctionTestHelper::ValidateResult(resultVec, expected, intValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -178,8 +176,7 @@ TEST(DayTest, Date32WithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 15) << "Row 0 day should be 15";
     EXPECT_EQ(resultVecTyped->GetValue(2), 31) << "Row 2 day should be 31";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -209,8 +206,7 @@ TEST(DayTest, IntWithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 15) << "Row 0 day should be 15";
     EXPECT_EQ(resultVecTyped->GetValue(2), 31) << "Row 2 day should be 31";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -230,8 +226,7 @@ TEST(DayTest, FirstDayOfMonth) {
     BaseVector* resultVec = nullptr;
     DayFunctionTestHelper::ExecuteDay(inputVec, OMNI_DATE32, resultVec);
     DayFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -252,8 +247,7 @@ TEST(DayTest, LastDayOfMonth) {
     BaseVector* resultVec = nullptr;
     DayFunctionTestHelper::ExecuteDay(inputVec, OMNI_DATE32, resultVec);
     DayFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -275,8 +269,7 @@ TEST(DayTest, DifferentYears) {
     BaseVector* resultVec = nullptr;
     DayFunctionTestHelper::ExecuteDay(inputVec, OMNI_DATE32, resultVec);
     DayFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -296,8 +289,7 @@ TEST(DayTest, DayOfMonthAlias) {
     BaseVector* resultVec = nullptr;
     DayFunctionTestHelper::ExecuteDayOfMonth(inputVec, OMNI_DATE32, resultVec);
     DayFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -319,7 +311,6 @@ TEST(DayTest, EdgeDates) {
     BaseVector* resultVec = nullptr;
     DayFunctionTestHelper::ExecuteDay(inputVec, OMNI_DATE32, resultVec);
     DayFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }

@@ -113,8 +113,7 @@ TEST(DayOfYearTest, Date32Basic) {
     BaseVector* resultVec = nullptr;
     DayOfYearFunctionTestHelper::ExecuteDayOfYear(inputVec, OMNI_DATE32, resultVec);
     DayOfYearFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -134,8 +133,7 @@ TEST(DayOfYearTest, IntBasic) {
     BaseVector* resultVec = nullptr;
     DayOfYearFunctionTestHelper::ExecuteDayOfYear(inputVec, OMNI_INT, resultVec);
     DayOfYearFunctionTestHelper::ValidateResult(resultVec, expected, intValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -165,8 +163,7 @@ TEST(DayOfYearTest, Date32WithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 1) << "Row 0 dayofyear should be 1";
     EXPECT_EQ(resultVecTyped->GetValue(2), 366) << "Row 2 dayofyear should be 366 (leap year)";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -196,8 +193,7 @@ TEST(DayOfYearTest, IntWithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 1) << "Row 0 dayofyear should be 1";
     EXPECT_EQ(resultVecTyped->GetValue(2), 366) << "Row 2 dayofyear should be 366 (leap year)";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -220,8 +216,7 @@ TEST(DayOfYearTest, LeapYearVsNonLeapYear) {
     BaseVector* resultVec = nullptr;
     DayOfYearFunctionTestHelper::ExecuteDayOfYear(inputVec, OMNI_DATE32, resultVec);
     DayOfYearFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -244,8 +239,7 @@ TEST(DayOfYearTest, EpochDate) {
     BaseVector* resultVec = nullptr;
     DayOfYearFunctionTestHelper::ExecuteDayOfYear(inputVec, OMNI_DATE32, resultVec);
     DayOfYearFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -270,8 +264,7 @@ TEST(DayOfYearTest, SpecificMonths) {
     BaseVector* resultVec = nullptr;
     DayOfYearFunctionTestHelper::ExecuteDayOfYear(inputVec, OMNI_DATE32, resultVec);
     DayOfYearFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -292,7 +285,6 @@ TEST(DayOfYearTest, DifferentYears) {
     BaseVector* resultVec = nullptr;
     DayOfYearFunctionTestHelper::ExecuteDayOfYear(inputVec, OMNI_DATE32, resultVec);
     DayOfYearFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }

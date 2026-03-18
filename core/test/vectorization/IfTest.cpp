@@ -229,9 +229,6 @@ TEST(IfTest, BooleanIfMixed) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_BOOLEAN, resultVec);
     IfFunctionTestHelper::ValidateBooleanResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -259,9 +256,6 @@ TEST(IfTest, BooleanIfNullCondition) {
     EXPECT_EQ(boolResult->GetValue(1), false);  
     EXPECT_EQ(boolResult->GetValue(2), false);
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -280,9 +274,6 @@ TEST(IfTest, ByteIfMixed) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_BYTE, resultVec);
     IfFunctionTestHelper::ValidateNumericResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -301,9 +292,6 @@ TEST(IfTest, ShortIfMixed) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_SHORT, resultVec);
     IfFunctionTestHelper::ValidateNumericResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -322,9 +310,6 @@ TEST(IfTest, IntIfTrue) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_INT, resultVec);
     IfFunctionTestHelper::ValidateNumericResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -343,9 +328,6 @@ TEST(IfTest, IntIfFalse) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_INT, resultVec);
     IfFunctionTestHelper::ValidateNumericResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -364,9 +346,6 @@ TEST(IfTest, IntIfMixed) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_INT, resultVec);
     IfFunctionTestHelper::ValidateNumericResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -394,9 +373,6 @@ TEST(IfTest, IntIfNullCondition) {
     EXPECT_EQ(intResult->GetValue(1), 500);  
     EXPECT_EQ(intResult->GetValue(2), 300);
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -419,9 +395,6 @@ TEST(IfTest, IntIfNullTrueValue) {
     EXPECT_FALSE(resultVec->IsNull(1)) << "Row 1 should not be NULL";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -440,9 +413,6 @@ TEST(IfTest, LongIfMixed) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_LONG, resultVec);
     IfFunctionTestHelper::ValidateNumericResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -461,9 +431,6 @@ TEST(IfTest, FloatIfMixed) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_FLOAT, resultVec);
     IfFunctionTestHelper::ValidateNumericResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -482,9 +449,6 @@ TEST(IfTest, DoubleIfMixed) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_DOUBLE, resultVec);
     IfFunctionTestHelper::ValidateNumericResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -503,9 +467,6 @@ TEST(IfTest, StringIfMixed) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_VARCHAR, resultVec);
     IfFunctionTestHelper::ValidateStringResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -528,9 +489,6 @@ TEST(IfTest, StringIfNullCondition) {
     EXPECT_FALSE(resultVec->IsNull(1));  
     EXPECT_FALSE(resultVec->IsNull(2));
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -549,9 +507,6 @@ TEST(IfTest, TimestampIfMixed) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_TIMESTAMP, resultVec);
     IfFunctionTestHelper::ValidateNumericResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -574,9 +529,6 @@ TEST(IfTest, TimestampIfNullCondition) {
     auto* tsResult = dynamic_cast<Vector<int64_t>*>(resultVec);
     EXPECT_EQ(tsResult->GetValue(0), 4000000LL);
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -595,9 +547,6 @@ TEST(IfTest, BinaryIfMixed) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_VARBINARY, resultVec);
     IfFunctionTestHelper::ValidateStringResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -625,9 +574,6 @@ TEST(IfTest, BinaryIfNullCondition) {
     EXPECT_EQ(binResult->GetValue(1), "bbb");
     EXPECT_EQ(binResult->GetValue(2), "zzz");  
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -650,9 +596,6 @@ TEST(IfTest, BinaryIfNullValue) {
     EXPECT_FALSE(resultVec->IsNull(1));
     EXPECT_FALSE(resultVec->IsNull(2));
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -691,9 +634,6 @@ TEST(IfTest, ArrayIfMixed) {
     EXPECT_EQ(row1Vec->GetValue(2), 50);
     delete row1Slice;
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -722,9 +662,6 @@ TEST(IfTest, ArrayIfNullCondition) {
     EXPECT_EQ(row0Vec->GetValue(1), 20);
     delete row0Slice;
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -747,9 +684,6 @@ TEST(IfTest, ArrayIfNullValue) {
     EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL (true array is NULL and cond is true)";
     EXPECT_FALSE(resultVec->IsNull(1));
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -780,9 +714,6 @@ TEST(IfTest, MapIfMixed) {
     EXPECT_EQ(resultMap->GetSize(static_cast<int64_t>(0)), 2);
     EXPECT_EQ(resultMap->GetSize(static_cast<int64_t>(1)), 2);
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -812,9 +743,6 @@ TEST(IfTest, MapIfNullCondition) {
 
     EXPECT_EQ(resultMap->GetSize(static_cast<int64_t>(0)), 2);
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -852,9 +780,6 @@ TEST(IfTest, RowIfMixed) {
     EXPECT_EQ(intChild->GetValue(1), 45);   
     EXPECT_EQ(intChild->GetValue(2), 35);   
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -884,9 +809,6 @@ TEST(IfTest, RowIfNullCondition) {
     EXPECT_EQ(strChild->GetValue(0), "dave");
     EXPECT_EQ(intChild->GetValue(0), 40);
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -913,9 +835,6 @@ TEST(IfTest, RowIfNullValue) {
     EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL (true row is NULL)";
     EXPECT_FALSE(resultVec->IsNull(1));
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -942,9 +861,6 @@ TEST(IfTest, AllNullConditions) {
         EXPECT_EQ(intResult->GetValue(i), falseValues[i]);
     }
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -969,9 +885,6 @@ TEST(IfTest, AllNullValues) {
     EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }
 
@@ -990,8 +903,5 @@ TEST(IfTest, SingleRow) {
     IfFunctionTestHelper::ExecuteIf(condVec, trueVec, falseVec, OMNI_INT, resultVec);
     IfFunctionTestHelper::ValidateNumericResult(resultVec, expected, condValues.size());
 
-    delete condVec;
-    delete trueVec;
-    delete falseVec;
     delete resultVec;
 }

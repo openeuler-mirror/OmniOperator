@@ -90,6 +90,8 @@ public:
                 }
             }
         }
+        delete seedVec;
+        delete valVec;
     }
 
 };
@@ -189,6 +191,8 @@ public:
                 }
             }
         }
+        delete seedVec;
+        delete valVec;
     }
 
 };

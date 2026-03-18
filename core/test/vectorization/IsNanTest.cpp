@@ -90,7 +90,6 @@ TEST(IsNanTest, DoubleNormalValue) {
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(inputValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -106,7 +105,6 @@ TEST(IsNanTest, DoubleNanValue) {
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(inputValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -120,7 +118,6 @@ TEST(IsNanTest, DoubleDivisionByZero) {
     IsNanFunctionTestHelper::ExecuteIsNan(inputVec, OMNI_DOUBLE, resultVec);
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls, 1);
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -138,7 +135,6 @@ TEST(IsNanTest, DoubleNullInput) {
     IsNanFunctionTestHelper::ExecuteIsNan(inputVec, OMNI_DOUBLE, resultVec);
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls, 3);
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -154,7 +150,6 @@ TEST(IsNanTest, DoubleInfinityValue) {
     IsNanFunctionTestHelper::ExecuteIsNan(inputVec, OMNI_DOUBLE, resultVec);
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls, 2);
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -176,7 +171,6 @@ TEST(IsNanTest, DoubleMixedValues) {
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(inputValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -197,7 +191,6 @@ TEST(IsNanTest, DoubleBoundaryValues) {
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(inputValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -212,7 +205,6 @@ TEST(IsNanTest, FloatNormalValue) {
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(inputValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -228,7 +220,6 @@ TEST(IsNanTest, FloatNanValue) {
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(inputValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -242,7 +233,6 @@ TEST(IsNanTest, FloatDivisionByZero) {
     IsNanFunctionTestHelper::ExecuteIsNan(inputVec, OMNI_FLOAT, resultVec);
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls, 1);
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -260,7 +250,6 @@ TEST(IsNanTest, FloatNullInput) {
     IsNanFunctionTestHelper::ExecuteIsNan(inputVec, OMNI_FLOAT, resultVec);
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls, 3);
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -276,7 +265,6 @@ TEST(IsNanTest, FloatInfinityValue) {
     IsNanFunctionTestHelper::ExecuteIsNan(inputVec, OMNI_FLOAT, resultVec);
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls, 2);
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -298,7 +286,6 @@ TEST(IsNanTest, FloatMixedValues) {
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(inputValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -319,6 +306,5 @@ TEST(IsNanTest, FloatBoundaryValues) {
     IsNanFunctionTestHelper::ValidateBoolResult(resultVec, expected, expectedNulls,
                                                 static_cast<int>(inputValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }

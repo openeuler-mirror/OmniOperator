@@ -122,8 +122,7 @@ TEST(MonthTest, Date32Basic) {
     BaseVector* resultVec = nullptr;
     MonthFunctionTestHelper::ExecuteMonth(inputVec, OMNI_DATE32, resultVec);
     MonthFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -143,8 +142,7 @@ TEST(MonthTest, IntBasic) {
     BaseVector* resultVec = nullptr;
     MonthFunctionTestHelper::ExecuteMonth(inputVec, OMNI_INT, resultVec);
     MonthFunctionTestHelper::ValidateResult(resultVec, expected, intValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -174,8 +172,7 @@ TEST(MonthTest, Date32WithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 1) << "Row 0 month should be 1";
     EXPECT_EQ(resultVecTyped->GetValue(2), 12) << "Row 2 month should be 12";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -205,7 +202,6 @@ TEST(MonthTest, IntWithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 1) << "Row 0 month should be 1";
     EXPECT_EQ(resultVecTyped->GetValue(2), 12) << "Row 2 month should be 12";
-    
-    delete inputVec;
+
     delete resultVec;
 }

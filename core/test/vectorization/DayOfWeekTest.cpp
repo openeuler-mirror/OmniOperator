@@ -114,8 +114,7 @@ TEST(DayOfWeekTest, Date32Basic) {
     BaseVector* resultVec = nullptr;
     DayOfWeekFunctionTestHelper::ExecuteDayOfWeek(inputVec, OMNI_DATE32, resultVec);
     DayOfWeekFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -135,8 +134,7 @@ TEST(DayOfWeekTest, IntBasic) {
     BaseVector* resultVec = nullptr;
     DayOfWeekFunctionTestHelper::ExecuteDayOfWeek(inputVec, OMNI_INT, resultVec);
     DayOfWeekFunctionTestHelper::ValidateResult(resultVec, expected, intValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -166,8 +164,7 @@ TEST(DayOfWeekTest, Date32WithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 2) << "Row 0 dayofweek should be 2 (Monday)";
     EXPECT_EQ(resultVecTyped->GetValue(2), 1) << "Row 2 dayofweek should be 1 (Sunday)";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -197,8 +194,7 @@ TEST(DayOfWeekTest, IntWithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 2) << "Row 0 dayofweek should be 2 (Monday)";
     EXPECT_EQ(resultVecTyped->GetValue(2), 1) << "Row 2 dayofweek should be 1 (Sunday)";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -223,8 +219,7 @@ TEST(DayOfWeekTest, AllDaysOfWeek) {
     BaseVector* resultVec = nullptr;
     DayOfWeekFunctionTestHelper::ExecuteDayOfWeek(inputVec, OMNI_DATE32, resultVec);
     DayOfWeekFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -246,8 +241,7 @@ TEST(DayOfWeekTest, EpochDate) {
     BaseVector* resultVec = nullptr;
     DayOfWeekFunctionTestHelper::ExecuteDayOfWeek(inputVec, OMNI_DATE32, resultVec);
     DayOfWeekFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -267,7 +261,6 @@ TEST(DayOfWeekTest, DifferentYears) {
     BaseVector* resultVec = nullptr;
     DayOfWeekFunctionTestHelper::ExecuteDayOfWeek(inputVec, OMNI_DATE32, resultVec);
     DayOfWeekFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }

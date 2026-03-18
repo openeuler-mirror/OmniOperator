@@ -122,9 +122,7 @@ TEST(AddMonthsTest, AddMonthsPositive) {
     
     AddMonthsFunctionTestHelper::ExecuteAddMonths(dateVec, numMonthsVec, resultVec);
     AddMonthsFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numMonthsVec;
+
     delete resultVec;
 }
 
@@ -155,9 +153,7 @@ TEST(AddMonthsTest, AddMonthsNegative) {
     
     AddMonthsFunctionTestHelper::ExecuteAddMonths(dateVec, numMonthsVec, resultVec);
     AddMonthsFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numMonthsVec;
+
     delete resultVec;
 }
 
@@ -184,9 +180,7 @@ TEST(AddMonthsTest, AddMonthsZero) {
     
     AddMonthsFunctionTestHelper::ExecuteAddMonths(dateVec, numMonthsVec, resultVec);
     AddMonthsFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numMonthsVec;
+
     delete resultVec;
 }
 
@@ -213,9 +207,7 @@ TEST(AddMonthsTest, AddMonthsLeapYear) {
     
     AddMonthsFunctionTestHelper::ExecuteAddMonths(dateVec, numMonthsVec, resultVec);
     AddMonthsFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numMonthsVec;
+
     delete resultVec;
 }
 
@@ -245,9 +237,7 @@ TEST(AddMonthsTest, AddMonthsMonthEndAdjustment) {
     
     AddMonthsFunctionTestHelper::ExecuteAddMonths(dateVec, numMonthsVec, resultVec);
     AddMonthsFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete numMonthsVec;
+
     delete resultVec;
 }
 
@@ -276,9 +266,7 @@ TEST(AddMonthsTest, AddMonthsWithNullDate) {
     EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
-    
-    delete dateVec;
-    delete numMonthsVec;
+
     delete resultVec;
 }
 
@@ -307,8 +295,6 @@ TEST(AddMonthsTest, AddMonthsWithNullNumMonths) {
     EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (numMonths is NULL)";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
-    
-    delete dateVec;
-    delete numMonthsVec;
+
     delete resultVec;
 }

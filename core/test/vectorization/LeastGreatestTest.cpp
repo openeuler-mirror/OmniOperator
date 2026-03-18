@@ -168,7 +168,7 @@ TEST(GreatestTest, IntBasic) {
     ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec}, OMNI_INT, resultVec);
     
     ValidateNumericResult<int32_t>(resultVec, {400, 200, 600}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -190,7 +190,7 @@ TEST(GreatestTest, IntWithNull) {
     
     // NULL is ignored, so result is 400, 200, 600
     ValidateNumericResult<int32_t>(resultVec, {400, 200, 600}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -211,7 +211,7 @@ TEST(GreatestTest, IntAllNull) {
     
     // All NULL -> result is NULL
     ValidateNumericResult<int32_t>(resultVec, {0, 0, 0}, allNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -231,7 +231,7 @@ TEST(GreatestTest, LongBasic) {
     ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec}, OMNI_LONG, resultVec);
     
     ValidateNumericResult<int64_t>(resultVec, {4000000000000LL, 2000000000000LL, 3000000000000LL}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -251,7 +251,7 @@ TEST(GreatestTest, DoubleBasic) {
     ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec}, OMNI_DOUBLE, resultVec);
     
     ValidateNumericResult<double>(resultVec, {400.1, 200.7, 300.9}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -278,7 +278,7 @@ TEST(GreatestTest, DoubleWithNaN) {
     
     // Spark: NaN > everything
     ValidateNumericResult<double>(resultVec, {nan, nan, inf, nan}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete arg3Vec;
@@ -301,7 +301,7 @@ TEST(GreatestTest, BooleanBasic) {
     ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec, arg3Vec}, OMNI_BOOLEAN, resultVec);
     
     ValidateNumericResult<bool>(resultVec, {true, true, true}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete arg3Vec;
@@ -325,7 +325,7 @@ TEST(GreatestTest, StringBasic) {
     ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec, arg3Vec}, OMNI_CHAR, resultVec);
     
     ValidateStringResult(resultVec, {"b", "cherry", "zebra"}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete arg3Vec;
@@ -346,7 +346,7 @@ TEST(GreatestTest, NegativeNumbers) {
     ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec}, OMNI_INT, resultVec);
     
     ValidateNumericResult<int32_t>(resultVec, {-100, -200, -300}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -368,7 +368,7 @@ TEST(LeastTest, IntBasic) {
     ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec}, OMNI_INT, resultVec);
     
     ValidateNumericResult<int32_t>(resultVec, {100, 100, 300}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -390,7 +390,7 @@ TEST(LeastTest, IntWithNull) {
     
     // NULL is ignored, so result is 400, 100, 300
     ValidateNumericResult<int32_t>(resultVec, {400, 100, 300}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -411,7 +411,7 @@ TEST(LeastTest, IntAllNull) {
     
     // All NULL -> result is NULL
     ValidateNumericResult<int32_t>(resultVec, {0, 0, 0}, allNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -431,7 +431,7 @@ TEST(LeastTest, LongBasic) {
     ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec}, OMNI_LONG, resultVec);
     
     ValidateNumericResult<int64_t>(resultVec, {1000000000000LL, 1000000000000LL, 2000000000000LL}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -451,7 +451,7 @@ TEST(LeastTest, DoubleBasic) {
     ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec}, OMNI_DOUBLE, resultVec);
     
     ValidateNumericResult<double>(resultVec, {100.5, 100.3, 200.5}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -482,7 +482,7 @@ TEST(LeastTest, DoubleWithNaN) {
     ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec, arg3Vec}, OMNI_DOUBLE, resultVec);
     
     ValidateNumericResult<double>(resultVec, {negInf, 0.0, inf, nan}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete arg3Vec;
@@ -506,7 +506,7 @@ TEST(LeastTest, BooleanBasic) {
     ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec, arg3Vec}, OMNI_BOOLEAN, resultVec);
     
     ValidateNumericResult<bool>(resultVec, {false, false, true}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete arg3Vec;
@@ -530,7 +530,7 @@ TEST(LeastTest, StringBasic) {
     ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec, arg3Vec}, OMNI_CHAR, resultVec);
     
     ValidateStringResult(resultVec, {"abcde", "apple", "alpha"}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete arg3Vec;
@@ -551,7 +551,7 @@ TEST(LeastTest, NegativeNumbers) {
     ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec}, OMNI_INT, resultVec);
     
     ValidateNumericResult<int32_t>(resultVec, {-200, -500, -400}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -576,7 +576,7 @@ TEST(GreatestTest, DateBasic) {
     ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec, arg3Vec}, OMNI_DATE32, resultVec);
     
     ValidateNumericResult<int32_t>(resultVec, {10000, 10000, 10000}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete arg3Vec;
@@ -600,7 +600,7 @@ TEST(LeastTest, DateBasic) {
     ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec, arg3Vec}, OMNI_DATE32, resultVec);
     
     ValidateNumericResult<int32_t>(resultVec, {100, 100, 500}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete arg3Vec;
@@ -623,7 +623,7 @@ TEST(GreatestTest, TimestampBasic) {
     ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec, arg3Vec}, OMNI_TIMESTAMP, resultVec);
     
     ValidateNumericResult<int64_t>(resultVec, {4859000000482LL, 4859000000482LL, 4859000000482LL}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete arg3Vec;
@@ -646,7 +646,7 @@ TEST(LeastTest, TimestampBasic) {
     ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec, arg3Vec}, OMNI_TIMESTAMP, resultVec);
     
     ValidateNumericResult<int64_t>(resultVec, {581000001651LL, 581000001651LL, 581000001651LL}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete arg3Vec;
@@ -670,7 +670,7 @@ TEST(GreatestTest, Decimal64Basic) {
     ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec}, OMNI_DECIMAL64, resultVec);
     
     ValidateNumericResult<int64_t>(resultVec, {40010, 20070, 30090}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;
@@ -690,7 +690,7 @@ TEST(LeastTest, Decimal64Basic) {
     ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec}, OMNI_DECIMAL64, resultVec);
     
     ValidateNumericResult<int64_t>(resultVec, {10050, 10030, 20050}, noNulls);
-    
+
     delete arg1Vec;
     delete arg2Vec;
     delete resultVec;

@@ -110,8 +110,7 @@ TEST(YearTest, Date32Basic) {
     BaseVector* resultVec = nullptr;
     YearFunctionTestHelper::ExecuteYear(inputVec, OMNI_DATE32, resultVec);
     YearFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -131,8 +130,7 @@ TEST(YearTest, IntBasic) {
     BaseVector* resultVec = nullptr;
     YearFunctionTestHelper::ExecuteYear(inputVec, OMNI_INT, resultVec);
     YearFunctionTestHelper::ValidateResult(resultVec, expected, intValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -162,8 +160,7 @@ TEST(YearTest, Date32WithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 2024) << "Row 0 year should be 2024";
     EXPECT_EQ(resultVecTyped->GetValue(2), 2025) << "Row 2 year should be 2025";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -193,8 +190,7 @@ TEST(YearTest, IntWithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 2024) << "Row 0 year should be 2024";
     EXPECT_EQ(resultVecTyped->GetValue(2), 2025) << "Row 2 year should be 2025";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -216,7 +212,6 @@ TEST(YearTest, DifferentYears) {
     BaseVector* resultVec = nullptr;
     YearFunctionTestHelper::ExecuteYear(inputVec, OMNI_DATE32, resultVec);
     YearFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
