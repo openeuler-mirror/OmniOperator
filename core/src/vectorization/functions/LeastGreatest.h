@@ -38,7 +38,7 @@ public:
     explicit LeastGreatestFunction() {}
 
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
-               ExecutionContext *context) const override;
+        ExecutionContext *context) const override;
 
 private:
     template<typename T>
@@ -52,18 +52,18 @@ private:
     void SetStringValueToVector(BaseVector *vec, int32_t row, std::string_view &value) const;
     
     void DispatchCompare(const std::vector<BaseVector *> &argVectors, const DataTypePtr &outputType,
-                          BaseVector *&result) const;
+        BaseVector *&result, ExecutionContext *context) const;
     
     // Template implementations for different types
     template<typename T>
     void CompareNumeric(const std::vector<BaseVector *> &argVectors, BaseVector *&result,
-                        const DataTypePtr &outputType) const;
+        const DataTypePtr &outputType, ExecutionContext *context) const;
     
     void CompareString(const std::vector<BaseVector *> &argVectors, BaseVector *&result,
-                        const DataTypePtr &outputType) const;
+        const DataTypePtr &outputType, ExecutionContext *context) const;
     
     void CompareBoolean(const std::vector<BaseVector *> &argVectors, BaseVector *&result,
-                         const DataTypePtr &outputType) const;
+        const DataTypePtr &outputType, ExecutionContext *context) const;
 };
 
 using GreatestFunction = LeastGreatestFunction<CompareMode::GREATEST>;

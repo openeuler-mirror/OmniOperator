@@ -146,6 +146,40 @@ struct TrimFunction {
     }
 };
 
+template <typename T>
+struct LTrimFunction {
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *str)
+    {
+        if (str == nullptr) {
+            return false;
+        }
+        auto start = str->find_first_not_of(" ");
+        if (start == std::string_view::npos) {
+            result.clear();
+            return true;
+        }
+        result = std::string(str->substr(start));
+        return true;
+    }
+};
+
+template <typename T>
+struct RTrimFunction {
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *str)
+    {
+        if (str == nullptr) {
+            return false;
+        }
+        auto end = str->find_last_not_of(" ");
+        if (end == std::string_view::npos) {
+            result.clear();
+            return true;
+        }
+        result.assign(str->data(), end + 1);
+        return true;
+    }
+};
+
 /// trim(trimStr, string) -> string
 /// Removes leading and trailing characters that appear in trimStr from the input string str.
 /// - trimStr: set of characters to trim (each occurrence at head/tail is removed).
@@ -171,6 +205,40 @@ struct TrimWithCharsFunction {
         auto end = str->find_last_not_of(*trimStr);
         // Extract the trimmed substring
         result = std::string(str->substr(start, end - start + 1));
+        return true;
+    }
+};
+
+template <typename T>
+struct LTrimWithCharsFunction {
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *trimStr, const std::string_view *str)
+    {
+        if (str == nullptr || trimStr == nullptr) {
+            return false;
+        }
+        auto start = str->find_first_not_of(*trimStr);
+        if (start == std::string_view::npos) {
+            result.clear();
+            return true;
+        }
+        result = std::string(str->substr(start));
+        return true;
+    }
+};
+
+template <typename T>
+struct RTrimWithCharsFunction {
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *trimStr, const std::string_view *str)
+    {
+        if (str == nullptr || trimStr == nullptr) {
+            return false;
+        }
+        auto end = str->find_last_not_of(*trimStr);
+        if (end == std::string_view::npos) {
+            result.clear();
+            return true;
+        }
+        result.assign(str->data(), end + 1);
         return true;
     }
 };
