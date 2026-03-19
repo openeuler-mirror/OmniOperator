@@ -138,7 +138,16 @@ public:
     // set value from vector row
     void TransValue(BaseVector *baseVector, int32_t rowIndex)
     {
-        if (baseVector->IsNull(rowIndex)) {
+        if constexpr (encoding == OMNI_ENCODING_CONST) {
+            // ConstVector: NullsBuffer has only 1 element, must check index 0 (not rowIndex).
+            // The constant value is the same for every row in the batch.
+            if (baseVector->IsNull(0)) {
+                SetNull();
+            } else {
+                isNull = false;
+                value = reinterpret_cast<ConstVector<T> *>(baseVector)->GetConstValue();
+            }
+        } else if (baseVector->IsNull(rowIndex)) {
             SetNull();
         } else {
             isNull = false;
@@ -154,7 +163,7 @@ public:
                 value = reinterpret_cast<RowVector *>(baseVector)->GetValue(rowIndex);
             } else {
                 // OMNI_ENCODING_CONTAINER is only used for the agg avg partial in olk. row shuffle is not supported.
-                std::string message = encoding + "encoding type is not supported for omni row";
+                std::string message = "encoding type " + std::to_string(static_cast<int>(encoding)) + " is not supported for omni row";
                 throw omniruntime::exception::OmniException("Encoding Unsupported", message);
             }
         }

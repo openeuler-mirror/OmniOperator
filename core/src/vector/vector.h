@@ -250,13 +250,6 @@ public:
         MakeOwnedCopy();
     }
 
-    ConstVector(std::vector<RAW_DATA_TYPE> array, DataTypeId dataTypeId): array(array)
-    {
-        this->dataTypeId = dataTypeId;
-        this->encoding = OMNI_ENCODING_CONST;
-        this->nullsBuffer = std::make_shared<NullsBuffer>(1, nullptr, 0);
-    }
-
     ConstVector(RAW_DATA_TYPE value, DataTypeId dataTypeId, int32_t size)
         : BaseVector(size, OMNI_ENCODING_CONST, dataTypeId), value(value)
     {
@@ -295,7 +288,6 @@ private:
     }
 
     RAW_DATA_TYPE value;
-    std::vector<RAW_DATA_TYPE> array;
     std::string ownedData_;  // Only meaningful when RAW_DATA_TYPE is std::string_view
 };
 
