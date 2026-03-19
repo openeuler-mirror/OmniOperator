@@ -125,6 +125,12 @@ private:
 
     void SetVarcharValueForVectorBatch(int64_t rowNum, vec::BaseVector *pqVector, vec::BaseVector *tmpVector) const;
 
+    void SetArrayValueForVectorBatch(int64_t rowNum, vec::BaseVector *pqVector, vec::BaseVector *tmpVector) const;
+
+    void SetMapValueForVectorBatch(int64_t rowNum, vec::BaseVector *pqVector, vec::BaseVector *tmpVector) const;
+
+    void SetRowValueForVectorBatch(int64_t rowNum, vec::BaseVector *pqVector, vec::BaseVector *tmpVector) const;
+
     void UpdateSingleRowVectorBatch(vec::VectorBatch *vectorBatch, vec::VectorBatch *singleRowVecBatch,
         int32_t position) const;
 

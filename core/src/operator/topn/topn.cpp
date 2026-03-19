@@ -243,6 +243,43 @@ static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(omniruntime::vec::Vector
     singleRowVecBatch->Append(flatVector);
 }
 
+static void ALWAYS_INLINE SetComplexVectorForSingleRowVecBatch(DataType* dataType,
+    omniruntime::vec::VectorBatch *singleRowVecBatch, BaseVector *vector, int32_t position)
+{
+    auto complexVector = VectorHelper::CreateComplexVector(dataType, 1);
+    DataTypeId dataTypeId = dataType->GetId();
+    if (vector->IsNull(position)) {
+        if (dataTypeId == OMNI_ARRAY) {
+            (static_cast<ArrayVector *>(complexVector))->SetNull(0);
+        } else if (dataTypeId == OMNI_MAP) {
+            (static_cast<MapVector *>(complexVector))->SetNull(0);
+        } else if (dataTypeId == OMNI_ROW) {
+            (static_cast<RowVector *>(complexVector))->SetNull(0);
+        } else {
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "Can not handle this type " + std::to_string(dataTypeId));
+        }
+    } else {
+        if (dataTypeId == OMNI_ARRAY) {
+            BaseVector* value = (static_cast<ArrayVector *>(vector))->GetValue(position);
+            (static_cast<ArrayVector *>(complexVector))->SetValue(0, value);
+            delete value;
+        } else if (dataTypeId == OMNI_MAP) {
+            auto mapVector = static_cast<MapVector *>(vector)->Slice(position, 1, false);
+            static_cast<MapVector *>(complexVector)->SetValue(0, mapVector);
+            delete mapVector;
+        } else if (dataTypeId == OMNI_ROW) {
+            auto rowVector = static_cast<RowVector *>(vector)->Slice(position, 1, false);
+            static_cast<RowVector *>(complexVector)->Append(rowVector, 0, 1);
+            delete rowVector;
+        } else {
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                "Can not handle this type " + std::to_string(dataTypeId));
+        }
+    }
+    singleRowVecBatch->Append(complexVector);
+}
+
 VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const
 {
     auto typeIds = sourceTypes.GetIds();
@@ -250,7 +287,18 @@ VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int
     auto singleRowVecBatchPtr = singleRowVecBatch.get();
     for (int i = 0; i < sourceTypesCount; ++i) {
         BaseVector *vector = vectorBatch->Get(i);
-        DYNAMIC_TYPE_DISPATCH(SetVectorForSingleRowVecBatch, typeIds[i], singleRowVecBatchPtr, vector, position);
+        switch (typeIds[i]) {
+            case OMNI_ARRAY:
+            case OMNI_MAP:
+            case OMNI_ROW: {
+                auto dataType = sourceTypes.GetType(i);
+                SetComplexVectorForSingleRowVecBatch(dataType.get(), singleRowVecBatchPtr, vector, position);
+                break;
+            }
+            default:
+                DYNAMIC_TYPE_DISPATCH(SetVectorForSingleRowVecBatch, typeIds[i], singleRowVecBatchPtr, vector, position);
+                break;
+        }
     }
 
     return singleRowVecBatch.release();
@@ -309,10 +357,23 @@ int32_t TopNOperator::GetOutput(VectorBatch **outputVecBatch)
         for (int j = 0; j < sourceTypesCount; ++j) {
             BaseVector *singleVector = singleVecBatch->Get(j);
             BaseVector *resultVector = resultVecBatchPtr->Get(j);
-            if (typeIds[j] == OMNI_VARCHAR || typeIds[j] == OMNI_CHAR) {
-                SetVarcharValueForVectorBatch(i, singleVector, resultVector);
-            } else {
-                SetValueForVectorBatch(typeIds[j], i, singleVector, resultVector);
+            switch (typeIds[j]) {
+                case OMNI_CHAR:
+                case OMNI_VARCHAR:
+                    SetVarcharValueForVectorBatch(i, singleVector, resultVector);
+                    break;
+                case OMNI_ARRAY:
+                    SetArrayValueForVectorBatch(i, singleVector, resultVector);
+                    break;
+                case OMNI_MAP:
+                    SetMapValueForVectorBatch(i, singleVector, resultVector);
+                    break;
+                case OMNI_ROW:
+                    SetRowValueForVectorBatch(i, singleVector, resultVector);
+                    break;
+                default:
+                    SetValueForVectorBatch(typeIds[j], i, singleVector, resultVector);
+                    break;
             }
         }
         VectorHelper::FreeVecBatch(singleVecBatch);
@@ -346,6 +407,39 @@ void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, BaseVector *pqV
     }
     auto value = static_cast<VarcharVector *>(pqVector)->GetValue(0);
     static_cast<VarcharVector *>(tmpVector)->SetValue(static_cast<int32_t>(rowNum), value);
+}
+
+void TopNOperator::SetArrayValueForVectorBatch(int64_t rowNum, vec::BaseVector *pqVector, vec::BaseVector *tmpVector) const
+{
+    if (pqVector->IsNull(0)) {
+        static_cast<ArrayVector *>(tmpVector)->SetNull(static_cast<int32_t>(rowNum));
+        return;
+    }
+    auto value = static_cast<ArrayVector *>(pqVector)->GetValue(0);
+    static_cast<ArrayVector *>(tmpVector)->SetValue(static_cast<int32_t>(rowNum), value);
+    delete value;
+}
+
+void TopNOperator::SetMapValueForVectorBatch(int64_t rowNum, vec::BaseVector *pqVector, vec::BaseVector *tmpVector) const
+{
+    if (pqVector->IsNull(0)) {
+        static_cast<MapVector *>(tmpVector)->SetNull(static_cast<int32_t>(rowNum));
+        return;
+    }
+    auto mapVector = static_cast<MapVector *>(pqVector)->Slice(0, 1, false);
+    static_cast<MapVector *>(tmpVector)->SetValue(static_cast<int32_t>(rowNum), mapVector);
+    delete mapVector;
+}
+
+void TopNOperator::SetRowValueForVectorBatch(int64_t rowNum, vec::BaseVector *pqVector, vec::BaseVector *tmpVector) const
+{
+    if (pqVector->IsNull(0)) {
+        static_cast<RowVector *>(tmpVector)->SetNull(static_cast<int32_t>(rowNum));
+        return;
+    }
+    auto rowVector = static_cast<RowVector *>(pqVector)->Slice(0, 1, false);
+    static_cast<RowVector *>(tmpVector)->Append(rowVector, static_cast<int32_t>(rowNum), 1);
+    delete rowVector;
 }
 
 OmniStatus TopNOperator::Close()
