@@ -329,6 +329,20 @@ void JoinResultBuilder::PaddingRightTableNull(int32_t leftBatchId, int32_t leftR
     buildRowCount++;
 }
 
+void JoinResultBuilder::SetRightNullRangeForColumn(BaseVector *vector, const DataTypePtr &dataType, int32_t startRow,
+    int32_t endRow)
+{
+    auto typeId = dataType->GetId();
+    if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR) {
+        auto *varcharVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
+        for (int32_t i = startRow; i < endRow; i++) {
+            varcharVec->SetNull(i);
+        }
+    } else {
+        vector->SetNulls(startRow, true, endRow - startRow);
+    }
+}
+
 void JoinResultBuilder::UpdateLeftAntiJoinHandler(int32_t addressPosition,
     std::vector<int8_t> &isSameBufferedKeyMatched, int32_t inputSize)
 {
@@ -453,13 +467,24 @@ int32_t JoinResultBuilder::ConstructInnerJoinOutput()
 int32_t JoinResultBuilder::ConstructLeftJoinOutput()
 {
     auto inputSize = static_cast<int32_t>(streamedTableValueAddresses.size());
+    // Rows already materialized in buildVectorBatch from previous AddJoinValueAddresses in the same batch
+    const int32_t rowBase = buildRowCount;
+    leftOutputBatchIds.clear();
+    leftOutputRowIds.clear();
+    rightOutputBatchIds.clear();
+    rightOutputRowIds.clear();
+
+    bool batchFull = false;
+
     for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
         if (preStreamedRowAddress != INT64_MAX && preStreamedRowAddress != streamedRowAddress &&
             !preLeftTableRowMatchedOut) {
-            // set values for left but set nulls for right for left join, full join, left anti
-            PaddingRightTableNull(preStreamedBatchId, preStreamedRowId);
+            leftOutputBatchIds.push_back(preStreamedBatchId);
+            leftOutputRowIds.push_back(preStreamedRowId);
+            rightOutputBatchIds.push_back(JOIN_NULL_FLAG);
+            rightOutputRowIds.push_back(0);
         }
         if (preStreamedRowAddress == INT64_MAX || preStreamedRowAddress != streamedRowAddress) {
             preLeftTableRowMatchedOut = false;
@@ -469,16 +494,13 @@ int32_t JoinResultBuilder::ConstructLeftJoinOutput()
         int32_t leftRowId = DecodePosition(streamedRowAddress);
         int32_t rightBatchId = DecodeSliceIndex(bufferedRowAddress);
         int32_t rightRowId = DecodePosition(bufferedRowAddress);
-        if (leftBatchId != JOIN_NULL_FLAG && rightBatchId != JOIN_NULL_FLAG) {
-            FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
-        }
 
-        // JOIN_NULL_FLAG row direct output && filter match direct output, pad no NULL
         if (leftBatchId == JOIN_NULL_FLAG || rightBatchId == JOIN_NULL_FLAG ||
             IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
-            ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId);
-            ParsingAndOrganizationResultsForRightTable(rightBatchId, rightRowId);
-            buildRowCount++;
+            leftOutputBatchIds.push_back(leftBatchId);
+            leftOutputRowIds.push_back(leftRowId);
+            rightOutputBatchIds.push_back(rightBatchId);
+            rightOutputRowIds.push_back(rightRowId);
             preLeftTableRowMatchedOut = true;
         }
 
@@ -486,22 +508,83 @@ int32_t JoinResultBuilder::ConstructLeftJoinOutput()
         preStreamedBatchId = leftBatchId;
         preStreamedRowId = leftRowId;
         addressOffset++;
-        if (buildRowCount >= maxRowCount) {
-            buildVectorBatchRowCount = buildRowCount;
-            return 1;
+        if (rowBase + static_cast<int32_t>(leftOutputBatchIds.size()) >= maxRowCount) {
+            batchFull = true;
+            break;
         }
     }
 
-    if (preStreamedRowAddress != INT64_MAX && !preLeftTableRowMatchedOut) {
-        // pad NULL for last mismatch row
-        PaddingRightTableNull(preStreamedBatchId, preStreamedRowId);
+    if (!batchFull && preStreamedRowAddress != INT64_MAX && !preLeftTableRowMatchedOut) {
+        leftOutputBatchIds.push_back(preStreamedBatchId);
+        leftOutputRowIds.push_back(preStreamedRowId);
+        rightOutputBatchIds.push_back(JOIN_NULL_FLAG);
+        rightOutputRowIds.push_back(0);
+        preStreamedRowAddress = INT64_MAX;
+    } else if (!batchFull) {
+        preStreamedRowAddress = INT64_MAX;
     }
-    buildVectorBatchRowCount = buildRowCount;
-    preStreamedRowAddress = INT64_MAX;
-    if (buildRowCount >= maxRowCount) {
-        return 1;
+
+    int32_t numOutputRows = static_cast<int32_t>(leftOutputBatchIds.size());
+    if (numOutputRows == 0) {
+        buildVectorBatchRowCount = rowBase;
+        return 0;
     }
-    return 0;
+
+    if (buildVectorBatch == nullptr) {
+        buildVectorBatch = NewEmptyVectorBatch();
+    }
+
+    for (int32_t columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
+        int32_t outPos = rowBase;
+        int32_t segmentStart = 0;
+        while (segmentStart < numOutputRows) {
+            int32_t batchId = leftOutputBatchIds[segmentStart];
+            int32_t segmentEnd = segmentStart;
+            while (segmentEnd < numOutputRows && leftOutputBatchIds[segmentEnd] == batchId) {
+                segmentEnd++;
+            }
+            std::vector<int32_t> rowIds(leftOutputRowIds.begin() + segmentStart, leftOutputRowIds.begin() + segmentEnd);
+            if (batchId == JOIN_NULL_FLAG) {
+                for (int32_t r = 0; r < static_cast<int32_t>(rowIds.size()); r++) {
+                    AddValueNullToBuildVector(leftTableOutputTypes[columnIdx], buildVectorBatch->Get(columnIdx),
+                        outPos + r);
+                }
+            } else {
+                auto inputVector = leftTablePagesIndex->GetColumn(batchId, leftTableOutputCols[columnIdx]);
+                AddValuesToBuildVector(inputVector, leftTableOutputTypes[columnIdx], rowIds,
+                    buildVectorBatch->Get(columnIdx), outPos);
+            }
+            outPos += static_cast<int32_t>(rowIds.size());
+            segmentStart = segmentEnd;
+        }
+    }
+
+    for (int32_t columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
+        int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
+        int32_t outRow = 0;
+        while (outRow < numOutputRows) {
+            int32_t batchId = rightOutputBatchIds[outRow];
+            int32_t segmentStart = outRow;
+            while (outRow < numOutputRows && rightOutputBatchIds[outRow] == batchId) {
+                outRow++;
+            }
+            int32_t segmentEnd = outRow;
+            if (batchId == JOIN_NULL_FLAG) {
+                SetRightNullRangeForColumn(buildVectorBatch->Get(buildColumnIdx), rightTableOutputTypes[columnIdx],
+                    rowBase + segmentStart, rowBase + segmentEnd);
+            } else {
+                std::vector<int32_t> rowIds(rightOutputRowIds.begin() + segmentStart, rightOutputRowIds.begin() + segmentEnd);
+                auto inputVector = rightTablePagesIndex->GetColumn(batchId, rightTableOutputCols[columnIdx]);
+                AddValuesToBuildVector(inputVector, rightTableOutputTypes[columnIdx], rowIds,
+                    buildVectorBatch->Get(buildColumnIdx), rowBase + segmentStart);
+            }
+        }
+    }
+
+    buildRowCount = rowBase + numOutputRows;
+    buildVectorBatchRowCount = rowBase + numOutputRows;
+
+    return batchFull ? 1 : 0;
 }
 
 int32_t JoinResultBuilder::ConstructFullJoinOutput()

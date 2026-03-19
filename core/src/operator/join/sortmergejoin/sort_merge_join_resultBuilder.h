@@ -96,6 +96,10 @@ public:
         bufferedTableValueAddresses.clear();
         streamedTableValueAddresses.clear();
         isSameBufferedKeyMatched.clear();
+        leftOutputBatchIds.clear();
+        leftOutputRowIds.clear();
+        rightOutputBatchIds.clear();
+        rightOutputRowIds.clear();
     }
 
     ~JoinResultBuilder();
@@ -228,6 +232,14 @@ private:
     std::vector<int8_t> isSameBufferedKeyMatched;
     LeftAntiJoinHandler leftAntiJoinHandler;
     std::vector<DataTypePtr> allTypes;
+
+    // Two-phase left/full join: phase-1 output indices (batchId, rowId) per output row
+    std::vector<int32_t> leftOutputBatchIds;
+    std::vector<int32_t> leftOutputRowIds;
+    std::vector<int32_t> rightOutputBatchIds;
+    std::vector<int32_t> rightOutputRowIds;
+
+    void SetRightNullRangeForColumn(BaseVector *vector, const DataTypePtr &dataType, int32_t startRow, int32_t endRow);
 };
 }
 }
