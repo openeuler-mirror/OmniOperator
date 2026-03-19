@@ -74,6 +74,7 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
             case OMNI_FLOAT:
                 keyCompareFuncs[i] = (OperatorUtil::CompareValue<float, true, false, true>);
                 break;
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 keyCompareFuncs[i] = (OperatorUtil::CompareValue<std::string_view, true, false, true>);
@@ -91,8 +92,8 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
                 keyCompareFuncs[i] = (OperatorUtil::CompareStructValue);
                 break;
             default:
-                throw omniruntime::exception::OmniException("sort merge join scanner",
-                    "unsupport compare funct in smj");
+                throw omniruntime::exception::OmniException("SortMergeJoinScanner",
+                    "Unsupported data type in smj: " + colTypeId);
         }
     }
 }
