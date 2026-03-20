@@ -175,6 +175,9 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
     }
 
     for (int i = 0; i < col2Size; i++) {
+        if (nullMap != nullptr && (*nullMap)[i]) {
+            continue;
+        }
         if (col2Vector->IsNull(rowOffset + i)) {
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
@@ -227,6 +230,9 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
     }
 
     for (size_t i = 0; i < rowCount; i++) {
+        if (nullMap != nullptr && (*nullMap)[i]) {
+            continue;
+        }
         if (col2Vector->IsNull(rowOffset + i)) {
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
