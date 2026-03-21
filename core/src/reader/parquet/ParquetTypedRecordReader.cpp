@@ -18,6 +18,9 @@
  */
 
 #include <parquet/arrow/reader_internal.h>
+#define PARQUET_IMPL_NAMESPACE standard
+#include <parquet/level_conversion_inc.h>
+#undef PARQUET_IMPL_NAMESPACE
 #include "ParquetTypedRecordReader.h"
 #include "ParquetDecoder.h"
 
@@ -305,6 +308,7 @@ void ParquetColumnReaderBase<DType>::InitializeDataDecoder(const DataPage& page,
     current_decoder_->SetData(static_cast<int>(num_buffered_values_), buffer,static_cast<int>(data_size));
 }
 
+template<DataTypeId Type_ID>
 std::shared_ptr<OmniRecordReader> MakeByteArrayRecordReader(const ColumnDescriptor* descr,
         LevelInfo leaf_info,
         ::arrow::MemoryPool* pool,
@@ -314,7 +318,7 @@ std::shared_ptr<OmniRecordReader> MakeByteArrayRecordReader(const ColumnDescript
         ss << "Invalid ParquetByteArrayDictionary is not implement yet " << static_cast<int>(descr->physical_type());
         throw ParquetException(ss.str());
     } else {
-        return std::make_shared<ParquetByteArrayChunkedRecordReader>(descr, leaf_info, pool);
+        return std::make_shared<ParquetByteArrayChunkedRecordReader<Type_ID>>(descr, leaf_info, pool);
     }
 }
 
@@ -372,7 +376,10 @@ std::shared_ptr<OmniRecordReader> MakeRecordReader(const ColumnDescriptor* descr
                 leaf_info, pool);
         }
         case ::arrow::Type::STRING: {
-            return MakeByteArrayRecordReader(descr, leaf_info, pool, read_dictionary);
+            return MakeByteArrayRecordReader<OMNI_VARCHAR>(descr, leaf_info, pool, read_dictionary);
+        }
+        case ::arrow::Type::BINARY: {
+            return MakeByteArrayRecordReader<OMNI_VARBINARY>(descr, leaf_info, pool, read_dictionary);
         }
         case ::arrow::Type::DECIMAL: {
             switch (descr->physical_type()) {
@@ -523,13 +530,24 @@ void DefLevelsToNullsSIMD(const int16_t* def_levels, int64_t num_def_levels, con
 }
 
 void DefLevelsToNulls(const int16_t* def_levels, int64_t num_def_levels, LevelInfo level_info,
-        int64_t* values_read, int64_t* null_count, uint8_t* nulls, int64_t nullsOffset) {
+                     int64_t* values_read, int64_t* null_count, uint8_t* nulls, int64_t nullsOffset) {
     if (level_info.rep_level == 0) {
         DefLevelsToNullsSIMD(def_levels, num_def_levels, level_info.def_level, values_read, null_count, nulls,
-            nullsOffset);
+                            nullsOffset);
     } else {
-        ::ParquetException::NYI("rep_level > 0 NYI");
+        ::parquet::internal::ValidityBitmapInputOutput output;
+        output.values_read_upper_bound = num_def_levels;
+        output.valid_bits = nulls;
+        output.valid_bits_offset = nullsOffset;
+        ::parquet::internal::standard::DefLevelsToBitmapSimd<true>(def_levels, num_def_levels, level_info, &output);
+        *null_count = output.null_count;
+        *values_read = output.values_read;
+        int32_t nRead = output.values_read >> 3;
+        nulls += nullsOffset;
+        for (int32_t i =0; i <= nRead; i++) {
+            *nulls = ~(*nulls);
+            nulls++;
+        }
     }
 }
-
 }

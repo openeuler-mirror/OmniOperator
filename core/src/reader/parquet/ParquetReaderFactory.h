@@ -32,11 +32,12 @@ public:
         const parquet::FileMetaData* metadata = metadata_ptr.get();
         const parquet::SchemaDescriptor* schema = metadata->schema();
 
-        std::vector<std::string> parquetColumnNames;
+        const parquet::schema::GroupNode* group_node = schema->group_node();
         std::unordered_set<std::string> parquetColumnSet;
-        for (int i = 0; i < schema->num_columns(); ++i) {
-            std::string col_name = schema->Column(i)->name();
-            parquetColumnNames.push_back(col_name);
+
+        for (int i = 0, fieldCnt = group_node->field_count(); i < fieldCnt; ++i) {
+            auto field = group_node->field(i);
+            std::string col_name = field->name();
             parquetColumnSet.insert(col_name);
         }
 
@@ -55,12 +56,10 @@ public:
         }
 
         options->SetIncludedColumnsList(updateIncludedColumnsList);
-
         options->ParseParquetPredicate();
 
         std::vector<std::string> filtered_parquet_cols(updateIncludedColumnsList.begin(), updateIncludedColumnsList.end());
         options->SetParquetIncludedColumns(filtered_parquet_cols);
-
         return std::move(parquetReader);
     }
 };
