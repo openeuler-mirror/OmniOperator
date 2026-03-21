@@ -9,6 +9,8 @@
 #include "type/decimal128_utils.h"
 #include "vector/unsafe_vector.h"
 #include "vector/array_vector.h"
+#include "vector/map_vector.h"
+#include "vector/row_vector.h"
 #include <cstdint>
 #include <arm_neon.h>
 
@@ -794,122 +796,147 @@ static void Mm3Boolean(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std
     }
 }
 
+static uint32_t HashSingleElement(vec::BaseVector* vec, type::DataTypeId typeId, int64_t index, uint32_t seed);
+
+// Compute the Murmur3 hash for a contiguous range of array elements.
+// Iterates elements in storage order [start, start+length), chaining each element's hash
+// as the seed for the next. Null elements are skipped (seed passes through unchanged).
+// Supports nested complex types via HashSingleElement dispatch.
 static uint32_t HashArrayElements(vec::BaseVector* elementVector, type::DataTypeId elementType,
                                   int64_t start, int64_t length, uint32_t seed)
 {
     uint32_t hash = seed;
+    for (int64_t i = start; i < start + length; i++) {
+        if (UNLIKELY(elementVector->HasNull() && elementVector->IsNull(i))) {
+            continue;
+        }
+        hash = HashSingleElement(elementVector, elementType, i, hash);
+    }
+    return hash;
+}
 
-    switch (elementType) {
+// Compute the Murmur3 hash for a single map entry at the given row.
+// Iterates key-value pairs in storage order: hash(key_0) → hash(value_0) → hash(key_1) → ...
+// Each hash result is chained as the seed for the next. Null keys/values are skipped.
+// Note: since map iteration order is unspecified, logically equal maps with different
+// internal ordering may produce different hash values (consistent with Spark/Velox behavior).
+static uint32_t HashMapEntry(vec::MapVector* mapVec, int64_t row, uint32_t seed)
+{
+    auto keyVector = mapVec->GetKeyVector();
+    auto valueVector = mapVec->GetValueVector();
+    auto keyType = keyVector->GetTypeId();
+    auto valueType = valueVector->GetTypeId();
+    auto offsets = mapVec->GetOffsets();
+
+    int64_t start = offsets[row];
+    int64_t size = mapVec->GetSize(row);
+
+    uint32_t hash = seed;
+    for (int64_t i = start; i < start + size; i++) {
+        if (!(keyVector->HasNull() && keyVector->IsNull(i))) {
+            hash = HashSingleElement(keyVector.get(), keyType, i, hash);
+        }
+        if (!(valueVector->HasNull() && valueVector->IsNull(i))) {
+            hash = HashSingleElement(valueVector.get(), valueType, i, hash);
+        }
+    }
+    return hash;
+}
+
+// Compute the Murmur3 hash for a single struct (row) at the given row index.
+// Iterates child fields in schema declaration order: hash(field_0) → hash(field_1) → ...
+// Each field's hash result is chained as the seed for the next. Null fields are skipped.
+// Supports nested complex types (struct containing array/map/struct) via recursive dispatch.
+static uint32_t HashStructRow(vec::RowVector* rowVec, int64_t row, uint32_t seed)
+{
+    uint32_t hash = seed;
+    for (int32_t i = 0; i < rowVec->ChildSize(); i++) {
+        auto& child = rowVec->ChildAt(i);
+        if (UNLIKELY(child->HasNull() && child->IsNull(row))) {
+            continue;
+        }
+        hash = HashSingleElement(child.get(), child->GetTypeId(), row, hash);
+    }
+    return hash;
+}
+
+static uint32_t HashSingleElement(vec::BaseVector* vec, type::DataTypeId typeId, int64_t index, uint32_t seed)
+{
+    switch (typeId) {
         case type::OMNI_BYTE: {
-            auto byteVector = reinterpret_cast<vec::Vector<int8_t> *>(elementVector);
-            for (int i = start; i < start + length; i++) {
-                if (UNLIKELY(byteVector->HasNull() && byteVector->IsNull(i))) {
-                    continue;
-                }
-                hash = HashInt(static_cast<uint32_t>(byteVector->GetValue(i)), hash);
-            }
-            break;
+            auto v = reinterpret_cast<vec::Vector<int8_t> *>(vec);
+            return HashInt(static_cast<uint32_t>(static_cast<int32_t>(v->GetValue(index))), seed);
         }
         case type::OMNI_SHORT: {
-            auto shortVector = reinterpret_cast<vec::Vector<int16_t> *>(elementVector);
-            for (int i = start; i < start + length; i++) {
-                if (UNLIKELY(shortVector->HasNull() && shortVector->IsNull(i))) {
-                    continue;
-                }
-                hash = HashInt(static_cast<uint32_t>(shortVector->GetValue(i)), hash);
-            }
-            break;
+            auto v = reinterpret_cast<vec::Vector<int16_t> *>(vec);
+            return HashInt(static_cast<uint32_t>(static_cast<int32_t>(v->GetValue(index))), seed);
         }
         case type::OMNI_FLOAT: {
-            auto floatVector = reinterpret_cast<vec::Vector<float> *>(elementVector);
-            for (int i = start; i < start + length; i++) {
-                if (UNLIKELY(floatVector->HasNull() && floatVector->IsNull(i))) {
-                    continue;
-                }
-                hash = HashInt(static_cast<uint32_t>(floatVector->GetValue(i)), hash);
-            }
-            break;
+            auto v = reinterpret_cast<vec::Vector<float> *>(vec);
+            float fval = v->GetValue(index);
+            uint32_t intVal;
+            memcpy(&intVal, &fval, sizeof(uint32_t));
+            return HashInt(intVal, seed);
         }
         case type::OMNI_INT:
         case type::OMNI_DATE32: {
-            auto intVector = reinterpret_cast<vec::Vector<int32_t> *>(elementVector);
-            for (int i = start; i < start + length; i++) {
-                if (UNLIKELY(intVector->HasNull() && intVector->IsNull(i))) {
-                    continue;
-                }
-                hash = HashInt(intVector->GetValue(i), hash);
-            }
-            break;
+            auto v = reinterpret_cast<vec::Vector<int32_t> *>(vec);
+            return HashInt(static_cast<uint32_t>(v->GetValue(index)), seed);
         }
         case type::OMNI_DOUBLE: {
-            auto doubleVector = reinterpret_cast<vec::Vector<double> *>(elementVector);
-            for (int i = start; i < start + length; i++) {
-                if (UNLIKELY(doubleVector->HasNull() && doubleVector->IsNull(i))) {
-                    continue;
-                }
-                hash = HashLong(static_cast<uint64_t>(doubleVector->GetValue(i)), hash);
-            }
-            break;
+            auto v = reinterpret_cast<vec::Vector<double> *>(vec);
+            double dval = v->GetValue(index);
+            uint64_t intVal;
+            memcpy(&intVal, &dval, sizeof(uint64_t));
+            return HashLong(intVal, seed);
         }
         case type::OMNI_LONG:
         case type::OMNI_TIMESTAMP:
         case type::OMNI_DECIMAL64: {
-            auto longVector = reinterpret_cast<vec::Vector<int64_t> *>(elementVector);
-            for (int i = start; i < start + length; i++) {
-                if (UNLIKELY(longVector->HasNull() && longVector->IsNull(i))) {
-                    continue;
-                }
-                hash = HashLong(longVector->GetValue(i), hash);
-            }
-            break;
+            auto v = reinterpret_cast<vec::Vector<int64_t> *>(vec);
+            return HashLong(static_cast<uint64_t>(v->GetValue(index)), seed);
         }
         case type::OMNI_CHAR:
         case type::OMNI_VARCHAR: {
-            auto charVector = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(elementVector);
-            for (int i = start; i < start + length; i++) {
-                if (UNLIKELY(charVector->HasNull() && charVector->IsNull(i))) {
-                    continue;
-                }
-                std::string_view value = charVector->GetValue(i);
-                hash = HashUnsafeBytes(
-                        const_cast<char *>(value.data()), value.size(), hash);
-            }
-            break;
+            auto v = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(vec);
+            std::string_view value = v->GetValue(index);
+            return HashUnsafeBytes(const_cast<char *>(value.data()), value.size(), seed);
         }
         case type::OMNI_DECIMAL128: {
-            auto decimalVector = reinterpret_cast<vec::Vector<type::Decimal128> *>(elementVector);
-            for (int i = start; i < start + length; i++) {
-                if (UNLIKELY(decimalVector->HasNull() && decimalVector->IsNull(i))) {
-                    continue;
-                }
-                int32_t byteLen = 0;
-                auto val = decimalVector->GetValue(i);
-                auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(
-                        val.HighBits(), val.LowBits(), byteLen);
-                hash = HashUnsafeBytes(
-                        reinterpret_cast<char *>(bytes), byteLen, hash);
-                delete[] bytes;
-            }
-            break;
+            auto v = reinterpret_cast<vec::Vector<type::Decimal128> *>(vec);
+            int32_t byteLen = 0;
+            auto val = v->GetValue(index);
+            auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(
+                    val.HighBits(), val.LowBits(), byteLen);
+            uint32_t hash = HashUnsafeBytes(reinterpret_cast<char *>(bytes), byteLen, seed);
+            delete[] bytes;
+            return hash;
         }
         case type::OMNI_BOOLEAN: {
-            auto boolVector = reinterpret_cast<vec::Vector<bool> *>(elementVector);
-            for (int i = start; i < start + length; i++) {
-                if (UNLIKELY(boolVector->HasNull() && boolVector->IsNull(i))) {
-                    continue;
-                }
-                hash = HashInt(boolVector->GetValue(i) ? 1 : 0, hash);
-            }
-            break;
+            auto v = reinterpret_cast<vec::Vector<bool> *>(vec);
+            return HashInt(v->GetValue(index) ? 1 : 0, seed);
         }
-        default:
+        case type::OMNI_ARRAY: {
+            auto arrayVec = reinterpret_cast<vec::ArrayVector *>(vec);
+            int64_t start = arrayVec->GetOffset(index);
+            int64_t size = arrayVec->GetSize(index);
+            return HashArrayElements(arrayVec->GetElementVector().get(),
+                                     arrayVec->GetElementVector()->GetTypeId(), start, size, seed);
+        }
+        case type::OMNI_MAP: {
+            auto mapVec = reinterpret_cast<vec::MapVector *>(vec);
+            return HashMapEntry(mapVec, index, seed);
+        }
+        case type::OMNI_ROW: {
+            auto rowVec = reinterpret_cast<vec::RowVector *>(vec);
+            return HashStructRow(rowVec, index, seed);
+        }
+        default: {
             std::string omniExceptionInfo =
-                    "Error in array element hash, not support type: " +
-                    std::to_string(elementVector->GetTypeId());
+                    "Error in element hash, not supported type: " + std::to_string(typeId);
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+        }
     }
-
-    return hash;
 }
 
 static void Mm3Array(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
@@ -935,6 +962,40 @@ static void Mm3Array(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::
             int64_t size = arrayVec->GetSize(row);
             partitionIds[row] = HashArrayElements(elementVector.get(), elementType,
                                                   start, size, partitionIds[row]);
+        }
+    }
+}
+
+static void Mm3Map(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
+{
+    auto* mapVec = reinterpret_cast<vec::MapVector *>(vec);
+
+    if (UNLIKELY(mapVec->HasNull())) {
+        for (int32_t row = 0; row < rowCount; row++) {
+            if (!mapVec->IsNull(row)) {
+                partitionIds[row] = HashMapEntry(mapVec, row, partitionIds[row]);
+            }
+        }
+    } else {
+        for (int32_t row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashMapEntry(mapVec, row, partitionIds[row]);
+        }
+    }
+}
+
+static void Mm3Struct(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::vector<uint32_t> &partitionIds)
+{
+    auto* rowVec = reinterpret_cast<vec::RowVector *>(vec);
+
+    if (UNLIKELY(rowVec->HasNull())) {
+        for (int32_t row = 0; row < rowCount; row++) {
+            if (!rowVec->IsNull(row)) {
+                partitionIds[row] = HashStructRow(rowVec, row, partitionIds[row]);
+            }
+        }
+    } else {
+        for (int32_t row = 0; row < rowCount; row++) {
+            partitionIds[row] = HashStructRow(rowVec, row, partitionIds[row]);
         }
     }
 }
