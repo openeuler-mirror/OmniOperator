@@ -70,6 +70,7 @@ HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashCols
             case OMNI_DECIMAL128:
                 return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<Decimal128, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
+            case OMNI_ARRAY:
             default:
                 return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<StringRef, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };

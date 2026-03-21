@@ -1620,6 +1620,78 @@ void CalculateColVarcharHashes(BaseVector *vec, int32_t rowCount, int64_t *hashe
     }
 }
 
+static int64_t HashArrayElementByType(BaseVector *elementVec, type::DataTypeId elementType, int64_t index);
+
+static int64_t HashArrayVectorRow(ArrayVector *arrayVec, int64_t rowIdx)
+{
+    int64_t offset = arrayVec->GetOffset(rowIdx);
+    int64_t size = arrayVec->GetSize(rowIdx);
+    auto elementVec = arrayVec->GetElementVector().get();
+    auto elementType = elementVec->GetTypeId();
+
+    int64_t hash = HashUtil::HashValue(static_cast<int64_t>(size));
+    for (int64_t i = offset; i < offset + size; i++) {
+        if (elementVec->HasNull() && elementVec->IsNull(i)) {
+            continue;
+        }
+        hash = HashUtil::CombineHash(hash, HashArrayElementByType(elementVec, elementType, i));
+    }
+    return hash;
+}
+
+static int64_t HashArrayElementByType(BaseVector *elementVec, type::DataTypeId elementType, int64_t index)
+{
+    switch (elementType) {
+        case type::OMNI_INT:
+        case type::OMNI_DATE32:
+            return HashUtil::HashValue(static_cast<Vector<int32_t> *>(elementVec)->GetValue(index));
+        case type::OMNI_LONG:
+        case type::OMNI_TIMESTAMP:
+        case type::OMNI_DECIMAL64:
+            return HashUtil::HashValue(static_cast<Vector<int64_t> *>(elementVec)->GetValue(index));
+        case type::OMNI_DOUBLE:
+            return HashUtil::HashValue(static_cast<Vector<double> *>(elementVec)->GetValue(index));
+        case type::OMNI_SHORT:
+            return HashUtil::HashValue(
+                static_cast<int32_t>(static_cast<Vector<int16_t> *>(elementVec)->GetValue(index)));
+        case type::OMNI_BYTE:
+            return HashUtil::HashValue(
+                static_cast<int32_t>(static_cast<Vector<int8_t> *>(elementVec)->GetValue(index)));
+        case type::OMNI_FLOAT:
+            return HashUtil::HashValue(
+                static_cast<double>(static_cast<Vector<float> *>(elementVec)->GetValue(index)));
+        case type::OMNI_BOOLEAN:
+            return HashUtil::HashValue(static_cast<Vector<bool> *>(elementVec)->GetValue(index));
+        case type::OMNI_VARCHAR:
+        case type::OMNI_CHAR: {
+            auto val = static_cast<Vector<LargeStringContainer<std::string_view>> *>(elementVec)->GetValue(index);
+            return HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(val.data())),
+                static_cast<int32_t>(val.length()));
+        }
+        case type::OMNI_DECIMAL128: {
+            auto val = static_cast<Vector<Decimal128> *>(elementVec)->GetValue(index);
+            return HashUtil::HashValue(static_cast<int64_t>(val.LowBits()), val.HighBits());
+        }
+        case type::OMNI_ARRAY:
+            return HashArrayVectorRow(static_cast<ArrayVector *>(elementVec), index);
+        default:
+            return 0;
+    }
+}
+
+void CalculateColArrayHashes(BaseVector *vec, int32_t rowCount, int64_t *hashes, std::vector<int8_t> &nulls)
+{
+    auto *arrayVec = static_cast<ArrayVector *>(vec);
+    for (int32_t i = 0; i < rowCount; ++i) {
+        if (vec->IsNull(i)) {
+            nulls[i] = 1;
+            continue;
+        }
+        int64_t hash = HashArrayVectorRow(arrayVec, i);
+        hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+    }
+}
+
 void ALWAYS_INLINE LookupJoinOperator::PopulateProbeHashes()
 {
     int32_t rowCount = curInputBatch->GetRowCount();
@@ -1659,6 +1731,9 @@ void ALWAYS_INLINE LookupJoinOperator::PopulateProbeHashes()
             case omniruntime::type::OMNI_VARCHAR:
             case omniruntime::type::OMNI_CHAR:
                 CalculateColVarcharHashes(hashCol, rowCount, hashes, curProbeNulls);
+                break;
+            case omniruntime::type::OMNI_ARRAY:
+                CalculateColArrayHashes(hashCol, rowCount, hashes, curProbeNulls);
                 break;
             default:
                 break;
