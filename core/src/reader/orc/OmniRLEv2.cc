@@ -20,6 +20,8 @@
 #include "orc/RLEV2Util.hh"
 #include "OrcDecodeUtils.hh"
 
+#include <string>
+
 using omniruntime::vec::VectorBatch;
 
 namespace omniruntime::reader {
@@ -40,7 +42,9 @@ namespace omniruntime::reader {
             case omniruntime::type::OMNI_TIMESTAMP:
                 return std::make_unique<omniruntime::vec::Vector<int64_t>>(numValues);
             default:
-                throw std::runtime_error("MakeFixedLengthVector Not support for this type: " + dataTypeId);
+                throw std::runtime_error(
+                    "MakeFixedLengthVector Not support for this type: " +
+                    std::to_string(static_cast<int>(dataTypeId)));
         }
     }
 
@@ -50,7 +54,9 @@ namespace omniruntime::reader {
             case omniruntime::type::OMNI_DOUBLE:
             	return std::make_unique<omniruntime::vec::Vector<double>>(numValues);
             default:
-                throw std::runtime_error("MakeDoubleVector Not support double vector for this type: " + dataTypeId);
+                throw std::runtime_error(
+                    "MakeDoubleVector Not support double vector for this type: " +
+                    std::to_string(static_cast<int>(dataTypeId)));
         }
     }
 
@@ -60,7 +66,9 @@ namespace omniruntime::reader {
             case omniruntime::type::OMNI_FLOAT:
                 return std::make_unique<omniruntime::vec::Vector<float>>(numValues);
             default:
-                throw std::runtime_error("MakeFloatVector Not support float vector for this type: " + dataTypeId);
+                throw std::runtime_error(
+                    "MakeFloatVector Not support float vector for this type: " +
+                    std::to_string(static_cast<int>(dataTypeId)));
         }
     }
 
@@ -72,7 +80,9 @@ namespace omniruntime::reader {
             case omniruntime::type::OMNI_DECIMAL128:
                 return std::make_unique<omniruntime::vec::Vector<omniruntime::vec::Decimal128>>(numValues);
             default:
-                throw std::runtime_error("makeDecimalVector Not support vector for this type: " + dataTypeId);
+                throw std::runtime_error(
+                    "makeDecimalVector Not support vector for this type: " +
+                    std::to_string(static_cast<int>(dataTypeId)));
         }
     }
 
@@ -85,7 +95,9 @@ namespace omniruntime::reader {
                 return std::make_unique<omniruntime::vec::Vector<
                     omniruntime::vec::LargeStringContainer<std::string_view>>>(numValues);
             default:
-                throw std::runtime_error("MakeVarcharVector Not support vector for this type: " + dataTypeId);
+                throw std::runtime_error(
+                    "MakeVarcharVector Not support vector for this type: " +
+                    std::to_string(static_cast<int>(dataTypeId)));
         }
     }
 
@@ -134,7 +146,9 @@ namespace omniruntime::reader {
             case ::orc::TypeKind::STRUCT:
                 return makeRowVector(numValues, baseTp, dataTypeId);
             default: {
-                throw std::runtime_error("Not support For This ORC Type: " + baseTp->getKind());
+                throw std::runtime_error(
+                    "Not support For This ORC Type: " +
+                    std::to_string(static_cast<int>(baseTp->getKind())));
             }
         }
     }
@@ -181,7 +195,8 @@ namespace omniruntime::reader {
                 return next(longValues, numValues, nulls);
             }
             default:
-                throw std::runtime_error("OmniRleDecoderV2 Not support For This Type: " + omniTypeId);
+                throw std::runtime_error(
+                    "OmniRleDecoderV2 Not support For This Type: " + std::to_string(omniTypeId));
         }
     }
 
