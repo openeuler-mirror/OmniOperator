@@ -63,12 +63,6 @@ std::unique_ptr<Aggregator> CollectSetAggregatorFactory::CreateAggregator(const 
     type::DataTypeId elementTypeId = GetCollectSetElementTypeId(inputTypes, inputRaw);
     const type::DataTypePtr &inputType = inputTypes.GetType(0);
     type::DataTypeId inputTypeId = inputType->GetId();
-    // Route array/row input to CollectSetComplexAggregator (uses std::set) to avoid DefaultHashMap
-    // and ArrayVector shared_ptr issues on array types (e.g. array<int> crash in ExtractValuesBatch).
-    if (inputTypeId == type::OMNI_ARRAY || inputTypeId == type::OMNI_ROW) {
-        return CollectSetComplexAggregator::Create(inputTypes, outputTypes, channels, inputRaw, outputPartial,
-            isOverflowAsNull, inputTypeId);
-    }
     switch (elementTypeId) {
         case type::OMNI_BOOLEAN:
             return CollectSetAggregator<type::OMNI_BOOLEAN, type::OMNI_BOOLEAN>::Create(inputTypes, outputTypes,
