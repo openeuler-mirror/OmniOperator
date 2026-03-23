@@ -452,7 +452,11 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupEmptyInputExtractNull)
     agg->ExtractValues(state.get(), extractVectors, 0);
 
     auto *arrayVec = static_cast<ArrayVector *>(extractVectors[0]);
-    EXPECT_TRUE(arrayVec->IsNull(0));
+    // Empty set is [] (not SQL null), aligned with Spark / ColumnarBatchToInternalRow.
+    EXPECT_FALSE(arrayVec->IsNull(0));
+    std::shared_ptr<BaseVector> elem = arrayVec->GetArrayAt(0, false);
+    ASSERT_NE(elem, nullptr);
+    EXPECT_EQ(static_cast<Vector<int64_t> *>(elem.get())->GetSize(), 0);
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outputVector;
@@ -489,7 +493,10 @@ TEST(CollectSetAggregatorTest, PartialProcessGroupAllNullsExtractNull)
     agg->ExtractValues(state.get(), extractVectors, 0);
 
     auto *arrayVec = static_cast<ArrayVector *>(extractVectors[0]);
-    EXPECT_TRUE(arrayVec->IsNull(0));
+    EXPECT_FALSE(arrayVec->IsNull(0));
+    std::shared_ptr<BaseVector> elem = arrayVec->GetArrayAt(0, false);
+    ASSERT_NE(elem, nullptr);
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(elem.get())->GetSize(), 0);
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outputVector;
@@ -823,7 +830,11 @@ TEST(CollectSetAggregatorTest, ProcessGroupUnspillSkipsNullRow)
     ASSERT_NE(elem0, nullptr);
     EXPECT_EQ(static_cast<Vector<int32_t> *>(elem0.get())->GetSize(), 2);
 
-    EXPECT_TRUE(resultArray->IsNull(1));
+    // Row1 skipped on unspill: empty set is [], not null
+    EXPECT_FALSE(resultArray->IsNull(1));
+    std::shared_ptr<BaseVector> elem1 = resultArray->GetArrayAt(1, false);
+    ASSERT_NE(elem1, nullptr);
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(elem1.get())->GetSize(), 0);
 
     for (int32_t i = 0; i < groupCount; i++) {
         DestroyCollectSetState(agg.get(), groupStates[i]);

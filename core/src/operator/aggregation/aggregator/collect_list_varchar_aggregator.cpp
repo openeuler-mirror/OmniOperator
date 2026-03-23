@@ -72,7 +72,10 @@ void CollectListVarcharAggregator::ExtractValues(const AggregateState *state, st
     const CollectListVarcharState *s = ConstCastState(state + aggStateOffset);
     auto *list = reinterpret_cast<std::vector<std::string> *>(s->listAddr);
     if (list->empty()) {
-        v->SetNull(rowIndex);
+        auto *elementVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(
+            VectorHelper::CreateVector(OMNI_FLAT, elementTypeId_, 0));
+        v->SetValue(rowIndex, elementVector);
+        delete elementVector;
         return;
     }
     size_t elementSize = list->size();
@@ -92,7 +95,10 @@ void CollectListVarcharAggregator::ExtractValuesBatch(std::vector<AggregateState
         const CollectListVarcharState *s = ConstCastState(groupStates[rowIndex] + aggStateOffset);
         auto *list = reinterpret_cast<std::vector<std::string> *>(s->listAddr);
         if (list->empty()) {
-            v->SetNull(rowOffset + rowIndex);
+            auto *elementVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(
+                VectorHelper::CreateVector(OMNI_FLAT, elementTypeId_, 0));
+            v->SetValue(rowOffset + rowIndex, elementVector);
+            delete elementVector;
             continue;
         }
         size_t elementSize = list->size();
@@ -122,21 +128,24 @@ static void UpdatePartialStateVarchar(std::vector<std::string> *list, BaseVector
         }
         std::string_view constVal = static_cast<vec::ConstVector<std::string_view> *>(vector)->GetConstValue();
         for (int32_t i = 0; i < rowCount; i++) {
-            if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
+            if ((nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) &&
+                !vector->IsNull(baseRowIndex + i)) {
                 list->push_back(std::string(constVal));
             }
         }
     } else if (isDictionary) {
         auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vector);
         for (int32_t i = 0; i < rowCount; i++) {
-            if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
+            if ((nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) &&
+                !vector->IsNull(baseRowIndex + i)) {
                 list->push_back(std::string(dictVec->GetValue(i)));
             }
         }
     } else {
         auto *flatVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
         for (int32_t i = 0; i < rowCount; i++) {
-            if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
+            if ((nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) &&
+                !vector->IsNull(baseRowIndex + i)) {
                 list->push_back(std::string(flatVec->GetValue(i)));
             }
         }
@@ -146,7 +155,8 @@ static void UpdatePartialStateVarchar(std::vector<std::string> *list, BaseVector
 static void UpdateFinalStateVarchar(std::vector<std::string> *list, ArrayVector *arrayVector,
     int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap, int32_t baseRowIndex) {
     for (int32_t i = 0; i < rowCount; i++) {
-        if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
+        if ((nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) &&
+            !arrayVector->IsNull(baseRowIndex + i)) {
             std::shared_ptr<BaseVector> elemHolder = arrayVector->GetArrayAt(i, false);
             BaseVector *elemVec = elemHolder.get();
             if (elemVec == nullptr || elemVec->GetSize() == 0) continue;
@@ -232,7 +242,9 @@ void CollectListVarcharAggregator::ProcessAlignAggSchema(VectorBatch *vecBatch, 
     }
     int32_t nonNullCount = 0;
     for (int32_t i = 0; i < rowCount; i++) {
-        if (nullMap == nullptr || !(*nullMap)[i]) nonNullCount++;
+        if ((nullMap == nullptr || !(*nullMap)[i]) && !originVector->IsNull(i)) {
+            nonNullCount++;
+        }
     }
     auto *arrayVector = static_cast<ArrayVector *>(VectorHelper::CreateComplexVector(GetOutputTypes().GetType(0).get(), rowCount));
     auto *elementVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(
@@ -242,7 +254,7 @@ void CollectListVarcharAggregator::ProcessAlignAggSchema(VectorBatch *vecBatch, 
     if (isDictionary) {
         auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(originVector);
         for (int32_t i = 0; i < rowCount; i++) {
-            if (nullMap != nullptr && (*nullMap)[i]) {
+            if ((nullMap != nullptr && (*nullMap)[i]) || originVector->IsNull(i)) {
                 arrayVector->SetNull(i);
                 arrayVector->SetSize(i, 0);
             } else {
@@ -254,7 +266,7 @@ void CollectListVarcharAggregator::ProcessAlignAggSchema(VectorBatch *vecBatch, 
     } else {
         auto *flatVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(originVector);
         for (int32_t i = 0; i < rowCount; i++) {
-            if (nullMap != nullptr && (*nullMap)[i]) {
+            if ((nullMap != nullptr && (*nullMap)[i]) || originVector->IsNull(i)) {
                 arrayVector->SetNull(i);
                 arrayVector->SetSize(i, 0);
             } else {

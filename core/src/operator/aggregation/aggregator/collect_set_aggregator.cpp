@@ -27,7 +27,10 @@ void CollectSetAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState *st
     DefaultHashMap<stateType, int8_t>* uniqueValues = reinterpret_cast<DefaultHashMap<stateType, int8_t> *>(setState->uniqueValuesAddr);
 
     if (uniqueValues->GetElementsSize() == 0) {
-        v->SetNull(rowIndex);
+        // Spark: empty collect_set is [] not null; avoids ColumnarBatchToInternalRow / UnsafeProjection NPE
+        auto elementVector = static_cast<Vector<stateType> *>(VectorHelper::CreateVector(OMNI_FLAT, IN_ID, 0));
+        v->SetValue(rowIndex, elementVector);
+        delete elementVector;
         return;
     }
     auto elementSize = uniqueValues->GetElementsSize();
@@ -66,7 +69,9 @@ void CollectSetAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<Aggrega
         DefaultHashMap<stateType, int8_t>* uniqueValues = reinterpret_cast<DefaultHashMap<stateType, int8_t> *>(setState->uniqueValuesAddr);
 
         if (uniqueValues->GetElementsSize() == 0) {
-            v->SetNull(rowOffset + rowIndex);
+            auto elementVector = static_cast<Vector<stateType> *>(VectorHelper::CreateVector(OMNI_FLAT, IN_ID, 0));
+            v->SetValue(rowOffset + rowIndex, elementVector);
+            delete elementVector;
             continue;
         }
 
@@ -329,7 +334,7 @@ void CollectSetAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInteranal(VectorB
 
     int32_t nonNullCount = 0;
     for (int32_t i = 0; i < rowCount; i++) {
-        if (nullMap == nullptr || !(*nullMap)[i]) {
+        if ((nullMap == nullptr || !(*nullMap)[i]) && !originVector->IsNull(i)) {
             nonNullCount++;
         }
     }
@@ -339,7 +344,7 @@ void CollectSetAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInteranal(VectorB
     auto *vector = reinterpret_cast<T *>(originVector);
 
     for (int32_t i = 0; i < rowCount; i++) {
-        if (nullMap != nullptr && (*nullMap)[i]) {
+        if ((nullMap != nullptr && (*nullMap)[i]) || originVector->IsNull(i)) {
             arrayVector->SetNull(i);
             arrayVector->SetSize(i, 0);
         } else {

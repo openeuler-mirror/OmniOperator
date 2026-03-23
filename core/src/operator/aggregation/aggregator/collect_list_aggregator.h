@@ -36,7 +36,8 @@ struct ListState {
             T *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictVector);
             const int32_t *ids = unsafe::UnsafeDictionaryVector::GetIds(dictVector);
             for (uint32_t i = 0; i < static_cast<uint32_t>(rowCount); i++) {
-                if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
+                if ((nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) &&
+                    !vector->IsNull(static_cast<int32_t>(baseRowIndex + i))) {
                     list->push_back(valuePtr[ids[i]]);
                 }
             }
@@ -44,7 +45,8 @@ struct ListState {
             auto flatVector = reinterpret_cast<Vector<T> *>(vector);
             T *valuePtr = unsafe::UnsafeVector::GetRawValues<T>(flatVector);
             for (uint32_t i = 0; i < static_cast<uint32_t>(rowCount); i++) {
-                if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
+                if ((nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) &&
+                    !vector->IsNull(static_cast<int32_t>(baseRowIndex + i))) {
                     list->push_back(valuePtr[i]);
                 }
             }
@@ -55,7 +57,8 @@ struct ListState {
     {
         std::vector<T> *list = reinterpret_cast<std::vector<T> *>(listAddr);
         for (uint32_t i = 0; i < static_cast<uint32_t>(rowCount); i++) {
-            if (nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) {
+            if ((nullMap == nullptr || !(*nullMap)[baseRowIndex + i]) &&
+                !arrayVector->IsNull(static_cast<int32_t>(baseRowIndex + i))) {
                 auto elementVector = arrayVector->GetArrayAt(i, false);
                 auto elementSize = elementVector->GetSize();
                 if (isDictionary) {

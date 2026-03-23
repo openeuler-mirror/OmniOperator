@@ -23,7 +23,9 @@ void CollectListAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState *s
     const ListState<stateType> *listState = ListState<stateType>::ConstCastState(state + aggStateOffset);
     std::vector<stateType> *list = reinterpret_cast<std::vector<stateType> *>(listState->listAddr);
     if (list->empty()) {
-        v->SetNull(rowIndex);
+        auto elementVector = static_cast<Vector<stateType> *>(VectorHelper::CreateVector(OMNI_FLAT, IN_ID, 0));
+        v->SetValue(rowIndex, elementVector);
+        delete elementVector;
         return;
     }
     size_t elementSize = list->size();
@@ -54,7 +56,9 @@ void CollectListAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<Aggreg
         const ListState<stateType> *listState = ListState<stateType>::ConstCastState(groupStates[rowIndex] + aggStateOffset);
         std::vector<stateType> *list = reinterpret_cast<std::vector<stateType> *>(listState->listAddr);
         if (list->empty()) {
-            v->SetNull(rowOffset + rowIndex);
+            auto elementVector = static_cast<Vector<stateType> *>(VectorHelper::CreateVector(OMNI_FLAT, IN_ID, 0));
+            v->SetValue(rowOffset + rowIndex, elementVector);
+            delete elementVector;
             continue;
         }
         size_t elementSize = list->size();
@@ -288,7 +292,7 @@ void CollectListAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInteranal(Vector
 
     int32_t nonNullCount = 0;
     for (int32_t i = 0; i < rowCount; i++) {
-        if (nullMap == nullptr || !(*nullMap)[i]) {
+        if ((nullMap == nullptr || !(*nullMap)[i]) && !originVector->IsNull(i)) {
             nonNullCount++;
         }
     }
@@ -298,7 +302,7 @@ void CollectListAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInteranal(Vector
     auto *vector = reinterpret_cast<U *>(originVector);
 
     for (int32_t i = 0; i < rowCount; i++) {
-        if (nullMap != nullptr && (*nullMap)[i]) {
+        if ((nullMap != nullptr && (*nullMap)[i]) || originVector->IsNull(i)) {
             arrayVector->SetNull(i);
             arrayVector->SetSize(i, 0);
         } else {

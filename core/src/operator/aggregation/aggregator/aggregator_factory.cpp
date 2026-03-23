@@ -9,39 +9,18 @@ namespace omniruntime {
 namespace op {
 
 // Resolve element type T for CollectSet. Partial: input is usually raw T, or Array<T> when merging; Final: input is Array<T>.
-static type::DataTypeId GetCollectSetElementTypeId(const type::DataTypes &inputTypes, bool inputRaw)
+static type::DataTypeId GetCollectElementTypeId(const type::DataTypes &inputTypes, bool inputRaw)
 {
     const type::DataTypePtr &inputType = inputTypes.GetType(0);
     type::DataTypeId inputTypeId = inputType->GetId();
     if (inputRaw) {
         // Partial: input is usually raw T (e.g. OMNI_INT); when merging partial results input may be Array<T>
-        if (inputTypeId == type::OMNI_ARRAY) {
-            return inputType->asArray().ElementType()->GetId();
-        }
         return inputTypeId;
     }
     // Final: input must be Array<T>
     if (inputTypeId != type::OMNI_ARRAY) {
         std::string omniExceptionInfo =
             "CollectSet final stage expects array input type, got " + std::to_string(inputTypeId);
-        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
-    }
-    return inputType->asArray().ElementType()->GetId();
-}
-
-static type::DataTypeId GetCollectListElementTypeId(const type::DataTypes &inputTypes, bool inputRaw)
-{
-    const type::DataTypePtr &inputType = inputTypes.GetType(0);
-    type::DataTypeId inputTypeId = inputType->GetId();
-    if (inputRaw) {
-        if (inputTypeId == type::OMNI_ARRAY || inputTypeId == type::OMNI_MAP || inputTypeId == type::OMNI_ROW) {
-            return inputTypeId;
-        }
-        return inputTypeId;
-    }
-    if (inputTypeId != type::OMNI_ARRAY) {
-        std::string omniExceptionInfo =
-            "CollectList final stage expects array input type, got " + std::to_string(inputTypeId);
         throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
     }
     return inputType->asArray().ElementType()->GetId();
@@ -60,9 +39,7 @@ std::unique_ptr<Aggregator> CollectSetAggregatorFactory::CreateAggregator(const 
                                                                           const type::DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
                                                                           bool isOverflowAsNull)
 {
-    type::DataTypeId elementTypeId = GetCollectSetElementTypeId(inputTypes, inputRaw);
-    const type::DataTypePtr &inputType = inputTypes.GetType(0);
-    type::DataTypeId inputTypeId = inputType->GetId();
+    type::DataTypeId elementTypeId = GetCollectElementTypeId(inputTypes, inputRaw);
     switch (elementTypeId) {
         case type::OMNI_BOOLEAN:
             return CollectSetAggregator<type::OMNI_BOOLEAN, type::OMNI_BOOLEAN>::Create(inputTypes, outputTypes,
@@ -126,7 +103,7 @@ std::unique_ptr<Aggregator> CollectListAggregatorFactory::CreateAggregator(const
                                                                           const type::DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
                                                                           bool isOverflowAsNull)
 {
-    type::DataTypeId elementTypeId = GetCollectListElementTypeId(inputTypes, inputRaw);
+    type::DataTypeId elementTypeId = GetCollectElementTypeId(inputTypes, inputRaw);
     switch (elementTypeId) {
         case type::OMNI_BOOLEAN:
             return CollectListAggregator<type::OMNI_BOOLEAN, type::OMNI_BOOLEAN>::Create(inputTypes, outputTypes,

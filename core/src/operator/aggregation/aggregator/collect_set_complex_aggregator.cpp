@@ -275,7 +275,24 @@ void CollectSetComplexAggregator::ExtractValues(const AggregateState *state, std
     const ComplexSetState *setState = ComplexSetState::ConstCastState(state + aggStateOffset);
     const ComplexSetType *set = reinterpret_cast<const ComplexSetType *>(setState->setAddr);
     if (set == nullptr || set->empty()) {
-        v->SetNull(rowIndex);
+        // Spark: empty set is [] not null
+        type::DataTypePtr outputType = GetOutputTypes().GetType(0);
+        type::DataType *elemType = GetLeafElementTypeFromOutput(outputType);
+        if (elemType == nullptr) {
+            v->SetNull(rowIndex);
+            return;
+        }
+        BaseVector *elemVec = VectorHelper::CreateComplexVector(elemType, 0);
+        type::DataType *outputElemType = (outputType->GetId() == OMNI_ARRAY)
+            ? outputType->asArray().ElementType().get() : nullptr;
+        if (outputElemType != nullptr && outputElemType->GetId() == OMNI_ARRAY) {
+            ArrayVector *innerArr = new ArrayVector(static_cast<int64_t>(0), std::shared_ptr<BaseVector>(elemVec));
+            static_cast<ArrayVector *>(v)->SetValue(rowIndex, innerArr);
+            delete innerArr;
+        } else {
+            static_cast<ArrayVector *>(v)->SetValue(rowIndex, elemVec);
+            delete elemVec;
+        }
         return;
     }
     type::DataTypePtr outputType = GetOutputTypes().GetType(0);
@@ -399,7 +416,7 @@ void CollectSetComplexAggregator::ProcessAlignAggSchema(VectorBatch *result, Bas
     ArrayVector *arrayVector = static_cast<ArrayVector *>(
         VectorHelper::CreateComplexVector(outputType.get(), rowCount));
     for (int32_t i = 0; i < rowCount; i++) {
-        if (nullMap != nullptr && (*nullMap)[i]) {
+        if ((nullMap != nullptr && (*nullMap)[i]) || originVector->IsNull(i)) {
             arrayVector->SetNull(i);
             arrayVector->SetSize(i, 0);
             continue;
