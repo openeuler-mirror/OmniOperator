@@ -40,7 +40,6 @@ template <type::DataTypeId COL2_ID>
 void MaxByComplexAggregator<COL2_ID>::ProcessSingleInternal(AggregateState *state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
-    (void)nullMap;
     (void)vector;
     using State = typename MaxByComplexAggregator<COL2_ID>::ComplexState;
     auto *complexState = State::CastState(state);
@@ -49,6 +48,9 @@ void MaxByComplexAggregator<COL2_ID>::ProcessSingleInternal(AggregateState *stat
     auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
     col2ptr += rowOffset;
     for (int32_t i = 0; i < rowCount; i++) {
+        if (nullMap != nullptr && (*nullMap)[i]) {
+            continue;
+        }
         int32_t rowIndex = rowOffset + i;
         if (col2Vector->IsNull(rowIndex)) {
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
@@ -77,7 +79,6 @@ template <type::DataTypeId COL2_ID>
 void MaxByComplexAggregator<COL2_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
     BaseVector *vector, const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
-    (void)nullMap;
     (void)vector;
     using State = typename MaxByComplexAggregator<COL2_ID>::ComplexState;
     BaseVector *col1Vector = this->curVectorBatch->Get(this->channels[0]);
@@ -86,6 +87,9 @@ void MaxByComplexAggregator<COL2_ID>::ProcessGroupInternal(std::vector<Aggregate
     col2ptr += rowOffset;
     const size_t rowCount = rowStates.size();
     for (size_t i = 0; i < rowCount; i++) {
+        if (nullMap != nullptr && (*nullMap)[i]) {
+            continue;
+        }
         int32_t rowIdx = static_cast<int32_t>(rowOffset + i);
         if (col2Vector->IsNull(rowIdx)) {
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
