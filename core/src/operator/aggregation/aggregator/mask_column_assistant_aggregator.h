@@ -41,6 +41,11 @@ public:
         return realAggregator->GetStateSize();
     }
 
+    std::vector<DataTypePtr> GetSpillType() override
+    {
+        return realAggregator->GetSpillType();
+    }
+
     void ProcessGroup(AggregateState *state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         BaseVector *maskVector = vectorBatch->Get(maskColumnId);
