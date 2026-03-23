@@ -146,6 +146,9 @@ private:
                 if (arg->GetEncoding() == OMNI_ENCODING_CONST) {
                     auto reader = ConstVectorReader<type>(arg);
                     unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, reader, readers...);
+                } else if (arg->GetEncoding() == OMNI_DICTIONARY) {
+                    auto reader = DicVectorReader<type>(arg);
+                    unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, reader, readers...);
                 } else {
                     // string_view use StringVectorReader
                     auto reader = StringVectorReader(arg);
