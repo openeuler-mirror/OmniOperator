@@ -278,6 +278,27 @@ void RegrReplacementAggregator::ExtractValuesForSpill(std::vector<AggregateState
     }
 }
 
+void RegrReplacementAggregator::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount,
+    int32_t &vectorIndex)
+{
+    auto nIdx = vectorIndex++;
+    auto avgIdx = vectorIndex++;
+    auto m2Idx = vectorIndex++;
+    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        auto &row = unspillRows[rowIdx];
+        auto *batch = row.batch;
+        auto index = row.rowIdx;
+        auto *nVec = static_cast<Vector<int64_t> *>(batch->Get(nIdx));
+        if (nVec->IsNull(index))
+            continue;
+        int64_t n = nVec->GetValue(index);
+        auto *avgVec = static_cast<Vector<double> *>(batch->Get(avgIdx));
+        auto *m2Vec = static_cast<Vector<double> *>(batch->Get(m2Idx));
+        auto *acc = reinterpret_cast<RegrReplacementState *>(row.state + aggStateOffset);
+        RegrReplacementMerge(acc->n, acc->avg, acc->m2, n, avgVec->GetValue(index), m2Vec->GetValue(index));
+    }
+}
+
 void RegrReplacementAggregator::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
     const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
 {
@@ -1175,6 +1196,34 @@ void RegrAggregator::ExtractValuesForSpill(std::vector<AggregateState *> &groupS
             m2XVec->SetValue(i, s->m2X);
             m2YVec->SetValue(i, s->m2Y);
         }
+    }
+}
+
+void RegrAggregator::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount,
+    int32_t &vectorIndex)
+{
+    auto cntIdx = vectorIndex++;
+    auto meanXIdx = vectorIndex++;
+    auto meanYIdx = vectorIndex++;
+    auto c2Idx = vectorIndex++;
+    auto m2XIdx = vectorIndex++;
+    auto m2YIdx = vectorIndex++;
+    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        auto &row = unspillRows[rowIdx];
+        auto *batch = row.batch;
+        auto index = row.rowIdx;
+        auto *cntVec = static_cast<Vector<int64_t> *>(batch->Get(cntIdx));
+        if (cntVec->IsNull(index))
+            continue;
+        int64_t count = cntVec->GetValue(index);
+        auto *meanXVec = static_cast<Vector<double> *>(batch->Get(meanXIdx));
+        auto *meanYVec = static_cast<Vector<double> *>(batch->Get(meanYIdx));
+        auto *c2Vec = static_cast<Vector<double> *>(batch->Get(c2Idx));
+        auto *m2XVec = static_cast<Vector<double> *>(batch->Get(m2XIdx));
+        auto *m2YVec = static_cast<Vector<double> *>(batch->Get(m2YIdx));
+        auto *acc = reinterpret_cast<RegrState *>(row.state + aggStateOffset);
+        RegrMerge(acc->count, acc->meanX, acc->meanY, acc->c2, acc->m2X, acc->m2Y, count, meanXVec->GetValue(index),
+            meanYVec->GetValue(index), c2Vec->GetValue(index), m2XVec->GetValue(index), m2YVec->GetValue(index));
     }
 }
 

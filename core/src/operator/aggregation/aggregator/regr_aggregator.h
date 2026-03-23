@@ -110,6 +110,8 @@ public:
         int32_t rowOffset, int32_t rowCount) override;
     void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override;
 
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
+
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
         const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override;
 
@@ -143,6 +145,8 @@ public:
     void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
         int32_t rowOffset, int32_t rowCount) override;
     void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override;
+
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
 
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
         const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override;
