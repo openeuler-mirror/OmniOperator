@@ -240,7 +240,10 @@ TEST(CollectSetComplexAggregatorTest, PartialEmptyInputExtractNull)
     agg->ExtractValues(state.get(), extractVectors, 0);
 
     auto *arrayVec = static_cast<ArrayVector *>(extractVectors[0]);
-    EXPECT_TRUE(arrayVec->IsNull(0));
+    EXPECT_FALSE(arrayVec->IsNull(0));
+    std::shared_ptr<BaseVector> inner = arrayVec->GetArrayAt(0, false);
+    ASSERT_NE(inner, nullptr);
+    EXPECT_EQ(inner->GetSize(), 0);
 
     delete outVec;
     static_cast<CollectSetComplexAggregator *>(agg.get())->DestroyState(state.get());

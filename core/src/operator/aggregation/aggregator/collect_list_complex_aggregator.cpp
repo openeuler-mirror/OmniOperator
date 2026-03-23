@@ -259,7 +259,21 @@ void CollectListComplexAggregator::ExtractValues(const AggregateState *state, st
     const ComplexListState *listState = ComplexListState::ConstCastState(state + aggStateOffset);
     const ComplexListType *list = reinterpret_cast<const ComplexListType *>(listState->listAddr);
     if (list == nullptr || list->empty()) {
-        v->SetNull(rowIndex);
+        type::DataTypePtr outputType = GetOutputTypes().GetType(0);
+        type::DataType *elemType = GetLeafElementTypeFromOutput(outputType);
+        if (elemType == nullptr) {
+            v->SetNull(rowIndex);
+            return;
+        }
+        BaseVector *elemVec = VectorHelper::CreateComplexVector(elemType, 0);
+        if (targetColTypeId_ == OMNI_ARRAY) {
+            ArrayVector *innerArr = new ArrayVector(static_cast<int64_t>(0), std::shared_ptr<BaseVector>(elemVec));
+            static_cast<ArrayVector *>(v)->SetValue(rowIndex, innerArr);
+            delete innerArr;
+        } else {
+            static_cast<ArrayVector *>(v)->SetValue(rowIndex, elemVec);
+            delete elemVec;
+        }
         return;
     }
     type::DataTypePtr outputType = GetOutputTypes().GetType(0);
@@ -365,7 +379,7 @@ void CollectListComplexAggregator::ProcessAlignAggSchema(VectorBatch *result, Ba
     ArrayVector *arrayVector = static_cast<ArrayVector *>(
         VectorHelper::CreateComplexVector(outputType.get(), rowCount));
     for (int32_t i = 0; i < rowCount; i++) {
-        if (nullMap != nullptr && (*nullMap)[i]) {
+        if ((nullMap != nullptr && (*nullMap)[i]) || originVector->IsNull(i)) {
             arrayVector->SetNull(i);
             arrayVector->SetSize(i, 0);
             continue;

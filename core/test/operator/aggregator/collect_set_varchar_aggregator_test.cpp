@@ -163,7 +163,10 @@ TEST(CollectSetVarcharAggregatorTest, PartialProcessGroupEmptyInputExtractNull)
     agg->ExtractValues(state.get(), extractVectors, 0);
 
     auto *arrayVec = static_cast<ArrayVector *>(extractVectors[0]);
-    EXPECT_TRUE(arrayVec->IsNull(0));
+    EXPECT_FALSE(arrayVec->IsNull(0));
+    std::shared_ptr<BaseVector> elemVec = arrayVec->GetArrayAt(0, false);
+    ASSERT_NE(elemVec, nullptr);
+    EXPECT_EQ(static_cast<Vector<LargeStringContainer<std::string_view>> *>(elemVec.get())->GetSize(), 0);
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outputVector;
