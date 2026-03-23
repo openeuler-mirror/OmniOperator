@@ -313,7 +313,8 @@ namespace common {
         }
     }
 
-    void SetStringVectorValue(int32_t rowCount, Vector<LargeStringContainer<std::string_view>> *baseVector,
+    template <typename VectorType>
+    void SetStringVectorValue(int32_t rowCount, VectorType *baseVector,
         Vector<LargeStringContainer<std::string_view>> *selectedBaseVector, const uint8_t *bitMark, bool isAllNull,
         bool isAllNotNull)
     {
@@ -389,10 +390,6 @@ namespace common {
             return false;
         }
         int32_t rowCount = baseVectors[0]->GetSize();
-        int32_t encodingType = baseVectors[0]->GetEncoding();
-        if (UNLIKELY(encodingType == OMNI_DICTIONARY)) {
-            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "OMNI_DICTIONARY is unsupported.");
-        }
         result.resize(baseVectors.size(), nullptr);
         for (int32_t i = 0; i < baseVectors.size(); i++) {
             auto baseVector = baseVectors[i];
@@ -436,9 +433,17 @@ namespace common {
                 }
                 case OMNI_VARCHAR:
                 case OMNI_CHAR: {
-                    SetStringVectorValue(rowCount, dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(baseVector),
-                        dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(selectedBaseVector), bitMark,
-                        isAllNull, isAllNotNull);
+                    if (baseVector->GetEncoding() == OMNI_DICTIONARY) {
+                        auto dictVector = dynamic_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(baseVector);
+                        SetStringVectorValue(rowCount, dictVector,
+                            dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(selectedBaseVector), bitMark,
+                            isAllNull, isAllNotNull);
+                    } else {
+                        auto flatVector = dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(baseVector);
+                        SetStringVectorValue(rowCount, flatVector,
+                            dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(selectedBaseVector), bitMark,
+                            isAllNull, isAllNotNull);
+                    }
                     break;
                 }
                 default: {
