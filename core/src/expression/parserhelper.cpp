@@ -125,3 +125,15 @@ DataTypePtr ParserHelper::GetReturnDataType(nlohmann::json jsonExpr)
             return nullptr;
     }
 }
+
+omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForComplexType(omniruntime::type::DataTypePtr dataType)
+{
+    auto dataTypeId = dataType->GetId();
+    if (dataTypeId == OMNI_ROW || dataTypeId == OMNI_ARRAY || dataTypeId == OMNI_MAP) {
+        auto expr = new LiteralExpr(INT_DEFAULT_VALUE, std::move(dataType));
+        expr->isNull = true;
+        return expr;
+    }
+    return nullptr;
+}
+

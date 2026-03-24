@@ -222,7 +222,7 @@ void ExprEval::Visit(const LiteralExpr &e)
         return;
     }
     auto typeId = e.dataType->GetId();
-    if (typeId == OMNI_ARRAY || typeId == OMNI_MAP || typeId == OMNI_ROW || typeId == OMNI_NONE) {
+    if (typeId == OMNI_NONE) {
         auto *arrayVec = new ArrayVector(rowSize);
         auto emptyElements = std::shared_ptr<BaseVector>(
             VectorHelper::CreateFlatVector(static_cast<int32_t>(OMNI_INT), 0));
@@ -231,6 +231,24 @@ void ExprEval::Visit(const LiteralExpr &e)
             arrayVec->SetNull(i);
         }
         inputValues_.push(arrayVec);
+        return;
+    }
+    if (typeId == OMNI_ARRAY) {
+        BaseVector *arrayVec = nullptr;
+        VectorHelper::CreateNullArrayVector(rowSize, e.dataType, arrayVec);
+        inputValues_.push(arrayVec);
+        return;
+    }
+    if (typeId == OMNI_MAP) {
+        BaseVector *mapVec = nullptr;
+        VectorHelper::CreateNullMapVector(rowSize, e.dataType, mapVec);
+        inputValues_.push(mapVec);
+        return;
+    }
+    if (typeId == OMNI_ROW) {
+        BaseVector *rowVector = nullptr;
+        VectorHelper::CreateNullRowVector(rowSize, e.dataType, rowVector);
+        inputValues_.push(rowVector);
         return;
     }
     BaseVector *outVec = VectorHelper::CreateFlatVector(typeId, rowSize);

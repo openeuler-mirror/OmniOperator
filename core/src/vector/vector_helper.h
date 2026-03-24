@@ -1594,6 +1594,59 @@ public:
         dstArrVec->SetKeyVector(std::shared_ptr<BaseVector>(emptyKeyElemVec));
         dstArrVec->SetValueVector(std::shared_ptr<BaseVector>(emptyValueElemVec));
     }
+
+    static void CreateNullRowVector(int32_t rowSize, const DataTypePtr& dataType, BaseVector*& output)
+    {
+        output = new RowVector(rowSize);
+        auto rowVector = dynamic_cast<RowVector *>(output);
+        auto rowTypePtr = std::dynamic_pointer_cast<RowType>(dataType);
+        if (!rowTypePtr) {
+            OMNI_THROW("Runtime error", "DataType is marked as OMNI_ROW but actual object is not RowType");
+        }
+        for (const auto& childType : rowTypePtr->Children()) {
+            auto emptyChild = std::shared_ptr<BaseVector>(
+                    VectorHelper::CreateFlatVector(static_cast<int32_t>(childType->GetId()), 0));
+            rowVector->AddChild(emptyChild);
+        }
+        for (int32_t i = 0; i < rowSize; ++i) {
+            rowVector->SetNull(i);
+        }
+    }
+
+    static void CreateNullArrayVector(int32_t rowSize, const DataTypePtr& dataType, BaseVector*& output)
+    {
+        output = new ArrayVector(rowSize);
+        auto arrayVec = dynamic_cast<ArrayVector *>(output);
+        auto arrayTypePtr = std::dynamic_pointer_cast<ArrayType>(dataType);
+        if (!arrayTypePtr) {
+            OMNI_THROW("Runtime error", "DataType is marked as OMNI_ARRAY but actual object is not ArrayType");
+        }
+        auto emptyElements = std::shared_ptr<BaseVector>(
+                VectorHelper::CreateFlatVector(static_cast<int32_t>(arrayTypePtr->ElementType()->GetId()), 0));
+        arrayVec->SetElementVector(emptyElements);
+        for (int32_t i = 0; i < rowSize; ++i) {
+            arrayVec->SetNull(i);
+        }
+    }
+
+    static void CreateNullMapVector(int32_t rowSize, const DataTypePtr& dataType, BaseVector*& output)
+    {
+        output = new MapVector(rowSize);
+        auto mapVec = dynamic_cast<MapVector *>(output);
+        auto mapTypePtr = std::dynamic_pointer_cast<MapType>(dataType);
+        if (!mapTypePtr) {
+            OMNI_THROW("Runtime error", "DataType is marked as OMNI_MAP but actual object is not MapType");
+        }
+        auto emptyKeyElements = std::shared_ptr<BaseVector>(
+                VectorHelper::CreateFlatVector(static_cast<int32_t>(mapTypePtr->Key()->GetId()), 0));
+        auto emptyValueElements = std::shared_ptr<BaseVector>(
+                VectorHelper::CreateFlatVector(static_cast<int32_t>(mapTypePtr->Value()->GetId()), 0));
+        mapVec->SetKeyVector(emptyKeyElements);
+        mapVec->SetValueVector(emptyValueElements);
+        for (int32_t i = 0; i < rowSize; ++i) {
+            mapVec->SetNull(i);
+        }
+    }
 };
 }
 
