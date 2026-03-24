@@ -463,6 +463,9 @@ BaseVector *Projection::ColumnProjectionStructVectorSliceHelper(VectorBatch *vec
     auto colVec = vecBatch->Get(this->columnProjectionIndex);
     auto rowCnt = vecBatch->GetRowCount();
     auto rowVector = dynamic_cast<RowVector *>(colVec);
+    if (rowVector == nullptr) {
+        return nullptr;
+    }
     if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
         return rowVector->Slice(0, numSelectedRows);
     }
@@ -894,6 +897,9 @@ BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
 BaseVector *ColumnProjectionStructVectorSliceHelper(BaseVector *colVec, int32_t numSelectedRows)
 {
     auto rowVector = dynamic_cast<RowVector *>(colVec);
+    if (rowVector == nullptr) {
+        return nullptr;
+    }
     return rowVector->Slice(0, numSelectedRows);
 }
 
