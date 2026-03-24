@@ -79,6 +79,15 @@ public:
         return sizeof(VarPopState);
     }
 
+    std::vector<DataTypePtr> GetSpillType() override
+    {
+        std::vector<DataTypePtr> spillTypes;
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE)); // count
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE)); // mean
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE)); // m2
+        return spillTypes;
+    }
+
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
     {
@@ -265,10 +274,10 @@ public:
             auto countVector = static_cast<Vector<ResultType> *>(batch->Get(firstVecIdx));
             if (!countVector->IsNull(index)) {
                 auto count = countVector->GetValue(index);
-                auto meanVector = static_cast<Vector<int64_t> *>(batch->Get(secondVecIdx));
+                auto meanVector = static_cast<Vector<double> *>(batch->Get(secondVecIdx));
                 auto mean = meanVector->GetValue(index);
-                auto m2VecIdx = static_cast<Vector<int64_t> *>(batch->Get(thirdVecIdx));
-                auto m2 = m2VecIdx->GetValue(index);
+                auto m2Vec = static_cast<Vector<double> *>(batch->Get(thirdVecIdx));
+                auto m2 = m2Vec->GetValue(index);
                 VarPopState *state = VarPopState::CastState(row.state + aggStateOffset);
                 VarPopFinalOp(state->mean, state->m2, state->count, count, mean, m2);
             }

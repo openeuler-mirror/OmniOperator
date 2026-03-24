@@ -300,6 +300,9 @@ ErrorCode SpillReader::ReadComplexVector(const DataTypePtr &dataType, BaseVector
         case OMNI_DOUBLE:
             result = ReadVector<double>(vector, rowCount);
             break;
+        case OMNI_FLOAT:
+            result = ReadVector<float>(vector, rowCount);
+            break;
         case OMNI_VARBINARY:
         case OMNI_VARCHAR:
         case OMNI_CHAR:
@@ -494,6 +497,9 @@ void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const st
                 break;
             case OMNI_DOUBLE:
                 SetCompareFunction<double>(isAscending, isNullsFirst, sortCompareFuncs);
+                break;
+            case OMNI_FLOAT:
+                SetCompareFunction<float>(isAscending, isNullsFirst, sortCompareFuncs);
                 break;
             case OMNI_VARBINARY:
             case OMNI_CHAR:

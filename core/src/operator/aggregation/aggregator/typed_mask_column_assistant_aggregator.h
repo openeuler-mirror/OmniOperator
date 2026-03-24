@@ -218,6 +218,11 @@ public:
         return realAggregator->GetStateSize();
     }
 
+    std::vector<DataTypePtr> GetSpillType() override
+    {
+        return realAggregator->GetSpillType();
+    }
+
     void InitState(AggregateState *state) override
     {
         realAggregator->InitState(state);
