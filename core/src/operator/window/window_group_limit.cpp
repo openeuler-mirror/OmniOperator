@@ -67,6 +67,8 @@ bool EqualPartitionValueTemplate(BaseVector *leftVec, int32_t leftPos, BaseVecto
         rightValue = static_cast<Vector<RawDataType> *>(rightVec)->GetValue(rightPos);
         if constexpr (typeId == OMNI_DOUBLE) {
             return std::abs(leftValue - rightValue) < DBL_EPSILON;
+        } else if constexpr (typeId == OMNI_FLOAT) {
+            return std::abs(leftValue - rightValue) < FLT_EPSILON;
         } else {
             return leftValue == rightValue;
         }
