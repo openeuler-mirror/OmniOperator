@@ -113,8 +113,7 @@ TEST(SecondTest, TimestampBasic) {
     BaseVector* resultVec = nullptr;
     SecondFunctionTestHelper::ExecuteSecond(inputVec, OMNI_TIMESTAMP, resultVec);
     SecondFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -134,8 +133,7 @@ TEST(SecondTest, TimestampEdgeCases) {
     BaseVector* resultVec = nullptr;
     SecondFunctionTestHelper::ExecuteSecond(inputVec, OMNI_TIMESTAMP, resultVec);
     SecondFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -165,8 +163,7 @@ TEST(SecondTest, TimestampWithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 45) << "Row 0 second should be 45";
     EXPECT_EQ(resultVecTyped->GetValue(2), 0) << "Row 2 second should be 0";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -186,7 +183,6 @@ TEST(SecondTest, TimestampAllSeconds) {
     BaseVector* resultVec = nullptr;
     SecondFunctionTestHelper::ExecuteSecond(inputVec, OMNI_TIMESTAMP, resultVec);
     SecondFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }

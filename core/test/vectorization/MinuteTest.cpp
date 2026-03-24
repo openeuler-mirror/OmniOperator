@@ -113,8 +113,7 @@ TEST(MinuteTest, TimestampBasic) {
     BaseVector* resultVec = nullptr;
     MinuteFunctionTestHelper::ExecuteMinute(inputVec, OMNI_TIMESTAMP, resultVec);
     MinuteFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -134,8 +133,7 @@ TEST(MinuteTest, TimestampEdgeCases) {
     BaseVector* resultVec = nullptr;
     MinuteFunctionTestHelper::ExecuteMinute(inputVec, OMNI_TIMESTAMP, resultVec);
     MinuteFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -165,8 +163,7 @@ TEST(MinuteTest, TimestampWithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 30) << "Row 0 minute should be 30";
     EXPECT_EQ(resultVecTyped->GetValue(2), 0) << "Row 2 minute should be 0";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -186,7 +183,6 @@ TEST(MinuteTest, TimestampAllMinutes) {
     BaseVector* resultVec = nullptr;
     MinuteFunctionTestHelper::ExecuteMinute(inputVec, OMNI_TIMESTAMP, resultVec);
     MinuteFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }

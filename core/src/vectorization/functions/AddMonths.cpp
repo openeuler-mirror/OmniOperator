@@ -172,6 +172,8 @@ public:
                 }
             });
         }
+        delete numMonthsArg;
+        delete dateArg;
     }
 };
 } // namespace

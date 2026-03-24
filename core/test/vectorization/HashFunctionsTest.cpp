@@ -78,8 +78,6 @@ TEST(HashFunctionTest, hash) {
                 << " expected=" << expectedResults[i];
         }
     }
-    delete inputVec;
-    delete inputVec2;
     delete result;
 }
 
@@ -138,7 +136,5 @@ TEST(HashFunctionTest, xxhash64) {
                 << " expected=" << expectedResults[i];
         }
     }
-    delete inputVec;
-    delete inputVec2;
     delete result;
 }

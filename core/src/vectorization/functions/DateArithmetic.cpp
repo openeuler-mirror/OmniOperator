@@ -132,6 +132,8 @@ public:
                 result->SetNotNull(i);
             });
         }
+        delete numDaysArg;
+        delete dateArg;
     }
 };
 } // namespace date_arithmetic_impl

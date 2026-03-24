@@ -128,8 +128,7 @@ TEST(QuarterTest, Date32Basic) {
     BaseVector* resultVec = nullptr;
     QuarterFunctionTestHelper::ExecuteQuarter(inputVec, OMNI_DATE32, resultVec);
     QuarterFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -150,8 +149,7 @@ TEST(QuarterTest, IntBasic) {
     BaseVector* resultVec = nullptr;
     QuarterFunctionTestHelper::ExecuteQuarter(inputVec, OMNI_INT, resultVec);
     QuarterFunctionTestHelper::ValidateResult(resultVec, expected, intValues.size());
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -181,8 +179,7 @@ TEST(QuarterTest, Date32WithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 1) << "Row 0 quarter should be 1";
     EXPECT_EQ(resultVecTyped->GetValue(2), 3) << "Row 2 quarter should be 3";
-    
-    delete inputVec;
+
     delete resultVec;
 }
 
@@ -212,7 +209,6 @@ TEST(QuarterTest, IntWithNull) {
     auto* resultVecTyped = dynamic_cast<Vector<int32_t>*>(resultVec);
     EXPECT_EQ(resultVecTyped->GetValue(0), 1) << "Row 0 quarter should be 1";
     EXPECT_EQ(resultVecTyped->GetValue(2), 3) << "Row 2 quarter should be 3";
-    
-    delete inputVec;
+
     delete resultVec;
 }

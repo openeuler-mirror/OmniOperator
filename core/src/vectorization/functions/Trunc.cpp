@@ -129,6 +129,8 @@ public:
                 }
             });
         }
+        delete formatArg;
+        delete dateArg;
     }
     
 private:

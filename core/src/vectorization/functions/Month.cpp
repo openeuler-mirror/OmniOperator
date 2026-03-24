@@ -77,6 +77,7 @@ public:
                 }
             });
         }
+        delete inputArg;
     }
 };
 } // namespace

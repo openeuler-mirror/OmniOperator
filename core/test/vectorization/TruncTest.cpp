@@ -123,9 +123,7 @@ TEST(TruncTest, TruncToYear) {
     
     TruncFunctionTestHelper::ExecuteTrunc(dateVec, formatVec, resultVec);
     TruncFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete formatVec;
+
     delete resultVec;
 }
 
@@ -155,9 +153,7 @@ TEST(TruncTest, TruncToMonth) {
     
     TruncFunctionTestHelper::ExecuteTrunc(dateVec, formatVec, resultVec);
     TruncFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete formatVec;
+
     delete resultVec;
 }
 
@@ -187,9 +183,7 @@ TEST(TruncTest, TruncToQuarter) {
     
     TruncFunctionTestHelper::ExecuteTrunc(dateVec, formatVec, resultVec);
     TruncFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete formatVec;
+
     delete resultVec;
 }
 
@@ -222,9 +216,7 @@ TEST(TruncTest, TruncToWeek) {
     
     TruncFunctionTestHelper::ExecuteTrunc(dateVec, formatVec, resultVec);
     TruncFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete formatVec;
+
     delete resultVec;
 }
 
@@ -254,9 +246,7 @@ TEST(TruncTest, TruncWithDifferentFormats) {
     
     TruncFunctionTestHelper::ExecuteTrunc(dateVec, formatVec, resultVec);
     TruncFunctionTestHelper::ValidateResult(resultVec, expected, dateValues.size());
-    
-    delete dateVec;
-    delete formatVec;
+
     delete resultVec;
 }
 
@@ -285,9 +275,7 @@ TEST(TruncTest, TruncWithNullDate) {
     EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
-    
-    delete dateVec;
-    delete formatVec;
+
     delete resultVec;
 }
 
@@ -316,9 +304,7 @@ TEST(TruncTest, TruncWithNullFormat) {
     EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (format is NULL)";
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
-    
-    delete dateVec;
-    delete formatVec;
+
     delete resultVec;
 }
 
@@ -343,8 +329,6 @@ TEST(TruncTest, TruncWithInvalidFormat) {
     // Both should be NULL (invalid format)
     EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL (invalid format)";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (invalid format for DATE)";
-    
-    delete dateVec;
-    delete formatVec;
+
     delete resultVec;
 }

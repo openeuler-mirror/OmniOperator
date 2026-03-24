@@ -129,6 +129,7 @@ void CastExpr::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputTy
     const auto size = input->GetSize();
     SelectivityVector row(size);
     const_cast<CastExpr *>(this)->apply(row, input, *context, fromType_, toType_, result);
+    delete input;
 }
 
 void CastExpr::apply(const SelectivityVector &rows, BaseVector *input, ExecutionContext &context,

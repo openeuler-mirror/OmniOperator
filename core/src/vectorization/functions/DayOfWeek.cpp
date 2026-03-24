@@ -84,6 +84,7 @@ public:
                 }
             });
         }
+        delete inputArg;
     }
 };
 } // namespace

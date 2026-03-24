@@ -152,6 +152,9 @@ public:
                     OMNI_THROW("If expr Error", "Unsupported output type Id:" + std::to_string(typeId));
             }
         }
+        delete falseVec;
+        delete trueVec;
+        delete condVec;
     }
 
 private:

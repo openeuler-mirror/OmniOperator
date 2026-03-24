@@ -172,8 +172,6 @@ TEST(CardinalityTest, ArrayBasic) {
     for (size_t i = 0; i < results.size(); ++i) {
         ASSERT_EQ(results[i], expected[i]);
     }
-
-    delete arrayVector;
 }
 
 TEST(CardinalityTest, ArrayWithNulls) {
@@ -195,8 +193,6 @@ TEST(CardinalityTest, ArrayWithNulls) {
     for (size_t i = 0; i < results.size(); ++i) {
         ASSERT_EQ(results[i], expected[i]);
     }
-
-    delete arrayVector;
 }
 
 TEST(CardinalityTest, MapBasic) {
@@ -217,8 +213,6 @@ TEST(CardinalityTest, MapBasic) {
     for (size_t i = 0; i < results.size(); ++i) {
         ASSERT_EQ(results[i], expected[i]);
     }
-
-    delete mapVector;
 }
 
 TEST(CardinalityTest, MapWithNulls) {
@@ -240,8 +234,6 @@ TEST(CardinalityTest, MapWithNulls) {
     for (size_t i = 0; i < results.size(); ++i) {
         ASSERT_EQ(results[i], expected[i]);
     }
-
-    delete mapVector;
 }
 
 TEST(CardinalityTest, ArrayEmpty) {
@@ -257,8 +249,6 @@ TEST(CardinalityTest, ArrayEmpty) {
     for (size_t i = 0; i < results.size(); ++i) {
         ASSERT_EQ(results[i], expected[i]);
     }
-
-    delete arrayVector;
 }
 
 TEST(CardinalityTest, MapEmpty) {
@@ -278,8 +268,6 @@ TEST(CardinalityTest, MapEmpty) {
     for (size_t i = 0; i < results.size(); ++i) {
         ASSERT_EQ(results[i], expected[i]);
     }
-
-    delete mapVector;
 }
 
 TEST(CardinalityTest, SingleElementArray) {
@@ -291,7 +279,6 @@ TEST(CardinalityTest, SingleElementArray) {
     ASSERT_EQ(results.size(), 1u);
     ASSERT_EQ(results[0], 1);
 
-    delete arrayVector;
 }
 
 TEST(CardinalityTest, SingleElementMap) {
@@ -305,7 +292,6 @@ TEST(CardinalityTest, SingleElementMap) {
     ASSERT_EQ(results.size(), 1u);
     ASSERT_EQ(results[0], 1);
 
-    delete mapVector;
 }
 
 TEST(CardinalityTest, AllNullArrays) {
@@ -323,5 +309,4 @@ TEST(CardinalityTest, AllNullArrays) {
         ASSERT_EQ(results[i], expected[i]);
     }
 
-    delete arrayVector;
 }
