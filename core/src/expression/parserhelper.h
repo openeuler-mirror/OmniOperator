@@ -18,6 +18,8 @@ public:
     static omniruntime::expressions::LiteralExpr *GetDefaultValueForType(omniruntime::type::DataTypeId destTypeId,
         int32_t precision = 0, int32_t scale = 0);
     static omniruntime::type::DataTypePtr GetReturnDataType(nlohmann::json jsonExpr);
+
+    static omniruntime::expressions::LiteralExpr *GetDefaultValueForComplexType(omniruntime::type::DataTypePtr dataType);
 };
 
 #endif

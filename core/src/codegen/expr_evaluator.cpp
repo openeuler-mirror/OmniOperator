@@ -400,7 +400,16 @@ BaseVector *Projection::Project(VectorBatch *vecBatch, int32_t selectedRows[], i
     if (this->isColumnProjection) {
         return ColumnProjectionProxy(vecBatch, selectedRows, numSelectedRows, typeIds);
     } else if (this->isConstantProjection) {
-        BaseVector *outVec = VectorHelper::CreateFlatVector(outType->GetId(), numSelectedRows);
+        BaseVector *outVec = nullptr;
+        if (outType->GetId() == OMNI_ARRAY) {
+            VectorHelper::CreateNullArrayVector(numSelectedRows, outType, outVec);
+        } else if (outType->GetId() == OMNI_MAP) {
+            VectorHelper::CreateNullMapVector(numSelectedRows, outType, outVec);
+        } else if (outType->GetId() == OMNI_ROW){
+            VectorHelper::CreateNullRowVector(numSelectedRows, outType, outVec);
+        } else {
+            outVec = VectorHelper::CreateFlatVector(outType->GetId(), numSelectedRows);
+        }
         if (!ConstantColumnProjection(context, outVec)) {
             delete outVec;
             context->GetArena()->Reset();
