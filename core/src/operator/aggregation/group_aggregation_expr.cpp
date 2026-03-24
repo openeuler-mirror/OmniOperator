@@ -21,7 +21,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OperatorConfig &operatorConfig,
     config::QueryConfig queryConfig, AggregationNode::Step step)
 {
-    this->queryConfig = queryConfig;
+    this->queryConfig_ = queryConfig;
     uint32_t aggColNum = 0;
     for (auto &aggKeys : aggsKeys) {
         aggColNum += aggKeys.size();
@@ -152,7 +152,7 @@ Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
     auto *op = new HashAggregationWithExprOperator(*originSourceTypes, *sourceTypes, projections, aggSimpleFilters,
-        hashAggOperator, queryConfig);
+        hashAggOperator, queryConfig_);
     op->Init();
     return op;
 }
@@ -166,6 +166,7 @@ HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes
       projections(projections),
       hashAggOperator(hashAggOperator)
 {
+    executionContext->SetConfig(queryConfig);
     adaptivePartialAgg = queryConfig.EnableAdaptivePartialAggregation();
     adaptivePartialAggMinRows = queryConfig.AdaptivePartialAggregationMinRows();
     adaptivePartialAggRatio = queryConfig.AdaptivePartialAggregationRatio();

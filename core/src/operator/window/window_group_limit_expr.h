@@ -17,6 +17,11 @@ public:
         const std::vector<omniruntime::expressions::Expr *> &sortKeys, std::vector<int32_t> &sortAscendings,
         std::vector<int32_t> &sortNullFirsts, OverflowConfig *overflowConfig);
 
+    WindowGroupLimitWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
+        const std::string funcName, const std::vector<omniruntime::expressions::Expr *> &partitionKeys,
+        const std::vector<omniruntime::expressions::Expr *> &sortKeys, std::vector<int32_t> &sortAscendings,
+        std::vector<int32_t> &sortNullFirsts, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig);
+
     ~WindowGroupLimitWithExprOperatorFactory() override;
 
     static WindowGroupLimitWithExprOperatorFactory *WindowGroupLimitWithExprOperatorFactory::CreateWindowGroupLimitWithExprOperatorFactory(
@@ -36,7 +41,7 @@ class WindowGroupLimitWithExprOperator : public Operator {
 public:
     WindowGroupLimitWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &partitionCols,
         std::vector<int32_t> &sortCols, std::vector<std::unique_ptr<Projection>> &projections,
-        WindowGroupLimitOperator *windowGroupLimitOperator);
+        WindowGroupLimitOperator *windowGroupLimitOperator, const config::QueryConfig &queryConfig);
 
     ~WindowGroupLimitWithExprOperator() override;
 

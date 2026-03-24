@@ -34,6 +34,13 @@ public:
         const DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr,
         Expr *filterExpr, bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig, int32_t *outputList = nullptr);
 
+    LookupJoinWithExprOperatorFactory(const DataTypes &probeTypes, int32_t *probeOutputCols,
+        int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
+        int32_t probeHashKeysCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
+        const DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr, Expr *filterExpr,
+        bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig,
+        int32_t *outputList = nullptr);
+
     ~LookupJoinWithExprOperatorFactory() override;
 
     omniruntime::op::Operator *CreateOperator() override;
@@ -49,7 +56,7 @@ private:
 class LookupJoinWithExprOperator : public Operator {
 public:
     LookupJoinWithExprOperator(const type::DataTypes &probeTypes, std::vector<std::unique_ptr<Projection>> &projections,
-        LookupJoinOperator *lookupJoinOperator);
+        LookupJoinOperator *lookupJoinOperator, const config::QueryConfig &queryConfig);
 
     ~LookupJoinWithExprOperator() override;
 

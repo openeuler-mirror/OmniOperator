@@ -26,6 +26,15 @@ WindowGroupLimitWithExprOperatorFactory::WindowGroupLimitWithExprOperatorFactory
         this->partitionCols, this->sortCols, sortAscendings, sortNullFirsts);
 }
 
+WindowGroupLimitWithExprOperatorFactory::WindowGroupLimitWithExprOperatorFactory(const type::DataTypes &sourceDataTypes,
+        int32_t n, const std::string funcName, const std::vector<omniruntime::expressions::Expr *> &partitionKeys,
+        const std::vector<omniruntime::expressions::Expr *> &sortKeys, std::vector<int32_t> &sortAscendings,
+        std::vector<int32_t> &sortNullFirsts, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig)
+    : WindowGroupLimitWithExprOperatorFactory(sourceDataTypes, n, funcName, partitionKeys, sortKeys, sortAscendings, sortNullFirsts, overflowConfig)
+{
+    this->queryConfig_ = queryConfig;
+}
+
 WindowGroupLimitWithExprOperatorFactory::~WindowGroupLimitWithExprOperatorFactory() = default;
 
 WindowGroupLimitWithExprOperatorFactory *WindowGroupLimitWithExprOperatorFactory::CreateWindowGroupLimitWithExprOperatorFactory(
@@ -41,7 +50,7 @@ WindowGroupLimitWithExprOperatorFactory *WindowGroupLimitWithExprOperatorFactory
     OverflowConfig *overflowConfig = queryConfig.IsOverFlowASNull()? new OverflowConfig(OVERFLOW_CONFIG_NULL) : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
 
     auto operatorFactory = new WindowGroupLimitWithExprOperatorFactory(*sourceDataTypes.get(), n, funcName, partitionKeys,
-        sortKeys, sortAscendings, sortNullFirsts, overflowConfig);
+        sortKeys, sortAscendings, sortNullFirsts, overflowConfig, queryConfig);
 
     delete overflowConfig;
     overflowConfig = nullptr;
@@ -53,15 +62,18 @@ Operator *WindowGroupLimitWithExprOperatorFactory::CreateOperator()
     auto windowGroupLimitOperator =
         static_cast<WindowGroupLimitOperator *>(windowGroupLimitOperatorFactory->CreateOperator());
     auto opOperator = new WindowGroupLimitWithExprOperator(*sourceTypes, partitionCols, sortCols, projections,
-        windowGroupLimitOperator);
+        windowGroupLimitOperator, queryConfig_);
     return opOperator;
 }
 
 WindowGroupLimitWithExprOperator::WindowGroupLimitWithExprOperator(const type::DataTypes &sourceTypes,
     std::vector<int32_t> &partitionCols, std::vector<int32_t> &sortCols,
-    std::vector<std::unique_ptr<Projection>> &projections, WindowGroupLimitOperator *windowGroupLimitOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, WindowGroupLimitOperator *windowGroupLimitOperator,
+    const config::QueryConfig &queryConfig)
     : sourceTypes(sourceTypes), projections(projections), windowGroupLimitOperator(windowGroupLimitOperator)
-{}
+{
+    executionContext->SetConfig(queryConfig);
+}
 
 WindowGroupLimitWithExprOperator::~WindowGroupLimitWithExprOperator()
 {

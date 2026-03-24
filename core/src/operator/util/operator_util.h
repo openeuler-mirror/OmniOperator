@@ -812,7 +812,7 @@ public:
         auto projectionCount = projections.size();
         for (size_t i = 0; i < projectionCount; i++) {
             if (!projections[i]->IsColumnProjection()) {
-                if (!projections[i]->IsSupported()) {
+                if (executionContext->queryConfig().PreferVectorizationExpression() && projections[i]->GetExpr()->supportVectorized()) {
                     // Fallback to ExpressionEvaluator (vectorized path) when codegen projection
                     // is not supported for this expression.
                     auto projectVec = projections[i]->ProjectVec(inputVecBatch, executionContext);

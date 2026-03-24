@@ -30,6 +30,10 @@ public:
         const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortKeysCount, const OperatorConfig &operatorConfig);
 
+    SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+        const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
+        int32_t sortKeysCount, const OperatorConfig &operatorConfig, const config::QueryConfig& queryConfig);
+
     ~SortWithExprOperatorFactory() override;
 
     Operator *CreateOperator() override;
@@ -44,7 +48,7 @@ private:
 class SortWithExprOperator : public Operator {
 public:
     SortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<std::unique_ptr<Projection>> &projections,
-        SortOperator *sortOperator);
+        SortOperator *sortOperator, const config::QueryConfig& queryConfig);
 
     ~SortWithExprOperator() override;
 

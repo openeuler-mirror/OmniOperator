@@ -19,6 +19,14 @@ TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &
     limit, offset, this->sortCols.data(), sortAsc, sortNullFirsts, sortKeyCount);
 }
 
+TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t limit,
+        int32_t offset, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc,
+        int32_t *sortNullFirsts, int32_t sortKeyCount, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig)
+    : TopNWithExprOperatorFactory(sourceDataTypes, limit, offset, sortKeys, sortAsc, sortNullFirsts, sortKeyCount, overflowConfig)
+{
+    this->queryConfig_ = queryConfig;
+}
+
 TopNWithExprOperatorFactory *TopNWithExprOperatorFactory::CreateTopNWithExprOperatorFactory(
     std::shared_ptr<const TopNNode> planNode, const config::QueryConfig &queryConfig)
 {
@@ -31,7 +39,7 @@ TopNWithExprOperatorFactory *TopNWithExprOperatorFactory::CreateTopNWithExprOper
     auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                                                                          : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     auto pOperatorFactory = new TopNWithExprOperatorFactory(*dataTypes.get(), cnt, 0, sortCols, sortAscending.data(),
-                                                    sortNullFirsts.data(), sortColCnt, overflowConfig);
+        sortNullFirsts.data(), sortColCnt, overflowConfig, queryConfig);
     delete overflowConfig;
     overflowConfig = nullptr;
     return pOperatorFactory;
@@ -42,14 +50,16 @@ TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() = default;
 Operator *TopNWithExprOperatorFactory::CreateOperator()
 {
     auto topNOperator = static_cast<TopNOperator *>(topNOperatorFactory->CreateOperator());
-    auto pOperator = new TopNWithExprOperator(*sourceTypes, projections, topNOperator);
+    auto pOperator = new TopNWithExprOperator(*sourceTypes, projections, topNOperator, queryConfig_);
     return pOperator;
 }
 
 TopNWithExprOperator::TopNWithExprOperator(const type::DataTypes &sourceTypes,
-    std::vector<std::unique_ptr<Projection>> &projections, TopNOperator *topNOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, TopNOperator *topNOperator, const config::QueryConfig &queryConfig)
     : sourceTypes(sourceTypes), projections(projections), topNOperator(topNOperator)
-{}
+{
+    executionContext->SetConfig(queryConfig);
+}
 
 TopNWithExprOperator::~TopNWithExprOperator()
 {

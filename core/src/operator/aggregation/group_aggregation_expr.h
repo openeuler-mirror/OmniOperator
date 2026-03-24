@@ -31,7 +31,6 @@ public:
     Operator *CreateOperator() override;
 
 private:
-    config::QueryConfig queryConfig;
     // originalSourceTypes is used to store raw input type which is not handled by projection function
     std::unique_ptr<DataTypes> originSourceTypes;
     // sourceTypes is used to store input type which has been handled by projection function

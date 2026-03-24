@@ -38,7 +38,8 @@ SortWithExprOperatorFactory* SortWithExprOperatorFactory::CreateSortWithExprOper
     auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                                                                  : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     auto pOperatorFactory = new SortWithExprOperatorFactory(*sourceTypes, outputCols, outputColsCount, sortExpressions,
-        sortAscendings, sortNullFirsts, expressionCount, OperatorConfig(spillConfig, overflowConfig));
+        sortAscendings, sortNullFirsts, expressionCount, OperatorConfig(spillConfig, overflowConfig)
+        , queryConfig);
     return pOperatorFactory;
 }
 
@@ -52,6 +53,15 @@ SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(*(this->sourceTypes), outputCols,
         outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig);
+}
+
+SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
+    int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
+    int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig
+    , const config::QueryConfig& queryConfig) : SortWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount,
+    sortKeys, sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig)
+{
+    this->queryConfig_ = queryConfig;
 }
 
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
@@ -72,15 +82,16 @@ SortWithExprOperatorFactory::~SortWithExprOperatorFactory()
 Operator *SortWithExprOperatorFactory::CreateOperator()
 {
     auto sortOperator = static_cast<SortOperator *>(sortOperatorFactory->CreateOperator());
-    auto pOperator = new SortWithExprOperator(*sourceTypes, projections, sortOperator);
+    auto pOperator = new SortWithExprOperator(*sourceTypes, projections, sortOperator, queryConfig_);
     return pOperator;
 }
 
 SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes,
-    std::vector<std::unique_ptr<Projection>> &projections, SortOperator *sortOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, SortOperator *sortOperator, const config::QueryConfig& queryConfig)
     : sourceTypes(sourceTypes), projections(projections), sortOperator(sortOperator)
 {
     SetOperatorName(metricsNameSort);
+    executionContext->SetConfig(queryConfig);
 }
 
 SortWithExprOperator::~SortWithExprOperator()

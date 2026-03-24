@@ -24,6 +24,19 @@ public:
     {
         return nullptr;
     }
+
+    const config::QueryConfig *GetQueryConfig() const
+    {
+        return &queryConfig_;
+    }
+
+    void SetQueryConfig(const config::QueryConfig &config)
+    {
+        queryConfig_ = config;
+    }
+
+protected:
+    config::QueryConfig queryConfig_;
 };
 
 using OperatorType = enum OperatorType {

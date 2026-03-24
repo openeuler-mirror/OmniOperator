@@ -41,7 +41,7 @@ HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHa
     auto overflowConfig = queryConfig.IsOverFlowASNull()
                           ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                           : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
-    auto hashBuilderWithExprOperatorFactory = new HashBuilderWithExprOperatorFactory(joinType, buildSide, *buildTypes, buildKeys, 1, overflowConfig);
+    auto hashBuilderWithExprOperatorFactory = new HashBuilderWithExprOperatorFactory(joinType, buildSide, *buildTypes, buildKeys, 1, overflowConfig, queryConfig);
 
     delete overflowConfig;
     overflowConfig = nullptr;
@@ -72,6 +72,14 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType 
         *(this->buildTypes), this->buildHashCols.data(), buildHashKeys.size(), hashTableCount);
 }
 
+HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType joinType, BuildSide buildSide,
+    const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+    int32_t hashTableCount, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig)
+    : HashBuilderWithExprOperatorFactory(joinType, buildSide, buildTypes, buildHashKeys, hashTableCount, overflowConfig)
+{
+    this->queryConfig_ = queryConfig;
+}
+
 HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()
 {
     delete this->operatorFactory;
@@ -80,14 +88,16 @@ HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()
 Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
 {
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(operatorFactory->CreateOperator());
-    return new HashBuilderWithExprOperator(*buildTypes, projections, hashBuilderOperator);
+    return new HashBuilderWithExprOperator(*buildTypes, projections, hashBuilderOperator, queryConfig_);
 }
 
 HashBuilderWithExprOperator::HashBuilderWithExprOperator(const DataTypes &buildTypes,
-    std::vector<std::unique_ptr<Projection>> &projections, HashBuilderOperator *hashBuilderOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, HashBuilderOperator *hashBuilderOperator
+    , const config::QueryConfig &queryConfig)
     : buildTypes(buildTypes), projections(projections), hashBuilderOperator(hashBuilderOperator)
 {
     SetOperatorName(opNameForHashBuilder);
+    executionContext->SetConfig(queryConfig);
 }
 
 HashBuilderWithExprOperator::~HashBuilderWithExprOperator()

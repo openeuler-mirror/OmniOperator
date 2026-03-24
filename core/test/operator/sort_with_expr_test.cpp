@@ -521,9 +521,13 @@ TEST(SortWithExprTest, TestSortMapElementAtExprAsc)
     std::vector<Expr *> sortExprs { elementAtExpr };
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {true};
-
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
         sortExprs, ascendings, nullFirsts, 1, OperatorConfig());
+    const std::unordered_map<std::string, std::string> config = {
+        {"prefer_vectorization_expression", "true"}
+    };
+    auto queryConfig = config::QueryConfig(config);
+    operatorFactory->SetQueryConfig(queryConfig);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
@@ -571,6 +575,11 @@ TEST(SortWithExprTest, TestSortMapElementAtExprMissingFunctionNoCrash)
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
         sortExprs, ascendings, nullFirsts, 1, OperatorConfig());
+    const std::unordered_map<std::string, std::string> config = {
+        {"prefer_vectorization_expression", "true"}
+    };
+    auto queryConfig = config::QueryConfig(config);
+    operatorFactory->SetQueryConfig(queryConfig);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     // Missing codegen metadata for element_at should not crash. It should fall back

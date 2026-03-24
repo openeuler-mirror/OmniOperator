@@ -16,6 +16,11 @@ public:
         const std::vector<omniruntime::expressions::Expr *> &sortKeys, std::vector<int32_t> &sortAscendings,
         std::vector<int32_t> &sortNullFirsts, OverflowConfig *overflowConfig);
 
+    TopNSortWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n, bool isStrictTopN,
+        const std::vector<omniruntime::expressions::Expr *> &partitionKeys,
+        const std::vector<omniruntime::expressions::Expr *> &sortKeys, std::vector<int32_t> &sortAscendings,
+        std::vector<int32_t> &sortNullFirsts, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig);
+
     static TopNSortWithExprOperatorFactory* CreateTopNSortWithExprOperatorFactory(
         std::shared_ptr<const TopNSortNode> planNode, const config::QueryConfig &queryConfig);
 
@@ -35,7 +40,7 @@ class TopNSortWithExprOperator : public Operator {
 public:
     TopNSortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &partitionCols,
         std::vector<int32_t> &sortCols, std::vector<std::unique_ptr<Projection>> &projections,
-        TopNSortOperator *topNSortOperator);
+        TopNSortOperator *topNSortOperator, const config::QueryConfig &queryConfig);
 
     ~TopNSortWithExprOperator() override;
 
