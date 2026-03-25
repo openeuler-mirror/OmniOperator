@@ -33,6 +33,11 @@ public class ConstVec extends Vec {
         cacheConstValue();
     }
 
+    private ConstVec(ConstVec vector, int offset, int length) {
+        super(vector, offset, length, 0);
+        cacheConstValue();
+    }
+
     private void cacheConstValue() {
         DataTypeId typeId = getType().getId();
         switch (typeId) {
@@ -214,8 +219,8 @@ public class ConstVec extends Vec {
     }
 
     @Override
-    public Vec slice(int start, int length) {
-        throw new UnsupportedOperationException("ConstVec does not support slice");
+    public ConstVec slice(int start, int length) {
+        return new ConstVec(this, start, length);
     }
 
     @Override
