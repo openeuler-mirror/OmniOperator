@@ -68,11 +68,13 @@ uint64_t SplitReader::next(vec::VectorBatch **output_, int *omniTypeId, uint64_t
     for (int i = 0; i < recordBatch->size(); ++i) {
         output->Append(recordBatch->at(i));
     }
-    // Schema evolution: fill missing columns (added after the file was written) with all-null ConstVectors
     if (fileRowType_->size() > output->GetVectorCount()) {
         for (int i = output->GetVectorCount(); i < fileRowType_->size(); ++i) {
-            auto missingFieldVec = createNullConstVec(
-                fileRowType_->children_()[i]->GetId(), batchRowSize);
+            auto missingFieldVec = vec::VectorHelper::CreateFlatVector(fileRowType_->children_()[i]->GetId(),
+                batchRowSize);
+            for (int j = 0; j < batchRowSize; ++j) {
+                omniruntime::vec::VectorHelper::SetValue(missingFieldVec, j, nullptr);
+            }
             output->Append(missingFieldVec);
         }
     }
