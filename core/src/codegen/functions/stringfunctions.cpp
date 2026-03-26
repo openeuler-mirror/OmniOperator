@@ -8,6 +8,7 @@
 #include "md5.h"
 #include "dtoa.h"
 #include "type/string_Impl.h"
+#include <nlohmann/json.hpp>
 
 namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT int64_t CountChar(const char *str, int32_t strLen, const char *target, int32_t targetWidth, int32_t targetLen, bool isNull)
@@ -162,6 +163,161 @@ extern "C" DLLEXPORT const char* RegexpExtractRetNull(int64_t contextPtr, const 
         memcpy_s(ret, *outLen + 1, str + startIdx, *outLen + 1);
         return ret;
     } else {
+        *outIsNull = true;
+        *outLen = 0;
+        return nullptr;
+    }
+}
+
+static std::vector<std::string> ParseJsonPath(const std::string& path)
+{
+    std::vector<std::string> keys;
+    if (path.empty() || path[0] != '$') {
+        return keys;
+    }
+    
+    std::string currentKey;
+    bool inBracket = false;
+    bool expectKey = true;
+    
+    for (size_t i = 1; i < path.size(); ++i) {
+        char c = path[i];
+        
+        if (c == '.') {
+            if (!currentKey.empty() && !inBracket) {
+                keys.push_back(currentKey);
+                currentKey.clear();
+            }
+            expectKey = true;
+        } else if (c == '[') {
+            if (!currentKey.empty()) {
+                keys.push_back(currentKey);
+                currentKey.clear();
+            }
+            inBracket = true;
+            expectKey = true;
+        } else if (c == ']') {
+            if (!currentKey.empty()) {
+                keys.push_back(currentKey);
+                currentKey.clear();
+            }
+            inBracket = false;
+            expectKey = false;
+        } else if (c == '\'' || c == '"') {
+            continue;
+        } else {
+            currentKey += c;
+        }
+    }
+    
+    if (!currentKey.empty()) {
+        keys.push_back(currentKey);
+    }
+    
+    return keys;
+}
+
+extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
+                                                   const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
+                                                   bool *outIsNull, int32_t *outLen)
+{
+    if (outIsNull == nullptr || outLen == nullptr) {
+        return nullptr;
+    }
+    
+    if (jsonStrIsNull || pathStrIsNull) {
+        *outIsNull = true;
+        *outLen = 0;
+        return nullptr;
+    }
+    
+    std::string jsonContent(jsonStr, jsonStrLen);
+    std::string pathContent(pathStr, pathStrLen);
+    
+    // Fix escaped quotes: replace \ with "
+    // The input data has \ instead of " for JSON string delimiters
+    // Only keep \\ (escaped backslash) and \" (escaped quote)
+    std::string fixedJsonContent;
+    fixedJsonContent.reserve(jsonContent.size());
+    for (size_t j = 0; j < jsonContent.size(); j++) {
+        if (jsonContent[j] == '\\') {
+            if (j + 1 < jsonContent.size()) {
+                char next = jsonContent[j + 1];
+                if (next == '\\' || next == '"') {
+                    fixedJsonContent += jsonContent[j];
+                } else {
+                    fixedJsonContent += '"';
+                }
+            } else {
+                fixedJsonContent += '"';
+            }
+        } else {
+            fixedJsonContent += jsonContent[j];
+        }
+    }
+    
+    try {
+        nlohmann::json jsonData = nlohmann::json::parse(fixedJsonContent);
+        std::vector<std::string> keys = ParseJsonPath(pathContent);
+        
+        nlohmann::json* current = &jsonData;
+        for (const auto& key : keys) {
+            if (current->is_object()) {
+                if (current->contains(key)) {
+                    current = &(*current)[key];
+                } else {
+                    *outIsNull = true;
+                    *outLen = 0;
+                    return nullptr;
+                }
+            } else if (current->is_array()) {
+                try {
+                    size_t index = std::stoul(key);
+                    if (index < current->size()) {
+                        current = &(*current)[index];
+                    } else {
+                        *outIsNull = true;
+                        *outLen = 0;
+                        return nullptr;
+                    }
+                } catch (...) {
+                    *outIsNull = true;
+                    *outLen = 0;
+                    return nullptr;
+                }
+            } else {
+                *outIsNull = true;
+                *outLen = 0;
+                return nullptr;
+            }
+        }
+        
+        if (current->is_null()) {
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        
+        std::string result;
+        if (current->is_string()) {
+            result = current->get<std::string>();
+        } else if (current->is_number_integer()) {
+            result = std::to_string(current->get<int64_t>());
+        } else if (current->is_number_float()) {
+            result = std::to_string(current->get<double>());
+        } else if (current->is_boolean()) {
+            result = current->get<bool>() ? "true" : "false";
+        } else {
+            result = current->dump();
+        }
+        
+        *outIsNull = false;
+        *outLen = static_cast<int32_t>(result.size());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
+        return ret;
+        
+    } catch (const std::exception&) {
         *outIsNull = true;
         *outLen = 0;
         return nullptr;

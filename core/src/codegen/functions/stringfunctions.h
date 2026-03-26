@@ -48,6 +48,10 @@ extern "C" DLLEXPORT const char* RegexpExtractRetNull(int64_t contextPtr, const 
                                                       const char *regexToMatch, int32_t regexWidth, int32_t regexLen,
                                                       bool regexIsNull, int32_t group, bool groupIsNull, bool *outIsNull, int32_t *outLen);
 
+extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
+                                                   const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
+                                                   bool *outIsNull, int32_t *outLen);
+
 extern "C" DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
     int32_t bpLen, bool isNull, int32_t *outLen);
 
