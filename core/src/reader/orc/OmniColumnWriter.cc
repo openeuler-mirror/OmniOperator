@@ -275,8 +275,20 @@ namespace omniruntime::writer {
         omniruntime::vec::NullsBuffer *curNullsBuffer = rowBatch->GetNullsBuffer();
         OmniColumnWriter::addNulls(curNullsBuffer, pNullsBuffer, offset, numValues);
         std::vector < omniruntime::vec::BaseVector * > childrenVec = rowVec->GetRawChildren();
-        for (uint32_t i = 0; i < children.size(); ++i) {
-            children[i]->add(childrenVec[i], curNullsBuffer, offset, numValues);
+        if (!childrenVec.empty()) {
+            if (childrenVec.size() < children.size()) {
+                throw orc::InvalidArgument("Struct writer child count mismatch for raw children.");
+            }
+            for (uint32_t i = 0; i < children.size(); ++i) {
+                children[i]->add(childrenVec[i], curNullsBuffer, offset, numValues);
+            }
+        } else {
+            if (rowVec->ChildSize() < static_cast<int32_t>(children.size())) {
+                throw orc::InvalidArgument("Struct writer child count mismatch for children.");
+            }
+            for (uint32_t i = 0; i < children.size(); ++i) {
+                children[i]->add(rowVec->ChildAt(i).get(), curNullsBuffer, offset, numValues);
+            }
         }
 
         bool hasNull = curNullsBuffer->HasNull();
