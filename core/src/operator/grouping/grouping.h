@@ -13,7 +13,10 @@ namespace omniruntime::op {
 class GroupingOperatorFactory final : public OperatorFactory {
 public:
     GroupingOperatorFactory(const std::shared_ptr<const GroupingNode> &groupingNode,
-        const config::QueryConfig &queryConfig): groupingNode_(groupingNode), queryConfig_(queryConfig) {}
+        const config::QueryConfig &queryConfig): groupingNode_(groupingNode)
+    {
+        this->queryConfig_ = queryConfig;
+    }
 
     Operator *CreateOperator() override;
 
@@ -22,7 +25,6 @@ public:
 
 private:
     std::shared_ptr<const GroupingNode> groupingNode_;
-    config::QueryConfig queryConfig_;
 };
 
 class GroupingOperator final : public Operator {

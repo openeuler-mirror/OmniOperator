@@ -15,6 +15,10 @@ public:
         const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortKeyCount, OverflowConfig *overflowConfig);
 
+    TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t limit, int32_t offset,
+        const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
+        int32_t sortKeyCount, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig);
+
     ~TopNWithExprOperatorFactory() override;
 
     static TopNWithExprOperatorFactory *CreateTopNWithExprOperatorFactory(
@@ -32,7 +36,7 @@ private:
 class TopNWithExprOperator : public Operator {
 public:
     TopNWithExprOperator(const type::DataTypes &sourceTypes, std::vector<std::unique_ptr<Projection>> &projections,
-        TopNOperator *topNOperator);
+        TopNOperator *topNOperator, const config::QueryConfig &queryConfig);
 
     ~TopNWithExprOperator() override;
 

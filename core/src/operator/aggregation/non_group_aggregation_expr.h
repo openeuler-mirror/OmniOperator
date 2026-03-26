@@ -23,6 +23,13 @@ public:
         std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig,
         bool isStatisticalAggregate = false);
 
+    AggregationWithExprOperatorFactory(std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
+        std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys, DataTypes &sourceDataTypes,
+        std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
+        std::vector<omniruntime::expressions::Expr *> &aggFilterExprs, std::vector<uint32_t> &maskColumns,
+        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig,
+        const config::QueryConfig &queryConfig, bool isStatisticalAggregate = false);
+
     ~AggregationWithExprOperatorFactory() override;
 
     static AggregationWithExprOperatorFactory *CreateAggregationWithExprOperatorFactory(
@@ -45,7 +52,7 @@ class AggregationWithExprOperator : public Operator {
 public:
     AggregationWithExprOperator(const DataTypes &originSourceTypes, const type::DataTypes &sourceTypes,
         std::vector<std::unique_ptr<Projection>> &projections, std::vector<SimpleFilter *> &aggSimpleFilters,
-        AggregationOperator *AggOperator);
+        AggregationOperator *AggOperator, const config::QueryConfig &queryConfig);
 
     ~AggregationWithExprOperator() override;
 

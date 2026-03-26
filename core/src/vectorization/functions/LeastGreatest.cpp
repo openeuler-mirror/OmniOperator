@@ -46,58 +46,56 @@ static bool shouldReplace(const T &newVal, const T &currentVal) {
 
 template<CompareMode Mode>
 void LeastGreatestFunction<Mode>::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, 
-                            BaseVector *&result, ExecutionContext *context) const {
-    const char* funcName = (Mode == CompareMode::GREATEST) ? "Greatest" : "Least";
-    // Collect all arguments from stack (they are in reverse order)
+    BaseVector *&result, ExecutionContext *context) const {
     std::vector<BaseVector *> argVectors;
     argVectors.push_back(args.top());
     args.pop();
     argVectors.push_back(args.top());
     args.pop();
     std::reverse(argVectors.begin(), argVectors.end());
-    DispatchCompare(argVectors, outputType, result);
+    DispatchCompare(argVectors, outputType, result, context);
 }
 
 template<CompareMode Mode>
 void LeastGreatestFunction<Mode>::DispatchCompare(const std::vector<BaseVector *> &argVectors, 
-                                        const DataTypePtr &outputType, BaseVector *&result) const {
+    const DataTypePtr &outputType, BaseVector *&result, ExecutionContext *context) const {
     DataTypeId outputTypeId = outputType->GetId();
     
     if (TypeUtil::IsStringType(outputTypeId)) {
-        CompareString(argVectors, result, outputType);
+        CompareString(argVectors, result, outputType, context);
     } else if (outputTypeId == OMNI_BOOLEAN) {
-        CompareBoolean(argVectors, result, outputType);
+        CompareBoolean(argVectors, result, outputType, context);
     } else {
         // Numeric types
         switch (outputTypeId) {
             case OMNI_BYTE:
-                CompareNumeric<int8_t>(argVectors, result, outputType);
+                CompareNumeric<int8_t>(argVectors, result, outputType, context);
                 break;
             case OMNI_SHORT:
-                CompareNumeric<int16_t>(argVectors, result, outputType);
+                CompareNumeric<int16_t>(argVectors, result, outputType, context);
                 break;
             case OMNI_INT:
             case OMNI_DATE32:
-                CompareNumeric<int32_t>(argVectors, result, outputType);
+                CompareNumeric<int32_t>(argVectors, result, outputType, context);
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
-                CompareNumeric<int64_t>(argVectors, result, outputType);
+                CompareNumeric<int64_t>(argVectors, result, outputType, context);
                 break;
             case OMNI_FLOAT:
-                CompareNumeric<float>(argVectors, result, outputType);
+                CompareNumeric<float>(argVectors, result, outputType, context);
                 break;
             case OMNI_DOUBLE:
-                CompareNumeric<double>(argVectors, result, outputType);
+                CompareNumeric<double>(argVectors, result, outputType, context);
                 break;
             case OMNI_DECIMAL128:
-                CompareNumeric<int128_t>(argVectors, result, outputType);
+                CompareNumeric<int128_t>(argVectors, result, outputType, context);
                 break;
             case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                CompareString(argVectors, result, outputType);
+                CompareString(argVectors, result, outputType, context);
                 break;
             default:
                 OMNI_THROW("LeastGreatest function Error", 
@@ -109,8 +107,8 @@ void LeastGreatestFunction<Mode>::DispatchCompare(const std::vector<BaseVector *
 template<CompareMode Mode>
 template<typename T>
 void LeastGreatestFunction<Mode>::CompareNumeric(const std::vector<BaseVector *> &argVectors, 
-                                    BaseVector *&result, const DataTypePtr &outputType) const {
-    auto size = argVectors[0]->GetSize();
+    BaseVector *&result, const DataTypePtr &outputType, ExecutionContext *context) const {
+    auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
     
     for (int32_t row = 0; row < size; ++row) {
@@ -140,8 +138,8 @@ void LeastGreatestFunction<Mode>::CompareNumeric(const std::vector<BaseVector *>
 
 template<CompareMode Mode>
 void LeastGreatestFunction<Mode>::CompareString(const std::vector<BaseVector *> &argVectors, 
-                                    BaseVector *&result, const DataTypePtr &outputType) const {
-    auto size = argVectors[0]->GetSize();
+    BaseVector *&result, const DataTypePtr &outputType, ExecutionContext *context) const {
+    auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
     
     for (int32_t row = 0; row < size; ++row) {
@@ -174,8 +172,8 @@ void LeastGreatestFunction<Mode>::CompareString(const std::vector<BaseVector *> 
 
 template<CompareMode Mode>
 void LeastGreatestFunction<Mode>::CompareBoolean(const std::vector<BaseVector *> &argVectors, 
-                                    BaseVector *&result, const DataTypePtr &outputType) const {
-    auto size = argVectors[0]->GetSize();
+    BaseVector *&result, const DataTypePtr &outputType, ExecutionContext *context) const {
+    auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
     
     for (int32_t row = 0; row < size; ++row) {
@@ -310,13 +308,13 @@ std::vector<std::shared_ptr<codegen::FunctionSignature>> LeastSignatures() {
 
 // Explicit template instantiations for GREATEST
 template class LeastGreatestFunction<CompareMode::GREATEST>;
-template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<int8_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<int16_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<int32_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<int64_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<float>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<double>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<int128_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
+template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<int8_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<int16_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<int32_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<int64_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<float>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<double>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::GREATEST>::CompareNumeric<int128_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
 
 template int8_t LeastGreatestFunction<CompareMode::GREATEST>::GetValueFromVector<int8_t>(BaseVector *, int32_t) const;
 template int16_t LeastGreatestFunction<CompareMode::GREATEST>::GetValueFromVector<int16_t>(BaseVector *, int32_t) const;
@@ -338,13 +336,13 @@ template void LeastGreatestFunction<CompareMode::GREATEST>::SetValueToVector<boo
 
 // Explicit template instantiations for LEAST
 template class LeastGreatestFunction<CompareMode::LEAST>;
-template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<int8_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<int16_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<int32_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<int64_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<float>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<double>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
-template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<int128_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &) const;
+template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<int8_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<int16_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<int32_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<int64_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<float>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<double>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
+template void LeastGreatestFunction<CompareMode::LEAST>::CompareNumeric<int128_t>(const std::vector<BaseVector *> &, BaseVector *&, const DataTypePtr &, ExecutionContext *) const;
 
 template int8_t LeastGreatestFunction<CompareMode::LEAST>::GetValueFromVector<int8_t>(BaseVector *, int32_t) const;
 template int16_t LeastGreatestFunction<CompareMode::LEAST>::GetValueFromVector<int16_t>(BaseVector *, int32_t) const;

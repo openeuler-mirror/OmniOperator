@@ -83,6 +83,23 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
         windowFrameStartChannelsField, windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig);
 }
 
+WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
+    int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols,
+    int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols,
+    int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
+    int32_t expectedPositions, const type::DataTypes &outputDataTypes,
+    const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
+    int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig,
+    const config::QueryConfig &queryConfig) : WindowWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount,
+    windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount,
+    sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, outputDataTypes,
+    argumentKeys, argumentChannelsCount, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
+    windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig)
+{
+    this->queryConfig_ = queryConfig;
+}
+
 WindowWithExprOperatorFactory::~WindowWithExprOperatorFactory()
 {
     delete this->operatorFactory;
@@ -157,21 +174,23 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
          preGroupedCols.data(), preGroupedCols.size(), sortCols.data(), sortAscending.data(), sortNullFirsts.data(),
          sortCols.size(), preSortedChannelPrefix, expectedPositionsCount, *windowFunctionReturnTypes.get(),
          argumentKeys, argumentKeys.size(), windowFrameTypes.data(), windowFrameStartTypes.data(),
-         windowFrameStartChannels.data(), windowFrameEndTypes.data(), windowFrameEndChannels.data(), config);
+         windowFrameStartChannels.data(), windowFrameEndTypes.data(), windowFrameEndChannels.data(), config, queryConfig);
     return operatorFactory;
 }
 
 Operator *WindowWithExprOperatorFactory::CreateOperator()
 {
     auto windowOperator = static_cast<WindowOperator *>(operatorFactory->CreateOperator());
-    auto windowWithExprOperator = new WindowWithExprOperator(*sourceTypes, projections, windowOperator);
+    auto windowWithExprOperator = new WindowWithExprOperator(*sourceTypes, projections, windowOperator, queryConfig_);
     return windowWithExprOperator;
 }
 
 WindowWithExprOperator::WindowWithExprOperator(const type::DataTypes &sourceTypes,
-    std::vector<std::unique_ptr<Projection>> &projections, WindowOperator *windowOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, WindowOperator *windowOperator, const config::QueryConfig &queryConfig)
     : sourceTypes(std::move(sourceTypes)), projections(projections), windowOperator(windowOperator)
-{}
+{
+    executionContext->SetConfig(queryConfig);
+}
 
 WindowWithExprOperator::~WindowWithExprOperator()
 {

@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <utility>
 #include "vectorization/functions/IsNull.h"
-#include "vectorization/functions/CastExpr.h"
+#include "vectorization/functions/Cast.h"
 #include "vectorization/functions/NameStruct.h"
 #include "vectorization/functions/MapFunction.h"
 #include "type/data_type.h"
@@ -1032,8 +1032,7 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
         vectorFunction = std::make_shared<vectorization::MapFunction>();
     }
     if (funcName == "CAST") {
-        auto hook = std::make_shared<CastHooks>(config::QueryConfig());
-        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
+        vectorFunction = std::make_shared<CastFunction>(args[0]->dataType, dataType);
     }
 }
 
@@ -1058,8 +1057,7 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
         vectorFunction = std::make_shared<vectorization::MapFunction>();
     }
     if (funcName == "CAST") {
-        auto hook = std::make_shared<CastHooks>(config::QueryConfig());
-        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
+        vectorFunction = std::make_shared<CastFunction>(args[0]->dataType, dataType);
     }
 }
 
@@ -1082,8 +1080,7 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
         vectorFunction = std::make_shared<vectorization::MapFunction>();
     }
     if (funcName == "CAST") {
-        auto hook = std::make_shared<CastHooks>(config::QueryConfig());
-        vectorFunction = std::make_shared<CastExpr>(args[0]->dataType, dataType, true, hook);
+        vectorFunction = std::make_shared<CastFunction>(args[0]->dataType, dataType);
     }
 }
 

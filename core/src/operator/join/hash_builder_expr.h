@@ -36,6 +36,10 @@ public:
         const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t hashTableCount,
         OverflowConfig *overflowConfig);
 
+    HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType joinType, BuildSide buildSide,
+        const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+        int32_t hashTableCount, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig);
+
     ~HashBuilderWithExprOperatorFactory() override;
 
     omniruntime::op::Operator *CreateOperator() override;
@@ -55,7 +59,7 @@ private:
 class HashBuilderWithExprOperator : public Operator {
 public:
     HashBuilderWithExprOperator(const DataTypes &buildTypes, std::vector<std::unique_ptr<Projection>> &projections,
-        HashBuilderOperator *hashBuilderOperator);
+        HashBuilderOperator *hashBuilderOperator, const config::QueryConfig &queryConfig);
 
     ~HashBuilderWithExprOperator() override;
 

@@ -81,6 +81,14 @@ enum DataTypeId {
 
 template <DataTypeId dataTypeId> struct NativeType {};
 
+template <> struct NativeType<DataTypeId::OMNI_INVALID> {
+    static constexpr const char* name = "INVALID";
+};
+
+template <> struct NativeType<DataTypeId::OMNI_NONE> {
+    static constexpr const char* name = "NONE";
+};
+
 template <> struct NativeType<DataTypeId::OMNI_INT> {
     using type = int32_t;
     static constexpr const char* name = "INTEGER";
@@ -390,7 +398,7 @@ public:
 
     std::string toString() const override
     {
-        return "FixedWidthDataType";
+        return NativeType<typeId>::name;
     }
 };
 
@@ -450,7 +458,7 @@ public:
 
     std::string toString() const override
     {
-        return "Array";
+        return "ARRAY";
     }
 
 protected:
@@ -510,7 +518,7 @@ public:
 
     std::string toString() const override
     {
-        return "VarBinaryDataType";
+        return "BINARY";
     }
 
 protected:
@@ -607,7 +615,7 @@ public:
 
     std::string toString() const override
     {
-        return "RowType";
+        return "STRUCT";
     }
 
 protected:
@@ -670,7 +678,7 @@ public:
 
     std::string toString() const override
     {
-        return "DecimalDataType";
+        return "DECIMAL";
     }
 
 protected:
@@ -723,7 +731,7 @@ public:
 
     std::string toString() const override
     {
-        return "MapType";
+        return "MAP";
     }
 
 protected:
@@ -801,7 +809,7 @@ public:
 
     std::string toString() const override
     {
-        return "DateDataType";
+        return "DATE";
     }
 
 protected:
@@ -1061,7 +1069,7 @@ public:
 
     std::string toString() const override
     {
-        return "VarcharDataType";
+        return "STRING";
     }
 
 protected:

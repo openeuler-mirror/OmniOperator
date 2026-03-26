@@ -92,6 +92,19 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
     aggOperatorFactory->Init();
 }
 
+AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
+    std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
+    std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys, DataTypes &sourceDataTypes,
+    std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
+    std::vector<omniruntime::expressions::Expr *> &aggFilters, std::vector<uint32_t> &maskColumns,
+    std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig,
+    const config::QueryConfig &queryConfig, bool isStatisticalAggregate)
+    : AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggsKeys, sourceDataTypes, aggOutputTypes, aggFuncTypes,
+    aggFilters, maskColumns, inputRaws, outputPartial, overflowConfig, isStatisticalAggregate)
+{
+    this->queryConfig_ = queryConfig;
+}
+
 AggregationWithExprOperatorFactory::~AggregationWithExprOperatorFactory()
 {
     delete aggOperatorFactory;
@@ -105,12 +118,13 @@ Operator *AggregationWithExprOperatorFactory::CreateOperator()
 {
     auto aggOperator = static_cast<AggregationOperator *>(aggOperatorFactory->CreateOperator());
     return new AggregationWithExprOperator(*originSourceTypes, *sourceTypes, projections, aggSimpleFilters,
-        aggOperator);
+        aggOperator, queryConfig_);
 }
 
 AggregationWithExprOperator::AggregationWithExprOperator(const DataTypes &originSourceTypes,
     const DataTypes &sourceTypes, std::vector<std::unique_ptr<Projection>> &projections,
-    std::vector<SimpleFilter *> &aggSimpleFilters, AggregationOperator *aggOperator)
+    std::vector<SimpleFilter *> &aggSimpleFilters, AggregationOperator *aggOperator,
+    const config::QueryConfig &queryConfig)
     : originTypes(originSourceTypes),
       sourceTypes(sourceTypes),
       projections(projections),
@@ -124,6 +138,7 @@ AggregationWithExprOperator::AggregationWithExprOperator(const DataTypes &origin
             this->aggSimpleFilters[i] = new SimpleFilter(*aggSimpleFilters[i]);
         }
     }
+    executionContext->SetConfig(queryConfig);
 }
 
 AggregationWithExprOperator::~AggregationWithExprOperator()
@@ -204,7 +219,7 @@ AggregationWithExprOperatorFactory *AggregationWithExprOperatorFactory::CreateAg
                                                              : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     auto pOperatorFactory = new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggsKeys, *sourceDataTypes, aggsOutputTypes,
         aggFuncTypes, aggFilters, maskColsVector, inputRaws, outputPartial, overflowConfig,
-        isStatisticalAggregate);
+        queryConfig, isStatisticalAggregate);
 
     delete overflowConfig;
     overflowConfig = nullptr;

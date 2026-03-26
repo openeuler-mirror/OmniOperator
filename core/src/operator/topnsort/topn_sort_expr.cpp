@@ -25,6 +25,16 @@ TopNSortWithExprOperatorFactory::TopNSortWithExprOperatorFactory(const type::Dat
         this->partitionCols, this->sortCols, sortAscendings, sortNullFirsts);
 }
 
+TopNSortWithExprOperatorFactory::TopNSortWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
+        bool isStrictTopN, const std::vector<omniruntime::expressions::Expr *> &partitionKeys,
+        const std::vector<omniruntime::expressions::Expr *> &sortKeys, std::vector<int32_t> &sortAscendings,
+        std::vector<int32_t> &sortNullFirsts, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig)
+    : TopNSortWithExprOperatorFactory(sourceDataTypes, n, isStrictTopN, partitionKeys, sortKeys, sortAscendings,
+        sortNullFirsts, overflowConfig)
+{
+    this->queryConfig_ = queryConfig;
+}
+
 TopNSortWithExprOperatorFactory* TopNSortWithExprOperatorFactory::CreateTopNSortWithExprOperatorFactory(
     std::shared_ptr<const TopNSortNode> planNode, const config::QueryConfig &queryConfig)
 {
@@ -39,7 +49,7 @@ TopNSortWithExprOperatorFactory* TopNSortWithExprOperatorFactory::CreateTopNSort
                                                                          : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
 
     auto pOperatorFactory = new TopNSortWithExprOperatorFactory(*sourceTypes.get(), n, isStrictTopN, partitionKeys, sortKeys,
-        sortAscendings, sortNullFirsts, overflowConfig);
+        sortAscendings, sortNullFirsts, overflowConfig, queryConfig);
 
     delete overflowConfig;
     overflowConfig = nullptr;
@@ -51,15 +61,19 @@ TopNSortWithExprOperatorFactory::~TopNSortWithExprOperatorFactory() = default;
 Operator *TopNSortWithExprOperatorFactory::CreateOperator()
 {
     auto topNSortOperator = static_cast<TopNSortOperator *>(topNSortOperatorFactory->CreateOperator());
-    auto pOperator = new TopNSortWithExprOperator(*sourceTypes, partitionCols, sortCols, projections, topNSortOperator);
+    auto pOperator = new TopNSortWithExprOperator(*sourceTypes, partitionCols, sortCols, projections,
+        topNSortOperator, queryConfig_);
     return pOperator;
 }
 
 TopNSortWithExprOperator::TopNSortWithExprOperator(const type::DataTypes &sourceTypes,
     std::vector<int32_t> &partitionCols, std::vector<int32_t> &sortCols,
-    std::vector<std::unique_ptr<Projection>> &projections, TopNSortOperator *topNSortOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, TopNSortOperator *topNSortOperator,
+    const config::QueryConfig &queryConfig)
     : sourceTypes(sourceTypes), projections(projections), topNSortOperator(topNSortOperator)
-{}
+{
+    executionContext->SetConfig(queryConfig);
+}
 
 TopNSortWithExprOperator::~TopNSortWithExprOperator()
 {

@@ -22,8 +22,14 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterString<EndsWithFunction>({prefix + "EndsWith"});
     RegisterString<ContainsFunction>({prefix + "Contains"});
     RegisterFunction<TrimFunction, std::string, std::string_view>(prefix + "Trim", {OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<LTrimFunction, std::string, std::string_view>(prefix + "LTrim", {OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<RTrimFunction, std::string, std::string_view>(prefix + "RTrim", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<TrimWithCharsFunction, std::string, std::string_view, std::string_view>(
         prefix + "Trim", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<LTrimWithCharsFunction, std::string, std::string_view, std::string_view>(
+        prefix + "LTrim", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<RTrimWithCharsFunction, std::string, std::string_view, std::string_view>(
+        prefix + "RTrim", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_CHAR}, OMNI_VARCHAR);
     RegisterFunction<SoundexFunction, std::string, std::string_view>(prefix + "soundex", {OMNI_VARCHAR}, OMNI_VARCHAR);

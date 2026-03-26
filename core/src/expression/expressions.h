@@ -109,7 +109,7 @@ public:
 
     virtual uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) { return nullptr; }
 
-    virtual bool supportVectorized() { return false; }
+    virtual bool supportVectorized() const { return false; }
 
     virtual std::string toString() const
     {
@@ -164,7 +164,7 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
-    bool supportVectorized() override
+    bool supportVectorized() const override
     {
         return true;
     }
@@ -208,9 +208,9 @@ public:
 
     omniruntime::vec::BaseVector *GetFieldVector(omniruntime::vec::VectorBatch *vecBatch);
 
-    bool supportVectorized() override
+    bool supportVectorized() const override
     {
-        return this->dataType->GetId() == OMNI_ROW || this->dataType->GetId() == OMNI_VARCHAR || this->dataType->GetId() == OMNI_MAP ;
+        return true;
     }
 
     bool FieldIsArray();
@@ -250,7 +250,7 @@ public:
     uint8_t* computeNOT(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
 
-    bool supportVectorized() override
+    bool supportVectorized() const override
     {
         return exp->supportVectorized();
     }
@@ -291,7 +291,7 @@ public:
     uint8_t* computeNEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
 
-    bool supportVectorized() override
+    bool supportVectorized() const override
     {
         return left->supportVectorized() && right->supportVectorized();
     }
@@ -313,7 +313,7 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 
-    bool supportVectorized() override { return arguments[0]->supportVectorized(); }
+    bool supportVectorized() const override { return arguments[0]->supportVectorized(); }
 
     std::string toString() const override
     {
@@ -393,7 +393,7 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 
-    bool supportVectorized() override
+    bool supportVectorized() const override
     {
         return condition->supportVectorized() && trueExpr->supportVectorized() && falseExpr->supportVectorized();
     }
@@ -425,7 +425,7 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 
-    bool supportVectorized() override
+    bool supportVectorized() const override
     {
         return value1->supportVectorized() && value2->supportVectorized();
     }
@@ -453,7 +453,7 @@ public:
 
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
 
-    bool supportVectorized() override
+    bool supportVectorized() const override
     {
         return value->supportVectorized();
     }
@@ -496,9 +496,9 @@ public:
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatc, uint8_t *bitMark) override;
     std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
 
-    bool supportVectorized() override
+    bool supportVectorized() const override
     {
-        return funcName == "RLike";
+        return vectorFunction != nullptr;
     }
 
     std::string toString() const override

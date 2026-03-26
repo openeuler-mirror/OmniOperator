@@ -122,6 +122,7 @@ void JoinHashTableVariants<KeyType, RowRefListType>::ComputeMultiColKey(
                   std::is_same_v<KeyType, int64_t> || std::is_same_v<KeyType, int128_t>) {
         for (int i = 0; i < hashColCount; ++i) {
             switch (hashColumns[i]->GetTypeId()) {
+                case OMNI_BOOLEAN:
                 case OMNI_BYTE:
                     key = static_cast<KeyType>(key) << BITS_OF_BYTE | static_cast<KeyType>(
                         GetVectorValue<int8_t>(hashColumns[i], index));
@@ -131,11 +132,16 @@ void JoinHashTableVariants<KeyType, RowRefListType>::ComputeMultiColKey(
                         GetVectorValue<int16_t>(hashColumns[i], index));
                     break;
                 case OMNI_INT:
+                case OMNI_DATE32:
+                case OMNI_FLOAT:
                     key = static_cast<KeyType>(key) << BITS_OF_INT | static_cast<KeyType>(
                         GetVectorValue<int32_t>(hashColumns[i], index));
                     break;
                 case OMNI_LONG:
+                case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
+                case OMNI_DOUBLE:
+                case OMNI_DATE64:
                     key = static_cast<KeyType>(key) << BITS_OF_LONG | static_cast<KeyType>(
                         GetVectorValue<int64_t>(hashColumns[i], index));
                     break;

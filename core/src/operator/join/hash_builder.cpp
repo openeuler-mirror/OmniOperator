@@ -49,10 +49,15 @@ HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashCols
         auto type = buildTypes.GetIds()[buildHashCols[0]];
         switch (type) {
             case OMNI_BOOLEAN:
+            case OMNI_BYTE:
                 return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int8_t, RowRefListType>>,
+                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
+            case OMNI_SHORT:
+                return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int16_t, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
             case OMNI_INT:
             case OMNI_DATE32:
+            case OMNI_FLOAT:
                 return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int32_t, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
             case OMNI_LONG:
@@ -61,12 +66,6 @@ HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashCols
             case OMNI_DOUBLE:
             case OMNI_DATE64:
                 return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int64_t, RowRefListType>>,
-                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
-            case OMNI_SHORT:
-                return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int16_t, RowRefListType>>,
-                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
-            case OMNI_BYTE:
-                return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int8_t, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
             case OMNI_DECIMAL128:
                 return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<Decimal128, RowRefListType>>,
@@ -97,6 +96,7 @@ int32_t GetTypeLength(int buildHashColsCount, DataTypes& buildTypes, std::vector
     int32_t lengthCount = 0;
     for (int i = 0; i < buildHashColsCount; i++) {
         switch (buildTypes.GetIds()[buildHashCols[i]]) {
+            case OMNI_BOOLEAN:
             case OMNI_BYTE:
                 lengthCount += BITS_OF_BYTE;
                 break;
@@ -104,13 +104,16 @@ int32_t GetTypeLength(int buildHashColsCount, DataTypes& buildTypes, std::vector
                 lengthCount += BITS_OF_SHORT;
                 break;
             case OMNI_INT:
+            case OMNI_DATE32:
+            case OMNI_FLOAT:
                 lengthCount += BITS_OF_INT;
                 break;
             case OMNI_LONG:
-                lengthCount += BITS_OF_LONG;
-                break;
+            case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
-                lengthCount += BITS_OF_DECIMAL;
+            case OMNI_DOUBLE:
+            case OMNI_DATE64:
+                lengthCount += BITS_OF_LONG;
                 break;
             default:
                 return NOT_EXPECTED_TYPE;

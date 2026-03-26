@@ -147,7 +147,7 @@ LookupJoinWithExprOperatorFactory *LookupJoinWithExprOperatorFactory::CreateLook
 
     auto pLookupJoinWithExprOperatorFactory = new LookupJoinWithExprOperatorFactory(*probeTypes, probeOutputCols.data(), probeOutputCols.size(),
         probeHashCols, probeHashColsCount, buildOutputCols.data(), buildOutputCols.size(), *buildTypes,
-    reinterpret_cast<int64_t>(hashBuilderOperatorFactory), filter, isShuffle, overflowConfig, outputList.data());
+    reinterpret_cast<int64_t>(hashBuilderOperatorFactory), filter, isShuffle, overflowConfig, queryConfig, outputList.data());
 
     delete overflowConfig;
     overflowConfig = nullptr;
@@ -174,6 +174,19 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
         filterExpr, probeTypes.GetSize(), isShuffleExchangeBuildPlan, overflowConfig, outputList);
 }
 
+LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataTypes &probeTypes,
+    int32_t *probeOutputCols, int32_t probeOutputColsCount,
+    const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
+    int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
+    int64_t hashBuilderFactoryAddr, Expr *filterExpr, bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig,
+    const config::QueryConfig &queryConfig, int32_t *outputList)
+    : LookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount,
+    buildOutputCols, buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, filterExpr, isShuffleExchangeBuildPlan,
+    overflowConfig, outputList)
+{
+    this->queryConfig_ = queryConfig;
+}
+
 LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()
 {
     delete this->operatorFactory;
@@ -182,16 +195,18 @@ LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()
 Operator *LookupJoinWithExprOperatorFactory::CreateOperator()
 {
     auto lookupJoinOperator = static_cast<LookupJoinOperator *>(operatorFactory->CreateOperator());
-    return new LookupJoinWithExprOperator(*probeTypes, projections, lookupJoinOperator);
+    return new LookupJoinWithExprOperator(*probeTypes, projections, lookupJoinOperator, queryConfig_);
 }
 
 LookupJoinWithExprOperator::LookupJoinWithExprOperator(const type::DataTypes &probeTypes,
-    std::vector<std::unique_ptr<Projection>> &projections, LookupJoinOperator *lookupJoinOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, LookupJoinOperator *lookupJoinOperator,
+    const config::QueryConfig &queryConfig)
     : probeTypes(probeTypes),
       projections(projections),
       lookupJoinOperator(lookupJoinOperator)
 {
     SetOperatorName(opNameForLookUpJoin);
+    executionContext->SetConfig(queryConfig);
 }
 
 LookupJoinWithExprOperator::~LookupJoinWithExprOperator()
