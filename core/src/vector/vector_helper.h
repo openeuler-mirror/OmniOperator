@@ -502,6 +502,24 @@ public:
         }
     }
 
+    template <type::DataTypeId typeId> static void PrintConstVectorValue(BaseVector *vector, int32_t rowIndex)
+    {
+        using namespace omniruntime::type;
+        if (vector->IsNull(rowIndex)) {
+            std::cout << "NULL"
+                      << "\t";
+            return;
+        }
+        using T = typename NativeType<typeId>::type;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            std::cout << std::dec << static_cast<ConstVector<T> *>(vector)->GetConstValue() << "\t";
+        } else if constexpr (typeId == OMNI_DECIMAL128) {
+            std::cout << std::dec << static_cast<ConstVector<Decimal128> *>(vector)->GetConstValue() << "\t";
+        } else {
+            std::cout << std::dec << static_cast<ConstVector<T> *>(vector)->GetConstValue() << "\t";
+        }
+    }
+
     static void PrintMapVectorValue(MapVector *mapVec, int32_t rowIndex)
     {
         if (mapVec->IsNull(rowIndex)) {
@@ -551,6 +569,8 @@ public:
                 auto valueVec = reinterpret_cast<BaseVector *>(value);
                 DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, valueVec->GetTypeId(), valueVec, rowIndex);
             }
+        } else if (encoding == vec::OMNI_ENCODING_CONST) {
+            DYNAMIC_TYPE_DISPATCH(PrintConstVectorValue, vector->GetTypeId(), vector, rowIndex);
         } else if (encoding == vec::OMNI_ENCODING_ARRAY) {
             PrintArrayVectorValue(vector, rowIndex);
         } else if (encoding == vec::OMNI_ENCODING_STRUCT) {
@@ -872,46 +892,63 @@ public:
     static BaseVector *SliceConstVector(BaseVector *vector, int length)
     {
         DataTypeId dataTypeId = vector->GetTypeId();
+        BaseVector *result = nullptr;
         switch (dataTypeId) {
             case type::OMNI_INT:
             case type::OMNI_DATE32:
-                return new ConstVector<int32_t>(
+                result = new ConstVector<int32_t>(
                     reinterpret_cast<ConstVector<int32_t> *>(vector)->GetConstValue(), dataTypeId, length);
+                break;
             case type::OMNI_SHORT:
-                return new ConstVector<int16_t>(
+                result = new ConstVector<int16_t>(
                     reinterpret_cast<ConstVector<int16_t> *>(vector)->GetConstValue(), dataTypeId, length);
+                break;
             case type::OMNI_BYTE:
-                return new ConstVector<int8_t>(
+                result = new ConstVector<int8_t>(
                     reinterpret_cast<ConstVector<int8_t> *>(vector)->GetConstValue(), dataTypeId, length);
+                break;
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64:
-                return new ConstVector<int64_t>(
+                result = new ConstVector<int64_t>(
                     reinterpret_cast<ConstVector<int64_t> *>(vector)->GetConstValue(), dataTypeId, length);
+                break;
             case type::OMNI_DECIMAL128:
-                return new ConstVector<type::Decimal128>(
+                result = new ConstVector<type::Decimal128>(
                     reinterpret_cast<ConstVector<type::Decimal128> *>(vector)->GetConstValue(), dataTypeId, length);
+                break;
             case type::OMNI_DOUBLE:
-                return new ConstVector<double>(
+                result = new ConstVector<double>(
                     reinterpret_cast<ConstVector<double> *>(vector)->GetConstValue(), dataTypeId, length);
+                break;
             case type::OMNI_FLOAT:
-                return new ConstVector<float>(
+                result = new ConstVector<float>(
                     reinterpret_cast<ConstVector<float> *>(vector)->GetConstValue(), dataTypeId, length);
+                break;
             case type::OMNI_BOOLEAN:
-                return new ConstVector<bool>(
+                result = new ConstVector<bool>(
                     reinterpret_cast<ConstVector<bool> *>(vector)->GetConstValue(), dataTypeId, length);
+                break;
             case type::OMNI_VARBINARY:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR:
-                return new ConstVector<std::string_view>(
+                result = new ConstVector<std::string_view>(
                     reinterpret_cast<ConstVector<std::string_view> *>(vector)->GetConstValue(), dataTypeId, length);
+                break;
             default: {
                 std::string omniExceptionInfo =
                     "In function SliceConstVector, no such data type " + std::to_string(dataTypeId);
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
+        
+        // copy nullsBuffer
+        if (vector->HasNull()) {
+            result->SetNulls(0, true, length);
+        }
+        
+        return result;
     }
 
     static BaseVector *SliceVector(BaseVector *vector, int positionOffset, int length)
