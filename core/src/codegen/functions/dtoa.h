@@ -6,6 +6,7 @@
 #ifndef OMNI_RUNTIME_DTOA_H
 #define OMNI_RUNTIME_DTOA_H
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
 #include <sstream>
@@ -319,6 +320,14 @@ public:
     static constexpr long SIGN_BIT_MASK = 0x8000000000000000L;
 };
 
+class FloatConsts {
+public:
+    static constexpr int EXP_BIAS = 127;
+    static constexpr int32_t SIGNIF_BIT_MASK = 0x007FFFFFL;
+    static constexpr int32_t EXP_BIT_MASK = 0x7F800000L;
+    static constexpr int32_t SIGN_BIT_MASK = static_cast<int32_t>(0x80000000U);
+};
+
 class DoubleToString {
 public:
     DoubleToString() = default;
@@ -371,6 +380,10 @@ public:
     static std::string DoubleToStringConverter(double d);
 
     static std::size_t DoubleToStringConverter(double d, char *result);
+
+    static std::string FloatToStringConverter(float f);
+
+    static std::size_t FloatToStringConverter(float f, char *result);
 
     std::string ToString()
     {

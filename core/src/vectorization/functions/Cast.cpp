@@ -8,6 +8,7 @@
 #include <limits>
 #include <cstring>
 #include <type/Conversions.h>
+#include "codegen/functions/dtoa.h"
 
 namespace omniruntime::vectorization {
     using namespace omniruntime::type;
@@ -30,6 +31,9 @@ void CastFunction::DispatchCast(BaseVector* input, BaseVector*& result, Executio
     switch (toType_->GetId()) {
         case OMNI_BOOLEAN:
             CastToBoolean(input, result, context);
+            break;
+        case OMNI_BYTE:
+            CastToByte(input, result, context);
             break;
         case OMNI_SHORT:
             CastToShort(input, result, context);
@@ -127,28 +131,28 @@ void CastFunction::CastToBoolean(BaseVector* input, BaseVector*& result, Executi
             bool boolValue = false;
             switch (fromType_->GetId()) {
                 case OMNI_BYTE:
-                    boolValue = static_cast<Vector<int8_t> *>(input)->GetValue(row) != 0;
+                    boolValue = VectorHelper::GetValueFromVector<int8_t>(input, row) != 0;
                     break;
                 case OMNI_SHORT:
-                    boolValue = static_cast<Vector<int16_t> *>(input)->GetValue(row) != 0;
+                    boolValue = VectorHelper::GetValueFromVector<int16_t>(input, row) != 0;
                     break;
                 case OMNI_INT:
-                    boolValue = static_cast<Vector<int32_t> *>(input)->GetValue(row) != 0;
+                    boolValue = VectorHelper::GetValueFromVector<int32_t>(input, row) != 0;
                     break;
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:
-                    boolValue = static_cast<Vector<int64_t> *>(input)->GetValue(row) != 0;
+                    boolValue = VectorHelper::GetValueFromVector<int64_t>(input, row) != 0;
                     break;
                 case OMNI_FLOAT:
-                    boolValue = static_cast<Vector<float> *>(input)->GetValue(row) != 0;
+                    boolValue = VectorHelper::GetValueFromVector<float>(input, row) != 0;
                     break;
                 case OMNI_DOUBLE:
-                    boolValue = static_cast<Vector<double> *>(input)->GetValue(row) != 0;
+                    boolValue = VectorHelper::GetValueFromVector<double>(input, row) != 0;
                     break;
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 {
-                    auto boolResult = folly::tryTo<bool>(static_cast<Vector<LargeStringContainer<std::string_view>> *>(input)->GetValue(row));
+                    auto boolResult = folly::tryTo<bool>(VectorHelper::GetStringValueFromVector(input, row));
                     if (boolResult.hasValue()) {
                         boolValue = boolResult.value();
                     } else {
@@ -158,7 +162,7 @@ void CastFunction::CastToBoolean(BaseVector* input, BaseVector*& result, Executi
                     break;
                 }
                 case OMNI_DECIMAL128:
-                    boolValue = !static_cast<Vector<Decimal128> *>(input)->GetValue(row).IsZero();
+                    boolValue = !VectorHelper::GetValueFromVector<Decimal128>(input, row).IsZero();
                     break;
                 default:
                     OMNI_THROW("Cast function Error", "Unsupported cast to boolean from " + TypeUtil::TypeToString(fromType_->GetId()));
@@ -196,7 +200,7 @@ void CastFunction::CastToByte(BaseVector* input, BaseVector*& result, ExecutionC
             case OMNI_VARCHAR:
             {
                 auto str = static_cast<ConstVector<std::string_view> *>(input)->GetConstValue();
-                type::Status status = ConvertStringToInteger<int8_t, false>(byteValue, str.data(), str.size());
+                type::Status status = ConvertStringToInteger<int8_t, true>(byteValue, str.data(), str.size());
                 if (status == type::Status::IS_NOT_A_NUMBER || status == type::Status::CONVERT_OVERFLOW) {
                     result->SetNulls(0, true, size);
                     return;
@@ -237,28 +241,28 @@ void CastFunction::CastToByte(BaseVector* input, BaseVector*& result, ExecutionC
             int8_t byteValue;
             switch (fromType_->GetId()) {
                 case OMNI_BOOLEAN:
-                    byteValue = static_cast<int8_t>(static_cast<Vector<bool> *>(input)->GetValue(row) ? 1 : 0);
+                    byteValue = static_cast<int8_t>(VectorHelper::GetValueFromVector<bool>(input, row) ? 1 : 0);
                     break;
                 case OMNI_SHORT:
-                    byteValue = static_cast<int8_t>(static_cast<Vector<int16_t> *>(input)->GetValue(row));
+                    byteValue = static_cast<int8_t>(VectorHelper::GetValueFromVector<int16_t>(input, row));
                     break;
                 case OMNI_INT:
-                    byteValue = static_cast<int8_t>(static_cast<Vector<int32_t> *>(input)->GetValue(row));
+                    byteValue = static_cast<int8_t>(VectorHelper::GetValueFromVector<int32_t>(input, row));
                     break;
                 case OMNI_LONG:
-                    byteValue = static_cast<int8_t>(static_cast<Vector<int64_t> *>(input)->GetValue(row));
+                    byteValue = static_cast<int8_t>(VectorHelper::GetValueFromVector<int64_t>(input, row));
                     break;
                 case OMNI_FLOAT:
-                    byteValue = static_cast<int8_t>(static_cast<Vector<float> *>(input)->GetValue(row));
+                    byteValue = static_cast<int8_t>(VectorHelper::GetValueFromVector<float>(input, row));
                     break;
                 case OMNI_DOUBLE:
-                    byteValue = static_cast<int8_t>(static_cast<Vector<double> *>(input)->GetValue(row));
+                    byteValue = static_cast<int8_t>(VectorHelper::GetValueFromVector<double>(input, row));
                     break;
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 {
-                    auto str = static_cast<Vector<LargeStringContainer<std::string_view>> *>(input)->GetValue(row);
-                    type::Status status = ConvertStringToInteger<int8_t, false>(byteValue, str.data(), str.size());
+                    auto str = VectorHelper::GetStringValueFromVector(input, row);
+                    type::Status status = ConvertStringToInteger<int8_t, true>(byteValue, str.data(), str.size());
                     if (status == type::Status::IS_NOT_A_NUMBER || status == type::Status::CONVERT_OVERFLOW) {
                         result->SetNull(row);
                         continue;
@@ -267,14 +271,14 @@ void CastFunction::CastToByte(BaseVector* input, BaseVector*& result, ExecutionC
                 }
                 case OMNI_DECIMAL64:
                 {
-                    auto temp = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+                    auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     byteValue = static_cast<int8_t>(Decimal64(temp).ReScale(-scale, RoundingMode::ROUND_FLOOR).GetValue());
                     break;
                 }
                 case OMNI_DECIMAL128:
                 {
-                    Decimal128 temp = static_cast<Vector<Decimal128> *>(input)->GetValue(row);
+                    Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     try {
                         byteValue = static_cast<int8_t>(Decimal128Wrapper(temp).ReScale(-scale, RoundingMode::ROUND_FLOOR).ToInt128());
@@ -320,7 +324,7 @@ void CastFunction::CastToShort(BaseVector* input, BaseVector*& result, Execution
             case OMNI_VARCHAR:
             {
                 auto str = static_cast<ConstVector<std::string_view> *>(input)->GetConstValue();
-                type::Status status = ConvertStringToInteger<int16_t, false>(shortValue, str.data(), str.size());
+                type::Status status = ConvertStringToInteger<int16_t, true>(shortValue, str.data(), str.size());
                 if (status == type::Status::IS_NOT_A_NUMBER || status == type::Status::CONVERT_OVERFLOW) {
                     result->SetNulls(0, true, size);
                     return;
@@ -361,28 +365,28 @@ void CastFunction::CastToShort(BaseVector* input, BaseVector*& result, Execution
             int16_t shortValue;
             switch (fromType_->GetId()) {
                 case OMNI_BOOLEAN:
-                    shortValue = static_cast<int16_t>(static_cast<Vector<bool> *>(input)->GetValue(row) ? 1 : 0);
+                    shortValue = static_cast<int16_t>(VectorHelper::GetValueFromVector<bool>(input, row) ? 1 : 0);
                     break;
                 case OMNI_BYTE:
-                    shortValue = static_cast<int16_t>(static_cast<Vector<int8_t> *>(input)->GetValue(row));
+                    shortValue = static_cast<int16_t>(VectorHelper::GetValueFromVector<int8_t>(input, row));
                     break;
                 case OMNI_INT:
-                    shortValue = static_cast<int16_t>(static_cast<Vector<int32_t> *>(input)->GetValue(row));
+                    shortValue = static_cast<int16_t>(VectorHelper::GetValueFromVector<int32_t>(input, row));
                     break;
                 case OMNI_LONG:
-                    shortValue = static_cast<int16_t>(static_cast<Vector<int64_t> *>(input)->GetValue(row));
+                    shortValue = static_cast<int16_t>(VectorHelper::GetValueFromVector<int64_t>(input, row));
                     break;
                 case OMNI_FLOAT:
-                    shortValue = static_cast<int16_t>(static_cast<Vector<float> *>(input)->GetValue(row));
+                    shortValue = static_cast<int16_t>(VectorHelper::GetValueFromVector<float>(input, row));
                     break;
                 case OMNI_DOUBLE:
-                    shortValue = static_cast<int16_t>(static_cast<Vector<double> *>(input)->GetValue(row));
+                    shortValue = static_cast<int16_t>(VectorHelper::GetValueFromVector<double>(input, row));
                     break;
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 {
-                    auto str = static_cast<Vector<LargeStringContainer<std::string_view>> *>(input)->GetValue(row);
-                    type::Status status = ConvertStringToInteger<int16_t, false>(shortValue, str.data(), str.size());
+                    auto str = VectorHelper::GetStringValueFromVector(input, row);
+                    type::Status status = ConvertStringToInteger<int16_t, true>(shortValue, str.data(), str.size());
                     if (status == type::Status::IS_NOT_A_NUMBER || status == type::Status::CONVERT_OVERFLOW) {
                         result->SetNull(row);
                         continue;
@@ -391,14 +395,14 @@ void CastFunction::CastToShort(BaseVector* input, BaseVector*& result, Execution
                 }
                 case OMNI_DECIMAL64:
                 {
-                    auto temp = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+                    auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     shortValue = static_cast<int16_t>(Decimal64(temp).ReScale(-scale, RoundingMode::ROUND_FLOOR).GetValue());
                     break;
                 }
                 case OMNI_DECIMAL128:
                 {
-                    Decimal128 temp = static_cast<Vector<Decimal128> *>(input)->GetValue(row);
+                    Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     try {
                         shortValue = static_cast<int16_t>(Decimal128Wrapper(temp).ReScale(-scale, RoundingMode::ROUND_FLOOR).ToInt128());
@@ -444,7 +448,7 @@ void CastFunction::CastToInt(BaseVector* input, BaseVector*& result, ExecutionCo
             case OMNI_VARCHAR:
             {
                 auto str = static_cast<ConstVector<std::string_view> *>(input)->GetConstValue();
-                type::Status status = ConvertStringToInteger<int32_t, false>(intValue, str.data(), str.size());
+                type::Status status = ConvertStringToInteger<int32_t, true>(intValue, str.data(), str.size());
                 if (status == type::Status::IS_NOT_A_NUMBER || status == type::Status::CONVERT_OVERFLOW) {
                     result->SetNulls(0, true, size);
                     return;
@@ -485,28 +489,28 @@ void CastFunction::CastToInt(BaseVector* input, BaseVector*& result, ExecutionCo
             int32_t intValue;
             switch (fromType_->GetId()) {
                 case OMNI_BOOLEAN:
-                    intValue = static_cast<int32_t>(static_cast<Vector<bool> *>(input)->GetValue(row) ? 1 : 0);
+                    intValue = static_cast<int32_t>(VectorHelper::GetValueFromVector<bool>(input, row) ? 1 : 0);
                     break;
                 case OMNI_BYTE:
-                    intValue = static_cast<int32_t>(static_cast<Vector<int8_t> *>(input)->GetValue(row));
+                    intValue = static_cast<int32_t>(VectorHelper::GetValueFromVector<int8_t>(input, row));
                     break;
                 case OMNI_SHORT:
-                    intValue = static_cast<int32_t>(static_cast<Vector<int16_t> *>(input)->GetValue(row));
+                    intValue = static_cast<int32_t>(VectorHelper::GetValueFromVector<int16_t>(input, row));
                     break;
                 case OMNI_LONG:
-                    intValue = static_cast<int32_t>(static_cast<Vector<int64_t> *>(input)->GetValue(row));
+                    intValue = static_cast<int32_t>(VectorHelper::GetValueFromVector<int64_t>(input, row));
                     break;
                 case OMNI_FLOAT:
-                    intValue = static_cast<int32_t>(static_cast<Vector<float> *>(input)->GetValue(row));
+                    intValue = static_cast<int32_t>(VectorHelper::GetValueFromVector<float>(input, row));
                     break;
                 case OMNI_DOUBLE:
-                    intValue = static_cast<int32_t>(static_cast<Vector<double> *>(input)->GetValue(row));
+                    intValue = static_cast<int32_t>(VectorHelper::GetValueFromVector<double>(input, row));
                     break;
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 {
-                    auto str = static_cast<Vector<LargeStringContainer<std::string_view>> *>(input)->GetValue(row);
-                    type::Status status = ConvertStringToInteger<int32_t, false>(intValue, str.data(), str.size());
+                    auto str = VectorHelper::GetStringValueFromVector(input, row);
+                    type::Status status = ConvertStringToInteger<int32_t, true>(intValue, str.data(), str.size());
                     if (status == type::Status::IS_NOT_A_NUMBER || status == type::Status::CONVERT_OVERFLOW) {
                         result->SetNull(row);
                         continue;
@@ -515,14 +519,14 @@ void CastFunction::CastToInt(BaseVector* input, BaseVector*& result, ExecutionCo
                 }
                 case OMNI_DECIMAL64:
                 {
-                    auto temp = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+                    auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     intValue = static_cast<int32_t>(Decimal64(temp).ReScale(-scale, RoundingMode::ROUND_FLOOR).GetValue());
                     break;
                 }
                 case OMNI_DECIMAL128:
                 {
-                    Decimal128 temp = static_cast<Vector<Decimal128> *>(input)->GetValue(row);
+                    Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     try {
                         intValue = static_cast<int32_t>(Decimal128Wrapper(temp).ReScale(-scale, RoundingMode::ROUND_FLOOR).ToInt128());
@@ -568,7 +572,7 @@ void CastFunction::CastToLong(BaseVector* input, BaseVector*& result, ExecutionC
             case OMNI_VARCHAR:
             {
                 auto str = static_cast<ConstVector<std::string_view> *>(input)->GetConstValue();
-                type::Status status = ConvertStringToInteger<int64_t, false>(longValue, str.data(), str.size());
+                type::Status status = ConvertStringToInteger<int64_t, true>(longValue, str.data(), str.size());
                 if (status == type::Status::IS_NOT_A_NUMBER || status == type::Status::CONVERT_OVERFLOW) {
                     result->SetNulls(0, true, size);
                     return;
@@ -609,28 +613,28 @@ void CastFunction::CastToLong(BaseVector* input, BaseVector*& result, ExecutionC
             int64_t longValue;
             switch (fromType_->GetId()) {
                 case OMNI_BOOLEAN:
-                    longValue = static_cast<int64_t>(static_cast<Vector<bool> *>(input)->GetValue(row) ? 1 : 0);
+                    longValue = static_cast<int64_t>(VectorHelper::GetValueFromVector<bool>(input, row) ? 1 : 0);
                     break;
                 case OMNI_BYTE:
-                    longValue = static_cast<int64_t>(static_cast<Vector<int8_t> *>(input)->GetValue(row));
+                    longValue = static_cast<int64_t>(VectorHelper::GetValueFromVector<int8_t>(input, row));
                     break;
                 case OMNI_SHORT:
-                    longValue = static_cast<int64_t>(static_cast<Vector<int16_t> *>(input)->GetValue(row));
+                    longValue = static_cast<int64_t>(VectorHelper::GetValueFromVector<int16_t>(input, row));
                     break;
                 case OMNI_INT:
-                    longValue = static_cast<int64_t>(static_cast<Vector<int32_t> *>(input)->GetValue(row));
+                    longValue = static_cast<int64_t>(VectorHelper::GetValueFromVector<int32_t>(input, row));
                     break;
                 case OMNI_FLOAT:
-                    longValue = static_cast<int64_t>(static_cast<Vector<float> *>(input)->GetValue(row));
+                    longValue = static_cast<int64_t>(VectorHelper::GetValueFromVector<float>(input, row));
                     break;
                 case OMNI_DOUBLE:
-                    longValue = static_cast<int64_t>(static_cast<Vector<double> *>(input)->GetValue(row));
+                    longValue = static_cast<int64_t>(VectorHelper::GetValueFromVector<double>(input, row));
                     break;
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 {
-                    auto str = static_cast<Vector<LargeStringContainer<std::string_view>> *>(input)->GetValue(row);
-                    type::Status status = ConvertStringToInteger<int64_t, false>(longValue, str.data(), str.size());
+                    auto str = VectorHelper::GetStringValueFromVector(input, row);
+                    type::Status status = ConvertStringToInteger<int64_t, true>(longValue, str.data(), str.size());
                     if (status == type::Status::IS_NOT_A_NUMBER || status == type::Status::CONVERT_OVERFLOW) {
                         result->SetNull(row);
                         continue;
@@ -639,14 +643,14 @@ void CastFunction::CastToLong(BaseVector* input, BaseVector*& result, ExecutionC
                 }
                 case OMNI_DECIMAL64:
                 {
-                    auto temp = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+                    auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     longValue = static_cast<int64_t>(Decimal64(temp).ReScale(-scale, RoundingMode::ROUND_FLOOR).GetValue());
                     break;
                 }
                 case OMNI_DECIMAL128:
                 {
-                    Decimal128 temp = static_cast<Vector<Decimal128> *>(input)->GetValue(row);
+                    Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     try {
                         longValue = static_cast<int64_t>(Decimal128Wrapper(temp).ReScale(-scale, RoundingMode::ROUND_FLOOR).ToInt128());
@@ -734,28 +738,28 @@ void CastFunction::CastToFloat(BaseVector* input, BaseVector*& result, Execution
             float floatValue;
             switch (fromType_->GetId()) {
                 case OMNI_BOOLEAN:
-                    floatValue = static_cast<float>(static_cast<Vector<bool> *>(input)->GetValue(row) ? 1 : 0);
+                    floatValue = static_cast<float>(VectorHelper::GetValueFromVector<bool>(input, row) ? 1 : 0);
                     break;
                 case OMNI_BYTE:
-                    floatValue = static_cast<float>(static_cast<Vector<int8_t> *>(input)->GetValue(row));
+                    floatValue = static_cast<float>(VectorHelper::GetValueFromVector<int8_t>(input, row));
                     break;
                 case OMNI_SHORT:
-                    floatValue = static_cast<float>(static_cast<Vector<int16_t> *>(input)->GetValue(row));
+                    floatValue = static_cast<float>(VectorHelper::GetValueFromVector<int16_t>(input, row));
                     break;
                 case OMNI_INT:
-                    floatValue = static_cast<float>(static_cast<Vector<int32_t> *>(input)->GetValue(row));
+                    floatValue = static_cast<float>(VectorHelper::GetValueFromVector<int32_t>(input, row));
                     break;
                 case OMNI_LONG:
-                    floatValue = static_cast<float>(static_cast<Vector<int64_t> *>(input)->GetValue(row));
+                    floatValue = static_cast<float>(VectorHelper::GetValueFromVector<int64_t>(input, row));
                     break;
                 case OMNI_DOUBLE:
-                    floatValue = static_cast<float>(static_cast<Vector<double> *>(input)->GetValue(row));
+                    floatValue = static_cast<float>(VectorHelper::GetValueFromVector<double>(input, row));
                     break;
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 {
                     double temp;
-                    auto str = static_cast<Vector<LargeStringContainer<std::string_view>> *>(input)->GetValue(row);
+                    auto str = VectorHelper::GetStringValueFromVector(input, row);
                     type::Status status = ConvertStringToDouble(temp, str.data(), str.size());
                     if (status == type::Status::IS_NOT_A_NUMBER || status == type::Status::CONVERT_OVERFLOW) {
                         result->SetNull(row);
@@ -766,14 +770,14 @@ void CastFunction::CastToFloat(BaseVector* input, BaseVector*& result, Execution
                 }
                 case OMNI_DECIMAL64:
                 {
-                    auto temp = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+                    auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     floatValue = stof(Decimal64(temp).SetScale(scale).ToString());
                     break;
                 }
                 case OMNI_DECIMAL128:
                 {
-                    Decimal128 temp = static_cast<Vector<Decimal128> *>(input)->GetValue(row);
+                    Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     Decimal128Wrapper input(temp);
                     floatValue = static_cast<float>(static_cast<double>(input) / DOUBLE_10_POW[scale]);
@@ -834,7 +838,7 @@ void CastFunction::CastToDouble(BaseVector* input, BaseVector*& result, Executio
                 Decimal128 temp(static_cast<ConstVector<std::string_view> *>(input)->GetConstValue());
                 auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                 Decimal128Wrapper input(temp);
-                doubleValue = static_cast<double>(input) / DOUBLE_10_POW[scale];
+                ConvertStringToDouble(doubleValue, input.SetScale(scale).ToString());
                 break;
             }
             default:
@@ -852,27 +856,27 @@ void CastFunction::CastToDouble(BaseVector* input, BaseVector*& result, Executio
             double doubleValue;
             switch (fromType_->GetId()) {
                 case OMNI_BOOLEAN:
-                    doubleValue = static_cast<double>(static_cast<Vector<bool> *>(input)->GetValue(row) ? 1 : 0);
+                    doubleValue = static_cast<double>(VectorHelper::GetValueFromVector<bool>(input, row) ? 1 : 0);
                     break;
                 case OMNI_BYTE:
-                    doubleValue = static_cast<double>(static_cast<Vector<int8_t> *>(input)->GetValue(row));
+                    doubleValue = static_cast<double>(VectorHelper::GetValueFromVector<int8_t>(input, row));
                     break;
                 case OMNI_SHORT:
-                    doubleValue = static_cast<double>(static_cast<Vector<int16_t> *>(input)->GetValue(row));
+                    doubleValue = static_cast<double>(VectorHelper::GetValueFromVector<int16_t>(input, row));
                     break;
                 case OMNI_INT:
-                    doubleValue = static_cast<double>(static_cast<Vector<int32_t> *>(input)->GetValue(row));
+                    doubleValue = static_cast<double>(VectorHelper::GetValueFromVector<int32_t>(input, row));
                     break;
                 case OMNI_LONG:
-                    doubleValue = static_cast<double>(static_cast<Vector<int64_t> *>(input)->GetValue(row));
+                    doubleValue = static_cast<double>(VectorHelper::GetValueFromVector<int64_t>(input, row));
                     break;
                 case OMNI_FLOAT:
-                    doubleValue = static_cast<double>(static_cast<Vector<float> *>(input)->GetValue(row));
+                    doubleValue = static_cast<double>(VectorHelper::GetValueFromVector<float>(input, row));
                     break;
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 {
-                    auto str = static_cast<Vector<LargeStringContainer<std::string_view>> *>(input)->GetValue(row);
+                    auto str = VectorHelper::GetStringValueFromVector(input, row);
                     type::Status status = ConvertStringToDouble(doubleValue, str.data(), str.size());
                     if (status == type::Status::IS_NOT_A_NUMBER || status == type::Status::CONVERT_OVERFLOW) {
                         result->SetNull(row);
@@ -882,17 +886,17 @@ void CastFunction::CastToDouble(BaseVector* input, BaseVector*& result, Executio
                 }
                 case OMNI_DECIMAL64:
                 {
-                    auto temp = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+                    auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     doubleValue = stod(Decimal64(temp).SetScale(scale).ToString());
                     break;
                 }
                 case OMNI_DECIMAL128:
                 {
-                    Decimal128 temp = static_cast<Vector<Decimal128> *>(input)->GetValue(row);
+                    Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     Decimal128Wrapper input(temp);
-                    doubleValue = static_cast<double>(input) / DOUBLE_10_POW[scale];
+                    ConvertStringToDouble(doubleValue, input.SetScale(scale).ToString());
                     break;
                 }
                 default:
@@ -971,14 +975,20 @@ void CastFunction::CastNumericToString(BaseVector* input, BaseVector*& result, E
                 result->SetNull(row);
                 continue;
             }
-            T value = static_cast<Vector<T> *>(input)->GetValue(row);
-
-            const auto castResult = type::util::Converter<OMNI_VARCHAR>::tryCast(value);
-            if (castResult.hasError()) {
-                result->SetNull(row);
-                continue;
+            T value = VectorHelper::GetValueFromVector<T>(input, row);
+            std::string strValue;
+            if constexpr (std::is_same_v<T, double>) {
+                strValue = codegen::function::DoubleToString::DoubleToStringConverter(value);
+            } else if constexpr (std::is_same_v<T, float>) {
+                strValue = codegen::function::DoubleToString::FloatToStringConverter(value);
+            } else {
+                const auto castResult = type::util::Converter<OMNI_VARCHAR>::tryCast(value);
+                if (castResult.hasError()) {
+                    result->SetNull(row);
+                    continue;
+                }
+                strValue = castResult.value();
             }
-            std::string strValue = castResult.value();
             std::string_view strView(strValue);
             dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,strView);
         }
@@ -997,8 +1007,7 @@ void CastFunction::CastDateToString(BaseVector* input, BaseVector*& result, Exec
     auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(OMNI_VARCHAR, size);
     if (input->GetEncoding() == OMNI_ENCODING_CONST) {
-        auto *constVec = static_cast<ConstVector<int32_t> *>(input);
-        std::string strValue = type::util::ToIso8601(constVec->GetConstValue());
+        std::string strValue = type::util::ToIso8601(static_cast<ConstVector<int32_t> *>(input)->GetConstValue());
         std::string_view strView(strValue);
         for (int32_t row = 0; row < size; ++row) {
             dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,strView);
@@ -1009,7 +1018,7 @@ void CastFunction::CastDateToString(BaseVector* input, BaseVector*& result, Exec
                 result->SetNull(row);
                 continue;
             }
-            int32_t value = static_cast<Vector<int32_t> *>(input)->GetValue(row);
+            int32_t value = VectorHelper::GetValueFromVector<int32_t>(input, row);
             std::string strValue = type::util::ToIso8601(value);
             std::string_view strView(strValue);
             dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,strView);
@@ -1022,8 +1031,7 @@ void CastFunction::CastTimestampToString(BaseVector* input, BaseVector*& result,
     auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(OMNI_VARCHAR, size);
     if (input->GetEncoding() == OMNI_ENCODING_CONST) {
-        auto *constVec = static_cast<ConstVector<int64_t> *>(input);
-        Timestamp inputValue = Timestamp::fromMicros(constVec->GetConstValue());
+        Timestamp inputValue = Timestamp::fromMicros(static_cast<ConstVector<int64_t> *>(input)->GetConstValue());
         if (options.timeZone) {
             inputValue.toTimezone(*(options.timeZone));
         }
@@ -1038,7 +1046,7 @@ void CastFunction::CastTimestampToString(BaseVector* input, BaseVector*& result,
                 result->SetNull(row);
                 continue;
             }
-            int64_t value = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+            int64_t value = VectorHelper::GetValueFromVector<int64_t>(input, row);
             Timestamp inputValue = Timestamp::fromMicros(value);
             if (options.timeZone) {
                 inputValue.toTimezone(*(options.timeZone));
@@ -1055,8 +1063,7 @@ void CastFunction::CastDecimal64ToString(BaseVector* input, BaseVector*& result,
     auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(OMNI_VARCHAR, size);
     if (input->GetEncoding() == OMNI_ENCODING_CONST) {
-        auto *constVec = static_cast<ConstVector<int64_t> *>(input);
-        std::string str = Decimal64(constVec->GetConstValue()).SetScale(dataType->GetScale()).ToString();
+        std::string str = Decimal64(static_cast<ConstVector<int64_t> *>(input)->GetConstValue()).SetScale(dataType->GetScale()).ToString();
         auto strView(str);
         for (int32_t row = 0; row < size; ++row) {
             dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,strView);
@@ -1067,7 +1074,7 @@ void CastFunction::CastDecimal64ToString(BaseVector* input, BaseVector*& result,
                 result->SetNull(row);
                 continue;
             }
-            auto value = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+            auto value = VectorHelper::GetValueFromVector<int64_t>(input, row);
             std::string str = Decimal64(value).SetScale(dataType->GetScale()).ToString();
             auto strView(str);
             dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,strView);
@@ -1080,8 +1087,7 @@ void CastFunction::CastDecimal128ToString(BaseVector* input, BaseVector*& result
     auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(OMNI_VARCHAR, size);
     if (input->GetEncoding() == OMNI_ENCODING_CONST) {
-        auto *constVec = static_cast<ConstVector<std::string_view> *>(input);
-        Decimal128 value(constVec->GetConstValue());
+        Decimal128 value(static_cast<ConstVector<std::string_view> *>(input)->GetConstValue());
         std::string str = Decimal128Wrapper(value).SetScale(dataType->GetScale()).ToString();
         auto strView(str);
         for (int32_t row = 0; row < size; ++row) {
@@ -1093,7 +1099,7 @@ void CastFunction::CastDecimal128ToString(BaseVector* input, BaseVector*& result
                 result->SetNull(row);
                 continue;
             }
-            auto value = static_cast<Vector<Decimal128> *>(input)->GetValue(row);
+            auto value = VectorHelper::GetValueFromVector<Decimal128>(input, row);
             std::string str = Decimal128Wrapper(value).SetScale(dataType->GetScale()).ToString();
             auto strView(str);
             dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,strView);
@@ -1150,7 +1156,7 @@ void CastFunction::CastToDate(BaseVector* input, BaseVector*& result, ExecutionC
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 {
-                    const auto str = static_cast<Vector<LargeStringContainer<std::string_view>> *>(input)->GetValue(row);
+                    const auto str = VectorHelper::GetStringValueFromVector(input, row);
                     const auto resultValue = hooks_->castStringToDate(str);
                     if (resultValue.hasError()) {
                         result->SetNull(row);
@@ -1161,7 +1167,7 @@ void CastFunction::CastToDate(BaseVector* input, BaseVector*& result, ExecutionC
                 }
                 case OMNI_TIMESTAMP:
                 {
-                    auto temp = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+                    auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
                     auto config = context->queryConfig();
                     const tz::TimeZone *timeZone = nullptr;
                     if (config.AdjustTimestampToTimezone()) {
@@ -1223,7 +1229,7 @@ void CastFunction::CastToTimestamp(BaseVector* input, BaseVector*& result, Execu
                 case OMNI_DATE32:
                 {
                     static constexpr int64_t kMillisPerDay{86'400'000};
-                    auto temp = static_cast<Vector<int32_t> *>(input)->GetValue(row);
+                    auto temp = VectorHelper::GetValueFromVector<int32_t>(input, row);
                     auto config = context->queryConfig();
                     const tz::TimeZone *timeZone = nullptr;
                     if (config.AdjustTimestampToTimezone()) {
@@ -1380,7 +1386,7 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
             switch (fromType_->GetId()) {
                 case OMNI_BOOLEAN:
                 {
-                    auto temp = DecimalOperations::rescaleInt<bool, int64_t>(static_cast<Vector<bool> *>(input)->GetValue(row), toPrecision, toScale);
+                    auto temp = DecimalOperations::rescaleInt<bool, int64_t>(VectorHelper::GetValueFromVector<bool>(input, row), toPrecision, toScale);
                     if (temp.has_value()) {
                         decimal64Value = temp.value();
                     } else {
@@ -1391,7 +1397,7 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
                 }
                 case OMNI_BYTE:
                 {
-                    auto temp = DecimalOperations::rescaleInt<int8_t, int64_t>(static_cast<Vector<int8_t> *>(input)->GetValue(row), toPrecision, toScale);
+                    auto temp = DecimalOperations::rescaleInt<int8_t, int64_t>(VectorHelper::GetValueFromVector<int8_t>(input, row), toPrecision, toScale);
                     if (temp.has_value()) {
                         decimal64Value = temp.value();
                     } else {
@@ -1402,7 +1408,7 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
                 }
                 case OMNI_SHORT:
                 {
-                    auto temp = DecimalOperations::rescaleInt<int16_t, int64_t>(static_cast<Vector<int16_t> *>(input)->GetValue(row), toPrecision, toScale);
+                    auto temp = DecimalOperations::rescaleInt<int16_t, int64_t>(VectorHelper::GetValueFromVector<int16_t>(input, row), toPrecision, toScale);
                     if (temp.has_value()) {
                         decimal64Value = temp.value();
                     } else {
@@ -1413,7 +1419,7 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
                 }
                 case OMNI_INT:
                 {
-                    auto temp = DecimalOperations::rescaleInt<int32_t, int64_t>(static_cast<Vector<int32_t> *>(input)->GetValue(row), toPrecision, toScale);
+                    auto temp = DecimalOperations::rescaleInt<int32_t, int64_t>(VectorHelper::GetValueFromVector<int32_t>(input, row), toPrecision, toScale);
                     if (temp.has_value()) {
                         decimal64Value = temp.value();
                     } else {
@@ -1424,7 +1430,7 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
                 }
                 case OMNI_LONG:
                 {
-                    auto temp = DecimalOperations::rescaleInt<int64_t, int64_t>(static_cast<Vector<int64_t> *>(input)->GetValue(row), toPrecision, toScale);
+                    auto temp = DecimalOperations::rescaleInt<int64_t, int64_t>(VectorHelper::GetValueFromVector<int64_t>(input, row), toPrecision, toScale);
                     if (temp.has_value()) {
                         decimal64Value = temp.value();
                     } else {
@@ -1435,7 +1441,7 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
                 }
                 case OMNI_FLOAT:
                 {
-                    auto status = DecimalOperations::rescaleFloatingPoint<float, int64_t>(static_cast<Vector<float> *>(input)->GetValue(row), toPrecision, toScale, decimal64Value);
+                    auto status = DecimalOperations::rescaleFloatingPoint<float, int64_t>(VectorHelper::GetValueFromVector<float>(input, row), toPrecision, toScale, decimal64Value);
                     if (!status.ok()) {
                         result->SetNull(row);
                         continue;
@@ -1444,7 +1450,7 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
                 }
                 case OMNI_DOUBLE:
                 {
-                    auto status = DecimalOperations::rescaleFloatingPoint<double, int64_t>(static_cast<Vector<double> *>(input)->GetValue(row), toPrecision, toScale, decimal64Value);
+                    auto status = DecimalOperations::rescaleFloatingPoint<double, int64_t>(VectorHelper::GetValueFromVector<double>(input, row), toPrecision, toScale, decimal64Value);
                     if (!status.ok()) {
                         result->SetNull(row);
                         continue;
@@ -1454,7 +1460,7 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 {
-                    auto str = static_cast<Vector<LargeStringContainer<std::string_view>> *>(input)->GetValue(row);
+                    auto str = VectorHelper::GetStringValueFromVector(input, row);
                     const auto status = toDecimalValue<int64_t>(hooks_->removeWhiteSpaces(str), toPrecision, toScale, decimal64Value);
                     if (!status.ok()) {
                         result->SetNull(row);
@@ -1464,7 +1470,7 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
                 }
                 case OMNI_DECIMAL64:
                 {
-                    auto temp = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+                    auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
                     auto fromPrecision = static_cast<DecimalDataType *>(fromType_.get())->GetPrecision();
                     auto fromScale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     const auto status = DecimalOperations::rescaleWithRoundUp<int64_t, int64_t>(temp, fromPrecision, fromScale, toPrecision, toScale, decimal64Value);
@@ -1476,7 +1482,7 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
                 }
                 case OMNI_DECIMAL128:
                 {
-                    Decimal128 temp = static_cast<Vector<Decimal128> *>(input)->GetValue(row);
+                    Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
                     auto fromPrecision = static_cast<DecimalDataType *>(fromType_.get())->GetPrecision();
                     auto fromScale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     const auto status = DecimalOperations::rescaleWithRoundUp<int128_t, int64_t>(temp.ToInt128(), fromPrecision, fromScale, toPrecision, toScale, decimal64Value);
@@ -1627,7 +1633,7 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
             switch (fromType_->GetId()) {
                 case OMNI_BOOLEAN:
                 {
-                    auto temp = DecimalOperations::rescaleInt<bool, int128_t>(static_cast<Vector<bool> *>(input)->GetValue(row), toPrecision, toScale);
+                    auto temp = DecimalOperations::rescaleInt<bool, int128_t>(VectorHelper::GetValueFromVector<bool>(input, row), toPrecision, toScale);
                     if (temp.has_value()) {
                         decimal128Value = temp.value();
                     } else {
@@ -1638,7 +1644,7 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
                 }
                 case OMNI_BYTE:
                 {
-                    auto temp = DecimalOperations::rescaleInt<int8_t, int128_t>(static_cast<Vector<int8_t> *>(input)->GetValue(row), toPrecision, toScale);
+                    auto temp = DecimalOperations::rescaleInt<int8_t, int128_t>(VectorHelper::GetValueFromVector<int8_t>(input, row), toPrecision, toScale);
                     if (temp.has_value()) {
                         decimal128Value = temp.value();
                     } else {
@@ -1649,7 +1655,7 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
                 }
                 case OMNI_SHORT:
                 {
-                    auto temp = DecimalOperations::rescaleInt<int16_t, int128_t>(static_cast<Vector<int16_t> *>(input)->GetValue(row), toPrecision, toScale);
+                    auto temp = DecimalOperations::rescaleInt<int16_t, int128_t>(VectorHelper::GetValueFromVector<int16_t>(input, row), toPrecision, toScale);
                     if (temp.has_value()) {
                         decimal128Value = temp.value();
                     } else {
@@ -1660,7 +1666,7 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
                 }
                 case OMNI_INT:
                 {
-                    auto temp = DecimalOperations::rescaleInt<int32_t, int128_t>(static_cast<Vector<int32_t> *>(input)->GetValue(row), toPrecision, toScale);
+                    auto temp = DecimalOperations::rescaleInt<int32_t, int128_t>(VectorHelper::GetValueFromVector<int32_t>(input, row), toPrecision, toScale);
                     if (temp.has_value()) {
                         decimal128Value = temp.value();
                     } else {
@@ -1671,7 +1677,7 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
                 }
                 case OMNI_LONG:
                 {
-                    auto temp = DecimalOperations::rescaleInt<int64_t, int128_t>(static_cast<Vector<int64_t> *>(input)->GetValue(row), toPrecision, toScale);
+                    auto temp = DecimalOperations::rescaleInt<int64_t, int128_t>(VectorHelper::GetValueFromVector<int64_t>(input, row), toPrecision, toScale);
                     if (temp.has_value()) {
                         decimal128Value = temp.value();
                     } else {
@@ -1682,7 +1688,7 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
                 }
                 case OMNI_FLOAT:
                 {
-                    auto status = DecimalOperations::rescaleFloatingPoint<float, int128_t>(static_cast<Vector<float> *>(input)->GetValue(row), toPrecision, toScale, decimal128Value);
+                    auto status = DecimalOperations::rescaleFloatingPoint<float, int128_t>(VectorHelper::GetValueFromVector<float>(input, row), toPrecision, toScale, decimal128Value);
                     if (!status.ok()) {
                         result->SetNull(row);
                         continue;
@@ -1691,7 +1697,7 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
                 }
                 case OMNI_DOUBLE:
                 {
-                    auto status = DecimalOperations::rescaleFloatingPoint<double, int128_t>(static_cast<Vector<double> *>(input)->GetValue(row), toPrecision, toScale, decimal128Value);
+                    auto status = DecimalOperations::rescaleFloatingPoint<double, int128_t>(VectorHelper::GetValueFromVector<double>(input, row), toPrecision, toScale, decimal128Value);
                     if (!status.ok()) {
                         result->SetNull(row);
                         continue;
@@ -1701,7 +1707,7 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 {
-                    auto str = static_cast<Vector<LargeStringContainer<std::string_view>> *>(input)->GetValue(row);
+                    auto str = VectorHelper::GetStringValueFromVector(input, row);
                     const auto status = toDecimalValue<int128_t>(hooks_->removeWhiteSpaces(str), toPrecision, toScale, decimal128Value);
                     if (!status.ok()) {
                         result->SetNull(row);
@@ -1711,7 +1717,7 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
                 }
                 case OMNI_DECIMAL64:
                 {
-                    auto temp = static_cast<Vector<int64_t> *>(input)->GetValue(row);
+                    auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
                     auto fromPrecision = static_cast<DecimalDataType *>(fromType_.get())->GetPrecision();
                     auto fromScale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     const auto status = DecimalOperations::rescaleWithRoundUp<int64_t, int128_t>(temp, fromPrecision, fromScale, toPrecision, toScale, decimal128Value);
@@ -1723,7 +1729,7 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
                 }
                 case OMNI_DECIMAL128:
                 {
-                    Decimal128 temp = static_cast<Vector<Decimal128> *>(input)->GetValue(row);
+                    Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
                     auto fromPrecision = static_cast<DecimalDataType *>(fromType_.get())->GetPrecision();
                     auto fromScale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     const auto status = DecimalOperations::rescaleWithRoundUp<int128_t, int128_t>(temp.ToInt128(), fromPrecision, fromScale, toPrecision, toScale, decimal128Value);

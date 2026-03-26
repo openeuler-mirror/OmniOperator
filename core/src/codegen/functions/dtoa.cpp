@@ -1227,4 +1227,71 @@ std::string DoubleToString::DoubleToStringConverter(double d)
     auto length = DoubleToStringConverter(d, result);
     return std::string{result, length};
 }
+
+namespace {
+constexpr int FLOAT_EXP_SHIFT = 23; // IEEE754 binary32 explicit fraction bits
+constexpr int64_t FLOAT_FRACT_HOB = (INT64_C(1) << FLOAT_EXP_SHIFT);
+} // namespace
+
+std::size_t DoubleToString::FloatToStringConverter(float f, char *result)
+{
+    const int32_t fBits = BitCast<int32_t>(f);
+    const bool isNeg = (fBits & FloatConsts::SIGN_BIT_MASK) != 0;
+    int64_t fractBits =
+        static_cast<int64_t>(static_cast<uint32_t>(fBits) & static_cast<uint32_t>(FloatConsts::SIGNIF_BIT_MASK));
+    int binExp = (static_cast<uint32_t>(fBits) & static_cast<uint32_t>(FloatConsts::EXP_BIT_MASK)) >> FLOAT_EXP_SHIFT;
+
+    auto setValueAndGetSize = [&result](const std::string &inputString) -> std::size_t {
+        auto size = inputString.size();
+        memcpy(result, inputString.c_str(), size);
+        return size;
+    };
+
+    if (binExp == static_cast<int>(static_cast<uint32_t>(FloatConsts::EXP_BIT_MASK) >> FLOAT_EXP_SHIFT)) {
+        if (fractBits == 0L) {
+            if (isNeg) {
+                return setValueAndGetSize("-Infinity");
+            }
+            return setValueAndGetSize("Infinity");
+        }
+        return setValueAndGetSize("NaN");
+    }
+
+    int nSignificantBits = 0;
+    if (binExp == 0) {
+        if (fractBits == 0L) {
+            if (isNeg) {
+                return setValueAndGetSize("-0.0");
+            }
+            return setValueAndGetSize("0.0");
+        }
+        const int leadingZeros = NumberOfLeadingZeros(static_cast<int64_t>(fractBits));
+        const int shift = leadingZeros - (63 - FLOAT_EXP_SHIFT);
+        fractBits <<= shift;
+        binExp = 1 - shift;
+        nSignificantBits = 64 - leadingZeros;
+    } else {
+        fractBits |= FLOAT_FRACT_HOB;
+        nSignificantBits = FLOAT_EXP_SHIFT + 1; // 24
+    }
+    binExp -= FloatConsts::EXP_BIAS;
+
+    // Reuse double Dtoa: align float significand to double mantissa position (shift by EXP_SHIFT - 23).
+    const int fractShiftToDouble = EXP_SHIFT - FLOAT_EXP_SHIFT;
+    const long fractPromoted = static_cast<long>(fractBits << fractShiftToDouble);
+    // const int binExpForDtoa = binExp - fractShiftToDouble;
+
+    DoubleToString buf = DoubleToString();
+    buf.setSign(isNeg);
+    // buf.Dtoa(binExpForDtoa, fractPromoted, nSignificantBits, true);
+    buf.Dtoa(binExp, fractPromoted, nSignificantBits, true);
+    return buf.ToString(result);
+}
+
+std::string DoubleToString::FloatToStringConverter(float f)
+{
+    char result[MAX_DATA_LENGTH];
+    const auto length = FloatToStringConverter(f, result);
+    return std::string{result, length};
+}
 }

@@ -1684,6 +1684,60 @@ public:
             mapVec->SetNull(i);
         }
     }
+    template <typename T>
+    static bool GetValueFromVector(BaseVector *vec, int32_t row, T& result) {
+        Encoding encoding = vec->GetEncoding();
+        if (encoding == OMNI_ENCODING_CONST) {
+            auto *constVec = static_cast<ConstVector<T> *>(vec);
+            result = constVec->GetConstValue();
+            return true;
+        }
+        if (encoding == OMNI_FLAT) {
+            auto *flatVec = static_cast<Vector<T> *>(vec);
+            if (flatVec->IsNull(row)) {
+                return false;
+            } else {
+                result = flatVec->GetValue(row);
+                return true;
+            }
+        }
+        OMNI_THROW("GetValueFromVector Failed! ", "Unsupported encoding type");
+    }
+
+    template <typename T>
+    static T GetValueFromVector(BaseVector *vec, int32_t row) {
+        Encoding encoding = vec->GetEncoding();
+
+        if (encoding == OMNI_ENCODING_CONST) {
+            auto *constVec = static_cast<ConstVector<T> *>(vec);
+            return constVec->GetConstValue();
+        } else if (encoding == OMNI_FLAT) {
+            auto *flatVec = static_cast<Vector<T> *>(vec);
+            return flatVec->GetValue(row);
+        } else if (encoding == OMNI_DICTIONARY) {
+            auto *dictVec = static_cast<Vector<DictionaryContainer<T>> *>(vec);
+            return dictVec->GetValue(row);
+        } else {
+            OMNI_THROW("OMNI RUNTIME ERROR", "Unsupported encoding type");
+        }
+    }
+
+    static std::string_view GetStringValueFromVector(BaseVector *vec, int32_t row) {
+        Encoding encoding = vec->GetEncoding();
+
+        if (encoding == OMNI_ENCODING_CONST) {
+            auto *constVec = static_cast<ConstVector<std::string_view> *>(vec);
+            return constVec->GetConstValue();
+        } else if (encoding == OMNI_FLAT) {
+            auto *flatVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
+            return flatVec->GetValue(row);
+        } else if (encoding == OMNI_DICTIONARY) {
+            auto *dictVec = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vec);
+            return dictVec->GetValue(row);
+        } else {
+            OMNI_THROW("OMNI RUNTIME ERROR", "Unsupported encoding type for string");
+        }
+    }
 };
 }
 

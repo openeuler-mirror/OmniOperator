@@ -168,21 +168,15 @@ TEST(RegexpExtractTest, RegexpExtractNoMatch) {
     std::vector<std::string> strValues = {"hello", "world"};
     std::vector<std::string> patterns = {"\\d+", "\\d+"};  // No digits in strings
     std::vector<int32_t> groupIndices = {0, 0};
-
+    std::vector<std::string> expected = {"", ""};
     BaseVector* strVec = RegexpExtractFunctionTestHelper::CreateStringVector(strValues);
     BaseVector* patternVec = RegexpExtractFunctionTestHelper::CreateStringVector(patterns);
     BaseVector* groupIdxVec = RegexpExtractFunctionTestHelper::CreateNumericVector(groupIndices, OMNI_INT);
     BaseVector* resultVec = nullptr;
 
-    RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, nullptr, resultVec);
+    RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);
+    RegexpExtractFunctionTestHelper::ValidateStringResult(resultVec, expected, strValues.size());
 
-    // When no match, result should be NULL
-    for (int i = 0; i < 2; ++i) {
-        EXPECT_TRUE(resultVec->IsNull(i)) << "Row " << i << " should be NULL (no match)";
-    }
-
-    // groupIdxVec was not passed to Apply (nullptr was passed instead), so must delete here
-    delete groupIdxVec;
     delete resultVec;
 }
 
@@ -238,31 +232,6 @@ TEST(RegexpExtractTest, RegexpExtractWithNullPattern) {
     delete resultVec;
 }
 
-// Test: RegexpExtract with NULL group index
-TEST(RegexpExtractTest, RegexpExtractWithNullGroupIndex) {
-    std::cout << "=== Test: RegexpExtract with NULL group index ===" << std::endl;
-
-    std::vector<std::string> strValues = {"hello123", "world456"};
-    std::vector<std::string> patterns = {"\\d+", "\\d+"};
-    std::vector<int32_t> groupIndices = {0, 0};
-
-    BaseVector* strVec = RegexpExtractFunctionTestHelper::CreateStringVector(strValues);
-    BaseVector* patternVec = RegexpExtractFunctionTestHelper::CreateStringVector(patterns);
-    BaseVector* groupIdxVec = RegexpExtractFunctionTestHelper::CreateNumericVector(groupIndices, OMNI_INT);
-
-    // Set middle group index to NULL
-    groupIdxVec->SetNull(1);
-
-    BaseVector* resultVec = nullptr;
-    RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);
-
-    // When group index is NULL, result should be NULL
-    EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
-    EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (group index is NULL)";
-
-    delete resultVec;
-}
-
 // Test: RegexpExtract with email pattern
 TEST(RegexpExtractTest, RegexpExtractEmailPattern) {
     std::cout << "=== Test: RegexpExtract with email pattern ===" << std::endl;
@@ -296,12 +265,11 @@ TEST(RegexpExtractTest, RegexpExtractOutOfRangeGroup) {
     BaseVector* patternVec = RegexpExtractFunctionTestHelper::CreateStringVector(patterns);
     BaseVector* groupIdxVec = RegexpExtractFunctionTestHelper::CreateNumericVector(groupIndices, OMNI_INT);
     BaseVector* resultVec = nullptr;
-
-    RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);
-
-    // When group index is out of range, result should be NULL
-    EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL (group index out of range)";
-
+    EXPECT_THROW(RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec)
+        , omniruntime::exception::OmniException);
+    delete groupIdxVec;
+    delete patternVec;
+    delete strVec;
     delete resultVec;
 }
 

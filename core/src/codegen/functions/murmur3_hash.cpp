@@ -168,7 +168,8 @@ extern "C" DLLEXPORT int32_t Mm3Int8(int8_t val, bool isValNull, int32_t seed, b
         return seed;
     }
 
-    return static_cast<int32_t>(HashByte(static_cast<uint8_t>(val), static_cast<uint32_t>(seed)));
+    return static_cast<int32_t>(
+       HashInt(static_cast<uint32_t>(static_cast<int32_t>(val)), static_cast<uint32_t>(seed)));
 }
 
 extern "C" DLLEXPORT int32_t Mm3Int16(int16_t val, bool isValNull, int32_t seed, bool isSeedNull)
@@ -180,7 +181,8 @@ extern "C" DLLEXPORT int32_t Mm3Int16(int16_t val, bool isValNull, int32_t seed,
         return seed;
     }
 
-    return static_cast<int32_t>(HashShort(static_cast<uint16_t>(val), static_cast<uint32_t>(seed)));
+    return static_cast<int32_t>(
+       HashInt(static_cast<uint32_t>(static_cast<int32_t>(val)), static_cast<uint32_t>(seed)));
 }
 
 extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, bool isValNull, int32_t seed, bool isSeedNull)

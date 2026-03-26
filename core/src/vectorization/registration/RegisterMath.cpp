@@ -17,8 +17,8 @@ void RegisterMathFunctions(const std::string &prefix)
 {
     RegisterIsNullFunction(prefix + "isnull");
     RegisterBinaryNumeric<PlusFunction>({prefix + "add"});
-    RegisterBinaryLogical<And>(prefix + "and");
-	RegisterBinaryLogical<Or>(prefix + "or");
+    VectorFunction::RegisterVectorFunction("and", {OMNI_BOOLEAN, OMNI_BOOLEAN}, OMNI_BOOLEAN, std::make_shared<AndFunction>());
+    VectorFunction::RegisterVectorFunction("or", {OMNI_BOOLEAN, OMNI_BOOLEAN}, OMNI_BOOLEAN, std::make_shared<OrFunction>());
     RegisterUnaryIntegral<Not>(prefix + "not");
     RegisterBinaryNumeric<MinusFunction>({prefix + "subtract"});
     RegisterBinaryNumeric<MultiplyFunction>({prefix + "multiply"});
@@ -108,5 +108,7 @@ void RegisterMathFunctions(const std::string &prefix)
     // Supports: DOUBLE for value/bound1/bound2, LONG for numBuckets
     RegisterFunction<WidthBucketFunction, int64_t, double, double, double, int64_t>(
         prefix + "width_bucket", {OMNI_DOUBLE, OMNI_DOUBLE, OMNI_DOUBLE, OMNI_LONG}, OMNI_LONG);
+    RegisterFunction<NormalizeNaNAndZero, float, float>(prefix + "NormalizeNaNAndZero", {OMNI_FLOAT}, OMNI_FLOAT);
+    RegisterFunction<NormalizeNaNAndZero, double, double>(prefix + "NormalizeNaNAndZero", {OMNI_DOUBLE}, OMNI_DOUBLE);
 }
 }

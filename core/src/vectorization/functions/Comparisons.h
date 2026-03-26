@@ -17,19 +17,90 @@ struct Not {
     }
 };
 
-template <typename T>
-struct And {
-    ALWAYS_INLINE void call(bool &result, const bool &a, const bool &b)
+class AndFunction : public VectorFunction {
+public:
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
+        op::ExecutionContext *context) const override
     {
-        result = a && b;
+        const auto left = args.top();
+        args.pop();
+        const auto right = args.top();
+        args.pop();
+        auto size = context->GetResultRowSize();
+        result = VectorHelper::CreateFlatVector(OMNI_BOOLEAN, size);
+        bool lValue;
+        bool rValue;
+        for (size_t i = 0; i < size; i++) {
+            auto lIsNotNull = VectorHelper::GetValueFromVector<bool>(left, i, lValue);
+            auto rIsNotNull = VectorHelper::GetValueFromVector<bool>(right, i, rValue);
+            if (lIsNotNull && rIsNotNull) {
+                static_cast<Vector<bool> *>(result)->SetValue(i, lValue && rValue);
+                continue;
+            }
+            if (lIsNotNull) {
+                if (lValue) {
+                    result->SetNull(i);
+                } else {
+                    static_cast<Vector<bool> *>(result)->SetValue(i, false);
+                }
+                continue;
+            }
+            if (rIsNotNull) {
+                if (rValue) {
+                    result->SetNull(i);
+                } else {
+                    static_cast<Vector<bool> *>(result)->SetValue(i, false);
+                }
+                continue;
+            }
+            result->SetNull(i);
+        }
+        delete left;
+        delete right;
     }
 };
 
-template <typename T>
-struct Or {
-    ALWAYS_INLINE void call(bool &result, const bool &a, const bool &b)
+class OrFunction : public VectorFunction {
+public:
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
+        op::ExecutionContext *context) const override
     {
-        result = a || b;
+        const auto left = args.top();
+        args.pop();
+        const auto right = args.top();
+        args.pop();
+        auto size = context->GetResultRowSize();
+        result = VectorHelper::CreateFlatVector(OMNI_BOOLEAN, size);
+        bool lValue;
+        bool rValue;
+        for (size_t i = 0; i < size; i++) {
+            auto lIsNotNull = VectorHelper::GetValueFromVector<bool>(left, i, lValue);
+            auto rIsNotNull = VectorHelper::GetValueFromVector<bool>(right, i, rValue);
+            if (lIsNotNull && rIsNotNull) {
+                static_cast<Vector<bool> *>(result)->SetValue(i, lValue || rValue);
+                continue;
+            }
+            if (lIsNotNull) {
+                if (lValue) {
+                    static_cast<Vector<bool> *>(result)->SetValue(i, true);
+                } else {
+                    result->SetNull(i);
+                }
+                continue;
+            }
+            if (rIsNotNull)
+            {
+                if (rValue) {
+                    static_cast<Vector<bool> *>(result)->SetValue(i, true);
+                } else {
+                    result->SetNull(i);
+                }
+                continue;
+            }
+            result->SetNull(i);
+        }
+        delete left;
+        delete right;
     }
 };
 

@@ -22,7 +22,7 @@ public:
         args.pop();
         auto valVec = args.top();
         args.pop();
-        const auto size = valVec->GetSize();
+        const auto size = context->GetResultRowSize();
         if (result == nullptr) {
             result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
         }
