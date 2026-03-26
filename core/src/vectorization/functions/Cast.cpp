@@ -688,6 +688,9 @@ void CastFunction::CastToFloat(BaseVector* input, BaseVector*& result, Execution
             case OMNI_DOUBLE:
                 floatValue = static_cast<float>(static_cast<ConstVector<double> *>(input)->GetConstValue());
                 break;
+            case OMNI_TIMESTAMP:
+                floatValue = static_cast<float>(static_cast<ConstVector<int64_t> *>(input)->GetConstValue()) / 1000000.0f;
+                break;
             case OMNI_CHAR:
             case OMNI_VARCHAR:
             {

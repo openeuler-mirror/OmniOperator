@@ -49,6 +49,10 @@ std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchCastInt64ToDouble), CAST_FN_STR, {}, { OMNI_LONG }, OMNI_DOUBLE,
             INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchCastTimestampMicrosToDoubleSeconds), CAST_FN_STR, {},
+            { OMNI_TIMESTAMP }, OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchCastTimestampMicrosToFloatSeconds), CAST_FN_STR, {},
+            { OMNI_TIMESTAMP }, OMNI_FLOAT, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchCastInt32ToInt64), CAST_FN_STR, {}, { OMNI_INT }, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchCastInt64ToInt32), CAST_FN_STR, {}, { OMNI_LONG }, OMNI_INT, INPUT_DATA),
 
