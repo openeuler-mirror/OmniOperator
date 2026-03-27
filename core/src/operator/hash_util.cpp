@@ -78,6 +78,12 @@ std::unique_ptr<omniruntime::vec::Vector<int32_t>> HashUtil::ComputePartitionIds
             case type::OMNI_ARRAY:
                 Mm3Array(vecs[col], rowCount, partitionIds);
                 break;
+            case type::OMNI_MAP:
+                Mm3Map(vecs[col], rowCount, partitionIds);
+                break;
+            case type::OMNI_ROW:
+                Mm3Struct(vecs[col], rowCount, partitionIds);
+                break;
             default:
                 std::string omniExceptionInfo =
                         "Error in shuffle hash, not support type: " +
