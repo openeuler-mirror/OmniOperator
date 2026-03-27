@@ -193,9 +193,11 @@ void ExprEval::Visit(const LiteralExpr &e)
             case OMNI_BOOLEAN:
                 constVec = new ConstVector(e.boolVal, typeId);
                 break;
-            case OMNI_DECIMAL128:
-                constVec = new ConstVector(e.stringVal, typeId);
+            case OMNI_DECIMAL128: {
+                Decimal128 decimal128(*e.stringVal);
+                constVec = new ConstVector<Decimal128>(decimal128, typeId);
                 break;
+            }
             case OMNI_VARCHAR:
             case OMNI_CHAR:
             case OMNI_VARBINARY:
