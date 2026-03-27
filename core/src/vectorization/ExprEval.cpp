@@ -201,9 +201,13 @@ void ExprEval::Visit(const LiteralExpr &e)
             case OMNI_VARBINARY:
                 constVec = new ConstVector(std::string_view(*e.stringVal), typeId);
                 break;
-            case OMNI_ARRAY:
-            case OMNI_MAP:
             case OMNI_ROW:
+            case OMNI_MAP:
+            case OMNI_ARRAY: {
+                constVec = VectorHelper::CreateComplexVector(e.dataType.get(), 1);
+                constVec->SetNull(0);
+                break;
+            }
             case OMNI_NONE: {
                 auto *nullArrayVec = new ArrayVector(1);
                 auto emptyElements = std::shared_ptr<BaseVector>(

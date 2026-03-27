@@ -372,12 +372,12 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
                 serialize->PushBackSerializer(dicVectorSerializerCenter[omniId]);
             } else if (curVector->GetEncoding() == Encoding::OMNI_ENCODING_CONST) {
                 serialize->PushBackSerializer(constVectorSerializerCenter[omniId]);
-            } else if (omniId == type::OMNI_ARRAY) {
+            } else if (omniId == type::OMNI_ARRAY || omniId == type::OMNI_ROW) {
                 serialize->PushBackSerializer(complexVectorSerializerCenter[omniId]);
             } else {
                 serialize->PushBackSerializer(vectorSerializerCenter[omniId]);
             }
-            if (omniId == type::OMNI_ARRAY) {
+            if (omniId == type::OMNI_ARRAY || omniId == type::OMNI_ROW) {
                 serialize->PushBackDeSerializer(complexVectorDeSerializerCenter[omniId]);
             } else {
                 serialize->PushBackDeSerializer(vectorDeSerializerCenter[omniId]);
