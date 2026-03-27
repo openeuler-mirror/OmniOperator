@@ -904,6 +904,10 @@ void RegrAggregator::ExtractFinalValue(const RegrState *s, BaseVector *outVec, i
     if (outputTypes.GetType(0)->GetId() == OMNI_LONG && aggType == OMNI_AGGREGATION_TYPE_REGR_COUNT) {
         static_cast<Vector<int64_t> *>(outVec)->SetValue(rowIndex, static_cast<int64_t>(result));
     } else {
+        // Match Spark/JVM: normalize IEEE -0.0 to +0.0 for display and equality (e.g. ROUND).
+        if (result == 0.0) {
+            result = 0.0;
+        }
         static_cast<Vector<double> *>(outVec)->SetValue(rowIndex, result);
     }
 }

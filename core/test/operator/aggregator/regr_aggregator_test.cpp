@@ -4,6 +4,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <cmath>
 #include <vector>
 
 #include "operator/aggregation/aggregator/aggregator_util.h"
@@ -100,6 +101,41 @@ TEST(RegrAggregatorTest, SingleStageFinal)
     EXPECT_DOUBLE_EQ(runRegrAndGetDouble(OMNI_AGGREGATION_TYPE_REGR_SXX), 10.0);
     EXPECT_DOUBLE_EQ(runRegrAndGetDouble(OMNI_AGGREGATION_TYPE_REGR_SYY), 40.0);
     EXPECT_DOUBLE_EQ(runRegrAndGetDouble(OMNI_AGGREGATION_TYPE_REGR_SXY), 20.0);
+
+    // Zero slope must be +0.0 (not -0.0) to match Spark after ROUND / equality checks.
+    {
+        const int32_t n = 10;
+        VectorBatch *batch = new VectorBatch(n);
+        Vector<int64_t> *groupCol = new Vector<int64_t>(n);
+        Vector<double> *yCol = new Vector<double>(n);
+        Vector<double> *xCol = new Vector<double>(n);
+        for (int32_t i = 0; i < n; ++i) {
+            groupCol->SetValue(i, 0);
+            yCol->SetValue(i, 3.0);
+            xCol->SetValue(i, static_cast<double>(i));
+        }
+        batch->Append(groupCol);
+        batch->Append(yCol);
+        batch->Append(xCol);
+        auto factory = CreateRegrHashAggregationFactory(
+            std::vector<uint32_t>({0}), std::vector<DataTypePtr>({LongType()}),
+            OMNI_AGGREGATION_TYPE_REGR_SLOPE, std::vector<uint32_t>({1, 2}),
+            std::vector<DataTypePtr>({DoubleType(), DoubleType()}), DoubleType(),
+            true, false, false);
+        auto op = factory->CreateOperator();
+        op->Init();
+        op->AddInput(batch);
+        VectorBatch *out = nullptr;
+        op->GetOutput(&out);
+        ASSERT_NE(out, nullptr);
+        BaseVector *resVec = out->Get(1);
+        ASSERT_FALSE(resVec->IsNull(0));
+        double val = static_cast<Vector<double> *>(resVec)->GetValue(0);
+        EXPECT_DOUBLE_EQ(val, 0.0);
+        EXPECT_FALSE(std::signbit(val)) << "regr_slope zero must be positive zero (+0.0), like Spark";
+        omniruntime::op::Operator::DeleteOperator(op);
+        VectorHelper::FreeVecBatch(out);
+    }
 
     // regr_count returns Long (bigint)
     {

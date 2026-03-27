@@ -12,6 +12,7 @@ constexpr int16_t SHORT_DEFAULT_VALUE = 0;
 constexpr int32_t INT_DEFAULT_VALUE = 0;
 constexpr int64_t LONG_DEFAULT_VALUE = 0L;
 constexpr double DOUBLE_DEFAULT_VALUE = 0.000;
+constexpr float FLOAT_DEFAULT_VALUE = 0.000f;
 constexpr bool BOOL_DEFAULT_VALUE = true;
 constexpr char CHAR_DEFAULT_VALUE[] = "NULL";
 constexpr char DECIMAL128_DEFAULT_VALUE[] = "0";
@@ -53,6 +54,8 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
                 return new LiteralExpr(LONG_DEFAULT_VALUE, std::move(destType));
             case OMNI_DOUBLE:
                 return new LiteralExpr(DOUBLE_DEFAULT_VALUE, std::move(destType));
+            case OMNI_FLOAT:
+                return new LiteralExpr(FLOAT_DEFAULT_VALUE, std::move(destType));
             case OMNI_BOOLEAN:
                 return new LiteralExpr(BOOL_DEFAULT_VALUE, std::move(destType));
             case OMNI_CHAR:
