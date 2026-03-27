@@ -95,6 +95,7 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     if (sourceTypes.GetSize() == 1) {
         const auto &firstSourceTypeId = sourceTypes.GetType(0)->GetId();
         canInplaceSort = (firstSourceTypeId != OMNI_VARCHAR) && (firstSourceTypeId != OMNI_CHAR) &&
+            (firstSourceTypeId != OMNI_VARBINARY) &&
             (firstSourceTypeId != OMNI_BOOLEAN) && (firstSourceTypeId != OMNI_ARRAY) &&
             (firstSourceTypeId != OMNI_ROW);
     }
@@ -435,6 +436,7 @@ void SortOperator::SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t &
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
+            case OMNI_VARBINARY:
                 SetSpillOutputVector<std::string_view>(outputVector, offset, rowCount, outputCol);
                 break;
             case OMNI_BYTE:

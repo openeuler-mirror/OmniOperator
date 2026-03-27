@@ -168,6 +168,179 @@ TEST(NativeOmniSortTest, TestSortLongColumn)
     DeleteSortOperatorFactory(operatorFactory);
 }
 
+// Sort by VARBINARY key: memcmp byte order (aligned with Spark ORDER BY on binary).
+TEST(NativeOmniSortTest, TestSortVarBinaryColumn)
+{
+    constexpr int32_t dataSize = 4;
+    int32_t data1[dataSize] = {10, 20, 30, 40};
+    std::string binData[dataSize] = {"b", "a", "d", "c"};
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), VarBinaryType(32) }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, binData);
+
+    int outputCols[2] = {0, 1};
+    int sortCols[1] = {1};
+    int ascendings[1] = {true};
+    int nullFirsts[1] = {true};
+
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    int32_t expectData1[dataSize] = {20, 10, 40, 30};
+    std::string expectBin[dataSize] = {"a", "b", "c", "d"};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectBin);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+// Velox: PrefixSort.cpp treats TypeKind::VARBINARY like VARCHAR (encodeRowColumn<StringView>).
+// PrefixSortTest covers VARBINARY keys with the same compare path as variable-width strings.
+TEST(NativeOmniSortTest, TestSortVarBinaryDesc)
+{
+    constexpr int32_t dataSize = 4;
+    int32_t data1[dataSize] = {10, 20, 30, 40};
+    std::string binData[dataSize] = {"b", "a", "d", "c"};
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), VarBinaryType(32) }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, binData);
+
+    int outputCols[2] = {0, 1};
+    int sortCols[1] = {1};
+    int ascendings[1] = {false};
+    int nullFirsts[1] = {true};
+
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    int32_t expectData1[dataSize] = {30, 40, 10, 20};
+    std::string expectBin[dataSize] = {"d", "c", "b", "a"};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectBin);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+// Byte-wise prefix order: shorter key is less when it is a prefix of the longer (memcmp + length).
+TEST(NativeOmniSortTest, TestSortVarBinaryPrefixByteOrder)
+{
+    constexpr int32_t dataSize = 3;
+    int32_t data1[dataSize] = {1, 2, 3};
+    std::string binData[dataSize] = {std::string("\x01\x02", 2), std::string("\x01", 1), std::string("\x00", 1)};
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), VarBinaryType(16) }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, binData);
+
+    int outputCols[2] = {0, 1};
+    int sortCols[1] = {1};
+    int ascendings[1] = {true};
+    int nullFirsts[1] = {true};
+
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    int32_t expectData1[dataSize] = {3, 2, 1};
+    std::string expectBin[dataSize] = {std::string("\x00", 1), std::string("\x01", 1), std::string("\x01\x02", 2)};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectBin);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+// Single VARBINARY column only (Velox fuzz-style single VARBINARY key); avoids inplace-sort on one string column.
+TEST(NativeOmniSortTest, TestSortVarBinarySingleColumn)
+{
+    constexpr int32_t dataSize = 3;
+    std::string binData[dataSize] = {std::string("\xff", 1), std::string("\x00", 1), std::string("\x7f", 1)};
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ VarBinaryType(8) }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, binData);
+
+    int outputCols[1] = {0};
+    int sortCols[1] = {0};
+    int ascendings[1] = {true};
+    int nullFirsts[1] = {true};
+
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols, ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    std::string expectBin[dataSize] = {std::string("\x00", 1), std::string("\x7f", 1), std::string("\xff", 1)};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectBin);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+// NULLS LAST on VARBINARY key (same null-handling dimension as Velox PrefixSortTest singleKeyWithNulls).
+TEST(NativeOmniSortTest, TestSortVarBinaryNullsLast)
+{
+    constexpr int32_t dataSize = 4;
+    int32_t data1[dataSize] = {10, 20, 30, 40};
+    std::string binData[dataSize] = {"c", "a", "z", "b"};
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({IntType(), VarBinaryType(32)}));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, binData);
+    vecBatch->Get(1)->SetNull(2);
+
+    int outputCols[2] = {0, 1};
+    int sortCols[1] = {1};
+    int ascendings[1] = {true};
+    int nullFirsts[1] = {false};
+
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    int32_t expectData1[dataSize] = {20, 40, 10, 30};
+    std::string expectBin[dataSize] = {"a", "b", "c", ""};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectBin);
+    expectVecBatch->Get(1)->SetNull(3);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
 TEST(NativeOmniSortTest, TestSortWithNullFirst)
 {
     // construct input data
