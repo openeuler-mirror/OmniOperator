@@ -58,9 +58,8 @@ extern "C" DLLEXPORT int64_t AddDec64Dec64Dec64ReScale(int64_t contextPtr, int64
     int32_t xScale, int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
     Decimal64 result;
-    DecimalOperations::InternalDecimalAdd(Decimal64(x).SetScale(xScale), xScale, xPrecision,
-        Decimal64(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalAddWithResultScale(Decimal64(x).SetScale(xScale), xScale, xPrecision,
+        Decimal64(y).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_RETURN(result, outPrecision);
     return result.GetValue();
 }
@@ -70,9 +69,8 @@ extern "C" DLLEXPORT void AddDec64Dec64Dec128ReScale(int64_t contextPtr, int64_t
     uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalAddWithResultScale(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -83,9 +81,8 @@ extern "C" DLLEXPORT void AddDec128Dec128Dec128ReScale(int64_t contextPtr, int64
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalAddWithResultScale(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale,
+        xPrecision, Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -96,9 +93,8 @@ extern "C" DLLEXPORT void AddDec64Dec128Dec128ReScale(int64_t contextPtr, int64_
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalAddWithResultScale(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -109,9 +105,8 @@ extern "C" DLLEXPORT void AddDec128Dec64Dec128ReScale(int64_t contextPtr, int64_
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalAddWithResultScale(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -123,9 +118,8 @@ extern "C" DLLEXPORT int64_t SubDec64Dec64Dec64ReScale(int64_t contextPtr, int64
     int32_t xScale, int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
     Decimal64 result;
-    DecimalOperations::InternalDecimalSubtract(Decimal64(x).SetScale(xScale), xScale, xPrecision,
-        Decimal64(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalSubtractWithResultScale(Decimal64(x).SetScale(xScale), xScale, xPrecision,
+        Decimal64(y).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_RETURN(result, outPrecision);
     return result.GetValue();
 }
@@ -135,9 +129,8 @@ extern "C" DLLEXPORT void SubDec64Dec64Dec128ReScale(int64_t contextPtr, int64_t
     uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalSubtractWithResultScale(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -148,9 +141,8 @@ extern "C" DLLEXPORT void SubDec128Dec128Dec128ReScale(int64_t contextPtr, int64
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalSubtractWithResultScale(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale,
+        xPrecision, Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -161,9 +153,8 @@ extern "C" DLLEXPORT void SubDec64Dec128Dec128ReScale(int64_t contextPtr, int64_
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalSubtractWithResultScale(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -174,9 +165,8 @@ extern "C" DLLEXPORT void SubDec128Dec64Dec128ReScale(int64_t contextPtr, int64_
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalSubtractWithResultScale(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale,
+        xPrecision, Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -223,9 +213,14 @@ extern "C" DLLEXPORT void MulDec64Dec128Dec128ReScale(int64_t contextPtr, int64_
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    int32_t rescaleFactor = xScale + yScale - outScale;
+    if (rescaleFactor >= 0 && rescaleFactor <= MAX_SCALE) {
+        result = Decimal128Wrapper(x).MultiplyRoundUp(Decimal128Wrapper(yHigh, yLow), rescaleFactor);
+    } else {
+        DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+            Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
+        result.ReScale(outScale);
+    }
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -236,9 +231,14 @@ extern "C" DLLEXPORT void MulDec128Dec64Dec128ReScale(int64_t contextPtr, int64_
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(xHigh, xLow), xScale, xPrecision,
-        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    int32_t rescaleFactor = xScale + yScale - outScale;
+    if (rescaleFactor >= 0 && rescaleFactor <= MAX_SCALE) {
+        result = Decimal128Wrapper(xHigh, xLow).MultiplyRoundUp(Decimal128Wrapper(y), rescaleFactor);
+    } else {
+        DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(xHigh, xLow), xScale, xPrecision,
+            Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
+        result.ReScale(outScale);
+    }
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -451,9 +451,8 @@ extern "C" DLLEXPORT int64_t AddDec64Dec64Dec64RetNull(bool *isNull, int64_t x, 
     int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
     Decimal64 result;
-    DecimalOperations::InternalDecimalAdd(Decimal64(x).SetScale(xScale), xScale, xPrecision,
-        Decimal64(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalAddWithResultScale(Decimal64(x).SetScale(xScale), xScale, xPrecision,
+        Decimal64(y).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_RETURN_NULL(result, outPrecision);
     return result.GetValue();
 }
@@ -463,9 +462,8 @@ extern "C" DLLEXPORT void AddDec64Dec64Dec128RetNull(bool *isNull, int64_t x, in
     uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalAddWithResultScale(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -476,9 +474,8 @@ extern "C" DLLEXPORT void AddDec128Dec128Dec128RetNull(bool *isNull, int64_t xHi
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalAddWithResultScale(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale,
+        xPrecision, Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -489,9 +486,8 @@ extern "C" DLLEXPORT void AddDec64Dec128Dec128RetNull(bool *isNull, int64_t x, i
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalAddWithResultScale(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -502,9 +498,8 @@ extern "C" DLLEXPORT void AddDec128Dec64Dec128RetNull(bool *isNull, int64_t yHig
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalAddWithResultScale(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -670,8 +665,13 @@ extern "C" DLLEXPORT void MulDec64Dec128Dec128NotReScale(int64_t contextPtr, int
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
+    int32_t rescaleFactor = xScale + yScale - outScale;
+    if (rescaleFactor >= 0 && rescaleFactor <= MAX_SCALE) {
+        result = Decimal128Wrapper(x).MultiplyRoundUp(Decimal128Wrapper(yHigh, yLow), rescaleFactor);
+    } else {
+        DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+            Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
+    }
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -682,8 +682,13 @@ extern "C" DLLEXPORT void MulDec128Dec64Dec128NotReScale(int64_t contextPtr, int
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(xHigh, xLow), xScale, xPrecision,
-        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
+    int32_t rescaleFactor = xScale + yScale - outScale;
+    if (rescaleFactor >= 0 && rescaleFactor <= MAX_SCALE) {
+        result = Decimal128Wrapper(xHigh, xLow).MultiplyRoundUp(Decimal128Wrapper(y), rescaleFactor);
+    } else {
+        DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(xHigh, xLow), xScale, xPrecision,
+            Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
+    }
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -882,9 +887,8 @@ extern "C" DLLEXPORT int64_t SubDec64Dec64Dec64RetNull(bool *isNull, int64_t x, 
     int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
     Decimal64 result;
-    DecimalOperations::InternalDecimalSubtract(Decimal64(x).SetScale(xScale), xScale, xPrecision,
-        Decimal64(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalSubtractWithResultScale(Decimal64(x).SetScale(xScale), xScale, xPrecision,
+        Decimal64(y).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_RETURN_NULL(result, outPrecision);
     return result.GetValue();
 }
@@ -894,9 +898,8 @@ extern "C" DLLEXPORT void SubDec64Dec64Dec128RetNull(bool *isNull, int64_t x, in
     uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalSubtractWithResultScale(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -907,9 +910,8 @@ extern "C" DLLEXPORT void SubDec128Dec128Dec128RetNull(bool *isNull, int64_t xHi
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalSubtractWithResultScale(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale,
+        xPrecision, Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -920,9 +922,8 @@ extern "C" DLLEXPORT void SubDec64Dec128Dec128RetNull(bool *isNull, int64_t x, i
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalSubtractWithResultScale(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -933,9 +934,8 @@ extern "C" DLLEXPORT void SubDec128Dec64Dec128RetNull(bool *isNull, int64_t xHig
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    DecimalOperations::InternalDecimalSubtractWithResultScale(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale,
+        xPrecision, Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, outScale, result);
     CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -982,9 +982,14 @@ extern "C" DLLEXPORT void MulDec64Dec128Dec128RetNull(bool *isNull, int64_t x, i
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    int32_t rescaleFactor = xScale + yScale - outScale;
+    if (rescaleFactor >= 0 && rescaleFactor <= MAX_SCALE) {
+        result = Decimal128Wrapper(x).MultiplyRoundUp(Decimal128Wrapper(yHigh, yLow), rescaleFactor);
+    } else {
+        DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
+            Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
+        result.ReScale(outScale);
+    }
     CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -995,9 +1000,14 @@ extern "C" DLLEXPORT void MulDec128Dec64Dec128RetNull(bool *isNull, int64_t xHig
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    int32_t rescaleFactor = xScale + yScale - outScale;
+    if (rescaleFactor >= 0 && rescaleFactor <= MAX_SCALE) {
+        result = Decimal128Wrapper(xHigh, xLow).MultiplyRoundUp(Decimal128Wrapper(y), rescaleFactor);
+    } else {
+        DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
+            Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
+        result.ReScale(outScale);
+    }
     CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
@@ -1093,6 +1103,9 @@ extern "C" DLLEXPORT void DivDec128Dec64Dec128RetNull(bool *isNull, int64_t xHig
 extern "C" DLLEXPORT int64_t ModDec64Dec64Dec64RetNull(bool *isNull, int64_t x, int32_t xPrecision, int32_t xScale,
     int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
+    if (*isNull) {
+        return 0;
+    }
     Decimal64 result;
     DecimalOperations::InternalDecimalMod(Decimal64(x).SetScale(xScale), xScale, xPrecision,
         Decimal64(y).SetScale(yScale), yScale, yPrecision, result);
@@ -1104,16 +1117,23 @@ extern "C" DLLEXPORT int64_t ModDec64Dec64Dec64RetNull(bool *isNull, int64_t x, 
 extern "C" DLLEXPORT int64_t ModDec64Dec128Dec64RetNull(bool *isNull, int64_t x, int32_t xPrecision, int32_t xScale,
     int64_t yHigh, int64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
+    if (*isNull) {
+        return 0;
+    }
     Decimal64 result;
     DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
         Decimal128Wrapper(yHigh, yLow).SetScale(yScale).SetScale(yScale), yScale, yPrecision, result);
     result.ReScale(outScale);
+    CHECK_OVERFLOW_RETURN_NULL(result, outPrecision);
     return result.GetValue();
 }
 
 extern "C" DLLEXPORT int64_t ModDec128Dec64Dec64RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
     int32_t xScale, int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
+    if (*isNull) {
+        return 0;
+    }
     Decimal64 result;
     DecimalOperations::InternalDecimalMod(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
         Decimal128Wrapper(y).SetScale(yScale).SetScale(yScale), yScale, yPrecision, result);
@@ -1129,6 +1149,9 @@ extern "C" DLLEXPORT void ModDec128Dec64Dec128RetNull(bool *isNull, int64_t xHig
     int32_t xScale, int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
+    if (*isNull) {
+        return;
+    }
     Decimal128Wrapper result;
     DecimalOperations::InternalDecimalMod(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
         Decimal128Wrapper(y).SetScale(yScale), yScale, yPrecision, result);
@@ -1142,6 +1165,9 @@ extern "C" DLLEXPORT void ModDec128Dec128Dec128RetNull(bool *isNull, int64_t xHi
     int32_t xScale, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
+    if (*isNull) {
+        return;
+    }
     Decimal128Wrapper result;
     DecimalOperations::InternalDecimalMod(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
         Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
@@ -1155,6 +1181,9 @@ extern "C" DLLEXPORT int64_t ModDec128Dec128Dec64RetNull(bool *isNull, int64_t x
     int32_t xScale, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale)
 {
+    if (*isNull) {
+        return 0;
+    }
     Decimal64 result;
     DecimalOperations::InternalDecimalMod(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
         Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
@@ -1167,6 +1196,9 @@ extern "C" DLLEXPORT void ModDec64Dec128Dec128RetNull(bool *isNull, int64_t x, i
     int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
+    if (*isNull) {
+        return;
+    }
     Decimal128Wrapper result;
     DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x).SetScale(xScale), xScale, xPrecision,
         Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);

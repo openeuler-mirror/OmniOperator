@@ -1200,7 +1200,12 @@ private:
             result = (val + HalfTenOfScaleMultipliers[scale - newScale]) /
                 TenOfScaleMultipliers[scale - newScale];
         } else {
-            result = result * TenOfScaleMultipliers[newScale - scale];
+            int32_t scaleToIncrease = newScale - scale;
+            while (scaleToIncrease > 0) {
+                int32_t step = std::min(scaleToIncrease, MAX_SCALE);
+                result = result * TenOfScaleMultipliers[step];
+                scaleToIncrease -= step;
+            }
         }
         return result;
     }
@@ -1841,6 +1846,27 @@ public:
         result = x.ReScale(resultScale).Add(y.ReScale(resultScale)).SetScale(resultScale);
     }
 
+    // Avoid intermediate variable overflow
+    template<typename Decimal>
+    static inline void InternalDecimalAddWithResultScale(Decimal x, int32_t xScale, int32_t xPrecision, Decimal y,
+        int32_t yScale, int32_t yPrecision, int32_t resultScale, Decimal &result)
+    {
+        const int32_t maxInputScale = std::max(xScale, yScale);
+
+        if (resultScale < 0 || resultScale > MAX_SCALE || resultScale > maxInputScale) {
+            result = x.ReScale(maxInputScale).Add(y.ReScale(maxInputScale)).SetScale(maxInputScale);
+            if (resultScale >= 0 && resultScale <= MAX_SCALE) {
+                result.ReScale(resultScale);
+            }
+            return;
+        }
+        if (maxInputScale + maxInputScale <= MAX_SCALE) {
+            result = x.ReScale(maxInputScale).Add(y.ReScale(maxInputScale)).SetScale(maxInputScale).ReScale(resultScale);
+        } else {
+            result = x.ReScale(resultScale).Add(y.ReScale(resultScale)).SetScale(resultScale);
+        }
+    }
+
     template<typename Decimal>
     static inline void InternalDecimalSubtract(Decimal x, int32_t xScale, int32_t xPrecision, Decimal y,
         int32_t yScale, int32_t yPrecision, Decimal &result)
@@ -1850,11 +1876,45 @@ public:
     }
 
     template<typename Decimal>
+    static inline void InternalDecimalSubtractWithResultScale(Decimal x, int32_t xScale, int32_t xPrecision, Decimal y,
+        int32_t yScale, int32_t yPrecision, int32_t resultScale, Decimal &result)
+    {
+        const int32_t maxInputScale = std::max(xScale, yScale);
+        if (resultScale < 0 || resultScale > MAX_SCALE || resultScale > maxInputScale) {
+            result = x.ReScale(maxInputScale).Subtract(y.ReScale(maxInputScale)).SetScale(maxInputScale);
+            if (resultScale >= 0 && resultScale <= MAX_SCALE) {
+                result.ReScale(resultScale);
+            }
+            return;
+        }
+        if (maxInputScale + maxInputScale <= MAX_SCALE) {
+            result = x.ReScale(maxInputScale).Subtract(y.ReScale(maxInputScale)).SetScale(maxInputScale).ReScale(resultScale);
+        } else {
+            result = x.ReScale(resultScale).Subtract(y.ReScale(resultScale)).SetScale(resultScale);
+        }
+    }
+
+    template<typename Decimal>
     static inline void InternalDecimalMultiply(Decimal x, int32_t xScale, int32_t xPrecision, Decimal y,
         int32_t yScale, int32_t yPrecision, Decimal &result)
     {
         int32_t resultScale = GetResultScale(xScale, yScale, Op::MULTIPLY);
         result = x.Multiply(y).SetScale(resultScale);
+    }
+
+    template<typename Decimal>
+    static inline void InternalDecimalMultiplyWithResultScale(Decimal x, int32_t xScale, int32_t xPrecision, Decimal y,
+        int32_t yScale, int32_t yPrecision, int32_t resultScale, Decimal &result)
+    {
+        int32_t fullResultScale = GetResultScale(xScale, yScale, Op::MULTIPLY);
+        if (resultScale < 0 || resultScale > MAX_SCALE || resultScale > fullResultScale) {
+            result = x.Multiply(y).SetScale(fullResultScale);
+            if (resultScale >= 0 && resultScale <= MAX_SCALE) {
+                result.ReScale(resultScale);
+            }
+            return;
+        }
+        result = x.MultiplyRoundUp(y, fullResultScale - resultScale).SetScale(resultScale);
     }
 
     template<typename Decimal, typename ResultDecimal>

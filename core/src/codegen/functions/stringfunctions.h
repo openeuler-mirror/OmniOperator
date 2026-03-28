@@ -59,6 +59,12 @@ extern "C" DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *a
 extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
     int32_t bWidth, int32_t bpLen, bool isNull, int32_t *outLen);
 
+extern "C" DLLEXPORT const char *ConcatWsWithoutStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    bool separatorIsNull, bool *retIsNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *ConcatWsWith1Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull, bool *retIsNull, int32_t *outLen);
+
 extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
     bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull, const char *s2, int32_t s2Len, bool s2IsNull,
     bool *retIsNull, int32_t *outLen);
