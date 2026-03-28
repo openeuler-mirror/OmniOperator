@@ -75,6 +75,11 @@ public abstract class ComplexVec extends Vec {
             case OMNI_VARBINARY:
             case OMNI_CHAR:
             case OMNI_VARCHAR: {
+                if (getVecEncodingNative(nativeVector) == VecEncoding.OMNI_VEC_ENCODING_DICTIONARY.ordinal()) {
+                    int sz = getSizeNative(nativeVector);
+                    return new DictionaryVec(nativeVector, getValuesNative(nativeVector),
+                        getValueNullsNative(nativeVector), sz, dataType);
+                }
                 return new VarcharVec(nativeVector);
             }
             case OMNI_DECIMAL128: {
