@@ -212,6 +212,11 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(CastInt64ToDouble), MathCastFnStr(), {}, { OMNI_LONG }, OMNI_DOUBLE,
             INPUT_DATA),
+        // Spark: cast(ts as double/float) uses seconds since epoch, not raw microseconds.
+        Function(reinterpret_cast<void *>(CastTimestampMicrosToDoubleSeconds), MathCastFnStr(), {},
+            { OMNI_TIMESTAMP }, OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastTimestampMicrosToFloatSeconds), MathCastFnStr(), {},
+            { OMNI_TIMESTAMP }, OMNI_FLOAT, INPUT_DATA),
         Function(reinterpret_cast<void *>(CastFloatToDouble), MathCastFnStr(), {}, { OMNI_FLOAT }, OMNI_DOUBLE,
             INPUT_DATA),
         Function(reinterpret_cast<void *>(CastInt32ToInt64), MathCastFnStr(), {}, { OMNI_INT }, OMNI_LONG, INPUT_DATA),

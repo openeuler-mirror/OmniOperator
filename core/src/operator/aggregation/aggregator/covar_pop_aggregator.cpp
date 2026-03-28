@@ -309,7 +309,34 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggrega
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CovarPopAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &, int32_t, int32_t &) {}
+void CovarPopAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount,
+    int32_t &vectorIndex) {
+    const int32_t vNIdx = vectorIndex++;
+    const int32_t vXIdx = vectorIndex++;
+    const int32_t vYIdx = vectorIndex++;
+    const int32_t vCkIdx = vectorIndex++;
+    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        auto &row = unspillRows[rowIdx];
+        VectorBatch *batch = row.batch;
+        const int32_t index = row.rowIdx;
+        auto *vN = static_cast<Vector<double> *>(batch->Get(vNIdx));
+        if (vN->IsNull(index)) {
+            continue;
+        }
+        const double nD = vN->GetValue(index);
+        if (nD <= 0) {
+            continue;
+        }
+        auto *vX = static_cast<Vector<double> *>(batch->Get(vXIdx));
+        auto *vY = static_cast<Vector<double> *>(batch->Get(vYIdx));
+        auto *vCk = static_cast<Vector<double> *>(batch->Get(vCkIdx));
+        auto *s = CovarPartialState::CastState(row.state + aggStateOffset);
+        s->Merge(static_cast<int64_t>(nD), vX->GetValue(index), vY->GetValue(index), vCk->GetValue(index));
+        if (s->count > 0 && !s->IsOverFlowed()) {
+            s->valueState = AggValueState::NORMAL;
+        }
+    }
+}
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void CovarPopAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *, BaseVector *,

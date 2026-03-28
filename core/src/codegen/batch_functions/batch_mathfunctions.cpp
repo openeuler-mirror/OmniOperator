@@ -50,6 +50,22 @@ extern "C" DLLEXPORT void BatchCastInt64ToDouble(int64_t *x, bool *resIsNull, do
     }
 }
 
+extern "C" DLLEXPORT void BatchCastTimestampMicrosToDoubleSeconds(
+    int64_t *x, bool *resIsNull, double *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = static_cast<double>(x[i]) / 1000000.0;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastTimestampMicrosToFloatSeconds(
+    int64_t *x, bool *resIsNull, float *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = static_cast<float>(x[i]) / 1000000.0f;
+    }
+}
+
 extern "C" DLLEXPORT void BatchCastDoubleToInt32HalfUp(double *x, bool *resIsNull, int32_t *output, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {

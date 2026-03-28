@@ -25,6 +25,10 @@ template <typename T> extern DLLEXPORT void BatchAbs(T *x, bool *resIsNull, T *o
 extern "C" DLLEXPORT void BatchCastInt32ToDouble(int32_t *x, bool *resIsNull, double *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastInt64ToDouble(int64_t *x, bool *resIsNull, double *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastTimestampMicrosToDoubleSeconds(
+    int64_t *x, bool *resIsNull, double *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastTimestampMicrosToFloatSeconds(
+    int64_t *x, bool *resIsNull, float *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastInt32ToInt64(int32_t *x, bool *resIsNull, int64_t *output, int32_t rowCnt);
 

@@ -92,6 +92,17 @@ extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x)
     return static_cast<double>(x);
 }
 
+// Spark Cast(timestamp AS double): epoch seconds as double (internal storage is microseconds).
+extern "C" DLLEXPORT double CastTimestampMicrosToDoubleSeconds(int64_t microsSinceEpoch)
+{
+    return static_cast<double>(microsSinceEpoch) / 1000000.0;
+}
+
+extern "C" DLLEXPORT float CastTimestampMicrosToFloatSeconds(int64_t microsSinceEpoch)
+{
+    return static_cast<float>(microsSinceEpoch) / 1000000.0f;
+}
+
 extern "C" DLLEXPORT double CastFloatToDouble(float x)
 {
     return static_cast<double>(x);

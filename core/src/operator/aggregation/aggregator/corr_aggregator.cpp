@@ -409,7 +409,51 @@ void CorrAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSt
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CorrAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &, int32_t, int32_t &) {}
+void CorrAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount,
+    int32_t &vectorIndex) {
+    const int32_t vNIdx = vectorIndex++;
+    const int32_t vXIdx = vectorIndex++;
+    const int32_t vYIdx = vectorIndex++;
+    const int32_t vCkIdx = vectorIndex++;
+    const int32_t vXMkIdx = vectorIndex++;
+    const int32_t vYMkIdx = vectorIndex++;
+    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        auto &row = unspillRows[rowIdx];
+        VectorBatch *batch = row.batch;
+        const int32_t index = row.rowIdx;
+        auto *vN = static_cast<Vector<double> *>(batch->Get(vNIdx));
+        if (vN->IsNull(index)) {
+            continue;
+        }
+        const double nD = vN->GetValue(index);
+        if (nD <= 0) {
+            continue;
+        }
+        auto *vX = static_cast<Vector<double> *>(batch->Get(vXIdx));
+        auto *vY = static_cast<Vector<double> *>(batch->Get(vYIdx));
+        auto *vCk = static_cast<Vector<double> *>(batch->Get(vCkIdx));
+        auto *vXMk = static_cast<Vector<double> *>(batch->Get(vXMkIdx));
+        auto *vYMk = static_cast<Vector<double> *>(batch->Get(vYMkIdx));
+        CorrPartialState other;
+        other.count = static_cast<int64_t>(nD);
+        other.sum_x = nD * vX->GetValue(index);
+        other.sum_y = nD * vY->GetValue(index);
+        other.sum_xx = vXMk->GetValue(index) + nD * vX->GetValue(index) * vX->GetValue(index);
+        other.sum_yy = vYMk->GetValue(index) + nD * vY->GetValue(index) * vY->GetValue(index);
+        other.sum_xy = vCk->GetValue(index) + nD * vX->GetValue(index) * vY->GetValue(index);
+        if (!std::isfinite(other.sum_x) || !std::isfinite(other.sum_y) || !std::isfinite(other.sum_xx) ||
+            !std::isfinite(other.sum_yy) || !std::isfinite(other.sum_xy)) {
+            other.valueState = AggValueState::OVERFLOWED;
+        } else {
+            other.valueState = AggValueState::NORMAL;
+        }
+        auto *s = CorrPartialState::CastState(row.state + aggStateOffset);
+        s->Merge(other);
+        if (s->count > 0 && !s->IsOverFlowed()) {
+            s->valueState = AggValueState::NORMAL;
+        }
+    }
+}
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void CorrAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *, BaseVector *,
