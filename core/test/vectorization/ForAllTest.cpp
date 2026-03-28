@@ -3,6 +3,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <memory>
 #include <vector>
 #include <string>
 
@@ -223,7 +224,9 @@ TEST(ForAllTest, NullElementsInArray)
     int32_t elems[] = {5, 3, 3, 0};
     std::vector<int32_t> offsets = {0, 2, 3, 4};
 
-    auto *input = CreateIntArrayVectorBatch(rowSize, 4, elems, offsets);
+    // RAII: failed ASSERT_* returns immediately; manual deletes below would be skipped and confuse ASAN.
+    auto context = std::make_unique<ExecutionContext>();
+    std::unique_ptr<VectorBatch> input(CreateIntArrayVectorBatch(rowSize, 4, elems, offsets));
     auto *arrVec = dynamic_cast<ArrayVector *>(input->Get(0));
     auto *elemVec = dynamic_cast<Vector<int32_t> *>(arrVec->GetElementVector().get());
     elemVec->SetNull(0);
@@ -241,28 +244,23 @@ TEST(ForAllTest, NullElementsInArray)
         new LambdaExpr(gtExpr, paramTypes, paramNameToIdxMap, BooleanType())
     }, BooleanType());
 
-    auto *context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
-    ExprEval e(input, context);
+    ExprEval e(input.get(), context.get());
     e.VisitExpr(expr);
-    auto *result = e.GetResult();
+    std::unique_ptr<BaseVector> result(e.GetResult());
 
-    auto *boolVec = dynamic_cast<Vector<bool> *>(result);
+    auto *boolVec = dynamic_cast<Vector<bool> *>(result.get());
     ASSERT_NE(boolVec, nullptr);
     ASSERT_EQ(boolVec->GetSize(), 3);
 
-    ASSERT_FALSE(boolVec->IsNull(0));
-    ASSERT_EQ(boolVec->GetValue(0), false);
+    // Row 0: elements (NULL, 3). Predicate (x > 1) is NULL then true → Spark/SQL: forall is NULL if f returns NULL for any element.
+    ASSERT_TRUE(boolVec->IsNull(0));
 
     ASSERT_FALSE(boolVec->IsNull(1));
     ASSERT_EQ(boolVec->GetValue(1), true);
 
     ASSERT_FALSE(boolVec->IsNull(2));
     ASSERT_EQ(boolVec->GetValue(2), false);
-
-    delete context;
-    delete input;
-    delete result;
 }
 
 TEST(ForAllTest, AllNullArrayRows)
