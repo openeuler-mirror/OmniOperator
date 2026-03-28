@@ -1627,7 +1627,8 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
             break;
         }
         case OMNI_VARCHAR:
-        case OMNI_CHAR: {
+        case OMNI_CHAR:
+        case OMNI_VARBINARY: {
             VarcharColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, (int64_t *)values,
                 varcharLength, from, to, currentCol);
             break;
@@ -1706,7 +1707,7 @@ void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortAscendings, co
     auto dataTypeIds = dataTypes.GetIds();
     for (int32_t i = 0; i < sortColCount; ++i) {
         auto sortColTypeId = dataTypeIds[sortCols[i]];
-        if (sortColTypeId == OMNI_CHAR || sortColTypeId == OMNI_VARCHAR) {
+        if (sortColTypeId == OMNI_CHAR || sortColTypeId == OMNI_VARCHAR || sortColTypeId == OMNI_VARBINARY) {
             hasVarCharCol = true;
             break;
         }
@@ -1763,7 +1764,8 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                     outputIndex);
                 break;
             case OMNI_VARCHAR:
-            case OMNI_CHAR: {
+            case OMNI_CHAR:
+            case OMNI_VARBINARY: {
                 ConstructVector<OMNI_VARCHAR>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
                     outputIndex);
                 break;
@@ -1834,7 +1836,8 @@ void PagesIndex::GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount
                     radixRowWidth, outputVector);
                 break;
             case OMNI_VARCHAR:
-            case OMNI_CHAR: {
+            case OMNI_CHAR:
+            case OMNI_VARBINARY: {
                 ConstructVectorRadixSort<OMNI_VARCHAR>(vaStart, length, inputVectors, hasNull, hasDictionary,
                     radixRowWidth, outputVector);
                 break;
