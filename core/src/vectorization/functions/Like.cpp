@@ -5,10 +5,9 @@
 
 #include "Like.h"
 #include "vector/vector.h"
-#include <limits>
-#include <cstring>
-#include <regex>
+#include "util/utf8_util.h"
 #include <codecvt>
+#include <regex>
 
 namespace omniruntime::vectorization {
 using namespace omniruntime::type;
@@ -17,7 +16,10 @@ using namespace omniruntime::vec;
 namespace {
 constexpr char kLikeWildcardMany = '%';
 constexpr char kLikeWildcardOne = '_';
-constexpr char kLikeEscape = '\\';
+
+/// Default SQL escape (Spark / 2-arg LIKE).
+constexpr char kDefaultEscapeBytes[] = "\\";
+constexpr std::string_view kDefaultLikeEscape(kDefaultEscapeBytes, 1);
 
 static std::wstring ToWideString(const std::string& s) {
     std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
@@ -33,19 +35,66 @@ static void AppendRegexEscaped(char c, std::string& out) {
     out += c;
 }
 
-/// Convert SQL LIKE pattern to regex string. % -> .*, _ -> ., \ + char -> literal.
-static std::string LikePatternToRegex(const std::string_view& pattern) {
+/// Spark / Substrait may pass ESCAPE as CHAR(n): '/' padded with trailing ASCII spaces — trim before validation.
+static std::string_view RTrimAsciiSpaces(std::string_view s) {
+    while (!s.empty() && s.back() == ' ') {
+        s.remove_suffix(1);
+    }
+    return s;
+}
+
+static bool ValidateSingleCharEscape(std::string_view esc, std::string_view& outSeq) {
+    esc = RTrimAsciiSpaces(esc);
+    if (esc.empty()) {
+        return false;
+    }
+    int32_t cps = omniruntime::Utf8Util::CountCodePoints(esc.data(), static_cast<int32_t>(esc.size()));
+    if (cps != 1) {
+        return false;
+    }
+    outSeq = esc;
+    return true;
+}
+
+static int32_t Utf8LiteralLenAfterEscape(const char* p, size_t remaining) {
+    if (remaining == 0) {
+        return 0;
+    }
+    int32_t len = omniruntime::Utf8Util::LengthOfCodePoint(*p);
+    if (len < 1) {
+        return 1;
+    }
+    if (static_cast<size_t>(len) > remaining) {
+        return static_cast<int32_t>(remaining);
+    }
+    return len;
+}
+
+/// Convert SQL LIKE pattern to regex string. % -> .*, _ -> ., escape + next char -> literal.
+static std::string LikePatternToRegex(const std::string_view& pattern, const std::string_view& escapeSeq) {
     std::string regexStr;
     regexStr.reserve(pattern.size() * 2 + 4);
-    regexStr += '^';  // full match from start
+    regexStr += '^';
     size_t i = 0;
     while (i < pattern.size()) {
-        char c = pattern[i];
-        if (c == kLikeEscape && i + 1 < pattern.size()) {
-            AppendRegexEscaped(pattern[i + 1], regexStr);
-            i += 2;
+        if (!escapeSeq.empty() && i + escapeSeq.size() <= pattern.size() &&
+            pattern.compare(i, escapeSeq.size(), escapeSeq) == 0) {
+            if (i + escapeSeq.size() >= pattern.size()) {
+                for (size_t j = 0; j < escapeSeq.size(); ++j) {
+                    AppendRegexEscaped(pattern[i + j], regexStr);
+                }
+                i += escapeSeq.size();
+                continue;
+            }
+            i += escapeSeq.size();
+            int32_t litLen = Utf8LiteralLenAfterEscape(pattern.data() + i, pattern.size() - i);
+            for (int32_t k = 0; k < litLen; ++k) {
+                AppendRegexEscaped(pattern[i + static_cast<size_t>(k)], regexStr);
+            }
+            i += static_cast<size_t>(litLen);
             continue;
         }
+        char c = pattern[i];
         if (c == kLikeWildcardMany) {
             regexStr += ".*";
         } else if (c == kLikeWildcardOne) {
@@ -55,15 +104,31 @@ static std::string LikePatternToRegex(const std::string_view& pattern) {
         }
         ++i;
     }
-    regexStr += '$';  // full match to end
+    regexStr += '$';
     return regexStr;
 }
 }  // namespace
 
 void LikeFunction::Apply(std::stack<BaseVector*>& args, const DataTypePtr& outputType,
                          BaseVector*& result, ExecutionContext* context) const {
-    if (args.size() < 2) {
-        OMNI_THROW("Like function Error", "LIKE requires 2 arguments: string, pattern");
+    if (argumentCount_ != 2 && argumentCount_ != 3) {
+        OMNI_THROW("Like function Error", "Invalid LIKE function registration arity: {}", argumentCount_);
+    }
+    if (args.size() < static_cast<size_t>(argumentCount_)) {
+        OMNI_THROW("Like function Error", "LIKE requires {} arguments; got {}", argumentCount_, args.size());
+    }
+    if (argumentCount_ == 3) {
+        BaseVector* escapeVec = args.top();
+        args.pop();
+        BaseVector* patternVec = args.top();
+        args.pop();
+        BaseVector* strVec = args.top();
+        args.pop();
+        ApplyLikeWithEscape(strVec, patternVec, escapeVec, result, outputType);
+        delete escapeVec;
+        delete patternVec;
+        delete strVec;
+        return;
     }
     BaseVector* patternVec = args.top();
     args.pop();
@@ -105,9 +170,93 @@ void LikeFunction::ApplyLike(BaseVector* strVec, BaseVector* patternVec, BaseVec
     }
 }
 
+void LikeFunction::ApplyLikeWithEscape(BaseVector* strVec, BaseVector* patternVec, BaseVector* escapeVec,
+                                       BaseVector*& result, const DataTypePtr& outputType) const {
+    int32_t size = strVec->GetSize();
+    result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
+
+    if (patternVec->GetEncoding() == OMNI_ENCODING_CONST && patternVec->IsNull(0)) {
+        for (int32_t row = 0; row < size; ++row) {
+            result->SetNull(row);
+        }
+        return;
+    }
+
+    std::optional<std::string_view> constEscape;
+    if (escapeVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        if (escapeVec->IsNull(0)) {
+            for (int32_t row = 0; row < size; ++row) {
+                result->SetNull(row);
+            }
+            return;
+        }
+        std::string_view esc = reinterpret_cast<ConstVector<std::string_view>*>(escapeVec)->GetConstValue();
+        std::string_view escSeq;
+        if (!ValidateSingleCharEscape(esc, escSeq)) {
+            OMNI_THROW("Like function Error", "Escape string must be a single character");
+        }
+        constEscape = escSeq;
+    }
+
+    if (patternVec->GetEncoding() == OMNI_ENCODING_CONST) {
+        std::string_view patternSv = reinterpret_cast<ConstVector<std::string_view>*>(patternVec)->GetConstValue();
+        for (int32_t row = 0; row < size; ++row) {
+            if (strVec->IsNull(row) || patternVec->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+            std::string_view str = GetStringValueFromVector(strVec, row);
+            std::string_view escSeq;
+            if (constEscape.has_value()) {
+                escSeq = *constEscape;
+            } else {
+                if (escapeVec->IsNull(row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                std::string_view esc = GetStringValueFromVector(escapeVec, row);
+                if (!ValidateSingleCharEscape(esc, escSeq)) {
+                    OMNI_THROW("Like function Error", "Escape string must be a single character");
+                }
+            }
+            bool matches = MatchLike(str, patternSv, escSeq);
+            SetBooleanValueToVector(result, row, matches);
+        }
+    } else {
+        for (int32_t row = 0; row < size; ++row) {
+            if (strVec->IsNull(row) || patternVec->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+            std::string_view escSeq;
+            if (constEscape.has_value()) {
+                escSeq = *constEscape;
+            } else {
+                if (escapeVec->IsNull(row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                std::string_view esc = GetStringValueFromVector(escapeVec, row);
+                if (!ValidateSingleCharEscape(esc, escSeq)) {
+                    OMNI_THROW("Like function Error", "Escape string must be a single character");
+                }
+            }
+            std::string_view str = GetStringValueFromVector(strVec, row);
+            std::string_view patternSv = GetStringValueFromVector(patternVec, row);
+            bool matches = MatchLike(str, patternSv, escSeq);
+            SetBooleanValueToVector(result, row, matches);
+        }
+    }
+}
+
 bool LikeFunction::MatchLike(const std::string_view& str, const std::string_view& pattern) const {
+    return MatchLike(str, pattern, kDefaultLikeEscape);
+}
+
+bool LikeFunction::MatchLike(const std::string_view& str, const std::string_view& pattern,
+                             const std::string_view& escapeSeq) const {
     std::string strCopy(str);
-    std::string regexStr = LikePatternToRegex(pattern);
+    std::string regexStr = LikePatternToRegex(pattern, escapeSeq);
     try {
         std::wstring wRegex = ToWideString(regexStr);
         std::wstring wStr = ToWideString(strCopy);

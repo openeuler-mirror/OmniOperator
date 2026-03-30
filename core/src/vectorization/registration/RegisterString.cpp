@@ -52,7 +52,9 @@ void RegisterStringFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("regexp_extract", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT},
         OMNI_VARCHAR, std::make_shared<RegexpExtractFunction>());
     VectorFunction::RegisterVectorFunction("LIKE", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
-        std::make_shared<LikeFunction>());
+        std::make_shared<LikeFunction>(2));
+    VectorFunction::RegisterVectorFunction("LIKE", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+        std::make_shared<LikeFunction>(3));
     // Spark + Gluten: substr(string, start), substr(string, start, length); Gluten maps "substring" -> "substr"
     RegisterFunction<SubstrFunction, std::string, std::string_view, int32_t>(
         prefix + "substr", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
