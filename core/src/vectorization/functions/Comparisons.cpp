@@ -33,8 +33,8 @@ class ComparisonFunction final : public VectorFunction {
             const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
             leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
             auto rightSelectivity = std::make_shared<SelectivityVector>(rowSize);
-            const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
-            leftSelectivity->setFromBitsNegate(rightNullBits, rowSize);
+            const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(rightVector));
+            rightSelectivity->setFromBitsNegate(rightNullBits, rowSize);
             leftSelectivity->intersect(*rightSelectivity);
             leftSelectivity->applyToSelected([&](vector_size_t i) {
                 comparedResult->SetValue(i, cmp(leftVector->GetValue(i), rightVector->GetValue(i)));
@@ -47,8 +47,8 @@ class ComparisonFunction final : public VectorFunction {
             const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
             leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
             auto rightSelectivity = std::make_shared<SelectivityVector>(rowSize);
-            const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
-            leftSelectivity->setFromBitsNegate(rightNullBits, rowSize);
+            const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(rightVector));
+            rightSelectivity->setFromBitsNegate(rightNullBits, rowSize);
             leftSelectivity->intersect(*rightSelectivity);
             leftSelectivity->applyToSelected([&](vector_size_t i) {
                 comparedResult->SetValue(i, cmp(rightVector->GetValue(i), leftVector->GetValue(i)));
@@ -66,8 +66,8 @@ class ComparisonFunction final : public VectorFunction {
         const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
         leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
         auto rightSelectivity = std::make_shared<SelectivityVector>(rowSize);
-        const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
-        leftSelectivity->setFromBitsNegate(rightNullBits, rowSize);
+        const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(rightVector));
+        rightSelectivity->setFromBitsNegate(rightNullBits, rowSize);
         leftSelectivity->intersect(*rightSelectivity);
         leftSelectivity->applyToSelected([&](vector_size_t i) {
             comparedResult->SetValue(i, cmp(leftVector->GetValue(i), rightVector->GetValue(i)));
@@ -83,14 +83,23 @@ class ComparisonFunction final : public VectorFunction {
         const auto leftNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
         leftSelectivity->setFromBitsNegate(leftNullBits, rowSize);
         auto rightSelectivity = std::make_shared<SelectivityVector>(rowSize);
-        const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(leftVector));
-        leftSelectivity->setFromBitsNegate(rightNullBits, rowSize);
+        const auto rightNullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(rightVector));
+        rightSelectivity->setFromBitsNegate(rightNullBits, rowSize);
         leftSelectivity->intersect(*rightSelectivity);
         leftSelectivity->applyToSelected([&](vector_size_t i) {
             comparedResult->SetValue(i, cmp(leftVector->GetValue(i), rightVector->GetValue(i)));
         });
     }
 
+    // SQL / Spark: comparison result is unknown (NULL) if either operand is NULL.
+    static void PropagateSqlComparisonNulls(BaseVector *leftArg, BaseVector *rightArg, Vector<bool> *out, int32_t rowSize)
+    {
+        for (int32_t i = 0; i < rowSize; ++i) {
+            if (leftArg->IsNull(i) || rightArg->IsNull(i)) {
+                out->SetNull(i);
+            }
+        }
+    }
 
     // this method is used to compare between column and constant
     /**
@@ -137,7 +146,7 @@ class ComparisonFunction final : public VectorFunction {
         auto rowSize = context->GetResultRowSize();
         auto *flatResult = reinterpret_cast<Vector<bool> *>(VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowSize));
         auto alignedBuffer = unsafe::UnsafeVector::GetValues(flatResult)->GetBuffer();
-        // set defualt compared result is 0 which means the result is filtered for there might exists some row not compare when it's null
+        // Default false for rows that will be written; rows with unknown (NULL) result are marked via PropagateSqlComparisonNulls.
         memset(alignedBuffer, 0, rowSize);
         if (leftArg->GetEncoding() == OMNI_ENCODING_CONST || rightArg->GetEncoding() == OMNI_ENCODING_CONST) {
             // Fast path for (flat, const).
@@ -158,6 +167,7 @@ class ComparisonFunction final : public VectorFunction {
             // Path if one or more arguments are encoded.
             OMNI_THROW("ComparisonFunction Error:", "Not support decoded vector");
         }
+        PropagateSqlComparisonNulls(leftArg, rightArg, flatResult, rowSize);
         result = flatResult;
         delete rightArg;
         delete leftArg;

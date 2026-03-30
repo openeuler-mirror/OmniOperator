@@ -34,6 +34,7 @@ void TestComparisonOp(const std::string& functionName,
     int32_t rowSize = static_cast<int32_t>(leftData.size());
     ASSERT_EQ(rightData.size(), leftData.size());
     ASSERT_EQ(expectedResults.size(), leftData.size());
+    ASSERT_EQ(expectedNulls.size(), leftData.size());
 
     BaseVector* leftVec = VectorHelper::CreateFlatVector(typeId, rowSize);
     auto* leftVector = static_cast<Vector<T>*>(leftVec);
@@ -90,6 +91,7 @@ void TestComparisonOpStringLike(DataTypeId typeId,
     int32_t rowSize = static_cast<int32_t>(leftData.size());
     ASSERT_EQ(rightData.size(), leftData.size());
     ASSERT_EQ(expectedResults.size(), leftData.size());
+    ASSERT_EQ(expectedNulls.size(), leftData.size());
 
     using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
     BaseVector* leftVec = VectorHelper::CreateFlatVector(typeId, rowSize);
@@ -154,6 +156,37 @@ TEST_F(ComparisonTest, EqualBoolean) {
     std::vector<bool> expected = {true, false, false, true};
     std::vector<bool> expectedNulls = {false, false, false, false};
     TestComparisonOp<bool, OMNI_BOOLEAN>("equal", left, leftNulls, right, rightNulls, expected, expectedNulls);
+}
+
+// Spark / SQL: NULL = NULL and NULL = value are unknown (NULL), not false.
+TEST_F(ComparisonTest, EqualBoolean_NullSemanticsLikeSpark) {
+    std::vector<bool> left = {true, false, true, false, true};
+    std::vector<bool> leftNulls = {false, false, true, true, false};
+    std::vector<bool> right = {true, false, true, false, false};
+    std::vector<bool> rightNulls = {false, false, true, false, true};
+    std::vector<bool> expected = {true, true, false, false, false};
+    std::vector<bool> expectedNulls = {false, false, true, true, true};
+    TestComparisonOp<bool, OMNI_BOOLEAN>("equal", left, leftNulls, right, rightNulls, expected, expectedNulls);
+}
+
+TEST_F(ComparisonTest, EqualInt_NullSemanticsLikeSpark) {
+    std::vector<int32_t> left = {1, 2, 3, 4, 5};
+    std::vector<bool> leftNulls = {false, true, false, true, false};
+    std::vector<int32_t> right = {1, 2, 3, 4, 99};
+    std::vector<bool> rightNulls = {false, false, true, false, true};
+    std::vector<bool> expected = {true, false, false, false, false};
+    std::vector<bool> expectedNulls = {false, true, true, true, true};
+    TestComparisonOp<int32_t, OMNI_INT>("equal", left, leftNulls, right, rightNulls, expected, expectedNulls);
+}
+
+TEST_F(ComparisonTest, LessThanInt_NullSemanticsLikeSpark) {
+    std::vector<int32_t> left = {1, 2, 3};
+    std::vector<bool> leftNulls = {false, true, false};
+    std::vector<int32_t> right = {2, 2, 3};
+    std::vector<bool> rightNulls = {false, false, true};
+    std::vector<bool> expected = {true, false, false};
+    std::vector<bool> expectedNulls = {false, true, true};
+    TestComparisonOp<int32_t, OMNI_INT>("lessThan", left, leftNulls, right, rightNulls, expected, expectedNulls);
 }
 
 TEST_F(ComparisonTest, EqualShort) {
