@@ -60,8 +60,48 @@ namespace omniruntime::reader {
     }
 
     void OmniBooleanRleDecoder::nextNulls(char *data, uint64_t numValues, uint64_t *nulls) {
+        // When 'nulls' (incomingNulls) is provided, it represents the parent struct's
+        // null bitmap where bit=1 means the row is null at the parent level.
+        // The ORC PRESENT stream only encodes rows where the parent is NOT null,
+        // so we must: (1) count parent-non-null rows, (2) read that many bits from
+        // the PRESENT stream, and (3) expand the result back to full numValues,
+        // marking parent-null rows as null in the output.
+        // Output 'data' uses Omni NULL bitmap semantics: bit=1 means null.
         if (nulls) {
-            throw std::runtime_error("Not implemented yet for struct type!");
+            // Step 1: Count how many rows are NOT null at the parent level
+            uint64_t nonNullCount = 0;
+            for (uint64_t i = 0; i < numValues; ++i) {
+                if (!BitUtil::IsBitSet(nulls, i)) {
+                    ++nonNullCount;
+                }
+            }
+            // Fast path: all rows are parent-null, mark everything as null
+            if (nonNullCount == 0) {
+                const uint32_t outputBytes = (numValues + 7) / 8;
+                ::memset(data, 0xff, outputBytes);
+                return;
+            }
+            // Step 2: Read PRESENT stream for parent-non-null rows only
+            uint8_t* tempBuffer = new uint8_t[(nonNullCount + 7) / 8];
+            nextNulls(reinterpret_cast<char*>(tempBuffer), nonNullCount, nullptr);
+            // Step 3: Expand result back to full numValues, inheriting parent nulls
+            uint64_t srcBit = 0;
+            for (uint64_t i = 0; i < numValues; ++i) {
+                if (!BitUtil::IsBitSet(nulls, i)) {
+                    // Parent is NOT null: copy child's own null status from PRESENT stream
+                    if (BitUtil::IsBitSet(reinterpret_cast<uint64_t*>(tempBuffer), srcBit)) {
+                        BitUtil::SetBit(reinterpret_cast<uint64_t*>(data), i);
+                    } else {
+                        BitUtil::ClearBit(reinterpret_cast<uint64_t*>(data), i);
+                    }
+                    ++srcBit;
+                } else {
+                    // Parent IS null: mark this row as null in the output
+                    BitUtil::SetBit(reinterpret_cast<uint64_t*>(data), i);
+                }
+            }
+            delete[] tempBuffer;
+            return;
         }
 
         uint64_t nonNulls = numValues;
