@@ -798,62 +798,79 @@ static void Mm3Boolean(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std
 
 static uint32_t HashSingleElement(vec::BaseVector* vec, type::DataTypeId typeId, int64_t index, uint32_t seed);
 
-// Compute the Murmur3 hash for a contiguous range of array elements.
+// Compute the Murmur3 hash of the ARRAY value at column row index `row` in `arrayVec`.
 // Iterates elements in storage order [start, start+length), chaining each element's hash
 // as the seed for the next. Null elements are skipped (seed passes through unchanged).
 // Supports nested complex types via HashSingleElement dispatch.
-static uint32_t HashArrayElements(vec::BaseVector* elementVector, type::DataTypeId elementType,
-                                  int64_t start, int64_t length, uint32_t seed)
+static uint32_t HashArrayAtRow(vec::ArrayVector* arrayVec, int64_t row, uint32_t seed)
 {
+    auto elementVector = arrayVec->GetElementVector();
+    auto elementType = elementVector->GetTypeId();
+
+    int64_t start = arrayVec->GetOffset(row);
+    int64_t size = arrayVec->GetSize(row);
+
+    bool hasNull = elementVector->HasNull();
+
     uint32_t hash = seed;
-    for (int64_t i = start; i < start + length; i++) {
-        if (UNLIKELY(elementVector->HasNull() && elementVector->IsNull(i))) {
-            continue;
+    if (UNLIKELY(hasNull)) {
+        for (int64_t i = start; i < start + size; i++) {
+            if (UNLIKELY(elementVector->IsNull(i))) {
+                continue;
+            }
+            hash = HashSingleElement(elementVector.get(), elementType, i, hash);
         }
-        hash = HashSingleElement(elementVector, elementType, i, hash);
+    } else {
+        for (int64_t i = start; i < start + size; i++) {
+            hash = HashSingleElement(elementVector.get(), elementType, i, hash);
+        }
     }
     return hash;
 }
 
-// Compute the Murmur3 hash for a single map entry at the given row.
+// Compute the Murmur3 hash of the MAP value at column row index `row` in `mapVec`.
 // Iterates key-value pairs in storage order: hash(key_0) → hash(value_0) → hash(key_1) → ...
 // Each hash result is chained as the seed for the next. Null keys/values are skipped.
 // Note: since map iteration order is unspecified, logically equal maps with different
 // internal ordering may produce different hash values (consistent with Spark/Velox behavior).
-static uint32_t HashMapEntry(vec::MapVector* mapVec, int64_t row, uint32_t seed)
+static uint32_t HashMapAtRow(vec::MapVector* mapVec, int64_t row, uint32_t seed)
 {
     auto keyVector = mapVec->GetKeyVector();
     auto valueVector = mapVec->GetValueVector();
     auto keyType = keyVector->GetTypeId();
     auto valueType = valueVector->GetTypeId();
-    auto offsets = mapVec->GetOffsets();
 
-    int64_t start = offsets[row];
+    int64_t start = mapVec->GetOffset(row);
     int64_t size = mapVec->GetSize(row);
+
+    bool keyHasNull = keyVector->HasNull();
+    bool valueHasNull = valueVector->HasNull();
 
     uint32_t hash = seed;
     for (int64_t i = start; i < start + size; i++) {
-        if (!(keyVector->HasNull() && keyVector->IsNull(i))) {
+        if (!(keyHasNull && UNLIKELY(keyVector->IsNull(i)))) {
             hash = HashSingleElement(keyVector.get(), keyType, i, hash);
         }
-        if (!(valueVector->HasNull() && valueVector->IsNull(i))) {
+        if (!(valueHasNull && UNLIKELY(valueVector->IsNull(i)))) {
             hash = HashSingleElement(valueVector.get(), valueType, i, hash);
         }
     }
     return hash;
 }
 
-// Compute the Murmur3 hash for a single struct (row) at the given row index.
+// Compute the Murmur3 hash of the STRUCT value at column row index `row` in `rowVec`.
 // Iterates child fields in schema declaration order: hash(field_0) → hash(field_1) → ...
 // Each field's hash result is chained as the seed for the next. Null fields are skipped.
 // Supports nested complex types (struct containing array/map/struct) via recursive dispatch.
-static uint32_t HashStructRow(vec::RowVector* rowVec, int64_t row, uint32_t seed)
+static uint32_t HashStructAtRow(vec::RowVector* rowVec, int64_t row, uint32_t seed)
 {
     uint32_t hash = seed;
     for (int32_t i = 0; i < rowVec->ChildSize(); i++) {
         auto& child = rowVec->ChildAt(i);
-        if (UNLIKELY(child->HasNull() && child->IsNull(row))) {
-            continue;
+        if (UNLIKELY(child->HasNull())) {
+            if (UNLIKELY(child->IsNull(row))) {
+                continue;
+            }
         }
         hash = HashSingleElement(child.get(), child->GetTypeId(), row, hash);
     }
@@ -918,18 +935,15 @@ static uint32_t HashSingleElement(vec::BaseVector* vec, type::DataTypeId typeId,
         }
         case type::OMNI_ARRAY: {
             auto arrayVec = reinterpret_cast<vec::ArrayVector *>(vec);
-            int64_t start = arrayVec->GetOffset(index);
-            int64_t size = arrayVec->GetSize(index);
-            return HashArrayElements(arrayVec->GetElementVector().get(),
-                                     arrayVec->GetElementVector()->GetTypeId(), start, size, seed);
+            return HashArrayAtRow(arrayVec, index, seed);
         }
         case type::OMNI_MAP: {
             auto mapVec = reinterpret_cast<vec::MapVector *>(vec);
-            return HashMapEntry(mapVec, index, seed);
+            return HashMapAtRow(mapVec, index, seed);
         }
         case type::OMNI_ROW: {
             auto rowVec = reinterpret_cast<vec::RowVector *>(vec);
-            return HashStructRow(rowVec, index, seed);
+            return HashStructAtRow(rowVec, index, seed);
         }
         default: {
             std::string omniExceptionInfo =
@@ -943,25 +957,15 @@ static void Mm3Array(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::
 {
     auto* arrayVec = reinterpret_cast<vec::ArrayVector *>(vec);
 
-    auto offsets = arrayVec->GetOffsets();
-    auto elementVector = arrayVec->GetElementVector();
-    auto elementType = elementVector->GetTypeId();
-
     if (UNLIKELY(arrayVec->HasNull())) {
         for (int32_t row = 0; row < rowCount; row++) {
             if (!arrayVec->IsNull(row)) {
-                int64_t start = offsets[row];
-                int64_t size = arrayVec->GetSize(row);
-                partitionIds[row] = HashArrayElements(elementVector.get(), elementType,
-                                                      start, size, partitionIds[row]);
+                partitionIds[row] = HashArrayAtRow(arrayVec, row, partitionIds[row]);
             }
         }
     } else {
         for (int32_t row = 0; row < rowCount; row++) {
-            int64_t start = offsets[row];
-            int64_t size = arrayVec->GetSize(row);
-            partitionIds[row] = HashArrayElements(elementVector.get(), elementType,
-                                                  start, size, partitionIds[row]);
+            partitionIds[row] = HashArrayAtRow(arrayVec, row, partitionIds[row]);
         }
     }
 }
@@ -973,12 +977,12 @@ static void Mm3Map(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std::ve
     if (UNLIKELY(mapVec->HasNull())) {
         for (int32_t row = 0; row < rowCount; row++) {
             if (!mapVec->IsNull(row)) {
-                partitionIds[row] = HashMapEntry(mapVec, row, partitionIds[row]);
+                partitionIds[row] = HashMapAtRow(mapVec, row, partitionIds[row]);
             }
         }
     } else {
         for (int32_t row = 0; row < rowCount; row++) {
-            partitionIds[row] = HashMapEntry(mapVec, row, partitionIds[row]);
+            partitionIds[row] = HashMapAtRow(mapVec, row, partitionIds[row]);
         }
     }
 }
@@ -990,12 +994,12 @@ static void Mm3Struct(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std:
     if (UNLIKELY(rowVec->HasNull())) {
         for (int32_t row = 0; row < rowCount; row++) {
             if (!rowVec->IsNull(row)) {
-                partitionIds[row] = HashStructRow(rowVec, row, partitionIds[row]);
+                partitionIds[row] = HashStructAtRow(rowVec, row, partitionIds[row]);
             }
         }
     } else {
         for (int32_t row = 0; row < rowCount; row++) {
-            partitionIds[row] = HashStructRow(rowVec, row, partitionIds[row]);
+            partitionIds[row] = HashStructAtRow(rowVec, row, partitionIds[row]);
         }
     }
 }
