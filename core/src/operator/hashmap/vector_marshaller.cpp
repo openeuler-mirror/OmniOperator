@@ -557,131 +557,162 @@ std::unordered_map<DataTypeId, DeSerializerFunc> complexVectorDeSerializerCenter
 };
 
 std::vector<VectorSerializer> vectorSerializerCenter = {
-    nullptr,                                        // OMNI_NONE,
-    SerializeValueIntoArena<type::OMNI_INT>,        // OMNI_INT
-    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_LONG
-    SerializeValueIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
-    SerializeValueIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    SerializeValueIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT
-    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64,
-    SerializeValueIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    SerializeValueIntoArena<type::OMNI_INT>,        // OMNI_DATE32
-    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
-    SerializeValueIntoArena<type::OMNI_INT>,        // OMNI_TIME32
-    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
-    nullptr,                                        // OMNI_INTERVAL_MONTHS
-    nullptr,                                        // OMNI_INTERVAL_DAY_TIME
-    SerializeValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
-    SerializeValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR,
-    nullptr,                                        // OMNI_CONTAINER,
-    SerializeValueIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE
-    SerializeValueIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT
-    nullptr,                                        // OMNI_VARBINARY
-    nullptr,                                        // OMNI_ARRAY
-    nullptr,                                        // OMNI_MAP
-    nullptr,                                        // OMNI_ROW
-    nullptr,                                        // OMNI_UNKNOWN
-    nullptr,                                        // OMNI_FUNCTION
-    nullptr,                                        // OMNI_OPAQUE
-    nullptr,                                        // OMNI_INVALID
-    nullptr,                                        // reserved for future
-    nullptr,                                        // reserved for future
-    SerializeValueIntoArena<type::OMNI_ARRAY>,      // OMNI_ARRAY
-    nullptr,                                        // OMNI_MMAP
-    SerializeValueIntoArena<type::OMNI_ROW>         // OMNI_ROW
+    nullptr,                                        // OMNI_NONE, 0
+    SerializeValueIntoArena<type::OMNI_INT>,        // OMNI_INT, 1
+    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_LONG, 2
+    SerializeValueIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE, 3
+    SerializeValueIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN, 4
+    SerializeValueIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT, 5
+    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64, 6
+    SerializeValueIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128, 7
+    SerializeValueIntoArena<type::OMNI_INT>,        // OMNI_DATE32, 8
+    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_DATE64, 9
+    SerializeValueIntoArena<type::OMNI_INT>,        // OMNI_TIME32, 10
+    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_TIME64, 11
+    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP, 12
+    nullptr,                                        // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                        // OMNI_INTERVAL_DAY_TIME, 14
+    SerializeValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR, 15
+    SerializeValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR, 16
+    nullptr,                                        // OMNI_CONTAINER, 17
+    SerializeValueIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE, 18
+    SerializeValueIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
+    nullptr,                                        // OMNI_VARBINARY, 20
+    nullptr,                                        // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                        // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                        // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                        // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                        // OMNI_MULTISET, 25
+    nullptr,                                        // 26
+    nullptr,                                        // 27
+    nullptr,                                        // 28
+    nullptr,                                        // 29
+    SerializeValueIntoArena<type::OMNI_ARRAY>,      // OMNI_ARRAY, 30
+    nullptr,                                        // OMNI_MAP, 31
+    SerializeValueIntoArena<type::OMNI_ROW>,        // OMNI_ROW, 32
+    nullptr,                                        // OMNI_UNKNOWN, 33
+    nullptr,                                        // OMNI_FUNCTION, 34
+    nullptr,                                        // OMNI_OPAQUE, 35
+    nullptr                                         // OMNI_INVALID
 };
 
 std::vector<VectorSerializer> dicVectorSerializerCenter = {
-    nullptr,                                                  // OMNI_NONE,
-    SerializeDictionaryValueIntoArena<type::OMNI_INT>,        // OMNI_INT
-    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_LONG
-    SerializeDictionaryValueIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
-    SerializeDictionaryValueIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    SerializeDictionaryValueIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT
-    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64,
-    SerializeDictionaryValueIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    SerializeDictionaryValueIntoArena<type::OMNI_INT>,        // OMNI_DATE32
-    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
-    SerializeDictionaryValueIntoArena<type::OMNI_INT>,        // OMNI_TIME32
-    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
-    nullptr,                                                  // OMNI_INTERVAL_MONTHS
-    nullptr,                                                  // OMNI_INTERVAL_DAY_TIME
-    SerializeDictionaryValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
-    SerializeDictionaryValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR,
-    nullptr,                                                  // OMNI_CONTAINER,
-    SerializeDictionaryValueIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE
-    SerializeDictionaryValueIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT
-    nullptr,                                                  // OMNI_VARBINARY
-    nullptr,                                                  // OMNI_ARRAY
-    nullptr,                                                  // OMNI_MAP
-    nullptr,                                                  // OMNI_ROW
-    nullptr,                                                  // OMNI_UNKNOWN
-    nullptr,                                                  // OMNI_FUNCTION
-    nullptr,                                                  // OMNI_OPAQUE
+    nullptr,                                                  // OMNI_NONE, 0
+    SerializeDictionaryValueIntoArena<type::OMNI_INT>,        // OMNI_INT, 1
+    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_LONG, 2
+    SerializeDictionaryValueIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE, 3
+    SerializeDictionaryValueIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN, 4
+    SerializeDictionaryValueIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT, 5
+    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64, 6
+    SerializeDictionaryValueIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128, 7
+    SerializeDictionaryValueIntoArena<type::OMNI_INT>,        // OMNI_DATE32, 8
+    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_DATE64, 9
+    SerializeDictionaryValueIntoArena<type::OMNI_INT>,        // OMNI_TIME32, 10
+    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_TIME64, 11
+    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP, 12
+    nullptr,                                                  // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                  // OMNI_INTERVAL_DAY_TIME, 14
+    SerializeDictionaryValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR, 15
+    SerializeDictionaryValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR, 16
+    nullptr,                                                  // OMNI_CONTAINER, 17
+    SerializeDictionaryValueIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE, 18
+    SerializeDictionaryValueIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
+    nullptr,                                                  // OMNI_VARBINARY, 20
+    nullptr,                                                  // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                  // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                  // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                  // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                  // OMNI_MULTISET, 25
+    nullptr,                                                  // 26
+    nullptr,                                                  // 27
+    nullptr,                                                  // 28
+    nullptr,                                                  // 29
+    nullptr,                                                  // OMNI_ARRAY, 30
+    nullptr,                                                  // OMNI_MAP, 31
+    nullptr,                                                  // OMNI_ROW, 32
+    nullptr,                                                  // OMNI_UNKNOWN, 33
+    nullptr,                                                  // OMNI_FUNCTION, 34
+    nullptr,                                                  // OMNI_OPAQUE, 35
     nullptr                                                   // OMNI_INVALID
 };
 
 std::vector<VectorSerializer> constVectorSerializerCenter = {
-    nullptr,                                                 // OMNI_NONE,
-    SerializeConstValueIntoArena<type::OMNI_INT>,            // OMNI_INT
-    SerializeConstValueIntoArena<type::OMNI_LONG>,           // OMNI_LONG
-    SerializeConstValueIntoArena<type::OMNI_DOUBLE>,         // OMNI_DOUBLE
-    SerializeConstValueIntoArena<type::OMNI_BOOLEAN>,        // OMNI_BOOLEAN
-    SerializeConstValueIntoArena<type::OMNI_SHORT>,          // OMNI_SHORT
-    SerializeConstValueIntoArena<type::OMNI_LONG>,           // OMNI_DECIMAL64,
-    SerializeConstValueIntoArena<type::OMNI_DECIMAL128>,     // OMNI_DECIMAL128
-    SerializeConstValueIntoArena<type::OMNI_INT>,            // OMNI_DATE32
-    SerializeConstValueIntoArena<type::OMNI_LONG>,           // OMNI_DATE64
-    SerializeConstValueIntoArena<type::OMNI_INT>,            // OMNI_TIME32
-    SerializeConstValueIntoArena<type::OMNI_LONG>,           // OMNI_TIME64
-    SerializeConstValueIntoArena<type::OMNI_LONG>,           // OMNI_TIMESTAMP
-    nullptr,                                                 // OMNI_INTERVAL_MONTHS
-    nullptr,                                                 // OMNI_INTERVAL_DAY_TIME
-    SerializeConstValueIntoArena<type::OMNI_VARCHAR>,        // OMNI_VARCHAR
-    SerializeConstValueIntoArena<type::OMNI_VARCHAR>,        // OMNI_CHAR,
-    nullptr,                                                 // OMNI_CONTAINER,
-    SerializeConstValueIntoArena<type::OMNI_BYTE>,           // OMNI_BYTE
-    SerializeConstValueIntoArena<type::OMNI_FLOAT>,          // OMNI_FLOAT
-    nullptr,                                                 // OMNI_VARBINARY
-    nullptr,                                                 // OMNI_ARRAY
-    nullptr,                                                 // OMNI_MAP
-    nullptr,                                                 // OMNI_ROW
-    nullptr,                                                 // OMNI_UNKNOWN
-    nullptr,                                                 // OMNI_FUNCTION
-    nullptr,                                                 // OMNI_OPAQUE
+    nullptr,                                                 // OMNI_NONE, 0
+    SerializeConstValueIntoArena<type::OMNI_INT>,            // OMNI_INT, 1
+    SerializeConstValueIntoArena<type::OMNI_LONG>,           // OMNI_LONG, 2
+    SerializeConstValueIntoArena<type::OMNI_DOUBLE>,         // OMNI_DOUBLE, 3
+    SerializeConstValueIntoArena<type::OMNI_BOOLEAN>,        // OMNI_BOOLEAN, 4
+    SerializeConstValueIntoArena<type::OMNI_SHORT>,          // OMNI_SHORT, 5
+    SerializeConstValueIntoArena<type::OMNI_LONG>,           // OMNI_DECIMAL64, 6
+    SerializeConstValueIntoArena<type::OMNI_DECIMAL128>,     // OMNI_DECIMAL128, 7
+    SerializeConstValueIntoArena<type::OMNI_INT>,            // OMNI_DATE32, 8
+    SerializeConstValueIntoArena<type::OMNI_LONG>,           // OMNI_DATE64, 9
+    SerializeConstValueIntoArena<type::OMNI_INT>,            // OMNI_TIME32, 10
+    SerializeConstValueIntoArena<type::OMNI_LONG>,           // OMNI_TIME64, 11
+    SerializeConstValueIntoArena<type::OMNI_LONG>,           // OMNI_TIMESTAMP, 12
+    nullptr,                                                 // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                 // OMNI_INTERVAL_DAY_TIME, 14
+    SerializeConstValueIntoArena<type::OMNI_VARCHAR>,        // OMNI_VARCHAR, 15
+    SerializeConstValueIntoArena<type::OMNI_VARCHAR>,        // OMNI_CHAR, 16
+    nullptr,                                                 // OMNI_CONTAINER, 17
+    SerializeConstValueIntoArena<type::OMNI_BYTE>,           // OMNI_BYTE, 18
+    SerializeConstValueIntoArena<type::OMNI_FLOAT>,          // OMNI_FLOAT, 19
+    nullptr,                                                 // OMNI_VARBINARY, 20
+    nullptr,                                                 // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                 // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                 // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                 // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                 // OMNI_MULTISET, 25
+    nullptr,                                                 // 26
+    nullptr,                                                 // 27
+    nullptr,                                                 // 28
+    nullptr,                                                 // 29
+    nullptr,                                                 // OMNI_ARRAY, 30
+    nullptr,                                                 // OMNI_MAP, 31
+    nullptr,                                                 // OMNI_ROW, 32
+    nullptr,                                                 // OMNI_UNKNOWN, 33
+    nullptr,                                                 // OMNI_FUNCTION, 34
+    nullptr,                                                 // OMNI_OPAQUE, 35
     nullptr                                                  // OMNI_INVALID
 };
 
 std::vector<VectorDeSerializer> vectorDeSerializerCenter = {
-    nullptr,                                       // OMNI_NONE,
-    DeserializeFromPointer<type::OMNI_INT>,        // OMNI_INT
-    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_LONG
-    DeserializeFromPointer<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
-    DeserializeFromPointer<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    DeserializeFromPointer<type::OMNI_SHORT>,      // OMNI_SHORT
-    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_DECIMAL64,
-    DeserializeFromPointer<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    DeserializeFromPointer<type::OMNI_INT>,        // OMNI_DATE32
-    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_DATE64
-    DeserializeFromPointer<type::OMNI_INT>,        // /OMNI_TIME32
-    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_TIME64
-    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_TIMESTAMP
-    nullptr,                                       // OMNI_INTERVAL_MONTHS
-    nullptr,                                       // OMNI_INTERVAL_DAY_TIME
-    DeserializeFromPointer<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
-    DeserializeFromPointer<type::OMNI_VARCHAR>,    // OMNI_CHAR,
-    nullptr,                                       // OMNI_CONTAINER,
-    DeserializeFromPointer<type::OMNI_BYTE>,       // OMNI_BYTE
-    DeserializeFromPointer<type::OMNI_FLOAT>,      // OMNI_FLOAT
-    nullptr,                                       // OMNI_VARBINARY
-    nullptr,                                       // OMNI_ARRAY
-    nullptr,                                       // OMNI_MAP
-    nullptr,                                       // OMNI_ROW
-    nullptr,                                       // OMNI_UNKNOWN
-    nullptr,                                       // OMNI_FUNCTION
-    nullptr,                                       // OMNI_OPAQUE
+    nullptr,                                       // OMNI_NONE, 0
+    DeserializeFromPointer<type::OMNI_INT>,        // OMNI_INT, 1
+    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_LONG, 2
+    DeserializeFromPointer<type::OMNI_DOUBLE>,     // OMNI_DOUBLE, 3
+    DeserializeFromPointer<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN, 4
+    DeserializeFromPointer<type::OMNI_SHORT>,      // OMNI_SHORT, 5
+    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_DECIMAL64, 6
+    DeserializeFromPointer<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128, 7
+    DeserializeFromPointer<type::OMNI_INT>,        // OMNI_DATE32, 8
+    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_DATE64, 9
+    DeserializeFromPointer<type::OMNI_INT>,        // OMNI_TIME32, 10
+    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_TIME64, 11
+    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_TIMESTAMP, 12
+    nullptr,                                       // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                       // OMNI_INTERVAL_DAY_TIME, 14
+    DeserializeFromPointer<type::OMNI_VARCHAR>,    // OMNI_VARCHAR, 15
+    DeserializeFromPointer<type::OMNI_VARCHAR>,    // OMNI_CHAR, 16
+    nullptr,                                       // OMNI_CONTAINER, 17
+    DeserializeFromPointer<type::OMNI_BYTE>,       // OMNI_BYTE, 18
+    DeserializeFromPointer<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
+    nullptr,                                       // OMNI_VARBINARY, 20
+    nullptr,                                       // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                       // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                       // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                       // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                       // OMNI_MULTISET, 25
+    nullptr,                                       // 26
+    nullptr,                                       // 27
+    nullptr,                                       // 28
+    nullptr,                                       // 29
+    nullptr,                                       // OMNI_ARRAY, 30
+    nullptr,                                       // OMNI_MAP, 31
+    nullptr,                                       // OMNI_ROW, 32
+    nullptr,                                       // OMNI_UNKNOWN, 33
+    nullptr,                                       // OMNI_FUNCTION, 34
+    nullptr,                                       // OMNI_OPAQUE, 35
     nullptr                                        // OMNI_INVALID
 };
 
@@ -739,16 +770,19 @@ bool SerializeDictionaryValueIgnoreNullIntoArena(BaseVector *baseVector, int32_t
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
     if (!baseVector->IsNull(rowIdx)) {
-        auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<RawDataType>> *>(baseVector);
-
-        auto value = dictionaryVector->GetValue(rowIdx);
-        // the analysis of const expr  will be in compile stage
-        if constexpr (std::is_same_v<RawDataType, std::string_view>) {
-            VariableTypeSerializer(value, arenaAllocator, result);
-        } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
-            Decimal128SerializerForJoin(value, arenaAllocator, result);
+        if constexpr (std::is_same_v<RawDataType, ArrayType>) {
+            auto *arrayVector = dynamic_cast<ArrayVector *>(baseVector);
+            ArrayVectorSerializer(*arrayVector, rowIdx, arenaAllocator, result);
         } else {
-            FixedLenTypeSerializerForJoin<RawDataType>(value, arenaAllocator, result);
+            auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<RawDataType>> *>(baseVector);
+            auto value = dictionaryVector->GetValue(rowIdx);
+            if constexpr (std::is_same_v<RawDataType, std::string_view>) {
+                VariableTypeSerializer(value, arenaAllocator, result);
+            } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
+                Decimal128SerializerForJoin(value, arenaAllocator, result);
+            } else {
+                FixedLenTypeSerializerForJoin<RawDataType>(value, arenaAllocator, result);
+            }
         }
         return true;
     }
@@ -763,15 +797,19 @@ bool SerializeConstValueIgnoreNullIntoArena(BaseVector *baseVector, int32_t rowI
     using RawDataType = typename NativeAndVectorType<id>::type;
 
     if (!baseVector->IsNull(rowIdx)) {
-        auto constVector = static_cast<ConstVector<RawDataType> *>(baseVector);
-        auto value = constVector->GetConstValue();
-
-        if constexpr (std::is_same_v<RawDataType, std::string_view>) {
-            VariableTypeSerializer(value, arenaAllocator, result);
-        } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
-            Decimal128SerializerForJoin(value, arenaAllocator, result);
+        if constexpr (std::is_same_v<RawDataType, ArrayType>) {
+            auto *arrayVector = dynamic_cast<ArrayVector *>(baseVector);
+            ArrayVectorSerializer(*arrayVector, rowIdx, arenaAllocator, result);
         } else {
-            FixedLenTypeSerializerForJoin<RawDataType>(value, arenaAllocator, result);
+            auto constVector = static_cast<ConstVector<RawDataType> *>(baseVector);
+            auto value = constVector->GetConstValue();
+            if constexpr (std::is_same_v<RawDataType, std::string_view>) {
+                VariableTypeSerializer(value, arenaAllocator, result);
+            } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
+                Decimal128SerializerForJoin(value, arenaAllocator, result);
+            } else {
+                FixedLenTypeSerializerForJoin<RawDataType>(value, arenaAllocator, result);
+            }
         }
         return true;
     }
@@ -801,95 +839,122 @@ template <type::DataTypeId id> std::string DeserializeKeyFromPointer(const char 
 }
 
 std::vector<VectorSerializerIgnoreNull> vectorSerializerIgnoreNullCenter = {
-    nullptr,                                                  // OMNI_NONE,
-    SerializeValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_INT
-    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_LONG
-    SerializeValueIgnoreNullIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
-    SerializeValueIgnoreNullIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    SerializeValueIgnoreNullIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT
-    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64,
-    SerializeValueIgnoreNullIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    SerializeValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_DATE32
-    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
-    SerializeValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32
-    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
+    nullptr,                                                  // OMNI_NONE, 0
+    SerializeValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_INT, 1
+    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_LONG, 2
+    SerializeValueIgnoreNullIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE, 3
+    SerializeValueIgnoreNullIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN, 4
+    SerializeValueIgnoreNullIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT, 5
+    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64, 6
+    SerializeValueIgnoreNullIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128, 7
+    SerializeValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_DATE32, 8
+    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64, 9
+    SerializeValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32, 10
+    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64, 11
+    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP, 12
     nullptr,                                                  // OMNI_INTERVAL_MONTHS
-    nullptr,                                                  // OMNI_INTERVAL_DAY_TIME
-    SerializeValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
-    SerializeValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR,
-    nullptr,                                                  // OMNI_CONTAINER,
-    SerializeValueIgnoreNullIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE
-    SerializeValueIgnoreNullIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT
-    nullptr,                                                  // OMNI_VARBINARY
-    nullptr,                                                  // OMNI_ARRAY
-    nullptr,                                                  // OMNI_MAP
-    nullptr,                                                  // OMNI_ROW
-    nullptr,                                                  // OMNI_UNKNOWN
-    nullptr,                                                  // OMNI_FUNCTION
-    nullptr,                                                  // OMNI_OPAQUE
+    nullptr,                                                  // OMNI_INTERVAL_DAY_TI
+    SerializeValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR, 15
+    SerializeValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR, 16
+    nullptr,                                                  // OMNI_CONTAINER, 17
+    SerializeValueIgnoreNullIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE, 18
+    SerializeValueIgnoreNullIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
+    nullptr,                                                  // OMNI_VARBINARY, 20
+    nullptr,                                                  // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                  // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                  // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                  // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                  // OMNI_MULTISET, 25
+    nullptr,                                                  // 26
+    nullptr,                                                  // 27
+    nullptr,                                                  // 28
+    nullptr,                                                  // 29
+    SerializeValueIgnoreNullIntoArena<type::OMNI_ARRAY>,      // OMNI_ARRAY, 30
+    nullptr,                                                  // OMNI_MAP, 31
+    nullptr,                                                  // OMNI_ROW, 32
+    nullptr,                                                  // OMNI_UNKNOWN, 33
+    nullptr,                                                  // OMNI_FUNCTION, 34
+    nullptr,                                                  // OMNI_OPAQUE, 35
     nullptr                                                   // OMNI_INVALID
 };
 
 std::vector<VectorSerializerIgnoreNull> dicVectorSerializerIgnoreNullCenter = {
-    nullptr,                                                            // OMNI_NONE,
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_INT
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_LONG
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64,
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_DATE32
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
-    nullptr,                                                            // OMNI_INTERVAL_MONTHS
-    nullptr,                                                            // OMNI_INTERVAL_DAY_TIME
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR,
-    nullptr,                                                            // OMNI_CONTAINER,
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE
-    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT
-    nullptr,                                                            // OMNI_VARBINARY
-    nullptr,                                                            // OMNI_ARRAY
-    nullptr,                                                            // OMNI_MAP
-    nullptr,                                                            // OMNI_ROW
-    nullptr,                                                            // OMNI_UNKNOWN
-    nullptr,                                                            // OMNI_FUNCTION
-    nullptr,                                                            // OMNI_OPAQUE
+    nullptr,                                                            // OMNI_NONE, 0
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_INT, 1
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_LONG, 2
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE, 3
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN, 4
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT, 5
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64, 6
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128, 7
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_DATE32, 8
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64, 9
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32, 10
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64, 11
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP, 12
+    nullptr,                                                            // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                            // OMNI_INTERVAL_DAY_TIME, 14
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR, 15
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR, 16
+    nullptr,                                                            // OMNI_CONTAINER, 17
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE, 18
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
+    nullptr,                                                            // OMNI_VARBINARY, 20
+    nullptr,                                                            // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                            // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                            // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                            // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                            // OMNI_MULTISET, 25
+    nullptr,                                                            // 26
+    nullptr,                                                            // 27
+    nullptr,                                                            // 28
+    nullptr,                                                            // 29
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_ARRAY>,      // OMNI_ARRAY, 30
+    nullptr,                                                            // OMNI_MAP, 31
+    nullptr,                                                            // OMNI_ROW, 32
+    nullptr,                                                            // OMNI_UNKNOWN, 33
+    nullptr,                                                            // OMNI_FUNCTION, 34
+    nullptr,                                                            // OMNI_OPAQUE, 35
     nullptr                                                             // OMNI_INVALID
 };
 
 std::vector<VectorSerializerIgnoreNull> constVectorSerializerIgnoreNullCenter = {
-    nullptr,                                                            // OMNI_NONE,
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_INT>,             // OMNI_INT
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_LONG>,            // OMNI_LONG
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_DOUBLE>,          // OMNI_DOUBLE
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_BOOLEAN>,         // OMNI_BOOLEAN
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_SHORT>,           // OMNI_SHORT
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_LONG>,            // OMNI_DECIMAL64,
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_DECIMAL128>,      // OMNI_DECIMAL128
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_INT>,             // OMNI_DATE32
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_LONG>,            // OMNI_DATE64
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_INT>,             // OMNI_TIME32
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_LONG>,            // OMNI_TIME64
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_LONG>,            // OMNI_TIMESTAMP
-    nullptr,                                                            // OMNI_INTERVAL_MONTHS
-    nullptr,                                                            // OMNI_INTERVAL_DAY_TIME
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,         // OMNI_VARCHAR
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,         // OMNI_CHAR,
-    nullptr,                                                            // OMNI_CONTAINER,
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_BYTE>,            // OMNI_BYTE
-    SerializeConstValueIgnoreNullIntoArena<type::OMNI_FLOAT>,           // OMNI_FLOAT
-    nullptr,                                                            // OMNI_VARBINARY
-    nullptr,                                                            // OMNI_ARRAY
-    nullptr,                                                            // OMNI_MAP
-    nullptr,                                                            // OMNI_ROW
-    nullptr,                                                            // OMNI_UNKNOWN
-    nullptr,                                                            // OMNI_FUNCTION
-    nullptr,                                                            // OMNI_OPAQUE
+    nullptr,                                                            // OMNI_NONE, 0
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_INT>,             // OMNI_INT, 1
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_LONG>,            // OMNI_LONG, 2
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_DOUBLE>,          // OMNI_DOUBLE, 3
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_BOOLEAN>,         // OMNI_BOOLEAN, 4
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_SHORT>,           // OMNI_SHORT, 5
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_LONG>,            // OMNI_DECIMAL64, 6
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_DECIMAL128>,      // OMNI_DECIMAL128, 7
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_INT>,             // OMNI_DATE32, 8
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_LONG>,            // OMNI_DATE64, 9
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_INT>,             // OMNI_TIME32, 10
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_LONG>,            // OMNI_TIME64, 11
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_LONG>,            // OMNI_TIMESTAMP, 12
+    nullptr,                                                            // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                            // OMNI_INTERVAL_DAY_TIME, 14
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,         // OMNI_VARCHAR, 15
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,         // OMNI_CHAR, 16
+    nullptr,                                                            // OMNI_CONTAINER, 17
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_BYTE>,            // OMNI_BYTE, 18
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_FLOAT>,           // OMNI_FLOAT, 19
+    nullptr,                                                            // OMNI_VARBINARY, 20
+    nullptr,                                                            // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                            // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                            // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                            // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                            // OMNI_MULTISET, 25
+    nullptr,                                                            // 26
+    nullptr,                                                            // 27
+    nullptr,                                                            // 28
+    nullptr,                                                            // 29
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_ARRAY>,           // OMNI_ARRAY, 30
+    nullptr,                                                            // OMNI_MAP, 31
+    nullptr,                                                            // OMNI_ROW, 32
+    nullptr,                                                            // OMNI_UNKNOWN, 33
+    nullptr,                                                            // OMNI_FUNCTION, 34
+    nullptr,                                                            // OMNI_OPAQUE, 35
     nullptr                                                             // OMNI_INVALID
 };
 
@@ -1022,188 +1087,242 @@ bool SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd(BaseVector *baseVector,
 }
 
 std::vector<FixedKeyVectorSerializerIgnoreNull> vectorSerializerFixedKeysIgnoreNullCenter = {
-    nullptr,                                                      // OMNI_NONE,
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_INT
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_LONG
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64,
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_DATE32
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
-    nullptr,                                                      // OMNI_INTERVAL_MONTHS
-    nullptr,                                                      // OMNI_INTERVAL_DAY_TIME
-    nullptr,                                                      // OMNI_VARCHAR
-    nullptr,                                                      // OMNI_CHAR,
-    nullptr,                                                      // OMNI_CONTAINER,
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE
-    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT
-    nullptr,                                                      // OMNI_VARBINARY
-    nullptr,                                                      // OMNI_ARRAY
-    nullptr,                                                      // OMNI_MAP
-    nullptr,                                                      // OMNI_ROW
-    nullptr,                                                      // OMNI_UNKNOWN
-    nullptr,                                                      // OMNI_FUNCTION
-    nullptr,                                                      // OMNI_OPAQUE
+    nullptr,                                                      // OMNI_NONE, 0
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_INT, 1
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_LONG, 2
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE, 3
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN, 4
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT, 5
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64, 6
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128, 7
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_DATE32, 8
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64, 9
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32, 10
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64, 11
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP, 12
+    nullptr,                                                      // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                      // OMNI_INTERVAL_DAY_TIME, 14
+    nullptr,                                                      // OMNI_VARCHAR, 15
+    nullptr,                                                      // OMNI_CHAR, 16
+    nullptr,                                                      // OMNI_CONTAINER, 17
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE, 18
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
+    nullptr,                                                      // OMNI_VARBINARY, 20
+    nullptr,                                                      // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                      // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                      // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                      // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                      // OMNI_MULTISET, 25
+    nullptr,                                                      // 26
+    nullptr,                                                      // 27
+    nullptr,                                                      // 28
+    nullptr,                                                      // 29
+    nullptr,                                                      // OMNI_ARRAY, 30
+    nullptr,                                                      // OMNI_MAP, 31
+    nullptr,                                                      // OMNI_ROW, 32
+    nullptr,                                                      // OMNI_UNKNOWN, 33
+    nullptr,                                                      // OMNI_FUNCTION, 34
+    nullptr,                                                      // OMNI_OPAQUE, 35
     nullptr                                                       // OMNI_INVALID
 };
 
 std::vector<FixedKeyVectorSerializerIgnoreNull> dicVectorSerializerFixedKeysIgnoreNullCenter = {
-    nullptr,                                                                // OMNI_NONE,
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_INT
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_LONG
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64,
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_DATE32
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
-    nullptr,                                                                // OMNI_INTERVAL_MONTHS
-    nullptr,                                                                // OMNI_INTERVAL_DAY_TIME
-    nullptr,                                                                // OMNI_VARCHAR
-    nullptr,                                                                // OMNI_CHAR,
-    nullptr,                                                                // OMNI_CONTAINER,
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE
-    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT
-    nullptr,                                                                // OMNI_VARBINARY
-    nullptr,                                                                // OMNI_ARRAY
-    nullptr,                                                                // OMNI_MAP
-    nullptr,                                                                // OMNI_ROW
-    nullptr,                                                                // OMNI_UNKNOWN
-    nullptr,                                                                // OMNI_FUNCTION
-    nullptr,                                                                // OMNI_OPAQUE
+    nullptr,                                                                // OMNI_NONE, 0
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_INT, 1
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_LONG, 2
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_DOUBLE>,     // OMNI_DOUBLE, 3
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN, 4
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_SHORT>,      // OMNI_SHORT, 5
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DECIMAL64, 6
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128, 7
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_DATE32, 8
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64, 9
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32, 10
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64, 11
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP, 12
+    nullptr,                                                                // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                                // OMNI_INTERVAL_DAY_TIME, 14
+    nullptr,                                                                // OMNI_VARCHAR, 15
+    nullptr,                                                                // OMNI_CHAR, 16
+    nullptr,                                                                // OMNI_CONTAINER, 17
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE, 18
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
+    nullptr,                                                                // OMNI_VARBINARY, 20
+    nullptr,                                                                // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                                // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                                // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                                // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                                // OMNI_MULTISET, 25
+    nullptr,                                                                // 26
+    nullptr,                                                                // 27
+    nullptr,                                                                // 28
+    nullptr,                                                                // 29
+    nullptr,                                                                // OMNI_ARRAY, 30
+    nullptr,                                                                // OMNI_MAP, 31
+    nullptr,                                                                // OMNI_ROW, 32
+    nullptr,                                                                // OMNI_UNKNOWN, 33
+    nullptr,                                                                // OMNI_FUNCTION, 34
+    nullptr,                                                                // OMNI_OPAQUE, 35
     nullptr                                                                 // OMNI_INVALID
 };
 
 std::vector<FixedKeyVectorSerializerIgnoreNull> constVectorSerializerFixedKeysIgnoreNullCenter = {
-    nullptr,                                                              // OMNI_NONE,
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,           // OMNI_INT
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,          // OMNI_LONG
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_DOUBLE>,        // OMNI_DOUBLE
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_BOOLEAN>,       // OMNI_BOOLEAN
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_SHORT>,         // OMNI_SHORT
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,          // OMNI_DECIMAL64,
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_DECIMAL128>,    // OMNI_DECIMAL128
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,           // OMNI_DATE32
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,          // OMNI_DATE64
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,           // OMNI_TIME32
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,          // OMNI_TIME64
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,          // OMNI_TIMESTAMP
-    nullptr,                                                              // OMNI_INTERVAL_MONTHS
-    nullptr,                                                              // OMNI_INTERVAL_DAY_TIME
-    nullptr,                                                              // OMNI_VARCHAR
-    nullptr,                                                              // OMNI_CHAR,
-    nullptr,                                                              // OMNI_CONTAINER,
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_BYTE>,          // OMNI_BYTE
-    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_FLOAT>,         // OMNI_FLOAT
-    nullptr,                                                              // OMNI_VARBINARY
-    nullptr,                                                              // OMNI_ARRAY
-    nullptr,                                                              // OMNI_MAP
-    nullptr,                                                              // OMNI_ROW
-    nullptr,                                                              // OMNI_UNKNOWN
-    nullptr,                                                              // OMNI_FUNCTION
-    nullptr,                                                              // OMNI_OPAQUE
+    nullptr,                                                              // OMNI_NONE, 0
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,           // OMNI_INT, 1
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,          // OMNI_LONG, 2
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_DOUBLE>,        // OMNI_DOUBLE, 3
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_BOOLEAN>,       // OMNI_BOOLEAN, 4
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_SHORT>,         // OMNI_SHORT, 5
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,          // OMNI_DECIMAL64, 6
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_DECIMAL128>,    // OMNI_DECIMAL128, 7
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,           // OMNI_DATE32, 8
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,          // OMNI_DATE64, 9
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,           // OMNI_TIME32, 10
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,          // OMNI_TIME64, 11
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,          // OMNI_TIMESTAMP, 12
+    nullptr,                                                              // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                              // OMNI_INTERVAL_DAY_TIME, 14
+    nullptr,                                                              // OMNI_VARCHAR, 15
+    nullptr,                                                              // OMNI_CHAR, 16
+    nullptr,                                                              // OMNI_CONTAINER, 17
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_BYTE>,          // OMNI_BYTE, 18
+    SerializeConstFixedKeysIgnoreNullIntoArena<type::OMNI_FLOAT>,         // OMNI_FLOAT, 19
+    nullptr,                                                              // OMNI_VARBINARY, 20
+    nullptr,                                                              // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                              // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                              // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                              // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                              // OMNI_MULTISET, 25
+    nullptr,                                                              // 26
+    nullptr,                                                              // 27
+    nullptr,                                                              // 28
+    nullptr,                                                              // 29
+    nullptr,                                                              // OMNI_ARRAY, 30
+    nullptr,                                                              // OMNI_MAP, 31
+    nullptr,                                                              // OMNI_ROW, 32
+    nullptr,                                                              // OMNI_UNKNOWN, 33
+    nullptr,                                                              // OMNI_FUNCTION, 34
+    nullptr,                                                              // OMNI_OPAQUE, 35
     nullptr                                                               // OMNI_INVALID
 };
 
 std::vector<FixedKeyVectorSerializerIgnoreNullSimd> constVectorSerializerFixedKeysIgnoreNullCenterSimd = {
-    nullptr,                                                                  // OMNI_NONE,
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,           // OMNI_INT
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,          // OMNI_LONG
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DOUBLE>,        // OMNI_DOUBLE
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BOOLEAN>,       // OMNI_BOOLEAN
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_SHORT>,         // OMNI_SHORT
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,          // OMNI_DECIMAL64,
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DECIMAL128>,    // OMNI_DECIMAL128
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,           // OMNI_DATE32
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,          // OMNI_DATE64
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,           // OMNI_TIME32
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,          // OMNI_TIME64
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,          // OMNI_TIMESTAMP
-    nullptr,                                                                  // OMNI_INTERVAL_MONTHS
-    nullptr,                                                                  // OMNI_INTERVAL_DAY_TIME
-    nullptr,                                                                  // OMNI_VARCHAR
-    nullptr,                                                                  // OMNI_CHAR,
-    nullptr,                                                                  // OMNI_CONTAINER,
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BYTE>,          // OMNI_BYTE
-    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_FLOAT>,         // OMNI_FLOAT
-    nullptr,                                                                  // OMNI_VARBINARY
-    nullptr,                                                                  // OMNI_ARRAY
-    nullptr,                                                                  // OMNI_MAP
-    nullptr,                                                                  // OMNI_ROW
-    nullptr,                                                                  // OMNI_UNKNOWN
-    nullptr,                                                                  // OMNI_FUNCTION
-    nullptr,                                                                  // OMNI_OPAQUE
+    nullptr,                                                                  // OMNI_NONE, 0
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,           // OMNI_INT, 1
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,          // OMNI_LONG, 2
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DOUBLE>,        // OMNI_DOUBLE, 3
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BOOLEAN>,       // OMNI_BOOLEAN, 4
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_SHORT>,         // OMNI_SHORT, 5
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,          // OMNI_DECIMAL64, 6
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DECIMAL128>,    // OMNI_DECIMAL128, 7
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,           // OMNI_DATE32, 8
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,          // OMNI_DATE64, 9
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,           // OMNI_TIME32, 10
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,          // OMNI_TIME64, 11
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,          // OMNI_TIMESTAMP, 12
+    nullptr,                                                                  // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                                  // OMNI_INTERVAL_DAY_TIME, 14
+    nullptr,                                                                  // OMNI_VARCHAR, 15
+    nullptr,                                                                  // OMNI_CHAR, 16
+    nullptr,                                                                  // OMNI_CONTAINER, 17
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BYTE>,          // OMNI_BYTE, 18
+    SerializeConstFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_FLOAT>,         // OMNI_FLOAT, 19
+    nullptr,                                                                  // OMNI_VARBINARY, 20
+    nullptr,                                                                  // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                                  // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                                  // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                                  // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                                  // OMNI_MULTISET, 25
+    nullptr,                                                                  // 26
+    nullptr,                                                                  // 27
+    nullptr,                                                                  // 28
+    nullptr,                                                                  // 29
+    nullptr,                                                                  // OMNI_ARRAY, 30
+    nullptr,                                                                  // OMNI_MAP, 31
+    nullptr,                                                                  // OMNI_ROW, 32
+    nullptr,                                                                  // OMNI_UNKNOWN, 33
+    nullptr,                                                                  // OMNI_FUNCTION, 34
+    nullptr,                                                                  // OMNI_OPAQUE, 35
     nullptr                                                                   // OMNI_INVALID
 };
 
 std::vector<FixedKeyVectorSerializerIgnoreNullSimd> vectorSerializerFixedKeysIgnoreNullCenterSimd = {
-    nullptr,                                                      // OMNI_NONE,
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_INT
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_LONG
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_SHORT>,      // OMNI_SHORT
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DECIMAL64,
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_DATE32
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DATE64
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_TIME32
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIME64
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIMESTAMP
-    nullptr,                                                          // OMNI_INTERVAL_MONTHS
-    nullptr,                                                          // OMNI_INTERVAL_DAY_TIME
-    nullptr,                                                          // OMNI_VARCHAR
-    nullptr,                                                          // OMNI_CHAR,
-    nullptr,                                                          // OMNI_CONTAINER,
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BYTE>,       // OMNI_BYTE
-    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_FLOAT>,      // OMNI_FLOAT
-    nullptr,                                                          // OMNI_VARBINARY
-    nullptr,                                                          // OMNI_ARRAY
-    nullptr,                                                          // OMNI_MAP
-    nullptr,                                                          // OMNI_ROW
-    nullptr,                                                          // OMNI_UNKNOWN
-    nullptr,                                                          // OMNI_FUNCTION
-    nullptr,                                                          // OMNI_OPAQUE
+    nullptr,                                                          // OMNI_NONE, 0
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_INT, 1
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_LONG, 2
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DOUBLE>,     // OMNI_DOUBLE, 3
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN, 4
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_SHORT>,      // OMNI_SHORT, 5
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DECIMAL64, 6
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128, 7
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_DATE32, 8
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DATE64, 9
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_TIME32, 10
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIME64, 11
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIMESTAMP, 12
+    nullptr,                                                          // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                          // OMNI_INTERVAL_DAY_TIME, 14
+    nullptr,                                                          // OMNI_VARCHAR, 15
+    nullptr,                                                          // OMNI_CHAR, 16
+    nullptr,                                                          // OMNI_CONTAINER, 17
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BYTE>,       // OMNI_BYTE, 18
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
+    nullptr,                                                          // OMNI_VARBINARY, 20
+    nullptr,                                                          // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                          // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                          // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                          // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                          // OMNI_MULTISET, 25
+    nullptr,                                                          // 26
+    nullptr,                                                          // 27
+    nullptr,                                                          // 28
+    nullptr,                                                          // 29
+    nullptr,                                                          // OMNI_ARRAY, 30
+    nullptr,                                                          // OMNI_MAP, 31
+    nullptr,                                                          // OMNI_ROW, 32
+    nullptr,                                                          // OMNI_UNKNOWN, 33
+    nullptr,                                                          // OMNI_FUNCTION, 34
+    nullptr,                                                          // OMNI_OPAQUE, 35
     nullptr                                                           // OMNI_INVALID
 };
 
 std::vector<FixedKeyVectorSerializerIgnoreNullSimd> dicVectorSerializerFixedKeysIgnoreNullCenterSimd = {
-    nullptr,                                                                // OMNI_NONE,
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_INT
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_LONG
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_SHORT>,      // OMNI_SHORT
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DECIMAL64,
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_DATE32
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DATE64
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_TIME32
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIME64
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIMESTAMP
-    nullptr,                                                                    // OMNI_INTERVAL_MONTHS
-    nullptr,                                                                    // OMNI_INTERVAL_DAY_TIME
-    nullptr,                                                                    // OMNI_VARCHAR
-    nullptr,                                                                    // OMNI_CHAR,
-    nullptr,                                                                    // OMNI_CONTAINER,
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BYTE>,       // OMNI_BYTE
-    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_FLOAT>,      // OMNI_FLOAT
-    nullptr,                                                                    // OMNI_VARBINARY
-    nullptr,                                                                    // OMNI_ARRAY
-    nullptr,                                                                    // OMNI_MAP
-    nullptr,                                                                    // OMNI_ROW
-    nullptr,                                                                    // OMNI_UNKNOWN
-    nullptr,                                                                    // OMNI_FUNCTION
-    nullptr,                                                                    // OMNI_OPAQUE
+    nullptr,                                                                    // OMNI_NONE, 0
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_INT, 1
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_LONG, 2
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DOUBLE>,     // OMNI_DOUBLE, 3
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN, 4
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_SHORT>,      // OMNI_SHORT, 5
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DECIMAL64, 6
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128, 7
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_DATE32, 8
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DATE64, 9
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_TIME32, 10
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIME64, 11
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIMESTAMP, 12
+    nullptr,                                                                    // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                                    // OMNI_INTERVAL_DAY_TIME, 14
+    nullptr,                                                                    // OMNI_VARCHAR, 15
+    nullptr,                                                                    // OMNI_CHAR, 16
+    nullptr,                                                                    // OMNI_CONTAINER, 17
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BYTE>,       // OMNI_BYTE, 18
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
+    nullptr,                                                                    // OMNI_VARBINARY, 20
+    nullptr,                                                                    // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                                    // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                                    // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                                    // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                                    // OMNI_MULTISET, 25
+    nullptr,                                                                    // 26
+    nullptr,                                                                    // 27
+    nullptr,                                                                    // 28
+    nullptr,                                                                    // 29
+    nullptr,                                                                    // OMNI_ARRAY, 30
+    nullptr,                                                                    // OMNI_MAP, 31
+    nullptr,                                                                    // OMNI_ROW, 32
+    nullptr,                                                                    // OMNI_UNKNOWN, 33
+    nullptr,                                                                    // OMNI_FUNCTION, 34
+    nullptr,                                                                    // OMNI_OPAQUE, 35
     nullptr                                                                     // OMNI_INVALID
 };
 }
