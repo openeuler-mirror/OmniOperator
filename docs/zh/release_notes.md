@@ -545,14 +545,13 @@
 
 |文档名称|内容简介|交付形式|
 |--|--|--|
-|《Kunpeng BoostKit 25.3.0 大数据OmniRuntime 1.9.0 版本说明书》|本文档提供OmniRuntime的版本发布信息。|开源仓|
-|《Kunpeng BoostKit 25.3.0 大数据OmniRuntime 特性指南》|本文档提供OmniRuntime安装部署等指导。|开源仓|
+|《OmniOperator 2.1.0 版本说明书》|提供OmniOperator的版本发布信息。|开源仓|
+|《OmniOperator 安装指南》|提供OmniOperator的安装部署指导。|开源仓|
+|《OmniOperator 使用指南》|提供OmniOperator的使用操作指导。|开源仓|
+|《OmniOperator 常见问题》|记录安装、部署和使用过程中可能遇到的问题及其解决方法。|开源仓|
 
 
 
 ### 获取文档的方法<a name="ZH-CN_TOPIC_0000002547210757"></a>
 
-您可以通过访问[鲲鹏社区](https://www.hikunpeng.com/document/detail/zh/kunpengbds/overview/kunpengbds.html)浏览和获取相关文档。
-
-
-
+您可以通过访问[开源仓](https://gitcode.com/openeuler/OmniOperator)浏览和获取相关文档。
