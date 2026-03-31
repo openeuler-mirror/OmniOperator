@@ -500,6 +500,9 @@ template <typename RawType> static bool ALWAYS_INLINE OnlyEqual(RawType &left, R
     if constexpr (std::is_same_v<RawType, double>) {
         const double diff = left - right;
         return (std::abs(diff) < __DBL_EPSILON__);
+    } else if constexpr (std::is_same_v<RawType, float>) {
+        const float diff = left - right;
+        return (std::abs(diff) < __FLT_EPSILON__);
     } else {
         return left == right;
     }
@@ -546,6 +549,259 @@ template <int32_t sortAscending> static int8_t ALWAYS_INLINE DoubleCompare(doubl
         return right > left ?
             OperatorUtil::COMPARE_STATUS_GREATER_THAN : OperatorUtil::COMPARE_STATUS_LESS_THAN;
     }
+}
+
+static bool ALWAYS_INLINE FloatEqual(float left, float right)
+{
+    if (left == right) return true;
+
+    float diff = std::fabs(left - right);
+
+    if (diff < __FLT_EPSILON__) return true;
+
+    float max_val = std::max(std::fabs(left), std::fabs(right));
+    return diff < max_val * __FLT_EPSILON__;
+}
+
+template <int32_t sortAscending> static int8_t ALWAYS_INLINE FloatCompare(float left, float right)
+{
+    if (FloatEqual(left, right)) {
+        return omniruntime::op::OperatorUtil::COMPARE_STATUS_EQUAL;
+    }
+
+    if constexpr (sortAscending == 1) {
+        return left > right ?
+            OperatorUtil::COMPARE_STATUS_GREATER_THAN : OperatorUtil::COMPARE_STATUS_LESS_THAN;
+    } else {
+        return right > left ?
+            OperatorUtil::COMPARE_STATUS_GREATER_THAN : OperatorUtil::COMPARE_STATUS_LESS_THAN;
+    }
+}
+
+template <int32_t sortAscending>
+static void ALWAYS_INLINE QuickSortFloatSmall(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
+{
+    for (int32_t i = from + 1; i < to; ++i) {
+        auto iValuePtr = values[i];
+        auto iValue = *(reinterpret_cast<float *>(&iValuePtr));
+        auto iAddr = addresses[i];
+        int32_t j = i - 1;
+        while (j >= from) {
+            auto jValuePtr = values[j];
+            auto jValue = *(reinterpret_cast<float *>(&jValuePtr));
+            if constexpr (sortAscending == 0) {
+                if (FloatEqual(jValue, iValue) || jValue > iValue) {
+                    break;
+                }
+            } else {
+                if (FloatEqual(jValue, iValue) || jValue < iValue) {
+                    break;
+                }
+            }
+            values[j + 1] = values[j];
+            addresses[j + 1] = addresses[j];
+            --j;
+        }
+        values[j + 1] = iValuePtr;
+        addresses[j + 1] = iAddr;
+    }
+}
+
+template <int32_t sortAscending>
+static float ALWAYS_INLINE GetMedianFloat(float va, float vb, float vc)
+{
+    int8_t ab = FloatCompare<sortAscending>(va, vb);
+    int8_t ac = FloatCompare<sortAscending>(va, vc);
+    int8_t bc = FloatCompare<sortAscending>(vb, vc);
+    return ((ab < 0) ? (bc < 0 ? vb : ac < 0 ? vc : va) : (bc > 0 ? vb : ac > 0 ? vc : va));
+}
+
+template <int32_t sortAscending>
+static float ALWAYS_INLINE GetMedianFloat(int64_t *values, int32_t a, int32_t b, int32_t c)
+{
+    float va = *(reinterpret_cast<float *>(&values[a]));
+    float vb = *(reinterpret_cast<float *>(&values[b]));
+    float vc = *(reinterpret_cast<float *>(&values[c]));
+    int8_t ab = FloatCompare<sortAscending>(va, vb);
+    int8_t ac = FloatCompare<sortAscending>(va, vc);
+    int8_t bc = FloatCompare<sortAscending>(vb, vc);
+    return ((ab < 0) ? (bc < 0 ? vb : ac < 0 ? vc : va) : (bc > 0 ? vb : ac > 0 ? vc : va));
+}
+
+template <int32_t sortAscending>
+static float ALWAYS_INLINE GetMedianFloatValue(int64_t *values, int32_t from, int32_t to, int32_t len)
+{
+    int32_t l = from;
+    int32_t n = to - 1;
+    int32_t m = from + len / QUICK_SORT_MIDDLE;
+
+    if (len > QUICK_SORT_BIG_LEN) {
+        int32_t s = len / QUICK_SORT_STEP_SIZE;
+        float vl = GetMedianFloat<sortAscending>(values, l, l + s, l + QUICK_SORT_MIDDLE * s);
+        float vm = GetMedianFloat<sortAscending>(values, m - s, m, m + s);
+        float vn = GetMedianFloat<sortAscending>(values, n - QUICK_SORT_MIDDLE * s, n - s, n);
+        return GetMedianFloat<sortAscending>(vl, vm, vn);
+    }
+    return GetMedianFloat<sortAscending>(values, l, m, n);
+}
+
+template <int32_t sortAscending>
+int8_t ALWAYS_INLINE GetNextCompareFloatLeft(int8_t *compareTmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
+    int64_t *values, float &pivotValue)
+{
+    if (k < limit) {
+        return compareTmp[k++];
+    }
+    k = 1;
+
+    limit = std::min(c - b + 1, NMAX_SIZE);
+
+    int32_t i = b;
+    int32_t j = 0;
+    for (; j < limit - NSTEP; i += NSTEP, j += NSTEP) {
+        auto v0 = *(reinterpret_cast<float *>(&values[i]));
+        auto v1 = *(reinterpret_cast<float *>(&values[i + 1]));
+        auto v2 = *(reinterpret_cast<float *>(&values[i + 2]));
+        auto v3 = *(reinterpret_cast<float *>(&values[i + 3]));
+        compareTmp[j] = FloatCompare<sortAscending>(v0, pivotValue);
+        compareTmp[j + 1] = FloatCompare<sortAscending>(v1, pivotValue);
+        compareTmp[j + 2] = FloatCompare<sortAscending>(v2, pivotValue);
+        compareTmp[j + 3] = FloatCompare<sortAscending>(v3, pivotValue);
+        auto v4 = *(reinterpret_cast<float *>(&values[i + 4]));
+        auto v5 = *(reinterpret_cast<float *>(&values[i + 5]));
+        auto v6 = *(reinterpret_cast<float *>(&values[i + 6]));
+        auto v7 = *(reinterpret_cast<float *>(&values[i + 7]));
+        compareTmp[j + 4] = FloatCompare<sortAscending>(v4, pivotValue);
+        compareTmp[j + 5] = FloatCompare<sortAscending>(v5, pivotValue);
+        compareTmp[j + 6] = FloatCompare<sortAscending>(v6, pivotValue);
+        compareTmp[j + 7] = FloatCompare<sortAscending>(v7, pivotValue);
+        auto v8 = *(reinterpret_cast<float *>(&values[i + 8]));
+        auto v9 = *(reinterpret_cast<float *>(&values[i + 9]));
+        auto v10 = *(reinterpret_cast<float *>(&values[i + 10]));
+        auto v11 = *(reinterpret_cast<float *>(&values[i + 11]));
+        compareTmp[j + 8] = FloatCompare<sortAscending>(v8, pivotValue);
+        compareTmp[j + 9] = FloatCompare<sortAscending>(v9, pivotValue);
+        compareTmp[j + 10] = FloatCompare<sortAscending>(v10, pivotValue);
+        compareTmp[j + 11] = FloatCompare<sortAscending>(v11, pivotValue);
+    }
+    for (; j < limit; ++i, ++j) {
+        auto v = *(reinterpret_cast<float *>(&values[i]));
+        compareTmp[j] = FloatCompare<sortAscending>(v, pivotValue);
+    }
+    return compareTmp[0];
+}
+
+template <int32_t sortAscending>
+inline int8_t GetNextCompareFloatRight(int8_t *compareTmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
+    int64_t *values, float &pivotValue)
+{
+    if (k < limit) {
+        return compareTmp[k++];
+    }
+    k = 1;
+    limit = std::min(c - b + 1, NMAX_SIZE);
+
+    int32_t i = c;
+    int32_t j = 0;
+    for (; j < limit - NSTEP; i -= NSTEP, j += NSTEP) {
+        auto v0 = *(reinterpret_cast<float *>(&values[i]));
+        auto v1 = *(reinterpret_cast<float *>(&values[i - 1]));
+        auto v2 = *(reinterpret_cast<float *>(&values[i - 2]));
+        auto v3 = *(reinterpret_cast<float *>(&values[i - 3]));
+        compareTmp[j] = FloatCompare<sortAscending>(v0, pivotValue);
+        compareTmp[j + 1] = FloatCompare<sortAscending>(v1, pivotValue);
+        compareTmp[j + 2] = FloatCompare<sortAscending>(v2, pivotValue);
+        compareTmp[j + 3] = FloatCompare<sortAscending>(v3, pivotValue);
+        auto v4 = *(reinterpret_cast<float *>(&values[i - 4]));
+        auto v5 = *(reinterpret_cast<float *>(&values[i - 5]));
+        auto v6 = *(reinterpret_cast<float *>(&values[i - 6]));
+        auto v7 = *(reinterpret_cast<float *>(&values[i - 7]));
+        compareTmp[j + 4] = FloatCompare<sortAscending>(v4, pivotValue);
+        compareTmp[j + 5] = FloatCompare<sortAscending>(v5, pivotValue);
+        compareTmp[j + 6] = FloatCompare<sortAscending>(v6, pivotValue);
+        compareTmp[j + 7] = FloatCompare<sortAscending>(v7, pivotValue);
+        auto v8 = *(reinterpret_cast<float *>(&values[i - 8]));
+        auto v9 = *(reinterpret_cast<float *>(&values[i - 9]));
+        auto v10 = *(reinterpret_cast<float *>(&values[i - 10]));
+        auto v11 = *(reinterpret_cast<float *>(&values[i - 11]));
+        compareTmp[j + 8] = FloatCompare<sortAscending>(v8, pivotValue);
+        compareTmp[j + 9] = FloatCompare<sortAscending>(v9, pivotValue);
+        compareTmp[j + 10] = FloatCompare<sortAscending>(v10, pivotValue);
+        compareTmp[j + 11] = FloatCompare<sortAscending>(v11, pivotValue);
+    }
+    for (; j < limit; --i, ++j) {
+        auto v = *(reinterpret_cast<float *>(&values[i]));
+        compareTmp[j] = FloatCompare<sortAscending>(v, pivotValue);
+    }
+    return compareTmp[0];
+}
+
+template <int32_t sortAscending>
+void QuickSortFloatInternal(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int8_t *compareTmp)
+{
+    int32_t len = to - from;
+    if (len <= QUICK_SORT_SMALL_LEN) {
+        QuickSortFloatSmall<sortAscending>(values, addresses, from, to);
+        return;
+    }
+
+    auto pivotValue = GetMedianFloatValue<sortAscending>(values, from, to, len);
+
+    int32_t a = from;
+    int32_t b = a;
+    int32_t c = to - 1;
+    int32_t d = c;
+
+    int32_t bk = 0;
+    int32_t blim = 0;
+    int32_t ck = 0;
+    int32_t clim = 0;
+    int8_t *leftCompareTmp = compareTmp;
+    int8_t *rightCompareTmp = compareTmp + NMAX_SIZE;
+
+    while (true) {
+        int8_t comparison;
+        while (b <= c && (comparison = GetNextCompareFloatLeft<sortAscending>(leftCompareTmp, bk, blim, b, c,
+            values, pivotValue)) <= 0) {
+            if (UNLIKELY(comparison == 0)) {
+                Swap(values, addresses, a++, b);
+            }
+            b++;
+        }
+
+        while (c >= b && (comparison = GetNextCompareFloatRight<sortAscending>(rightCompareTmp, ck, clim, b, c,
+            values, pivotValue)) >= 0) {
+            if (UNLIKELY(comparison == 0)) {
+                Swap(values, addresses, c, d--);
+            }
+            c--;
+        }
+        if (b > c) {
+            break;
+        }
+        Swap(values, addresses, b++, c--);
+    }
+
+    int32_t s;
+    int32_t n = to;
+    s = std::min(a - from, b - a);
+    VectorSwap(values, addresses, from, b - s, s);
+    s = std::min(d - c, n - d - 1);
+    VectorSwap(values, addresses, b, n - s, s);
+
+    if ((s = b - a) > 1) {
+        QuickSortFloatInternal<sortAscending>(values, addresses, from, from + s, compareTmp);
+    }
+    if ((s = d - c) > 1) {
+        QuickSortFloatInternal<sortAscending>(values, addresses, n - s, n, compareTmp);
+    }
+}
+
+template <int32_t sortAscending>
+void QuickSortFloat(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
+{
+    std::array<int8_t, NMAX_SIZE + NMAX_SIZE> compareResult = {};
+    QuickSortFloatInternal<sortAscending>(values, addresses, from, to, compareResult.data());
 }
 
 template <int32_t sortAscending>
@@ -1043,6 +1299,10 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
             } else if constexpr (std::is_same_v<RawType, double>) {
                 double value = static_cast<ConstVector<double> *>(column)->GetConstValue();
                 memcpy(values + i, &value, sizeof(double));
+            } else if constexpr (std::is_same_v<RawType, float>) {
+                values[i] = 0;
+                float value = static_cast<ConstVector<float> *>(column)->GetConstValue();
+                memcpy(values + i, &value, sizeof(float));
             } else {
                 values[i] = static_cast<ConstVector<RawType> *>(column)->GetConstValue();
             }
@@ -1072,6 +1332,10 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
                 } else if constexpr (std::is_same_v<RawType, double>) {
                     double value = dictionaryVector->GetValue(rowIdx);
                     memcpy(values + i, &value, sizeof(double));
+                } else if constexpr (std::is_same_v<RawType, float>) {
+                    values[i] = 0;
+                    float value = dictionaryVector->GetValue(rowIdx);
+                    memcpy(values + i, &value, sizeof(float));
                 } else {
                     values[i] = dictionaryVector->GetValue(rowIdx);
                 }
@@ -1083,6 +1347,10 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
                 } else if constexpr (std::is_same_v<RawType, double>) {
                     double value = static_cast<FlatVector *>(column)->GetValue(rowIdx);
                     memcpy(values + i, &value, sizeof(double));
+                } else if constexpr (std::is_same_v<RawType, float>) {
+                    values[i] = 0;
+                    float value = static_cast<FlatVector *>(column)->GetValue(rowIdx);
+                    memcpy(values + i, &value, sizeof(float));
                 } else {
                     values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
                 }
@@ -1095,6 +1363,10 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
             } else if constexpr (std::is_same_v<RawType, double>) {
                 double value = static_cast<FlatVector *>(column)->GetValue(rowIdx);
                 memcpy(values + i, &value, sizeof(double));
+            } else if constexpr (std::is_same_v<RawType, float>) {
+                values[i] = 0;
+                float value = static_cast<FlatVector *>(column)->GetValue(rowIdx);
+                memcpy(values + i, &value, sizeof(float));
             } else {
                 values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
             }
@@ -1426,6 +1698,12 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
                     QuickSortDouble<1>(values, valueAddresses, nonNullFrom, nonNullTo);
                     // QuickSortAscSIMD(reinterpret_cast<double *>(values), valueAddresses, nonNullFrom, nonNullTo);
                 }
+            } else if constexpr (std::is_same_v<RawType, float>) {
+                if (sortAscending == 0) {
+                    QuickSortFloat<0>(values, valueAddresses, nonNullFrom, nonNullTo);
+                } else {
+                    QuickSortFloat<1>(values, valueAddresses, nonNullFrom, nonNullTo);
+                }
             } else {
                 if (sortAscending == 0) {
                     QuickSortDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
@@ -1618,6 +1896,11 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
         }
         case OMNI_DOUBLE: {
             ColumnarSort<double>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from,
+                to, currentCol);
+            break;
+        }
+        case OMNI_FLOAT: {
+            ColumnarSort<float>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from,
                 to, currentCol);
             break;
         }

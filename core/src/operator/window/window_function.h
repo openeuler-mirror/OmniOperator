@@ -193,7 +193,6 @@ public:
 
 private:
     void CopyValueFromPartition(BaseVector *outputColumn, int32_t outputIndex, int32_t sourceRow);
-    void CopyValue(BaseVector *destVector, int32_t destIndex, BaseVector *srcVector, int32_t srcIndex);
 
     int32_t valueChannel_;
     int64_t offset_;

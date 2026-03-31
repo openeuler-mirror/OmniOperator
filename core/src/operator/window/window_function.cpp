@@ -350,78 +350,7 @@ void NthValueFunction::CopyValueFromPartition(BaseVector *outputColumn, int32_t 
     if (sourceVector->IsNull(vectorPosition)) {
         outputColumn->SetNull(outputIndex);
     } else {
-        CopyValue(outputColumn, outputIndex, sourceVector, vectorPosition);
-    }
-}
-
-void NthValueFunction::CopyValue(BaseVector *destVector, int32_t destIndex, BaseVector *srcVector, int32_t srcIndex)
-{
-    using namespace omniruntime::type;
-    DataTypeId typeId = srcVector->GetTypeId();
-
-    switch (typeId) {
-        case OMNI_BOOLEAN: {
-            auto src = static_cast<vec::Vector<bool> *>(srcVector);
-            auto dst = static_cast<vec::Vector<bool> *>(destVector);
-            dst->SetValue(destIndex, src->GetValue(srcIndex));
-            break;
-        }
-        case OMNI_BYTE: {
-            auto src = static_cast<vec::Vector<int8_t> *>(srcVector);
-            auto dst = static_cast<vec::Vector<int8_t> *>(destVector);
-            dst->SetValue(destIndex, src->GetValue(srcIndex));
-            break;
-        }
-        case OMNI_SHORT: {
-            auto src = static_cast<vec::Vector<int16_t> *>(srcVector);
-            auto dst = static_cast<vec::Vector<int16_t> *>(destVector);
-            dst->SetValue(destIndex, src->GetValue(srcIndex));
-            break;
-        }
-        case OMNI_INT:
-        case OMNI_DATE32: {
-            auto src = static_cast<vec::Vector<int32_t> *>(srcVector);
-            auto dst = static_cast<vec::Vector<int32_t> *>(destVector);
-            dst->SetValue(destIndex, src->GetValue(srcIndex));
-            break;
-        }
-        case OMNI_LONG:
-        case OMNI_TIMESTAMP:
-        case OMNI_DATE64:
-        case OMNI_DECIMAL64: {
-            auto src = static_cast<vec::Vector<int64_t> *>(srcVector);
-            auto dst = static_cast<vec::Vector<int64_t> *>(destVector);
-            dst->SetValue(destIndex, src->GetValue(srcIndex));
-            break;
-        }
-        case OMNI_FLOAT: {
-            auto src = static_cast<vec::Vector<float> *>(srcVector);
-            auto dst = static_cast<vec::Vector<float> *>(destVector);
-            dst->SetValue(destIndex, src->GetValue(srcIndex));
-            break;
-        }
-        case OMNI_DOUBLE: {
-            auto src = static_cast<vec::Vector<double> *>(srcVector);
-            auto dst = static_cast<vec::Vector<double> *>(destVector);
-            dst->SetValue(destIndex, src->GetValue(srcIndex));
-            break;
-        }
-        case OMNI_DECIMAL128: {
-            auto src = static_cast<vec::Vector<Decimal128> *>(srcVector);
-            auto dst = static_cast<vec::Vector<Decimal128> *>(destVector);
-            dst->SetValue(destIndex, src->GetValue(srcIndex));
-            break;
-        }
-        case OMNI_VARCHAR:
-        case OMNI_CHAR: {
-            auto src = static_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(srcVector);
-            auto dst = static_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(destVector);
-            dst->SetValue(destIndex, src->GetValue(srcIndex));
-            break;
-        }
-        default:
-            OMNI_THROW("UNSUPPORTED_ERROR",
-                "NthValueFunction::CopyValue unsupported data type: %d", static_cast<int>(typeId));
+        vec::VectorHelper::CopyValue(sourceVector, vectorPosition, outputColumn, outputIndex);
     }
 }
 
