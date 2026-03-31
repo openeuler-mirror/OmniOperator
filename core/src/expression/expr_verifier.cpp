@@ -6,10 +6,20 @@
 #include "codegen/func_registry.h"
 #include "vectorization/registration/SimpleFunctionRegistry.h"
 #include "util/debug.h"
+#include "re2/re2.h"
 
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 using namespace omniruntime::vectorization;
+
+namespace {
+/** True if @p pattern compiles with RE2 (linear-time subset; excludes lookaround, backrefs, etc.). */
+bool IsRe2SupportedRegexpPattern(const std::string &pattern)
+{
+    re2::RE2 re(pattern, re2::RE2::Quiet);
+    return re.ok();
+}
+} // namespace
 
 namespace omniruntime {
 namespace expressions {
@@ -323,6 +333,21 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
                     return;
                 }
             }
+        }
+    }
+
+    if (funcExpr.funcName == "regexp_replace") {
+        auto *literalArg = dynamic_cast<LiteralExpr *>(funcExpr.arguments[1]);
+        if (literalArg != nullptr && literalArg->stringVal != nullptr) {
+            if (!IsRe2SupportedRegexpPattern(*literalArg->stringVal)) {
+                this->isSupportCodegen_ = false;
+                this->isSupportVectorization_ = false;
+                return;
+            }
+        } else {
+            this->isSupportCodegen_ = false;
+            this->isSupportVectorization_ = false;
+            return;
         }
     }
 
