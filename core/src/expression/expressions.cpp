@@ -62,9 +62,11 @@ std::vector<BaseVector *> GetConstantInputs(const std::vector<Expr *> &arguments
                 case OMNI_BOOLEAN:
                     constantInputs.push_back(new ConstVector(literalExpr->boolVal, typeId));
                     break;
-                case OMNI_DECIMAL128:
-                    constantInputs.push_back(new ConstVector(literalExpr->stringVal, typeId));
+                case OMNI_DECIMAL128: {
+                    Decimal128 decimal128(*literalExpr->stringVal);
+                    constantInputs.push_back(new ConstVector<Decimal128>(decimal128, typeId));
                     break;
+                }
                 case OMNI_VARCHAR:
                 case OMNI_CHAR:
                 case OMNI_VARBINARY:
