@@ -187,111 +187,6 @@ private:
         }
     }
 
-    template <typename... TReader>
-    void iterate(ApplyContext &context, BaseVector *result, TReader &... readers) const
-    {
-        auto rowSize = context.GetResultRowSize();
-        auto resultAddr = static_cast<return_type_traits *>(VectorHelper::UnsafeGetValues(result));
-        auto nullBuffer = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
-        auto copyNullSize = NullsBuffer::CalculateNbytes(rowSize) - 8;
-        memcpy(nullBuffer, context.rows->allBits(), copyNullSize);
-        BitUtil::Negate(nullBuffer, rowSize);
-        if constexpr (std::is_same_v<return_type_traits, std::string>) {
-            auto tempResult = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(result);
-            if (context.hasFilter()) {
-                auto isSelect = context.GetIsSelectRow();
-                int selectRow = 0;
-                context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
-                    if (!isSelect[row]) {
-                        return;
-                    }
-                    // Passing a stack variable have shown to be boost the performance
-                    // of functions that repeatedly update the output. The opposite
-                    // optimization (eliminating the temp) is easier to do by the
-                    // compiler (assuming the function call is inlined).
-                    std::string out;
-                    bool notNull;
-                    auto status = doApplyNotNull<0>(row, out, notNull, readers...);
-                    if (!status.ok()) {
-                        tempResult->SetNull(row);
-                        return;
-                    }
-
-                    if (!notNull) {
-                        tempResult->SetNull(row);
-                    }
-                    std::string_view tmp(out);
-                    tempResult->SetValue(row, tmp);
-                    ++selectRow;
-                });
-            } else {
-                context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
-                    // Passing a stack variable have shown to be boost the performance
-                    // of functions that repeatedly update the output. The opposite
-                    // optimization (eliminating the temp) is easier to do by the
-                    // compiler (assuming the function call is inlined).
-                    std::string out;
-                    bool notNull;
-                    auto status = doApplyNotNull<0>(row, out, notNull, readers...);
-                    if (!status.ok()) {
-                        tempResult->SetNull(row);
-                        return;
-                    }
-                    if (!notNull) {
-                        tempResult->SetNull(row);
-                    }
-                    std::string_view tmp(out);
-                    tempResult->SetValue(row, tmp);
-                });
-            }
-        } else {
-            if (context.hasFilter()) {
-                auto isSelect = context.GetIsSelectRow();
-                int selectRow = 0;
-                context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
-                    if (!isSelect[row]) {
-                        return;
-                    }
-                    // Passing a stack variable have shown to be boost the performance
-                    // of functions that repeatedly update the output. The opposite
-                    // optimization (eliminating the temp) is easier to do by the
-                    // compiler (assuming the function call is inlined).
-                    return_type_traits out{};
-                    bool notNull;
-                    auto status = doApplyNotNull<0>(row, out, notNull, readers...);
-                    if (!status.ok()) {
-                        BitUtil::SetBit(nullBuffer, selectRow, true);
-                        return;
-                    }
-
-                    if (!notNull) {
-                        BitUtil::SetBit(nullBuffer, selectRow, true);
-                    }
-                    resultAddr[selectRow] = out;
-                    ++selectRow;
-                });
-            } else {
-                context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
-                    // Passing a stack variable have shown to be boost the performance
-                    // of functions that repeatedly update the output. The opposite
-                    // optimization (eliminating the temp) is easier to do by the
-                    // compiler (assuming the function call is inlined).
-                    return_type_traits out{};
-                    bool notNull;
-                    auto status = doApplyNotNull<0>(row, out, notNull, readers...);
-                    if (!status.ok()) {
-                        BitUtil::SetBit(nullBuffer, row, true);
-                        return;
-                    }
-                    if (!notNull) {
-                        BitUtil::SetBit(nullBuffer, row, true);
-                    }
-                    resultAddr[row] = out;
-                });
-            }
-        }
-    }
-
     // If we're guaranteed not to have any nulls, pass all parameters as
     // references.
     //
@@ -318,6 +213,119 @@ private:
     ALWAYS_INLINE Status doApplyNotNull(size_t /*idx*/, T &target, bool &notNull, const Values &... values) const
     {
         return (*fn_).call(target, notNull, values...);
+    }
+
+    // GCC 7.x ICE (cp/semantics.c:finish_member_declaration) when calling
+    // doApplyNotNull<0> directly from a generic lambda; delegate via this wrapper.
+    template <typename... TReader>
+    ALWAYS_INLINE Status applyNotNullRow(size_t rowIdx, T &target, bool &notNull, TReader &... readers) const
+    {
+        return this->template doApplyNotNull<0>(rowIdx, target, notNull, readers...);
+    }
+
+    template <typename... TReader>
+    void iterate(ApplyContext &context, BaseVector *result, TReader &... readers) const
+    {
+        auto rowSize = context.GetResultRowSize();
+        auto resultAddr = static_cast<return_type_traits *>(VectorHelper::UnsafeGetValues(result));
+        auto nullBuffer = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
+        auto copyNullSize = NullsBuffer::CalculateNbytes(rowSize) - 8;
+        memcpy(nullBuffer, context.rows->allBits(), copyNullSize);
+        BitUtil::Negate(nullBuffer, rowSize);
+        if constexpr (std::is_same_v<return_type_traits, std::string>) {
+            auto tempResult = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(result);
+            if (context.hasFilter()) {
+                auto isSelect = context.GetIsSelectRow();
+                int selectRow = 0;
+                context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
+                    if (!isSelect[row]) {
+                        return;
+                    }
+                    // Passing a stack variable have shown to be boost the performance
+                    // of functions that repeatedly update the output. The opposite
+                    // optimization (eliminating the temp) is easier to do by the
+                    // compiler (assuming the function call is inlined).
+                    std::string out;
+                    bool notNull;
+                    auto status = applyNotNullRow(static_cast<size_t>(row), out, notNull, readers...);
+                    if (!status.ok()) {
+                        tempResult->SetNull(row);
+                        return;
+                    }
+
+                    if (!notNull) {
+                        tempResult->SetNull(row);
+                    }
+                    std::string_view tmp(out);
+                    tempResult->SetValue(row, tmp);
+                    ++selectRow;
+                });
+            } else {
+                context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
+                    // Passing a stack variable have shown to be boost the performance
+                    // of functions that repeatedly update the output. The opposite
+                    // optimization (eliminating the temp) is easier to do by the
+                    // compiler (assuming the function call is inlined).
+                    std::string out;
+                    bool notNull;
+                    auto status = applyNotNullRow(static_cast<size_t>(row), out, notNull, readers...);
+                    if (!status.ok()) {
+                        tempResult->SetNull(row);
+                        return;
+                    }
+                    if (!notNull) {
+                        tempResult->SetNull(row);
+                    }
+                    std::string_view tmp(out);
+                    tempResult->SetValue(row, tmp);
+                });
+            }
+        } else {
+            if (context.hasFilter()) {
+                auto isSelect = context.GetIsSelectRow();
+                int selectRow = 0;
+                context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
+                    if (!isSelect[row]) {
+                        return;
+                    }
+                    // Passing a stack variable have shown to be boost the performance
+                    // of functions that repeatedly update the output. The opposite
+                    // optimization (eliminating the temp) is easier to do by the
+                    // compiler (assuming the function call is inlined).
+                    return_type_traits out{};
+                    bool notNull;
+                    auto status = applyNotNullRow(static_cast<size_t>(row), out, notNull, readers...);
+                    if (!status.ok()) {
+                        BitUtil::SetBit(nullBuffer, selectRow, true);
+                        return;
+                    }
+
+                    if (!notNull) {
+                        BitUtil::SetBit(nullBuffer, selectRow, true);
+                    }
+                    resultAddr[selectRow] = out;
+                    ++selectRow;
+                });
+            } else {
+                context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
+                    // Passing a stack variable have shown to be boost the performance
+                    // of functions that repeatedly update the output. The opposite
+                    // optimization (eliminating the temp) is easier to do by the
+                    // compiler (assuming the function call is inlined).
+                    return_type_traits out{};
+                    bool notNull;
+                    auto status = applyNotNullRow(static_cast<size_t>(row), out, notNull, readers...);
+                    if (!status.ok()) {
+                        BitUtil::SetBit(nullBuffer, row, true);
+                        return;
+                    }
+                    if (!notNull) {
+                        BitUtil::SetBit(nullBuffer, row, true);
+                    }
+                    resultAddr[row] = out;
+                });
+            }
+        }
     }
 };
 }

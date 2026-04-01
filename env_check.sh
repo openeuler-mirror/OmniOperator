@@ -125,7 +125,7 @@ setup_dependencies() {
   fi
 
   echo "Start build folly"
-  local folly_tag="v2024.07.01.00"
+  local folly_tag="v2020.10.12.00"
   local folly_repo="https://gitee.com/mirrors/folly.git"
   local folly_source_dir="${workspace}/${open_source_dir}/folly"
   local folly_default_home="/usr/local"
@@ -169,7 +169,7 @@ setup_dependencies() {
 # package build_script/build.sh functionality here
 build() {
   local workspace=$(pwd)
-  export OMNI_COMPILER_THREAD_COUNT=8
+  export OMNI_COMPILER_THREAD_COUNT=2
   sh $workspace/build_scripts/build.sh "$@"
   cd $workspace
 }

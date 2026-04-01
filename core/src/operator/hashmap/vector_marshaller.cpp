@@ -549,7 +549,7 @@ template <typename T> const bool DoFixedLenTypeCompare(T right, uint8_t *&pos)
     if (rowDataSize == 0) {
         return false;
     }
-    auto left = GetValue<T>(rowDataSize, pos + sizeof(uint8_t));
+    auto left = GetValue<T>(rowDataSize, reinterpret_cast<const char *>(pos + sizeof(uint8_t)));
     pos += sizeof(uint8_t) + rowDataSize;
     return left == right;
 }

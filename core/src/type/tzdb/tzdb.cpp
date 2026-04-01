@@ -13,7 +13,8 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
-#include <filesystem>
+#include <cstdlib>
+#include <limits.h>
 #include <fstream>
 #include <fmt/format.h>
 #include <stdexcept>
@@ -86,6 +87,93 @@ std::string __libcpp_tzdb_directory()
   return result.substr(0, i);
 #endif // __APPLE__
 }
+
+namespace {
+// POSIX path helpers (avoid std::filesystem — not available on GCC 7 / older libstdc++).
+// Single (string_view, string_view) overload avoids ambiguous overloads when the second
+// argument is a string literal (const char[N] converts to both string& and string_view).
+[[nodiscard]] std::string __join_path(std::string_view __a, std::string_view __b)
+{
+    if (__b.empty()) {
+        return std::string(__a);
+    }
+    if (__b.front() == '/') {
+        return std::string(__b);
+    }
+    if (!__a.empty() && __a.back() == '/') {
+        return std::string(__a) + std::string(__b);
+    }
+    if (__a.empty()) {
+        return std::string(__b);
+    }
+    return std::string(__a) + "/" + std::string(__b);
+}
+
+[[nodiscard]] bool __path_exists(const std::string &__p)
+{
+    struct stat __st;
+    return stat(__p.c_str(), &__st) == 0;
+}
+
+[[nodiscard]] bool __path_is_symlink(const std::string &__p)
+{
+    struct stat __st;
+    return lstat(__p.c_str(), &__st) == 0 && S_ISLNK(__st.st_mode);
+}
+
+[[nodiscard]] std::string __read_symlink_string(const char *__path)
+{
+    struct stat __st;
+    if (lstat(__path, &__st) != 0) {
+        std::__throw_runtime_error("tzdb: lstat for symlink failed");
+    }
+    if (!S_ISLNK(__st.st_mode)) {
+        std::__throw_runtime_error("tzdb: not a symlink");
+    }
+    size_t __cap = static_cast<size_t>(__st.st_size) > 0 ? static_cast<size_t>(__st.st_size) + 1U
+                                                          : static_cast<size_t>(PATH_MAX);
+    std::vector<char> __buf(__cap);
+    ssize_t __len = readlink(__path, __buf.data(), __buf.size() - 1U);
+    while (__len >= 0 && static_cast<size_t>(__len) == __buf.size() - 1U) {
+        __cap *= 2;
+        __buf.resize(__cap);
+        __len = readlink(__path, __buf.data(), __buf.size() - 1U);
+    }
+    if (__len < 0) {
+        std::__throw_runtime_error("tzdb: readlink failed");
+    }
+    return std::string(__buf.data(), static_cast<size_t>(__len));
+}
+
+[[nodiscard]] bool __path_is_relative(const std::string &__p)
+{
+    return !__p.empty() && __p.front() != '/';
+}
+
+[[nodiscard]] std::string __canonical_path(const std::string &__p)
+{
+    char __resolved[PATH_MAX];
+    if (realpath(__p.c_str(), __resolved) == nullptr) {
+        std::__throw_runtime_error("tzdb: realpath failed");
+    }
+    return std::string(__resolved);
+}
+
+[[nodiscard]] std::string __relative_under_zoneinfo(const std::string &__absolute)
+{
+    const std::string __prefix = "/usr/share/zoneinfo/";
+    if (__absolute.size() >= __prefix.size() && __absolute.compare(0, __prefix.size(), __prefix) == 0) {
+        return __absolute.substr(__prefix.size());
+    }
+    const std::string __prefix_no_slash = "/usr/share/zoneinfo";
+    if (__absolute.size() > __prefix_no_slash.size() &&
+        __absolute.compare(0, __prefix_no_slash.size(), __prefix_no_slash) == 0 &&
+        __absolute[__prefix_no_slash.size()] == '/') {
+        return __absolute.substr(__prefix_no_slash.size() + 1U);
+    }
+    return __absolute;
+}
+} // namespace
 
 //===----------------------------------------------------------------------===//
 //                           Details
@@ -337,7 +425,9 @@ static void __matches(std::istream &__input, std::string_view __expected)
 [[nodiscard]] static date::year __parse_year_value(std::istream &__input)
 {
     bool __negative = __input.peek() == '-';
-    if (__negative) [[unlikely]] __input.get();
+    if (__negative) {
+        __input.get();
+    }
 
     int64_t __result = __parse_integral(__input, true);
     if (__result > static_cast<int64_t>(date::year::max())) {
@@ -352,7 +442,9 @@ static void __matches(std::istream &__input, std::string_view __expected)
 
 [[nodiscard]] static date::year __parse_year(std::istream &__input)
 {
-    if (std::tolower(__input.peek()) != 'm') [[likely]] return __parse_year_value(__input);
+    if (std::tolower(__input.peek()) != 'm') {
+        return __parse_year_value(__input);
+    }
 
     __input.get();
     switch (std::tolower(__input.peek())) {
@@ -510,7 +602,9 @@ static void __matches(std::istream &__input, std::string_view __expected)
     return __parse_string(__input);
 }
 
-[[nodiscard]] static auto __binary_find(const __rules_storage_type &__rules_db, const std::string &__rule_name)
+// Reserved for libc++-style lookups; not wired yet.
+[[nodiscard]] [[maybe_unused]] static auto __binary_find(const __rules_storage_type &__rules_db,
+    const std::string &__rule_name)
 {
     auto __end = __rules_db.end();
     auto __ret = std::lower_bound(__rules_db.begin(), __rules_db.end(), __rule_name,
@@ -640,12 +734,13 @@ static void __parse_zone(tzdb &__tzdb, __rules_storage_type &__rules, std::istre
         __skip_optional_whitespace(__input);
     } while (std::isdigit(__input.peek()) || __input.peek() == '-');
 
-    std::filesystem::path __root = __libcpp_tzdb_directory();
-    if (!std::filesystem::exists(__root / __p->__name())) {
+    const std::string __root = __libcpp_tzdb_directory();
+    const std::string __zone_path = __join_path(__root, __p->__name());
+    if (!__path_exists(__zone_path)) {
         // in case the zonefile does not exists
         return;
     }
-    std::ifstream zone_file{__root / __p->__name()};
+    std::ifstream zone_file{__zone_path};
     date::populate_transitions(__p->transitions(), __p->ttinfos(), zone_file);
 
     __tzdb.zones.emplace_back(time_zone::__create(std::move(__p)));
@@ -760,8 +855,8 @@ static void __parse_leap_seconds(std::vector<leap_second> &__leap_seconds, std::
 
 void __init_tzdb(tzdb &__tzdb, __rules_storage_type &__rules)
 {
-    std::filesystem::path __root = __libcpp_tzdb_directory();
-    std::ifstream __tzdata{__root / "tzdata.zi"};
+    const std::string __root = __libcpp_tzdb_directory();
+    std::ifstream __tzdata{__join_path(__root, "tzdata.zi")};
 
     __tzdb.version = __parse_version(__tzdata);
     __parse_tzdata(__tzdb, __rules, __tzdata);
@@ -777,7 +872,7 @@ void __init_tzdb(tzdb &__tzdb, __rules_storage_type &__rules)
     // - leap-seconds.list the source data
     // The latter is much easier to parse, it seems Howard shares that
     // opinion.
-    __parse_leap_seconds(__tzdb.leap_seconds, std::ifstream{__root / "leap-seconds.list"});
+    __parse_leap_seconds(__tzdb.leap_seconds, std::ifstream{__join_path(__root, "leap-seconds.list")});
 }
 
 #ifdef _WIN32
@@ -814,19 +909,21 @@ void __init_tzdb(tzdb &__tzdb, __rules_storage_type &__rules)
     if (const char *__tz = getenv("TZ"))
         if (const time_zone *__result = tzdb.__locate_zone(__tz)) return __result;
 
-    std::filesystem::path __path = "/etc/localtime";
-    if (!std::filesystem::exists(__path))
+    const std::string __path = "/etc/localtime";
+    if (!__path_exists(__path))
         std::__throw_runtime_error("tzdb: the symlink '/etc/localtime' does not exist");
 
-    if (!std::filesystem::is_symlink(__path))
+    if (!__path_is_symlink(__path))
         std::__throw_runtime_error("tzdb: the path '/etc/localtime' is not a symlink");
 
-    std::filesystem::path __tz = std::filesystem::read_symlink(__path);
+    std::string __tz = __read_symlink_string(__path.c_str());
     // The path may be a relative path, in that case convert it to an absolute
     // path based on the proper initial directory.
-    if (__tz.is_relative()) __tz = std::filesystem::canonical("/etc" / __tz);
+    if (__path_is_relative(__tz)) {
+        __tz = __canonical_path(__join_path("/etc", __tz));
+    }
 
-    std::string __name = std::filesystem::relative(__tz, "/usr/share/zoneinfo/");
+    std::string __name = __relative_under_zoneinfo(__tz);
     if (const time_zone *__result = tzdb.__locate_zone(__name)) return __result;
 
     std::__throw_runtime_error(("tzdb: the time zone '" + __name + "' is not found in the database").c_str());
@@ -854,8 +951,8 @@ tzdb_list &get_tzdb_list()
 
 std::string remote_version()
 {
-    std::filesystem::path __root = __libcpp_tzdb_directory();
-    std::ifstream __tzdata{__root / "tzdata.zi"};
+    const std::string __root = __libcpp_tzdb_directory();
+    std::ifstream __tzdata{__join_path(__root, "tzdata.zi")};
     return __parse_version(__tzdata);
 }
 } // namespace omniruntime::tzdb

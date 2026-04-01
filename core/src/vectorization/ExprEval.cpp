@@ -191,27 +191,27 @@ void ExprEval::Visit(const LiteralExpr &e)
         switch (e.dataType->GetId()) {
             case OMNI_INT:
             case OMNI_DATE32:
-                constVec = new ConstVector(e.intVal, typeId, rowSize);
+                constVec = new ConstVector<int32_t>(e.intVal, typeId, rowSize);
                 break;
             case OMNI_SHORT:
-                constVec = new ConstVector(e.shortVal, typeId, rowSize);
+                constVec = new ConstVector<int16_t>(e.shortVal, typeId, rowSize);
                 break;
             case OMNI_BYTE:
-                constVec = new ConstVector(e.byteVal, typeId, rowSize);
+                constVec = new ConstVector<int8_t>(e.byteVal, typeId, rowSize);
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
-                constVec = new ConstVector(e.longVal, typeId, rowSize);
+                constVec = new ConstVector<int64_t>(e.longVal, typeId, rowSize);
                 break;
             case OMNI_DOUBLE:
-                constVec = new ConstVector(e.doubleVal, typeId, rowSize);
+                constVec = new ConstVector<double>(e.doubleVal, typeId, rowSize);
                 break;
             case OMNI_FLOAT:
-                constVec = new ConstVector(e.floatVal, typeId, rowSize);
+                constVec = new ConstVector<float>(e.floatVal, typeId, rowSize);
                 break;
             case OMNI_BOOLEAN:
-                constVec = new ConstVector(e.boolVal, typeId, rowSize);
+                constVec = new ConstVector<bool>(e.boolVal, typeId, rowSize);
                 break;
             case OMNI_DECIMAL128: {
                 Decimal128 decimal128(*e.stringVal);
@@ -221,7 +221,7 @@ void ExprEval::Visit(const LiteralExpr &e)
             case OMNI_VARCHAR:
             case OMNI_CHAR:
             case OMNI_VARBINARY:
-                constVec = new ConstVector(std::string_view(*e.stringVal), typeId, rowSize);
+                constVec = new ConstVector<std::string_view>(std::string_view(*e.stringVal), typeId, rowSize);
                 break;
             case OMNI_MAP: {
                 // Non-root null map literals (e.g. stack padding: array(col, null)) must match

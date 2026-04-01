@@ -6,6 +6,7 @@
 #pragma once
 #include "vectorization/VectorFunction.h"
 #include "vectorization/SelectivityVector.h"
+#include <vector>
 
 namespace omniruntime::vectorization {
 using namespace omniruntime::type;
@@ -80,8 +81,8 @@ public:
         ExecutionContext *context) const
     {
         auto rowSize = arrayArg->GetSize();
-        int32_t dicIndex[rowSize];
-        memset(dicIndex, -1, sizeof(dicIndex));
+        // std::vector instead of VLA: C++ has no VLA; GCC extension breaks lambda capture (incomplete type on g++7).
+        std::vector<int32_t> dicIndex(static_cast<size_t>(rowSize), -1);
         auto arrayVector = dynamic_cast<ArrayVector *>(arrayArg);
 
         auto offset = arrayVector->GetOffsets();
@@ -105,7 +106,7 @@ public:
         });
 
         auto elementVector = arrayVector->GetElementVector();
-        auto result = VectorHelper::CreateDictionaryVector(dicIndex, rowSize, elementVector.get(),
+        auto result = VectorHelper::CreateDictionaryVector(dicIndex.data(), rowSize, elementVector.get(),
             elementVector->GetTypeId());
         for (auto i = 0; i < rowSize; i++) {
             if (dicIndex[i] == -1) {
@@ -160,8 +161,7 @@ public:
         ExecutionContext *context) const
     {
         auto rowSize = arrayArg->GetSize();
-        int32_t dicIndex[rowSize];
-        memset(dicIndex, -1, sizeof(dicIndex));
+        std::vector<int32_t> dicIndex(static_cast<size_t>(rowSize), -1);
         auto arrayVector = dynamic_cast<ArrayVector *>(arrayArg);
 
         auto offset = arrayVector->GetOffsets();
@@ -176,8 +176,8 @@ public:
         });
 
         auto elementVector = arrayVector->GetElementVector();
-        auto result = VectorHelper::CreateDictionaryVector(dicIndex, rowSize, elementVector.get(),
-            elementVector->GetTypeId());
+        auto result = VectorHelper::CreateDictionaryVector(dicIndex.data(), rowSize,
+            elementVector.get(), elementVector->GetTypeId());
         for (auto i = 0; i < rowSize; i++) {
             if (dicIndex[i] == -1) {
                 result->SetNull(i);

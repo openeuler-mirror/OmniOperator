@@ -574,7 +574,7 @@ struct Converter<OMNI_VARCHAR, void, TPolicy> {
             startExp++;
         }
         OMNI_CHECK(startExp < str.length(), "Exponent should not be all zeros.");
-        str.replace(pos, str.length() - startExp, str, startExp);
+        str.replace(pos, str.length() - startExp, str, startExp, str.length() - startExp);
         pos += str.length() - startExp;
 
         str.resize(pos);

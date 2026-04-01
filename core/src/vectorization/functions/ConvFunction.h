@@ -11,10 +11,9 @@
 #include <string_view>
 #include <cstdint>
 #include <cmath>
-#include <charconv>
 #include <limits>
 #include <cctype>
-#include <iostream>
+#include <cstring>
 
 namespace omniruntime::vectorization {
 
@@ -49,17 +48,39 @@ struct ConvFunction {
 
     static uint64_t toUnsigned(const std::string_view &input, int32_t start, int32_t fromBase)
     {
-        uint64_t unsignedValue = 0;
-        auto fromStatus = std::from_chars(
-            input.data() + start,
-            input.data() + input.size(),
-            unsignedValue,
-            fromBase);
-        if (fromStatus.ec == std::errc::invalid_argument) {
+        const char *p = input.data() + start;
+        const char *end = input.data() + input.size();
+        if (p >= end) {
             return 0;
         }
-        if (fromStatus.ec == std::errc::result_out_of_range) {
-            return kMaxUnsignedInt64;
+        const auto base = static_cast<uint32_t>(fromBase);
+        uint64_t unsignedValue = 0;
+        bool any = false;
+        while (p < end) {
+            const unsigned char uc = static_cast<unsigned char>(*p);
+            int digit = -1;
+            if (uc >= '0' && uc <= '9') {
+                digit = static_cast<int>(uc - '0');
+            } else if (uc >= 'a' && uc <= 'z') {
+                digit = static_cast<int>(uc - 'a' + 10);
+            } else if (uc >= 'A' && uc <= 'Z') {
+                digit = static_cast<int>(uc - 'A' + 10);
+            } else {
+                break;
+            }
+            if (digit >= fromBase) {
+                break;
+            }
+            any = true;
+            const auto ud = static_cast<uint64_t>(digit);
+            if (unsignedValue > (std::numeric_limits<uint64_t>::max() - ud) / static_cast<uint64_t>(base)) {
+                return kMaxUnsignedInt64;
+            }
+            unsignedValue = unsignedValue * static_cast<uint64_t>(base) + ud;
+            ++p;
+        }
+        if (!any) {
+            return 0;
         }
         return unsignedValue;
     }
@@ -113,16 +134,45 @@ struct ConvFunction {
         return std::make_pair(unsignedValue, resultSize);
     }
 
+    static void unsignedMagnitudeToBaseRightAligned(char *outEnd, uint64_t u, int base, char *&outBegin)
+    {
+        char *p = outEnd;
+        if (u == 0) {
+            *--p = '0';
+            outBegin = p;
+            return;
+        }
+        const auto b = static_cast<uint32_t>(base);
+        while (u > 0) {
+            const int d = static_cast<int>(u % b);
+            u /= b;
+            *--p = static_cast<char>(d < 10 ? '0' + d : 'a' + (d - 10));
+        }
+        outBegin = p;
+    }
+
     static void toCharsSigned(
         std::string &result,
         int64_t signedValue,
         int32_t toBase,
         int32_t resultSize)
     {
-        result.resize(resultSize);
-        auto toStatus = std::to_chars(
-            result.data(), result.data() + result.size(), signedValue, -toBase);
-        result.resize(toStatus.ptr - result.data());
+        const int base = -toBase;
+        const bool neg = signedValue < 0;
+        const uint64_t u = neg ? (static_cast<uint64_t>(-(signedValue + 1)) + 1U) : static_cast<uint64_t>(signedValue);
+        result.resize(static_cast<size_t>(resultSize));
+        char *const buf = result.data();
+        char *const last = buf + resultSize;
+        char *begin = last;
+        unsignedMagnitudeToBaseRightAligned(last, u, base, begin);
+        if (neg) {
+            *--begin = '-';
+        }
+        const size_t len = static_cast<size_t>(last - begin);
+        if (begin != buf) {
+            std::memmove(buf, begin, len);
+        }
+        result.resize(len);
     }
 
     static void toCharsUnsigned(
@@ -131,10 +181,17 @@ struct ConvFunction {
         int32_t toBase,
         int32_t resultSize)
     {
-        result.resize(resultSize);
-        auto toStatus = std::to_chars(
-            result.data(), result.data() + result.size(), unsignedValue, std::abs(toBase));
-        result.resize(toStatus.ptr - result.data());
+        const int base = std::abs(toBase);
+        result.resize(static_cast<size_t>(resultSize));
+        char *const buf = result.data();
+        char *const last = buf + resultSize;
+        char *begin = last;
+        unsignedMagnitudeToBaseRightAligned(last, unsignedValue, base, begin);
+        const size_t len = static_cast<size_t>(last - begin);
+        if (begin != buf) {
+            std::memmove(buf, begin, len);
+        }
+        result.resize(len);
     }
 
     ALWAYS_INLINE bool call(

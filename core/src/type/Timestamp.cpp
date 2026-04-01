@@ -5,7 +5,6 @@
 #include "Timestamp.h"
 #include <algorithm>
 #include <optional>
-#include <charconv>
 #include "type/tzdb/exception.h"
 #include "type/date32.h"
 
@@ -30,6 +29,19 @@ ALWAYS_INLINE uint32_t CountDigits(__uint128_t n)
         n /= 10000u;
         count += 4;
     }
+}
+
+/** Write @p value as exactly @p numDigits decimal digits into @p first (no '\0'). */
+ALWAYS_INLINE void writeDecimalDigits(char *const first, uint32_t numDigits, uint64_t value)
+{
+    char *p = first + numDigits;
+    uint64_t v = value;
+    while (p > first) {
+        --p;
+        *p = static_cast<char>('0' + static_cast<int>(v % 10U));
+        v /= 10U;
+    }
+    OMNI_CHECK(v == 0U && p == first, "writeDecimalDigits: width mismatch for value");
 }
 }
 
@@ -158,10 +170,7 @@ std::string_view Timestamp::tmToStringView(const std::tm &tmValue, uint64_t nano
             std::memset(position, '0', leadingZeros);
             offset += leadingZeros;
         }
-        const auto [endPosition, errorCode] = std::to_chars(position + offset, position + offset + numDigits, value);
-        std::ignore = endPosition;
-        OMNI_CHECK(errorCode == std::errc(), "Failed to convert value to varchar: {}.",
-            std::make_error_code(errorCode).message());
+        writeDecimalDigits(position + offset, numDigits, static_cast<uint64_t>(value));
         offset += numDigits;
         return offset;
     };
@@ -243,10 +252,8 @@ std::string_view Timestamp::tmToStringView(const std::tm &tmValue, uint64_t nano
         }
         writePosition += nonZeroOffset.value() + 1;
     } else {
-        const auto [position, errorCode] = std::to_chars(writePosition, writePosition + numDigits, nanos);
-        OMNI_CHECK(errorCode == std::errc(), "Failed to convert fractional part to chars: {}.",
-            std::make_error_code(errorCode).message());
-        writePosition = position;
+        writeDecimalDigits(writePosition, numDigits, nanos);
+        writePosition += numDigits;
     }
     return std::string_view(startPosition, writePosition - startPosition);
 }
