@@ -37,6 +37,8 @@ void RegisterStringFunctions(const std::string &prefix)
     // char_length / character_length / length(string) -> integer (character count, Unicode-aware)
     RegisterFunction<CharLengthFunction, int32_t, std::string_view>(prefix + "length", {OMNI_VARCHAR}, OMNI_INT);
     RegisterFunction<CharLengthFunction, int32_t, std::string_view>(prefix + "length", {OMNI_CHAR}, OMNI_INT);
+    // length(binary) -> integer (byte count)
+    RegisterFunction<BinaryLengthFunction, int32_t, std::string_view>(prefix + "length", {OMNI_VARBINARY}, OMNI_INT);
     // ascii(string) -> int32; align with velox (Varchar), add CHAR for upstream compatibility
     RegisterFunction<AsciiFunction, int32_t, std::string_view>(prefix + "ascii", {OMNI_VARCHAR}, OMNI_INT);
     RegisterFunction<ChrFunction, std::string, int64_t>(prefix + "chr", {OMNI_LONG}, OMNI_VARCHAR);
