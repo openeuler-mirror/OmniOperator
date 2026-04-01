@@ -30,39 +30,28 @@ namespace omniruntime::vectorization {
         }
         return arr;
     }
-  static constexpr std::array<bool, 128> g_re_meta_chars = GetMetaCharTable();
+    static constexpr std::array<bool, 128> g_re_meta_chars = GetMetaCharTable();
 
 void RegexpExtractFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
-                                  BaseVector *&result, ExecutionContext *context) const {
-    int32_t argCnt = args.size();
-    if (argCnt < 3) {
-        OMNI_THROW("RegexpExtract function Error", "No enough input arguments");
-    }
-
+    BaseVector *&result, ExecutionContext *context) const {
     BaseVector *groupIdxVec = nullptr;
     BaseVector *patternVec = nullptr;
     BaseVector *strVec = nullptr;
-
     groupIdxVec = args.top();
     args.pop();
-
     patternVec = args.top();
     args.pop();
-
     strVec = args.top();
     args.pop();
-
-    ApplyRegexpExtract(strVec, patternVec, groupIdxVec, result, outputType);
-
+    ApplyRegexpExtract(strVec, patternVec, groupIdxVec, result, outputType, context);
     delete groupIdxVec;
     delete patternVec;
     delete strVec;
 }
 
 void RegexpExtractFunction::ApplyRegexpExtract(BaseVector *strVec, BaseVector *patternVec,
-                                              BaseVector *groupIdxVec, BaseVector *&result,
-                                              const DataTypePtr &outputType) const {
-    auto size = strVec->GetSize();
+    BaseVector *groupIdxVec, BaseVector *&result, const DataTypePtr &outputType, ExecutionContext *context) const {
+    auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
 
     for (int32_t row = 0; row < size; ++row) {
@@ -71,37 +60,18 @@ void RegexpExtractFunction::ApplyRegexpExtract(BaseVector *strVec, BaseVector *p
             result->SetNull(row);
             continue;
         }
-
-        // If group index is provided and is NULL, result is NULL
-        if (groupIdxVec != nullptr && groupIdxVec->IsNull(row)) {
-            result->SetNull(row);
-            continue;
-        }
-
         std::string_view str = GetStringValueFromVector(strVec, row);
         std::string_view pattern = GetStringValueFromVector(patternVec, row);
-
-        // Get group index (default to 0 if not provided)
-        int32_t groupIdx = 0;
-        if (groupIdxVec != nullptr) {
-            groupIdx = GetIntValueFromVector(groupIdxVec, row);
-        }
+        int32_t groupIdx = GetIntValueFromVector(groupIdxVec, row);
 
         std::string extracted = ExtractRegex(str, pattern, groupIdx);
-
-        if (extracted.empty()) {
-            // If no match or group doesn't exist, result is NULL
-            result->SetNull(row);
-        } else {
-            std::string_view extractedView(extracted);
-            SetStringValueToVector(result, row, extractedView);
-        }
+        std::string_view extractedView(extracted);
+        SetStringValueToVector(result, row, extractedView);
     }
 }
 
-std::string RegexpExtractFunction::ExtractRegex(const std::string_view &plainStr,
-                                                const std::string_view &patternStr,
-                                                int32_t idx) const {
+std::string RegexpExtractFunction::ExtractRegex(const std::string_view &plainStr, const std::string_view &patternStr,
+    int32_t idx) const {
     if(patternStr.size() == 0) {
         throw omniruntime::exception::OmniException("patternStr must not empty");
     }
@@ -134,6 +104,11 @@ std::string RegexpExtractFunction::ExtractRegex(const std::string_view &plainStr
      }
 
     const re2::RE2& re = *re_sp;
+    int maxIdx = re.NumberOfCapturingGroups();
+    if (idx > maxIdx) {
+        OMNI_THROW("The value of parameter(s) `idx` in `regexp_extract` is invalid: ",
+            "Expects group index between 0 and " + std::to_string(maxIdx) + ", but got " + std::to_string(idx));
+    }
     std::vector<re2::StringPiece> groups(idx + 1);
     auto input = re2::StringPiece(str, strLen);
     if (!re.Match(input, 0, strLen, RE2::UNANCHORED, groups.data(), idx + 1)) {
@@ -178,8 +153,7 @@ int32_t RegexpExtractFunction::GetIntValueFromVector(BaseVector *vec, int32_t ro
     }
 }
 
-void RegexpExtractFunction::SetStringValueToVector(BaseVector *vec, int32_t row,
-                                                   std::string_view &value) const {
+void RegexpExtractFunction::SetStringValueToVector(BaseVector *vec, int32_t row, std::string_view &value) const {
     auto *resultVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
     resultVec->SetValue(row, value);
 }

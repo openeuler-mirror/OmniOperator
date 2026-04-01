@@ -87,6 +87,17 @@ TEST(FunctionTest, ArenaAllocatorReset)
 /*
  * Murmur3 hash tests
  */
+
+TEST(FunctionTest, Mm3Int8)
+{
+    EXPECT_EQ(Mm3Int8(127, false, 42, false), 1135925485);
+}
+
+TEST(FunctionTest, Mm3Int16)
+{
+    EXPECT_EQ(Mm3Int16(32477, false, 42, false), -476749289);
+}
+
 TEST(FunctionTest, Mm3Int32)
 {
     EXPECT_EQ(Mm3Int32(-2147483648, false, 42, false), 723455942);

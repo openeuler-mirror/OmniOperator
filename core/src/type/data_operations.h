@@ -188,6 +188,7 @@ inline Status ConvertStringToDouble(double &result, const char *bytes, int32_t l
 
     if (bytes[offset] == '.') {
         offset++;
+        if (length == 1) return Status::IS_NOT_A_NUMBER;
         if (offset == end) {
             if (significantDigits == 0 && !leadingZero) {
                 return Status::IS_NOT_A_NUMBER;

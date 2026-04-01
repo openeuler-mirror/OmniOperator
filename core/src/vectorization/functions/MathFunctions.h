@@ -646,4 +646,52 @@ namespace omniruntime::vectorization {
         }
     };
 
+    template <typename T>
+    struct NormalizeNaNAndZero {
+        const double DOUBLE_NAN = (0.0 / 0.0);
+        const uint64_t DOUBLE_BIT_MASK = ((static_cast<uint64_t>(1) << (sizeof(double) * 8 - 1)) - 1);
+        const float FLOAT_NAN = (0.0f / 0.0f);
+        const uint32_t FLOAT_BIT_MASK = ((static_cast<uint32_t>(1) << (sizeof(float) * 8 - 1)) - 1);
+        double computeDouble(double value) {
+            if (std::isnan(value)) {
+                return DOUBLE_NAN;
+            }
+            union {
+                uint64_t l;
+                double d;
+            } u;
+            u.d = value;
+            if (u.l & DOUBLE_BIT_MASK) {
+                return value;
+            }
+            return 0.0;
+        }
+
+        float computeFloat(float value) {
+            if (std::isnan(value)) {
+                return FLOAT_NAN;
+            }
+            union {
+                uint32_t l;
+                float d;
+            } u;
+            u.d = value;
+            if (u.l & FLOAT_BIT_MASK) {
+                return value;
+            }
+            return 0.0f;
+        }
+
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            if (std::is_same_v<TInput, double>) {
+                result = computeDouble(a);
+            } else if (std::is_same_v<TInput, float>) {
+                result = computeFloat(a);
+            }
+            return Status::OK();
+        }
+    };
+
 }

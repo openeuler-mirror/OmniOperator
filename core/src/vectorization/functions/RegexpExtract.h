@@ -38,7 +38,7 @@ private:
 
     // Main implementation for REGEXP_EXTRACT operation
     void ApplyRegexpExtract(BaseVector *strVec, BaseVector *patternVec, BaseVector *groupIdxVec,
-                           BaseVector *&result, const DataTypePtr &outputType) const;
+        BaseVector *&result, const DataTypePtr &outputType, ExecutionContext *context) const;
 
     // Extract a string using regex pattern and group index
     std::string ExtractRegex(const std::string_view &str, const std::string_view &pattern, int32_t groupIdx) const;
