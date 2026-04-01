@@ -19,6 +19,7 @@
 
 #include "PredicateUtil.h"
 #include <algorithm>
+#include <vector>
 #include <nlohmann/json.hpp>
 #include "../common/JulianGregorianRebase.h"
 #include "../common/TimeRebaseInfo.h"
@@ -44,6 +45,9 @@ namespace common {
         switch (typeId) {
             case OMNI_SHORT: {
                 return std::make_unique<LeafPredicateCondition<int16_t>>(op, index, static_cast<int16_t>(stoi(value)));
+            }
+            case OMNI_BYTE: {
+                return std::make_unique<LeafPredicateCondition<int8_t>>(op, index, static_cast<int8_t>(stoi(value)));
             }
             case OMNI_INT: {
                 return std::make_unique<LeafPredicateCondition<int32_t>>(op, index, stoi(value));
@@ -88,6 +92,9 @@ namespace common {
         switch (typeId) {
             case OMNI_SHORT: {
                 return std::make_unique<LeafPredicateCondition<int16_t>>(op, index, static_cast<int16_t>(stoi(value)));
+            }
+            case OMNI_BYTE: {
+                return std::make_unique<LeafPredicateCondition<int8_t>>(op, index, static_cast<int8_t>(stoi(value)));
             }
             case OMNI_INT: {
                 return std::make_unique<LeafPredicateCondition<int32_t>>(op, index, stoi(value));
@@ -390,13 +397,35 @@ namespace common {
             return false;
         }
         int32_t rowCount = baseVectors[0]->GetSize();
+        std::vector<int32_t> retainPositions;
+        retainPositions.reserve(resultSize);
+        for (int32_t j = 0; j < rowCount; ++j) {
+            if (BitUtil::IsBitSet(bitMark, j)) {
+                retainPositions.push_back(j);
+            }
+        }
         result.resize(baseVectors.size(), nullptr);
         for (int32_t i = 0; i < baseVectors.size(); i++) {
             auto baseVector = baseVectors[i];
             auto dataType = baseVector->GetTypeId();
-            auto selectedBaseVector = VectorHelper::CreateVector(OMNI_FLAT, dataType, static_cast<int32_t>(resultSize));
             auto isAllNull = isNullSet.count(i);
             auto isAllNotNull = isNotNullSet.count(i);
+            BaseVector *selectedBaseVector = nullptr;
+            switch (dataType) {
+                case OMNI_ROW:
+                case OMNI_ARRAY:
+                case OMNI_MAP:
+                case OMNI_CONTAINER: {
+                    selectedBaseVector = VectorHelper::CopyPositionsVector(baseVector, retainPositions.data(), 0,
+                        resultSize);
+                    result[i] = selectedBaseVector;
+                    continue;
+                }
+                default: {
+                    selectedBaseVector =
+                        VectorHelper::CreateVector(OMNI_FLAT, dataType, static_cast<int32_t>(resultSize));
+                }
+            }
             switch (dataType) {
                 case OMNI_INT:
                 case OMNI_DATE32: {
@@ -409,6 +438,11 @@ namespace common {
                         isAllNull, isAllNotNull);
                     break;
                 }
+                case OMNI_BYTE: {
+                    SetFlatVectorValue<Vector<int8_t>, int8_t>(rowCount, baseVector, selectedBaseVector, bitMark,
+                        isAllNull, isAllNotNull);
+                    break;
+                }
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64: {
@@ -418,6 +452,11 @@ namespace common {
                 }
                 case OMNI_DOUBLE: {
                     SetFlatVectorValue<Vector<double>, double>(rowCount, baseVector, selectedBaseVector, bitMark,
+                        isAllNull, isAllNotNull);
+                    break;
+                }
+                case OMNI_FLOAT: {
+                    SetFlatVectorValue<Vector<float>, float>(rowCount, baseVector, selectedBaseVector, bitMark,
                         isAllNull, isAllNotNull);
                     break;
                 }
@@ -456,4 +495,4 @@ namespace common {
         }
         return true;
     }
-}
+} // namespace common
