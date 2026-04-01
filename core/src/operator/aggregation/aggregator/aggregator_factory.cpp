@@ -300,6 +300,12 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
         case OMNI_AGGREGATION_TYPE_REGR_SYY: {
             return std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_SYY);
         }
+        case OMNI_AGGREGATION_TYPE_REGR_AVGX: {
+            return std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_AVGX);
+        }
+        case OMNI_AGGREGATION_TYPE_REGR_AVGY: {
+            return std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_AVGY);
+        }
         case OMNI_AGGREGATION_TYPE_REGR_REPLACEMENT: {
             return std::make_unique<RegrReplacementAggregatorFactory>();
         }
@@ -562,8 +568,40 @@ std::unique_ptr<Aggregator> RegrAggregatorFactory::CreateAggregator(const DataTy
                     "Regr aggregate merge requires 3, 4, 6, or 7 columns, got " + std::to_string(n));
         }
     }
-    return std::make_unique<RegrAggregator>(aggregateType, inputTypes, outputTypes, channels,
-        inputRaw, outputPartial, isOverflowAsNull);
+    switch (aggregateType) {
+        case OMNI_AGGREGATION_TYPE_REGR_COUNT:
+            return std::make_unique<RegrCountAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+                isOverflowAsNull);
+        case OMNI_AGGREGATION_TYPE_REGR_INTERCEPT:
+            return std::make_unique<RegrInterceptAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+                isOverflowAsNull);
+        case OMNI_AGGREGATION_TYPE_REGR_R2:
+            return std::make_unique<RegrR2Aggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+                isOverflowAsNull);
+        case OMNI_AGGREGATION_TYPE_REGR_SLOPE:
+            return std::make_unique<RegrSlopeAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+                isOverflowAsNull);
+        case OMNI_AGGREGATION_TYPE_REGR_SXX:
+            return std::make_unique<RegrSxxAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+                isOverflowAsNull);
+        case OMNI_AGGREGATION_TYPE_REGR_SXY:
+            return std::make_unique<RegrSxyAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+                isOverflowAsNull);
+        case OMNI_AGGREGATION_TYPE_REGR_SYY:
+            return std::make_unique<RegrSyyAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+                isOverflowAsNull);
+        case OMNI_AGGREGATION_TYPE_REGR_AVGX:
+            return std::make_unique<RegrAvgXAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+                isOverflowAsNull);
+        case OMNI_AGGREGATION_TYPE_REGR_AVGY:
+            return std::make_unique<RegrAvgYAggregator>(inputTypes, outputTypes, channels, inputRaw, outputPartial,
+                isOverflowAsNull);
+        default: {
+            std::string msg =
+                "RegrAggregatorFactory: unsupported aggregate type " + std::to_string(static_cast<int>(aggregateType));
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", msg);
+        }
+    }
 }
 
 std::unique_ptr<Aggregator> RegrReplacementAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,

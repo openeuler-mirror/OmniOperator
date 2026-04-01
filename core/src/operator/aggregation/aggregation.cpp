@@ -214,6 +214,22 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 }
                 break;
             }
+            case OMNI_AGGREGATION_TYPE_REGR_AVGX: {
+                if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
+                    aggregatorFactories.push_back(std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_AVGX));
+                } else {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Regr aggregate does not support mask column");
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_REGR_AVGY: {
+                if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
+                    aggregatorFactories.push_back(std::make_unique<RegrAggregatorFactory>(OMNI_AGGREGATION_TYPE_REGR_AVGY));
+                } else {
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Regr aggregate does not support mask column");
+                }
+                break;
+            }
             case OMNI_AGGREGATION_TYPE_REGR_REPLACEMENT: {
                 if (maskCols[i] == Aggregator::INVALID_MASK_COL) {
                     aggregatorFactories.push_back(std::make_unique<RegrReplacementAggregatorFactory>());
