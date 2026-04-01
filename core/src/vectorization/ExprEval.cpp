@@ -282,7 +282,21 @@ void ExprEval::Visit(const FieldExpr &e)
 {
     auto colVec = GetStructField(&e, vecBatch_);
     auto typeId = colVec->GetTypeId();
-    vecBatch_[e.colVal]->SetIsField(true);
+    // For nested field access (e.g., col_structtype.name), e.colVal is the child field
+    // index within the struct, not the top-level column index in vecBatch_.
+    // We need to traverse the FieldExpr input chain to find the root FieldExpr
+    // and use its colVal as the correct top-level column index.
+    int32_t topLevelColVal = e.colVal;
+    if (e.input != nullptr) {
+        const FieldExpr* current = &e;
+        while (current->input != nullptr) {
+            current = dynamic_cast<const FieldExpr*>(current->input);
+        }
+        topLevelColVal = current->colVal;
+    }
+    if (topLevelColVal >= 0 && topLevelColVal < static_cast<int32_t>(vecBatch_.size()) && vecBatch_[topLevelColVal] != nullptr) {
+        vecBatch_[topLevelColVal]->SetIsField(true);
+    }
     if (context->hasFilter) {
         auto isSelect = context->GetIsSelectRow();
         int selectRow[context->GetResultRowSize()] = {-1};
