@@ -157,6 +157,13 @@ public:
         return nullptr;
     }
 
+    /**
+     * using caller suggestedCapacity to reverse enough values buffer
+    */
+    virtual void Reserve(int32_t suggestedCapacity, bool copyNulls, bool copyValues)
+    {
+    }
+
     virtual BaseVector *Slice(int positionOffset, int length, bool isCopy = false)
     {
         return nullptr;
@@ -414,6 +421,29 @@ public:
                 SetValue(index, src->GetValue(i));
             }
         }
+    }
+
+    void Reserve(int32_t suggestedCapacity, bool copyNulls, bool copyValues) override
+    {
+        if(suggestedCapacity <= this->capacity || this->offset != 0) {
+            return;
+        }
+        if (copyNulls && this->nullsBuffer != nullptr) {
+            auto oldNullsBuffer = std::move(nullsBuffer);
+            this->nullsBuffer = std::make_shared<NullsBuffer>(suggestedCapacity);
+            this->nullsBuffer->SetNulls(0, oldNullsBuffer.get(), size);
+        } else {
+            this->nullsBuffer = std::make_shared<NullsBuffer>(suggestedCapacity);
+        }
+        if (copyValues && valuesBuffer != nullptr) {
+            auto oldValuesBuffer = std::move(valuesBuffer);
+            this->valuesBuffer = std::make_shared<AlignedBuffer<RAW_DATA_TYPE>>(suggestedCapacity);
+            memcpy(this->valuesBuffer->GetBuffer(), oldValuesBuffer->GetBuffer(), this->size * sizeof(RAW_DATA_TYPE));
+        } else {
+            this->valuesBuffer = std::make_shared<AlignedBuffer<RAW_DATA_TYPE>>(suggestedCapacity);
+        }
+        values = valuesBuffer->GetBuffer();
+        this->capacity = suggestedCapacity;
     }
 
     /* *
@@ -833,6 +863,22 @@ public:
         this->capacity = newCapacity;
         this->size = needCapacity;
         container->Expand(needCapacity);
+    }
+
+    void Reserve(int32_t suggestedCapacity, bool copyNulls, bool copyValues) override
+    {
+        if(suggestedCapacity <= this->capacity || this->offset != 0) {
+            return;
+        }
+        if (copyNulls && this->nullsBuffer != nullptr) {
+            auto oldNullsBuffer = std::move(this->nullsBuffer);
+            this->nullsBuffer = std::make_shared<NullsBuffer>(suggestedCapacity);
+            this->nullsBuffer->SetNulls(0, oldNullsBuffer.get(), this->size);
+        } else {
+            this->nullsBuffer = std::make_shared<NullsBuffer>(suggestedCapacity);
+        }
+        this->capacity = suggestedCapacity;
+        container->Expand(suggestedCapacity);
     }
 
 private:

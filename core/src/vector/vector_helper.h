@@ -409,6 +409,12 @@ public:
         for (int i = 0; i < size; i++) {
             if (i > 0)
                 std::cout << ", ";
+
+            if (arrayVec->IsNull(i)) {
+                std::cout << "NULL\t";
+                continue;
+            }
+
             switch (elementType) {
                 case OMNI_BYTE:
                     PrintArrayElement<OMNI_BYTE>(elementVec.get(), offset + i);

@@ -29,6 +29,7 @@
 
 using ResizableBuffer = ::arrow::ResizableBuffer;
 using namespace omniruntime::vec;
+using namespace omniruntime::vec::unsafe;
 
 namespace omniruntime::reader {
     constexpr int64_t kMinLevelBatchSize = 1024;
@@ -482,20 +483,25 @@ namespace omniruntime::reader {
         void Reserve(int64_t capacity) override {
             ReserveLevels(capacity);
             ReserveValues(capacity);
-            InitVec(capacity);
         }
 
         virtual void InitVec(int64_t capacity) {
             vec_ = new Vector<V>(capacity);
-            auto capacity_bytes = capacity * byte_width_;
-            if (parquet_vec_ != nullptr) {
-                memset(parquet_vec_, 0, capacity_bytes);
-            } else {
-                parquet_vec_ = new uint8_t[capacity_bytes];
-            }
-            // Init nulls
+            ResizeParquetVec(capacity);
             if (nullable_values_) {
                 nulls_ = unsafe::UnsafeBaseVector::GetNulls(vec_);
+            }
+        }
+
+        void ResizeParquetVec(int64_t capacity) {
+            auto capacity_bytes = capacity * byte_width_;
+            if (capacity > parquet_vec_capacity_) {
+                delete[] parquet_vec_;
+                parquet_vec_ = new uint8_t[capacity_bytes];
+                parquet_vec_capacity_ = capacity;
+            }
+            if (parquet_vec_ != nullptr) {
+                memset(parquet_vec_, 0, capacity_bytes);
             }
         }
 
@@ -540,17 +546,35 @@ namespace omniruntime::reader {
 
         void ReserveValues(int64_t extra_values) {
             const int64_t new_values_capacity =
-                UpdateCapacity(values_capacity_, values_written_, extra_values);
+                    UpdateCapacity(values_capacity_, values_written_, extra_values);
             if (new_values_capacity > values_capacity_) {
                 // XXX(wesm): A hack to avoid memory allocation when reading directly
                 // into builder classes
                 if (uses_values_) {
                     PARQUET_THROW_NOT_OK(values_->Resize(bytes_for_values(new_values_capacity),
-                                                     /*shrink_to_fit=*/false));
+                            /*shrink_to_fit=*/false));
                 }
                 values_capacity_ = new_values_capacity;
             }
-       }
+            if (vec_ != nullptr) {
+                vec_->Reserve(values_capacity_, nullable_values_, false);
+                if (nullable_values_) {
+                    nulls_ = unsafe::UnsafeBaseVector::GetNulls(vec_);
+                }
+                if (parquet_vec_ != nullptr && values_capacity_ > parquet_vec_capacity_) {
+                    auto new_bytes = values_capacity_ * byte_width_;
+                    auto old_bytes = parquet_vec_capacity_ * byte_width_;
+                    auto new_buf = new uint8_t[new_bytes];
+                    memcpy(new_buf, parquet_vec_, old_bytes);
+                    memset(new_buf + old_bytes, 0, new_bytes - old_bytes);
+                    delete[] parquet_vec_;
+                    parquet_vec_ = new_buf;
+                    parquet_vec_capacity_ = values_capacity_;
+                }
+            } else {
+                InitVec(extra_values);
+            }
+        }
 
         void Reset() override {
             ResetValues();
@@ -654,6 +678,7 @@ namespace omniruntime::reader {
                 throw ::parquet::ParquetException("BaseVector is nullptr!");
             }
             auto res = dynamic_cast<Vector<V>*>(vec_);
+            UnsafeBaseVector::SetSize(res, values_written_);
             res->SetValues(0, Values<T>(), values_written_);
             return vec_;
         }
@@ -671,6 +696,7 @@ namespace omniruntime::reader {
         ::parquet::internal::LevelInfo leaf_info_;
         omniruntime::vec::BaseVector* vec_ = nullptr;
         uint8_t* parquet_vec_ = nullptr;
+        int64_t parquet_vec_capacity_ = 0;
         uint8_t* nulls_ = nullptr;
         int32_t byte_width_;
     };
@@ -691,6 +717,7 @@ namespace omniruntime::reader {
             for (int i = 0; i < values_written_; i++) {
                 res->SetValue(i, static_cast<int8_t>(values[i]));
             }
+            UnsafeBaseVector::SetSize(res, values_written_);
             return vec_;
         }
     };
@@ -711,6 +738,7 @@ namespace omniruntime::reader {
             for (int i = 0; i < values_written_; i++) {
                 res->SetValue(i, static_cast<int16_t>(values[i]));
             }
+            UnsafeBaseVector::SetSize(res, values_written_);
             return vec_;
         }
     };
@@ -731,6 +759,7 @@ namespace omniruntime::reader {
             for (int i = 0; i < values_written_; i++) {
                 res->SetValue(i, static_cast<int64_t>(values[i]));
             }
+            UnsafeBaseVector::SetSize(res, values_written_);
             return vec_;
         }
     };
@@ -776,6 +805,7 @@ namespace omniruntime::reader {
                     PARQUET_THROW_NOT_OK(RawBytesToDecimal64Bytes(GetParquetVecHeadPtr(index++), byte_width_, &vec_, i));
                 }
             }
+            UnsafeBaseVector::SetSize(vec_, values_written_);
             return vec_;
         }
     };
@@ -821,17 +851,26 @@ namespace omniruntime::reader {
                     PARQUET_THROW_NOT_OK(RawBytesToDecimal128Bytes(GetParquetVecHeadPtr(index++), byte_width_, &vec_, i));
                 }
             }
+            UnsafeBaseVector::SetSize(vec_, values_written_);
             return vec_;
         }
     };
 
-    class ParquetByteArrayChunkedRecordReader : public ParquetTypedRecordReader<OMNI_VARCHAR, ::parquet::ByteArrayType> {
+    template<DataTypeId Type_ID>
+    class ParquetByteArrayChunkedRecordReader : public ParquetTypedRecordReader<Type_ID, ::parquet::ByteArrayType> {
     public:
+        using Base = ParquetTypedRecordReader<Type_ID, ::parquet::ByteArrayType>;
+        using Base::descr_;
+        using Base::vec_;
+        using Base::nulls_;
+        using Base::nullable_values_;
+        using Base::values_written_;
+
         ParquetByteArrayChunkedRecordReader(const ::parquet::ColumnDescriptor* descr, ::parquet::internal::LevelInfo leaf_info,
-            ::arrow::MemoryPool* pool)
-            : ParquetTypedRecordReader<OMNI_VARCHAR, ::parquet::ByteArrayType>(descr, leaf_info, pool) {
-                DCHECK_EQ(descr_->physical_type(), ::parquet::Type::BYTE_ARRAY);
-            }
+                                            ::arrow::MemoryPool* pool)
+                : ParquetTypedRecordReader<Type_ID, ::parquet::ByteArrayType>(descr, leaf_info, pool) {
+            DCHECK_EQ(descr_->physical_type(), ::parquet::Type::BYTE_ARRAY);
+        }
 
         void InitVec(int64_t capacity) override {
             vec_ = new Vector<LargeStringContainer<std::string_view>>(capacity);
@@ -842,14 +881,14 @@ namespace omniruntime::reader {
 
         void ReadValuesDense(int64_t values_to_read) override {
             int64_t num_decoded = this->current_decoder_->DecodeArrowNonNull(static_cast<int>(values_to_read),
-                &vec_, values_written_);
+                                                                             &vec_, values_written_);
             CheckNumberDecoded(num_decoded, values_to_read);
         }
 
         void ReadValuesSpaced(int64_t values_to_read, int64_t null_count) override {
             int64_t num_decoded = this->current_decoder_->DecodeArrow(
-                static_cast<int>(values_to_read), static_cast<int>(null_count),
-                nulls_, values_written_, &vec_);
+                    static_cast<int>(values_to_read), static_cast<int>(null_count),
+                    nulls_, values_written_, &vec_);
             CheckNumberDecoded(num_decoded, values_to_read -  null_count);
         }
 
@@ -857,6 +896,7 @@ namespace omniruntime::reader {
             if (vec_ == nullptr) {
                 throw ::parquet::ParquetException("GetBaseVec() is nullptr");
             }
+            UnsafeBaseVector::SetSize(vec_, values_written_);
             return vec_;
         }
     };
@@ -886,6 +926,7 @@ namespace omniruntime::reader {
                     res->SetValue(i, rebaseInfoPtr->timestampRebaseFunc(values[i]));
                 }
             }
+            UnsafeBaseVector::SetSize(vec_, values_written_);
             return vec_;
         }
 
@@ -916,6 +957,7 @@ namespace omniruntime::reader {
                     res->SetValue(i, rebaseInfoPtr->int96RebaseFunc(Int96GetMicroSeconds(values[i])));
                 }
             }
+            UnsafeBaseVector::SetSize(vec_, values_written_);
             return vec_;
         }
 
