@@ -33,6 +33,7 @@
 #include "../functions/LastDay.h"
 #include "../functions/MonthsBetween.h"
 #include "../functions/NextDay.h"
+#include "../functions/DateDiff.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -80,5 +81,7 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterMonthsBetweenFunction(prefix + "months_between");
 
     RegisterNextDayFunction(prefix + "next_day");
+
+    RegisterDateDiffFunction(prefix + "date_diff");
 }
 }
