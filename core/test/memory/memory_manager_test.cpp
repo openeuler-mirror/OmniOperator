@@ -134,15 +134,15 @@ template <class T> auto CreateVector(int vecSize)
 
     auto int32Vector = CreateVector<int32_t>(100);
     int64_t threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 589);
+    EXPECT_EQ(threadUntracked, 605);
 
     auto int64Vector = CreateVector<int64_t>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 1578); // int64Vector + int32Vector
+    EXPECT_EQ(threadUntracked, 1610); // int64Vector + int32Vector
 
     auto doubleVector = CreateVector<double>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 2567); // doubleVector + int64Vector + int32Vector
+    EXPECT_EQ(threadUntracked, 2615); // doubleVector + int64Vector + int32Vector
 
     int32Vector.reset();
     int64Vector.reset();

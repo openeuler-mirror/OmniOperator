@@ -134,15 +134,15 @@ TEST(Allocator, testSlicedVectorSize)
         vector->SetValue(i, value);
     }
     int64_t accountedMemory = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(accountedMemory, 589);
+    EXPECT_EQ(accountedMemory, 605);
 
     auto sliceVector = vector->Slice(0, vecSize);
     int64_t accountedMemory2  = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(accountedMemory2, 709);
+    EXPECT_EQ(accountedMemory2, 741);
 
     delete vector;
     int64_t accountedMemory3 = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(accountedMemory3, 541);
+    EXPECT_EQ(accountedMemory3, 557);
 
     delete sliceVector;
     EXPECT_EQ(threadMemoryManager->GetUntrackedMemory(), 0);

@@ -152,6 +152,16 @@ public:
         return dataTypeId;
     }
 
+    const std::shared_ptr<DataType>& GetDataType() const
+    {
+        return dataType_;
+    }
+
+    void SetDataType(std::shared_ptr<DataType> dt)
+    {
+        dataType_ = std::move(dt);
+    }
+
     virtual BaseVector *CopyPositions(const int *positions, int positionOffset, int length)
     {
         return nullptr;
@@ -236,6 +246,7 @@ protected:
     std::shared_ptr<NullsBuffer> nullsBuffer;
     bool isSliced;
     DataTypeId dataTypeId;
+    std::shared_ptr<DataType> dataType_ = nullptr;
     int32_t inMemoryBytes_ = 0;
     tsan_atomic<int32_t> length_{0};
 

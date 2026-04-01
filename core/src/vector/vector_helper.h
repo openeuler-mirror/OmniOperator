@@ -101,6 +101,33 @@ public:
         }
     }
 
+    static void SetVectorDataType(BaseVector* vec, DataType* dataType)
+    {
+        using namespace omniruntime::type;
+        if (vec == nullptr || dataType == nullptr) {
+            throw omniruntime::exception::OmniException("INVALID_ARGUMENT",
+                "In function SetVectorDataType, vec or dataType is nullptr");
+        }
+        auto id = dataType->GetId();
+        if (id == OMNI_DECIMAL128) {
+            auto dt = dynamic_cast<Decimal128DataType *>(dataType);
+            if (dt != nullptr) {
+                vec->SetDataType(std::make_shared<Decimal128DataType>(dt->GetPrecision(), dt->GetScale()));
+            } else {
+                vec->SetDataType(std::make_shared<Decimal128DataType>(
+                    DECIMAL128_DEFAULT_PRECISION, DECIMAL128_DEFAULT_SCALE));
+            }
+        } else if (id == OMNI_DECIMAL64) {
+            auto dt = dynamic_cast<Decimal64DataType *>(dataType);
+            if (dt != nullptr) {
+                vec->SetDataType(std::make_shared<Decimal64DataType>(dt->GetPrecision(), dt->GetScale()));
+            } else {
+                vec->SetDataType(std::make_shared<Decimal64DataType>(
+                    DECIMAL64_DEFAULT_PRECISION, DECIMAL64_DEFAULT_SCALE));
+            }
+        }
+    }
+
     static BaseVector *CreateComplexVector(DataType* dataType, int32_t size)
     {
         using namespace omniruntime::type;
@@ -129,7 +156,9 @@ public:
             }
             return new ArrayVector(size, children[0]);
         } else {
-            return CreateFlatVector(fieldType, size);
+            auto vec = CreateFlatVector(fieldType, size);
+            SetVectorDataType(vec, dataType);
+            return vec;
         }
     }
 
@@ -159,7 +188,9 @@ public:
             }
             return std::make_shared<ArrayVector>(size, children[0]);
         } else {
-            return CreateFlatVectorShared(fieldType, size);
+            auto vec = CreateFlatVectorShared(fieldType, size);
+            SetVectorDataType(vec.get(), dataType);
+            return vec;
         }
     }
 
