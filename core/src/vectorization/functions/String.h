@@ -573,6 +573,24 @@ struct UnBase64Function {
     }
 };
 
+/// length(binary) -> integer
+/// Returns the byte length of binary input, aligned with Spark SQL / Velox semantics.
+/// Unlike length(string) which returns character (Unicode code point) count,
+/// length(binary) returns the raw byte count.
+template <typename T>
+struct BinaryLengthFunction {
+    ALWAYS_INLINE bool call(int32_t &result, const std::string_view &input)
+    {
+        result = static_cast<int32_t>(input.size());
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *input)
+    {
+        return call(result, *input);
+    }
+};
+
 /// bit_length(string/binary) -> integer
 /// Returns the bit length of the input string or binary.
 /// The bit length is the byte length multiplied by 8.
