@@ -182,14 +182,18 @@ void RegisterToUtcTimestampFunction(const std::string &name)
 {
     auto func = std::make_shared<ToUtcTimestampVectorFunction>();
     VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP, OMNI_VARCHAR}, OMNI_TIMESTAMP, func);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP, OMNI_CHAR}, OMNI_TIMESTAMP, func);
     VectorFunction::RegisterVectorFunction(name, {OMNI_LONG, OMNI_VARCHAR}, OMNI_TIMESTAMP, func);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_LONG, OMNI_CHAR}, OMNI_TIMESTAMP, func);
 }
 
 void RegisterFromUtcTimestampFunction(const std::string &name)
 {
     auto func = std::make_shared<FromUtcTimestampVectorFunction>();
     VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP, OMNI_VARCHAR}, OMNI_TIMESTAMP, func);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP, OMNI_CHAR}, OMNI_TIMESTAMP, func);
     VectorFunction::RegisterVectorFunction(name, {OMNI_LONG, OMNI_VARCHAR}, OMNI_TIMESTAMP, func);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_LONG, OMNI_CHAR}, OMNI_TIMESTAMP, func);
 }
 
 }
