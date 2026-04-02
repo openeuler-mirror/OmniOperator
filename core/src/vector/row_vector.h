@@ -97,6 +97,11 @@ namespace omniruntime::vec {
 
             if (needCapacity <= capacity) {
                 size = needCapacity;
+                for (auto &child : children_) {
+                    if (child) {
+                        child->Expand(needCapacity);
+                    }
+                }
                 return;
             }
 
@@ -113,6 +118,12 @@ namespace omniruntime::vec {
 
             capacity = newCapacity;
             size = needCapacity;
+
+            for (auto &child : children_) {
+                if (child) {
+                    child->Expand(needCapacity);
+                }
+            }
         }
 
         /* *
