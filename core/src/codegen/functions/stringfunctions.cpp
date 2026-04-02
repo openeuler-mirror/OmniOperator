@@ -9,6 +9,9 @@
 #include "dtoa.h"
 #include "type/string_Impl.h"
 #include <nlohmann/json.hpp>
+#include <cctype>
+#include <functional>
+#include <unordered_map>
 
 namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT int64_t CountChar(const char *str, int32_t strLen, const char *target, int32_t targetWidth, int32_t targetLen, bool isNull)
@@ -169,6 +172,46 @@ extern "C" DLLEXPORT const char* RegexpExtractRetNull(int64_t contextPtr, const 
     }
 }
 
+// JSON parse cache to improve performance for repeated JSON queries
+// Uses thread-local storage to avoid synchronization overhead
+namespace {
+    // Simple hash function for JSON content
+    inline uint64_t HashJsonContent(const std::string& content)
+    {
+        // FNV-1a hash algorithm
+        uint64_t hash = 14695981039346656037ULL;
+        for (char c : content) {
+            hash ^= static_cast<unsigned char>(c);
+            hash *= 1099511628211ULL;
+        }
+        return hash;
+    }
+
+    struct JsonCache {
+        uint64_t hash = 0;
+        nlohmann::json parsedJson;
+        std::string lastJsonContent;
+        
+        bool IsCacheValid(const std::string& jsonContent) const
+        {
+            return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
+        }
+        
+        void SetCache(const std::string& jsonContent, const nlohmann::json& json)
+        {
+            hash = HashJsonContent(jsonContent);
+            lastJsonContent = jsonContent;
+            parsedJson = json;
+        }
+    };
+    
+    // Thread-local cache for JSON parsing
+    // This avoids re-parsing the same JSON in the same thread
+    thread_local JsonCache THREAD_LOCAL_JSON_CACHE;
+}
+
+// Enhanced JSON path parser supporting $.a.b, $[0], $['key'], $["key"], and nested combinations
+// Also handles keys with special characters when quoted
 static std::vector<std::string> ParseJsonPath(const std::string& path)
 {
     std::vector<std::string> keys;
@@ -176,40 +219,95 @@ static std::vector<std::string> ParseJsonPath(const std::string& path)
         return keys;
     }
     
+    enum State {
+        EXPECT_DOT_OR_BRACKET,  // After key, expect . or [
+        IN_DOT_NOTATION,         // After ., reading key until . or [
+        IN_BRACKET,              // After [, reading content until ]
+        IN_QUOTED_KEY            // Inside quotes within bracket
+    };
+    
+    State state = EXPECT_DOT_OR_BRACKET;
     std::string currentKey;
-    bool inBracket = false;
-    bool expectKey = true;
+    char quoteChar = '\0';
     
     for (size_t i = 1; i < path.size(); ++i) {
         char c = path[i];
         
-        if (c == '.') {
-            if (!currentKey.empty() && !inBracket) {
-                keys.push_back(currentKey);
-                currentKey.clear();
-            }
-            expectKey = true;
-        } else if (c == '[') {
-            if (!currentKey.empty()) {
-                keys.push_back(currentKey);
-                currentKey.clear();
-            }
-            inBracket = true;
-            expectKey = true;
-        } else if (c == ']') {
-            if (!currentKey.empty()) {
-                keys.push_back(currentKey);
-                currentKey.clear();
-            }
-            inBracket = false;
-            expectKey = false;
-        } else if (c == '\'' || c == '"') {
-            continue;
-        } else {
-            currentKey += c;
+        switch (state) {
+            case EXPECT_DOT_OR_BRACKET:
+                if (c == '.') {
+                    state = IN_DOT_NOTATION;
+                } else if (c == '[') {
+                    state = IN_BRACKET;
+                } else if (!isspace(c)) {
+                    // Invalid format, should start with . or [
+                    return keys;
+                }
+                break;
+                
+            case IN_DOT_NOTATION:
+                if (c == '.') {
+                    // Save current key when encountering next dot
+                    if (!currentKey.empty()) {
+                        keys.push_back(currentKey);
+                        currentKey.clear();
+                    }
+                    // Stay in IN_DOT_NOTATION state to read next key
+                } else if (c == '[') {
+                    if (!currentKey.empty()) {
+                        keys.push_back(currentKey);
+                        currentKey.clear();
+                    }
+                    state = IN_BRACKET;
+                } else if (isspace(c)) {
+                    // Stop at whitespace
+                    if (!currentKey.empty()) {
+                        keys.push_back(currentKey);
+                        currentKey.clear();
+                    }
+                    state = EXPECT_DOT_OR_BRACKET;
+                } else {
+                    currentKey += c;
+                }
+                break;
+                
+            case IN_BRACKET:
+                if (c == '\'' || c == '"') {
+                    quoteChar = c;
+                    state = IN_QUOTED_KEY;
+                } else if (c == ']') {
+                    if (!currentKey.empty()) {
+                        keys.push_back(currentKey);
+                        currentKey.clear();
+                    }
+                    state = EXPECT_DOT_OR_BRACKET;
+                } else if (!isspace(c)) {
+                    currentKey += c;
+                }
+                break;
+                
+            case IN_QUOTED_KEY:
+                if (c == '\\' && i + 1 < path.size()) {
+                    // Handle escape sequences
+                    char nextChar = path[i + 1];
+                    if (nextChar == quoteChar || nextChar == '\\') {
+                        currentKey += nextChar;
+                        ++i;  // Skip next character
+                    } else {
+                        currentKey += c;
+                    }
+                } else if (c == quoteChar) {
+                    // End of quoted key, expect ] next
+                    state = IN_BRACKET;
+                    quoteChar = '\0';
+                } else {
+                    currentKey += c;
+                }
+                break;
         }
     }
     
+    // Handle remaining key
     if (!currentKey.empty()) {
         keys.push_back(currentKey);
     }
@@ -234,33 +332,54 @@ extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char
     std::string jsonContent(jsonStr, jsonStrLen);
     std::string pathContent(pathStr, pathStrLen);
     
-    // Fix escaped quotes: replace \ with "
-    // The input data has \ instead of " for JSON string delimiters
-    // Only keep \\ (escaped backslash) and \" (escaped quote)
-    std::string fixedJsonContent;
-    fixedJsonContent.reserve(jsonContent.size());
-    for (size_t j = 0; j < jsonContent.size(); j++) {
-        if (jsonContent[j] == '\\') {
-            if (j + 1 < jsonContent.size()) {
-                char next = jsonContent[j + 1];
-                if (next == '\\' || next == '"') {
-                    fixedJsonContent += jsonContent[j];
-                } else {
-                    fixedJsonContent += '"';
-                }
-            } else {
-                fixedJsonContent += '"';
-            }
-        } else {
-            fixedJsonContent += jsonContent[j];
-        }
-    }
-    
     try {
-        nlohmann::json jsonData = nlohmann::json::parse(fixedJsonContent);
+        // Use cached JSON if available, otherwise parse and cache
+        nlohmann::json* jsonData;
+        if (THREAD_LOCAL_JSON_CACHE.IsCacheValid(jsonContent)) {
+            jsonData = &THREAD_LOCAL_JSON_CACHE.parsedJson;
+        } else {
+            nlohmann::json newJson;
+            // Try parsing the original JSON first
+            try {
+                newJson = nlohmann::json::parse(jsonContent);
+            } catch (...) {
+                // If parsing fails, try to fix escaped quotes
+                // This handles cases where input has \ instead of " for JSON string delimiters
+                std::string fixedJsonContent;
+                fixedJsonContent.reserve(jsonContent.size());
+                for (size_t j = 0; j < jsonContent.size(); j++) {
+                    if (jsonContent[j] == '\\') {
+                        if (j + 1 < jsonContent.size()) {
+                            char next = jsonContent[j + 1];
+                            if (next == '\\' || next == '"') {
+                                fixedJsonContent += jsonContent[j];
+                            } else {
+                                fixedJsonContent += '"';
+                            }
+                        } else {
+                            fixedJsonContent += '"';
+                        }
+                    } else {
+                        fixedJsonContent += jsonContent[j];
+                    }
+                }
+                newJson = nlohmann::json::parse(fixedJsonContent);
+                jsonContent = fixedJsonContent; // Update for cache validation
+            }
+            THREAD_LOCAL_JSON_CACHE.SetCache(jsonContent, newJson);
+            jsonData = &THREAD_LOCAL_JSON_CACHE.parsedJson;
+        }
+        
         std::vector<std::string> keys = ParseJsonPath(pathContent);
         
-        nlohmann::json* current = &jsonData;
+        // If path parsing failed (empty keys), return null
+        if (keys.empty()) {
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        
+        nlohmann::json* current = jsonData;
         for (const auto& key : keys) {
             if (current->is_object()) {
                 if (current->contains(key)) {
@@ -1698,4 +1817,3 @@ extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *
     return result;
 }
 }
-
