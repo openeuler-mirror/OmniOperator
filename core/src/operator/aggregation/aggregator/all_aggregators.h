@@ -45,5 +45,6 @@
 #include "operator/aggregation/aggregator/collect_list_complex_aggregator.h"
 #include "operator/aggregation/aggregator/kurtosis_aggregator.h"
 #include "operator/aggregation/aggregator/skewness_aggregator.h"
-#include "operator/aggregation/aggregator/regr_aggregator.h"
+#include "operator/aggregation/aggregator/regr/regr_replacement_aggregator.h"
+#include "operator/aggregation/aggregator/regr/regr_concrete_aggregators.h"
 #endif // OMNI_RUNTIME_ALL_AGGREGATORS_H
