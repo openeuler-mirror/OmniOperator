@@ -831,11 +831,12 @@ InExpr::InExpr(std::vector<Expr *> args)
                 case OMNI_DOUBLE:
                     dynamic_cast<Vector<double> *>(vector.get())->SetValue(i-1, literalExpr->doubleVal);
                     break;
-                case OMNI_VARCHAR: {
-                    std::string_view str = *literalExpr->stringVal;
-                    dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(vector.get())->SetValue(i-1, str);
+                case OMNI_VARCHAR:
+                    dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(vector.get())->SetValue(i-1, *literalExpr->stringVal);
                     break;
-                }
+                case OMNI_DECIMAL128:
+                    dynamic_cast<Vector<Decimal128> *>(vector.get())->SetValue(i-1, Decimal128(*literalExpr->stringVal));
+                    break;
                 default: LogError("Do not support such vector type %d", typeId);
             }
         } else {

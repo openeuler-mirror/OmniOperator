@@ -1115,6 +1115,28 @@ public:
         }
     }
 
+    static std::unique_ptr<VectorBatch> CopyVectorBatch(VectorBatch *src)
+    {
+        const int32_t rowCount = src->GetRowCount();
+        const int32_t vecCount = src->GetVectorCount();
+        std::vector<int32_t> identity(static_cast<size_t>(rowCount));
+        for (int32_t i = 0; i < rowCount; ++i) {
+            identity[static_cast<size_t>(i)] = i;
+        }
+        auto batch = std::make_unique<VectorBatch>(static_cast<size_t>(rowCount));
+        batch->ResizeVectorCount(vecCount);
+        int *const pos = rowCount > 0 ? reinterpret_cast<int *>(identity.data()) : nullptr;
+        for (int32_t i = 0; i < vecCount; ++i) {
+            BaseVector *col = src->Get(i);
+            if (col == nullptr) {
+                batch->SetVector(i, nullptr);
+                continue;
+            }
+            batch->SetVector(i, VectorHelper::CopyPositionsVector(col, pos, 0, rowCount));
+        }
+        return batch;
+    }
+
     static BaseVector *CopyPositionsVector(BaseVector *vector, int *positions, int offset, int length)
     {
         if (vector->GetEncoding() == OMNI_ENCODING_CONST) {

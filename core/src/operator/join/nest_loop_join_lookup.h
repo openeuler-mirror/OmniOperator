@@ -25,7 +25,7 @@ class NestLoopJoinLookupOperatorFactory : public OperatorFactory {
 public:
     static NestLoopJoinLookupOperatorFactory *CreateNestLoopJoinLookupOperatorFactory(JoinType &joinTypePtr,
         DataTypes &probeTypesPtr, int32_t *probeOutputColsPtr, int32_t probeOutputColsCount, Expr *filterExpr,
-        int64_t buildOperatorFactoryAddr, OverflowConfig *overflowConfig);
+        int64_t buildOperatorFactoryAddr, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig);
 
     static NestLoopJoinLookupOperatorFactory *CreateNestLoopJoinLookupOperatorFactory(
         std::shared_ptr<const NestedLoopJoinNode> planNode,
@@ -36,6 +36,10 @@ public:
         int32_t probeOutputColsCount, Filter *filter, DataTypes joinedTypes, int64_t buildOpFactoryAddr,
         OverflowConfig *overflowConfig);
 
+    NestLoopJoinLookupOperatorFactory(JoinType joinType, DataTypes probeTypes,
+        int32_t *probeOutputCols, int32_t probeOutputColsCount, Filter *filter, DataTypes joinedTypes,
+        int64_t buildOpFactoryAddr, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig, Expr *filterExpr);
+
     ~NestLoopJoinLookupOperatorFactory() override;
 
     omniruntime::op::Operator *CreateOperator() override;
@@ -45,6 +49,7 @@ private:
     JoinType joinType;
     std::vector<int32_t> probeOutputCols; // output columns for probe
     Filter *filter;
+    Expr *filterExpr;
     DataTypes joinedTypes;
     int64_t buildOpFactoryAddr;
 };
@@ -54,6 +59,10 @@ public:
     NestLoopJoinLookupOperator(JoinType joinType, std::vector<int32_t> &probeOutputCols, Filter *filter,
         DataTypes probeTypes, VectorBatch *buildVectorBatch, DataTypes buildTypes,
         std::vector<int32_t> &buildOutputCols, DataTypes joinedTypes);
+
+    NestLoopJoinLookupOperator(JoinType joinType, std::vector<int32_t> &probeOutputCols,
+        Filter *filter, DataTypes probeTypes, VectorBatch *buildVectorBatch, DataTypes buildTypes,
+        std::vector<int32_t> &buildOutputCols, DataTypes joinedTypes, const config::QueryConfig &queryConfig, Expr *filterExpr);
 
     ~NestLoopJoinLookupOperator() override;
 
@@ -88,6 +97,7 @@ private:
     JoinType joinType;
     std::vector<int32_t> &probeOutputCols;
     Filter *filter;
+    Expr *filterExpr;
     int32_t curProbePosition;
     int32_t maxRowCount;
     std::vector<int32_t> probeResultOutputRows;

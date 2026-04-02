@@ -9,12 +9,13 @@
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
 #include "nest_loop_join_lookup.h"
-
+#include "vectorization/ExprEval.h"
 #include "nest_loop_join_builder.h"
 
 using namespace omniruntime::vec;
 
 namespace omniruntime::op {
+
 NestLoopJoinLookupOperatorFactory::NestLoopJoinLookupOperatorFactory(JoinType joinType, DataTypes probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, Filter *filter, DataTypes joinedTypes,
     int64_t buildOpFactoryAddr, OverflowConfig *overflowConfig)
@@ -26,9 +27,18 @@ NestLoopJoinLookupOperatorFactory::NestLoopJoinLookupOperatorFactory(JoinType jo
       buildOpFactoryAddr(buildOpFactoryAddr)
 {}
 
+NestLoopJoinLookupOperatorFactory::NestLoopJoinLookupOperatorFactory(JoinType joinType, DataTypes probeTypes,
+    int32_t *probeOutputCols, int32_t probeOutputColsCount, Filter *filter, DataTypes joinedTypes,
+    int64_t buildOpFactoryAddr, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig, Expr *filterExpr)
+    : NestLoopJoinLookupOperatorFactory(joinType, probeTypes, probeOutputCols, probeOutputColsCount, filter, joinedTypes, buildOpFactoryAddr, overflowConfig)
+{
+    this->queryConfig_ = queryConfig;
+    this->filterExpr = filterExpr;
+}
+
 NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(
     JoinType &joinTypePtr, DataTypes &probeTypesPtr, int32_t *probeOutputColsPtr, int32_t probeOutputColsCount,
-    Expr *filterExpr, int64_t buildOperatorFactoryAddr, OverflowConfig *overflowConfig)
+    Expr *filterExpr, int64_t buildOperatorFactoryAddr, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig)
 {
     auto &probeTypesVector = probeTypesPtr.Get();
     auto nestedLoopJoinBuilderFactory =
@@ -50,7 +60,7 @@ NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNest
         }
     }
     auto pOperatorFactory = new NestLoopJoinLookupOperatorFactory(joinTypePtr, probeTypesPtr, probeOutputColsPtr, probeOutputColsCount,
-        filterPtr, joinedDataTypes, buildOperatorFactoryAddr, overflowConfig);
+        filterPtr, joinedDataTypes, buildOperatorFactoryAddr, overflowConfig, queryConfig, filterExpr);
 
     delete overflowConfig;
     overflowConfig = nullptr;
@@ -69,7 +79,7 @@ NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNest
     auto outputTypes = planNode->OutputType();
     Filter *filterPtr = nullptr;
     auto filterExpr = planNode->Filter();
-    if (filterExpr != nullptr) {
+    if (filterExpr != nullptr && !(queryConfig.PreferVectorizationExpression() && filterExpr->supportVectorized())) {
         filterPtr = new Filter(*filterExpr, *outputTypes, overflowConfig);
     }
 
@@ -82,7 +92,7 @@ NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNest
     }
 
     return new NestLoopJoinLookupOperatorFactory(joinType, *probeOutputTypes, probeOutputCols.data(),
-        probeOutputColsCount, filterPtr, *outputTypes, (int64_t)builderOperatorFactory, overflowConfig);
+        probeOutputColsCount, filterPtr, *outputTypes, (int64_t)builderOperatorFactory, overflowConfig, queryConfig, filterExpr);
 }
 
 Operator *NestLoopJoinLookupOperatorFactory::CreateOperator()
@@ -90,7 +100,7 @@ Operator *NestLoopJoinLookupOperatorFactory::CreateOperator()
     auto nestedLoopJoinBuilderFactory = reinterpret_cast<NestedLoopJoinBuildOperatorFactory *>(buildOpFactoryAddr);
     auto pNestLoopLookupJoinOperator = new NestLoopJoinLookupOperator(joinType, probeOutputCols, filter, probeTypes,
         nestedLoopJoinBuilderFactory->GetBuildVectorBatch(), nestedLoopJoinBuilderFactory->GetBuildDataTypes(),
-        nestedLoopJoinBuilderFactory->GetbuildOutputCols(), joinedTypes);
+        nestedLoopJoinBuilderFactory->GetbuildOutputCols(), joinedTypes, queryConfig_, filterExpr);
     return pNestLoopLookupJoinOperator;
 }
 
@@ -108,7 +118,6 @@ NestLoopJoinLookupOperator::NestLoopJoinLookupOperator(JoinType joinType, std::v
       joinType(joinType),
       probeOutputCols(probeOutputCols),
       filter(filter),
-      curProbePosition(curProbePosition),
       joinedTypes(joinedTypes),
       buildTypes(buildTypes)
 {
@@ -122,7 +131,40 @@ NestLoopJoinLookupOperator::NestLoopJoinLookupOperator(JoinType joinType, std::v
     int32_t buildRowCount = buildVectorBatch->GetRowCount();
     joinedVectorBatch = std::make_unique<VectorBatch>(buildRowCount);
     selectedRows = new int32_t[buildRowCount];
-    if ((joinType == OMNI_JOIN_TYPE_RIGHT || joinType == OMNI_JOIN_TYPE_FULL) && this->filter != nullptr) {
+    if ((joinType == OMNI_JOIN_TYPE_RIGHT || joinType == OMNI_JOIN_TYPE_FULL) && this->filterExpr != nullptr) {
+        buildMatchedRows.assign(buildRowCount, 0);
+        for (int32_t j = 0; j < probeOutputCols.size(); j++) {
+            DataTypeId vectorDataTypeId = probeTypes.GetType(probeOutputCols[j])->GetId();
+            probeOutputDataTypeIds.push_back(vectorDataTypeId);
+            probeOutputDataTypes.push_back(probeTypes.GetType(probeOutputCols[j]));
+        }
+    }
+}
+
+NestLoopJoinLookupOperator::NestLoopJoinLookupOperator(JoinType joinType, std::vector<int32_t> &probeOutputCols,
+    Filter *filter, DataTypes probeTypes, VectorBatch *buildVectorBatch, DataTypes buildTypes,
+    std::vector<int32_t> &buildOutputCols, DataTypes joinedTypes, const config::QueryConfig &queryConfig, Expr *filterExpr)
+    : buildVectorBatch(buildVectorBatch),
+      buildOutputCols(buildOutputCols),
+      joinType(joinType),
+      probeOutputCols(probeOutputCols),
+      filter(filter),
+      joinedTypes(joinedTypes),
+      buildTypes(buildTypes)
+{
+    executionContext->SetConfig(queryConfig);
+    this->filterExpr = filterExpr;
+    SetOperatorName(metricsNameNestedLoopJoinLookup);
+    int32_t leftRowSize =
+        OperatorUtil::GetOutputRowSize(probeTypes.Get(), probeOutputCols.data(), probeOutputCols.size());
+    int32_t rightRowSize =
+        OperatorUtil::GetOutputRowSize(buildTypes.Get(), buildOutputCols.data(), buildOutputCols.size());
+    int32_t outputRowSize = leftRowSize + rightRowSize;
+    maxRowCount = OperatorUtil::GetMaxRowCount(outputRowSize != 0 ? outputRowSize : DEFAULT_ROW_SIZE);
+    int32_t buildRowCount = buildVectorBatch->GetRowCount();
+    joinedVectorBatch = std::make_unique<VectorBatch>(buildRowCount);
+    selectedRows = new int32_t[buildRowCount];
+    if ((joinType == OMNI_JOIN_TYPE_RIGHT || joinType == OMNI_JOIN_TYPE_FULL) && this->filterExpr != nullptr) {
         buildMatchedRows.assign(buildRowCount, 0);
         for (int32_t j = 0; j < probeOutputCols.size(); j++) {
             DataTypeId vectorDataTypeId = probeTypes.GetType(probeOutputCols[j])->GetId();
@@ -163,23 +205,47 @@ void NestLoopJoinLookupOperator::UpdateJoinedVectorBatch(int32_t probeRow)
 
 int32_t NestLoopJoinLookupOperator::GetNumSelectedRows()
 {
-    auto *joinedVectorBatchPtr = joinedVectorBatch.get();
-    int32_t originVecCount = joinedVectorBatchPtr->GetVectorCount();
-    int32_t rowCount = joinedVectorBatchPtr->GetRowCount();
-    int64_t valueAddrs[originVecCount];
-    int64_t nullAddrs[originVecCount];
-    int64_t offsetAddrs[originVecCount];
-    int64_t dictionaryVectors[originVecCount];
-    GetAddr(*joinedVectorBatchPtr, valueAddrs, nullAddrs, offsetAddrs, dictionaryVectors, joinedTypes);
+    int32_t numSelectedRows = 0;
     ExecutionContext *context = executionContext.get();
-    int32_t numSelectedRows = filter->GetFilterFunc()(valueAddrs, rowCount, selectedRows, nullAddrs, offsetAddrs,
-        reinterpret_cast<int64_t>(context), dictionaryVectors);
-
-    if (context->HasError()) {
-        context->GetArena()->Reset();
-        std::string errorMessage = context->GetError();
-        throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+    auto *joinedVectorBatchPtr = joinedVectorBatch.get();
+    if (executionContext->queryConfig().PreferVectorizationExpression() && filterExpr->supportVectorized()) {
+        auto temp = context->GetResultRowSize();
+        context->SetResultRowSize(joinedVectorBatchPtr->GetRowCount());
+        auto joinedSnapshot = VectorHelper::CopyVectorBatch(joinedVectorBatch.get());
+        ExprEval e(joinedSnapshot.get(), context);
+        e.VisitExpr(*filterExpr);
+        auto outCol = static_cast<Vector<bool> *>(e.GetResult());
+        context->SetResultRowSize(temp);
+        if (context->HasError()) {
+            context->GetArena()->Reset();
+            std::string errorMessage = context->GetError();
+            delete outCol;
+            throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+        }
+        for (int i = 0, j = 0; i < outCol->GetSize(); ++i){
+            if (!outCol->IsNull(i) && outCol->GetValue(i)){
+                numSelectedRows++;
+                selectedRows[j++] = i;
+            }
+        }
+        delete outCol;
+    } else {
+        int32_t originVecCount = joinedVectorBatchPtr->GetVectorCount();
+        int32_t rowCount = joinedVectorBatchPtr->GetRowCount();
+        int64_t valueAddrs[originVecCount];
+        int64_t nullAddrs[originVecCount];
+        int64_t offsetAddrs[originVecCount];
+        int64_t dictionaryVectors[originVecCount];
+        GetAddr(*joinedVectorBatchPtr, valueAddrs, nullAddrs, offsetAddrs, dictionaryVectors, joinedTypes);
+        numSelectedRows = filter->GetFilterFunc()(valueAddrs, rowCount, selectedRows, nullAddrs, offsetAddrs,
+            reinterpret_cast<int64_t>(context), dictionaryVectors);
+        if (context->HasError()) {
+            context->GetArena()->Reset();
+            std::string errorMessage = context->GetError();
+            throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+        }
     }
+
     return numSelectedRows;
 }
 
@@ -288,7 +354,7 @@ void NestLoopJoinLookupOperator::PrepareCurrentProbe()
     buildNullPosition.clear();
     probeResultOutputRows.clear();
     buildResultOutputRows.clear();
-    if (this->filter != nullptr) {
+    if (this->filterExpr != nullptr) {
         switch (joinType) {
             case OMNI_JOIN_TYPE_INNER:
                 ProbeInnerJoin(probeRowCount, resultOutputRows);

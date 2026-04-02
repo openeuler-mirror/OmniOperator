@@ -73,5 +73,6 @@ void registerIn(const std::string &prefix)
     registerInFn<float>(prefix, OMNI_FLOAT);
     registerInFn<double>(prefix, OMNI_DOUBLE);
     registerInFn<std::string_view>(prefix, OMNI_VARCHAR);
+    registerInFn<Decimal128>(prefix, OMNI_DECIMAL128);
 }
 }
