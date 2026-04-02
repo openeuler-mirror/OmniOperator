@@ -333,6 +333,9 @@ ErrorCode SpillReader::ReadComplexVector(const DataTypePtr &dataType, BaseVector
 
 ErrorCode SpillReader::Read(void *buf, size_t bufSize)
 {
+    if (bufSize == 0) {
+        return ErrorCode::SUCCESS;
+    }
     // clear before error
     clearerr(file);
     if (!isSpillCompressEnabled) {
@@ -355,6 +358,9 @@ ErrorCode SpillReader::Read(void *buf, size_t bufSize)
 
 ErrorCode SpillReader::ReadWithCompress(void *buf, size_t bufSize)
 {
+    if (bufSize == 0) {
+        return ErrorCode::SUCCESS;
+    }
 
     if (remainLength == 0) {
         if (prevBuffer_ != nullptr) {
