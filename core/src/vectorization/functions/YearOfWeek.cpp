@@ -1,9 +1,14 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
- * Description: weekday(date/timestamp) -> int (0=Monday .. 6=Sunday), vectorized implementation
+ * Description: YearOfWeek function implementation
+ * Returns the ISO year that a given date belongs to according to ISO 8601 week numbering.
+ * For most dates this equals the calendar year. However, the last few days of December
+ * may belong to the next year's first ISO week, and the first few days of January may
+ * belong to the previous year's last ISO week.
+ * Supports: DATE32, INT (days since epoch)
  */
 
-#include "Weekday.h"
+#include "YearOfWeek.h"
 #include "vector/vector.h"
 #include "../VectorFunction.h"
 #include "vectorization/SelectivityVector.h"
@@ -11,7 +16,6 @@
 #include "type/Timestamp.h"
 #include "vector/vector_helper.h"
 #include "util/bit_util.h"
-#include "util/debug.h"
 #include <ctime>
 #include <cstring>
 
@@ -21,23 +25,14 @@ using namespace omniruntime::type;
 
 namespace {
 static constexpr int64_t kSecondsPerDay = 86400LL;
-static constexpr int64_t kMicrosecondsPerSecond = 1000000LL;
 
-/// weekday(date/timestamp) -> int32_t
-/// Returns day of week in Spark/Velox convention: 0 = Monday, 1 = Tuesday, ..., 6 = Sunday.
-/// tm_wday: 0=Sunday, 1=Monday, ..., 6=Saturday => (tm_wday + 6) % 7.
-static bool getWeekdayFromEpochSeconds(int64_t seconds, int32_t &weekday)
-{
-    std::tm tmValue;
-    if (!Timestamp::epochToCalendarUtc(seconds, tmValue)) {
-        return false;
-    }
-    // Spark/Velox: 0=Monday, 1=Tuesday, ..., 6=Sunday
-    weekday = static_cast<int32_t>((tmValue.tm_wday + 6) % 7);
-    return true;
-}
-
-class WeekdayFunction : public VectorFunction {
+/// year_of_week function
+/// year_of_week(date) -> int32
+/// Returns the ISO 8601 week-numbering year that the given date belongs to.
+/// The last few days in December may belong to ISO week 1 of the next year,
+/// and the first few days in January may belong to the last ISO week of the
+/// previous year.
+class YearOfWeekFunction : public VectorFunction {
 public:
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         op::ExecutionContext *context) const override
@@ -45,21 +40,19 @@ public:
         if (args.empty()) {
             return;
         }
+
         const auto inputArg = args.top();
         args.pop();
+
         const auto size = inputArg->GetSize();
 
         if (result == nullptr) {
             result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
         }
-        if (result->GetSize() < size) {
-            delete inputArg;
-            OMNI_THROW("WeekdayFunction Error:", "Result vector size is less than input size: " +
-                std::to_string(result->GetSize()) + " < " + std::to_string(size));
-        }
 
         auto *resultVector = reinterpret_cast<Vector<int32_t> *>(result);
         auto *resultRaw = unsafe::UnsafeVector::GetRawValues(resultVector);
+
         const auto inputTypeId = inputArg->GetTypeId();
 
         auto *resultNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
@@ -73,30 +66,40 @@ public:
         if (inputTypeId == OMNI_DATE32 || inputTypeId == OMNI_INT) {
             auto *inputVector = reinterpret_cast<Vector<int32_t> *>(inputArg);
             const auto *inputRaw = unsafe::UnsafeVector::GetRawValues(inputVector);
+
             rows.applyToSelected([&](vector_size_t i) {
                 int32_t daysSinceEpoch = inputRaw[i];
                 int64_t seconds = static_cast<int64_t>(daysSinceEpoch) * kSecondsPerDay;
-                int32_t wd;
-                if (getWeekdayFromEpochSeconds(seconds, wd)) {
-                    resultRaw[i] = wd;
-                    result->SetNotNull(i);
-                } else {
+
+                std::tm tmValue;
+                if (!Timestamp::epochToCalendarUtc(seconds, tmValue)) {
                     result->SetNull(i);
+                    return;
                 }
-            });
-        } else if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
-            auto *inputVector = reinterpret_cast<Vector<int64_t> *>(inputArg);
-            const auto *inputRaw = unsafe::UnsafeVector::GetRawValues(inputVector);
-            rows.applyToSelected([&](vector_size_t i) {
-                int64_t micros = inputRaw[i];
-                int64_t seconds = micros / kMicrosecondsPerSecond;
-                int32_t wd;
-                if (getWeekdayFromEpochSeconds(seconds, wd)) {
-                    resultRaw[i] = wd;
+
+                int isoWeekDay = (tmValue.tm_wday == 0) ? 7 : tmValue.tm_wday;
+
+                // The last few days in December may belong to the next year if they are
+                // in the same week as the next January 1 and this January 1 is a Thursday
+                // or before.
+                if (tmValue.tm_mon == 11 && tmValue.tm_mday >= 29 &&
+                    tmValue.tm_mday - isoWeekDay >= 31 - 3) {
+                    resultRaw[i] = static_cast<int32_t>(1900 + tmValue.tm_year + 1);
                     result->SetNotNull(i);
-                } else {
-                    result->SetNull(i);
+                    return;
                 }
+
+                // The first few days in January may belong to the last year if they are
+                // in the same week as January 1 and January 1 is a Friday or after.
+                if (tmValue.tm_mon == 0 && tmValue.tm_mday <= 3 &&
+                    isoWeekDay - (tmValue.tm_mday - 1) >= 5) {
+                    resultRaw[i] = static_cast<int32_t>(1900 + tmValue.tm_year - 1);
+                    result->SetNotNull(i);
+                    return;
+                }
+
+                resultRaw[i] = static_cast<int32_t>(1900 + tmValue.tm_year);
+                result->SetNotNull(i);
             });
         }
         delete inputArg;
@@ -104,15 +107,11 @@ public:
 };
 } // namespace
 
-void RegisterWeekdayFunction(const std::string &name)
+void RegisterYearOfWeekFunction(const std::string &name)
 {
     VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32}, OMNI_INT,
-        std::make_shared<WeekdayFunction>());
+        std::make_shared<YearOfWeekFunction>());
     VectorFunction::RegisterVectorFunction(name, {OMNI_INT}, OMNI_INT,
-        std::make_shared<WeekdayFunction>());
-    VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP}, OMNI_INT,
-        std::make_shared<WeekdayFunction>());
-    VectorFunction::RegisterVectorFunction(name, {OMNI_LONG}, OMNI_INT,
-        std::make_shared<WeekdayFunction>());
+        std::make_shared<YearOfWeekFunction>());
 }
 }

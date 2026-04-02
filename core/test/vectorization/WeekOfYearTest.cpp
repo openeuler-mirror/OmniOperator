@@ -127,7 +127,6 @@ TEST(WeekOfYearTest, Date32Basic) {
     WeekOfYearTestHelper::ExecuteWeekOfYear(inputVec, OMNI_DATE32, resultVec);
     WeekOfYearTestHelper::ValidateResult(resultVec, expected, static_cast<int>(dateValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -151,7 +150,6 @@ TEST(WeekOfYearTest, Date32YearBoundary) {
     WeekOfYearTestHelper::ExecuteWeekOfYear(inputVec, OMNI_DATE32, resultVec);
     WeekOfYearTestHelper::ValidateResult(resultVec, expected, static_cast<int>(dateValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -168,7 +166,6 @@ TEST(WeekOfYearTest, Date32EpochAndExtreme) {
     WeekOfYearTestHelper::ExecuteWeekOfYear(inputVec, OMNI_DATE32, resultVec);
     WeekOfYearTestHelper::ValidateResult(resultVec, expected, static_cast<int>(dateValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -184,7 +181,6 @@ TEST(WeekOfYearTest, IntBasic) {
     WeekOfYearTestHelper::ExecuteWeekOfYear(inputVec, OMNI_INT, resultVec);
     WeekOfYearTestHelper::ValidateResult(resultVec, expected, static_cast<int>(intValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -201,7 +197,6 @@ TEST(WeekOfYearTest, TimestampBasic) {
     WeekOfYearTestHelper::ExecuteWeekOfYear(inputVec, OMNI_TIMESTAMP, resultVec);
     WeekOfYearTestHelper::ValidateResult(resultVec, expected, static_cast<int>(tsValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -217,7 +212,6 @@ TEST(WeekOfYearTest, LongAsTimestamp) {
     WeekOfYearTestHelper::ExecuteWeekOfYear(inputVec, OMNI_LONG, resultVec);
     WeekOfYearTestHelper::ValidateResult(resultVec, expected, static_cast<int>(longValues.size()));
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -240,7 +234,6 @@ TEST(WeekOfYearTest, Date32WithNull) {
     EXPECT_EQ(typed->GetValue(0), 1);
     EXPECT_EQ(typed->GetValue(2), 52);
 
-    delete inputVec;
     delete resultVec;
 }
 
@@ -260,6 +253,5 @@ TEST(WeekOfYearTest, TimestampWithNull) {
     auto *typed = dynamic_cast<Vector<int32_t> *>(resultVec);
     EXPECT_EQ(typed->GetValue(0), 1);
 
-    delete inputVec;
     delete resultVec;
 }

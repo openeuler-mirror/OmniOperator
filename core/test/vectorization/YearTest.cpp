@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2026. All rights reserved.
  * Description: Year function unit tests
  */
 
@@ -15,6 +15,7 @@
 #include "vector/vector_helper.h"
 #include "vector/vector.h"
 #include "type/date_time_utils.h"
+#include "type/Timestamp.h"
 
 using namespace omniruntime;
 using namespace omniruntime::vec;
@@ -91,6 +92,28 @@ public:
     static int32_t DateToDays(int year, int month, int day) {
         LocalDate date(static_cast<int32_t>(year), static_cast<int16_t>(month), static_cast<int16_t>(day));
         return date.ToDays();
+    }
+
+    static BaseVector* CreateTimestampVector(const std::vector<int64_t>& values) {
+        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_TIMESTAMP, values.size());
+        auto* typedVec = static_cast<Vector<int64_t>*>(vec);
+        for (size_t i = 0; i < values.size(); ++i) {
+            typedVec->SetValue(i, values[i]);
+        }
+        return vec;
+    }
+
+    static int64_t TimestampToMicrosUtc(int year, int month, int day, int hour, int minute, int second) {
+        std::tm tm = {};
+        tm.tm_year = year - 1900;
+        tm.tm_mon = month - 1;
+        tm.tm_mday = day;
+        tm.tm_hour = hour;
+        tm.tm_min = minute;
+        tm.tm_sec = second;
+        tm.tm_isdst = 0;
+        int64_t seconds = Timestamp::calendarUtcToEpoch(tm);
+        return seconds * 1000000;
     }
 };
 
@@ -196,18 +219,15 @@ TEST(YearTest, IntWithNull) {
 
 // Test: Year with different years including leap year
 TEST(YearTest, DifferentYears) {
-    std::cout << "=== Test: Year with different years including leap year ===" << std::endl;
-    
-    // Test various years including leap year (2024)
     std::vector<int32_t> dateValues = {
-        YearFunctionTestHelper::DateToDays(2020, 2, 29),  // Leap year
-        YearFunctionTestHelper::DateToDays(2021, 3, 15),  // Non-leap year
-        YearFunctionTestHelper::DateToDays(2024, 2, 29),  // Leap year
-        YearFunctionTestHelper::DateToDays(2025, 1, 1),   // New year
-        YearFunctionTestHelper::DateToDays(1999, 12, 31)  // Old year
+        YearFunctionTestHelper::DateToDays(2020, 2, 29),
+        YearFunctionTestHelper::DateToDays(2021, 3, 15),
+        YearFunctionTestHelper::DateToDays(2024, 2, 29),
+        YearFunctionTestHelper::DateToDays(2025, 1, 1),
+        YearFunctionTestHelper::DateToDays(1999, 12, 31)
     };
     std::vector<int32_t> expected = {2020, 2021, 2024, 2025, 1999};
-    
+
     BaseVector* inputVec = YearFunctionTestHelper::CreateDate32Vector(dateValues);
     BaseVector* resultVec = nullptr;
     YearFunctionTestHelper::ExecuteYear(inputVec, OMNI_DATE32, resultVec);

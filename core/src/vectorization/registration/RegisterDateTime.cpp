@@ -15,6 +15,7 @@
 #include "../functions/DayOfYear.h"
 #include "../functions/WeekOfYear.h"
 #include "../functions/Weekday.h"
+#include "../functions/YearOfWeek.h"
 #include "../functions/Trunc.h"
 #include "../functions/AddMonths.h"
 #include "../functions/DateAdd.h"
@@ -51,6 +52,7 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterDayOfYearFunction(prefix + "dayofyear");
     RegisterWeekOfYearFunction(prefix + "week_of_year");
     RegisterWeekdayFunction(prefix + "weekday");
+    RegisterYearOfWeekFunction(prefix + "year_of_week");
     // Register as "trunc_date" to match Gluten mapping (Substrait "trunc" -> "trunc_date")
     // and codegen layer registration
     RegisterTruncFunction(prefix + "trunc_date");
