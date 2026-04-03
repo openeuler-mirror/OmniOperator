@@ -56,6 +56,7 @@ struct PlanNodeStats {
     /// input.
     uint64_t rawInputRows{0};
     uint64_t rawInputBytes{0};
+    uint64_t totalScanWallNanos{0};
 
     /// Sum of output rows for all corresponding operators. When
     /// plan node corresponds to multiple operator types, operators of only one of

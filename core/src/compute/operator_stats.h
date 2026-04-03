@@ -64,6 +64,8 @@ struct OperatorStats {
     /// For Scan
     uint64_t rawInputBytes{0};
     uint64_t rawInputRows{0};
+    /// Wall time spent in dataSource_->next (accumulated); surfaced as total scan time.
+    uint64_t totalScanTimeNanos{0};
 
     /// Bytes of input in terms of retained size of input vectors.
     uint64_t inputRows{0};
@@ -179,6 +181,7 @@ struct OperatorStats {
         numSplits += other.numSplits;
         rawInputBytes += other.rawInputBytes;
         rawInputRows += other.rawInputRows;
+        totalScanTimeNanos += other.totalScanTimeNanos;
 
         addInputTime.Add(other.addInputTime);
         inputBytes += other.inputBytes;
@@ -206,6 +209,7 @@ struct OperatorStats {
         numSplits = 0;
         rawInputBytes = 0;
         rawInputRows = 0;
+        totalScanTimeNanos = 0;
 
         addInputTime.Clear();
         inputBytes = 0;

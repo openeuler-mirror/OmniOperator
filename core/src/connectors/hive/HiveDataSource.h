@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <memory>
 #include <random>
 
 #include "connectors/Connector.h"
@@ -46,6 +47,16 @@ public:
     void addSplit(std::shared_ptr<ConnectorSplit> split, uint64_t size) override;
 
     std::optional<vec::VectorBatch *> next(uint64_t size) override;
+
+    uint64_t getCompletedRows() const override
+    {
+        return completedRows_;
+    }
+
+    uint64_t getCompletedBytes() const override
+    {
+        return completedBytes_;
+    }
 
 protected:
   virtual std::unique_ptr<SplitReader> createSplitReader();
@@ -95,7 +106,8 @@ private:
     std::unique_ptr <codegen::ExprSet> remainingFilterExprSet_;
     std::optional<vec::VectorBatch *> emptyOutput_;
     std::atomic <uint64_t> totalRemainingFilterTime_{0};
-    uint64_t completedRows_ = 0;
+    uint64_t completedRows_{0};
+    uint64_t completedBytes_{0};
 
     // Field indices referenced in both remaining filter and output type. These
     // columns need to be materialized eagerly to avoid missing values in output.

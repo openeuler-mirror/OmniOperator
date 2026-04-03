@@ -49,6 +49,7 @@ PlanNodeStats& PlanNodeStats::operator+=(const PlanNodeStats& another)
     blockedWallNanos += another.blockedWallNanos;
 
     physicalWrittenBytes += another.physicalWrittenBytes;
+    totalScanWallNanos += another.totalScanWallNanos;
 
     // Populating number of drivers for plan nodes with multiple operators is not
     // useful. Each operator could have been executed in different pipelines with
@@ -113,6 +114,7 @@ void PlanNodeStats::AddTotals(const OperatorStats& stats)
 
     rawInputRows += stats.rawInputRows;
     rawInputBytes += stats.rawInputBytes;
+    totalScanWallNanos += stats.totalScanTimeNanos;
 
     outputRows += stats.outputRows;
     outputBytes += stats.outputBytes;
