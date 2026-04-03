@@ -68,10 +68,6 @@ public:
 
     std::pair<BaseVector*, BaseVector*> GetValue(int index);
 
-    BaseVector* GetKeyValue(int index);
-
-    BaseVector* GetValueValue(int index);
-
     void Append(MapVector* other, int32_t offset);
 
     std::vector<DataTypeId> ALWAYS_INLINE GetTypeIds() const override

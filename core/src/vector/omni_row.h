@@ -87,7 +87,7 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         TMP_FUNC_PTR<type::OMNI_VARCHAR>,                     \
         TMP_FUNC_PTR<type::OMNI_VARCHAR>,                     \
         nullptr,                                              \
-        nullptr,                                              \
+        TMP_FUNC_PTR<type::OMNI_BYTE>,                        \
         TMP_FUNC_PTR<type::OMNI_INT>,                         \
         nullptr,                                              \
         nullptr,                                              \
@@ -122,7 +122,7 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_FLAT>,                     \
         TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_FLAT>,                     \
         nullptr,                                                                   \
-        nullptr,                                                                   \
+        TMP_FUNC_PTR<type::OMNI_BYTE, Encoding::OMNI_FLAT>,                        \
         TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_FLAT>,                         \
         nullptr,                                                                   \
         nullptr,                                                                   \
@@ -157,7 +157,7 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_DICTIONARY>,               \
         TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_DICTIONARY>,               \
         nullptr,                                                                   \
-        nullptr,                                                                   \
+        TMP_FUNC_PTR<type::OMNI_BYTE, Encoding::OMNI_DICTIONARY>,                  \
         TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_DICTIONARY>,                   \
         nullptr,                                                                   \
         nullptr,                                                                   \
@@ -168,8 +168,8 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         nullptr,                                                                   \
         nullptr }
 
-#define FUNC_CENTER_CONST_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR)                \
-    static std::vector<FUNC_NAME> CENTER_NAME = { nullptr,                         \
+#define FUNC_CENTER_CONST_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR)                               \
+    static std::vector<FUNC_NAME> CENTER_NAME = { nullptr,                                        \
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_INT, Encoding::OMNI_ENCODING_CONST),               \
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_LONG, Encoding::OMNI_ENCODING_CONST),              \
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_DOUBLE, Encoding::OMNI_ENCODING_CONST),            \
@@ -182,20 +182,20 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_INT, Encoding::OMNI_ENCODING_CONST),               \
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_LONG, Encoding::OMNI_ENCODING_CONST),              \
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_LONG, Encoding::OMNI_ENCODING_CONST),              \
-        nullptr,                                                                   \
-        nullptr,                                                                   \
+        nullptr,                                                                                  \
+        nullptr,                                                                                  \
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_VARCHAR, Encoding::OMNI_ENCODING_CONST),           \
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_VARCHAR, Encoding::OMNI_ENCODING_CONST),           \
-        nullptr,                                                                   \
-        nullptr,                                                                   \
+        nullptr,                                                                                  \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_BYTE, Encoding::OMNI_ENCODING_CONST),              \
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_INT, Encoding::OMNI_ENCODING_CONST),               \
-        nullptr,                                                                   \
-        nullptr,                                                                   \
-        nullptr,                                                                   \
-        nullptr,                                                                   \
-        nullptr,                                                                   \
-        nullptr,                                                                   \
-        nullptr,                                                                   \
+        nullptr,                                                                                  \
+        nullptr,                                                                                  \
+        nullptr,                                                                                  \
+        nullptr,                                                                                  \
+        nullptr,                                                                                  \
+        nullptr,                                                                                  \
+        nullptr,                                                                                  \
         nullptr }
 
 using TransFuncPtr = void (*)(BaseVector *vec, int32_t rowIndex, BaseSerialize *value);
@@ -358,11 +358,10 @@ static uint8_t *ArrayRowSetVecValue(uint8_t *row, ArrayVector *vec, int32_t rowI
     auto elementVector = vec->GetElementVector();
     elementVector->Expand(vec->GetOffset(rowIndex + 1));
     DataTypeId elementDataTypeId = elementVector->GetTypeId();
-    BaseVector* tmpVector = vec->GetValue(rowIndex);
+    int64_t startOffset = vec->GetOffset(rowIndex);
     for (int32_t i = 0; i < arraySize; i++) {
-        row = Row2VecFuncCenter[elementDataTypeId](row, tmpVector, i);
+        row = Row2VecFuncCenter[elementDataTypeId](row, elementVector.get(), startOffset + i);
     }
-    delete tmpVector;
     return row;
 }
 
@@ -393,9 +392,9 @@ static uint8_t *MapRowSetVecValue(uint8_t *row, MapVector *vec, int32_t rowIndex
     auto keyVector = vec->GetKeyVector();
     keyVector->Expand(vec->GetOffset(rowIndex + 1));
     DataTypeId keyDataTypeId = keyVector->GetTypeId();
-    auto tmpKeyVector = vec->GetKeyValue(rowIndex);
+    int64_t startOffset = vec->GetOffset(rowIndex);
     for (int32_t i = 0; i < keySize; i++) {
-        row = Row2VecFuncCenter[keyDataTypeId](row, tmpKeyVector, i);
+        row = Row2VecFuncCenter[keyDataTypeId](row, keyVector.get(), startOffset + i);
     }
 
     auto rowValueSize = (*row) & ENCODING_META_SIZE;
@@ -406,13 +405,10 @@ static uint8_t *MapRowSetVecValue(uint8_t *row, MapVector *vec, int32_t rowIndex
     auto valueVector = vec->GetValueVector();
     valueVector->Expand(vec->GetOffset(rowIndex + 1));
     DataTypeId valueDataTypeId = valueVector->GetTypeId();
-    auto tmpValueVector = vec->GetValueValue(rowIndex);
     for (int32_t i = 0; i < valueSize; i++) {
-        row = Row2VecFuncCenter[valueDataTypeId](row, tmpValueVector, i);
+        row = Row2VecFuncCenter[valueDataTypeId](row, valueVector.get(), startOffset + i);
     }
 
-    delete tmpKeyVector;
-    delete tmpValueVector;
     return row;
 }
  
