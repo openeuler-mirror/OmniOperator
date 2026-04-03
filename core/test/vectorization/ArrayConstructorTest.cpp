@@ -14,8 +14,16 @@
 #include "vectorization/ExprEval.h"
 #include "expression/expressions.h"
 #include "vector/array_vector.h"
+#include "vector/map_vector.h"
+#include "vector/row_vector.h"
+#include "type/data_type.h"
+#include "util/type_util.h"
 
 using namespace omniruntime;
+using omniruntime::type::ArrayType;
+using omniruntime::type::DataTypePtr;
+using omniruntime::type::MapType;
+using omniruntime::type::RowType;
 using namespace omniruntime::vec;
 using namespace omniruntime::vectorization;
 using namespace omniruntime::mem;
@@ -1288,6 +1296,182 @@ TEST_F(ArrayConstructorTest, NestedArrayDifferentSizes)
     EXPECT_EQ(typedInnerElems->GetValue(static_cast<int32_t>(off1)), 200);
     EXPECT_EQ(typedInnerElems->GetValue(static_cast<int32_t>(off1 + 1)), 300);
     EXPECT_EQ(typedInnerElems->GetValue(static_cast<int32_t>(off1 + 2)), 400);
+
+    delete context;
+    delete input;
+    delete result;
+}
+
+namespace {
+using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+
+MapVector *BuildStringIntMapColumn(int32_t mapRows, const std::vector<int32_t> &offsets,
+    const std::vector<std::string> &keys, const std::vector<int32_t> &vals)
+{
+    auto keyVector = std::make_shared<VarcharVector>(static_cast<int32_t>(keys.size()));
+    for (int32_t i = 0; i < static_cast<int32_t>(keys.size()); ++i) {
+        keyVector->SetValue(i, std::string_view(keys[i].data(), keys[i].size()));
+    }
+    auto valueVector = std::make_shared<Vector<int32_t>>(static_cast<int32_t>(vals.size()));
+    for (int32_t i = 0; i < static_cast<int32_t>(vals.size()); ++i) {
+        valueVector->SetValue(i, vals[i]);
+    }
+    auto *mapVector = new MapVector(mapRows, keyVector, valueVector);
+    for (size_t i = 0; i < offsets.size(); ++i) {
+        mapVector->SetOffset(static_cast<int32_t>(i), offsets[i]);
+    }
+    return mapVector;
+}
+
+MapVector *BuildAllNullMapColumn(int32_t numRows)
+{
+    auto keyVector = std::make_shared<VarcharVector>(0);
+    auto valueVector = std::make_shared<Vector<int32_t>>(0);
+    auto *mapVector = new MapVector(numRows, keyVector, valueVector);
+    for (int32_t i = 0; i <= numRows; ++i) {
+        mapVector->SetOffset(i, 0);
+    }
+    for (int32_t r = 0; r < numRows; ++r) {
+        mapVector->SetNull(r);
+    }
+    return mapVector;
+}
+} // namespace
+
+TEST_F(ArrayConstructorTest, MapArrayBasic)
+{
+    int rowSize = 1;
+    auto *mapCol0 = BuildStringIntMapColumn(1, { 0, 1 }, { "a" }, { 1 });
+    auto *mapCol1 = BuildStringIntMapColumn(1, { 0, 2 }, { "b", "c" }, { 2, 3 });
+
+    auto *input = new VectorBatch(rowSize);
+    input->Append(mapCol0);
+    input->Append(mapCol1);
+
+    auto mapType = std::make_shared<MapType>(omniruntime::type::VarcharType(10), omniruntime::type::IntType());
+    auto expr = FuncExpr("array", {
+        new FieldExpr(0, mapType),
+        new FieldExpr(1, mapType)
+    }, std::make_shared<ArrayType>(mapType));
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.VisitExpr(expr);
+    auto result = e.GetResult();
+
+    auto *outerResult = dynamic_cast<ArrayVector *>(result);
+    ASSERT_NE(outerResult, nullptr);
+    EXPECT_EQ(outerResult->GetSize(0), 2);
+
+    auto *middleMap = dynamic_cast<MapVector *>(outerResult->GetElementVector().get());
+    ASSERT_NE(middleMap, nullptr);
+    EXPECT_EQ(middleMap->GetSize(0), 1);
+    EXPECT_EQ(middleMap->GetSize(1), 2);
+    auto *kvec = dynamic_cast<VarcharVector *>(middleMap->GetKeyVector().get());
+    auto *vvec = dynamic_cast<Vector<int32_t> *>(middleMap->GetValueVector().get());
+    ASSERT_NE(kvec, nullptr);
+    ASSERT_NE(vvec, nullptr);
+    EXPECT_EQ(kvec->GetValue(static_cast<int32_t>(middleMap->GetOffset(0))), std::string_view("a"));
+    EXPECT_EQ(vvec->GetValue(static_cast<int32_t>(middleMap->GetOffset(0))), 1);
+    int64_t o1 = middleMap->GetOffset(1);
+    EXPECT_EQ(kvec->GetValue(static_cast<int32_t>(o1)), std::string_view("b"));
+    EXPECT_EQ(vvec->GetValue(static_cast<int32_t>(o1)), 2);
+    EXPECT_EQ(kvec->GetValue(static_cast<int32_t>(o1 + 1)), std::string_view("c"));
+    EXPECT_EQ(vvec->GetValue(static_cast<int32_t>(o1 + 1)), 3);
+
+    delete context;
+    delete input;
+    delete result;
+}
+
+TEST_F(ArrayConstructorTest, MapArraySecondArgumentNull)
+{
+    int rowSize = 1;
+    auto *mapCol0 = BuildStringIntMapColumn(1, { 0, 1 }, { "x" }, { 9 });
+    auto *mapCol1 = BuildAllNullMapColumn(1);
+
+    auto *input = new VectorBatch(rowSize);
+    input->Append(mapCol0);
+    input->Append(mapCol1);
+
+    auto mapType = std::make_shared<MapType>(omniruntime::type::VarcharType(10), omniruntime::type::IntType());
+    auto expr = FuncExpr("array", {
+        new FieldExpr(0, mapType),
+        new FieldExpr(1, mapType)
+    }, std::make_shared<ArrayType>(mapType));
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.VisitExpr(expr);
+    auto result = e.GetResult();
+
+    auto *outerResult = dynamic_cast<ArrayVector *>(result);
+    ASSERT_NE(outerResult, nullptr);
+    auto *middleMap = dynamic_cast<MapVector *>(outerResult->GetElementVector().get());
+    ASSERT_NE(middleMap, nullptr);
+    EXPECT_FALSE(middleMap->IsNull(0));
+    EXPECT_TRUE(middleMap->IsNull(1));
+
+    delete context;
+    delete input;
+    delete result;
+}
+
+TEST_F(ArrayConstructorTest, StructArrayBasic)
+{
+    int rowSize = 1;
+
+    auto name0 = std::make_shared<VarcharVector>(1);
+    name0->SetValue(0, std::string_view("aa"));
+    auto age0 = std::make_shared<Vector<int32_t>>(1);
+    age0->SetValue(0, 10);
+    std::vector<std::shared_ptr<BaseVector>> kids0 = { name0, age0 };
+    auto *row0 = new RowVector(1, kids0);
+
+    auto name1 = std::make_shared<VarcharVector>(1);
+    name1->SetValue(0, std::string_view("bb"));
+    auto age1 = std::make_shared<Vector<int32_t>>(1);
+    age1->SetValue(0, 20);
+    std::vector<std::shared_ptr<BaseVector>> kids1 = { name1, age1 };
+    auto *row1 = new RowVector(1, kids1);
+
+    auto *input = new VectorBatch(rowSize);
+    input->Append(row0);
+    input->Append(row1);
+
+    std::vector<DataTypePtr> rowFieldTypes = { omniruntime::type::VarcharType(10), omniruntime::type::IntType() };
+    auto structType = std::make_shared<RowType>(rowFieldTypes);
+    auto expr = FuncExpr("array", {
+        new FieldExpr(0, structType),
+        new FieldExpr(1, structType)
+    }, std::make_shared<ArrayType>(structType));
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.VisitExpr(expr);
+    auto result = e.GetResult();
+
+    auto *outerResult = dynamic_cast<ArrayVector *>(result);
+    ASSERT_NE(outerResult, nullptr);
+    EXPECT_EQ(outerResult->GetSize(0), 2);
+
+    auto *elemRow = dynamic_cast<RowVector *>(outerResult->GetElementVector().get());
+    ASSERT_NE(elemRow, nullptr);
+    EXPECT_EQ(elemRow->GetSize(), 2);
+    auto *nOut = dynamic_cast<VarcharVector *>(elemRow->ChildAt(0).get());
+    auto *aOut = dynamic_cast<Vector<int32_t> *>(elemRow->ChildAt(1).get());
+    ASSERT_NE(nOut, nullptr);
+    ASSERT_NE(aOut, nullptr);
+    EXPECT_EQ(nOut->GetValue(0), std::string_view("aa"));
+    EXPECT_EQ(aOut->GetValue(0), 10);
+    EXPECT_EQ(nOut->GetValue(1), std::string_view("bb"));
+    EXPECT_EQ(aOut->GetValue(1), 20);
 
     delete context;
     delete input;

@@ -100,6 +100,12 @@ void ArrayConstructorFunction::Apply(std::stack<BaseVector *> &args, const DataT
         case OMNI_ARRAY:
             ConstructArrayNested(argVectors, result, rowSize);
             break;
+        case OMNI_MAP:
+            ConstructArrayMap(argVectors, result, rowSize);
+            break;
+        case OMNI_ROW:
+            ConstructArrayStruct(argVectors, result, rowSize);
+            break;
         default:
             for (auto *vec : argVectors) {
                 delete vec;
@@ -272,6 +278,188 @@ void ArrayConstructorFunction::ConstructArrayNested(const std::vector<BaseVector
     result = outerArrayResult;
 }
 
+void ArrayConstructorFunction::ConstructArrayMap(const std::vector<BaseVector *> &argVectors,
+    BaseVector *&result, int32_t rowSize) const
+{
+    size_t numArgs = argVectors.size();
+    int64_t totalMapElements = static_cast<int64_t>(rowSize) * static_cast<int64_t>(numArgs);
+
+    MapVector *firstMapArg = nullptr;
+    for (size_t argIdx = 0; argIdx < numArgs; ++argIdx) {
+        firstMapArg = dynamic_cast<MapVector *>(argVectors[argIdx]);
+        if (firstMapArg) break;
+    }
+    if (!firstMapArg) {
+        OMNI_THROW("ArrayConstructorFunction Error:", "Expected MapVector for map array construction");
+    }
+    DataTypeId keyTypeId = firstMapArg->GetKeyVector()->GetTypeId();
+    DataTypeId valueTypeId = firstMapArg->GetValueVector()->GetTypeId();
+
+    int64_t totalKVPairs = 0;
+    for (size_t argIdx = 0; argIdx < numArgs; ++argIdx) {
+        auto *mapArg = dynamic_cast<MapVector *>(argVectors[argIdx]);
+        if (!mapArg) continue;
+        for (int32_t row = 0; row < rowSize; ++row) {
+            if (!IsValueNull(argVectors[argIdx], row)) {
+                totalKVPairs += mapArg->GetSize(row);
+            }
+        }
+    }
+
+    auto createFlatVecByType = [](DataTypeId typeId, int32_t size) -> std::shared_ptr<BaseVector> {
+        if (TypeUtil::IsStringType(typeId)) {
+            using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+            return std::shared_ptr<BaseVector>(new VarcharVector(size));
+        }
+        return std::shared_ptr<BaseVector>(VectorHelper::CreateFlatVector(static_cast<int32_t>(typeId), size));
+    };
+    auto keyVec = createFlatVecByType(keyTypeId, static_cast<int32_t>(totalKVPairs));
+    auto valueVec = createFlatVecByType(valueTypeId, static_cast<int32_t>(totalKVPairs));
+
+    auto middleMapVec = std::shared_ptr<BaseVector>(
+        new MapVector(totalMapElements, keyVec, valueVec));
+    auto *middleMap = dynamic_cast<MapVector *>(middleMapVec.get());
+
+    int64_t kvOffset = 0;
+    int32_t mapIdx = 0;
+    for (int32_t row = 0; row < rowSize; ++row) {
+        for (size_t argIdx = 0; argIdx < numArgs; ++argIdx) {
+            middleMap->SetOffset(mapIdx, static_cast<int32_t>(kvOffset));
+
+            if (IsValueNull(argVectors[argIdx], row)) {
+                middleMap->SetNull(mapIdx);
+                middleMap->SetOffset(mapIdx + 1, static_cast<int32_t>(kvOffset));
+            } else {
+                auto *mapArg = dynamic_cast<MapVector *>(argVectors[argIdx]);
+                if (!mapArg) {
+                    middleMap->SetNull(mapIdx);
+                    middleMap->SetOffset(mapIdx + 1, static_cast<int32_t>(kvOffset));
+                } else {
+                    int64_t srcStart = mapArg->GetOffset(row);
+                    int64_t srcLen = mapArg->GetSize(row);
+
+                    if (srcLen > 0) {
+                        auto srcKeyVec = mapArg->GetKeyVector();
+                        auto srcValueVec = mapArg->GetValueVector();
+                        BaseVector *keySlice = srcKeyVec->Slice(
+                            static_cast<int>(srcStart), static_cast<int>(srcLen), false);
+                        VectorHelper::AppendVector(keyVec.get(),
+                            static_cast<int32_t>(kvOffset), keySlice, static_cast<int32_t>(srcLen));
+                        delete keySlice;
+                        BaseVector *valueSlice = srcValueVec->Slice(
+                            static_cast<int>(srcStart), static_cast<int>(srcLen), false);
+                        VectorHelper::AppendVector(valueVec.get(),
+                            static_cast<int32_t>(kvOffset), valueSlice, static_cast<int32_t>(srcLen));
+                        delete valueSlice;
+                    }
+                    kvOffset += srcLen;
+                    middleMap->SetOffset(mapIdx + 1, static_cast<int32_t>(kvOffset));
+                }
+            }
+            mapIdx++;
+        }
+    }
+
+    auto *outerArrayResult = new ArrayVector(rowSize, middleMapVec);
+    int64_t outerOffset = 0;
+    for (int32_t row = 0; row < rowSize; ++row) {
+        outerArrayResult->SetOffset(row, static_cast<int32_t>(outerOffset));
+        outerOffset += static_cast<int64_t>(numArgs);
+        outerArrayResult->SetOffset(row + 1, static_cast<int32_t>(outerOffset));
+    }
+
+    result = outerArrayResult;
+}
+
+BaseVector* ArrayConstructorFunction::CreateVectorLike(BaseVector* source, int32_t size)
+{
+    auto encoding = source->GetEncoding();
+    if (encoding == OMNI_ENCODING_STRUCT) {
+        auto* srcRow = dynamic_cast<RowVector*>(source);
+        std::vector<std::shared_ptr<BaseVector>> children;
+        for (int32_t c = 0; c < srcRow->ChildSize(); ++c) {
+            children.push_back(std::shared_ptr<BaseVector>(
+                CreateVectorLike(srcRow->ChildAt(c).get(), size)));
+        }
+        return new RowVector(size, children);
+    } else if (encoding == OMNI_ENCODING_ARRAY) {
+        auto* srcArray = dynamic_cast<ArrayVector*>(source);
+        auto elemChild = std::shared_ptr<BaseVector>(
+            CreateVectorLike(srcArray->GetElementVector().get(), 0));
+        return new ArrayVector(size, elemChild);
+    } else if (encoding == OMNI_ENCODING_MAP) {
+        auto* srcMap = dynamic_cast<MapVector*>(source);
+        auto keyChild = std::shared_ptr<BaseVector>(
+            CreateVectorLike(srcMap->GetKeyVector().get(), 0));
+        auto valueChild = std::shared_ptr<BaseVector>(
+            CreateVectorLike(srcMap->GetValueVector().get(), 0));
+        return new MapVector(size, keyChild, valueChild);
+    } else {
+        return VectorHelper::CreateVector(OMNI_FLAT, source->GetTypeId(), size);
+    }
+}
+
+void ArrayConstructorFunction::ConstructArrayStruct(const std::vector<BaseVector *> &argVectors,
+    BaseVector *&result, int32_t rowSize) const
+{
+    size_t numArgs = argVectors.size();
+    int64_t totalElements = static_cast<int64_t>(rowSize) * static_cast<int64_t>(numArgs);
+
+    RowVector *firstRowArg = nullptr;
+    for (size_t argIdx = 0; argIdx < numArgs; ++argIdx) {
+        firstRowArg = dynamic_cast<RowVector *>(argVectors[argIdx]);
+        if (firstRowArg) break;
+    }
+    if (!firstRowArg) {
+        OMNI_THROW("ArrayConstructorFunction Error:",
+            "Expected RowVector for struct array construction");
+    }
+
+    auto* elementRow = dynamic_cast<RowVector*>(
+        CreateVectorLike(firstRowArg, static_cast<int32_t>(totalElements)));
+    auto elementRowVec = std::shared_ptr<BaseVector>(elementRow);
+
+    auto *outerArrayResult = new ArrayVector(rowSize, elementRowVec);
+    int64_t offset = 0;
+
+    for (int32_t row = 0; row < rowSize; ++row) {
+        outerArrayResult->SetOffset(row, static_cast<int32_t>(offset));
+        for (size_t argIdx = 0; argIdx < numArgs; ++argIdx) {
+            int32_t elemIdx = static_cast<int32_t>(offset);
+            if (IsValueNull(argVectors[argIdx], row)) {
+                elementRow->SetNull(elemIdx);
+                for (int32_t c = 0; c < elementRow->ChildSize(); ++c) {
+                    elementRow->ChildAt(c)->SetNull(elemIdx);
+                }
+            } else {
+                auto *srcRow = dynamic_cast<RowVector*>(argVectors[argIdx]);
+                if (!srcRow) {
+                    elementRow->SetNull(elemIdx);
+                    for (int32_t c = 0; c < elementRow->ChildSize(); ++c) {
+                        elementRow->ChildAt(c)->SetNull(elemIdx);
+                    }
+                } else {
+                    elementRow->SetNotNull(elemIdx);
+                    for (int32_t c = 0; c < firstRowArg->ChildSize(); ++c) {
+                        if (srcRow->ChildAt(c)->IsNull(row)) {
+                            elementRow->ChildAt(c)->SetNull(elemIdx);
+                        } else {
+                            elementRow->ChildAt(c)->SetNotNull(elemIdx);
+                            VectorHelper::CopyValue(
+                                srcRow->ChildAt(c).get(), row,
+                                elementRow->ChildAt(c).get(), elemIdx);
+                        }
+                    }
+                }
+            }
+            offset++;
+        }
+        outerArrayResult->SetOffset(row + 1, static_cast<int32_t>(offset));
+    }
+
+    result = outerArrayResult;
+}
+
 void ArrayConstructorFunction::ConstructEmptyArray(BaseVector *&result, int32_t rowSize) const
 {
     auto resultElementVec = std::shared_ptr<BaseVector>(
@@ -310,7 +498,9 @@ std::vector<std::shared_ptr<codegen::FunctionSignature>> ArrayConstructorSignatu
         OMNI_DECIMAL64,
         OMNI_DECIMAL128,
         OMNI_VARBINARY,
-        OMNI_ARRAY
+        OMNI_ARRAY,
+        OMNI_MAP,
+        OMNI_ROW
     };
 
     for (const auto &typeId : supportedTypes) {

@@ -10,6 +10,8 @@
 #include "operator/operator_factory.h"
 #include "util/omni_exception.h"
 #include "vector/row_vector.h"
+#include "vector/map_vector.h"
+#include "vector/array_vector.h"
 
 namespace omniruntime {
 namespace op {
@@ -65,6 +67,12 @@ private:
     omniruntime::vec::BaseVector* generateUnrepeatedRowValues(omniruntime::vec::RowVector* elementVector,
                                          omniruntime::vec::BaseVector* inputVector, int32_t numElements);
 
+    omniruntime::vec::BaseVector* generateUnrepeatedMapValues(omniruntime::vec::MapVector* elementVector,
+                                         omniruntime::vec::BaseVector* inputVector, int32_t numElements);
+
+    omniruntime::vec::BaseVector* generateUnrepeatedArrayValues(omniruntime::vec::ArrayVector* elementVector,
+                                         omniruntime::vec::BaseVector* inputVector, int32_t numElements);
+
     void generateComplexRepeatedValuesForType(DataTypeId typeId, int32_t inputSize, auto* inputVector, auto* outputVector,
                                               BaseVector* inputElementVector, BaseVector* outputElementVector);
 
@@ -76,6 +84,9 @@ private:
 
     void generateMapRepeatedValues(omniruntime::vec::BaseVector* inputVector,
                                    omniruntime::vec::BaseVector* outputVector);
+
+    void generateStructRepeatedValues(omniruntime::vec::BaseVector* inputVector,
+                                      omniruntime::vec::BaseVector* outputVector);
 
     template<typename VectorType>
     void generateComplexRepeatedValues(int32_t inputSize, auto* inputVector, auto* outputVector,
