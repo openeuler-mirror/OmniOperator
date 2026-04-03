@@ -172,6 +172,16 @@ public:
     // connector implementation decides how to support the cancellation if
     // needed.
     virtual void cancel() {}
+
+    virtual uint64_t getCompletedRows() const
+    {
+        return 0;
+    }
+
+    virtual uint64_t getCompletedBytes() const
+    {
+        return 0;
+    }
 };
 
 // Collection of context data for use in a DataSource, IndexSource or DataSink.

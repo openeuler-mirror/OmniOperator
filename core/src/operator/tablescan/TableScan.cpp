@@ -10,6 +10,7 @@
  */
 
 #include <cstdint>
+#include <chrono>
 #include "TableScan.h"
 #include "vector/vector_helper.h"
 #include "vector/vector_batch.h"
@@ -91,7 +92,17 @@ int32_t TableScanOperator::GetOutput(VectorBatch **outputVecBatch)
         }
 
         std::optional < VectorBatch * > dataOptional;
-        dataOptional = dataSource_->next(maxReadBatchSize_);
+        uint64_t nextWallNanos = 0;
+        {
+            const auto t0 = std::chrono::steady_clock::now();
+            dataOptional = dataSource_->next(maxReadBatchSize_);
+            const auto t1 = std::chrono::steady_clock::now();
+            nextWallNanos = static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count());
+        }
+        if (dataSource_ != nullptr) {
+            stats().totalScanTimeNanos += nextWallNanos;
+        }
         if (!dataOptional.has_value()) {
             return 0;
         }
@@ -103,6 +114,8 @@ int32_t TableScanOperator::GetOutput(VectorBatch **outputVecBatch)
                 continue;
             }
             *outputVecBatch = data;
+            stats().AddInputVector(
+                data->CalculateTotalSize(), 1, static_cast<uint64_t>(data->GetRowCount()));
             return 0;
         }
         needNewSplit_ = true;

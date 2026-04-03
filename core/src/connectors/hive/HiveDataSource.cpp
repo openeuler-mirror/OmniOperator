@@ -99,6 +99,8 @@ std::optional<vec::VectorBatch *> HiveDataSource::next(uint64_t size) {
         // no rows passed the pushed down filters.
         return getEmptyOutput();
     }
+    completedRows_ += static_cast<uint64_t>(rowsRemaining);
+    completedBytes_ += output_->CalculateTotalSize();
     return output_;
 }
 
