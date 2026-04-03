@@ -39,7 +39,7 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
 
     for (const int32_t buildHashCol : buildHashCols) {
         auto type = buildTypes->GetIds()[buildHashCol];
-        if (type == OMNI_VARCHAR || type == OMNI_CHAR || type == OMNI_ARRAY) {
+        if (type == OMNI_VARCHAR || type == OMNI_CHAR || type == OMNI_VARBINARY || type == OMNI_ARRAY) {
             isFixedKeys = false;
             break;
         }

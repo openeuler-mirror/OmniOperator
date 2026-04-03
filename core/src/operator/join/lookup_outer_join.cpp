@@ -192,7 +192,7 @@ void LookupOuterJoinOperator::BuildVecBatch(VectorBatch *vectorBatch)
         auto typeId = probeOutputTypes.GetType(col)->GetId();
         auto vector = VectorHelper::CreateVector(OMNI_FLAT, typeId, rowCount);
         for (int32_t row = 0; row < rowCount; row++) {
-            if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR) {
+            if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR || typeId == type::OMNI_VARBINARY) {
                 static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(row);
             } else {
                 vector->SetNull(row);

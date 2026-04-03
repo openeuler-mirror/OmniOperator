@@ -577,7 +577,7 @@ std::vector<VectorSerializer> vectorSerializerCenter = {
     nullptr,                                        // OMNI_CONTAINER, 17
     SerializeValueIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE, 18
     SerializeValueIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
-    nullptr,                                        // OMNI_VARBINARY, 20
+    SerializeValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARBINARY, 20 (same as VARCHAR)
     nullptr,                                        // OMNI_TIME_WITHOUT_TIME_ZONE, 21
     nullptr,                                        // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
     nullptr,                                        // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
@@ -617,7 +617,7 @@ std::vector<VectorSerializer> dicVectorSerializerCenter = {
     nullptr,                                                  // OMNI_CONTAINER, 17
     SerializeDictionaryValueIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE, 18
     SerializeDictionaryValueIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
-    nullptr,                                                  // OMNI_VARBINARY, 20
+    SerializeDictionaryValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARBINARY, 20 (same as VARCHAR)
     nullptr,                                                  // OMNI_TIME_WITHOUT_TIME_ZONE, 21
     nullptr,                                                  // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
     nullptr,                                                  // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
@@ -657,7 +657,7 @@ std::vector<VectorSerializer> constVectorSerializerCenter = {
     nullptr,                                                 // OMNI_CONTAINER, 17
     SerializeConstValueIntoArena<type::OMNI_BYTE>,           // OMNI_BYTE, 18
     SerializeConstValueIntoArena<type::OMNI_FLOAT>,          // OMNI_FLOAT, 19
-    nullptr,                                                 // OMNI_VARBINARY, 20
+    SerializeConstValueIntoArena<type::OMNI_VARCHAR>,       // OMNI_VARBINARY, 20 (same as VARCHAR)
     nullptr,                                                 // OMNI_TIME_WITHOUT_TIME_ZONE, 21
     nullptr,                                                 // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
     nullptr,                                                 // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
@@ -697,7 +697,7 @@ std::vector<VectorDeSerializer> vectorDeSerializerCenter = {
     nullptr,                                       // OMNI_CONTAINER, 17
     DeserializeFromPointer<type::OMNI_BYTE>,       // OMNI_BYTE, 18
     DeserializeFromPointer<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
-    nullptr,                                       // OMNI_VARBINARY, 20
+    DeserializeFromPointer<type::OMNI_VARCHAR>,    // OMNI_VARBINARY, 20 (same as VARCHAR)
     nullptr,                                       // OMNI_TIME_WITHOUT_TIME_ZONE, 21
     nullptr,                                       // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
     nullptr,                                       // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
@@ -859,7 +859,7 @@ std::vector<VectorSerializerIgnoreNull> vectorSerializerIgnoreNullCenter = {
     nullptr,                                                  // OMNI_CONTAINER, 17
     SerializeValueIgnoreNullIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE, 18
     SerializeValueIgnoreNullIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
-    nullptr,                                                  // OMNI_VARBINARY, 20
+    SerializeValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARBINARY, 20 (same as VARCHAR)
     nullptr,                                                  // OMNI_TIME_WITHOUT_TIME_ZONE, 21
     nullptr,                                                  // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
     nullptr,                                                  // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
@@ -899,7 +899,7 @@ std::vector<VectorSerializerIgnoreNull> dicVectorSerializerIgnoreNullCenter = {
     nullptr,                                                            // OMNI_CONTAINER, 17
     SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_BYTE>,       // OMNI_BYTE, 18
     SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
-    nullptr,                                                            // OMNI_VARBINARY, 20
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARBINARY, 20 (same as VARCHAR)
     nullptr,                                                            // OMNI_TIME_WITHOUT_TIME_ZONE, 21
     nullptr,                                                            // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
     nullptr,                                                            // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
@@ -939,7 +939,7 @@ std::vector<VectorSerializerIgnoreNull> constVectorSerializerIgnoreNullCenter = 
     nullptr,                                                            // OMNI_CONTAINER, 17
     SerializeConstValueIgnoreNullIntoArena<type::OMNI_BYTE>,            // OMNI_BYTE, 18
     SerializeConstValueIgnoreNullIntoArena<type::OMNI_FLOAT>,           // OMNI_FLOAT, 19
-    nullptr,                                                            // OMNI_VARBINARY, 20
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,        // OMNI_VARBINARY, 20 (same as VARCHAR)
     nullptr,                                                            // OMNI_TIME_WITHOUT_TIME_ZONE, 21
     nullptr,                                                            // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
     nullptr,                                                            // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
