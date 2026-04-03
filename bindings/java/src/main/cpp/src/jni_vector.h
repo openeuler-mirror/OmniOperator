@@ -307,11 +307,15 @@ static jclass dataTypeCls = nullptr;
 static jclass structDataTypeCls = nullptr;
 static jclass mapDataTypeCls = nullptr;
 static jclass arrayDataTypeCls = nullptr;
+static jclass decimal64DataTypeCls = nullptr;
+static jclass decimal128DataTypeCls = nullptr;
 
 static jmethodID createMethodId = nullptr;
 static jmethodID structDataTypeInitMethodId = nullptr;
 static jmethodID mapDataTypeInitMethodId = nullptr;
 static jmethodID arrayDataTypeInitMethodId = nullptr;
+static jmethodID decimal64DataTypeInitMethodId = nullptr;
+static jmethodID decimal128DataTypeInitMethodId = nullptr;
 
 /*
  * Class:     nova_hetu_omniruntime_vector_ArrayVec

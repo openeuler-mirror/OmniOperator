@@ -518,6 +518,20 @@ static void LoadDataTypeCls(JNIEnv *env)
             "<init>",
             "(Lnova/hetu/omniruntime/type/DataType;)V"
         );
+
+        decimal64DataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/Decimal64DataType");
+        decimal64DataTypeInitMethodId = env->GetMethodID(
+            decimal64DataTypeCls,
+            "<init>",
+            "(II)V"
+        );
+
+        decimal128DataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/Decimal128DataType");
+        decimal128DataTypeInitMethodId = env->GetMethodID(
+            decimal128DataTypeCls,
+            "<init>",
+            "(II)V"
+        );
     }
 }
 
@@ -562,6 +576,24 @@ static jobject GetDataType(JNIEnv *env, BaseVector *vec)
             jobject arrayType = env->NewObject(arrayDataTypeCls, arrayDataTypeInitMethodId, elementType);
             env->DeleteLocalRef(elementType);
             return arrayType;
+        }
+        case OMNI_DECIMAL128: {
+            auto dt = vec->GetDataType();
+            if (dt != nullptr) {
+                auto* decType = static_cast<omniruntime::type::Decimal128DataType*>(dt.get());
+                return env->NewObject(decimal128DataTypeCls, decimal128DataTypeInitMethodId,
+                    (jint)decType->GetPrecision(), (jint)decType->GetScale());
+            }
+            return env->CallStaticObjectMethod(dataTypeCls, createMethodId, (jint) id);
+        }
+        case OMNI_DECIMAL64: {
+            auto dt = vec->GetDataType();
+            if (dt != nullptr) {
+                auto* decType = static_cast<omniruntime::type::Decimal64DataType*>(dt.get());
+                return env->NewObject(decimal64DataTypeCls, decimal64DataTypeInitMethodId,
+                    (jint)decType->GetPrecision(), (jint)decType->GetScale());
+            }
+            return env->CallStaticObjectMethod(dataTypeCls, createMethodId, (jint) id);
         }
         default: {
             jobject flatType = env->CallStaticObjectMethod(dataTypeCls, createMethodId, (jint) id);
