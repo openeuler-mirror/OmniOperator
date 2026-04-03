@@ -9,6 +9,14 @@
 using namespace omniruntime::type;
 namespace  omniruntime::reader {
 
+namespace {
+std::string NormalizeEnhancementJson(const std::string &enhancementJson)
+{
+    auto trimmed = boost::algorithm::trim_copy(enhancementJson);
+    return trimmed.empty() ? "{}" : trimmed;
+}
+} // namespace
+
 static constexpr int32_t MAX_DECIMAL64_DIGITS = 18;
 uint64_t batchLen = 0;
 
@@ -416,7 +424,8 @@ void ReaderOptions::ParseParquetPredicate()
 
 void ReaderOptions::ParseEnhanceJson(const std::string &enhancementJson, FileFormat format)
 {
-    enhancementJson_ = std::make_shared<nlohmann::json>(nlohmann::json::parse(enhancementJson));
+    enhancementJson_ = std::make_shared<nlohmann::json>(
+        nlohmann::json::parse(NormalizeEnhancementJson(enhancementJson)));
 
     switch (format) {
         case FileFormat::ORC: {

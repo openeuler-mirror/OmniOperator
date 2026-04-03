@@ -47,17 +47,21 @@ public:
         const std::shared_ptr<const hive::HiveConnectorSplit> &hiveSplit_,
         const std::shared_ptr<const HiveTableHandle> &hiveTableHandle_,
         const std::unordered_map<std::string, std::shared_ptr<HiveColumnHandle>> *partitionKeys_,
+        const std::unordered_map<std::string, std::shared_ptr<HiveColumnHandle>> *infoColumnHandles_,
         const std::shared_ptr<const HiveConfig> &hiveConfig_,
         const type::RowTypePtr &readerOutputType_,
-        const std::shared_ptr<codegen::ScanSpec> &scanSpec_);
+        const std::shared_ptr<codegen::ScanSpec> &scanSpec_,
+        SpecialColumnNames specialColumns);
 
     static std::unique_ptr <SplitReader> create(
         const std::shared_ptr <hive::HiveConnectorSplit> &hiveSplit,
         const std::shared_ptr<const HiveTableHandle> &hiveTableHandle,
         const std::unordered_map <std::string, std::shared_ptr<HiveColumnHandle>> *partitionKeys,
+        const std::unordered_map <std::string, std::shared_ptr<HiveColumnHandle>> *infoColumnHandles,
         const std::shared_ptr<const HiveConfig> &hiveConfig,
         const type::RowTypePtr &readerOutputType,
-        const std::shared_ptr <codegen::ScanSpec> &scanSpec);
+        const std::shared_ptr <codegen::ScanSpec> &scanSpec,
+        const SpecialColumnNames &specialColumns);
 
     virtual ~SplitReader() = default;
 
@@ -73,6 +77,7 @@ protected:
     std::shared_ptr<const HiveConnectorSplit> hiveSplit_;
     const std::shared_ptr<const HiveTableHandle> hiveTableHandle_;
     const std::unordered_map <std::string, std::shared_ptr<HiveColumnHandle>> *const partitionKeys_;
+    const std::unordered_map <std::string, std::shared_ptr<HiveColumnHandle>> *const infoColumnHandles_;
     const std::shared_ptr<const HiveConfig> hiveConfig_;
     type::RowTypePtr readerOutputType_;
     mem::MemoryPool *const pool_;
@@ -83,7 +88,11 @@ protected:
     bool emptySplit_;
     omniruntime::type::RowTypePtr rowType_;
     omniruntime::type::RowTypePtr fileRowType_;
+    /** Parquet only: top-level name -> index in recordBatch (GetParquetIncludedColumns order). */
+    std::unordered_map<std::string, size_t> parquetFileVectorIndexByName_;
+    SpecialColumnNames specialColumns_;
 
+    bool isSpecialNonFileColumn(const std::string &colName) const;
     void createRowReader(omniruntime::type::RowTypePtr &rowType, uint64_t batchLen);
 
     int64_t StringToTimestamp(const std::string &timeStr)
