@@ -443,6 +443,192 @@ extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char
     }
 }
 
+// Extended JSON_VALUE function with ON EMPTY/ERROR behaviors
+// emptyBehavior: 0=NULL, 1=ERROR, 2=DEFAULT
+// errorBehavior: 0=NULL, 1=ERROR, 2=DEFAULT
+extern "C" DLLEXPORT const char* JsonValueExtended(
+    int64_t contextPtr,
+    const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
+    const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
+    int32_t emptyBehavior, const char *defaultOnEmpty, int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull,
+    int32_t errorBehavior, const char *defaultOnError, int32_t defaultOnErrorLen, bool defaultOnErrorIsNull,
+    bool *outIsNull, int32_t *outLen)
+{
+    if (outIsNull == nullptr || outLen == nullptr) {
+        return nullptr;
+    }
+    
+    if (jsonStrIsNull || pathStrIsNull) {
+        // Handle NULL input based on error behavior
+        if (errorBehavior == 2 && !defaultOnErrorIsNull) { // DEFAULT
+            *outIsNull = false;
+            *outLen = defaultOnErrorLen;
+            auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+            memcpy_s(ret, *outLen + 1, defaultOnError, *outLen + 1);
+            return ret;
+        } else if (errorBehavior == 1) { // ERROR
+            SetError(contextPtr, "JSON_VALUE error: NULL input");
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        } else { // NULL
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+    }
+    
+    std::string jsonContent(jsonStr, jsonStrLen);
+    std::string pathContent(pathStr, pathStrLen);
+    
+    try {
+        // Use cached JSON if available, otherwise parse and cache
+        nlohmann::json* jsonData;
+        if (THREAD_LOCAL_JSON_CACHE.IsCacheValid(jsonContent)) {
+            jsonData = &THREAD_LOCAL_JSON_CACHE.parsedJson;
+        } else {
+            nlohmann::json newJson;
+            try {
+                newJson = nlohmann::json::parse(jsonContent);
+            } catch (...) {
+                std::string fixedJsonContent;
+                fixedJsonContent.reserve(jsonContent.size());
+                for (size_t j = 0; j < jsonContent.size(); j++) {
+                    if (jsonContent[j] == '\\') {
+                        if (j + 1 < jsonContent.size()) {
+                            char next = jsonContent[j + 1];
+                            if (next == '\\' || next == '"') {
+                                fixedJsonContent += jsonContent[j];
+                            } else {
+                                fixedJsonContent += '"';
+                            }
+                        } else {
+                            fixedJsonContent += '"';
+                        }
+                    } else {
+                        fixedJsonContent += jsonContent[j];
+                    }
+                }
+                newJson = nlohmann::json::parse(fixedJsonContent);
+                jsonContent = fixedJsonContent;
+            }
+            THREAD_LOCAL_JSON_CACHE.SetCache(jsonContent, newJson);
+            jsonData = &THREAD_LOCAL_JSON_CACHE.parsedJson;
+        }
+        
+        std::vector<std::string> keys = ParseJsonPath(pathContent);
+        
+        if (keys.empty()) {
+            // Invalid path - treat as error
+            if (errorBehavior == 2 && !defaultOnErrorIsNull) { // DEFAULT
+                *outIsNull = false;
+                *outLen = defaultOnErrorLen;
+                auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+                memcpy_s(ret, *outLen + 1, defaultOnError, *outLen + 1);
+                return ret;
+            } else if (errorBehavior == 1) { // ERROR
+                SetError(contextPtr, "JSON_VALUE error: Invalid JSON path");
+                *outIsNull = true;
+                *outLen = 0;
+                return nullptr;
+            } else { // NULL
+                *outIsNull = true;
+                *outLen = 0;
+                return nullptr;
+            }
+        }
+        
+        nlohmann::json* current = jsonData;
+        bool found = true;
+        
+        for (const auto& key : keys) {
+            if (current->is_object()) {
+                if (current->contains(key)) {
+                    current = &(*current)[key];
+                } else {
+                    found = false;
+                    break;
+                }
+            } else if (current->is_array()) {
+                try {
+                    size_t index = std::stoul(key);
+                    if (index < current->size()) {
+                        current = &(*current)[index];
+                    } else {
+                        found = false;
+                        break;
+                    }
+                } catch (...) {
+                    found = false;
+                    break;
+                }
+            } else {
+                found = false;
+                break;
+            }
+        }
+        
+        if (!found || current->is_null()) {
+            // Empty result - apply empty behavior
+            if (emptyBehavior == 2 && !defaultOnEmptyIsNull) { // DEFAULT
+                *outIsNull = false;
+                *outLen = defaultOnEmptyLen;
+                auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+                memcpy_s(ret, *outLen + 1, defaultOnEmpty, *outLen + 1);
+                return ret;
+            } else if (emptyBehavior == 1) { // ERROR
+                SetError(contextPtr, "JSON_VALUE error: Empty result");
+                *outIsNull = true;
+                *outLen = 0;
+                return nullptr;
+            } else { // NULL
+                *outIsNull = true;
+                *outLen = 0;
+                return nullptr;
+            }
+        }
+        
+        std::string result;
+        if (current->is_string()) {
+            result = current->get<std::string>();
+        } else if (current->is_number_integer()) {
+            result = std::to_string(current->get<int64_t>());
+        } else if (current->is_number_float()) {
+            result = std::to_string(current->get<double>());
+        } else if (current->is_boolean()) {
+            result = current->get<bool>() ? "true" : "false";
+        } else {
+            result = current->dump();
+        }
+        
+        *outIsNull = false;
+        *outLen = static_cast<int32_t>(result.size());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
+        return ret;
+        
+    } catch (const std::exception& e) {
+        // Error during processing - apply error behavior
+        if (errorBehavior == 2 && !defaultOnErrorIsNull) { // DEFAULT
+            *outIsNull = false;
+            *outLen = defaultOnErrorLen;
+            auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+            memcpy_s(ret, *outLen + 1, defaultOnError, *outLen + 1);
+            return ret;
+        } else if (errorBehavior == 1) { // ERROR
+            std::string errMsg = std::string("JSON_VALUE error: ") + e.what();
+            SetError(contextPtr, errMsg.c_str());
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        } else { // NULL
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+    }
+}
+
 extern "C" DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
     const char *bp, int32_t bpLen, bool isNull, int32_t *outLen)
 {

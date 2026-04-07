@@ -222,4 +222,143 @@ TEST(JsonValueTest, PathsWithWhitespace)
     JsonValueTest(R"({"name":"John"})", "$. name", "", true);  // Invalid - space in path
 }
 
+// Test extended JSON_VALUE with ON EMPTY/ERROR behaviors
+TEST(JsonValueTest, ExtendedOnEmptyNull)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    
+    bool outIsNull = false;
+    int32_t outLen = 0;
+    
+    std::string json = R"({"name":"John"})";
+    std::string path = "$.age";  // Non-existent path
+    
+    // Test NULL ON EMPTY
+    const char *result = JsonValueExtended(
+        contextPtr,
+        json.c_str(), static_cast<int32_t>(json.size()), false,
+        path.c_str(), 0, static_cast<int32_t>(path.size()), false,
+        0, nullptr, 0, true,  // NULL ON EMPTY
+        0, nullptr, 0, true,  // NULL ON ERROR
+        &outIsNull, &outLen
+    );
+    
+    EXPECT_TRUE(outIsNull);
+    EXPECT_EQ(outLen, 0);
+    
+    delete context;
+}
+
+TEST(JsonValueTest, ExtendedOnEmptyDefault)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    
+    bool outIsNull = false;
+    int32_t outLen = 0;
+    
+    std::string json = R"({"name":"John"})";
+    std::string path = "$.age";  // Non-existent path
+    std::string defaultValue = "unknown";
+    
+    // Test DEFAULT ON EMPTY
+    const char *result = JsonValueExtended(
+        contextPtr,
+        json.c_str(), static_cast<int32_t>(json.size()), false,
+        path.c_str(), 0, static_cast<int32_t>(path.size()), false,
+        2, defaultValue.c_str(), static_cast<int32_t>(defaultValue.size()), false,  // DEFAULT ON EMPTY
+        0, nullptr, 0, true,  // NULL ON ERROR
+        &outIsNull, &outLen
+    );
+    
+    EXPECT_FALSE(outIsNull);
+    EXPECT_EQ("unknown", std::string(result, outLen));
+    
+    delete context;
+}
+
+TEST(JsonValueTest, ExtendedOnErrorNull)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    
+    bool outIsNull = false;
+    int32_t outLen = 0;
+    
+    std::string json = "invalid json";
+    std::string path = "$.name";
+    
+    // Test NULL ON ERROR with invalid JSON
+    const char *result = JsonValueExtended(
+        contextPtr,
+        json.c_str(), static_cast<int32_t>(json.size()), false,
+        path.c_str(), 0, static_cast<int32_t>(path.size()), false,
+        0, nullptr, 0, true,  // NULL ON EMPTY
+        0, nullptr, 0, true,  // NULL ON ERROR
+        &outIsNull, &outLen
+    );
+    
+    EXPECT_TRUE(outIsNull);
+    EXPECT_EQ(outLen, 0);
+    
+    delete context;
+}
+
+TEST(JsonValueTest, ExtendedOnErrorDefault)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    
+    bool outIsNull = false;
+    int32_t outLen = 0;
+    
+    std::string json = "invalid json";
+    std::string path = "$.name";
+    std::string defaultValue = "error_default";
+    
+    // Test DEFAULT ON ERROR with invalid JSON
+    const char *result = JsonValueExtended(
+        contextPtr,
+        json.c_str(), static_cast<int32_t>(json.size()), false,
+        path.c_str(), 0, static_cast<int32_t>(path.size()), false,
+        0, nullptr, 0, true,  // NULL ON EMPTY
+        2, defaultValue.c_str(), static_cast<int32_t>(defaultValue.size()), false,  // DEFAULT ON ERROR
+        &outIsNull, &outLen
+    );
+    
+    EXPECT_FALSE(outIsNull);
+    EXPECT_EQ("error_default", std::string(result, outLen));
+    
+    delete context;
+}
+
+TEST(JsonValueTest, ExtendedNullInput)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    
+    bool outIsNull = false;
+    int32_t outLen = 0;
+    
+    std::string json = R"({"name":"John"})";
+    std::string path = "$.name";
+    std::string defaultValue = "null_input_default";
+    
+    // Test with NULL input
+    const char *result = JsonValueExtended(
+        contextPtr,
+        json.c_str(), static_cast<int32_t>(json.size()), true,  // Input is NULL
+        path.c_str(), 0, static_cast<int32_t>(path.size()), false,
+        0, nullptr, 0, true,  // NULL ON EMPTY
+        2, defaultValue.c_str(), static_cast<int32_t>(defaultValue.size()), false,  // DEFAULT ON ERROR
+        &outIsNull, &outLen
+    );
+    
+    EXPECT_FALSE(outIsNull);
+    EXPECT_EQ("null_input_default", std::string(result, outLen));
+    
+    delete context;
+}
+
 } // namespace omniruntime
