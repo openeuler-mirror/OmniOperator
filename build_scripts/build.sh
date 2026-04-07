@@ -66,9 +66,6 @@ else
       elif [ "$i" == 'llvm' ] || [ "$i" == '--enable-llvm-debug' ]; then
           echo "-- Enable LLVM Debug"
           OPTIONS+=" -DDEBUG_LLVM=ON"
-      elif [ "$i" == '--disable-cpuchecker' ]; then
-          echo "-- Disable CPU checker"
-          OPTIONS+=" -DDISABLE_CPU_CHECKER=ON"
       elif [ "$i" == '--enable-dt' ]; then
           [ "$build_type" != 'coverage' ] &&  exit_with_message "-- Please use coverage with --enable-dt"
           echo "-- Enable DT checker"
