@@ -14,7 +14,6 @@ add_subdirectory(vector)
 add_subdirectory(codegen)
 add_subdirectory(expression)
 add_subdirectory(type)
-add_subdirectory(cpu_checker)
 add_subdirectory(udf/cplusplus)
 add_subdirectory(compute)
 

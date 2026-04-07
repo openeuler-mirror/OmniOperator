@@ -121,9 +121,6 @@ message(STATUS "Option DISABLE_JIT: ${DISABLE_JIT}")
 option(COVERAGE "Enable coverage to optimize operator" OFF)
 message(STATUS "Option Enable COVERAGE: ${COVERAGE}")
 
-option(COVERAGE "Disable CPU checker to optimize operator" OFF)
-message(STATUS "Option Disable CPU checker: ${DISABLE_CPU_CHECKER}")
-
 option(COVERAGE "Enable DT" OFF)
 message(STATUS "Option Enable DT: ${ENABLE_DT}")
 
