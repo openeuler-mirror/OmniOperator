@@ -94,8 +94,21 @@ class ComparisonFunction final : public VectorFunction {
     // SQL / Spark: comparison result is unknown (NULL) if either operand is NULL.
     static void PropagateSqlComparisonNulls(BaseVector *leftArg, BaseVector *rightArg, Vector<bool> *out, int32_t rowSize)
     {
+        bool leftIsConst = leftArg->GetEncoding() == OMNI_ENCODING_CONST;
+        bool rightIsConst = rightArg->GetEncoding() == OMNI_ENCODING_CONST;
+
+        bool leftConstNull = leftIsConst && leftArg->IsNull(0);
+        bool rightConstNull = rightIsConst && rightArg->IsNull(0);
+
+        if (leftConstNull || rightConstNull) {
+            for (int32_t i = 0; i < rowSize; ++i) {
+                out->SetNull(i);
+            }
+            return;
+        }
+
         for (int32_t i = 0; i < rowSize; ++i) {
-            if (leftArg->IsNull(i) || rightArg->IsNull(i)) {
+            if ((!leftIsConst && leftArg->IsNull(i)) || (!rightIsConst && rightArg->IsNull(i))) {
                 out->SetNull(i);
             }
         }
@@ -119,7 +132,18 @@ class ComparisonFunction final : public VectorFunction {
             constValue = constantVector->GetConstValue();
         }
 
-        if (vectorArg->GetEncoding() == OMNI_DICTIONARY) {
+        if (vectorArg->GetEncoding() == OMNI_ENCODING_CONST) {
+            ValueType otherVal;
+            if constexpr (kind == OMNI_VARCHAR || kind == OMNI_CHAR || kind == OMNI_VARBINARY) {
+                otherVal = reinterpret_cast<ConstVector<std::string_view>*>(vectorArg)->GetConstValue();
+            } else {
+                otherVal = reinterpret_cast<ConstVector<T>*>(vectorArg)->GetConstValue();
+            }
+            bool cmpResult = leftIsConst ? cmp(constValue, otherVal) : cmp(otherVal, constValue);
+            for (int32_t i = 0; i < rowSize; ++i) {
+                comparedResult->SetValue(i, cmpResult);
+            }
+        } else if (vectorArg->GetEncoding() == OMNI_DICTIONARY) {
             auto* vector = static_cast<DictionaryVectorType*>(vectorArg);
             const auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
             selectivity->setFromBitsNegate(nullBits, rowSize);

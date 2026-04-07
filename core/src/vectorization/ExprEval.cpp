@@ -171,37 +171,37 @@ void ExprEval::Visit(const LiteralExpr &e)
         switch (e.dataType->GetId()) {
             case OMNI_INT:
             case OMNI_DATE32:
-                constVec = new ConstVector(e.intVal, typeId);
+                constVec = new ConstVector(e.intVal, typeId, rowSize);
                 break;
             case OMNI_SHORT:
-                constVec = new ConstVector(e.shortVal, typeId);
+                constVec = new ConstVector(e.shortVal, typeId, rowSize);
                 break;
             case OMNI_BYTE:
-                constVec = new ConstVector(e.byteVal, typeId);
+                constVec = new ConstVector(e.byteVal, typeId, rowSize);
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
-                constVec = new ConstVector(e.longVal, typeId);
+                constVec = new ConstVector(e.longVal, typeId, rowSize);
                 break;
             case OMNI_DOUBLE:
-                constVec = new ConstVector(e.doubleVal, typeId);
+                constVec = new ConstVector(e.doubleVal, typeId, rowSize);
                 break;
             case OMNI_FLOAT:
-                constVec = new ConstVector(e.floatVal, typeId);
+                constVec = new ConstVector(e.floatVal, typeId, rowSize);
                 break;
             case OMNI_BOOLEAN:
-                constVec = new ConstVector(e.boolVal, typeId);
+                constVec = new ConstVector(e.boolVal, typeId, rowSize);
                 break;
             case OMNI_DECIMAL128: {
                 Decimal128 decimal128(*e.stringVal);
-                constVec = new ConstVector<Decimal128>(decimal128, typeId);
+                constVec = new ConstVector<Decimal128>(decimal128, typeId, rowSize);
                 break;
             }
             case OMNI_VARCHAR:
             case OMNI_CHAR:
             case OMNI_VARBINARY:
-                constVec = new ConstVector(std::string_view(*e.stringVal), typeId);
+                constVec = new ConstVector(std::string_view(*e.stringVal), typeId, rowSize);
                 break;
             case OMNI_ROW:
             case OMNI_MAP:
