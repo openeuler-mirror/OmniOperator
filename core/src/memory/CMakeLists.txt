@@ -4,5 +4,5 @@ add_library(${MEM_TARGET} ${MEM_POOL_LIST})
 
 # dependent include
 target_include_directories(${MEM_TARGET} PUBLIC /usr/local/include/jemalloc/)
-target_link_libraries(${MEM_TARGET} PUBLIC jemalloc cpu_checker)
+target_link_libraries(${MEM_TARGET} PUBLIC jemalloc)
 
