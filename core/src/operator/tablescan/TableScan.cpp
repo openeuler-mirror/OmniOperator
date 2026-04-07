@@ -124,14 +124,23 @@ int32_t TableScanOperator::GetOutput(VectorBatch **outputVecBatch)
 
 bool TableScanOperator::getSplit()
 {
-    Split split;
-    if (splitsStore_->noMoreSplits) {
+    if (splitsStore_ == nullptr) {
         noMoreSplits_ = true;
         return false;
-    } else {
-        split = std::move(splitsStore_->splits.front());
-        splitsStore_->splits.pop_front();
     }
+
+    if (splitsStore_->splits.empty()) {
+        if (splitsStore_->noMoreSplits) {
+            noMoreSplits_ = true;
+        }
+        return false;
+    }
+
+    Split split;
+
+    split = std::move(splitsStore_->splits.front());
+    splitsStore_->splits.pop_front();
+
     if (splitsStore_->splits.empty()) {
         splitsStore_->noMoreSplits = true;
     }
