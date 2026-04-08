@@ -183,8 +183,15 @@ bool ParseDateTimeString(const std::string_view &input, const std::string &jodaF
         return false;
     }
 
-    size_t parsedLen = static_cast<size_t>(parseEnd - strptimeInput.c_str());
-    if (parsedLen != strptimeInput.size()) {
+    // Allow trailing whitespace (CHAR types are right-padded with spaces)
+    const char *remaining = parseEnd;
+    while (*remaining == ' ' || *remaining == '\0') {
+        if (*remaining == '\0') {
+            break;
+        }
+        ++remaining;
+    }
+    if (*remaining != '\0') {
         return false;
     }
 
@@ -304,6 +311,8 @@ public:
 /// Parses a date string with default format "yyyy-MM-dd HH:mm:ss" and returns unix seconds.
 /// to_unix_timestamp(string, format) -> int64
 /// Parses a date string with specified format and returns unix seconds.
+/// to_unix_timestamp(string, format, timezone, policy) -> int64
+/// Parses a date string with format/timezone/policy from Gluten and returns unix seconds.
 /// to_unix_timestamp(timestamp) -> int64
 /// Extracts seconds from a timestamp value.
 /// to_unix_timestamp(date) -> int64
@@ -318,8 +327,40 @@ public:
         }
 
         size_t argCount = args.size();
+        
+        if (argCount == 4) {
+            // Gluten path: (timeStr, format, timezone, policy)
+            // Args are pushed in order, so stack top is the last arg (policy).
+            auto policyArg = args.top();
+            args.pop();
+            auto tzArg = args.top();
+            args.pop();
+            auto formatArg = args.top();
+            args.pop();
+            auto inputArg = args.top();
 
-        if (argCount == 2) {
+            DataTypeId inputTypeId = inputArg->GetTypeId();
+
+            const tz::TimeZone *sessionTz = ExtractTimezone(tzArg, context);
+
+            if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
+                delete policyArg;
+                delete tzArg;
+                delete formatArg;
+                ApplyTimestamp(args, outputType, result);
+            } else if (inputTypeId == OMNI_DATE32 || inputTypeId == OMNI_INT) {
+                delete policyArg;
+                delete tzArg;
+                delete formatArg;
+                ApplyDate(args, outputType, result);
+            } else {
+                // String path with explicit format and timezone
+                args.push(formatArg);
+                ApplyStringWithFormat(args, outputType, result, context, sessionTz);
+                delete policyArg;
+                delete tzArg;
+            }
+        } else if (argCount == 2) {
             auto formatArg = args.top();
             args.pop();
             auto inputArg = args.top();
@@ -359,6 +400,31 @@ public:
 private:
     static constexpr const char *kDefaultFormat = "yyyy-MM-dd HH:mm:ss";
 
+    static const tz::TimeZone *ExtractTimezone(BaseVector *tzArg, op::ExecutionContext *context)
+    {
+        if (tzArg == nullptr || tzArg->IsNull(0)) {
+            return getTimeZoneFromConfig(context->queryConfig());
+        }
+        std::string_view tzStr = GetStringValueFromVector(tzArg, 0);
+        if (tzStr.empty()) {
+            return getTimeZoneFromConfig(context->queryConfig());
+        }
+        std::string tzName(tzStr);
+        // Normalize common timezone format: "GMT+08:00" -> "Etc/GMT-8"
+        // Note: POSIX and IANA use inverted sign convention
+        if (tzName.find("GMT") == 0 || tzName.find("UTC") == 0) {
+            const tz::TimeZone *tz = tz::locateZone(tzName, false);
+            if (tz != nullptr) {
+                return tz;
+            }
+        }
+        const tz::TimeZone *tz = tz::locateZone(tzName, false);
+        if (tz != nullptr) {
+            return tz;
+        }
+        return getTimeZoneFromConfig(context->queryConfig());
+    }
+
     void ApplyStringDefault(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
         BaseVector *&result, op::ExecutionContext *context) const
     {
@@ -381,8 +447,9 @@ private:
             }
 
             std::string_view inputStr = GetStringValueFromVector(inputArg, row);
+
             int64_t resultMicros = 0;
-            if (ParseDateTimeString(inputStr, defaultFormat, resultMicros)) {
+            if (ParseDateTimeString(inputStr, defaultFormat, resultMicros)) {;
                 if (sessionTz != nullptr) {
                     Timestamp ts = Timestamp::fromMicros(resultMicros);
                     auto sysSeconds = sessionTz->to_sys(
@@ -406,7 +473,8 @@ private:
     }
 
     void ApplyStringWithFormat(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
-        BaseVector *&result, op::ExecutionContext *context) const
+        BaseVector *&result, op::ExecutionContext *context,
+        const tz::TimeZone *explicitTz = nullptr) const
     {
         auto formatArg = args.top();
         args.pop();
@@ -428,7 +496,8 @@ private:
             constFormat = std::string(formatView);
         }
 
-        const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+        const tz::TimeZone *sessionTz = (explicitTz != nullptr)
+            ? explicitTz : getTimeZoneFromConfig(context->queryConfig());
 
         for (int32_t row = 0; row < size; ++row) {
             if (inputArg->IsNull(row)) {
@@ -550,6 +619,8 @@ void RegisterToTimestampFunction(const std::string &name)
     auto toTimestampFunction = std::make_shared<ToTimestampFunction>();
     VectorFunction::RegisterVectorFunction(name, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_TIMESTAMP,
         toTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_CHAR, OMNI_VARCHAR}, OMNI_TIMESTAMP,
+        toTimestampFunction);
 }
 
 void RegisterToUnixTimestampFunction(const std::string &name)
@@ -558,8 +629,19 @@ void RegisterToUnixTimestampFunction(const std::string &name)
     // string input with default format
     VectorFunction::RegisterVectorFunction(name, {OMNI_VARCHAR}, OMNI_LONG,
         toUnixTimestampFunction);
-    // string input with custom format
+    VectorFunction::RegisterVectorFunction(name, {OMNI_CHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    // string input with custom format (2-arg)
     VectorFunction::RegisterVectorFunction(name, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_CHAR, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    // string input with format + timezone + policy from Gluten (4-arg)
+    VectorFunction::RegisterVectorFunction(name,
+        {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name,
+        {OMNI_CHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_LONG,
         toUnixTimestampFunction);
     // timestamp input (with optional format arg from Spark)
     VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP}, OMNI_LONG,
@@ -570,6 +652,13 @@ void RegisterToUnixTimestampFunction(const std::string &name)
         toUnixTimestampFunction);
     VectorFunction::RegisterVectorFunction(name, {OMNI_LONG, OMNI_VARCHAR}, OMNI_LONG,
         toUnixTimestampFunction);
+    // timestamp/long input with format + timezone + policy from Gluten (4-arg)
+    VectorFunction::RegisterVectorFunction(name,
+        {OMNI_TIMESTAMP, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name,
+        {OMNI_LONG, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
     // date input (with optional format arg from Spark)
     VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32}, OMNI_LONG,
         toUnixTimestampFunction);
@@ -578,6 +667,13 @@ void RegisterToUnixTimestampFunction(const std::string &name)
     VectorFunction::RegisterVectorFunction(name, {OMNI_INT}, OMNI_LONG,
         toUnixTimestampFunction);
     VectorFunction::RegisterVectorFunction(name, {OMNI_INT, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    // date input with format + timezone + policy from Gluten (4-arg)
+    VectorFunction::RegisterVectorFunction(name,
+        {OMNI_DATE32, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_LONG,
+        toUnixTimestampFunction);
+    VectorFunction::RegisterVectorFunction(name,
+        {OMNI_INT, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_LONG,
         toUnixTimestampFunction);
 }
 
