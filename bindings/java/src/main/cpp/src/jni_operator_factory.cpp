@@ -1637,7 +1637,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniNestedLoopJoinLookupOperatorFactory
     auto joinType = (JoinType)jJoinType;
     nestLoopJoinLookupOperatorFactory =
         NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(joinType, probeDataTypes,
-        probeOutputColsArr, probeOutputColsCount, filterExpr, jNestedLoopJoinBuildOperatorFactory, overflowConfig);
+        probeOutputColsArr, probeOutputColsCount, filterExpr, jNestedLoopJoinBuildOperatorFactory, overflowConfig, config::QueryConfig());
     JNI_METHOD_END(0L)
     Expr::DeleteExprs({ filterExpr });
     env->ReleaseIntArrayElements(jProbeOutputCols, probeOutputColsArr, 0);

@@ -10,6 +10,7 @@
 #include "type/decimal128.h"
 #include "../registration/SimpleFunctionRegistry.h"
 #include "codegen/functions/xxhash64_hash.h"
+#include "operator/util/mm3_util.h"
 
 namespace omniruntime::vectorization {
 
@@ -37,55 +38,50 @@ public:
                 continue;
             }
             switch (valTypeId) {
-                case OMNI_BOOLEAN: {
-                    auto valVector = reinterpret_cast<Vector<bool> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::Mm3Boolean(valVector->GetValue(i), false, seed, false));
+                case OMNI_BOOLEAN:
+                    resultVector->SetValue(i, codegen::function::Mm3Boolean(VectorHelper::GetValueFromVector<bool>(valVec, i), false, seed, false));
                     break;
-                }
-                case OMNI_BYTE: {
-                    auto valVector = reinterpret_cast<Vector<int8_t> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::Mm3Int8(valVector->GetValue(i), false, seed, false));
+                case OMNI_BYTE:
+                    resultVector->SetValue(i, codegen::function::Mm3Int8(VectorHelper::GetValueFromVector<int8_t>(valVec, i), false, seed, false));
                     break;
-                }
-                case OMNI_SHORT: {
-                    auto valVector = reinterpret_cast<Vector<int16_t> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::Mm3Int16(valVector->GetValue(i), false, seed, false));
+                case OMNI_SHORT:
+                    resultVector->SetValue(i, codegen::function::Mm3Int16(VectorHelper::GetValueFromVector<int16_t>(valVec, i), false, seed, false));
                     break;
-                }
                 case OMNI_INT:
-                case OMNI_DATE32: {
-                    auto valVector = reinterpret_cast<Vector<int32_t> *>(valVec);
-                        resultVector->SetValue(i, codegen::function::Mm3Int32(valVector->GetValue(i), false, seed, false));
+                case OMNI_DATE32:
+                    resultVector->SetValue(i, codegen::function::Mm3Int32(VectorHelper::GetValueFromVector<int32_t>(valVec, i), false, seed, false));
                     break;
-                }
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
-                case OMNI_DECIMAL64: {
-                    auto valVector = reinterpret_cast<Vector<int64_t> *>(valVec);
-                        resultVector->SetValue(i, codegen::function::Mm3Int64(valVector->GetValue(i), false, seed, false));
+                case OMNI_DECIMAL64:
+                    resultVector->SetValue(i, codegen::function::Mm3Int64(VectorHelper::GetValueFromVector<int64_t>(valVec, i), false, seed, false));
                     break;
-                }
-                case OMNI_FLOAT: {
-                    auto valVector = reinterpret_cast<Vector<float> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::Mm3Float(valVector->GetValue(i), false, seed, false));
+                case OMNI_FLOAT:
+                    resultVector->SetValue(i, codegen::function::Mm3Float(VectorHelper::GetValueFromVector<float>(valVec, i), false, seed, false));
                     break;
-                }
-                case OMNI_DOUBLE: {
-                    auto valVector = reinterpret_cast<Vector<double> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::Mm3Double(valVector->GetValue(i), false, seed, false));
+                case OMNI_DOUBLE:
+                    resultVector->SetValue(i, codegen::function::Mm3Double(VectorHelper::GetValueFromVector<double>(valVec, i), false, seed, false));
                     break;
-                }
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
-                case OMNI_VARBINARY: {
-                    auto valVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::Mm3String1(valVector->GetValue(i), false, seed, false));
+                case OMNI_VARBINARY:
+                    resultVector->SetValue(i, codegen::function::Mm3String1(VectorHelper::GetStringValueFromVector(valVec, i), false, seed, false));
+                    break;
+                case OMNI_DECIMAL128: {
+                    Decimal128 val = VectorHelper::GetValueFromVector<Decimal128>(valVec, i);
+                    resultVector->SetValue(i, codegen::function::Mm3Decimal128(val.HighBits(), val.LowBits(), 0, 0, false, seed, false));
                     break;
                 }
-                case OMNI_DECIMAL128: {
-                    auto valVector = reinterpret_cast<Vector<Decimal128> *>(valVec);
-                    Decimal128 val = valVector->GetValue(i);
-                    resultVector->SetValue(i, codegen::function::Mm3Decimal128(val.HighBits(), val.LowBits(), 0, 0, false, seed, false));
+                case OMNI_ARRAY: {
+                    auto *arrayVec = reinterpret_cast<vec::ArrayVector *>(valVec);
+                    resultVector->SetValue(i, static_cast<int32_t>(op::HashArrayAtRow(
+                        arrayVec, static_cast<int64_t>(i), static_cast<uint32_t>(seed))));
+                    break;
+                }
+                case OMNI_ROW: {
+                    auto *rowVec = reinterpret_cast<vec::RowVector *>(valVec);
+                    resultVector->SetValue(i, static_cast<int32_t>(op::HashStructAtRow(
+                        rowVec, static_cast<int64_t>(i), static_cast<uint32_t>(seed))));
                     break;
                 }
             }
@@ -111,6 +107,8 @@ void RegisterMurMur3HashFunction(const std::string &name)
     VectorFunction::RegisterVectorFunction(name, {OMNI_DECIMAL64, OMNI_INT}, OMNI_INT, std::make_shared<MurMur3HashFunction>());
     VectorFunction::RegisterVectorFunction(name, {OMNI_DECIMAL128, OMNI_INT}, OMNI_INT, std::make_shared<MurMur3HashFunction>());
     VectorFunction::RegisterVectorFunction(name, {OMNI_VARBINARY, OMNI_INT}, OMNI_INT, std::make_shared<MurMur3HashFunction>());
+    VectorFunction::RegisterVectorFunction(name, {OMNI_ARRAY, OMNI_INT}, OMNI_INT, std::make_shared<MurMur3HashFunction>());
+    VectorFunction::RegisterVectorFunction(name, {OMNI_ROW, OMNI_INT}, OMNI_INT, std::make_shared<MurMur3HashFunction>());
 }
 
 class XxHash64Function : public VectorFunction {

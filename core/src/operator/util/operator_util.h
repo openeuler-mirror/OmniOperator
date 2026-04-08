@@ -81,7 +81,8 @@ public:
                 const auto width = static_cast<VarcharDataType &>(*dataTypePtr).GetWidth();
                 return width < CHAR_MAX_WIDTH ? width : DEFAULT_CHAR_LENGTH;
             }
-            case OMNI_VARCHAR: {
+            case OMNI_VARCHAR:
+            case OMNI_VARBINARY : {
                 // if width is not set (which is the case when width=INT_MAX), we use default DEFAULT_CHAR_LENGTH width
                 // otherwise, estimation of row bytes would be too large and could overflow and be
                 const auto width = static_cast<VarcharDataType &>(*dataTypePtr).GetWidth();

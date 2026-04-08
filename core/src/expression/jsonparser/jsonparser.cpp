@@ -494,9 +494,10 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
     vector<DataTypeId> argTypes(args.size());
     std::transform(args.begin(), args.end(), argTypes.begin(),
         [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
-    auto signature = FunctionSignature(funcName, argTypes, retTypeId);
-    auto function = omniruntime::codegen::FunctionRegistry::LookupFunction(&signature);
-    if (function != nullptr) {
+    auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, retTypeId);
+    auto function = omniruntime::codegen::FunctionRegistry::LookupFunction(signature.get());
+    auto vectorFunction = VectorFunction::Find(signature);
+    if (function != nullptr || vectorFunction != nullptr) {
         return new FuncExpr(funcName, args, std::move(retType), function);
     }
 
