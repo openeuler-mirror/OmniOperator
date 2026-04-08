@@ -11,6 +11,9 @@
 #include "gtest/gtest.h"
 #include "test/util/test_util.h"
 #include "util/config/QueryConfig.h"
+#include "vector/map_vector.h"
+#include "vector/row_vector.h"
+#include "type/data_type.h"
 
 using namespace omniruntime;
 using namespace TestUtil;
@@ -36,6 +39,8 @@ private:
     std::vector<VectorBatch*> data;
     size_t index = 0;
 };
+
+using TestVarcharVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
 
 VectorBatch *CreateTestUnnestVecBatch()
 {
@@ -1221,6 +1226,376 @@ TEST(PipelineTest, TestStackWithNullValues)
     VectorBatch *expVecBatch = CreateTestStackOutputVecBatchWithNull();
     EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
     std::vector<Expr*> exprsToDelete = {expr1, expr2};
+    Expr::DeleteExprs(exprsToDelete);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+}
+
+// Simulates stack(2, c_map): one input row, array of [map, null] -> two output rows
+VectorBatch *CreateTestStackArrayOfMapInputVecBatch()
+{
+    const int32_t dataSize = 1;
+    int32_t idData[dataSize] = { 42 };
+    std::vector<DataTypePtr> types = { IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch *batch = CreateVectorBatch(sourceTypes, dataSize, idData);
+
+    auto keys = std::make_shared<TestVarcharVector>(1);
+    keys->SetValue(0, std::string_view("k"));
+    auto vals = std::make_shared<vec::Vector<int32_t>>(1);
+    vals->SetValue(0, 100);
+    auto *middleMap = new vec::MapVector(2, keys, vals);
+    middleMap->SetOffset(0, 0);
+    middleMap->SetOffset(1, 1);
+    middleMap->SetOffset(2, 1);
+    middleMap->SetNull(1);
+
+    auto *outerArray = new vec::ArrayVector(dataSize, std::shared_ptr<vec::BaseVector>(middleMap));
+    outerArray->SetOffset(0, 0);
+    outerArray->SetOffset(1, 2);
+    batch->Append(outerArray);
+    return batch;
+}
+
+VectorBatch *CreateTestStackArrayOfMapOutputVecBatch()
+{
+    const int32_t outRows = 2;
+    int32_t idData[outRows] = { 42, 42 };
+    std::vector<DataTypePtr> types = { IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch *batch = CreateVectorBatch(sourceTypes, outRows, idData);
+
+    auto expKeys = std::make_shared<TestVarcharVector>(1);
+    expKeys->SetValue(0, std::string_view("k"));
+    auto expVals = std::make_shared<vec::Vector<int32_t>>(1);
+    expVals->SetValue(0, 100);
+    auto *outMap = new vec::MapVector(outRows, expKeys, expVals);
+    outMap->SetOffset(0, 0);
+    outMap->SetOffset(1, 1);
+    outMap->SetOffset(2, 1);
+    outMap->SetNull(1);
+    batch->Append(outMap);
+    return batch;
+}
+
+TEST(PipelineTest, TestStackUnnestArrayOfMap)
+{
+    auto mapElemType = std::make_shared<type::MapType>(VarcharType(10), IntType());
+    std::vector<DataTypePtr> types = { IntType(), std::make_shared<OmniArrayType>(mapElemType) };
+    VectorBatch *vecBatch = CreateTestStackArrayOfMapInputVecBatch();
+    std::vector<VectorBatch *> inputVector;
+    inputVector.push_back(vecBatch);
+
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(types);
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+
+    auto expr1 = new FieldExpr(0, IntType());
+    auto expr2 = new FieldExpr(1, std::make_shared<OmniArrayType>(mapElemType));
+    auto replicateVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr1) };
+    auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr2) };
+    auto unnestNode = std::make_shared<const UnnestNode>(
+        "unnest", replicateVariables, unnestVariables, valueStreamNode, false, false);
+    std::unordered_set<PlanNodeId> emptySet;
+    PlanFragment planFragment{ unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet };
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
+    VectorBatch *vectorBatch = nullptr;
+    while (true) {
+        auto future = OmniFuture::makeEmpty();
+        auto out = task->Next(&future);
+        if (!future.valid()) {
+            vectorBatch = out;
+            break;
+        }
+        OMNI_CHECK(out == nullptr, "Expected to wait but still got non-null output from Omni task");
+        future.wait();
+    }
+
+    VectorBatch *expVecBatch = CreateTestStackArrayOfMapOutputVecBatch();
+    EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
+    std::vector<Expr *> exprsToDelete = { expr1, expr2 };
+    Expr::DeleteExprs(exprsToDelete);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+}
+
+VectorBatch *CreateTestStackArrayOfNestedArrayInputVecBatch()
+{
+    const int32_t dataSize = 1;
+    int32_t idData[dataSize] = { 7 };
+    std::vector<DataTypePtr> types = { IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch *batch = CreateVectorBatch(sourceTypes, dataSize, idData);
+
+    auto innerElem = std::make_shared<vec::Vector<int32_t>>(2);
+    innerElem->SetValue(0, 1);
+    innerElem->SetValue(1, 2);
+    auto *middle = new vec::ArrayVector(2, innerElem);
+    middle->SetOffset(0, 0);
+    middle->SetOffset(1, 2);
+    middle->SetNull(1);
+    middle->SetOffset(2, 2);
+
+    auto *outer = new vec::ArrayVector(dataSize, std::shared_ptr<vec::BaseVector>(middle));
+    outer->SetOffset(0, 0);
+    outer->SetOffset(1, 2);
+    batch->Append(outer);
+    return batch;
+}
+
+VectorBatch *CreateTestStackArrayOfNestedArrayOutputVecBatch()
+{
+    const int32_t outRows = 2;
+    int32_t idData[outRows] = { 7, 7 };
+    std::vector<DataTypePtr> types = { IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch *batch = CreateVectorBatch(sourceTypes, outRows, idData);
+
+    auto outInner = std::make_shared<vec::Vector<int32_t>>(2);
+    outInner->SetValue(0, 1);
+    outInner->SetValue(1, 2);
+    auto *outArr = new vec::ArrayVector(outRows, outInner);
+    outArr->SetOffset(0, 0);
+    outArr->SetOffset(1, 2);
+    outArr->SetOffset(2, 2);
+    outArr->SetNull(1);
+    batch->Append(outArr);
+    return batch;
+}
+
+TEST(PipelineTest, TestStackUnnestArrayOfArray)
+{
+    auto innerArrayType = std::make_shared<OmniArrayType>(IntType());
+    std::vector<DataTypePtr> types = { IntType(), std::make_shared<OmniArrayType>(innerArrayType) };
+    VectorBatch *vecBatch = CreateTestStackArrayOfNestedArrayInputVecBatch();
+    std::vector<VectorBatch *> inputVector;
+    inputVector.push_back(vecBatch);
+
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(types);
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+
+    auto expr1 = new FieldExpr(0, IntType());
+    auto expr2 = new FieldExpr(1, std::make_shared<OmniArrayType>(innerArrayType));
+    auto replicateVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr1) };
+    auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr2) };
+    auto unnestNode = std::make_shared<const UnnestNode>(
+        "unnest", replicateVariables, unnestVariables, valueStreamNode, false, false);
+    std::unordered_set<PlanNodeId> emptySet;
+    PlanFragment planFragment{ unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet };
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
+    VectorBatch *vectorBatch = nullptr;
+    while (true) {
+        auto future = OmniFuture::makeEmpty();
+        auto out = task->Next(&future);
+        if (!future.valid()) {
+            vectorBatch = out;
+            break;
+        }
+        OMNI_CHECK(out == nullptr, "Expected to wait but still got non-null output from Omni task");
+        future.wait();
+    }
+
+    VectorBatch *expVecBatch = CreateTestStackArrayOfNestedArrayOutputVecBatch();
+    EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
+    std::vector<Expr *> exprsToDelete = { expr1, expr2 };
+    Expr::DeleteExprs(exprsToDelete);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+}
+
+VectorBatch *CreateTestStackArrayOfStructInputVecBatch()
+{
+    const int32_t dataSize = 1;
+    int32_t idData[dataSize] = { 9 };
+    std::vector<DataTypePtr> types = { IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch *batch = CreateVectorBatch(sourceTypes, dataSize, idData);
+
+    auto nameCol = std::make_shared<TestVarcharVector>(2);
+    auto ageCol = std::make_shared<vec::Vector<int32_t>>(2);
+    nameCol->SetValue(0, std::string_view("a"));
+    ageCol->SetValue(0, 42);
+    nameCol->SetNull(1);
+    ageCol->SetNull(1);
+    std::vector<std::shared_ptr<vec::BaseVector>> structKids = { nameCol, ageCol };
+    auto *elemRow = new vec::RowVector(2, structKids);
+    elemRow->SetNotNull(0);
+    elemRow->SetNull(1);
+
+    auto *outer = new vec::ArrayVector(dataSize, std::shared_ptr<vec::BaseVector>(elemRow));
+    outer->SetOffset(0, 0);
+    outer->SetOffset(1, 2);
+    batch->Append(outer);
+    return batch;
+}
+
+VectorBatch *CreateTestStackArrayOfStructOutputVecBatch()
+{
+    const int32_t outRows = 2;
+    int32_t idData[outRows] = { 9, 9 };
+    std::vector<DataTypePtr> types = { IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch *batch = CreateVectorBatch(sourceTypes, outRows, idData);
+
+    auto nameVector = new vec::Vector<vec::LargeStringContainer<std::string_view>>(outRows);
+    auto ageVector = new vec::Vector<int32_t>(outRows);
+    nameVector->SetValue(0, std::string_view("a"));
+    ageVector->SetValue(0, 42);
+    nameVector->SetNull(1);
+    ageVector->SetNull(1);
+    std::vector<std::shared_ptr<vec::BaseVector>> structChildren;
+    structChildren.push_back(std::shared_ptr<vec::BaseVector>(nameVector));
+    structChildren.push_back(std::shared_ptr<vec::BaseVector>(ageVector));
+    auto *outputRowVector = new vec::RowVector(outRows, structChildren);
+    outputRowVector->SetNotNull(0);
+    outputRowVector->SetNull(1);
+    batch->Append(outputRowVector);
+    return batch;
+}
+
+TEST(PipelineTest, TestStackUnnestArrayOfStruct)
+{
+    std::vector<DataTypePtr> rowFieldTypes = { VarcharType(50), IntType() };
+    auto structType = std::make_shared<type::RowType>(rowFieldTypes);
+    std::vector<DataTypePtr> types = { IntType(), std::make_shared<OmniArrayType>(structType) };
+    VectorBatch *vecBatch = CreateTestStackArrayOfStructInputVecBatch();
+    std::vector<VectorBatch *> inputVector;
+    inputVector.push_back(vecBatch);
+
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(types);
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+
+    auto expr1 = new FieldExpr(0, IntType());
+    auto expr2 = new FieldExpr(1, std::make_shared<OmniArrayType>(structType));
+    auto replicateVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr1) };
+    auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr2) };
+    auto unnestNode = std::make_shared<const UnnestNode>(
+        "unnest", replicateVariables, unnestVariables, valueStreamNode, false, false);
+    std::unordered_set<PlanNodeId> emptySet;
+    PlanFragment planFragment{ unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet };
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
+    VectorBatch *vectorBatch = nullptr;
+    while (true) {
+        auto future = OmniFuture::makeEmpty();
+        auto out = task->Next(&future);
+        if (!future.valid()) {
+            vectorBatch = out;
+            break;
+        }
+        OMNI_CHECK(out == nullptr, "Expected to wait but still got non-null output from Omni task");
+        future.wait();
+    }
+
+    VectorBatch *expVecBatch = CreateTestStackArrayOfStructOutputVecBatch();
+    EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
+    std::vector<Expr *> exprsToDelete = { expr1, expr2 };
+    Expr::DeleteExprs(exprsToDelete);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+}
+
+VectorBatch *CreateTestUnnestReplicateStructInputVecBatch()
+{
+    const int32_t dataSize = 1;
+    int32_t idData[dataSize] = { 1 };
+    std::vector<DataTypePtr> types = { IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch *batch = CreateVectorBatch(sourceTypes, dataSize, idData);
+
+    auto repName = std::make_shared<TestVarcharVector>(1);
+    repName->SetValue(0, std::string_view("hi"));
+    auto repAge = std::make_shared<vec::Vector<int32_t>>(1);
+    repAge->SetValue(0, 5);
+    std::vector<std::shared_ptr<vec::BaseVector>> repKids = { repName, repAge };
+    batch->Append(new vec::RowVector(1, repKids));
+
+    auto arrElem = std::make_shared<vec::Vector<int32_t>>(2);
+    arrElem->SetValue(0, 100);
+    arrElem->SetValue(1, 200);
+    auto *arrVec = new vec::ArrayVector(1, arrElem);
+    arrVec->SetOffset(0, 0);
+    arrVec->SetOffset(1, 2);
+    batch->Append(arrVec);
+    return batch;
+}
+
+VectorBatch *CreateTestUnnestReplicateStructOutputVecBatch()
+{
+    const int32_t outRows = 2;
+    int32_t idData[outRows] = { 1, 1 };
+    std::vector<DataTypePtr> types = { IntType() };
+    DataTypes sourceTypes(types);
+    VectorBatch *batch = CreateVectorBatch(sourceTypes, outRows, idData);
+
+    auto nameVector = new vec::Vector<vec::LargeStringContainer<std::string_view>>(outRows);
+    auto ageVector = new vec::Vector<int32_t>(outRows);
+    nameVector->SetValue(0, std::string_view("hi"));
+    ageVector->SetValue(0, 5);
+    nameVector->SetValue(1, std::string_view("hi"));
+    ageVector->SetValue(1, 5);
+    std::vector<std::shared_ptr<vec::BaseVector>> structChildren;
+    structChildren.push_back(std::shared_ptr<vec::BaseVector>(nameVector));
+    structChildren.push_back(std::shared_ptr<vec::BaseVector>(ageVector));
+    batch->Append(new vec::RowVector(outRows, structChildren));
+
+    int32_t unnestVals[outRows] = { 100, 200 };
+    std::vector<DataTypePtr> intOnly = { IntType() };
+    DataTypes intTypes(intOnly);
+    VectorBatch *intPart = CreateVectorBatch(intTypes, outRows, unnestVals);
+    batch->Append(intPart->Get(0));
+    intPart->ClearVectors();
+    VectorHelper::FreeVecBatch(intPart);
+    return batch;
+}
+
+TEST(PipelineTest, TestUnnestReplicateStructColumn)
+{
+    std::vector<DataTypePtr> rowFieldTypes = { VarcharType(50), IntType() };
+    auto structType = std::make_shared<type::RowType>(rowFieldTypes);
+    std::vector<DataTypePtr> types = {
+        IntType(),
+        structType,
+        std::make_shared<OmniArrayType>(IntType())
+    };
+    VectorBatch *vecBatch = CreateTestUnnestReplicateStructInputVecBatch();
+    std::vector<VectorBatch *> inputVector;
+    inputVector.push_back(vecBatch);
+
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(types);
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+
+    auto expr1 = new FieldExpr(0, IntType());
+    auto expr2 = new FieldExpr(1, structType);
+    auto expr3 = new FieldExpr(2, std::make_shared<OmniArrayType>(IntType()));
+    auto replicateVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr1), static_cast<ExprPtr>(expr2) };
+    auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr3) };
+    auto unnestNode = std::make_shared<const UnnestNode>(
+        "unnest", replicateVariables, unnestVariables, valueStreamNode, false, false);
+    std::unordered_set<PlanNodeId> emptySet;
+    PlanFragment planFragment{ unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet };
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
+    VectorBatch *vectorBatch = nullptr;
+    while (true) {
+        auto future = OmniFuture::makeEmpty();
+        auto out = task->Next(&future);
+        if (!future.valid()) {
+            vectorBatch = out;
+            break;
+        }
+        OMNI_CHECK(out == nullptr, "Expected to wait but still got non-null output from Omni task");
+        future.wait();
+    }
+
+    VectorBatch *expVecBatch = CreateTestUnnestReplicateStructOutputVecBatch();
+    EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
+    std::vector<Expr *> exprsToDelete = { expr1, expr2, expr3 };
     Expr::DeleteExprs(exprsToDelete);
     VectorHelper::FreeVecBatch(expVecBatch);
     VectorHelper::FreeVecBatch(vectorBatch);

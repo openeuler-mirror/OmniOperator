@@ -11,6 +11,8 @@
 #include "vectorization/VectorFunction.h"
 #include "vector/vector.h"
 #include "vector/array_vector.h"
+#include "vector/map_vector.h"
+#include "vector/row_vector.h"
 #include "vector/vector_helper.h"
 #include "util/debug.h"
 #include "util/type_util.h"
@@ -43,7 +45,15 @@ private:
     void ConstructArrayNested(const std::vector<BaseVector *> &argVectors, BaseVector *&result,
         int32_t rowSize) const;
 
+    void ConstructArrayMap(const std::vector<BaseVector *> &argVectors, BaseVector *&result,
+        int32_t rowSize) const;
+
+    void ConstructArrayStruct(const std::vector<BaseVector *> &argVectors, BaseVector *&result,
+        int32_t rowSize) const;
+
     void ConstructEmptyArray(BaseVector *&result, int32_t rowSize) const;
+
+    static BaseVector* CreateVectorLike(BaseVector* source, int32_t size);
 
     template <typename T>
     static T GetValue(BaseVector *vec, int32_t row);
