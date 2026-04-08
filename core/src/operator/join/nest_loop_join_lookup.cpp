@@ -412,7 +412,7 @@ void NestLoopJoinLookupOperator::BuildNotMatchOutput(VectorBatch **outputVecBatc
 int32_t NestLoopJoinLookupOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (curInputBatch == nullptr) {
-        if (!buildMatchedRows.empty()) {
+        if (noMoreInput_ && !buildMatchedRows.empty()) {
             BuildNotMatchOutput(outputVecBatch);
             if ((*outputVecBatch != nullptr)) {
                 UpdateGetOutputInfo((*outputVecBatch)->GetRowCount());

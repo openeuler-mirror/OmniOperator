@@ -1663,7 +1663,8 @@ static int64_t HashArrayElementByType(BaseVector *elementVec, type::DataTypeId e
         case type::OMNI_BOOLEAN:
             return HashUtil::HashValue(static_cast<Vector<bool> *>(elementVec)->GetValue(index));
         case type::OMNI_VARCHAR:
-        case type::OMNI_CHAR: {
+        case type::OMNI_CHAR:
+        case type::OMNI_VARBINARY: {
             auto val = static_cast<Vector<LargeStringContainer<std::string_view>> *>(elementVec)->GetValue(index);
             return HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(val.data())),
                 static_cast<int32_t>(val.length()));
