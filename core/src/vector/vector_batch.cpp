@@ -65,7 +65,16 @@ void VectorBatch::ResizeVectorCount(size_t vectorCnt)
 void VectorBatch::FreeAllVectors()
 {
     int32_t vectorSize = static_cast<int32_t>(vectors.size()) - flatSize;
-    for (int32_t vecIndex = 0; vecIndex < vectorSize; ++vecIndex) {
+    std::unordered_set<BaseVector *> deleted;
+    for (size_t vecIndex = 0; vecIndex < vectorSize; ++vecIndex) {
+        if (deleted.count(vectors[vecIndex])) {
+            continue;
+        }
+        try {
+            deleted.insert(vectors[vecIndex]);
+        } catch (const std::exception &e) {
+            throw std::runtime_error("fail to insert");
+        }
         delete vectors[vecIndex];
         vectors[vecIndex] = nullptr;
     }
