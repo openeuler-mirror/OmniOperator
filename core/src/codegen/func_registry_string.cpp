@@ -27,6 +27,12 @@ const std::string RegexpExtractFnStr()
     return regexpExtractFnStr;
 }
 
+const std::string JsonValueFnStr()
+{
+    const std::string jsonValueFnStr = "json_value";
+    return jsonValueFnStr;
+}
+
 const std::string StrEqualFnStr()
 {
     const std::string compareFnStr = "strequal";
@@ -264,6 +270,8 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(ConcatStrStrRetNull), ConcatNullFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
             OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
         Function(reinterpret_cast<void *>(RegexpExtractRetNull), RegexpExtractFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR, OMNI_INT },
+            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(JsonValueRetNull), JsonValueFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR },
             OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
         Function(reinterpret_cast<void *>(ConcatCharCharRetNull), ConcatNullFnStr(), {}, { OMNI_CHAR, OMNI_CHAR },
             OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),

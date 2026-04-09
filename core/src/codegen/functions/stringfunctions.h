@@ -48,6 +48,21 @@ extern "C" DLLEXPORT const char* RegexpExtractRetNull(int64_t contextPtr, const 
                                                       const char *regexToMatch, int32_t regexWidth, int32_t regexLen,
                                                       bool regexIsNull, int32_t group, bool groupIsNull, bool *outIsNull, int32_t *outLen);
 
+extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
+                                                   const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
+                                                   bool *outIsNull, int32_t *outLen);
+
+// Extended JSON_VALUE function with ON EMPTY/ERROR behaviors
+// emptyBehavior: 0=NULL, 1=ERROR, 2=DEFAULT
+// errorBehavior: 0=NULL, 1=ERROR, 2=DEFAULT
+extern "C" DLLEXPORT const char* JsonValueExtended(
+    int64_t contextPtr,
+    const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
+    const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
+    int32_t emptyBehavior, const char *defaultOnEmpty, int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull,
+    int32_t errorBehavior, const char *defaultOnError, int32_t defaultOnErrorLen, bool defaultOnErrorIsNull,
+    bool *outIsNull, int32_t *outLen);
+
 extern "C" DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
     int32_t bpLen, bool isNull, int32_t *outLen);
 
