@@ -142,6 +142,12 @@ omniruntime::PlanNodeId OmniTask::getScanNodeId(std::shared_ptr<const PlanNode>&
     return ids[0];
 }
 
-void OmniTask::noMoreSplits(const omniruntime::PlanNodeId& planNodeId) {}
+void OmniTask::noMoreSplits(const omniruntime::PlanNodeId& planNodeId)
+{
+    auto it = splitsStore_.find(planNodeId);
+    if (it != splitsStore_.end() && it->second) {
+        it->second->noMoreSplits = true;
+    }
+}
 
 } // end of omniruntime
