@@ -979,8 +979,6 @@ void CastFunction::CastNumericToString(BaseVector* input, BaseVector*& result, E
             std::string strValue;
             if constexpr (std::is_same_v<T, double>) {
                 strValue = codegen::function::DoubleToString::DoubleToStringConverter(value);
-            } else if constexpr (std::is_same_v<T, float>) {
-                strValue = codegen::function::DoubleToString::FloatToStringConverter(value);
             } else {
                 const auto castResult = type::util::Converter<OMNI_VARCHAR>::tryCast(value);
                 if (castResult.hasError()) {

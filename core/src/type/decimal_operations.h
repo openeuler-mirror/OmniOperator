@@ -2004,7 +2004,7 @@ public:
         bool isOverflow = __builtin_mul_overflow(rescaledValue, TenOfScaleMultipliers[toScale], &rescaledValue);
         // Check overflow.
         if (!valueInPrecisionRange(rescaledValue, toPrecision) || isOverflow) {
-            OMNI_FAIL("Cannot cast {} '{}' to DECIMAL({}, {})", "rescaleInt", inputValue, toPrecision, toScale);
+            return std::nullopt;
         }
         return static_cast<TOutput>(rescaledValue);
     }
@@ -2040,8 +2040,10 @@ public:
 
         // Calculate the precise fractional digits.
         const auto integralValue = static_cast<uint128_t>(std::abs(value));
-        const auto integralDigits = integralValue == 0 ? 0 : CountDigits(integralValue);
-        const auto fractionDigits = std::max(digits - integralDigits, static_cast<unsigned>(0));
+        const uint32_t integralDigits = integralValue == 0 ? 0 : CountDigits(integralValue);
+        const uint32_t digitBudget = static_cast<uint32_t>(digits);
+        const uint32_t fractionDigits =
+            digitBudget > integralDigits ? digitBudget - integralDigits : 0U;
 
         // Scales up the input value with all the precise fractional digits kept.
         // Convert value as long double type because 1) double * int128_t returns
