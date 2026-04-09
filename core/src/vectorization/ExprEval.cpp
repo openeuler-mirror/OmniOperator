@@ -128,6 +128,9 @@ void ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec, con
         case OMNI_DOUBLE:
             SetConstantValues<double>(literalVal.doubleVal, outVec);
             break;
+        case OMNI_FLOAT:
+            SetConstantValues<float>(literalVal.floatVal, outVec);
+            break;
         case OMNI_BOOLEAN:
             SetConstantValues<bool>(literalVal.boolVal, outVec);
             break;
