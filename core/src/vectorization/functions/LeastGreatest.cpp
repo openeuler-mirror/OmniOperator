@@ -207,17 +207,90 @@ void LeastGreatestFunction<Mode>::CompareBoolean(const std::vector<BaseVector *>
     }
 }
 
+namespace {
+
+template<typename TargetT, typename SourceT>
+TargetT ReadConstValue(BaseVector *vec) {
+    return static_cast<TargetT>(static_cast<ConstVector<SourceT> *>(vec)->GetConstValue());
+}
+
+template<typename TargetT, typename SourceT>
+TargetT ReadFlatValue(BaseVector *vec, int32_t row) {
+    return static_cast<TargetT>(static_cast<Vector<SourceT> *>(vec)->GetValue(row));
+}
+
+template<typename T>
+T ReadWithTypePromotion(BaseVector *vec, int32_t row, Encoding encoding) {
+    DataTypeId typeId = vec->GetTypeId();
+
+    if constexpr (std::is_same_v<T, int128_t>) {
+        switch (typeId) {
+            case OMNI_DECIMAL128:
+                if (encoding == OMNI_ENCODING_CONST) {
+                    T result;
+                    std::memcpy(&result,
+                                reinterpret_cast<const char *>(vec) + sizeof(BaseVector),
+                                sizeof(T));
+                    return result;
+                }
+                return ReadFlatValue<T, int128_t>(vec, row);
+            case OMNI_DECIMAL64:
+            case OMNI_LONG:
+            case OMNI_TIMESTAMP:
+                return (encoding == OMNI_ENCODING_CONST)
+                    ? ReadConstValue<T, int64_t>(vec) : ReadFlatValue<T, int64_t>(vec, row);
+            case OMNI_INT:
+            case OMNI_DATE32:
+                return (encoding == OMNI_ENCODING_CONST)
+                    ? ReadConstValue<T, int32_t>(vec) : ReadFlatValue<T, int32_t>(vec, row);
+            case OMNI_SHORT:
+                return (encoding == OMNI_ENCODING_CONST)
+                    ? ReadConstValue<T, int16_t>(vec) : ReadFlatValue<T, int16_t>(vec, row);
+            case OMNI_BYTE:
+                return (encoding == OMNI_ENCODING_CONST)
+                    ? ReadConstValue<T, int8_t>(vec) : ReadFlatValue<T, int8_t>(vec, row);
+            default:
+                break;
+        }
+    }
+    if constexpr (std::is_same_v<T, int64_t>) {
+        switch (typeId) {
+            case OMNI_INT:
+            case OMNI_DATE32:
+                return (encoding == OMNI_ENCODING_CONST)
+                    ? ReadConstValue<T, int32_t>(vec) : ReadFlatValue<T, int32_t>(vec, row);
+            case OMNI_SHORT:
+                return (encoding == OMNI_ENCODING_CONST)
+                    ? ReadConstValue<T, int16_t>(vec) : ReadFlatValue<T, int16_t>(vec, row);
+            case OMNI_BYTE:
+                return (encoding == OMNI_ENCODING_CONST)
+                    ? ReadConstValue<T, int8_t>(vec) : ReadFlatValue<T, int8_t>(vec, row);
+            default:
+                break;
+        }
+    }
+    if constexpr (std::is_same_v<T, double>) {
+        if (typeId == OMNI_FLOAT) {
+            return (encoding == OMNI_ENCODING_CONST)
+                ? ReadConstValue<T, float>(vec) : ReadFlatValue<T, float>(vec, row);
+        }
+    }
+
+    if (encoding == OMNI_ENCODING_CONST) {
+        return static_cast<ConstVector<T> *>(vec)->GetConstValue();
+    }
+    return static_cast<Vector<T> *>(vec)->GetValue(row);
+}
+
+} // anonymous namespace
+
 template<CompareMode Mode>
 template<typename T>
 T LeastGreatestFunction<Mode>::GetValueFromVector(BaseVector *vec, int32_t row) const {
     Encoding encoding = vec->GetEncoding();
-    
-    if (encoding == OMNI_ENCODING_CONST) {
-        auto *constVec = static_cast<ConstVector<T> *>(vec);
-        return constVec->GetConstValue();
-    } else if (encoding == OMNI_FLAT) {
-        auto *flatVec = static_cast<Vector<T> *>(vec);
-        return flatVec->GetValue(row);
+
+    if (encoding == OMNI_ENCODING_CONST || encoding == OMNI_FLAT) {
+        return ReadWithTypePromotion<T>(vec, row, encoding);
     } else if (encoding == OMNI_DICTIONARY) {
         auto *dictVec = static_cast<Vector<DictionaryContainer<T>> *>(vec);
         return dictVec->GetValue(row);
