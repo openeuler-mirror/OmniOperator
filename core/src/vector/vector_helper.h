@@ -1691,24 +1691,6 @@ public:
         dstArrVec->SetValueVector(std::shared_ptr<BaseVector>(emptyValueElemVec));
     }
 
-    static void CreateNullRowVector(int32_t rowSize, const DataTypePtr& dataType, BaseVector*& output)
-    {
-        output = new RowVector(rowSize);
-        auto rowVector = dynamic_cast<RowVector *>(output);
-        auto rowTypePtr = std::dynamic_pointer_cast<RowType>(dataType);
-        if (!rowTypePtr) {
-            OMNI_THROW("Runtime error", "DataType is marked as OMNI_ROW but actual object is not RowType");
-        }
-        for (const auto& childType : rowTypePtr->Children()) {
-            auto emptyChild = std::shared_ptr<BaseVector>(
-                    VectorHelper::CreateFlatVector(static_cast<int32_t>(childType->GetId()), 0));
-            rowVector->AddChild(emptyChild);
-        }
-        for (int32_t i = 0; i < rowSize; ++i) {
-            rowVector->SetNull(i);
-        }
-    }
-
     static void CreateNullArrayVector(int32_t rowSize, const DataTypePtr& dataType, BaseVector*& output)
     {
         output = new ArrayVector(rowSize);
@@ -1743,6 +1725,37 @@ public:
             mapVec->SetNull(i);
         }
     }
+
+    static void CreateNullRowVector(int32_t rowSize, const DataTypePtr& dataType, BaseVector*& output)
+    {
+        output = new RowVector(rowSize);
+        auto rowVector = dynamic_cast<RowVector *>(output);
+        auto rowTypePtr = std::dynamic_pointer_cast<RowType>(dataType);
+        if (!rowTypePtr) {
+            OMNI_THROW("Runtime error", "DataType is marked as OMNI_ROW but actual object is not RowType");
+        }
+        for (const auto& childTypePtr : rowTypePtr->Children()) {
+            BaseVector *childRaw = nullptr;
+            const auto cid = childTypePtr->GetId();
+            if (cid == OMNI_ROW) {
+                CreateNullRowVector(rowSize, childTypePtr, childRaw);
+            } else if (cid == OMNI_ARRAY) {
+                CreateNullArrayVector(rowSize, childTypePtr, childRaw);
+            } else if (cid == OMNI_MAP) {
+                CreateNullMapVector(rowSize, childTypePtr, childRaw);
+            } else {
+                childRaw = VectorHelper::CreateFlatVector(static_cast<int32_t>(cid), rowSize);
+                for (int32_t i = 0; i < rowSize; ++i) {
+                    childRaw->SetNull(i);
+                }
+            }
+            rowVector->AddChild(std::shared_ptr<BaseVector>(childRaw));
+        }
+        for (int32_t i = 0; i < rowSize; ++i) {
+            rowVector->SetNull(i);
+        }
+    }
+
     template <typename T>
     static bool GetValueFromVector(BaseVector *vec, int32_t row, T& result) {
         Encoding encoding = vec->GetEncoding();

@@ -370,8 +370,14 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         if (serialize != nullptr) {
             if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
                 serialize->PushBackSerializer(dicVectorSerializerCenter[omniId]);
+                if (serialize == nullptr) {
+                    serialize->PushBackSerializer(complexVectorSerializerCenter[omniId]);
+                }
             } else if (curVector->GetEncoding() == Encoding::OMNI_ENCODING_CONST) {
                 serialize->PushBackSerializer(constVectorSerializerCenter[omniId]);
+                if (serialize == nullptr) {
+                    serialize->PushBackSerializer(complexVectorSerializerCenter[omniId]);
+                }
             } else if (omniId == type::OMNI_ARRAY || omniId == type::OMNI_ROW) {
                 serialize->PushBackSerializer(complexVectorSerializerCenter[omniId]);
             } else {

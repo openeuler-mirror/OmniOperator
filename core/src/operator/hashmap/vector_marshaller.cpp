@@ -102,24 +102,52 @@ void NullRowVectorSerializer(mem::SimpleArenaAllocator &arenaAllocator, StringRe
     result.size += resSize;
 }
 
-    uint8_t GetCompactLengthSize(uint64_t value) {
-        if (value == 0) {
-            return BYTE_1;
-        }
-        int bitWidth = 64 - __builtin_clzll(value);
-        int byteSize = (bitWidth + 7) / 8;
-
-        if (byteSize > 4) {
-            return BYTE_8;
-        }
-        if (byteSize > 2) {
-            return BYTE_4;
-        }
-        if (byteSize > 1) {
-            return BYTE_2;
-        }
+uint8_t GetCompactLengthSize(uint64_t value)
+{
+    if (value == 0) {
         return BYTE_1;
     }
+    int bitWidth = 64 - __builtin_clzll(value);
+    int byteSize = (bitWidth + 7) / 8;
+
+    if (byteSize > 4) {
+        return BYTE_8;
+    }
+    if (byteSize > 2) {
+        return BYTE_4;
+    }
+    if (byteSize > 1) {
+        return BYTE_2;
+    }
+    return BYTE_1;
+}
+
+// Hash / join key serialization: respect dictionary- or const-encoded nested columns (e.g. struct fields).
+ALWAYS_INLINE VectorSerializer SelectSerializerByEncodingAndType(BaseVector *vec, type::DataTypeId typeId)
+{
+    const size_t idx = static_cast<size_t>(typeId);
+    VectorSerializer serializer = nullptr;
+    if (vec->GetEncoding() == Encoding::OMNI_DICTIONARY && idx < dicVectorSerializerCenter.size() &&
+        dicVectorSerializerCenter[typeId] != nullptr) {
+        serializer = dicVectorSerializerCenter[typeId];
+    } else if (vec->GetEncoding() == Encoding::OMNI_ENCODING_CONST && idx < constVectorSerializerCenter.size() &&
+        constVectorSerializerCenter[typeId] != nullptr) {
+        serializer = constVectorSerializerCenter[typeId];
+    }
+    if (serializer != nullptr) {
+        return serializer;
+    }
+    if (idx < vectorSerializerCenter.size()) {
+        serializer = vectorSerializerCenter[typeId];
+    }
+    if (serializer == nullptr) {
+        auto it = complexVectorSerializerCenter.find(typeId);
+        if (it != complexVectorSerializerCenter.end()) {
+            serializer = it->second;
+        }
+    }
+    return serializer;
+}
 
 void ALWAYS_INLINE ArrayVectorSerializer(ArrayVector &arrayVector, int32_t rowIdx, mem::SimpleArenaAllocator
     &arenaAllocator, StringRef &result) {
@@ -138,7 +166,7 @@ void ALWAYS_INLINE ArrayVectorSerializer(ArrayVector &arrayVector, int32_t rowId
     int64_t end = offset + size;
     auto elementTypeId = elementVec->GetTypeId();
 
-    auto serializer = vectorSerializerCenter[elementTypeId];
+    auto serializer = SelectSerializerByEncodingAndType(elementVec, static_cast<type::DataTypeId>(elementTypeId));
     if (serializer == nullptr) {
         auto message = "Finding serializer for ArrayVector element failed.";
         throw OmniException("HashAgg SERIALIZED FAILED : ", message);
@@ -166,16 +194,10 @@ void ALWAYS_INLINE RowVectorSerializer(RowVector &rowVector, int32_t rowIdx, mem
         auto &childVec = rowVector.ChildAt(i);
         auto childTypeId = static_cast<type::DataTypeId>(childVec->GetTypeId());
 
-        auto serializer = vectorSerializerCenter[childTypeId];
+        auto serializer = SelectSerializerByEncodingAndType(childVec.get(), childTypeId);
         if (serializer == nullptr) {
-            // Try complex type serializers
-            auto it = complexVectorSerializerCenter.find(childTypeId);
-            if (it != complexVectorSerializerCenter.end()) {
-                serializer = it->second;
-            } else {
-                auto message = "Finding serializer for RowVector field failed, typeId=" + std::to_string(childTypeId);
-                throw OmniException("SERIALIZED FAILED : ", message);
-            }
+            auto message = "Finding serializer for RowVector field failed, typeId=" + std::to_string(childTypeId);
+            throw OmniException("SERIALIZED FAILED : ", message);
         }
         serializer(childVec.get(), rowIdx, arenaAllocator, result);
     }
