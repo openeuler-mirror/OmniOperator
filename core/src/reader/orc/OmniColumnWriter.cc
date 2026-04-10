@@ -1936,7 +1936,7 @@ namespace omniruntime::writer {
         uint64_t count = 0;
         for (uint64_t i = 0; i < numValues; ++i) {
             uint64_t curPos = offset + i;
-            if (hasNull || !curNullsBuffer->IsNull(curPos)) {
+            if (!hasNull || !curNullsBuffer->IsNull(curPos)) {
                 std::string_view sv = dictEncoding ? dictVec->GetValue(curPos) : flatVec->GetValue(curPos);
                 uint64_t itemLength = Utf8Utils::truncateBytesTo(
                         maxLength, sv.data(), static_cast<uint64_t>(sv.length()));

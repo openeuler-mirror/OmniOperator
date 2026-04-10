@@ -154,6 +154,13 @@ void CastExpr::apply(const SelectivityVector &rows, BaseVector *input, Execution
     // to the result at the same rows.
     result = localResult;
     OMNI_CHECK(result!=nullptr, "result can not be null!");
+    // Preserve input nulls in cast result. The cast kernels only process selected
+    // non-null rows, so we must explicitly mark input-null rows as null.
+    for (int32_t row = 0; row < size; ++row) {
+        if (input->IsNull(row)) {
+            result->SetNull(row);
+        }
+    }
 }
 
 VectorPtr CastExpr::applyMap(const SelectivityVector &rows, const MapVector *input, ExecutionContext &context,
