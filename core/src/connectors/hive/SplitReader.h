@@ -196,6 +196,7 @@ protected:
                 break;
             case omniruntime::type::OMNI_CHAR:
             case omniruntime::type::OMNI_VARCHAR:
+            case omniruntime::type::OMNI_VARBINARY:
                 result = new vec::ConstVector<std::string_view>(
                     std::string_view(), dataTypeId, batchRowSize);
                 break;
@@ -250,7 +251,8 @@ protected:
                 return new vec::ConstVector<bool>(item, dataTypeId, batchRowSize);
             }
             case omniruntime::type::OMNI_CHAR:
-            case omniruntime::type::OMNI_VARCHAR: {
+            case omniruntime::type::OMNI_VARCHAR:
+            case omniruntime::type::OMNI_VARBINARY: {
                 return new vec::ConstVector<std::string_view>(
                     std::string_view(val), dataTypeId, batchRowSize);
             }
@@ -318,7 +320,8 @@ protected:
                 break;
             }
             case omniruntime::type::OMNI_CHAR:
-            case omniruntime::type::OMNI_VARCHAR: {
+            case omniruntime::type::OMNI_VARCHAR:
+            case omniruntime::type::OMNI_VARBINARY: {
                 omniruntime::vec::VectorHelper::SetValue(vector, index, &val);
                 break;
             }
