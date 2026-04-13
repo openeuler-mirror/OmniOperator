@@ -32,7 +32,7 @@ public:
         auto condVec = args.top();
         args.pop();
         auto *boolVec = static_cast<Vector<bool> *>(condVec);
-        auto size = boolVec->GetSize();
+        auto size = context->GetResultRowSize();
         DataTypeId typeId = outputType->GetId();
         CreateResultVector(typeId, size, trueVec, result);
         for (int32_t row = 0; row < size; ++row) {
@@ -55,34 +55,26 @@ public:
             switch (typeId) {
                 case OMNI_BOOLEAN :
                 {
-                    auto res = temp->GetEncoding() == OMNI_ENCODING_CONST ?
-                        static_cast<ConstVector<bool> *>(temp)->GetConstValue() :
-                        static_cast<Vector<bool> *>(temp)->GetValue(row);
+                    auto res = VectorHelper::GetValueFromVector<bool>(temp, row);
                     VectorHelper::SetValue(result, row, &res);
                     break;
                 }
                 case OMNI_BYTE :
                 {
-                    auto res = temp->GetEncoding() == OMNI_ENCODING_CONST ?
-                        static_cast<ConstVector<int8_t> *>(temp)->GetConstValue() :
-                        static_cast<Vector<int8_t> *>(temp)->GetValue(row);
+                    auto res = VectorHelper::GetValueFromVector<int8_t>(temp, row);
                     VectorHelper::SetValue(result, row, &res);
                     break;
                 }
                 case OMNI_SHORT :
                 {
-                    auto res = temp->GetEncoding() == OMNI_ENCODING_CONST ?
-                        static_cast<ConstVector<int16_t> *>(temp)->GetConstValue() :
-                        static_cast<Vector<int16_t> *>(temp)->GetValue(row);
+                    auto res = VectorHelper::GetValueFromVector<int16_t>(temp, row);
                     VectorHelper::SetValue(result, row, &res);
                     break;
                 }
                 case OMNI_INT :
                 case OMNI_DATE32 :
                 {
-                    auto res = temp->GetEncoding() == OMNI_ENCODING_CONST ?
-                        static_cast<ConstVector<int32_t> *>(temp)->GetConstValue() :
-                        static_cast<Vector<int32_t> *>(temp)->GetValue(row);
+                    auto res = VectorHelper::GetValueFromVector<int32_t>(temp, row);
                     VectorHelper::SetValue(result, row, &res);
                     break;
                 }
@@ -91,46 +83,33 @@ public:
                 case OMNI_TIMESTAMP :
                 case OMNI_DECIMAL64 :
                 {
-                    auto res = temp->GetEncoding() == OMNI_ENCODING_CONST ?
-                        static_cast<ConstVector<int64_t> *>(temp)->GetConstValue() :
-                        static_cast<Vector<int64_t> *>(temp)->GetValue(row);
+                    auto res = VectorHelper::GetValueFromVector<int64_t>(temp, row);
                     VectorHelper::SetValue(result, row, &res);
                     break;
                 }
                 case OMNI_FLOAT :
                 {
-                    auto res = temp->GetEncoding() == OMNI_ENCODING_CONST ?
-                        static_cast<ConstVector<float> *>(temp)->GetConstValue() :
-                        static_cast<Vector<float> *>(temp)->GetValue(row);
+                    auto res = VectorHelper::GetValueFromVector<float>(temp, row);
                     VectorHelper::SetValue(result, row, &res);
                     break;
                 }
                 case OMNI_DOUBLE :
                 {
-                    auto res = temp->GetEncoding() == OMNI_ENCODING_CONST ?
-                        static_cast<ConstVector<double> *>(temp)->GetConstValue() :
-                        static_cast<Vector<double> *>(temp)->GetValue(row);
+                    auto res = VectorHelper::GetValueFromVector<double>(temp, row);
                     VectorHelper::SetValue(result, row, &res);
                     break;
                 }
                 case OMNI_VARCHAR :
                 case OMNI_VARBINARY :
                 {
-                    auto res = temp->GetEncoding() == OMNI_ENCODING_CONST ?
-                       static_cast<ConstVector<std::string_view> *>(temp)->GetConstValue() :
-                       static_cast<Vector<LargeStringContainer<std::string_view>> *>(temp)->GetValue(row);
+                    auto res = VectorHelper::GetStringValueFromVector(temp, row);
                     static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, res);
                     break;
                 }
                 case OMNI_DECIMAL128 :
                 {
-                    if (temp->GetEncoding() == OMNI_ENCODING_CONST) {
-                        Decimal128 *res = new Decimal128(std::string_view(*static_cast<ConstVector<std::string *> *>(temp)->GetConstValue()));
-                        VectorHelper::SetValue(result, row, res);
-                    } else {
-                        auto res = static_cast<Vector<Decimal128> *>(temp)->GetValue(row);
-                        VectorHelper::SetValue(result, row, &res);
-                    }
+                    auto res = VectorHelper::GetValueFromVector<Decimal128>(temp, row);
+                    VectorHelper::SetValue(result, row, &res);
                     break;
                 }
                 case OMNI_ARRAY :

@@ -230,57 +230,48 @@ public:
         const auto right = args.top();
         args.pop();
         auto inputTypeId = left->GetTypeId();
-        auto size = left->GetSize();
+        auto size = context->GetResultRowSize();
         if (result == nullptr) {
             result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
         }
         for (size_t i = 0; i < size; i++) {
             if (left->IsNull(i) && right->IsNull(i)) {
-                dynamic_cast<Vector<bool> *>(result)->SetValue(i, true);
+                static_cast<Vector<bool> *>(result)->SetValue(i, true);
             } else if (left->IsNull(i) || right->IsNull(i)) {
-                dynamic_cast<Vector<bool> *>(result)->SetValue(i, false);
+                static_cast<Vector<bool> *>(result)->SetValue(i, false);
             } else {
                 switch (inputTypeId) {
                     case OMNI_BOOLEAN:
-                        dynamic_cast<Vector<bool> *>(result)->SetValue(i,
-                            dynamic_cast<Vector<bool> *>(left)->GetValue(i) == dynamic_cast<Vector<bool> *>(right)->GetValue(i));
+                        static_cast<Vector<bool> *>(result)->SetValue(i, VectorHelper::GetValueFromVector<bool>(left, i) == VectorHelper::GetValueFromVector<bool>(right, i));
                         break;
                     case OMNI_BYTE:
-                        dynamic_cast<Vector<bool> *>(result)->SetValue(i,
-                            dynamic_cast<Vector<int8_t> *>(left)->GetValue(i) == dynamic_cast<Vector<int8_t> *>(right)->GetValue(i));
+                        static_cast<Vector<bool> *>(result)->SetValue(i, VectorHelper::GetValueFromVector<int8_t>(left, i) == VectorHelper::GetValueFromVector<int8_t>(right, i));
                         break;
                     case OMNI_SHORT:
-                        dynamic_cast<Vector<bool> *>(result)->SetValue(i,
-                            dynamic_cast<Vector<int16_t> *>(left)->GetValue(i) == dynamic_cast<Vector<int16_t> *>(right)->GetValue(i));
+                        static_cast<Vector<bool> *>(result)->SetValue(i, VectorHelper::GetValueFromVector<int16_t>(left, i) == VectorHelper::GetValueFromVector<int16_t>(right, i));
                         break;
                     case OMNI_INT:
                     case OMNI_DATE32:
-                        dynamic_cast<Vector<bool> *>(result)->SetValue(i,
-                            dynamic_cast<Vector<int32_t> *>(left)->GetValue(i) == dynamic_cast<Vector<int32_t> *>(right)->GetValue(i));
+                        static_cast<Vector<bool> *>(result)->SetValue(i, VectorHelper::GetValueFromVector<int32_t>(left, i) == VectorHelper::GetValueFromVector<int32_t>(right, i));
                         break;
                     case OMNI_LONG:
                     case OMNI_TIMESTAMP:
                     case OMNI_DECIMAL64:
-                        dynamic_cast<Vector<bool> *>(result)->SetValue(i,
-                            dynamic_cast<Vector<int64_t> *>(left)->GetValue(i) == dynamic_cast<Vector<int64_t> *>(right)->GetValue(i));
+                        static_cast<Vector<bool> *>(result)->SetValue(i, VectorHelper::GetValueFromVector<int64_t>(left, i) == VectorHelper::GetValueFromVector<int64_t>(right, i));
                         break;
                     case OMNI_FLOAT:
-                        dynamic_cast<Vector<bool> *>(result)->SetValue(i,
-                            equal(dynamic_cast<Vector<float> *>(left)->GetValue(i),dynamic_cast<Vector<float> *>(right)->GetValue(i)));
+                        static_cast<Vector<bool> *>(result)->SetValue(i, VectorHelper::GetValueFromVector<float>(left, i) == VectorHelper::GetValueFromVector<float>(right, i));
                         break;
                     case OMNI_DOUBLE:
-                        dynamic_cast<Vector<bool> *>(result)->SetValue(i,
-                            equal(dynamic_cast<Vector<double> *>(left)->GetValue(i), dynamic_cast<Vector<double> *>(right)->GetValue(i)));
+                        static_cast<Vector<bool> *>(result)->SetValue(i, VectorHelper::GetValueFromVector<double>(left, i) == VectorHelper::GetValueFromVector<double>(right, i));
                         break;
                     case OMNI_CHAR:
                     case OMNI_VARCHAR:
                     case OMNI_VARBINARY:
-                        dynamic_cast<Vector<bool> *>(result)->SetValue(i,
-                            dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(left)->GetValue(i) == dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(right)->GetValue(i));
+                        static_cast<Vector<bool> *>(result)->SetValue(i, VectorHelper::GetStringValueFromVector(left, i) == VectorHelper::GetStringValueFromVector(right, i));
                         break;
                     case OMNI_DECIMAL128:
-                        dynamic_cast<Vector<bool> *>(result)->SetValue(i,
-                            dynamic_cast<Vector<Decimal128> *>(left)->GetValue(i) == dynamic_cast<Vector<Decimal128> *>(right)->GetValue(i));
+                        static_cast<Vector<bool> *>(result)->SetValue(i, VectorHelper::GetValueFromVector<Decimal128>(left, i) == VectorHelper::GetValueFromVector<Decimal128>(right, i));
                         break;
                     default: ;
                 }

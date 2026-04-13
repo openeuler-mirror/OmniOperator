@@ -639,11 +639,17 @@ bool tryParseDateString(const char *buf, size_t len, size_t &pos, int64_t &daysS
         return false;
     }
     // First parse the year.
-    for (; pos < len && characterIsDigit(buf[pos]); pos++) {
-        year = checkedPlus((buf[pos] - '0'), checkedMultiply(year, 10));
-        if (year > kMaxYear) {
-            break;
+    try {
+        for (; pos < len && characterIsDigit(buf[pos]); pos++) {
+            year = checkedPlus((buf[pos] - '0'), checkedMultiply(year, 10));
+            if (year > kMaxYear) {
+                break;
+            }
         }
+    } catch (const omniruntime::exception::OmniException &) {
+        // Treat integer overflow (or other checked* errors) as parse failure,
+        // so callers get an Expected<T> error instead of an exception.
+        return false;
     }
     /// Spark digits of year must >= 4. The following formats are allowed:
     /// `[+-]yyyy*`

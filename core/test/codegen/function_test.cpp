@@ -175,6 +175,12 @@ TEST(FunctionTest, XxH64Long)
     EXPECT_EQ(XxH64Int64(123L, false, 42, false), -3178482946328430151);
 }
 
+TEST(FunctionTest, XxH64Float)
+{
+    float v = -1.47579571e9f;
+    EXPECT_EQ(XxH64Float(v, false, 42, false), -5090957869082801309);
+}
+
 TEST(FunctionTest, XxH64Double)
 {
     EXPECT_EQ(XxH64Double(123.456, false, 42, false), -6938331816624033461);
