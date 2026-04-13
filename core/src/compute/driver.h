@@ -129,6 +129,9 @@ public:
 
     PipelineStats pipelineStats()
     {
+        if (!closed_) {
+            updatePipelineStats();
+        }
         return pipelineStats_;
     }
 
