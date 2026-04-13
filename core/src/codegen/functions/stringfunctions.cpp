@@ -1571,8 +1571,11 @@ extern "C" DLLEXPORT const char *RegexpReplace(int64_t contextPtr, const char *s
     bool isNull, int32_t *outLen)
 {
     *outLen = 0;
-    if (isNull || stringInputLen <= 0 || patternLen <= 0 || replacementLen < 0 || stringInput == nullptr || pattern == nullptr) {
+    if (isNull || stringInputLen < 0 || patternLen <= 0 || replacementLen < 0 || stringInput == nullptr || pattern == nullptr) {
         return nullptr;
+    }
+    if (stringInputLen == 0) {
+        return reinterpret_cast<const char *>(EMPTY);
     }
 
     const int32_t start_pos = std::max(position - 1, static_cast<int32_t>(0));
@@ -1667,7 +1670,7 @@ extern "C" DLLEXPORT const char *RegexpReplace(int64_t contextPtr, const char *s
     const size_t length = buf.size();
     if (length == 0) {
         *outLen = 0;
-        return nullptr;
+        return reinterpret_cast<const char *>(EMPTY);
     }
 
     auto result = ArenaAllocatorMalloc(contextPtr, length);
