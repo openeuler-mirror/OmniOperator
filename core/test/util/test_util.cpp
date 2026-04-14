@@ -849,7 +849,13 @@ bool CompareStructUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const do
         auto expectedChild = expectedVec->ChildAt(childIndex).get();
 
         if (resultChild->GetTypeId() != expectedChild->GetTypeId()) {
-            throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Child type does not match!");
+            auto rid = resultChild->GetTypeId();
+            auto eid = expectedChild->GetTypeId();
+            bool charVarcharCompat =
+                (rid == OMNI_VARCHAR || rid == OMNI_CHAR) && (eid == OMNI_VARCHAR || eid == OMNI_CHAR);
+            if (!charVarcharCompat) {
+                throw omniruntime::exception::OmniException("RUNTIME_ERROR", "Child type does not match!");
+            }
         }
 
         if (!ColumnMatchIgnoreOrder(resultChild, expectedChild, error)) {

@@ -73,10 +73,15 @@ void ExecuteLeastGreatest(const std::string& funcName,
                            const std::vector<BaseVector*>& inputs,
                            DataTypeId outputTypeId,
                            BaseVector*& result) {
+    // Ensure vector functions are registered for unit tests.
+    link_register_functions();
+
     // Build signature for lookup
     std::vector<DataTypeId> inputTypes;
-    inputTypes.push_back(inputs[0]->GetTypeId());
-    inputTypes.push_back(inputs[0]->GetTypeId());
+    inputTypes.reserve(inputs.size());
+    for (const auto* input : inputs) {
+        inputTypes.push_back(input->GetTypeId());
+    }
 
     auto signature = std::make_shared<FunctionSignature>(funcName, inputTypes, outputTypeId);
     auto function = VectorFunction::Find(signature);
@@ -138,6 +143,7 @@ void ValidateNumericResult(BaseVector* result, const std::vector<T>& expected, c
 
 // Validate string result
 void ValidateStringResult(BaseVector* result, const std::vector<std::string>& expected, const std::vector<bool>& expectedNulls) {
+    ASSERT_NE(result, nullptr) << "Result vector is null";
     ASSERT_EQ(result->GetSize(), static_cast<int32_t>(expected.size()));
     auto* flatVec = static_cast<Vector<LargeStringContainer<std::string_view>>*>(result);
     
@@ -321,8 +327,8 @@ TEST(GreatestTest, StringBasic) {
     BaseVector* arg3Vec = CreateStringVectorWithValues(vals3, noNulls);
     
     BaseVector* resultVec = nullptr;
-    // CreateStringVector returns OMNI_CHAR
-    ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec, arg3Vec}, OMNI_CHAR, resultVec);
+    // CreateStringVector now defaults to OMNI_VARCHAR.
+    ExecuteLeastGreatest("Greatest", {arg1Vec, arg2Vec, arg3Vec}, OMNI_VARCHAR, resultVec);
     
     ValidateStringResult(resultVec, {"b", "cherry", "zebra"}, noNulls);
 
@@ -527,7 +533,7 @@ TEST(LeastTest, StringBasic) {
     BaseVector* arg3Vec = CreateStringVectorWithValues(vals3, noNulls);
     
     BaseVector* resultVec = nullptr;
-    ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec, arg3Vec}, OMNI_CHAR, resultVec);
+    ExecuteLeastGreatest("Least", {arg1Vec, arg2Vec, arg3Vec}, OMNI_VARCHAR, resultVec);
     
     ValidateStringResult(resultVec, {"abcde", "apple", "alpha"}, noNulls);
 

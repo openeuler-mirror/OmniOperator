@@ -224,13 +224,21 @@ template <typename CONTAINER> void string_vector_slice()
 template <typename CONTAINER> void string_vector_get_datatype()
 {
     int vectorSize = 1000;
-    DataTypeId expect = type::OMNI_CHAR;
+    DataTypeId expect = type::OMNI_VARCHAR;
 
     auto baseVector = VectorHelper::CreateStringVector(vectorSize);
     auto *vector = (Vector<CONTAINER> *)baseVector;
 
     EXPECT_EQ(vector->GetTypeId(), expect);
     EXPECT_EQ(baseVector->GetTypeId(), expect);
+    delete vector;
+}
+
+template <typename CONTAINER> void string_vector_get_datatype_explicit_char()
+{
+    int vectorSize = 1000;
+    auto *vector = new Vector<CONTAINER>(vectorSize, INITIAL_STRING_SIZE, type::OMNI_CHAR);
+    EXPECT_EQ(vector->GetTypeId(), type::OMNI_CHAR);
     delete vector;
 }
 
@@ -315,6 +323,11 @@ TEST(vector2, slice_container_large_string)
 TEST(vector2, string_vector_get_datatype)
 {
     string_vector_get_datatype<LargeStringContainer<std::string_view>>();
+}
+
+TEST(vector2, string_vector_get_datatype_explicit_char)
+{
+    string_vector_get_datatype_explicit_char<LargeStringContainer<std::string_view>>();
 }
 
 TEST(vector2, string_vector_get_large_size)

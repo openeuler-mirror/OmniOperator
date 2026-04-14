@@ -5,8 +5,18 @@
 
 #include "row_vector.h"
 #include "vector_helper.h"
+#include "util/debug.h"
 
 namespace omniruntime::vec {
+namespace {
+    /** Flat/dictionary string columns use the same physical vector; only logical CHAR vs VARCHAR may differ. */
+    bool BothOmniCharOrVarchar(type::DataTypeId a, type::DataTypeId b)
+    {
+        const bool aStr = (a == type::OMNI_VARCHAR || a == type::OMNI_CHAR);
+        const bool bStr = (b == type::OMNI_VARCHAR || b == type::OMNI_CHAR);
+        return aStr && bStr;
+    }
+} // namespace
     RowVector *RowVector::CopyPositions(const int *positions, int positionOffset, int length)
     {
         if (UNLIKELY((positions == nullptr) || (length < 0))) {
@@ -37,10 +47,15 @@ namespace omniruntime::vec {
 
         auto *otherRowVector = static_cast<RowVector *>(other);
         if (UNLIKELY(otherRowVector == nullptr)) {
+            LogError("RowVector::Append: other is not a RowVector (cast failed), positionOffset=%d length=%d",
+                positionOffset, length);
             std::string message = "RowVector::Append expects another RowVector";
             throw OmniException("TYPE_MISMATCH_ERROR", message);
         }
         if (UNLIKELY(children_.size() != otherRowVector->ChildSize())) {
+            LogError(
+                "RowVector::Append: child count mismatch: dstChildCount=%zu srcChildCount=%zu positionOffset=%d length=%d",
+                children_.size(), static_cast<size_t>(otherRowVector->ChildSize()), positionOffset, length);
             std::string message = "RowVector child count mismatch: " +
                                   std::to_string(children_.size()) + " vs " +
                                   std::to_string(otherRowVector->ChildSize());
@@ -60,9 +75,27 @@ namespace omniruntime::vec {
         for (int i = 0 ; i < children_.size(); i++) {
             BaseVector* child = children_[i].get();
             BaseVector* otherChild = otherRowVector->ChildAt(i).get();
-            if (UNLIKELY(child->GetTypeId() != otherChild->GetTypeId())) {
-                std::string message = "RowVector child type mismatch at index " + std::to_string(i);
-                throw OmniException("TYPE_MISMATCH_ERROR", message);
+            type::DataTypeId dti = child->GetTypeId();
+            type::DataTypeId sti = otherChild->GetTypeId();
+            if (UNLIKELY(dti != sti)) {
+                if (BothOmniCharOrVarchar(dti, sti)) {
+                    // Expected when plan uses VARCHAR but scan/struct child is CHAR (or vice versa); avoid LogWarn per row.
+                    LogDebug(
+                        "RowVector::Append: CHAR/VARCHAR compatible append at struct field index=%d: "
+                        "dstTypeId=%d dstEncoding=%d srcTypeId=%d srcEncoding=%d",
+                        i, static_cast<int>(dti), static_cast<int>(child->GetEncoding()),
+                        static_cast<int>(sti), static_cast<int>(otherChild->GetEncoding()));
+                } else {
+                    LogError(
+                        "RowVector::Append: child type mismatch at struct field index=%d: "
+                        "dstTypeId=%d dstEncoding=%d srcTypeId=%d srcEncoding=%d "
+                        "positionOffset=%d length=%d dstRowSize=%d srcRowSize=%d",
+                        i, static_cast<int>(dti), static_cast<int>(child->GetEncoding()),
+                        static_cast<int>(sti), static_cast<int>(otherChild->GetEncoding()),
+                        positionOffset, length, GetSize(), otherRowVector->GetSize());
+                    std::string message = "RowVector child type mismatch at index " + std::to_string(i);
+                    throw OmniException("TYPE_MISMATCH_ERROR", message);
+                }
             }
 
             child->Expand(newSize);

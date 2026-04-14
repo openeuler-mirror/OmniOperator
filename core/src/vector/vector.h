@@ -685,10 +685,11 @@ private:
 template <typename RAW_DATA_TYPE>
 class Vector<LargeStringContainer<RAW_DATA_TYPE>> final : public Vector<RAW_DATA_TYPE> {
 public:
-    explicit Vector(int size, int capacityInBytes = INITIAL_STRING_SIZE)
+    explicit Vector(int size, int capacityInBytes = INITIAL_STRING_SIZE,
+        DataTypeId stringDataTypeId = OMNI_VARCHAR)
         : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT)
     {
-        this->dataTypeId = OMNI_CHAR;
+        this->dataTypeId = stringDataTypeId;
         // default string_view vector use large string encoding
         this->container = std::make_shared<LargeStringContainer<std::string_view>>(size, capacityInBytes);
         // vector class capacity, nullsBuffer class capacity and values total capacity
@@ -700,7 +701,7 @@ public:
 
     // used for vector slice, sliced vector use same container as parent vector
     explicit Vector(int size, std::shared_ptr<LargeStringContainer<std::string_view>> container,
-        NullsBuffer *nullsBufferPtr, DataTypeId dataTypeId = OMNI_CHAR, int32_t sliceOffset = 0)
+        NullsBuffer *nullsBufferPtr, DataTypeId dataTypeId = OMNI_VARCHAR, int32_t sliceOffset = 0)
         : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT, nullsBufferPtr, sliceOffset), container(container)
     {
         this->dataTypeId = dataTypeId;
@@ -814,7 +815,7 @@ public:
             throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
-        auto vector = new Vector<LargeStringContainer<std::string_view>>(length);
+        auto vector = new Vector<LargeStringContainer<std::string_view>>(length, INITIAL_STRING_SIZE, this->dataTypeId);
         auto startPositions = positions + offset;
         for (int32_t i = 0; i < length; i++) {
             auto position = startPositions[i];

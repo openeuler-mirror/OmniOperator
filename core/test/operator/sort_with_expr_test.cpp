@@ -529,23 +529,29 @@ TEST(SortWithExprTest, TestSortMapElementAtExprAsc)
     auto queryConfig = config::QueryConfig(config);
     operatorFactory->SetQueryConfig(queryConfig);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
-    sortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
-    sortOperator->GetOutput(&outputVecBatch);
+    try {
+        sortOperator->AddInput(vecBatch);
+        sortOperator->GetOutput(&outputVecBatch);
 
-    auto *expectIdVector = new Vector<int32_t>(rowCount);
-    expectIdVector->SetValue(0, 20);
-    expectIdVector->SetValue(1, 30);
-    expectIdVector->SetValue(2, 10);
-    auto *expectMapVector = CreateStringIntMapVector({0, 1, 2, 4}, {"k0", "k0", "k0", "k1"}, {1, 2, 3, 9});
-    auto *expectVecBatch = new VectorBatch(rowCount);
-    expectVecBatch->Append(expectIdVector);
-    expectVecBatch->Append(expectMapVector);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+        auto *expectIdVector = new Vector<int32_t>(rowCount);
+        expectIdVector->SetValue(0, 20);
+        expectIdVector->SetValue(1, 30);
+        expectIdVector->SetValue(2, 10);
+        auto *expectMapVector = CreateStringIntMapVector({0, 1, 2, 4}, {"k0", "k0", "k0", "k1"}, {1, 2, 3, 9});
+        auto *expectVecBatch = new VectorBatch(rowCount);
+        expectVecBatch->Append(expectIdVector);
+        expectVecBatch->Append(expectMapVector);
+        EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+        VectorHelper::FreeVecBatch(expectVecBatch);
+    } catch (const std::exception &e) {
+        ADD_FAILURE() << "Unexpected exception: " << e.what();
+    } catch (...) {
+        ADD_FAILURE() << "Unknown exception during sort execution";
+    }
 
     Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     delete operatorFactory;
 }
