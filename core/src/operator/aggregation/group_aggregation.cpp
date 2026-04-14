@@ -21,6 +21,28 @@ using namespace omniruntime::type;
 
 static constexpr int32_t UNSPILL_ROW_COUNT_ONE_BATCH = 128;
 
+static ALWAYS_INLINE uint8_t PackedBitWidthForType(int32_t typeId)
+{
+    switch (typeId) {
+        case OMNI_BYTE:
+            return 8;
+        case OMNI_SHORT:
+            return 16;
+        case OMNI_INT:
+        case OMNI_DATE32:
+        case OMNI_TIME32:
+            return 32;
+        case OMNI_LONG:
+        case OMNI_TIMESTAMP:
+        case OMNI_DECIMAL64:
+        case OMNI_DATE64:
+        case OMNI_TIME64:
+            return 64;
+        default:
+            return 0;
+    }
+}
+
 using SetVector = void (*)(VectorBatch *vecBatch, int32_t rowCount);
 template <typename V> void SetVectorImpl(VectorBatch *vecBatch, int32_t rowCount)
 {
@@ -170,6 +192,29 @@ void HashAggregationOperatorFactory::ChooseGroupByType()
             return;
         }
     }
+    if (groupByTypes.GetSize() > 1) {
+        int32_t valueBits = 0;
+        for (int32_t i = 0; i < groupByTypes.GetSize(); ++i) {
+            auto typeId = groupByTypes.GetIds()[i];
+            auto bits = PackedBitWidthForType(typeId);
+            if (bits == 0) {
+                handleType = HandleType::serialize;
+                return;
+            }
+            valueBits += bits;
+        }
+        int32_t totalBits = valueBits + static_cast<int32_t>(groupByTypes.GetSize()); // + null mask bits
+        if (totalBits > 0 && totalBits <= 32) {
+            handleType = HandleType::packedInt32;
+            return;
+        } else if (totalBits <= 64) {
+            handleType = HandleType::packedInt64;
+            return;
+        } else if (totalBits <= 128) {
+            handleType = HandleType::packedInt128;
+            return;
+        }
+    }
     handleType = HandleType::serialize;
 }
 
@@ -200,6 +245,29 @@ OmniStatus HashAggregationOperator::Init()
         fixedInt64 = std::make_unique<decltype(fixedInt64)::element_type>();
     } else if (groupByColumnsHandleType == HandleType::fixedInt16) {
         fixedInt16 = std::make_unique<decltype(fixedInt16)::element_type>();
+    } else if (groupByColumnsHandleType == HandleType::packedInt32 || groupByColumnsHandleType == HandleType::packedInt64 ||
+        groupByColumnsHandleType == HandleType::packedInt128) {
+        std::vector<int32_t> typeIds;
+        std::vector<uint8_t> bitWidths;
+        typeIds.reserve(groupByCols.size());
+        bitWidths.reserve(groupByCols.size());
+        for (const auto &c : groupByCols) {
+            auto typeId = static_cast<int32_t>(c.input->GetId());
+            auto bits = PackedBitWidthForType(typeId);
+            if (bits == 0) {
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+                    "Packed group-by key does not support typeId " + std::to_string(typeId));
+            }
+            typeIds.emplace_back(typeId);
+            bitWidths.emplace_back(bits);
+        }
+        if (groupByColumnsHandleType == HandleType::packedInt32) {
+            packedInt32 = std::make_unique<decltype(packedInt32)::element_type>(std::move(typeIds), std::move(bitWidths));
+        } else if (groupByColumnsHandleType == HandleType::packedInt64) {
+            packedInt64 = std::make_unique<decltype(packedInt64)::element_type>(std::move(typeIds), std::move(bitWidths));
+        } else {
+            packedInt128 = std::make_unique<decltype(packedInt128)::element_type>(std::move(typeIds), std::move(bitWidths));
+        }
     } else {
         // only the serialization method is used now
         std::string omniExceptionInfo =
@@ -400,6 +468,15 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         Emplace(fixedInt64, vecBatch, groupVectors, groupColNum);
     } else if (groupByColumnsHandleType == HandleType::fixedInt16) {
         Emplace(fixedInt16, vecBatch, groupVectors, groupColNum);
+    } else if (groupByColumnsHandleType == HandleType::packedInt32) {
+        packedInt32->Prepare(groupVectors, groupColNum);
+        Emplace(packedInt32, vecBatch, groupVectors, groupColNum);
+    } else if (groupByColumnsHandleType == HandleType::packedInt64) {
+        packedInt64->Prepare(groupVectors, groupColNum);
+        Emplace(packedInt64, vecBatch, groupVectors, groupColNum);
+    } else if (groupByColumnsHandleType == HandleType::packedInt128) {
+        packedInt128->Prepare(groupVectors, groupColNum);
+        Emplace(packedInt128, vecBatch, groupVectors, groupColNum);
     } else {
         // only serialize method are used now
         VectorHelper::FreeVecBatch(vecBatch);
@@ -575,6 +652,12 @@ int32_t HashAggregationOperator::GetOutput(VectorBatch **outputVecBatch)
         expectedBatchSize = Output(fixedInt64, outputVecBatch);
     } else if (groupByColumnsHandleType == HandleType::fixedInt16) {
         expectedBatchSize = Output(fixedInt16, outputVecBatch);
+    } else if (groupByColumnsHandleType == HandleType::packedInt32) {
+        expectedBatchSize = Output(packedInt32, outputVecBatch);
+    } else if (groupByColumnsHandleType == HandleType::packedInt64) {
+        expectedBatchSize = Output(packedInt64, outputVecBatch);
+    } else if (groupByColumnsHandleType == HandleType::packedInt128) {
+        expectedBatchSize = Output(packedInt128, outputVecBatch);
     } else {
         SetStatus(OMNI_STATUS_ERROR);
         LogError("other groupby field handle type %d not implement now ", groupByColumnsHandleType);
@@ -1171,6 +1254,12 @@ ErrorCode HashAggregationOperator::SpillToDisk()
         totalSpillCount = fixedInt64->hashmap.GetElementsSize();
     } else if (fixedInt16 != nullptr) {
         totalSpillCount = fixedInt16->hashmap.GetElementsSize();
+    } else if (packedInt32 != nullptr) {
+        totalSpillCount = packedInt32->hashmap.GetElementsSize();
+    } else if (packedInt64 != nullptr) {
+        totalSpillCount = packedInt64->hashmap.GetElementsSize();
+    } else if (packedInt128 != nullptr) {
+        totalSpillCount = packedInt128->hashmap.GetElementsSize();
     }
     aggregationSort->ResizeKvVector(totalSpillCount);
 
@@ -1224,6 +1313,42 @@ ErrorCode HashAggregationOperator::SpillToDisk()
                     aggregationSortPtr->ParseNullHashMapToVector(key, value, lambdaRowIndex);
                     ++lambdaRowIndex;
                 });
+        } else if (packedInt32 != nullptr) {
+            auto statefulMachine = packedInt32->hashmap.GetOutputMachine(spillOutputState.outputHashmapPos,
+                spillOutputState.hasBeenOutputNum);
+            curOutputState = statefulMachine.HandleElements(totalSpillCount,
+                [&](const auto &key, auto &value) mutable {
+                    aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, lambdaRowIndex);
+                    ++lambdaRowIndex;
+                },
+                [&](const auto &key, auto &value) mutable {
+                    aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, lambdaRowIndex);
+                    ++lambdaRowIndex;
+                });
+        } else if (packedInt64 != nullptr) {
+            auto statefulMachine = packedInt64->hashmap.GetOutputMachine(spillOutputState.outputHashmapPos,
+                spillOutputState.hasBeenOutputNum);
+            curOutputState = statefulMachine.HandleElements(totalSpillCount,
+                [&](const auto &key, auto &value) mutable {
+                    aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, lambdaRowIndex);
+                    ++lambdaRowIndex;
+                },
+                [&](const auto &key, auto &value) mutable {
+                    aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, lambdaRowIndex);
+                    ++lambdaRowIndex;
+                });
+        } else if (packedInt128 != nullptr) {
+            auto statefulMachine = packedInt128->hashmap.GetOutputMachine(spillOutputState.outputHashmapPos,
+                spillOutputState.hasBeenOutputNum);
+            curOutputState = statefulMachine.HandleElements(totalSpillCount,
+                [&](const auto &key, auto &value) mutable {
+                    aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, lambdaRowIndex);
+                    ++lambdaRowIndex;
+                },
+                [&](const auto &key, auto &value) mutable {
+                    aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, lambdaRowIndex);
+                    ++lambdaRowIndex;
+                });
         }
     }
     spillOutputState.UpdateState(curOutputState);
@@ -1248,6 +1373,12 @@ ErrorCode HashAggregationOperator::SpillHashMap()
         rowCount = fixedInt64->GetElementsSize();
     } else if (fixedInt16 != nullptr) {
         rowCount = fixedInt16->GetElementsSize();
+    } else if (packedInt32 != nullptr) {
+        rowCount = packedInt32->GetElementsSize();
+    } else if (packedInt64 != nullptr) {
+        rowCount = packedInt64->GetElementsSize();
+    } else if (packedInt128 != nullptr) {
+        rowCount = packedInt128->GetElementsSize();
     }
     if (rowCount == 0) {
         return ErrorCode::SUCCESS;
@@ -1304,6 +1435,12 @@ uint64_t HashAggregationOperator::GetHashMapUniqueKeys()
         return fixedInt64->hashmap.GetElementsSize();
     } else if (fixedInt16 != nullptr) {
         return fixedInt16->hashmap.GetElementsSize();
+    } else if (packedInt32 != nullptr) {
+        return packedInt32->hashmap.GetElementsSize();
+    } else if (packedInt64 != nullptr) {
+        return packedInt64->hashmap.GetElementsSize();
+    } else if (packedInt128 != nullptr) {
+        return packedInt128->hashmap.GetElementsSize();
     }
     return 0;
 }
@@ -1413,14 +1550,50 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithoutAgg(VectorBatch *o
             if (serialize != nullptr) {
                 serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, rowIdx);
             } else if (fixedInt32 != nullptr) {
-                auto key = static_cast<int32_t>(std::stoi(keyRef.ToString()));
-                fixedInt32->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                if (keyRef.size > 0) {
+                    auto key = static_cast<int32_t>(std::stoi(keyRef.ToString()));
+                    fixedInt32->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                } else {
+                    fixedInt32->ParseNull(0, groupOutputVectors, groupColNum, rowIdx);
+                }
             } else if (fixedInt64 != nullptr) {
-                auto key = static_cast<int64_t>(std::stoi(keyRef.ToString()));
-                fixedInt64->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                if (keyRef.size > 0) {
+                    auto key = static_cast<int64_t>(std::stoi(keyRef.ToString()));
+                    fixedInt64->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                } else {
+                    fixedInt64->ParseNull(0, groupOutputVectors, groupColNum, rowIdx);
+                }
             } else if (fixedInt16 != nullptr) {
-                auto key = static_cast<int16_t>(std::stoi(keyRef.ToString()));
-                fixedInt16->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                if (keyRef.size > 0) {
+                    auto key = static_cast<int16_t>(std::stoi(keyRef.ToString()));
+                    fixedInt16->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                } else {
+                    fixedInt16->ParseNull(0, groupOutputVectors, groupColNum, rowIdx);
+                }
+            } else if (packedInt32 != nullptr) {
+                if (UNLIKELY(key.size() != sizeof(int32_t))) {
+                    throw omniruntime::exception::OmniException("SPILL_FAILED",
+                        "Invalid spilled packedInt32 key size " + std::to_string(key.size()));
+                }
+                int32_t packedKey = 0;
+                memcpy(&packedKey, key.data(), sizeof(packedKey));
+                packedInt32->ParseKeyToCols(packedKey, groupOutputVectors, groupColNum, rowIdx);
+            } else if (packedInt64 != nullptr) {
+                if (UNLIKELY(key.size() != sizeof(int64_t))) {
+                    throw omniruntime::exception::OmniException("SPILL_FAILED",
+                        "Invalid spilled packedInt64 key size " + std::to_string(key.size()));
+                }
+                int64_t packedKey = 0;
+                memcpy(&packedKey, key.data(), sizeof(packedKey));
+                packedInt64->ParseKeyToCols(packedKey, groupOutputVectors, groupColNum, rowIdx);
+            } else if (packedInt128 != nullptr) {
+                if (UNLIKELY(key.size() != sizeof(omniruntime::type::int128_t))) {
+                    throw omniruntime::exception::OmniException("SPILL_FAILED",
+                        "Invalid spilled packedInt128 key size " + std::to_string(key.size()));
+                }
+                omniruntime::type::int128_t packedKey = 0;
+                memcpy(&packedKey, key.data(), sizeof(packedKey));
+                packedInt128->ParseKeyToCols(packedKey, groupOutputVectors, groupColNum, rowIdx);
             }
             rowIdx++;
         }
@@ -1510,6 +1683,30 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
                 } else {
                     fixedInt16->ParseNull(0, groupOutputVectors, groupColNum, rowIdx);
                 }
+            } else if (packedInt32 != nullptr) {
+                if (UNLIKELY(key.size() != sizeof(int32_t))) {
+                    throw omniruntime::exception::OmniException("SPILL_FAILED",
+                        "Invalid spilled packedInt32 key size " + std::to_string(key.size()));
+                }
+                int32_t packedKey = 0;
+                memcpy(&packedKey, key.data(), sizeof(packedKey));
+                packedInt32->ParseKeyToCols(packedKey, groupOutputVectors, groupColNum, rowIdx);
+            } else if (packedInt64 != nullptr) {
+                if (UNLIKELY(key.size() != sizeof(int64_t))) {
+                    throw omniruntime::exception::OmniException("SPILL_FAILED",
+                        "Invalid spilled packedInt64 key size " + std::to_string(key.size()));
+                }
+                int64_t packedKey = 0;
+                memcpy(&packedKey, key.data(), sizeof(packedKey));
+                packedInt64->ParseKeyToCols(packedKey, groupOutputVectors, groupColNum, rowIdx);
+            } else if (packedInt128 != nullptr) {
+                if (UNLIKELY(key.size() != sizeof(omniruntime::type::int128_t))) {
+                    throw omniruntime::exception::OmniException("SPILL_FAILED",
+                        "Invalid spilled packedInt128 key size " + std::to_string(key.size()));
+                }
+                omniruntime::type::int128_t packedKey = 0;
+                memcpy(&packedKey, key.data(), sizeof(packedKey));
+                packedInt128->ParseKeyToCols(packedKey, groupOutputVectors, groupColNum, rowIdx);
             }
 
             currentGroupStates = groupStatesPtr + rowIdx * totalAggStatesSize;
@@ -1679,6 +1876,12 @@ ALWAYS_INLINE size_t HashAggregationOperator::GetElementsSize()
         elementSize = fixedInt64->GetElementsSize();
     } else if (fixedInt16 != nullptr) {
         elementSize = fixedInt16->GetElementsSize();
+    } else if (packedInt32 != nullptr) {
+        elementSize = packedInt32->GetElementsSize();
+    } else if (packedInt64 != nullptr) {
+        elementSize = packedInt64->GetElementsSize();
+    } else if (packedInt128 != nullptr) {
+        elementSize = packedInt128->GetElementsSize();
     }
     return elementSize;
 }
@@ -1693,6 +1896,12 @@ ALWAYS_INLINE void HashAggregationOperator::ResetHashmap()
         fixedInt64->ResetHashmap();
     } else if (fixedInt16 != nullptr) {
         fixedInt16->ResetHashmap();
+    } else if (packedInt32 != nullptr) {
+        packedInt32->ResetHashmap();
+    } else if (packedInt64 != nullptr) {
+        packedInt64->ResetHashmap();
+    } else if (packedInt128 != nullptr) {
+        packedInt128->ResetHashmap();
     }
 }
 } // end of namespace op

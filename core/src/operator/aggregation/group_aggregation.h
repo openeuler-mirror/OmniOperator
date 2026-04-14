@@ -8,6 +8,7 @@
 #include "definitions.h"
 #include "aggregation.h"
 #include "type/data_types.h"
+#include "type/data_type.h"
 #include "operator/hash_util.h"
 #include "operator/execution_context.h"
 #include "operator/aggregation/aggregator/only_aggregator_factory.h"
@@ -182,6 +183,10 @@ private:
 
     std::unique_ptr<GroupbySingleFixHandler<DefaultHashMap<int32_t, AggregateState *>, int32_t>> fixedInt32 = nullptr;
     std::unique_ptr<GroupbySingleFixHandler<DefaultHashMap<int64_t, AggregateState *>, int64_t>> fixedInt64 = nullptr;
+    std::unique_ptr<GroupbyPackedFixHandler<DefaultHashMap<int32_t, AggregateState *>, int32_t>> packedInt32 = nullptr;
+    std::unique_ptr<GroupbyPackedFixHandler<DefaultHashMap<int64_t, AggregateState *>, int64_t>> packedInt64 = nullptr;
+    std::unique_ptr<GroupbyPackedFixHandler<DefaultHashMap<omniruntime::type::int128_t, AggregateState *>,
+        omniruntime::type::int128_t>> packedInt128 = nullptr;
     bool isInited = false;
 
     OutputState outputState;

@@ -7,6 +7,7 @@
 #include <operator/hash_util.h>
 #include <type/string_ref.h>
 #include <type/decimal128.h>
+#include <type/data_type.h>
 #include <functional>
 #include <string>
 #include "crc_hasher.h"
@@ -47,6 +48,13 @@ template <> struct GroupbyHashCalculator<int64_t> {
     size_t operator() (const int64_t data) const
     {
         return omniruntime::simdutil::CRC32HasherForInt(data);
+    }
+};
+
+template <> struct GroupbyHashCalculator<omniruntime::type::int128_t> {
+    size_t operator() (const omniruntime::type::int128_t data) const
+    {
+        return omniruntime::simdutil::HashCRC32<omniruntime::type::int128_t>()(data);
     }
 };
 

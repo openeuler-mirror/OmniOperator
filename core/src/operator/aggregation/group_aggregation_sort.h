@@ -58,6 +58,16 @@ public:
     }
 
     template<typename T>
+    void ParseHashMapToVectorAsBytes(const T &key, AggregateState *value, size_t groupIndex)
+    {
+        auto &kv = kvVec[groupIndex];
+        kvString[groupIndex].assign(reinterpret_cast<const char *>(&key), sizeof(T));
+        kv.keyAddr = const_cast<char *>(kvString[groupIndex].data());
+        kv.keyLen = kvString[groupIndex].size();
+        kv.value = value;
+    }
+
+    template<typename T>
     void ParseNullHashMapToVector(const T &key, AggregateState *value, size_t groupIndex)
     {
         auto &kv = kvVec[groupIndex];
