@@ -862,7 +862,7 @@ public:
     static void *UnsafeGetOffsetsAddr(BaseVector *vector)
     {
         DataTypeId dataTypeId = vector->GetTypeId();
-        if (dataTypeId == type::OMNI_VARCHAR || dataTypeId == type::OMNI_CHAR) {
+        if (dataTypeId == type::OMNI_VARCHAR || dataTypeId == type::OMNI_CHAR || dataTypeId == type::OMNI_VARBINARY) {
             if (vector->GetEncoding() == OMNI_ENCODING_CONST) {
                 // ConstVector has no offsets array; the JIT getter functions handle
                 // constant string values directly via the ConstVector pointer.
@@ -1406,7 +1406,7 @@ public:
         for (int32_t i = 0; i < vecCount; i++) {
             BaseVector *vec = vectorBatch->Get(i);
             auto typeId = vec->GetTypeId();
-            if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR) {
+            if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR || typeId == type::OMNI_VARBINARY) {
                 auto *varcharVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
                 varcharVec->ResetForReuse();
             }

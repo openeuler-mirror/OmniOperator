@@ -119,14 +119,17 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_freeVectorNative(JN
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getCapacityInBytesNative(JNIEnv *env, jclass jcls,
     jlong jNativeVector)
 {
+    JNI_METHOD_START
     BaseVector *nativeVector = TransformVector(jNativeVector);
     DataTypeId typeId = nativeVector->GetTypeId();
-    if (typeId != omniruntime::type::OMNI_VARCHAR && typeId != omniruntime::type::OMNI_CHAR) {
+    if (typeId != omniruntime::type::OMNI_VARCHAR && typeId != omniruntime::type::OMNI_CHAR
+        && typeId != omniruntime::type::OMNI_VARBINARY) {
         throw omniruntime::exception::OmniException("vector type is no supported",
-            "the interface only supports varchar/char vector.");
+            "the interface only supports varchar/char/varbinary vector.");
     }
     auto *varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(nativeVector);
     return omniruntime::vec::unsafe::UnsafeStringVector::GetContainer(varCharVector)->GetCapacityInBytes();
+    JNI_METHOD_END(0)
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getSizeNative(JNIEnv *env, jclass jcls,
@@ -199,6 +202,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative(
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative(JNIEnv *env,
     jclass jcls, jlong jNativeVector)
 {
+    JNI_METHOD_START
     BaseVector *nativeVector = TransformVector(jNativeVector);
     auto offsetsAddr = VectorHelper::UnsafeGetOffsetsAddr(nativeVector);
     if (UNLIKELY(offsetsAddr == nullptr)) {
@@ -206,11 +210,13 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getVa
             "return a null pointer when getting offsets address");
     }
     return reinterpret_cast<uintptr_t>(offsetsAddr);
+    JNI_METHOD_END(0)
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_getValueOffsetsNative(JNIEnv *env,
     jclass jcls, jlong jNativeVector)
 {
+    JNI_METHOD_START
     ArrayVector *nativeVector = reinterpret_cast<ArrayVector *>(jNativeVector);
     auto offsetsAddr = nativeVector->GetOffsets();
     if (UNLIKELY(offsetsAddr == nullptr)) {
@@ -218,6 +224,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_getValueOffse
             "return a null pointer when getting offsets address");
     }
     return reinterpret_cast<uintptr_t>(offsetsAddr);
+    JNI_METHOD_END(0)
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getValueOffsetsNative(JNIEnv *env,
