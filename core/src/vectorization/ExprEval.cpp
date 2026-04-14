@@ -19,8 +19,13 @@ template <typename T>
 BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
 {
     if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
-        return new ConstVector<T>(
-            reinterpret_cast<ConstVector<T> *>(colVec)->GetConstValue(), colVec->GetTypeId(), numSelectedRows);
+        auto *constVec = reinterpret_cast<ConstVector<T> *>(colVec);
+        T val = constVec->GetConstValue();
+        auto *newConst = new ConstVector<T>(val, colVec->GetTypeId(), numSelectedRows);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            newConst->SetNulls(0, true, numSelectedRows);
+        }
+        return newConst;
     }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
         return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
@@ -32,8 +37,13 @@ template <typename T>
 BaseVector *ColumnProjectionCopyPositionsHelper(BaseVector *colVec, int32_t *selectedRows, int32_t numSelectedRows)
 {
     if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
-        return new ConstVector<T>(
-            reinterpret_cast<ConstVector<T> *>(colVec)->GetConstValue(), colVec->GetTypeId(), numSelectedRows);
+        auto *constVec = reinterpret_cast<ConstVector<T> *>(colVec);
+        T val = constVec->GetConstValue();
+        auto *newConst = new ConstVector<T>(val, colVec->GetTypeId(), numSelectedRows);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            newConst->SetNulls(0, true, numSelectedRows);
+        }
+        return newConst;
     }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
         return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->CopyPositions(selectedRows, 0,
@@ -46,8 +56,13 @@ template <typename T>
 BaseVector *ColumnProjectionVarCharVectorHelper(BaseVector *colVec, int32_t numSelectedRows)
 {
     if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
-        return new ConstVector<T>(
-            reinterpret_cast<ConstVector<T> *>(colVec)->GetConstValue(), colVec->GetTypeId(), numSelectedRows);
+        auto *constVec = reinterpret_cast<ConstVector<T> *>(colVec);
+        auto sv = constVec->GetConstValue();
+        auto *newConst = new ConstVector<T>(sv, colVec->GetTypeId(), numSelectedRows);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            newConst->SetNulls(0, true, numSelectedRows);
+        }
+        return newConst;
     }
     auto rowCnt = colVec->GetSize();
     if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
@@ -66,8 +81,13 @@ BaseVector *ColumnProjectionVarCharCopyPositionsHelper(BaseVector *colVec, const
     int32_t numSelectedRows)
 {
     if (colVec->GetEncoding() == OMNI_ENCODING_CONST) {
-        return new ConstVector<T>(
-            reinterpret_cast<ConstVector<T> *>(colVec)->GetConstValue(), colVec->GetTypeId(), numSelectedRows);
+        auto *constVec = reinterpret_cast<ConstVector<T> *>(colVec);
+        auto sv = constVec->GetConstValue();
+        auto *newConst = new ConstVector<T>(sv, colVec->GetTypeId(), numSelectedRows);
+        if (constVec->HasNull() && constVec->IsNull(0)) {
+            newConst->SetNulls(0, true, numSelectedRows);
+        }
+        return newConst;
     }
     if (colVec->GetEncoding() == OMNI_FLAT) {
         auto flatVec = reinterpret_cast<Vector<LargeStringContainer<T>> *>(colVec);
