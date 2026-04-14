@@ -73,6 +73,7 @@ public class VecFactory {
                 return new ByteVec(nativeVector);
             case OMNI_BOOLEAN:
                 return new BooleanVec(nativeVector);
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 return new VarcharVec(nativeVector);
@@ -152,6 +153,7 @@ public class VecFactory {
                 return new ByteVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             case OMNI_BOOLEAN:
                 return new BooleanVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 return new VarcharVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
@@ -190,6 +192,7 @@ public class VecFactory {
                 return new ByteVec(size);
             case OMNI_BOOLEAN:
                 return new BooleanVec(size);
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 return new VarcharVec(size);
