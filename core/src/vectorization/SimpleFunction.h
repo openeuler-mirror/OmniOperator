@@ -139,7 +139,12 @@ private:
             auto arg = rawArgs.top();
             rawArgs.pop();
             using type = exec_arg_at<FUNC::num_args - POSITION - 1>;
-            if (arg->GetEncoding() != OMNI_ENCODING_CONST) {
+            if (arg->GetEncoding() == OMNI_ENCODING_CONST) {
+                if (arg->IsNull(0)) {
+                    SelectivityVector emptyRows(context.GetResultRowSize(), false);
+                    context.rows->intersect(emptyRows);
+                }
+            } else {
                 context.IntersectNull(arg);
             }
             if constexpr (is_string_type_v<type>) {
