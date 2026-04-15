@@ -63,11 +63,21 @@ public:
         int64_t nullAddrs[originVecCount];
         int64_t offsetAddrs[originVecCount];
         int64_t dictionaryVectors[originVecCount];
-        GetAddr(*inputVecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaryVectors, originTypes);
+        bool hasSetAddr = false;
 
         for (auto &projection : projections) {
-            auto projectVec = projection->Project(inputVecBatch, valueAddrs, nullAddrs, offsetAddrs, executionContext,
-                dictionaryVectors, originTypes.GetIds());
+            BaseVector *projectVec = nullptr;
+            if (executionContext->queryConfig().PreferVectorizationExpression() &&
+                projection->GetExpr()->supportVectorized()) {
+                projectVec = projection->ProjectVec(inputVecBatch, executionContext);
+            } else {
+                if (!hasSetAddr) {
+                    GetAddr(*inputVecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaryVectors, originTypes);
+                    hasSetAddr = true;
+                }
+                projectVec = projection->Project(inputVecBatch, valueAddrs, nullAddrs, offsetAddrs, executionContext,
+                    dictionaryVectors, originTypes.GetIds());
+            }
             if (executionContext->HasError()) {
                 executionContext->GetArena()->Reset();
                 std::string errorMessage = executionContext->GetError();
