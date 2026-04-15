@@ -173,6 +173,45 @@ static void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowV
     resultVector->SetValue(0, value);
 }
 
+static void ALWAYS_INLINE SetArrayForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
+    BaseVector *vector, int32_t position)
+{
+    auto resultVector = static_cast<ArrayVector *>(singleRowVecBatch->Get(colIndex));
+    if (vector->IsNull(position)) {
+        resultVector->SetNull(0);
+        return;
+    }
+    auto value = static_cast<ArrayVector *>(vector)->GetValue(position);
+    resultVector->SetNotNull(0);
+    resultVector->SetValue(0, value);
+}
+
+static void ALWAYS_INLINE SetMapForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
+    BaseVector *vector, int32_t position)
+{
+    auto resultVector = static_cast<MapVector *>(singleRowVecBatch->Get(colIndex));
+    if (vector->IsNull(position)) {
+        resultVector->SetNull(0);
+        return;
+    }
+    auto value = static_cast<MapVector *>(vector)->Slice(position, 1, false);
+    resultVector->SetNotNull(0);
+    resultVector->SetValue(0, value);
+}
+
+static void ALWAYS_INLINE SetStructForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
+    BaseVector *vector, int32_t position)
+{
+    auto resultVector = static_cast<RowVector *>(singleRowVecBatch->Get(colIndex));
+    if (vector->IsNull(position)) {
+        resultVector->SetNull(0);
+        return;
+    }
+    auto value = static_cast<RowVector *>(vector)->Slice(position, 1, false);
+    resultVector->SetNotNull(0);
+    resultVector->SetValue(0, value);
+}
+
 void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBatch *singleRowVecBatch,
     int32_t position) const
 {
@@ -211,6 +250,15 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
                 break;
             case OMNI_BYTE:
                 SetValueForSingleRowVecBatch<OMNI_BYTE>(singleRowVecBatch, i, vector, position);
+                break;
+            case OMNI_ARRAY:
+                SetArrayForSingleRowVecBatch(singleRowVecBatch, i, vector, position);
+                break;
+            case OMNI_MAP:
+                SetMapForSingleRowVecBatch(singleRowVecBatch, i, vector, position);
+                break;
+            case OMNI_ROW:
+                SetStructForSingleRowVecBatch(singleRowVecBatch, i, vector, position);
                 break;
             default:
                 break;
@@ -270,7 +318,7 @@ static void ALWAYS_INLINE SetComplexVectorForSingleRowVecBatch(DataType* dataTyp
             delete mapVector;
         } else if (dataTypeId == OMNI_ROW) {
             auto rowVector = static_cast<RowVector *>(vector)->Slice(position, 1, false);
-            static_cast<RowVector *>(complexVector)->Append(rowVector, 0, 1);
+            static_cast<RowVector *>(complexVector)->SetValue(0, rowVector);
             delete rowVector;
         } else {
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
