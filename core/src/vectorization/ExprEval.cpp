@@ -243,7 +243,7 @@ void ExprEval::Visit(const LiteralExpr &e)
             default: LogError("Do not support such vector type %d", typeIds[e.dataType->GetId()]);
         }
         if (constVec != nullptr && e.isNull) {
-            constVec->SetNull(0);
+            constVec->SetNulls(0, true, constVec->GetSize());
         }
         inputValues_.push(constVec);
         return;
