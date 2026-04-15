@@ -69,11 +69,9 @@ std::unique_ptr<SplitReader> HiveDataSource::createSplitReader() {
             split_,
             hiveTableHandle_,
             &partitionKeys_,
-            &infoColumns_,
             hiveConfig_,
             readerOutputType_,
-            scanSpec_,
-            specialColumns_);
+            scanSpec_);
 }
 
 void HiveDataSource::addSplit(std::shared_ptr<ConnectorSplit> split, uint64_t size) {
