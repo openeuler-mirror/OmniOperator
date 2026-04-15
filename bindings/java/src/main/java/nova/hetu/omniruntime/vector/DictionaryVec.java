@@ -121,6 +121,7 @@ public class DictionaryVec extends FixedWidthVec {
             case OMNI_BOOLEAN:
                 setValue(size, (BooleanVec) vector);
                 break;
+            case OMNI_VARBINARY:
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 setValue(size, (VarcharVec) vector);
