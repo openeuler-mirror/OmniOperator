@@ -350,9 +350,9 @@ public:
                 ApplyTimestamp(args, outputType, result);
             } else if (inputTypeId == OMNI_DATE32 || inputTypeId == OMNI_INT) {
                 delete policyArg;
-                delete tzArg;
                 delete formatArg;
-                ApplyDate(args, outputType, result);
+                ApplyDate(args, outputType, result, sessionTz);
+                delete tzArg;
             } else {
                 // String path with explicit format and timezone
                 args.push(formatArg);
@@ -371,7 +371,8 @@ public:
                 ApplyTimestamp(args, outputType, result);
             } else if (inputTypeId == OMNI_DATE32 || inputTypeId == OMNI_INT) {
                 delete formatArg;
-                ApplyDate(args, outputType, result);
+                const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+                ApplyDate(args, outputType, result, sessionTz);
             } else {
                 args.push(formatArg);
                 ApplyStringWithFormat(args, outputType, result, context);
@@ -385,7 +386,8 @@ public:
             } else if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
                 ApplyTimestamp(args, outputType, result);
             } else if (inputTypeId == OMNI_DATE32 || inputTypeId == OMNI_INT) {
-                ApplyDate(args, outputType, result);
+                const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+                ApplyDate(args, outputType, result, sessionTz);
             } else {
                 args.pop();
                 OMNI_THROW("ToUnixTimestamp function Error",
@@ -580,7 +582,7 @@ private:
     }
 
     void ApplyDate(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
-        BaseVector *&result) const
+        BaseVector *&result, const tz::TimeZone *sessionTz = nullptr) const
     {
         auto inputArg = args.top();
         args.pop();
@@ -599,7 +601,16 @@ private:
 
             auto *inputVec = static_cast<Vector<int32_t> *>(inputArg);
             int32_t daysSinceEpoch = inputVec->GetValue(row);
-            int64_t seconds = static_cast<int64_t>(daysSinceEpoch) * Timestamp::kSecondsInDay;
+            
+            // Create timestamp from date and apply timezone correction if needed
+            Timestamp ts = Timestamp::fromDate(daysSinceEpoch);
+            if (sessionTz != nullptr) {
+                // Convert from local timezone to GMT (similar to Velox's toGMTWithGapCorrection)
+                // This handles timezone offset and potential gap/ambiguous time issues
+                ts.toGMT(*sessionTz);
+            }
+            
+            int64_t seconds = ts.getSeconds();
 
             auto *resultVec = static_cast<Vector<int64_t> *>(result);
             resultVec->SetValue(row, seconds);
