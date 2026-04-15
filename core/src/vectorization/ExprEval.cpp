@@ -162,8 +162,6 @@ void ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec, con
         }
         case OMNI_VARCHAR:
         case OMNI_CHAR:
-            SetConstantValues<std::string_view>(*literalVal.stringVal, outVec);
-            break;
         case OMNI_VARBINARY:
             SetConstantValues<std::string_view>(*literalVal.stringVal, outVec);
             break;
@@ -407,6 +405,7 @@ void ExprEval::Visit(const FieldExpr &e)
             break;
         case OMNI_VARCHAR:
         case OMNI_CHAR:
+        case OMNI_VARBINARY:
             inputValues_.push(ColumnProjectionVarCharVectorHelper<std::string_view>(colVec, rowSize));
             break;
         case OMNI_ARRAY:

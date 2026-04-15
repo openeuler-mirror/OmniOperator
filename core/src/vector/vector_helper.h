@@ -221,7 +221,7 @@ public:
     {
         using T = typename type::NativeType<typeId>::type;
         if constexpr (std::is_same_v<T, std::string_view>) {
-            return new Vector<LargeStringContainer<std::string_view>>(size, capacityInBytes);
+            return new Vector<LargeStringContainer<std::string_view>>(size, capacityInBytes, typeId);
         }
         return new Vector<T>(size, typeId);
     }
@@ -239,7 +239,7 @@ public:
     {
         using T = typename type::NativeType<typeId>::type;
         if constexpr (std::is_same_v<T, std::string_view>) {
-            return std::make_shared<Vector<LargeStringContainer<std::string_view>>>(size, capacityInBytes);
+            return std::make_shared<Vector<LargeStringContainer<std::string_view>>>(size, capacityInBytes, typeId);
         }
         return std::make_shared<Vector<T>>(size, typeId);
     }

@@ -2177,14 +2177,13 @@ static ALWAYS_INLINE void SetValueMap(BaseVector *inputVector, int32_t inputInde
     }
     auto *inputMap = static_cast<MapVector *>(inputVector);
     auto *outputMap = static_cast<MapVector *>(outputVector);
-    auto *slice = inputMap->Slice(inputIndex, 1, false);
+    std::unique_ptr<MapVector> slice(inputMap->Slice(inputIndex, 1, false));
     auto keyCount = static_cast<int32_t>(slice->GetOffset(1) - slice->GetOffset(0));
     auto dstOffset = static_cast<int32_t>(outputMap->GetOffset(outputIndex));
     outputMap->SetOffset(outputIndex + 1, dstOffset + keyCount);
     if (keyCount > 0) {
-        outputMap->Append(slice, dstOffset);
+        outputMap->Append(slice.get(), dstOffset);
     }
-    delete slice;
 }
 
 // Scalar/ARRAY path: uses NativeType<dataTypeId>::type. Never instantiated for OMNI_ROW or OMNI_MAP.
