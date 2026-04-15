@@ -1,7 +1,8 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  * Description: LIKE function implementation.
- * LIKE(string, pattern) -> boolean. Pattern: % = zero or more chars, _ = one char, \ = escape.
+ * LIKE(string, pattern) -> boolean; LIKE(string, pattern, escape) -> boolean.
+ * Pattern: % = zero or more chars, _ = one char; default escape is backslash, overridable via 3-arg form.
  */
 
 #pragma once
@@ -22,24 +23,31 @@ using namespace omniruntime::op;
 
 class LikeFunction : public VectorFunction {
 public:
-    explicit LikeFunction() = default;
+    explicit LikeFunction(int32_t argumentCount) : argumentCount_(argumentCount) {}
 
     void Apply(std::stack<BaseVector*>& args, const DataTypePtr& outputType, BaseVector*& result,
                ExecutionContext* context) const override;
 
 private:
+    int32_t argumentCount_;
+
     /// Get string value from vector (flat / const / dictionary)
     static std::string_view GetStringValueFromVector(BaseVector* vec, int32_t row);
 
     /// Set boolean value to result vector
     static void SetBooleanValueToVector(BaseVector* vec, int32_t row, bool value);
 
-    /// Main implementation: match str against LIKE pattern (% _ escape \)
+    /// Main implementation: match str against LIKE pattern (% _ escape)
     void ApplyLike(BaseVector* strVec, BaseVector* patternVec, BaseVector*& result,
                    const DataTypePtr& outputType) const;
 
+    void ApplyLikeWithEscape(BaseVector* strVec, BaseVector* patternVec, BaseVector* escapeVec, BaseVector*& result,
+                             const DataTypePtr& outputType) const;
+
     /// Convert LIKE pattern to regex string; then match str (full match) via std::regex
     bool MatchLike(const std::string_view& str, const std::string_view& pattern) const;
+    bool MatchLike(const std::string_view& str, const std::string_view& pattern,
+                   const std::string_view& escapeSeq) const;
 };
 
 }  // namespace omniruntime::vectorization

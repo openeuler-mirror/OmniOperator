@@ -2,10 +2,11 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  * Description: LIKE function unit tests.
  *   LIKE(string, pattern) -> boolean.
- *   Pattern: % = zero or more chars, _ = one char, \ = escape.
+ *   Pattern: % = zero or more chars, _ = one char; default escape '\\', or LIKE(s, p, escape).
  */
 
 #include <gtest/gtest.h>
+#include <stack>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,7 @@
 #include "codegen/func_signature.h"
 #include "vector/vector_helper.h"
 #include "vector/vector.h"
+#include "omni_exception.h"
 
 using namespace omniruntime;
 using namespace omniruntime::vec;
@@ -81,6 +83,23 @@ public:
         args.push(patternVec);
 
         ASSERT_NO_THROW(function->Apply(args, outputType, result, &context));
+    }
+
+    static void ExecuteLike3(BaseVector* strVec, BaseVector* patternVec, BaseVector* escapeVec, BaseVector*& result) {
+        auto signature = std::make_shared<FunctionSignature>("LIKE",
+            std::vector<DataTypeId>{OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN);
+        auto function = VectorFunction::Find(signature);
+        ASSERT_NE(function, nullptr) << "LIKE(str,pattern,escape) not found";
+
+        auto outputType = std::make_shared<DataType>(OMNI_BOOLEAN);
+        ExecutionContext context;
+        context.SetResultRowSize(strVec->GetSize());
+        std::stack<BaseVector*> args;
+        args.push(strVec);
+        args.push(patternVec);
+        args.push(escapeVec);
+
+        function->Apply(args, outputType, result, &context);
     }
 };
 
@@ -238,4 +257,157 @@ TEST(LikeTest, NullPattern) {
     EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
 
     delete resultVec;
+}
+
+TEST(LikeTest, EscapeThreeArg_CustomPercent) {
+    std::vector<std::string> strValues = {"100%", "50%"};
+    std::vector<std::string> patterns = {"100#%", "50#%"};
+    std::vector<bool> expected = {true, true};
+
+    BaseVector* strVec = LikeFunctionTestHelper::CreateStringVector(strValues);
+    BaseVector* patternVec = LikeFunctionTestHelper::CreateStringVector(patterns);
+    BaseVector* escapeVec = new ConstVector<std::string_view>(std::string_view("#"), OMNI_VARCHAR, 2);
+    BaseVector* resultVec = nullptr;
+
+    LikeFunctionTestHelper::ExecuteLike3(strVec, patternVec, escapeVec, resultVec);
+    LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
+
+    delete resultVec;
+}
+
+TEST(LikeTest, EscapeThreeArg_CustomUnderscore) {
+    // Exact match for "a_b" / "x_y": literal chars after escaped underscore.
+    std::vector<std::string> strValues = {"a_b", "x_y"};
+    std::vector<std::string> patterns = {"a$_b", "x$_y"};
+    std::vector<bool> expected = {true, true};
+
+    BaseVector* strVec = LikeFunctionTestHelper::CreateStringVector(strValues);
+    BaseVector* patternVec = LikeFunctionTestHelper::CreateStringVector(patterns);
+    BaseVector* escapeVec = new ConstVector<std::string_view>(std::string_view("$"), OMNI_VARCHAR, 2);
+    BaseVector* resultVec = nullptr;
+
+    LikeFunctionTestHelper::ExecuteLike3(strVec, patternVec, escapeVec, resultVec);
+    LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
+
+    delete resultVec;
+}
+
+// a$_ is only 3 pattern chars: a, $, _. The pair $_ is one literal '_'; there is NO trailing wildcard.
+// So it matches the 2-char string "a_" only — not "a_b". For "a_ + any one char" use a$__ (four pattern chars).
+TEST(LikeTest, EscapeThreeArg_LiteralUnderscoreOnlyTwoChars) {
+    std::vector<std::string> strValues = {"a_", "a_b"};
+    std::vector<std::string> patterns = {"a$_", "a$_"};
+    std::vector<bool> expected = {true, false};
+
+    BaseVector* strVec = LikeFunctionTestHelper::CreateStringVector(strValues);
+    BaseVector* patternVec = LikeFunctionTestHelper::CreateStringVector(patterns);
+    BaseVector* escapeVec = new ConstVector<std::string_view>(std::string_view("$"), OMNI_VARCHAR, 2);
+    BaseVector* resultVec = nullptr;
+
+    LikeFunctionTestHelper::ExecuteLike3(strVec, patternVec, escapeVec, resultVec);
+    LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
+
+    delete resultVec;
+}
+
+TEST(LikeTest, EscapeThreeArg_LiteralUnderscoreThenWildcard) {
+    std::vector<std::string> strValues = {"a_b", "a_", "x_y"};
+    std::vector<std::string> patterns = {"a$__", "a$__", "x$__"};
+    std::vector<bool> expected = {true, false, true};
+
+    BaseVector* strVec = LikeFunctionTestHelper::CreateStringVector(strValues);
+    BaseVector* patternVec = LikeFunctionTestHelper::CreateStringVector(patterns);
+    BaseVector* escapeVec = new ConstVector<std::string_view>(std::string_view("$"), OMNI_VARCHAR, 3);
+    BaseVector* resultVec = nullptr;
+
+    LikeFunctionTestHelper::ExecuteLike3(strVec, patternVec, escapeVec, resultVec);
+    LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
+
+    delete resultVec;
+}
+
+TEST(LikeTest, EscapeThreeArg_BackslashSameAsTwoArg) {
+    std::vector<std::string> strValues = {"100%", "x"};
+    std::vector<std::string> patterns = {"100\\%", "x"};
+    std::vector<bool> expected = {true, true};
+
+    BaseVector* strVec = LikeFunctionTestHelper::CreateStringVector(strValues);
+    BaseVector* patternVec = LikeFunctionTestHelper::CreateStringVector(patterns);
+    BaseVector* escapeVec = new ConstVector<std::string_view>(std::string_view("\\", 1), OMNI_VARCHAR, 2);
+    BaseVector* resultVec = nullptr;
+
+    LikeFunctionTestHelper::ExecuteLike3(strVec, patternVec, escapeVec, resultVec);
+    LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
+
+    delete resultVec;
+}
+
+// Spark / Gluten may pass ESCAPE as CHAR(n): '/' right-padded with spaces — must accept after trim.
+TEST(LikeTest, EscapeThreeArg_EscapeCharPaddedTrailingSpaces) {
+    std::string escStorage = "/   ";
+    std::vector<std::string> strValues = {"\xe6\xb0\xb4%"};  // 水 + %
+    std::vector<std::string> patterns = {"\xe6\xb0\xb4/%"};     // 水/%  ( / escapes % )
+    std::vector<bool> expected = {true};
+
+    BaseVector* strVec = LikeFunctionTestHelper::CreateStringVector(strValues);
+    BaseVector* patternVec = LikeFunctionTestHelper::CreateStringVector(patterns);
+    BaseVector* escapeVec = new ConstVector<std::string_view>(
+        std::string_view(escStorage.data(), escStorage.size()), OMNI_VARCHAR, 1);
+    BaseVector* resultVec = nullptr;
+
+    LikeFunctionTestHelper::ExecuteLike3(strVec, patternVec, escapeVec, resultVec);
+    LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
+
+    delete resultVec;
+}
+
+TEST(LikeTest, EscapeThreeArg_PerRowEscapeColumn) {
+    std::vector<std::string> strValues = {"100%", "50$"};
+    std::vector<std::string> patterns = {"100#%", "50$$"};
+    std::vector<std::string> escapes = {"#", "$"};
+    std::vector<bool> expected = {true, true};
+
+    BaseVector* strVec = LikeFunctionTestHelper::CreateStringVector(strValues);
+    BaseVector* patternVec = LikeFunctionTestHelper::CreateStringVector(patterns);
+    BaseVector* escapeVec = LikeFunctionTestHelper::CreateStringVector(escapes);
+    BaseVector* resultVec = nullptr;
+
+    LikeFunctionTestHelper::ExecuteLike3(strVec, patternVec, escapeVec, resultVec);
+    LikeFunctionTestHelper::ValidateBooleanResult(resultVec, expected, strValues.size());
+
+    delete resultVec;
+}
+
+TEST(LikeTest, EscapeThreeArg_NullEscape) {
+    std::vector<std::string> strValues = {"a", "b"};
+    std::vector<std::string> patterns = {"a", "b"};
+    BaseVector* strVec = LikeFunctionTestHelper::CreateStringVector(strValues);
+    BaseVector* patternVec = LikeFunctionTestHelper::CreateStringVector(patterns);
+    BaseVector* escapeVec = new ConstVector<std::string_view>(std::string_view("#"), OMNI_VARCHAR, 2);
+    escapeVec->SetNull(0);
+
+    BaseVector* resultVec = nullptr;
+    LikeFunctionTestHelper::ExecuteLike3(strVec, patternVec, escapeVec, resultVec);
+
+    EXPECT_TRUE(resultVec->IsNull(0));
+    EXPECT_TRUE(resultVec->IsNull(1));
+
+    delete resultVec;
+}
+
+TEST(LikeTest, EscapeThreeArg_InvalidEscapeLength) {
+    std::vector<std::string> strValues = {"a"};
+    std::vector<std::string> patterns = {"a"};
+    BaseVector* strVec = LikeFunctionTestHelper::CreateStringVector(strValues);
+    BaseVector* patternVec = LikeFunctionTestHelper::CreateStringVector(patterns);
+    BaseVector* escapeVec = new ConstVector<std::string_view>(std::string_view("##"), OMNI_VARCHAR, 1);
+    BaseVector* resultVec = nullptr;
+
+    ASSERT_THROW(LikeFunctionTestHelper::ExecuteLike3(strVec, patternVec, escapeVec, resultVec),
+        omniruntime::exception::OmniException);
+
+    delete resultVec;
+    delete strVec;
+    delete patternVec;
+    delete escapeVec;
 }
