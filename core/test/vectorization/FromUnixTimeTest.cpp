@@ -1,0 +1,451 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Description: FromUnixTime function unit tests
+ */
+
+#include <gtest/gtest.h>
+#include <vector>
+#include <string>
+#include <ctime>
+
+#include "test/util/test_util.h"
+#include "vectorization/registration/Register.h"
+#include "vectorization/functions/FromUnixTime.h"
+#include "vectorization/VectorFunction.h"
+#include "codegen/func_signature.h"
+#include "vector/vector_helper.h"
+#include "vector/vector.h"
+#include "type/Timestamp.h"
+
+using namespace omniruntime;
+using namespace omniruntime::vec;
+using namespace omniruntime::vectorization;
+using namespace omniruntime::op;
+using namespace omniruntime::type;
+using namespace omniruntime::codegen;
+using namespace omniruntime::TestUtil;
+
+class FromUnixTimeTestEnvironment : public ::testing::Environment {
+public:
+    void SetUp() override {
+        RegisterFunctions::RegisterAllFunctions("");
+    }
+};
+
+::testing::Environment* const from_unix_time_test_env =
+    ::testing::AddGlobalTestEnvironment(new FromUnixTimeTestEnvironment);
+
+class FromUnixTimeTestHelper {
+public:
+    static void ValidateResult(BaseVector* result, const std::vector<std::string>& expected,
+        const std::vector<bool>& expectNull, int rowSize) {
+        auto* resultVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(result);
+        ASSERT_NE(resultVec, nullptr) << "Result vector type mismatch";
+
+        for (int i = 0; i < rowSize; ++i) {
+            if (expectNull[i]) {
+                EXPECT_TRUE(result->IsNull(i)) << "Row " << i << " should be NULL";
+                continue;
+            }
+            EXPECT_FALSE(result->IsNull(i)) << "Row " << i << " should not be NULL";
+            if (!result->IsNull(i)) {
+                std::string_view actualValue = resultVec->GetValue(i);
+                EXPECT_EQ(std::string(actualValue), expected[i])
+                    << "Row " << i << " value mismatch: expected '" << expected[i]
+                    << "', got '" << std::string(actualValue) << "'";
+            }
+        }
+    }
+
+    static BaseVector* CreateLongVector(const std::vector<int64_t>& values) {
+        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_LONG, values.size());
+        auto* typedVec = static_cast<Vector<int64_t>*>(vec);
+        for (size_t i = 0; i < values.size(); ++i) {
+            typedVec->SetValue(i, values[i]);
+        }
+        return vec;
+    }
+
+    static BaseVector* CreateTimestampVector(const std::vector<int64_t>& microValues) {
+        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_TIMESTAMP, microValues.size());
+        auto* typedVec = static_cast<Vector<int64_t>*>(vec);
+        for (size_t i = 0; i < microValues.size(); ++i) {
+            typedVec->SetValue(i, microValues[i]);
+        }
+        return vec;
+    }
+
+    static BaseVector* CreateStringVector(const std::vector<std::string>& values) {
+        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_VARCHAR, values.size());
+        auto* typedVec = static_cast<Vector<LargeStringContainer<std::string_view>>*>(vec);
+        for (size_t i = 0; i < values.size(); ++i) {
+            typedVec->SetValue(i, std::string_view(values[i]));
+        }
+        return vec;
+    }
+
+    static BaseVector* CreateConstStringVector(const std::string& value, int32_t size) {
+        return new ConstVector<std::string_view>(std::string_view(value), OMNI_VARCHAR, size);
+    }
+
+    static void ExecuteFromUnixTime(BaseVector* inputVec, BaseVector* formatVec,
+        DataTypeId inputTypeId, BaseVector*& result) {
+        auto signature = std::make_shared<FunctionSignature>("from_unixtime",
+            std::vector<DataTypeId>{inputTypeId, OMNI_VARCHAR}, OMNI_VARCHAR);
+        auto function = VectorFunction::Find(signature);
+        ASSERT_NE(function, nullptr) << "from_unixtime function not found for signature";
+
+        auto outputType = std::make_shared<DataType>(OMNI_VARCHAR);
+        ExecutionContext context;
+        context.SetResultRowSize(inputVec->GetSize());
+        std::stack<BaseVector*> args;
+        args.push(inputVec);
+        args.push(formatVec);
+
+        ASSERT_NO_THROW(function->Apply(args, outputType, result, &context))
+            << "from_unixtime function threw an exception";
+    }
+
+    static void ExecuteFromUnixTimeWithTz(BaseVector* inputVec, BaseVector* formatVec,
+        BaseVector* tzVec, DataTypeId inputTypeId, BaseVector*& result) {
+        auto signature = std::make_shared<FunctionSignature>("from_unixtime",
+            std::vector<DataTypeId>{inputTypeId, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+        auto function = VectorFunction::Find(signature);
+        ASSERT_NE(function, nullptr) << "from_unixtime function not found for 3-arg signature";
+
+        auto outputType = std::make_shared<DataType>(OMNI_VARCHAR);
+        ExecutionContext context;
+        context.SetResultRowSize(inputVec->GetSize());
+        std::stack<BaseVector*> args;
+        args.push(inputVec);
+        args.push(formatVec);
+        args.push(tzVec);
+
+        ASSERT_NO_THROW(function->Apply(args, outputType, result, &context))
+            << "from_unixtime function threw an exception";
+    }
+};
+
+// Test: Basic from_unixtime with default format (2-arg, UTC)
+TEST(FromUnixTimeTest, BasicWithDefaultFormat) {
+    // 2-arg form uses UTC (gmtime_r) when no timezone is specified
+    std::vector<int64_t> unixSeconds = {0, 100, 86400};
+    std::vector<std::string> expected = {
+        "1970-01-01 00:00:00",
+        "1970-01-01 00:01:40",
+        "1970-01-02 00:00:00"
+    };
+    std::vector<bool> expectNull = {false, false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    // Note: Apply() already deletes inputVec and formatVec
+    delete resultVec;
+}
+
+// Test: from_unixtime with date-only format
+TEST(FromUnixTimeTest, DateOnlyFormat) {
+    std::vector<int64_t> unixSeconds = {0, 100};
+    std::vector<std::string> expected = {"1970-01-01", "1970-01-01"};
+    std::vector<bool> expectNull = {false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd", unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: from_unixtime with year-only format
+TEST(FromUnixTimeTest, YearOnlyFormat) {
+    std::vector<int64_t> unixSeconds = {0, 3600};
+    std::vector<std::string> expected = {"1970", "1970"};
+    std::vector<bool> expectNull = {false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy", unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: from_unixtime with negative unix seconds (before epoch, UTC)
+TEST(FromUnixTimeTest, NegativeUnixSeconds) {
+    std::vector<int64_t> unixSeconds = {-59, -3600};
+    std::vector<std::string> expected = {
+        "1969-12-31 23:59:01",
+        "1969-12-31 23:00:00"
+    };
+    std::vector<bool> expectNull = {false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: from_unixtime with hour-minute format
+TEST(FromUnixTimeTest, HourMinuteFormat) {
+    std::vector<int64_t> unixSeconds = {120};
+    std::vector<std::string> expected = {"1970-01-01 00:02"};
+    std::vector<bool> expectNull = {false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm", unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: NULL input handling
+TEST(FromUnixTimeTest, NullInput) {
+    std::vector<int64_t> unixSeconds = {0, 100, 86400};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    inputVec->SetNull(1); // Set row 1 to NULL
+
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+
+    EXPECT_FALSE(resultVec->IsNull(0)) << "Row 0 should not be NULL";
+    EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
+    EXPECT_FALSE(resultVec->IsNull(2)) << "Row 2 should not be NULL";
+
+    auto* resultVecTyped = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(resultVec);
+    EXPECT_EQ(std::string(resultVecTyped->GetValue(0)), "1970-01-01 00:00:00");
+    EXPECT_EQ(std::string(resultVecTyped->GetValue(2)), "1970-01-02 00:00:00");
+
+    delete resultVec;
+}
+
+// Test: NULL format handling
+TEST(FromUnixTimeTest, NullFormat) {
+    std::vector<int64_t> unixSeconds = {0};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", unixSeconds.size());
+    formatVec->SetNull(0); // Set format to NULL
+
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+
+    EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL when format is NULL";
+
+    delete resultVec;
+}
+
+// Test: All NULL input
+TEST(FromUnixTimeTest, AllNullInput) {
+    std::vector<int64_t> unixSeconds = {0, 0, 0};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    inputVec->SetNull(0);
+    inputVec->SetNull(1);
+    inputVec->SetNull(2);
+
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+
+    EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL";
+    EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
+    EXPECT_TRUE(resultVec->IsNull(2)) << "Row 2 should be NULL";
+
+    delete resultVec;
+}
+
+// Test: Variable format strings (non-constant)
+TEST(FromUnixTimeTest, VariableFormat) {
+    std::vector<int64_t> unixSeconds = {0, 100, 86400};
+    std::vector<std::string> formats = {
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd",
+        "yyyy"
+    };
+    std::vector<std::string> expected = {
+        "1970-01-01 00:00:00",
+        "1970-01-01",
+        "1970"
+    };
+    std::vector<bool> expectNull = {false, false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateStringVector(formats);
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: Single row
+TEST(FromUnixTimeTest, SingleRow) {
+    std::vector<int64_t> unixSeconds = {0};
+    std::vector<std::string> expected = {"1970-01-01 00:00:00"};
+    std::vector<bool> expectNull = {false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", 1);
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, 1);
+
+    delete resultVec;
+}
+
+// Test: Large timestamp values
+TEST(FromUnixTimeTest, LargeTimestampValues) {
+    // 2020-06-30 12:49:59 UTC = 1593521399 seconds
+    // 2000-01-01 00:00:00 UTC = 946684800 seconds
+    std::vector<int64_t> unixSeconds = {1593521399LL, 946684800LL};
+    std::vector<std::string> expected = {
+        "2020-06-30 12:49:59",
+        "2000-01-01 00:00:00"
+    };
+    std::vector<bool> expectNull = {false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: OMNI_TIMESTAMP input type (equivalent to OMNI_LONG)
+TEST(FromUnixTimeTest, TimestampInputType) {
+    std::vector<int64_t> unixSeconds = {0, 100};
+    std::vector<std::string> expected = {
+        "1970-01-01 00:00:00",
+        "1970-01-01 00:01:40"
+    };
+    std::vector<bool> expectNull = {false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateTimestampVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_TIMESTAMP, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: Velox-compatible test cases
+TEST(FromUnixTimeTest, VeloxCompatible) {
+    std::vector<int64_t> unixSeconds = {0, 100, 120, 100, -59, 3600};
+    std::vector<std::string> formats = {
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd",
+        "yyyy-MM-dd HH:mm",
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy"
+    };
+    std::vector<std::string> expected = {
+        "1970-01-01 00:00:00",
+        "1970-01-01",
+        "1970-01-01 00:02",
+        "1970-01-01 00:01:40",
+        "1969-12-31 23:59:01",
+        "1970"
+    };
+    std::vector<bool> expectNull = {false, false, false, false, false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateStringVector(formats);
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTime(inputVec, formatVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: 3-arg signature with timezone (Gluten calling convention)
+TEST(FromUnixTimeTest, ThreeArgWithTimezone) {
+    // from_unixtime(0, "yyyy-MM-dd HH:mm:ss", "UTC") -> "1970-01-01 00:00:00"
+    // from_unixtime(100, "yyyy-MM-dd HH:mm:ss", "UTC") -> "1970-01-01 00:01:40"
+    std::vector<int64_t> unixSeconds = {0, 100};
+    std::vector<std::string> expected = {
+        "1970-01-01 00:00:00",
+        "1970-01-01 00:01:40"
+    };
+    std::vector<bool> expectNull = {false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", unixSeconds.size());
+    BaseVector* tzVec = new ConstVector<std::string_view>(std::string_view("UTC"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTimeWithTz(inputVec, formatVec, tzVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    // Note: Apply() already deletes inputVec, formatVec, and tzVec
+    delete resultVec;
+}
+
+// Test: 3-arg signature with empty timezone (falls back to UTC)
+TEST(FromUnixTimeTest, ThreeArgWithEmptyTimezone) {
+    // Empty timezone falls back to UTC (gmtime_r)
+    std::vector<int64_t> unixSeconds = {0};
+    std::vector<std::string> expected = {"1970-01-01 00:00:00"};
+    std::vector<bool> expectNull = {false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", 1);
+    // Empty timezone string
+    BaseVector* tzVec = new ConstVector<std::string_view>(std::string_view(""), OMNI_VARCHAR, 1);
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTimeWithTz(inputVec, formatVec, tzVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, 1);
+
+    delete resultVec;
+}
+
+// Test: 3-arg signature with GMT+08:00 timezone
+TEST(FromUnixTimeTest, ThreeArgWithGMT8Timezone) {
+    // from_unixtime(0, "yyyy-MM-dd HH:mm:ss", "GMT+08:00") -> "1970-01-01 08:00:00"
+    // from_unixtime(100, "yyyy-MM-dd HH:mm:ss", "GMT+08:00") -> "1970-01-01 08:01:40"
+    std::vector<int64_t> unixSeconds = {0, 100};
+    std::vector<std::string> expected = {
+        "1970-01-01 08:00:00",
+        "1970-01-01 08:01:40"
+    };
+    std::vector<bool> expectNull = {false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd HH:mm:ss", unixSeconds.size());
+    BaseVector* tzVec = new ConstVector<std::string_view>(std::string_view("GMT+08:00"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTimeWithTz(inputVec, formatVec, tzVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
