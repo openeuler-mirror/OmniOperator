@@ -4,6 +4,7 @@
 
 #include "grouping.h"
 #include "operator/aggregation/group_aggregation_expr.h"
+#include <algorithm>
 
 namespace omniruntime::op {
 Operator *GroupingOperatorFactory::CreateOperator()
@@ -27,10 +28,52 @@ GroupingOperator::GroupingOperator(const std::shared_ptr<const GroupingNode> &gr
     auto residualOutputType = aggPlanNode_->OutputType();
     aggFactor_ = CreateOperatorFactory(aggPlanNode_, queryConfig_);
     int32_t index = 0;
-    auto nullSizeEnd = aggPlanNode_->GetGroupByNum() - 1;
-    auto nullSizeFrond = nullSizeEnd - 1;
+    const auto &groupByKeys = aggPlanNode_->GetGroupByKeys();
+    const auto groupingKeySize = static_cast<int32_t>(groupByKeys.size());
+    std::vector<int32_t> groupBySourceCols(groupingKeySize, -1);
+    for (int32_t i = 0; i < groupingKeySize; ++i) {
+        auto fieldExpr = dynamic_cast<FieldExpr *>(groupByKeys[i]);
+        if (fieldExpr != nullptr) {
+            groupBySourceCols[i] = fieldExpr->colVal;
+        }
+    }
+
+    auto isGroupingIdSourceCol = [&](int32_t sourceCol) -> bool {
+        if (projections.empty() || sourceCol < 0 || sourceCol >= static_cast<int32_t>(projections[0].size())) {
+            return false;
+        }
+        std::vector<int64_t> gids;
+        gids.reserve(projections.size());
+        for (const auto &projection : projections) {
+            if (sourceCol >= static_cast<int32_t>(projection.size())) {
+                return false;
+            }
+            auto literal = dynamic_cast<LiteralExpr *>(projection[sourceCol]);
+            if (literal == nullptr || literal->isNull) {
+                return false;
+            }
+            if (literal->GetReturnTypeId() != OMNI_INT && literal->GetReturnTypeId() != OMNI_LONG) {
+                return false;
+            }
+            int64_t gid = literal->GetReturnTypeId() == OMNI_INT ? literal->intVal : literal->longVal;
+            if (std::find(gids.begin(), gids.end(), gid) != gids.end()) {
+                return false;
+            }
+            gids.push_back(gid);
+        }
+        return true;
+    };
+
+    int32_t groupingIdKeyIdx = -1;
+    for (int32_t i = 0; i < groupingKeySize; ++i) {
+        if (isGroupingIdSourceCol(groupBySourceCols[i])) {
+            groupingIdKeyIdx = i;
+            break;
+        }
+    }
+
     aggOperators_.resize(projections.size());
-    residualAggFactor_ = CreateResidualOperatorFactory(aggPlanNode_, residualOutputType, nullSizeEnd + 1, queryConfig_);
+    residualAggFactor_ = CreateResidualOperatorFactory(aggPlanNode_, residualOutputType, groupingKeySize, queryConfig_);
     for (const auto &projection : projections) {
         if (index == 0) {
             auto exprEvaluator = std::make_shared<ExpressionEvaluator>(projection, sourceTypes, queryConfig);
@@ -41,18 +84,30 @@ GroupingOperator::GroupingOperator(const std::shared_ptr<const GroupingNode> &gr
             auto size = aggPlanNode_->OutputType()->GetSize();
             std::vector<ExprPtr> expressions(size);
             for (unsigned int i = 0; i < size; i++) {
-                if (i < nullSizeEnd && i >= nullSizeFrond) {
-                    expressions[i] = new LiteralExpr(0, aggPlanNode_->OutputType()->GetType(i), true);
-                    continue;
-                }
-                if (i == nullSizeEnd) {
-                    auto groupingId = dynamic_cast<LiteralExpr *>(projection.back());
-                    expressions[i] = new LiteralExpr(groupingId->longVal, groupingId->dataType);
+                if (i < static_cast<unsigned int>(groupingKeySize)) {
+                    int32_t sourceCol = groupBySourceCols[i];
+                    Expr *sourceExpr = nullptr;
+                    if (sourceCol >= 0 && sourceCol < static_cast<int32_t>(projection.size())) {
+                        sourceExpr = projection[sourceCol];
+                    }
+                    auto literal = dynamic_cast<LiteralExpr *>(sourceExpr);
+                    if (static_cast<int32_t>(i) == groupingIdKeyIdx && literal != nullptr) {
+                        if (literal->GetReturnTypeId() == OMNI_INT) {
+                            expressions[i] = new LiteralExpr(literal->intVal, literal->dataType, literal->isNull);
+                        } else if (literal->GetReturnTypeId() == OMNI_LONG) {
+                            expressions[i] = new LiteralExpr(literal->longVal, literal->dataType, literal->isNull);
+                        } else {
+                            expressions[i] = new FieldExpr(i, aggPlanNode_->OutputType()->GetType(i));
+                        }
+                    } else if (literal != nullptr && literal->isNull) {
+                        expressions[i] = new LiteralExpr(0, aggPlanNode_->OutputType()->GetType(i), true);
+                    } else {
+                        expressions[i] = new FieldExpr(i, aggPlanNode_->OutputType()->GetType(i));
+                    }
                     continue;
                 }
                 expressions[i] = new FieldExpr(i, aggPlanNode_->OutputType()->GetType(i));
             }
-            nullSizeFrond--;
             auto exprEvaluator = std::make_shared<ExpressionEvaluator>(expressions, *residualOutputType.get(),
                 queryConfig);
             exprEvaluator->ProjectFuncGeneration();
@@ -99,6 +154,7 @@ int32_t GroupingOperator::GetOutput(VectorBatch **outputVecBatch)
             auto projectedVecBatch = this->expressionEvaluators_[index_]->Evaluate(*outputVecBatch,
                 executionContext.get());
             aggOperators_[index_]->AddInput(projectedVecBatch);
+            index_++;
             return 0;
         }
         index_++;
