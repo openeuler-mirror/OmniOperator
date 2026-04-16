@@ -293,7 +293,7 @@ public:
 
     bool supportVectorized() const override
     {
-        return left->supportVectorized() && right->supportVectorized();
+        return vectorFunction != nullptr && left->supportVectorized() && right->supportVectorized();
     }
 
     std::string toString() const override;
@@ -498,7 +498,15 @@ public:
 
     bool supportVectorized() const override
     {
-        return vectorFunction != nullptr;
+        if (vectorFunction == nullptr) {
+            return false;
+        }
+        for (auto &arg : arguments) {
+            if (!arg->supportVectorized()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     std::string toString() const override
