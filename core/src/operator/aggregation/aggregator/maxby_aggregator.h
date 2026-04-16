@@ -105,7 +105,7 @@ public:
             throw omniruntime::exception::OmniException("Error in maxby aggregator:", omniExceptionInfo);
         }
 
-        if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR) {
+        if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR || COL2_ID == OMNI_VARBINARY) {
             return MaxByVarcharAggregator<COL1_ID, COL2_ID>::Create(inputTypes, outputTypes, channels, rawIn, partialOut,
                 isOverflowAsNull);
         }

@@ -271,10 +271,12 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ProcessGroupInternal(std::vector<Ag
 
 template class MaxByComplexVarcharAggregator<OMNI_VARCHAR>;
 template class MaxByComplexVarcharAggregator<OMNI_CHAR>;
+template class MaxByComplexVarcharAggregator<OMNI_VARBINARY>;
 
 // Force GetSpillType() to be emitted (fixes GetSpillTypeEv undefined symbol when linking).
 template std::vector<DataTypePtr> MaxByComplexVarcharAggregator<OMNI_VARCHAR>::GetSpillType();
 template std::vector<DataTypePtr> MaxByComplexVarcharAggregator<OMNI_CHAR>::GetSpillType();
+template std::vector<DataTypePtr> MaxByComplexVarcharAggregator<OMNI_VARBINARY>::GetSpillType();
 
 } // namespace op
 } // namespace omniruntime

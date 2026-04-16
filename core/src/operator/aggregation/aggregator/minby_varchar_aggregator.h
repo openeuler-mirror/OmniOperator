@@ -189,7 +189,7 @@ public:
         if constexpr (!IsSupportedBasicMinByType(COL1_ID) && COL1_ID != OMNI_VARCHAR && COL1_ID != OMNI_CHAR) {
             std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID);
             throw omniruntime::exception::OmniException("Error in minby varchar aggregator: : ", omniExceptionInfo);
-        } else if constexpr (COL2_ID != OMNI_VARCHAR && COL2_ID != OMNI_CHAR) {
+        } else if constexpr (COL2_ID != OMNI_VARCHAR && COL2_ID != OMNI_CHAR && COL2_ID != OMNI_VARBINARY) {
             std::string omniExceptionInfo = "sort col type must be varchar or char";
             throw omniruntime::exception::OmniException("Error in minby varchar aggregator: : ", omniExceptionInfo);
         } else {
