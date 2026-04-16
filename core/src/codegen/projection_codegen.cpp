@@ -190,6 +190,13 @@ intptr_t ProjectionCodeGen::CreateWrapper()
     Value *gep;
     Type *ty = llvmTypes->VectorToLLVMType(*(expr->GetReturnType()));
     if (TypeUtil::IsStringType(expr->GetReturnTypeId())) {
+        // varcharVectorFunc may be nullptr if WrapVarcharVector is not registered.
+        // Return 0 to fall back to non-codegen (vectorized) evaluation path.
+        if (varcharVectorFunc == nullptr) {
+            LogWarn("ProjectionCodeGen: WrapVarcharVector not registered for expr type %d, falling back to vectorized path",
+                expr->GetReturnTypeId());
+            return 0;
+        }
         auto outputLen = builder->CreateLoad(llvmTypes->I32Type(), outputLenPtr, "OUTPUT_LENGTH");
         auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
         // call wrap_varchar_vector function
