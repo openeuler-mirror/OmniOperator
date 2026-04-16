@@ -271,10 +271,12 @@ void MinByComplexVarcharAggregator<COL2_ID>::ProcessGroupInternal(std::vector<Ag
 
 template class MinByComplexVarcharAggregator<OMNI_VARCHAR>;
 template class MinByComplexVarcharAggregator<OMNI_CHAR>;
+template class MinByComplexVarcharAggregator<OMNI_VARBINARY>;
 
 // Force GetSpillType() to be emitted (fixes GetSpillTypeEv undefined symbol when linking).
 template std::vector<DataTypePtr> MinByComplexVarcharAggregator<OMNI_VARCHAR>::GetSpillType();
 template std::vector<DataTypePtr> MinByComplexVarcharAggregator<OMNI_CHAR>::GetSpillType();
+template std::vector<DataTypePtr> MinByComplexVarcharAggregator<OMNI_VARBINARY>::GetSpillType();
 
 } // namespace op
 } // namespace omniruntime

@@ -483,5 +483,18 @@ template class MinByVarcharAggregator<OMNI_VARCHAR, OMNI_CHAR>;
 template class MinByVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;
 template class MinByVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
 
+// COL2 = OMNI_VARBINARY
+template class MinByVarcharAggregator<OMNI_BOOLEAN, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_BYTE, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_SHORT, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_INT, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_LONG, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_FLOAT, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_DOUBLE, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_DECIMAL64, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_DECIMAL128, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_VARCHAR, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_CHAR, OMNI_VARBINARY>;
+
 } // namespace op
 } // namespace omniruntime

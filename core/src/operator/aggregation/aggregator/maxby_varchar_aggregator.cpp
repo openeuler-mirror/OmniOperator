@@ -448,5 +448,18 @@ template class MaxByVarcharAggregator<OMNI_VARCHAR, OMNI_CHAR>;
 template class MaxByVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;
 template class MaxByVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
 
+// COL2 = OMNI_VARBINARY
+template class MaxByVarcharAggregator<OMNI_BOOLEAN, OMNI_VARBINARY>;
+template class MaxByVarcharAggregator<OMNI_BYTE, OMNI_VARBINARY>;
+template class MaxByVarcharAggregator<OMNI_SHORT, OMNI_VARBINARY>;
+template class MaxByVarcharAggregator<OMNI_INT, OMNI_VARBINARY>;
+template class MaxByVarcharAggregator<OMNI_LONG, OMNI_VARBINARY>;
+template class MaxByVarcharAggregator<OMNI_FLOAT, OMNI_VARBINARY>;
+template class MaxByVarcharAggregator<OMNI_DOUBLE, OMNI_VARBINARY>;
+template class MaxByVarcharAggregator<OMNI_DECIMAL64, OMNI_VARBINARY>;
+template class MaxByVarcharAggregator<OMNI_DECIMAL128, OMNI_VARBINARY>;
+template class MaxByVarcharAggregator<OMNI_VARCHAR, OMNI_VARBINARY>;
+template class MaxByVarcharAggregator<OMNI_CHAR, OMNI_VARBINARY>;
+
 } // namespace op
 } // namespace omniruntime

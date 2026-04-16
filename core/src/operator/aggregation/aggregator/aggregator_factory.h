@@ -467,6 +467,8 @@ protected:
                 return FromKnownOutput<OMNI_VARCHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_CHAR:
                 return FromKnownOutput<OMNI_CHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARBINARY:
+                return FromKnownOutput<OMNI_VARBINARY>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             default:
                 std::string omniExceptionInfo = "In MinByAggretator function FromKnownOutput, no such input col2 type " + std::to_string(col2Id);
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
@@ -510,7 +512,7 @@ protected:
             case OMNI_ARRAY:
             case OMNI_MAP:
             case OMNI_ROW:
-                if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR) {
+                if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR || COL2_ID == OMNI_VARBINARY) {
                     return MinByComplexVarcharAggregator<COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes),
                         channels, inputRaw, outputPartial, isOverflowAsNull, col1Id);
                 } else {
@@ -570,6 +572,8 @@ protected:
                 return FromKnownOutput<OMNI_VARCHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_CHAR:
                 return FromKnownOutput<OMNI_CHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARBINARY:
+                return FromKnownOutput<OMNI_VARBINARY>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             default:
                 std::string omniExceptionInfo = "In MaxByAggretator function FromKnownOutput, no such input col2 type " + std::to_string(col2Id);
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
@@ -613,7 +617,7 @@ protected:
             case OMNI_ARRAY:
             case OMNI_MAP:
             case OMNI_ROW:
-                if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR) {
+                if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR || COL2_ID == OMNI_VARBINARY) {
                     return MaxByComplexVarcharAggregator<COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes),
                         channels, inputRaw, outputPartial, isOverflowAsNull, col1Id);
                 } else {
