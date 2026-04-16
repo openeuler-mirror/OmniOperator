@@ -328,7 +328,7 @@ public:
 
         size_t argCount = args.size();
         
-        if (argCount == 4) {
+        if (argCount >= 4) {
             // Gluten path: (timeStr, format, timezone, policy)
             // Args are pushed in order, so stack top is the last arg (policy).
             auto policyArg = args.top();
@@ -360,7 +360,7 @@ public:
                 delete policyArg;
                 delete tzArg;
             }
-        } else if (argCount == 2) {
+        } else if (argCount >= 2) {
             auto formatArg = args.top();
             args.pop();
             auto inputArg = args.top();
@@ -377,7 +377,7 @@ public:
                 args.push(formatArg);
                 ApplyStringWithFormat(args, outputType, result, context);
             }
-        } else if (argCount == 1) {
+        } else if (argCount >= 1) {
             auto inputArg = args.top();
             DataTypeId inputTypeId = inputArg->GetTypeId();
 
