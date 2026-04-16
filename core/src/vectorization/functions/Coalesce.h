@@ -40,7 +40,7 @@ private:
     void SetValueToVector(BaseVector *vec, int32_t row, const T &value) const;
 
     // Helper: Set string value to vector
-    void SetStringValueToVector(BaseVector *vec, int32_t row, std::string_view &value) const;
+    void SetStringValueToVector(BaseVector *vec, int32_t row, const std::string_view &value) const;
 
     // Dispatch coalesce based on output type
     void DispatchCoalesce(const std::vector<BaseVector *> &argVectors, const DataTypePtr &outputType,

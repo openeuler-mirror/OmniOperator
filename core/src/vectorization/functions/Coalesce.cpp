@@ -102,7 +102,7 @@ void CoalesceFunction::CoalesceString(const std::vector<BaseVector *> &argVector
         for (size_t argIdx = 0; argIdx < argVectors.size(); ++argIdx) {
             if (!argVectors[argIdx]->IsNull(row)) {
                 std::string_view value = GetStringValueFromVector(argVectors[argIdx], row);
-                SetStringValueToVector(result, row, const_cast<std::string_view &>(value));
+                SetStringValueToVector(result, row, value);
                 found = true;
                 break;
             }
@@ -295,10 +295,8 @@ void CoalesceFunction::CoalesceRow(const std::vector<BaseVector *> &argVectors,
                     case OMNI_VARCHAR:
                     case OMNI_CHAR:
                     case OMNI_VARBINARY: {
-                        auto val = static_cast<Vector<LargeStringContainer<std::string_view>> *>(
-                            srcChild)->GetValue(row);
-                        static_cast<Vector<LargeStringContainer<std::string_view>> *>(
-                            dstChild)->SetValue(row, val);
+                        std::string_view strVal = GetStringValueFromVector(srcChild, row);
+                        SetStringValueToVector(dstChild, row, strVal);
                         break;
                     }
                     case OMNI_DECIMAL128: {
@@ -358,9 +356,10 @@ void CoalesceFunction::SetValueToVector(BaseVector *vec, int32_t row, const T &v
 }
 
 void CoalesceFunction::SetStringValueToVector(BaseVector *vec, int32_t row,
-                                             std::string_view &value) const {
+                                             const std::string_view &value) const {
     auto *resultVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
     resultVec->SetValue(row, value);
+    resultVec->SetNotNull(row);
 }
 
 // Explicit template instantiations

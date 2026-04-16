@@ -84,7 +84,7 @@ extern "C" DLLEXPORT int64_t XxH64Float(float val, bool isValNull, int64_t seed,
         return seed;
     }
 
-    return HashLong(HashUtil::FloatToIntBits(val), seed);
+    return HashInt(HashUtil::FloatToIntBits(val), seed);
 }
 
 extern "C" DLLEXPORT int64_t XxH64Double(double val, bool isValNull, int64_t seed, bool isSeedNull)

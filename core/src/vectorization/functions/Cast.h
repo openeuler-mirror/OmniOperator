@@ -54,10 +54,14 @@ private:
     void CastToTimestamp(BaseVector* input, BaseVector*& result, ExecutionContext* context) const;
     // cast(Xxx as decimal64)
     void CastToDecimal64(BaseVector* input, BaseVector*& result, ExecutionContext* context) const;
+    int64_t StringToDecimal64(std::string str, bool *isNull, int32_t outPrecision, int32_t outScale) const;
     // cast(Xxx as Decimal128)
     void CastToDecimal128(BaseVector* input, BaseVector*& result, ExecutionContext* context) const;
+    int128_t StringToDecimal128(std::string str, bool *isNull, int32_t outPrecision, int32_t outScale) const;
     // cast(Xxx as binary)
     void CastToBinary(BaseVector* input, BaseVector*& result, ExecutionContext* context) const;
+    template <typename TInput>
+    void CastIntegerToBinary(BaseVector* input, BaseVector*& result, ExecutionContext* context) const;
 
     struct DecimalComponents {
         std::string_view wholeDigits;

@@ -717,10 +717,12 @@ void CastFunction::CastToFloat(BaseVector* input, BaseVector*& result, Execution
             }
             case OMNI_DECIMAL128:
             {
+                double doubleValue;
                 Decimal128 temp(static_cast<ConstVector<std::string_view> *>(input)->GetConstValue());
                 auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                 Decimal128Wrapper input(temp);
-                floatValue = static_cast<float>(static_cast<double>(input) / DOUBLE_10_POW[scale]);
+                ConvertStringToDouble(doubleValue, input.SetScale(scale).ToString());
+                floatValue = static_cast<float>(doubleValue);
                 break;
             }
             default:
@@ -777,10 +779,12 @@ void CastFunction::CastToFloat(BaseVector* input, BaseVector*& result, Execution
                 }
                 case OMNI_DECIMAL128:
                 {
+                    double doubleValue;
                     Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
                     auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
                     Decimal128Wrapper input(temp);
-                    floatValue = static_cast<float>(static_cast<double>(input) / DOUBLE_10_POW[scale]);
+                    ConvertStringToDouble(doubleValue, input.SetScale(scale).ToString());
+                    floatValue = static_cast<float>(doubleValue);
                     break;
                 }
                 default:
@@ -1337,8 +1341,9 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
             case OMNI_VARCHAR:
             {
                 auto str = static_cast<ConstVector<std::string_view> *>(input)->GetConstValue();
-                const auto status = toDecimalValue<int64_t>(hooks_->removeWhiteSpaces(str), toPrecision, toScale, decimal64Value);
-                if (!status.ok()) {
+                bool isNull = false;
+                decimal64Value = StringToDecimal64(std::string(str), &isNull, toPrecision, toScale);
+                if (isNull) {
                     result->SetNulls(0, true, size);
                     return;
                 }
@@ -1459,8 +1464,9 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
                 case OMNI_VARCHAR:
                 {
                     auto str = VectorHelper::GetStringValueFromVector(input, row);
-                    const auto status = toDecimalValue<int64_t>(hooks_->removeWhiteSpaces(str), toPrecision, toScale, decimal64Value);
-                    if (!status.ok()) {
+                    bool isNull = false;
+                    decimal64Value = StringToDecimal64(std::string(str), &isNull, toPrecision, toScale);
+                    if (isNull) {
                         result->SetNull(row);
                         continue;
                     }
@@ -1496,6 +1502,21 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
             dynamic_cast<Vector<int64_t> *>(result)->SetValue(row, decimal64Value);
         }
     }
+}
+
+int64_t CastFunction::StringToDecimal64(std::string str, bool *isNull, int32_t outPrecision, int32_t outScale) const{
+    str.erase(0, str.find_first_not_of(' '));
+    str.erase(str.find_last_not_of(' ') + 1);
+    if (!str.empty() && str.back() == '.') {
+        str.push_back('0');
+    }
+    Decimal64<true> result(str);
+    result.ReScale(outScale);
+    if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
+        *isNull = true;
+        return 0;
+    }
+    return result.GetValue();
 }
 
 void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, ExecutionContext* context) const {
@@ -1584,8 +1605,9 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
             case OMNI_VARCHAR:
             {
                 auto str = static_cast<ConstVector<std::string_view> *>(input)->GetConstValue();
-                const auto status = toDecimalValue<int128_t>(hooks_->removeWhiteSpaces(str), toPrecision, toScale, decimal128Value);
-                if (!status.ok()) {
+                bool isNull = false;
+                decimal128Value = StringToDecimal128(std::string(str), &isNull, toPrecision, toScale);
+                if (isNull) {
                     result->SetNulls(0, true, size);
                     return;
                 }
@@ -1706,8 +1728,9 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
                 case OMNI_VARCHAR:
                 {
                     auto str = VectorHelper::GetStringValueFromVector(input, row);
-                    const auto status = toDecimalValue<int128_t>(hooks_->removeWhiteSpaces(str), toPrecision, toScale, decimal128Value);
-                    if (!status.ok()) {
+                    bool isNull = false;
+                    decimal128Value = StringToDecimal128(std::string(str), &isNull, toPrecision, toScale);
+                    if (isNull) {
                         result->SetNull(row);
                         continue;
                     }
@@ -1745,19 +1768,38 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
     }
 }
 
+int128_t CastFunction::StringToDecimal128(std::string str, bool *isNull, int32_t outPrecision, int32_t outScale) const {
+    str.erase(0, str.find_first_not_of(' '));
+    str.erase(str.find_last_not_of(' ') + 1);
+    if (!str.empty() && str.back() == '.') {
+        str.push_back('0');
+    }
+    if (!regex_match(str, g_decimalRegex)) {
+        *isNull = true;
+        return 0;
+    }
+    Decimal128Wrapper<true> result(str.c_str());
+    result.ReScale(outScale);
+    if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
+        *isNull = true;
+        return 0;
+    }
+    return result.ToInt128();
+}
+
 void CastFunction::CastToBinary(BaseVector* input, BaseVector*& result, ExecutionContext* context) const {
     switch (fromType_->GetId()) {
         case OMNI_BYTE:
-            CastNumericToString<int8_t>(input, result, context);
+            CastIntegerToBinary<int8_t>(input, result, context);
             break;
         case OMNI_SHORT:
-            CastNumericToString<int16_t>(input, result, context);
+            CastIntegerToBinary<int16_t>(input, result, context);
             break;
         case OMNI_INT:
-            CastNumericToString<int32_t>(input, result, context);
+            CastIntegerToBinary<int32_t>(input, result, context);
             break;
         case OMNI_LONG:
-            CastNumericToString<int64_t>(input, result, context);
+            CastIntegerToBinary<int64_t>(input, result, context);
             break;
         case OMNI_CHAR:
         case OMNI_VARCHAR:
@@ -1769,6 +1811,51 @@ void CastFunction::CastToBinary(BaseVector* input, BaseVector*& result, Executio
             OMNI_THROW("Cast function Error", "Unsupported cast to binary from " + TypeUtil::TypeToString(fromType_->GetId()));
     }
 }
+
+template <typename TInput>
+void CastFunction::CastIntegerToBinary(BaseVector* input, BaseVector*& result, ExecutionContext* context) const
+{
+    const auto size = context->GetResultRowSize();
+    result = VectorHelper::CreateFlatVector(OMNI_VARBINARY, size);
+    auto *out = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(result);
+
+    // Keep consistent with CastExpr::applyIntToBinaryCast: encode in big-endian.
+    char inlined[sizeof(TInput)];
+
+    auto setRow = [&](int32_t row, TInput v) {
+        if constexpr (std::is_same_v<TInput, int8_t>) {
+            inlined[0] = static_cast<char>(v & 0xFF);
+        } else {
+            for (int i = sizeof(TInput) - 1; i >= 0; --i) {
+                inlined[i] = static_cast<char>(v & 0xFF);
+                v >>= 8;
+            }
+        }
+        out->SetValue(row, std::string_view(inlined, sizeof(TInput)));
+    };
+
+    if (input->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto *constVec = static_cast<ConstVector<TInput> *>(input);
+        const auto v = constVec->GetConstValue();
+        for (int32_t row = 0; row < size; ++row) {
+            setRow(row, v);
+        }
+        return;
+    }
+
+    for (int32_t row = 0; row < size; ++row) {
+        if (input->IsNull(row)) {
+            result->SetNull(row);
+            continue;
+        }
+        setRow(row, VectorHelper::GetValueFromVector<TInput>(input, row));
+    }
+}
+
+template void CastFunction::CastIntegerToBinary<int8_t>(BaseVector*, BaseVector*&, ExecutionContext*) const;
+template void CastFunction::CastIntegerToBinary<int16_t>(BaseVector*, BaseVector*&, ExecutionContext*) const;
+template void CastFunction::CastIntegerToBinary<int32_t>(BaseVector*, BaseVector*&, ExecutionContext*) const;
+template void CastFunction::CastIntegerToBinary<int64_t>(BaseVector*, BaseVector*&, ExecutionContext*) const;
 
 std::string_view CastFunction::extractDigits(const char *s, size_t start, size_t size) const
 {
@@ -1868,12 +1955,15 @@ Status CastFunction::parseHugeInt(const DecimalComponents &decimalComponents, in
     return Status::OK();
 }
 
+
+
 template <typename T>
 Status CastFunction::toDecimalValue(const std::string_view s, int toPrecision, int toScale, T &decimalValue) const
 {
     DecimalComponents decimalComponents;
-    if (auto status = parseDecimalComponents(s.data(), s.size(), decimalComponents); !status.ok()) {
-        return Status::UserError("Value is not a number. " + status.message());
+    auto checkStatus = parseDecimalComponents(s.data(), s.size(), decimalComponents);
+    if ( !checkStatus.ok() || !regex_match(s.data(), g_decimalRegex)) {
+        return Status::UserError("Value is not a number. " + std::string(s.data(), s.size()));
     }
 
     // Count number of significant digits (without leading zeros).

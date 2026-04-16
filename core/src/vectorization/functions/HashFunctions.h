@@ -120,7 +120,7 @@ public:
         args.pop();
         auto valVec = args.top();
         args.pop();
-        const auto size = valVec->GetSize();
+        const auto size = context->GetResultRowSize();
         if (result == nullptr) {
             result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
         }
@@ -135,55 +135,39 @@ public:
                 continue;
             }
             switch (valTypeId) {
-                case OMNI_BOOLEAN: {
-                    auto valVector = reinterpret_cast<Vector<bool> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::XxH64Boolean(valVector->GetValue(i), false, seed, false));
+                case OMNI_BOOLEAN:
+                    resultVector->SetValue(i, codegen::function::XxH64Boolean(VectorHelper::GetValueFromVector<bool>(valVec, i), false, seed, false));
                     break;
-                }
-                case OMNI_BYTE: {
-                    auto valVector = reinterpret_cast<Vector<int8_t> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::XxH64Int8(valVector->GetValue(i), false, seed, false));
+                case OMNI_BYTE:
+                    resultVector->SetValue(i, codegen::function::XxH64Int8(VectorHelper::GetValueFromVector<int8_t>(valVec, i), false, seed, false));
                     break;
-                }
-                case OMNI_SHORT: {
-                    auto valVector = reinterpret_cast<Vector<int16_t> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::XxH64Int16(valVector->GetValue(i), false, seed, false));
+                case OMNI_SHORT:
+                    resultVector->SetValue(i, codegen::function::XxH64Int16(VectorHelper::GetValueFromVector<int16_t>(valVec, i), false, seed, false));
                     break;
-                }
                 case OMNI_INT:
-                case OMNI_DATE32: {
-                    auto valVector = reinterpret_cast<Vector<int32_t> *>(valVec);
-                        resultVector->SetValue(i, codegen::function::XxH64Int32(valVector->GetValue(i), false, seed, false));
+                case OMNI_DATE32:
+                    resultVector->SetValue(i, codegen::function::XxH64Int32(VectorHelper::GetValueFromVector<int32_t>(valVec, i), false, seed, false));
                     break;
-                }
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
-                case OMNI_DECIMAL64: {
-                    auto valVector = reinterpret_cast<Vector<int64_t> *>(valVec);
-                        resultVector->SetValue(i, codegen::function::XxH64Int64(valVector->GetValue(i), false, seed, false));
+                case OMNI_DECIMAL64:
+                    resultVector->SetValue(i, codegen::function::XxH64Int64(VectorHelper::GetValueFromVector<int64_t>(valVec, i), false, seed, false));
                     break;
-                }
-                case OMNI_FLOAT: {
-                    auto valVector = reinterpret_cast<Vector<float> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::XxH64Float(valVector->GetValue(i), false, seed, false));
+                case OMNI_FLOAT:
+                    resultVector->SetValue(i, codegen::function::XxH64Float(VectorHelper::GetValueFromVector<float>(valVec, i), false, seed, false));
                     break;
-                }
-                case OMNI_DOUBLE: {
-                    auto valVector = reinterpret_cast<Vector<double> *>(valVec);
-                    resultVector->SetValue(i, codegen::function::XxH64Double(valVector->GetValue(i), false, seed, false));
+                case OMNI_DOUBLE:
+                    resultVector->SetValue(i, codegen::function::XxH64Double(VectorHelper::GetValueFromVector<double>(valVec, i), false, seed, false));
                     break;
-                }
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 case OMNI_VARBINARY: {
-                    auto valVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(valVec);
-                    std::string_view valString = valVector->GetValue(i);
+                    std::string_view valString = VectorHelper::GetStringValueFromVector(valVec, i);
                     resultVector->SetValue(i, codegen::function::XxH64String(valString.data(), valString.size(), false, seed, false));
                     break;
                 }
                 case OMNI_DECIMAL128: {
-                    auto valVector = reinterpret_cast<Vector<Decimal128> *>(valVec);
-                    Decimal128 val = valVector->GetValue(i);
+                    Decimal128 val = VectorHelper::GetValueFromVector<Decimal128>(valVec, i);
                     resultVector->SetValue(i, codegen::function::XxH64Decimal128(val.HighBits(), val.LowBits(), 0, 0, false, seed, false));
                     break;
                 }
@@ -192,7 +176,6 @@ public:
         delete seedVec;
         delete valVec;
     }
-
 };
 
 void RegisterXxHash64Function(const std::string &name)

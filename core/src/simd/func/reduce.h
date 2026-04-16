@@ -5,6 +5,7 @@
 #define OMNI_SIMD_REDUCE_FUNC_H
 
 #include <limits>
+#include <type_traits>
 #include <cstring>
 #include "simd/simd.h"
 #include "libboundscheck/include/securec.h"
@@ -48,8 +49,8 @@ OMNI_INLINE VFromD<D> LoadFromDic(D d, const IN *OMNI_RESTRICT inPtr, const int3
             limitValue = 0;                                         \
             reduceVec = Set(d, limitValue);                         \
         } else if constexpr (Rf == ReduceFunc::Max) {               \
-            if constexpr (std::is_same_v<double, OUT>) {            \
-                limitValue = std::numeric_limits<double>::lowest(); \
+            if constexpr (std::is_floating_point_v<OUT>) {          \
+                limitValue = std::numeric_limits<OUT>::lowest();   \
             } else {                                                \
                 limitValue = std::numeric_limits<OUT>::min();       \
             }                                                       \
