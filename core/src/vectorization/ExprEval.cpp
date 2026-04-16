@@ -424,6 +424,9 @@ void ExprEval::Visit(const FieldExpr &e)
 void ExprEval::Visit(const UnaryExpr &e)
 {
     e.exp->Accept(*this);
+    if (e.vectorFunction == nullptr) {
+        OMNI_THROW("Vectorization Error:", "Vector function not found for unary expression");
+    }
     auto result = VectorHelper::CreateFlatVector(e.dataType->GetId(), rowSize);
     e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
@@ -433,6 +436,9 @@ void ExprEval::Visit(const BinaryExpr &e)
 {
     e.left->Accept(*this);
     e.right->Accept(*this);
+    if (e.vectorFunction == nullptr) {
+        OMNI_THROW("Vectorization Error:", "Vector function not found for binary expression");
+    }
 
     BaseVector *result = nullptr;
     e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
@@ -442,6 +448,9 @@ void ExprEval::Visit(const BinaryExpr &e)
 void ExprEval::Visit(const InExpr &e)
 {
     e.arguments[0]->Accept(*this);
+    if (e.vectorFunction == nullptr) {
+        OMNI_THROW("Vectorization Error:", "Vector function not found for in expression");
+    }
     BaseVector *result = nullptr;
     const auto inputDataType = e.arguments[0]->dataType;
     ArrayType arrayType(inputDataType);
@@ -461,6 +470,9 @@ void ExprEval::Visit(const IfExpr &e)
     for (auto arg : e.arguments) {
         arg->Accept(*this);
     }
+    if (e.vectorFunction == nullptr) {
+        OMNI_THROW("Vectorization Error:", "Vector function not found for if expression");
+    }
 
     BaseVector *result = nullptr;
     e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
@@ -472,6 +484,9 @@ void ExprEval::Visit(const CoalesceExpr &e)
     for (auto arg : e.arguments) {
         arg->Accept(*this);
     }
+    if (e.vectorFunction == nullptr) {
+        OMNI_THROW("Vectorization Error:", "Vector function not found for coalesce expression");
+    }
 
     BaseVector *result = nullptr;
     e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
@@ -481,6 +496,9 @@ void ExprEval::Visit(const CoalesceExpr &e)
 void ExprEval::Visit(const IsNullExpr &e)
 {
     e.value->Accept(*this);
+    if (e.vectorFunction == nullptr) {
+        OMNI_THROW("Vectorization Error:", "Vector function not found for isnull expression");
+    }
     auto result = VectorHelper::CreateFlatVector(e.dataType->GetId(), rowSize);
     e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);

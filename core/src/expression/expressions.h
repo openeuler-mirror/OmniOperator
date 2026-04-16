@@ -252,7 +252,7 @@ public:
 
     bool supportVectorized() const override
     {
-        return exp->supportVectorized();
+        return vectorFunction != nullptr && exp->supportVectorized();
     }
 
     std::string toString() const override
@@ -293,7 +293,7 @@ public:
 
     bool supportVectorized() const override
     {
-        return left->supportVectorized() && right->supportVectorized();
+        return vectorFunction != nullptr && left->supportVectorized() && right->supportVectorized();
     }
 
     std::string toString() const override;
@@ -313,7 +313,10 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 
-    bool supportVectorized() const override { return arguments[0]->supportVectorized(); }
+    bool supportVectorized() const override
+    {
+        return vectorFunction != nullptr && !arguments.empty() && arguments[0]->supportVectorized();
+    }
 
     std::string toString() const override
     {
@@ -395,7 +398,8 @@ public:
 
     bool supportVectorized() const override
     {
-        return condition->supportVectorized() && trueExpr->supportVectorized() && falseExpr->supportVectorized();
+        return vectorFunction != nullptr && condition->supportVectorized() &&
+            trueExpr->supportVectorized() && falseExpr->supportVectorized();
     }
 
     std::string toString() const override
@@ -427,7 +431,7 @@ public:
 
     bool supportVectorized() const override
     {
-        return value1->supportVectorized() && value2->supportVectorized();
+        return vectorFunction != nullptr && value1->supportVectorized() && value2->supportVectorized();
     }
 
     std::string toString() const override
@@ -455,7 +459,7 @@ public:
 
     bool supportVectorized() const override
     {
-        return value->supportVectorized();
+        return vectorFunction != nullptr && value->supportVectorized();
     }
 
     std::string toString() const override
