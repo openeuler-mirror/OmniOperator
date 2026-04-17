@@ -30,9 +30,9 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class TrySumFlatIMAggregator : pu
 
         template <typename TypeIn, typename TypeOut> static void UpdateState(AggregateState *state, const TypeIn &in)
         {
-            auto *maxState = CastState(state);
-            SumOp<TypeIn, TypeOut, int64_t, StateCountHandler, true>(&(maxState->value),
-                maxState->count, in, 1ULL);
+            auto *sumState = CastState(state);
+            SumOp<TypeIn, TypeOut, int64_t, StateCountHandler, true>(&(sumState->value),
+                sumState->count, in, 1ULL);
         }
 
         template <typename TypeIn, typename TypeOut, bool addIf>
@@ -48,7 +48,7 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class TrySumFlatIMAggregator : pu
 public:
     TrySumFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial, bool isOverflowAsNull)
-        : TypedAggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial,
+        : TypedAggregator(OMNI_AGGREGATION_TYPE_TRY_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial,
         isOverflowAsNull)
     {}
     TrySumFlatIMAggregator(const FunctionType aggFunc, const DataTypes &inputTypes, const DataTypes &outputTypes,
@@ -61,20 +61,31 @@ public:
         const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
     {
         // final stage : input vector will be Vector<ResultType>
-        auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
-        ptr += rowOffset;
-        if (nullMap == nullptr) {
-            AddUseRowIndex<ResultType, TrySumFlatState::template UpdateState<ResultType, ResultType>>(rowStates,
-                aggStateOffset, ptr);
-        } else {
-            AddConditionalUseRowIndex<ResultType,
-                TrySumFlatState::template UpdateStateWithCondition<ResultType, ResultType, false>>(rowStates,
-                aggStateOffset, ptr, *nullMap);
+        auto *sumPtr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
+        auto *emptyVector = curVectorBatch->Get(channels[1]);
+        auto *emptyPtr = reinterpret_cast<bool *>(GetValuesFromVector<OMNI_BOOLEAN>(emptyVector));
+        sumPtr += rowOffset;
+        emptyPtr += rowOffset;
+
+        for (size_t i = 0; i < rowStates.size(); ++i) {
+            auto *state = TrySumFlatState::CastState(rowStates[i] + aggStateOffset);
+            if (state->IsOverFlowed()) {
+                continue;
+            }
+            if (nullMap != nullptr && (*nullMap)[i]) {
+                if (!emptyPtr[i]) {
+                    state->count = StateCountHandler::Overflowed();
+                }
+                continue;
+            }
+            if (!emptyPtr[i]) {
+                SumOp<ResultType, ResultType, int64_t, StateCountHandler, true>(&state->value, state->count, sumPtr[i], 1ULL);
+            }
         }
     }
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
-        const std::shared_ptr<NullsHelper> nullMap)
+        const std::shared_ptr<NullsHelper> nullMap) override
     {
         if (inputRaw) {
             if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
@@ -134,20 +145,32 @@ public:
     void ProcessSingleInternalFinal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
     {
-        TrySumFlatState *trySumFlatState = TrySumFlatState::CastState(state);
-        auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
-        ptr += rowOffset;
-        if (nullMap == nullptr) {
-                Add<ResultType, ResultType, int64_t, SumOp<ResultType, ResultType, int64_t, StateCountHandler>>(
-                    reinterpret_cast<ResultType *>(&trySumFlatState->value), trySumFlatState->count, ptr, rowCount);
-        } else {
-                AddConditional<ResultType , ResultType, int64_t, SumConditionalOp<ResultType, ResultType, int64_t, StateCountHandler, false>>(
-                    reinterpret_cast<ResultType *>(&trySumFlatState->value), trySumFlatState->count, ptr, rowCount, *nullMap);
+        auto *trySumState = TrySumFlatState::CastState(state);
+        auto *sumPtr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
+        auto *emptyVector = curVectorBatch->Get(channels[1]);
+        auto *emptyPtr = reinterpret_cast<bool *>(GetValuesFromVector<OMNI_BOOLEAN>(emptyVector));
+        sumPtr += rowOffset;
+        emptyPtr += rowOffset;
+
+        for (int32_t i = 0; i < rowCount; ++i) {
+            if (trySumState->IsOverFlowed()) {
+                break;
+            }
+            if (nullMap != nullptr && (*nullMap)[i]) {
+                if (!emptyPtr[i]) {
+                    trySumState->count = StateCountHandler::Overflowed();
+                }
+                continue;
+            }
+            if (!emptyPtr[i]) {
+                SumOp<ResultType, ResultType, int64_t, StateCountHandler, true>(
+                        &trySumState->value, trySumState->count, sumPtr[i], 1ULL);
+            }
         }
     }
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap) override
     {
         TrySumFlatState *trySumFlatState = TrySumFlatState::CastState(state);
         if (inputRaw) {
@@ -217,15 +240,11 @@ public:
         auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
         auto rowCount = static_cast<int32_t>(groupStates.size());
         for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-            TrySumFlatState *state = TrySumFlatState::CastState(groupStates[rowIndex] + aggStateOffset);
-            auto count = state->count;
-            bool isOverflow = count<0;
-            bool isEmpty = count==0;
-            if (isEmpty) {
-                // set null for empty group(all rows are NULL) when spill to ensure skip empty group when unspill
+            auto *state = TrySumFlatState::CastState(groupStates[rowIndex] + aggStateOffset);
+            if (state->IsEmpty()) {
                 spillValueVec->SetNull(rowIndex);
                 spillValueVec->SetValue(rowIndex, SPILL_EMPTY_VALUE);
-            } else if (isOverflow) {
+            } else if (state->IsOverFlowed()) {
                 spillValueVec->SetNull(rowIndex);
                 spillValueVec->SetValue(rowIndex, SPILL_OVERFLOW_VALUE);
             } else {
@@ -236,54 +255,99 @@ public:
 
     void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        auto v = static_cast<Vector<ResultType> *>(vectors[0]);
-        const TrySumFlatState *trySumFlatState = TrySumFlatState::ConstCastState(state + aggStateOffset);
-        bool isOverflow = trySumFlatState->count<0;
-        bool isEmpty = trySumFlatState->count==0;
-        if (isOverflow || isEmpty) {
-            v->SetNull(rowIndex);
+        const auto *trySumState = TrySumFlatState::ConstCastState(state + aggStateOffset);
+        if (outputPartial) {
+            auto sumVector = static_cast<Vector<ResultType> *>(vectors[0]);
+            auto emptyVector = static_cast<Vector<bool> *>(vectors[1]);
+            if (trySumState->IsOverFlowed()) {
+                sumVector->SetNull(rowIndex);
+                emptyVector->SetValue(rowIndex, false);
+            } else if (trySumState->IsEmpty()) {
+                sumVector->SetValue(rowIndex, ResultType {});
+                emptyVector->SetValue(rowIndex, true);
+            } else {
+                sumVector->SetValue(rowIndex, trySumState->value);
+                emptyVector->SetValue(rowIndex, false);
+            }
+            return;
+
+        }
+
+        auto sumVector = static_cast<Vector<ResultType> *>(vectors[0]);
+        if (trySumState->IsOverFlowed() || trySumState->IsEmpty()) {
+            sumVector->SetNull(rowIndex);
         } else {
-            v->SetValue(rowIndex, static_cast<ResultType>(trySumFlatState->value));
+            sumVector->SetValue(rowIndex, trySumState->value);
         }
     }
 
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates,
-                            std::vector<BaseVector *> &vectors,
-                            int32_t rowOffset,
-                            int32_t rowCount) override {
-        auto v = static_cast<Vector<ResultType> *>(vectors[0]);
-        for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-            const TrySumFlatState *s =
-                TrySumFlatState::ConstCastState(groupStates[rowIndex] + aggStateOffset);
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override
+    {
+        if (outputPartial) {
+            auto sumVector = static_cast<Vector<ResultType> *>(vectors[0]);
+            auto emptyVector = static_cast<Vector<bool> *>(vectors[1]);
+            for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+                const auto *state = TrySumFlatState::ConstCastState(groupStates[rowIndex] + aggStateOffset);
+                if (state->IsOverFlowed()) {
+                    sumVector->SetNull(rowIndex);
+                    emptyVector->SetValue(rowIndex, false);
+                } else if (state->IsEmpty()) {
+                    sumVector->SetValue(rowIndex, ResultType {});
+                    emptyVector->SetValue(rowIndex, true);
+                } else {
+                    sumVector->SetValue(rowIndex, state->value);
+                    emptyVector->SetValue(rowIndex, false);
+                }
+            }
+            return;
+        }
 
-            if (s->count < 0 || s->count == 0) v->SetNull(rowIndex);
-            else v->SetValue(rowIndex, static_cast<ResultType>(s->value));
+        auto sumVector = static_cast<Vector<ResultType> *>(vectors[0]);
+        for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            const auto *state = TrySumFlatState::ConstCastState(groupStates[rowIndex] + aggStateOffset);
+            if (state->IsOverFlowed() || state->IsEmpty()) {
+                sumVector->SetNull(rowIndex);
+            } else {
+                sumVector->SetValue(rowIndex, state->value);
+            }
         }
     }
 
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
         const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override
     {
-        int rowCount = originVector->GetSize();
-        // opt branch
+        int rowCount = originVector == nullptr ? 0 : originVector->GetSize();
+        auto emptyVector = reinterpret_cast<Vector<bool> *>(VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowCount));
+
+        if (rowCount == 0) {
+            auto sumVector = reinterpret_cast<Vector<ResultType> *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
+            result->Append(sumVector);
+            result->Append(emptyVector);
+            return;
+        }
+
         if constexpr (std::is_same_v<InType, ResultType>) {
-            if (!aggFilter) {
+            if (nullMap == nullptr && !aggFilter) {
                 auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+                bool *emptyPtr = reinterpret_cast<bool *>(GetValuesFromVector<OMNI_BOOLEAN>(emptyVector));
+                std::fill_n(emptyPtr, rowCount, false);
                 result->Append(sumVector);
+                result->Append(emptyVector);
                 return;
             }
         }
 
         if (originVector->GetEncoding() == OMNI_DICTIONARY) {
-            ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<InType>>>(result, originVector, nullMap);
+            ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<InType>>>(result, originVector, nullMap, emptyVector);
         } else {
-            ProcessAlignAggSchemaInternal<Vector<InType>>(result, originVector, nullMap);
+            ProcessAlignAggSchemaInternal<Vector<InType>>(result, originVector, nullMap, emptyVector);
         }
     }
 
     template<typename T>
     void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
-        const std::shared_ptr<NullsHelper> nullMap)
+        const std::shared_ptr<NullsHelper> nullMap, Vector<bool> *emptyVector)
     {
         int rowCount = originVector->GetSize();
         auto sumVector = reinterpret_cast<Vector<ResultType> *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
@@ -292,17 +356,21 @@ public:
         if (nullMap != nullptr) {
             for (int index = 0; index < rowCount; ++index) {
                 if ((*nullMap)[index]) {
-                    sumVector->SetNull(index);
+                    sumVector->SetValue(index, ResultType {});
+                    emptyVector->SetValue(index, true);
                 } else {
-                    sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                    sumVector->SetValue(index, static_cast<ResultType>(vector->GetValue(index)));
+                    emptyVector->SetValue(index, false);
                 }
             }
         } else {
             for (int index = 0; index < rowCount; ++index) {
-                sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                sumVector->SetValue(index, static_cast<ResultType>(vector->GetValue(index)));
+                emptyVector->SetValue(index, false);
             }
         }
         result->Append(sumVector);
+        result->Append(emptyVector);
     }
 
 private:
@@ -311,4 +379,4 @@ private:
 };
 }
 }
-#endif // OMNI_RUNTIME_SUM_FLAT_IM_AGGREGATOR_H
+#endif // OMNI_RUNTIME_TRY_SUM_FLAT_IM_AGGREGATOR_H
