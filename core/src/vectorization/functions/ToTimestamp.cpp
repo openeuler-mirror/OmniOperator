@@ -153,7 +153,7 @@ int32_t ParseMillisFromString(const std::string_view &input, const std::string &
 }
 
 bool ParseDateTimeString(const std::string_view &input, const std::string &jodaFormat,
-    int64_t &resultMicros)
+    int64_t &resultMicros, bool allowTrailingWhitespace = true)
 {
     if (input.empty() || jodaFormat.empty()) {
         return false;
@@ -183,16 +183,23 @@ bool ParseDateTimeString(const std::string_view &input, const std::string &jodaF
         return false;
     }
 
-    // Allow trailing whitespace (CHAR types are right-padded with spaces)
-    const char *remaining = parseEnd;
-    while (*remaining == ' ' || *remaining == '\0') {
-        if (*remaining == '\0') {
-            break;
+    if (allowTrailingWhitespace) {
+        // LEGACY mode: Allow trailing whitespace (CHAR types are right-padded with spaces)
+        const char *remaining = parseEnd;
+        while (*remaining == ' ' || *remaining == '\0') {
+            if (*remaining == '\0') {
+                break;
+            }
+            ++remaining;
         }
-        ++remaining;
-    }
-    if (*remaining != '\0') {
-        return false;
+        if (*remaining != '\0') {
+            return false;
+        }
+    } else {
+        // CORRECTED mode: Require the entire input to be consumed (JODA behavior)
+        if (*parseEnd != '\0') {
+            return false;
+        }
     }
 
     int64_t seconds = Timestamp::calendarUtcToEpoch(timeInfo);
@@ -258,6 +265,8 @@ public:
         }
 
         const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+        // get_timestamp does not receive a policy parameter, default to LEGACY (allow trailing whitespace)
+        bool isLegacy = true;
 
         for (int32_t row = 0; row < size; ++row) {
             if (inputArg->IsNull(row)) {
@@ -281,7 +290,7 @@ public:
             }
 
             int64_t resultMicros = 0;
-            if (ParseDateTimeString(inputStr, format, resultMicros)) {
+            if (ParseDateTimeString(inputStr, format, resultMicros, isLegacy)) {
                 if (sessionTz != nullptr) {
                     Timestamp ts = Timestamp::fromMicros(resultMicros);
                     auto sysSeconds = sessionTz->to_sys(
@@ -328,7 +337,7 @@ public:
 
         size_t argCount = args.size();
         
-        if (argCount == 4) {
+        if (argCount >= 4) {
             // Gluten path: (timeStr, format, timezone, policy)
             // Args are pushed in order, so stack top is the last arg (policy).
             auto policyArg = args.top();
@@ -342,6 +351,7 @@ public:
             DataTypeId inputTypeId = inputArg->GetTypeId();
 
             const tz::TimeZone *sessionTz = ExtractTimezone(tzArg, context);
+            bool isLegacy = ExtractLegacyPolicy(policyArg);
 
             if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
                 delete policyArg;
@@ -350,17 +360,17 @@ public:
                 ApplyTimestamp(args, outputType, result);
             } else if (inputTypeId == OMNI_DATE32 || inputTypeId == OMNI_INT) {
                 delete policyArg;
-                delete tzArg;
                 delete formatArg;
-                ApplyDate(args, outputType, result);
+                ApplyDate(args, outputType, result, sessionTz);
+                delete tzArg;
             } else {
                 // String path with explicit format and timezone
                 args.push(formatArg);
-                ApplyStringWithFormat(args, outputType, result, context, sessionTz);
+                ApplyStringWithFormat(args, outputType, result, context, sessionTz, isLegacy);
                 delete policyArg;
                 delete tzArg;
             }
-        } else if (argCount == 2) {
+        } else if (argCount >= 2) {
             auto formatArg = args.top();
             args.pop();
             auto inputArg = args.top();
@@ -371,12 +381,13 @@ public:
                 ApplyTimestamp(args, outputType, result);
             } else if (inputTypeId == OMNI_DATE32 || inputTypeId == OMNI_INT) {
                 delete formatArg;
-                ApplyDate(args, outputType, result);
+                const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+                ApplyDate(args, outputType, result, sessionTz);
             } else {
                 args.push(formatArg);
                 ApplyStringWithFormat(args, outputType, result, context);
             }
-        } else if (argCount == 1) {
+        } else if (argCount >= 1) {
             auto inputArg = args.top();
             DataTypeId inputTypeId = inputArg->GetTypeId();
 
@@ -385,7 +396,8 @@ public:
             } else if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
                 ApplyTimestamp(args, outputType, result);
             } else if (inputTypeId == OMNI_DATE32 || inputTypeId == OMNI_INT) {
-                ApplyDate(args, outputType, result);
+                const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+                ApplyDate(args, outputType, result, sessionTz);
             } else {
                 args.pop();
                 OMNI_THROW("ToUnixTimestamp function Error",
@@ -425,8 +437,34 @@ private:
         return getTimeZoneFromConfig(context->queryConfig());
     }
 
+    // Extract the timeParserPolicy from the policy argument.
+    // Returns true if policy is "LEGACY" (allow trailing whitespace),
+    // false if policy is "CORRECTED" or "EXCEPTION" (strict parsing, no trailing whitespace).
+    //
+    // Policy behavior:
+    // - LEGACY: Uses legacy formatter (SimpleDateFormat), allows trailing whitespace.
+    // - CORRECTED: Uses new formatter (Iso8601), requires entire input consumed.
+    //             Returns NULL on parse failure.
+    // - EXCEPTION: Uses new formatter (Iso8601), requires entire input consumed.
+    //             On parse failure, tries legacy formatter. If legacy succeeds, throws
+    //             SparkUpgradeException; if legacy also fails, throws original exception.
+    //
+    // For EXCEPTION policy, full support requires two-phase parsing (try new, then legacy).
+    // Current implementation treats EXCEPTION same as CORRECTED for the first phase.
+    static bool ExtractLegacyPolicy(BaseVector *policyArg)
+    {
+        if (policyArg == nullptr || policyArg->IsNull(0)) {
+            return false;  // Default to CORRECTED/EXCEPTION (strict)
+        }
+        std::string_view policyStr = GetStringValueFromVector(policyArg, 0);
+        // Only LEGACY policy allows trailing whitespace.
+        // Both CORRECTED and EXCEPTION use strict parsing (no trailing whitespace).
+        return (policyStr == "LEGACY");
+    }
+
     void ApplyStringDefault(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
-        BaseVector *&result, op::ExecutionContext *context) const
+        BaseVector *&result, op::ExecutionContext *context,
+        bool isLegacy = true) const
     {
         auto inputArg = args.top();
         args.pop();
@@ -449,7 +487,7 @@ private:
             std::string_view inputStr = GetStringValueFromVector(inputArg, row);
 
             int64_t resultMicros = 0;
-            if (ParseDateTimeString(inputStr, defaultFormat, resultMicros)) {;
+            if (ParseDateTimeString(inputStr, defaultFormat, resultMicros, isLegacy)) {;
                 if (sessionTz != nullptr) {
                     Timestamp ts = Timestamp::fromMicros(resultMicros);
                     auto sysSeconds = sessionTz->to_sys(
@@ -474,7 +512,8 @@ private:
 
     void ApplyStringWithFormat(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
         BaseVector *&result, op::ExecutionContext *context,
-        const tz::TimeZone *explicitTz = nullptr) const
+        const tz::TimeZone *explicitTz = nullptr,
+        bool isLegacy = true) const
     {
         auto formatArg = args.top();
         args.pop();
@@ -521,7 +560,7 @@ private:
             }
 
             int64_t resultMicros = 0;
-            if (ParseDateTimeString(inputStr, format, resultMicros)) {
+            if (ParseDateTimeString(inputStr, format, resultMicros, isLegacy)) {
                 if (sessionTz != nullptr) {
                     Timestamp ts = Timestamp::fromMicros(resultMicros);
                     auto sysSeconds = sessionTz->to_sys(
@@ -580,7 +619,7 @@ private:
     }
 
     void ApplyDate(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
-        BaseVector *&result) const
+        BaseVector *&result, const tz::TimeZone *sessionTz = nullptr) const
     {
         auto inputArg = args.top();
         args.pop();
@@ -599,7 +638,16 @@ private:
 
             auto *inputVec = static_cast<Vector<int32_t> *>(inputArg);
             int32_t daysSinceEpoch = inputVec->GetValue(row);
-            int64_t seconds = static_cast<int64_t>(daysSinceEpoch) * Timestamp::kSecondsInDay;
+            
+            // Create timestamp from date and apply timezone correction if needed
+            Timestamp ts = Timestamp::fromDate(daysSinceEpoch);
+            if (sessionTz != nullptr) {
+                // Convert from local timezone to GMT (similar to Velox's toGMTWithGapCorrection)
+                // This handles timezone offset and potential gap/ambiguous time issues
+                ts.toGMT(*sessionTz);
+            }
+            
+            int64_t seconds = ts.getSeconds();
 
             auto *resultVec = static_cast<Vector<int64_t> *>(result);
             resultVec->SetValue(row, seconds);
