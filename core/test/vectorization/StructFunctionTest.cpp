@@ -4,6 +4,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <stack>
 #include <string>
 #include <vector>
 #include "test/util/test_util.h"
@@ -16,6 +17,7 @@
 #include "vector/array_vector.h"
 #include "vector/map_vector.h"
 #include "vector/vector_batch.h"
+#include "vectorization/functions/NameStruct.h"
 
 using namespace omniruntime;
 using namespace omniruntime::vec;
@@ -432,6 +434,65 @@ TEST(StructFunctionTest, NameStructMultiField) {
     delete result;
     delete context;
     delete batch;
+}
+
+TEST(StructFunctionTest, NameStructIgnoresOuterStackEntries) {
+    RegisterOnce();
+    int rowSize = 2;
+    auto sentinel = VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowSize);
+    static_cast<Vector<double> *>(sentinel)->SetValue(0, 11.1);
+    static_cast<Vector<double> *>(sentinel)->SetValue(1, 22.2);
+
+    auto name1 = VectorHelper::CreateStringVector(rowSize);
+    auto value1 = VectorHelper::CreateStringVector(rowSize);
+    auto name2 = VectorHelper::CreateStringVector(rowSize);
+    auto value2 = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
+
+    std::string fieldName1("name");
+    std::string fieldValue1("izvyp");
+    std::string fieldName2("age");
+    static_cast<Vector<LargeStringContainer<std::string_view>> *>(name1)->SetValue(0, std::string_view(fieldName1));
+    static_cast<Vector<LargeStringContainer<std::string_view>> *>(name1)->SetValue(1, std::string_view(fieldName1));
+    static_cast<Vector<LargeStringContainer<std::string_view>> *>(value1)->SetValue(0, std::string_view(fieldValue1));
+    static_cast<Vector<LargeStringContainer<std::string_view>> *>(value1)->SetValue(1, std::string_view(fieldValue1));
+    static_cast<Vector<LargeStringContainer<std::string_view>> *>(name2)->SetValue(0, std::string_view(fieldName2));
+    static_cast<Vector<LargeStringContainer<std::string_view>> *>(name2)->SetValue(1, std::string_view(fieldName2));
+    static_cast<Vector<int32_t> *>(value2)->SetValue(0, 4);
+    static_cast<Vector<int32_t> *>(value2)->SetValue(1, 5);
+
+    std::stack<BaseVector *> args;
+    args.push(sentinel);
+    args.push(name1);
+    args.push(value1);
+    args.push(name2);
+    args.push(value2);
+
+    std::vector<std::shared_ptr<DataType>> fieldTypes = {
+        std::make_shared<DataType>(OMNI_VARCHAR),
+        std::make_shared<DataType>(OMNI_INT)
+    };
+    auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"name", "age"});
+    ExecutionContext *context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+    NameStructFunction func;
+    BaseVector *result = nullptr;
+    func.Apply(args, rowType, result, context);
+
+    auto *rowVec = dynamic_cast<RowVector *>(result);
+    ASSERT_NE(rowVec, nullptr);
+    ASSERT_EQ(rowVec->ChildSize(), 2);
+    auto *nameChild = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rowVec->ChildAt(0).get());
+    auto *ageChild = static_cast<Vector<int32_t> *>(rowVec->ChildAt(1).get());
+    ASSERT_EQ(nameChild->GetValue(0), "izvyp");
+    ASSERT_EQ(nameChild->GetValue(1), "izvyp");
+    ASSERT_EQ(ageChild->GetValue(0), 4);
+    ASSERT_EQ(ageChild->GetValue(1), 5);
+    ASSERT_EQ(args.size(), 1);
+    ASSERT_EQ(args.top(), sentinel);
+
+    delete result;
+    delete context;
+    delete sentinel;
 }
 
 TEST(StructFunctionTest, NameStructWithNull) {

@@ -30,17 +30,53 @@ void NameStructFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr
         OMNI_THROW("NameStruct Error", "Output type must be RowType");
     }
     size_t fieldCount = static_cast<size_t>(rowType->Size());
+    size_t consumedCount = 0;
     std::vector<BaseVector *> argVectors;
     std::vector<BaseVector *> nameVectors;
-    if (allArgs.size() == fieldCount) {
-        argVectors = allArgs;
-    } else if (allArgs.size() == 2 * fieldCount) {
-        argVectors.reserve(fieldCount);
-        nameVectors.reserve(fieldCount);
-        for (size_t i = 0; i < fieldCount; ++i) {
-            nameVectors.push_back(allArgs[2 * i]);
-            argVectors.push_back(allArgs[2 * i + 1]);
+
+    auto isNameValueLayout = [&](const std::vector<BaseVector *> &selected) {
+        if (selected.size() != 2 * fieldCount) {
+            return false;
         }
+        for (size_t i = 0; i < fieldCount; ++i) {
+            if (!TypeUtil::IsStringType(selected[2 * i]->GetTypeId())) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    auto takeFromSuffix = [&](size_t suffixCount) {
+        size_t startIdx = allArgs.size() - suffixCount;
+        std::vector<BaseVector *> selected(allArgs.begin() + static_cast<int64_t>(startIdx), allArgs.end());
+        if (suffixCount == fieldCount) {
+            argVectors = std::move(selected);
+        } else {
+            argVectors.reserve(fieldCount);
+            nameVectors.reserve(fieldCount);
+            for (size_t i = 0; i < fieldCount; ++i) {
+                nameVectors.push_back(selected[2 * i]);
+                argVectors.push_back(selected[2 * i + 1]);
+            }
+        }
+        consumedCount = suffixCount;
+    };
+
+    if (allArgs.size() == fieldCount) {
+        takeFromSuffix(fieldCount);
+    } else if (allArgs.size() == 2 * fieldCount) {
+        takeFromSuffix(2 * fieldCount);
+    } else if (allArgs.size() > 2 * fieldCount) {
+        // Some callers leave unrelated vectors on the stack before invoking a nested named_struct.
+        // Consume only the tail that belongs to this call and restore the prefix afterwards.
+        std::vector<BaseVector *> candidate(allArgs.end() - static_cast<int64_t>(2 * fieldCount), allArgs.end());
+        if (isNameValueLayout(candidate)) {
+            takeFromSuffix(2 * fieldCount);
+        } else {
+            takeFromSuffix(fieldCount);
+        }
+    } else if (allArgs.size() > fieldCount) {
+        takeFromSuffix(fieldCount);
     } else {
         OMNI_THROW("NameStruct Error", "Argument count mismatch: expected " +
                    std::to_string(fieldCount) + " or " + std::to_string(2 * fieldCount) +
@@ -68,6 +104,9 @@ void NameStructFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr
                 CopyFieldAtRow(srcVec, dstVec, row, fieldTypeId, readRow, pOffset);
             }
         }
+    }
+    for (size_t i = 0; i + consumedCount < allArgs.size(); ++i) {
+        args.push(allArgs[i]);
     }
     for (auto *vec : argVectors) {
         if (vec != nullptr && !vec->GetIsField()) {
