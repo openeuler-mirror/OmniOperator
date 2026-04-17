@@ -154,7 +154,6 @@ int32_t GroupingOperator::GetOutput(VectorBatch **outputVecBatch)
             auto projectedVecBatch = this->expressionEvaluators_[index_]->Evaluate(*outputVecBatch,
                 executionContext.get());
             aggOperators_[index_]->AddInput(projectedVecBatch);
-            index_++;
             return 0;
         }
         index_++;
