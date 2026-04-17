@@ -279,6 +279,9 @@ public:
             case OMNI_BOOLEAN:
                 return CalElementSize<OMNI_BOOLEAN>(bv);
                 break;
+            case OMNI_VARBINARY:
+                return CalElementSize<OMNI_VARBINARY>(bv);
+                break;
             case OMNI_ARRAY:
                 return CalElementSize<OMNI_ARRAY>(bv);
                 break;
@@ -493,6 +496,9 @@ private:
             case OMNI_BOOLEAN:
                 return SerializeArrayElements<OMNI_BOOLEAN>(writeBuffer, bv);
                 break;
+            case OMNI_VARBINARY:
+                return SerializeArrayElements<OMNI_VARBINARY>(writeBuffer, bv);
+                break;
             case OMNI_ARRAY:
                 return SerializeArrayElements<OMNI_ARRAY>(writeBuffer, bv);
                 break;
@@ -590,6 +596,9 @@ private:
                     break;
                 case OMNI_BOOLEAN:
                     writeBuffer = WriteStructChildBuffer<OMNI_BOOLEAN>(writeBuffer, value[i]);
+                    break;
+                case OMNI_VARBINARY:
+                    writeBuffer = WriteStructChildBuffer<OMNI_VARBINARY>(writeBuffer, value[i]);
                     break;
                 case OMNI_ARRAY:
                     writeBuffer = WriteStructChildBuffer<OMNI_ARRAY>(writeBuffer, value[i]);

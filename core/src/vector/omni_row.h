@@ -89,7 +89,7 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         nullptr,                                              \
         TMP_FUNC_PTR<type::OMNI_BYTE>,                        \
         TMP_FUNC_PTR<type::OMNI_INT>,                         \
-        nullptr,                                              \
+        TMP_FUNC_PTR<type::OMNI_VARBINARY>,                   \
         nullptr,                                              \
         nullptr,                                              \
         nullptr,                                              \
@@ -124,7 +124,7 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         nullptr,                                                                   \
         TMP_FUNC_PTR<type::OMNI_BYTE, Encoding::OMNI_FLAT>,                        \
         TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_FLAT>,                         \
-        nullptr,                                                                   \
+        TMP_FUNC_PTR<type::OMNI_VARBINARY, Encoding::OMNI_FLAT>,                   \
         nullptr,                                                                   \
         nullptr,                                                                   \
         nullptr,                                                                   \
@@ -159,7 +159,7 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         nullptr,                                                                   \
         TMP_FUNC_PTR<type::OMNI_BYTE, Encoding::OMNI_DICTIONARY>,                  \
         TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_DICTIONARY>,                   \
-        nullptr,                                                                   \
+        TMP_FUNC_PTR<type::OMNI_VARBINARY, Encoding::OMNI_DICTIONARY>,             \
         nullptr,                                                                   \
         nullptr,                                                                   \
         nullptr,                                                                   \
@@ -189,7 +189,7 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
         nullptr,                                                                                  \
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_BYTE, Encoding::OMNI_ENCODING_CONST),              \
         TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_INT, Encoding::OMNI_ENCODING_CONST),               \
-        nullptr,                                                                                  \
+        TMP_FUNC_CALL(TMP_FUNC_PTR, type::OMNI_VARBINARY, Encoding::OMNI_ENCODING_CONST),         \
         nullptr,                                                                                  \
         nullptr,                                                                                  \
         nullptr,                                                                                  \

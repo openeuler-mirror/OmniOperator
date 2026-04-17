@@ -251,6 +251,9 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
             case OMNI_BYTE:
                 SetValueForSingleRowVecBatch<OMNI_BYTE>(singleRowVecBatch, i, vector, position);
                 break;
+            case OMNI_VARBINARY:
+                SetValueForSingleRowVecBatch<OMNI_VARBINARY>(singleRowVecBatch, i, vector, position);
+                break;
             case OMNI_ARRAY:
                 SetArrayForSingleRowVecBatch(singleRowVecBatch, i, vector, position);
                 break;
