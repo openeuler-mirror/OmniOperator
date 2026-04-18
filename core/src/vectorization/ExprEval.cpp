@@ -224,19 +224,40 @@ void ExprEval::Visit(const LiteralExpr &e)
             case OMNI_VARBINARY:
                 constVec = new ConstVector(std::string_view(*e.stringVal), typeId, rowSize);
                 break;
-            case OMNI_ROW:
-            case OMNI_MAP:
+            case OMNI_MAP: {
+                // Non-root null map literals (e.g. stack padding: array(col, null)) must match
+                // batch row count; size 1 would overrun in variadic functions like array()/named_struct().
+                if (e.isNull) {
+                    VectorHelper::CreateNullMapVector(rowSize, e.dataType, constVec);
+                } else {
+                    constVec = VectorHelper::CreateComplexVector(e.dataType.get(), rowSize);
+                }
+                break;
+            }
             case OMNI_ARRAY: {
-                constVec = VectorHelper::CreateComplexVector(e.dataType.get(), 1);
-                constVec->SetNull(0);
+                if (e.isNull) {
+                    VectorHelper::CreateNullArrayVector(rowSize, e.dataType, constVec);
+                } else {
+                    constVec = VectorHelper::CreateComplexVector(e.dataType.get(), rowSize);
+                }
+                break;
+            }
+            case OMNI_ROW: {
+                if (e.isNull) {
+                    VectorHelper::CreateNullRowVector(rowSize, e.dataType, constVec);
+                } else {
+                    constVec = VectorHelper::CreateComplexVector(e.dataType.get(), rowSize);
+                }
                 break;
             }
             case OMNI_NONE: {
-                auto *nullArrayVec = new ArrayVector(1);
+                auto *nullArrayVec = new ArrayVector(rowSize);
                 auto emptyElements = std::shared_ptr<BaseVector>(
                     VectorHelper::CreateFlatVector(static_cast<int32_t>(OMNI_INT), 0));
                 nullArrayVec->SetElementVector(emptyElements);
-                nullArrayVec->SetNull(0);
+                for (int32_t i = 0; i < rowSize; ++i) {
+                    nullArrayVec->SetNull(i);
+                }
                 constVec = nullArrayVec;
                 break;
             }
