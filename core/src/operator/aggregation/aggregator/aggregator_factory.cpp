@@ -725,6 +725,10 @@ std::unique_ptr<Aggregator> TrySumSparkAggregatorFactory::CreateAggregator(const
             return std::make_unique<TrySumFlatIMAggregator<OMNI_LONG, OMNI_LONG>>(inputTypes, outputTypes, channels,
                 inputRaw, outputPartial, isOverflowAsNull);
         }
+        case OMNI_FLOAT: {
+            return std::make_unique<SumFlatIMAggregator<OMNI_FLOAT, OMNI_DOUBLE>>(inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull);
+        }
         case OMNI_DOUBLE: {
             return std::make_unique<SumFlatIMAggregator<OMNI_DOUBLE, OMNI_DOUBLE>>(inputTypes, outputTypes, channels,
                 inputRaw, outputPartial, isOverflowAsNull);
