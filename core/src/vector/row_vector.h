@@ -54,6 +54,21 @@ namespace omniruntime::vec {
             return children_.size();
         }
 
+        void ALWAYS_INLINE SetNull(int64_t index)
+        {
+            BaseVector::SetNull(index);
+            for (auto &child : children_) {
+                if (child) {
+                    child->SetNull(static_cast<int32_t>(index));
+                }
+            }
+            for (auto *rawChild : rawChildren_) {
+                if (rawChild) {
+                    rawChild->SetNull(static_cast<int32_t>(index));
+                }
+            }
+        }
+
         void Set(int32_t index, BaseVector* setVec)
         {
             // if the index exceeds the current size, expand children_
