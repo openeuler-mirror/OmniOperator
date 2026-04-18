@@ -35,7 +35,7 @@ namespace common {
         lastSwitch = switches[switches.size() - 1];
     }
 
-    int64_t JulianGregorianRebase::RebaseJulianToGregorianMicros(int64_t micros)
+    int64_t JulianGregorianRebase::RebaseJulianToGregorianMicros(int64_t micros) const
     {
         if (micros >= lastSwitch) {
             return micros;
@@ -50,7 +50,33 @@ namespace common {
         return micros + diffs[i];
     }
 
-    int64_t JulianGregorianRebase::CalculateJulianDayOffset(int64_t micros)
+    int64_t JulianGregorianRebase::RebaseGregorianToJulianMicros(int64_t micros) const
+    {
+        if (micros >= lastSwitch) {
+            return micros;
+        }
+
+        const int64_t searchWindow = ONE_DAY_MICROS * 100L;
+        int64_t low = micros - searchWindow;
+        int64_t high = micros + searchWindow;
+
+        while (low <= high) {
+            int64_t mid = low + (high - low) / 2;
+            int64_t rebased = RebaseJulianToGregorianMicros(mid);
+            if (rebased == micros) {
+                return mid;
+            }
+            if (rebased < micros) {
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+
+        return micros;
+    }
+
+    int64_t JulianGregorianRebase::CalculateJulianDayOffset(int64_t micros) const
     {
         int64_t dayOffset = 2;
         int64_t switchMicros = switches[1];

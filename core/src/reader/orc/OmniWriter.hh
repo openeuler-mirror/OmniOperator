@@ -7,6 +7,7 @@
 #include "orc/Vector.hh"
 #include "vector/vector.h"
 #include "OmniColumnWriter.hh"
+#include "reader/common/JulianGregorianRebase.h"
 #include <memory>
 #include <set>
 #include <string>
@@ -37,5 +38,10 @@ namespace omniruntime::writer {
 
     std::unique_ptr <OmniWriter>
     createOmniWriter(const ::orc::Type &type, ::orc::OutputStream *stream, const ::orc::WriterOptions &options);
+
+    std::unique_ptr <OmniWriter>
+    createOmniWriterWithTimestampRebase(const ::orc::Type &type, ::orc::OutputStream *stream,
+                                        const ::orc::WriterOptions &options,
+                                        std::unique_ptr<common::JulianGregorianRebase> timestampRebase);
 }
 #endif

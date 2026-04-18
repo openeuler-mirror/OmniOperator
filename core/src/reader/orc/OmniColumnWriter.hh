@@ -28,6 +28,7 @@
 #include "Statistics.hh"
 #include "wrap/orc-proto-wrapper.hh"
 #include "vector/vector_helper.h"
+#include "reader/common/JulianGregorianRebase.h"
 
 namespace omniruntime::writer {
 
@@ -185,7 +186,8 @@ namespace omniruntime::writer {
     std::unique_ptr <OmniColumnWriter> buildOmniWriter(
             const ::orc::Type &type,
             const ::orc::StreamsFactory &factory,
-            const ::orc::WriterOptions &options);
+            const ::orc::WriterOptions &options,
+            const common::JulianGregorianRebase *timestampRebase = nullptr);
 }
 
 #endif

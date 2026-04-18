@@ -32,12 +32,14 @@ namespace common {
     public:
         JulianGregorianRebase(std::string tz, const std::vector<int64_t> &switches, const std::vector<int64_t> &diffs);
 
-        int64_t RebaseJulianToGregorianMicros(int64_t micros);
+        int64_t RebaseJulianToGregorianMicros(int64_t micros) const;
+
+        int64_t RebaseGregorianToJulianMicros(int64_t micros) const;
 
         std::string GetTz();
 
     private:
-        int64_t CalculateJulianDayOffset(int64_t micros);
+        int64_t CalculateJulianDayOffset(int64_t micros) const;
 
         std::string tz;
         std::int64_t offset{};
