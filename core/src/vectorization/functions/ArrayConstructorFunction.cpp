@@ -37,6 +37,17 @@ std::string_view ArrayConstructorFunction::GetStringValue(BaseVector *vec, int32
         }
         return std::string_view();
     }
+    if (vec->GetEncoding() == OMNI_DICTIONARY) {
+        // Dictionary-encoded varchar produced by e.g. the native ORC reader.
+        // dynamic_cast<Vector<LargeStringContainer<...>>*> on it returns nullptr
+        // and would otherwise silently produce empty strings.
+        using DictVarcharVector = Vector<DictionaryContainer<std::string_view, LargeStringContainer>>;
+        auto *dictVec = dynamic_cast<DictVarcharVector *>(vec);
+        if (dictVec != nullptr) {
+            return dictVec->GetValue(row);
+        }
+        return std::string_view();
+    }
     using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
     auto *varcharVec = dynamic_cast<VarcharVector *>(vec);
     if (varcharVec != nullptr) {
