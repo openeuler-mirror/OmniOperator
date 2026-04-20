@@ -798,6 +798,49 @@ static void Mm3Boolean(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std
 
 static uint32_t HashSingleElement(vec::BaseVector* vec, type::DataTypeId typeId, int64_t index, uint32_t seed);
 
+template <typename T>
+static ALWAYS_INLINE T GetPrimitiveValueByEncoding(vec::BaseVector* vec, int64_t index)
+{
+    auto encoding = vec->GetEncoding();
+    if (encoding == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<T> *>(vec);
+        return constVec->GetConstValue();
+    }
+    if (encoding == vec::OMNI_DICTIONARY) {
+        auto dictVec = reinterpret_cast<vec::Vector<vec::DictionaryContainer<T>> *>(vec);
+        return dictVec->GetValue(index);
+    }
+    if (encoding != vec::OMNI_FLAT) {
+        std::string omniExceptionInfo =
+            "Error in element hash, unsupported encoding: " + std::to_string(static_cast<int32_t>(encoding));
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+    }
+    auto flatVec = reinterpret_cast<vec::Vector<T> *>(vec);
+    return flatVec->GetValue(index);
+}
+
+template <>
+ALWAYS_INLINE std::string_view GetPrimitiveValueByEncoding<std::string_view>(
+    vec::BaseVector* vec, int64_t index)
+{
+    auto encoding = vec->GetEncoding();
+    if (encoding == vec::OMNI_ENCODING_CONST) {
+        auto constVec = reinterpret_cast<vec::ConstVector<std::string_view> *>(vec);
+        return constVec->GetConstValue();
+    }
+    if (encoding == vec::OMNI_DICTIONARY) {
+        auto dictVec = reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view>> *>(vec);
+        return dictVec->GetValue(index);
+    }
+    if (encoding != vec::OMNI_FLAT) {
+        std::string omniExceptionInfo =
+            "Error in element hash, unsupported string encoding: " + std::to_string(static_cast<int32_t>(encoding));
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+    }
+    auto flatVec = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(vec);
+    return flatVec->GetValue(index);
+}
+
 // Compute the Murmur3 hash of the ARRAY value at column row index `row` in `arrayVec`.
 // Iterates elements in storage order [start, start+length), chaining each element's hash
 // as the seed for the next. Null elements are skipped (seed passes through unchanged).
@@ -881,28 +924,26 @@ static uint32_t HashSingleElement(vec::BaseVector* vec, type::DataTypeId typeId,
 {
     switch (typeId) {
         case type::OMNI_BYTE: {
-            auto v = reinterpret_cast<vec::Vector<int8_t> *>(vec);
-            return HashInt(static_cast<uint32_t>(static_cast<int32_t>(v->GetValue(index))), seed);
+            auto value = GetPrimitiveValueByEncoding<int8_t>(vec, index);
+            return HashInt(static_cast<uint32_t>(static_cast<int32_t>(value)), seed);
         }
         case type::OMNI_SHORT: {
-            auto v = reinterpret_cast<vec::Vector<int16_t> *>(vec);
-            return HashInt(static_cast<uint32_t>(static_cast<int32_t>(v->GetValue(index))), seed);
+            auto value = GetPrimitiveValueByEncoding<int16_t>(vec, index);
+            return HashInt(static_cast<uint32_t>(static_cast<int32_t>(value)), seed);
         }
         case type::OMNI_FLOAT: {
-            auto v = reinterpret_cast<vec::Vector<float> *>(vec);
-            float fval = v->GetValue(index);
+            float fval = GetPrimitiveValueByEncoding<float>(vec, index);
             uint32_t intVal;
             memcpy(&intVal, &fval, sizeof(uint32_t));
             return HashInt(intVal, seed);
         }
         case type::OMNI_INT:
         case type::OMNI_DATE32: {
-            auto v = reinterpret_cast<vec::Vector<int32_t> *>(vec);
-            return HashInt(static_cast<uint32_t>(v->GetValue(index)), seed);
+            auto value = GetPrimitiveValueByEncoding<int32_t>(vec, index);
+            return HashInt(static_cast<uint32_t>(value), seed);
         }
         case type::OMNI_DOUBLE: {
-            auto v = reinterpret_cast<vec::Vector<double> *>(vec);
-            double dval = v->GetValue(index);
+            double dval = GetPrimitiveValueByEncoding<double>(vec, index);
             uint64_t intVal;
             memcpy(&intVal, &dval, sizeof(uint64_t));
             return HashLong(intVal, seed);
@@ -910,19 +951,17 @@ static uint32_t HashSingleElement(vec::BaseVector* vec, type::DataTypeId typeId,
         case type::OMNI_LONG:
         case type::OMNI_TIMESTAMP:
         case type::OMNI_DECIMAL64: {
-            auto v = reinterpret_cast<vec::Vector<int64_t> *>(vec);
-            return HashLong(static_cast<uint64_t>(v->GetValue(index)), seed);
+            auto value = GetPrimitiveValueByEncoding<int64_t>(vec, index);
+            return HashLong(static_cast<uint64_t>(value), seed);
         }
         case type::OMNI_CHAR:
         case type::OMNI_VARCHAR: {
-            auto v = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(vec);
-            std::string_view value = v->GetValue(index);
+            std::string_view value = GetPrimitiveValueByEncoding<std::string_view>(vec, index);
             return HashUnsafeBytes(const_cast<char *>(value.data()), value.size(), seed);
         }
         case type::OMNI_DECIMAL128: {
-            auto v = reinterpret_cast<vec::Vector<type::Decimal128> *>(vec);
+            auto val = GetPrimitiveValueByEncoding<type::Decimal128>(vec, index);
             int32_t byteLen = 0;
-            auto val = v->GetValue(index);
             auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(
                     val.HighBits(), val.LowBits(), byteLen);
             uint32_t hash = HashUnsafeBytes(reinterpret_cast<char *>(bytes), byteLen, seed);
@@ -930,8 +969,8 @@ static uint32_t HashSingleElement(vec::BaseVector* vec, type::DataTypeId typeId,
             return hash;
         }
         case type::OMNI_BOOLEAN: {
-            auto v = reinterpret_cast<vec::Vector<bool> *>(vec);
-            return HashInt(v->GetValue(index) ? 1 : 0, seed);
+            auto value = GetPrimitiveValueByEncoding<bool>(vec, index);
+            return HashInt(value ? 1 : 0, seed);
         }
         case type::OMNI_ARRAY: {
             auto arrayVec = reinterpret_cast<vec::ArrayVector *>(vec);
