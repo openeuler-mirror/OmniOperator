@@ -9,6 +9,77 @@ namespace omniruntime {
 namespace op {
 
 namespace {
+// Recursively decode OMNI_DICTIONARY encoded vectors to OMNI_FLAT, including children
+// of complex vectors (RowVector / ArrayVector / MapVector). Required because the unnest
+// operator only handles FLAT / ARRAY / MAP / STRUCT encodings, and common producers
+// (e.g. ORC native reader) emit dictionary-encoded leaf columns — especially for
+// varchar/char — which would otherwise either be rejected by the encoding whitelist
+// or cause undefined behaviour via static_cast to Vector<LargeStringContainer<...>>*
+// inside VectorHelper::CopyValue.
+// Returns a vector the caller owns. If no decoding was needed, returns `source` and
+// `replaced` stays false; otherwise a newly-allocated vector is returned and the
+// caller is responsible for releasing the original.
+omniruntime::vec::BaseVector* NormalizeEncoding(omniruntime::vec::BaseVector* source, bool& replaced)
+{
+    using namespace omniruntime::vec;
+    if (source == nullptr) {
+        return source;
+    }
+    auto encoding = source->GetEncoding();
+    if (encoding == OMNI_DICTIONARY) {
+        replaced = true;
+        return VectorHelper::DecodeDictionaryVector(source);
+    }
+    if (encoding == OMNI_ENCODING_STRUCT) {
+        auto* srcRow = dynamic_cast<RowVector*>(source);
+        if (srcRow == nullptr) {
+            return source;
+        }
+        for (int32_t c = 0; c < srcRow->ChildSize(); ++c) {
+            bool childReplaced = false;
+            auto* original = srcRow->ChildAt(c).get();
+            auto* normalized = NormalizeEncoding(original, childReplaced);
+            if (childReplaced) {
+                // RowVector::Set takes ownership of the raw pointer via shared_ptr,
+                // and the previous child's shared_ptr will be released here.
+                srcRow->Set(c, normalized);
+            }
+        }
+        return source;
+    }
+    if (encoding == OMNI_ENCODING_ARRAY) {
+        auto* srcArr = dynamic_cast<ArrayVector*>(source);
+        if (srcArr == nullptr) {
+            return source;
+        }
+        bool childReplaced = false;
+        auto* original = srcArr->GetElementVector().get();
+        auto* normalized = NormalizeEncoding(original, childReplaced);
+        if (childReplaced) {
+            srcArr->SetElementVector(std::shared_ptr<BaseVector>(normalized));
+        }
+        return source;
+    }
+    if (encoding == OMNI_ENCODING_MAP) {
+        auto* srcMap = dynamic_cast<MapVector*>(source);
+        if (srcMap == nullptr) {
+            return source;
+        }
+        bool keyReplaced = false;
+        auto* keyNorm = NormalizeEncoding(srcMap->GetKeyVector().get(), keyReplaced);
+        if (keyReplaced) {
+            srcMap->SetKeyVector(std::shared_ptr<BaseVector>(keyNorm));
+        }
+        bool valReplaced = false;
+        auto* valNorm = NormalizeEncoding(srcMap->GetValueVector().get(), valReplaced);
+        if (valReplaced) {
+            srcMap->SetValueVector(std::shared_ptr<BaseVector>(valNorm));
+        }
+        return source;
+    }
+    return source;
+}
+
 omniruntime::vec::BaseVector* CreateOutputVectorLike(omniruntime::vec::BaseVector* source, int32_t size)
 {
     using namespace omniruntime::vec;
@@ -81,6 +152,21 @@ int32_t UnnestOperator::AddInput(omniruntime::vec::VectorBatch* vecBatch)
         VectorHelper::FreeVecBatch(vecBatch);
         return 0;
     }
+
+    // Some producers (e.g. native ORC reader) feed dictionary-encoded leaf vectors
+    // — including leaves nested inside STRUCT / ARRAY / MAP. The unnest fast paths
+    // only accept FLAT / ARRAY / MAP / STRUCT encodings and also perform unchecked
+    // static_cast<Vector<...>*> on leaves, so decode any dictionary encoding up front.
+    for (int32_t i = 0; i < vecBatch->GetVectorCount(); ++i) {
+        auto* vec = vecBatch->Get(i);
+        bool replaced = false;
+        auto* normalized = NormalizeEncoding(vec, replaced);
+        if (replaced) {
+            vecBatch->SetVector(i, normalized);
+            delete vec;
+        }
+    }
+
     int32_t numElements = 0;
     rawMaxSizes_.resize(vecBatch->Get(0)->GetSize());
     
