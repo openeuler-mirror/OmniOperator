@@ -49,7 +49,8 @@ void ArrayConstructorFunction::Apply(std::stack<BaseVector *> &args, const DataT
     BaseVector *&result, ExecutionContext *context) const
 {
     std::vector<BaseVector *> argVectors;
-    while (!args.empty()) {
+    auto paramNums = context->getInputParamsNUms();
+    while (!args.empty() && (paramNums-- > 0)) {
         argVectors.push_back(args.top());
         args.pop();
     }

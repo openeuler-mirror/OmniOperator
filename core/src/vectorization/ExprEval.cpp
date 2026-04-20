@@ -530,7 +530,9 @@ void ExprEval::Visit(const FuncExpr &e)
     for (auto arg : e.arguments) {
         arg->Accept(*this);
     }
-
+    if (e.funcName == "array") {
+        context->setInputParamsNUms(e.arguments.size());
+    }
     BaseVector *result = nullptr;
     if (e.vectorFunction == nullptr) {
         // vectorFunction may be null when VectorFunction registry was not yet initialized
