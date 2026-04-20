@@ -79,7 +79,7 @@ int CompareVectorBatch(int32_t leftPosition, omniruntime::vec::VectorBatch *left
         }
 
         compare =
-            OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, leftPosition, rightVector, rightPosition);
+            OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, leftPosition, rightVector, rightPosition, sortNullFirsts[i] == 1);
         if (sortAscendings[i] == 0) {
             compare = -compare;
         }
@@ -212,6 +212,9 @@ static void ALWAYS_INLINE SetStructForSingleRowVecBatch(VectorBatch *singleRowVe
     resultVector->SetValue(0, value);
 }
 
+static ALWAYS_INLINE BaseVector *CreateComplexVectorForSingleRow(DataType *dataType, BaseVector *vector,
+    int32_t position);
+
 void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBatch *singleRowVecBatch,
     int32_t position) const
 {
@@ -255,14 +258,14 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
                 SetValueForSingleRowVecBatch<OMNI_VARBINARY>(singleRowVecBatch, i, vector, position);
                 break;
             case OMNI_ARRAY:
-                SetArrayForSingleRowVecBatch(singleRowVecBatch, i, vector, position);
-                break;
             case OMNI_MAP:
-                SetMapForSingleRowVecBatch(singleRowVecBatch, i, vector, position);
+            case OMNI_ROW: {
+                auto dataType = sourceTypes.GetType(i);
+                auto replacement = CreateComplexVectorForSingleRow(dataType.get(), vector, position);
+                delete singleRowVecBatch->Get(i);
+                singleRowVecBatch->SetVector(i, replacement);
                 break;
-            case OMNI_ROW:
-                SetStructForSingleRowVecBatch(singleRowVecBatch, i, vector, position);
-                break;
+            }
             default:
                 break;
         }
@@ -294,8 +297,8 @@ static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(omniruntime::vec::Vector
     singleRowVecBatch->Append(flatVector);
 }
 
-static void ALWAYS_INLINE SetComplexVectorForSingleRowVecBatch(DataType* dataType,
-    omniruntime::vec::VectorBatch *singleRowVecBatch, BaseVector *vector, int32_t position)
+static ALWAYS_INLINE  BaseVector *CreateComplexVectorForSingleRow(DataType *dataType, BaseVector *vector,
+    int32_t position)
 {
     auto complexVector = VectorHelper::CreateComplexVector(dataType, 1);
     DataTypeId dataTypeId = dataType->GetId();
@@ -328,6 +331,13 @@ static void ALWAYS_INLINE SetComplexVectorForSingleRowVecBatch(DataType* dataTyp
                 "Can not handle this type " + std::to_string(dataTypeId));
         }
     }
+    return complexVector;
+}
+
+static void ALWAYS_INLINE SetComplexVectorForSingleRowVecBatch(DataType* dataType,
+    omniruntime::vec::VectorBatch *singleRowVecBatch, BaseVector *vector, int32_t position)
+{
+    auto complexVector = CreateComplexVectorForSingleRow(dataType, vector, position);
     singleRowVecBatch->Append(complexVector);
 }
 
