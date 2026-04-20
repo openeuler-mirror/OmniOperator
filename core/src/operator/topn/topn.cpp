@@ -212,7 +212,7 @@ static void ALWAYS_INLINE SetStructForSingleRowVecBatch(VectorBatch *singleRowVe
     resultVector->SetValue(0, value);
 }
 
-static BaseVector *ALWAYS_INLINE CreateComplexVectorForSingleRow(DataType *dataType, BaseVector *vector,
+static ALWAYS_INLINE BaseVector *CreateComplexVectorForSingleRow(DataType *dataType, BaseVector *vector,
     int32_t position);
 
 void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBatch *singleRowVecBatch,
@@ -297,7 +297,7 @@ static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(omniruntime::vec::Vector
     singleRowVecBatch->Append(flatVector);
 }
 
-static BaseVector *ALWAYS_INLINE CreateComplexVectorForSingleRow(DataType *dataType, BaseVector *vector,
+static ALWAYS_INLINE  BaseVector *CreateComplexVectorForSingleRow(DataType *dataType, BaseVector *vector,
     int32_t position)
 {
     auto complexVector = VectorHelper::CreateComplexVector(dataType, 1);
