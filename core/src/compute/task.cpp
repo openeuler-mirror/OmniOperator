@@ -69,11 +69,7 @@ TaskStats OmniTask::GetTaskStats() const
             continue;
         }
         auto pipelineStats = driver->pipelineStats();
-        auto pipelineId = pipelineStats.pipelineId;
-        if (taskStats.pipelineStats.size() <= static_cast<size_t>(pipelineId)) {
-            taskStats.pipelineStats.resize(pipelineId + 1);
-        }
-        taskStats.pipelineStats[pipelineId] = pipelineStats;
+        taskStats.pipelineStats.emplace_back(pipelineStats);
     }
     return taskStats;
 }
