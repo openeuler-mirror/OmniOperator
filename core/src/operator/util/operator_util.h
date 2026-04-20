@@ -136,7 +136,7 @@ public:
     }
 
     static int32_t CompareVectorAtPosition(int32_t colTypeId, vec::BaseVector *leftColumn, int32_t leftColumnPosition,
-        vec::BaseVector *rightColumn, int32_t rightColumnPosition)
+        vec::BaseVector *rightColumn, int32_t rightColumnPosition, bool nullsFirst = true)
     {
         switch (colTypeId) {
             case OMNI_BYTE:
@@ -154,12 +154,18 @@ public:
                 return CompareTemplate<int64_t>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_DOUBLE:
                 return CompareDouble(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
+            case OMNI_FLOAT:
+                return CompareTemplate<float>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 return CompareVarchar(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_DECIMAL128:
                 return CompareTemplate<type::Decimal128>(leftColumn, leftColumnPosition, rightColumn,
                     rightColumnPosition);
+            case OMNI_ARRAY:
+                return CompareArrayValue(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition, nullsFirst);
+            case OMNI_ROW:
+                return CompareStructValue(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             default:
                 break;
         }
