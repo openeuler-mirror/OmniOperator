@@ -27,61 +27,60 @@ public:
         if (result == nullptr) {
             result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
         }
-        auto seed = reinterpret_cast<ConstVector<int32_t> *>(seedVec)->GetConstValue();
         auto resultVector = reinterpret_cast<Vector<int32_t> *>(result);
 
         const auto valTypeId = valVec->GetTypeId();
         for (size_t i = 0; i < size; i++) {
             resultVector->SetNotNull(i);
             if (valVec->IsNull(i)) {
-                resultVector->SetValue(i, seed);
+                resultVector->SetValue(i, VectorHelper::GetValueFromVector<int32_t>(seedVec, i));
                 continue;
             }
             switch (valTypeId) {
                 case OMNI_BOOLEAN:
-                    resultVector->SetValue(i, codegen::function::Mm3Boolean(VectorHelper::GetValueFromVector<bool>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::Mm3Boolean(VectorHelper::GetValueFromVector<bool>(valVec, i), false, VectorHelper::GetValueFromVector<int32_t>(seedVec, i), false));
                     break;
                 case OMNI_BYTE:
-                    resultVector->SetValue(i, codegen::function::Mm3Int8(VectorHelper::GetValueFromVector<int8_t>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::Mm3Int8(VectorHelper::GetValueFromVector<int8_t>(valVec, i), false, VectorHelper::GetValueFromVector<int32_t>(seedVec, i), false));
                     break;
                 case OMNI_SHORT:
-                    resultVector->SetValue(i, codegen::function::Mm3Int16(VectorHelper::GetValueFromVector<int16_t>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::Mm3Int16(VectorHelper::GetValueFromVector<int16_t>(valVec, i), false, VectorHelper::GetValueFromVector<int32_t>(seedVec, i), false));
                     break;
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    resultVector->SetValue(i, codegen::function::Mm3Int32(VectorHelper::GetValueFromVector<int32_t>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::Mm3Int32(VectorHelper::GetValueFromVector<int32_t>(valVec, i), false, VectorHelper::GetValueFromVector<int32_t>(seedVec, i), false));
                     break;
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
-                    resultVector->SetValue(i, codegen::function::Mm3Int64(VectorHelper::GetValueFromVector<int64_t>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::Mm3Int64(VectorHelper::GetValueFromVector<int64_t>(valVec, i), false, VectorHelper::GetValueFromVector<int32_t>(seedVec, i), false));
                     break;
                 case OMNI_FLOAT:
-                    resultVector->SetValue(i, codegen::function::Mm3Float(VectorHelper::GetValueFromVector<float>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::Mm3Float(VectorHelper::GetValueFromVector<float>(valVec, i), false, VectorHelper::GetValueFromVector<int32_t>(seedVec, i), false));
                     break;
                 case OMNI_DOUBLE:
-                    resultVector->SetValue(i, codegen::function::Mm3Double(VectorHelper::GetValueFromVector<double>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::Mm3Double(VectorHelper::GetValueFromVector<double>(valVec, i), false, VectorHelper::GetValueFromVector<int32_t>(seedVec, i), false));
                     break;
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 case OMNI_VARBINARY:
-                    resultVector->SetValue(i, codegen::function::Mm3String1(VectorHelper::GetStringValueFromVector(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::Mm3String1(VectorHelper::GetStringValueFromVector(valVec, i), false, VectorHelper::GetValueFromVector<int32_t>(seedVec, i), false));
                     break;
                 case OMNI_DECIMAL128: {
                     Decimal128 val = VectorHelper::GetValueFromVector<Decimal128>(valVec, i);
-                    resultVector->SetValue(i, codegen::function::Mm3Decimal128(val.HighBits(), val.LowBits(), 0, 0, false, seed, false));
+                    resultVector->SetValue(i, codegen::function::Mm3Decimal128(val.HighBits(), val.LowBits(), 0, 0, false, VectorHelper::GetValueFromVector<int32_t>(seedVec, i), false));
                     break;
                 }
                 case OMNI_ARRAY: {
                     auto *arrayVec = reinterpret_cast<vec::ArrayVector *>(valVec);
                     resultVector->SetValue(i, static_cast<int32_t>(op::HashArrayAtRow(
-                        arrayVec, static_cast<int64_t>(i), static_cast<uint32_t>(seed))));
+                        arrayVec, static_cast<int64_t>(i), static_cast<uint32_t>(VectorHelper::GetValueFromVector<int32_t>(seedVec, i)))));
                     break;
                 }
                 case OMNI_ROW: {
                     auto *rowVec = reinterpret_cast<vec::RowVector *>(valVec);
                     resultVector->SetValue(i, static_cast<int32_t>(op::HashStructAtRow(
-                        rowVec, static_cast<int64_t>(i), static_cast<uint32_t>(seed))));
+                        rowVec, static_cast<int64_t>(i), static_cast<uint32_t>(VectorHelper::GetValueFromVector<int32_t>(seedVec, i)))));
                     break;
                 }
             }
@@ -124,51 +123,50 @@ public:
         if (result == nullptr) {
             result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
         }
-        auto seed = reinterpret_cast<ConstVector<int64_t> *>(seedVec)->GetConstValue();
         auto resultVector = reinterpret_cast<Vector<int64_t> *>(result);
 
         const auto valTypeId = valVec->GetTypeId();
         for (size_t i = 0; i < size; i++) {
             resultVector->SetNotNull(i);
             if (valVec->IsNull(i)) {
-                resultVector->SetValue(i, seed);
+                resultVector->SetValue(i, VectorHelper::GetValueFromVector<int64_t>(seedVec, i));
                 continue;
             }
             switch (valTypeId) {
                 case OMNI_BOOLEAN:
-                    resultVector->SetValue(i, codegen::function::XxH64Boolean(VectorHelper::GetValueFromVector<bool>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::XxH64Boolean(VectorHelper::GetValueFromVector<bool>(valVec, i), false, VectorHelper::GetValueFromVector<int64_t>(seedVec, i), false));
                     break;
                 case OMNI_BYTE:
-                    resultVector->SetValue(i, codegen::function::XxH64Int8(VectorHelper::GetValueFromVector<int8_t>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::XxH64Int8(VectorHelper::GetValueFromVector<int8_t>(valVec, i), false, VectorHelper::GetValueFromVector<int64_t>(seedVec, i), false));
                     break;
                 case OMNI_SHORT:
-                    resultVector->SetValue(i, codegen::function::XxH64Int16(VectorHelper::GetValueFromVector<int16_t>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::XxH64Int16(VectorHelper::GetValueFromVector<int16_t>(valVec, i), false, VectorHelper::GetValueFromVector<int64_t>(seedVec, i), false));
                     break;
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    resultVector->SetValue(i, codegen::function::XxH64Int32(VectorHelper::GetValueFromVector<int32_t>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::XxH64Int32(VectorHelper::GetValueFromVector<int32_t>(valVec, i), false, VectorHelper::GetValueFromVector<int64_t>(seedVec, i), false));
                     break;
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
-                    resultVector->SetValue(i, codegen::function::XxH64Int64(VectorHelper::GetValueFromVector<int64_t>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::XxH64Int64(VectorHelper::GetValueFromVector<int64_t>(valVec, i), false, VectorHelper::GetValueFromVector<int64_t>(seedVec, i), false));
                     break;
                 case OMNI_FLOAT:
-                    resultVector->SetValue(i, codegen::function::XxH64Float(VectorHelper::GetValueFromVector<float>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::XxH64Float(VectorHelper::GetValueFromVector<float>(valVec, i), false, VectorHelper::GetValueFromVector<int64_t>(seedVec, i), false));
                     break;
                 case OMNI_DOUBLE:
-                    resultVector->SetValue(i, codegen::function::XxH64Double(VectorHelper::GetValueFromVector<double>(valVec, i), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::XxH64Double(VectorHelper::GetValueFromVector<double>(valVec, i), false, VectorHelper::GetValueFromVector<int64_t>(seedVec, i), false));
                     break;
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
                 case OMNI_VARBINARY: {
                     std::string_view valString = VectorHelper::GetStringValueFromVector(valVec, i);
-                    resultVector->SetValue(i, codegen::function::XxH64String(valString.data(), valString.size(), false, seed, false));
+                    resultVector->SetValue(i, codegen::function::XxH64String(valString.data(), valString.size(), false, VectorHelper::GetValueFromVector<int64_t>(seedVec, i), false));
                     break;
                 }
                 case OMNI_DECIMAL128: {
                     Decimal128 val = VectorHelper::GetValueFromVector<Decimal128>(valVec, i);
-                    resultVector->SetValue(i, codegen::function::XxH64Decimal128(val.HighBits(), val.LowBits(), 0, 0, false, seed, false));
+                    resultVector->SetValue(i, codegen::function::XxH64Decimal128(val.HighBits(), val.LowBits(), 0, 0, false, VectorHelper::GetValueFromVector<int64_t>(seedVec, i), false));
                     break;
                 }
             }

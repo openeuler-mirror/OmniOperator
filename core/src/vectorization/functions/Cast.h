@@ -70,6 +70,8 @@ private:
         int8_t sign = 1;
     };
 
+    void fixDecimalStringInPlace(std::string& str) const;
+
     std::string_view extractDigits(const char *s, size_t start, size_t size) const;
 
     Status parseDecimalComponents(const char *s, size_t size, DecimalComponents &out) const;

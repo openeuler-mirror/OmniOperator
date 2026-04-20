@@ -1507,9 +1507,11 @@ void CastFunction::CastToDecimal64(BaseVector* input, BaseVector*& result, Execu
 int64_t CastFunction::StringToDecimal64(std::string str, bool *isNull, int32_t outPrecision, int32_t outScale) const{
     str.erase(0, str.find_first_not_of(' '));
     str.erase(str.find_last_not_of(' ') + 1);
-    if (!str.empty() && str.back() == '.') {
-        str.push_back('0');
+    if (str.empty() || (str.size() == 1 && !isdigit(str[0]))) {
+        *isNull = true;
+        return 0;
     }
+    fixDecimalStringInPlace(str);
     Decimal64<true> result(str);
     result.ReScale(outScale);
     if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
@@ -1771,9 +1773,11 @@ void CastFunction::CastToDecimal128(BaseVector* input, BaseVector*& result, Exec
 int128_t CastFunction::StringToDecimal128(std::string str, bool *isNull, int32_t outPrecision, int32_t outScale) const {
     str.erase(0, str.find_first_not_of(' '));
     str.erase(str.find_last_not_of(' ') + 1);
-    if (!str.empty() && str.back() == '.') {
-        str.push_back('0');
+    if (str.empty() || (str.size() == 1 && !isdigit(str[0]))) {
+        *isNull = true;
+        return 0;
     }
+    fixDecimalStringInPlace(str);
     if (!regex_match(str, g_decimalRegex)) {
         *isNull = true;
         return 0;
@@ -1856,6 +1860,17 @@ template void CastFunction::CastIntegerToBinary<int8_t>(BaseVector*, BaseVector*
 template void CastFunction::CastIntegerToBinary<int16_t>(BaseVector*, BaseVector*&, ExecutionContext*) const;
 template void CastFunction::CastIntegerToBinary<int32_t>(BaseVector*, BaseVector*&, ExecutionContext*) const;
 template void CastFunction::CastIntegerToBinary<int64_t>(BaseVector*, BaseVector*&, ExecutionContext*) const;
+
+void CastFunction::fixDecimalStringInPlace(std::string& str) const{
+    if (!str.empty()) {
+        if (str.front() == '.') {
+            str.insert(str.begin(), '0');
+        }
+        if (str.back() == '.') {
+            str.push_back('0');
+        }
+    }
+}
 
 std::string_view CastFunction::extractDigits(const char *s, size_t start, size_t size) const
 {
