@@ -304,6 +304,14 @@ public:
     void SetCurrentLambda(const omniruntime::expressions::LambdaExpr *lambda) { currentLambda_ = lambda; }
     const omniruntime::expressions::LambdaExpr *GetCurrentLambda() const { return currentLambda_; }
 
+    int32_t getInputParamsNUms() const {
+        return inputParamsNUms;
+    }
+
+    void setInputParamsNUms(int32_t inputParamsNUms) {
+        ExecutionContext::inputParamsNUms = inputParamsNUms;
+    }
+
 private:
     bool *isSelectRow;
     int32_t resultRowSize;
@@ -312,6 +320,7 @@ private:
     std::string errorMessage;
     const omniruntime::expressions::LambdaExpr *currentLambda_ = nullptr;
     config::QueryConfig queryConfig_;
+    int32_t inputParamsNUms = 0;
 
     // True if nulls in the input vectors were pruned (removed from the current
     // selectivity vector). Only possible is all expressions have default null
