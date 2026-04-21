@@ -15,9 +15,9 @@ namespace omniruntime {
 namespace op {
 // When target col is VARCHAR/CHAR, state holds std::string_view (pointing to arena); otherwise use AggNativeAndVectorType.
 template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MaxByVarcharAggregator : public TypedAggregator {
-    using targetValueType = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR,
+    using targetValueType = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR || COL1_ID == OMNI_VARBINARY,
         std::string_view, typename AggNativeAndVectorType<COL1_ID>::type>;
-    using targetValueTypeVec = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR,
+    using targetValueTypeVec = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR || COL1_ID == OMNI_VARBINARY,
         Vector<LargeStringContainer<std::string_view>>, typename AggNativeAndVectorType<COL1_ID>::vector>;
 
 #pragma pack(push, 1)
@@ -169,6 +169,18 @@ public:
         }
     }
 
+    static constexpr bool IsSupportedStringMaxByType(DataTypeId type_id)
+    {
+        switch (type_id) {
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+        case OMNI_VARBINARY:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
         if (inputTypes.GetType(0)->GetId() != outputTypes.GetType(0)->GetId()) {
@@ -176,10 +188,10 @@ public:
             throw omniruntime::exception::OmniException("Error in maxby varchar aggregator: ", omniExceptionInfo);
         }
 
-        if constexpr (!IsSupportedBasicMaxByType(COL1_ID) && COL1_ID != OMNI_VARCHAR && COL1_ID != OMNI_CHAR) {
+        if constexpr (!IsSupportedBasicMaxByType(COL1_ID) && !IsSupportedStringMaxByType(COL1_ID)) {
             std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID);
             throw omniruntime::exception::OmniException("Error in maxby varchar aggregator: ", omniExceptionInfo);
-        } else if constexpr (COL2_ID != OMNI_VARCHAR && COL2_ID != OMNI_CHAR && COL2_ID != OMNI_VARBINARY) {
+        } else if constexpr (!IsSupportedStringMaxByType(COL2_ID)) {
             std::string omniExceptionInfo = "sort col type must be varchar or char";
             throw omniruntime::exception::OmniException("Error in maxby varchar aggregator: ", omniExceptionInfo);
         } else {

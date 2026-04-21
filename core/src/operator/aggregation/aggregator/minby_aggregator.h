@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <cfloat>
+#include <limits>
 #include "typed_aggregator.h"
 #include "minby_varchar_aggregator.h"
 
@@ -23,9 +24,9 @@ template <typename T> T GetSortKeyMax()
     } else if constexpr (std::is_same_v<T, int64_t>) {
         return std::numeric_limits<int64_t>::max();
     } else if constexpr (std::is_same_v<T, float>) {
-        return std::numeric_limits<float>::max();
+        return std::numeric_limits<float>::infinity();
     } else if constexpr (std::is_same_v<T, double>) {
-        return std::numeric_limits<double>::max();
+        return std::numeric_limits<double>::infinity();
     } else if constexpr (std::is_same_v<T, int128_t>) {
         return std::numeric_limits<int128_t>::max();
     } else if constexpr (std::is_same_v<T, omniruntime::type::Decimal128>) {
@@ -36,8 +37,10 @@ template <typename T> T GetSortKeyMax()
 };
 
 template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByAggregator : public TypedAggregator {
-    using targetValueType = typename AggNativeAndVectorType<COL1_ID>::type;
-    using targetValueTypeVec = typename AggNativeAndVectorType<COL1_ID>::vector;
+    using targetValueType = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR || COL1_ID == OMNI_VARBINARY,
+        std::string_view, typename AggNativeAndVectorType<COL1_ID>::type>;
+    using targetValueTypeVec = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR || COL1_ID == OMNI_VARBINARY,
+        Vector<LargeStringContainer<std::string_view>>, typename AggNativeAndVectorType<COL1_ID>::vector>;
     using sortKeyType = typename AggNativeAndVectorType<COL2_ID>::type;
     using sortKeyTypeVec = typename AggNativeAndVectorType<COL2_ID>::vector;
 
@@ -49,6 +52,7 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByAggregator : public
         sortKeyType sortKey;
         bool isEmpty = true;
         bool targetIsNull = false;  // true when the winning row has null target (Spark semantics)
+        bool targetValueOwned = false;
         static const MinByAggregator<COL1_ID, COL2_ID>::MinByState<targetValueType, sortKeyType> *ConstCastState(const AggregateState *state)
         {
             return reinterpret_cast<const MinByAggregator<COL1_ID, COL2_ID>::MinByState<targetValueType, sortKeyType> *>(state);
@@ -58,6 +62,33 @@ template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByAggregator : public
         {
             return reinterpret_cast<MinByAggregator<COL1_ID, COL2_ID>::MinByState<targetValueType, sortKeyType> *>(state);
         }
+
+        /** Reset target value fields without releasing (for InitState when col1 is varchar/char). */
+        void ClearTargetValue()
+        {
+            if constexpr (std::is_same_v<targetValueType, std::string_view>) {
+                targetValue = std::string_view();
+                targetValueOwned = false;
+            }
+        }
+
+        void ReleaseTargetValueIfOwned()
+        {
+            if constexpr (std::is_same_v<targetValueType, std::string_view>) {
+                if (!targetValueOwned) {
+                    return;
+                }
+                if (targetValue.data() == nullptr) {
+                    targetValueOwned = false;
+                    return;
+                }
+                delete[] const_cast<char *>(targetValue.data());
+                targetValue = std::string_view();
+                targetValueOwned = false;
+            }
+        }
+
+        void SetTargetValueOwned(bool owned) { targetValueOwned = owned; }
     };
 #pragma pack(pop)
 
@@ -92,10 +123,22 @@ public:
         }
     }
 
+    static constexpr bool IsSupportedStringMinByType(DataTypeId type_id)
+    {
+        switch (type_id) {
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+            case OMNI_VARBINARY:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     static constexpr bool IsSupportedOutputType(DataTypeId type_id)
     {
         // Only scalar types; ARRAY/MAP/ROW are handled by MinByComplexAggregator (factory routes there).
-        return IsSupportedBasicMinByType(type_id);
+        return IsSupportedBasicMinByType(type_id) || IsSupportedStringMinByType(type_id);
     }
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
@@ -105,7 +148,7 @@ public:
             throw omniruntime::exception::OmniException("Error in minby aggregator: ", omniExceptionInfo);
         }
 
-        if constexpr (COL2_ID == OMNI_VARCHAR || COL2_ID == OMNI_CHAR || COL2_ID == OMNI_VARBINARY) {
+        if constexpr (IsSupportedStringMinByType(COL2_ID)) {
             return MinByVarcharAggregator<COL1_ID, COL2_ID>::Create(inputTypes, outputTypes, channels, rawIn, partialOut,
                 isOverflowAsNull);
         }

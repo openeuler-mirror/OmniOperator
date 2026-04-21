@@ -161,19 +161,6 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateSt
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
 
-    bool col1IsConst = (col1Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
-    bool col2IsConst = (col2Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
-
-    Vector<LargeStringContainer<std::string_view>> *col2ptr = nullptr;
-    std::string_view col2ConstVal;
-    if (col2IsConst) {
-        if (!col2Vector->IsNull(0)) {
-            col2ConstVal = static_cast<vec::ConstVector<std::string_view> *>(col2Vector)->GetConstValue();
-        }
-    } else {
-        col2ptr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(col2Vector);
-    }
-
     for (int32_t i = rowOffset; i < rowCount; i++) {
         if (nullMap != nullptr && (*nullMap)[i]) {
             continue;
@@ -182,22 +169,13 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateSt
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
         bool targetNull = col1Vector->IsNull(i);
-        targetValueType targetVal{};
-        if (col1IsConst) {
-            targetVal = static_cast<vec::ConstVector<targetValueType> *>(col1Vector)->GetConstValue();
-        } else if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
-            auto *col1StrVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(col1Vector);
-            targetVal = col1StrVec->GetValue(i);
-        } else {
-            auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
-            targetVal = col1ptr[i];
-        }
-        auto strView = col2IsConst ? col2ConstVal : col2ptr->GetValue(i);
+        targetValueType targetVal = VectorHelper::GetFlatValue<COL1_ID>(col1Vector, i);
+        auto strView = VectorHelper::GetFlatValue<COL2_ID>(col2Vector, i);
         if (minByVarcharState->GetStrKeyAddress() == 0) {
             minByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), strView.size());
             minByVarcharState->targetIsNull = targetNull;
             if (!targetNull) {
-                if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                if constexpr (IsSupportedStringMinByType(COL1_ID)) {
                     minByVarcharState->ReleaseTargetValueIfOwned();
                     if (this->arenaAllocator != nullptr) {
                         char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
@@ -219,11 +197,11 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateSt
             const auto *curVal = strView.data();
             int32_t curLen = strView.size();
             auto result = memcmp((const char *)minByVarcharState->GetStrKeyAddress(), curVal, std::min(minByVarcharState->GetStrKeyLen(), curLen));
-            if (result > 0 || (result == 0 && minByVarcharState->GetStrKeyLen() > curLen)) {
+            if (result > 0 || (result == 0 && minByVarcharState->GetStrKeyLen() >= curLen)) {
                 minByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), curLen);
                 minByVarcharState->targetIsNull = targetNull;
                 if (!targetNull) {
-                    if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                    if constexpr (IsSupportedStringMinByType(COL1_ID)) {
                         minByVarcharState->ReleaseTargetValueIfOwned();
                         if (this->arenaAllocator != nullptr) {
                             char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
@@ -254,9 +232,6 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
 
-    bool col1IsConst = (col1Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
-    bool col2IsConst = (col2Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
-
     const size_t rowCount = rowStates.size();
     if (rowCount != col1Vector->GetSize() || rowCount != col2Vector->GetSize()) {
         std::string omniExceptionInfo = "rowStates count must be equal to base vec size";
@@ -264,16 +239,6 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
     }
     if (rowCount <= 0) {
         return;
-    }
-
-    Vector<LargeStringContainer<std::string_view>> *col2ptr = nullptr;
-    std::string_view col2ConstVal;
-    if (col2IsConst) {
-        if (!col2Vector->IsNull(0)) {
-            col2ConstVal = static_cast<vec::ConstVector<std::string_view> *>(col2Vector)->GetConstValue();
-        }
-    } else {
-        col2ptr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(col2Vector);
     }
 
     for (size_t i = 0; i < rowCount; i++) {
@@ -286,22 +251,13 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
         }
         auto *minByVarcharState = MinByVarcharState<targetValueType>::CastState(rowStates[i] + aggStateOffset);
         bool targetNull = col1Vector->IsNull(rowIdx);
-        targetValueType targetVal{};
-        if (col1IsConst) {
-            targetVal = static_cast<vec::ConstVector<targetValueType> *>(col1Vector)->GetConstValue();
-        } else if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
-            auto *col1StrVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(col1Vector);
-            targetVal = col1StrVec->GetValue(rowIdx);
-        } else {
-            auto *col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector));
-            targetVal = col1ptr[rowIdx];
-        }
-        auto strView = col2IsConst ? col2ConstVal : col2ptr->GetValue(rowIdx);
+        targetValueType targetVal = VectorHelper::GetFlatValue<COL1_ID>(col1Vector, rowIdx);
+        auto strView = VectorHelper::GetFlatValue<COL2_ID>(col2Vector, rowIdx);
         if (minByVarcharState->GetStrKeyAddress() == 0) {
             minByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), strView.size());
             minByVarcharState->targetIsNull = targetNull;
             if (!targetNull) {
-                if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                if constexpr (IsSupportedStringMinByType(COL1_ID)) {
                     minByVarcharState->ReleaseTargetValueIfOwned();
                     if (this->arenaAllocator != nullptr) {
                         char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
@@ -323,11 +279,11 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<
             const auto *curVal = strView.data();
             int32_t curLen = strView.size();
             auto result = memcmp((const char *)minByVarcharState->GetStrKeyAddress(), curVal, std::min(minByVarcharState->GetStrKeyLen(), curLen));
-            if (result > 0 || (result == 0 && minByVarcharState->GetStrKeyLen() > curLen)) {
+            if (result > 0 || (result == 0 && minByVarcharState->GetStrKeyLen() >= curLen)) {
                 minByVarcharState->SetStrKey(reinterpret_cast<int64_t>(strView.data()), curLen);
                 minByVarcharState->targetIsNull = targetNull;
                 if (!targetNull) {
-                    if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                    if constexpr (IsSupportedStringMinByType(COL1_ID)) {
                         minByVarcharState->ReleaseTargetValueIfOwned();
                         if (this->arenaAllocator != nullptr) {
                             char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
@@ -381,7 +337,7 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupUnspill(std::vector<U
             int32_t curLen = static_cast<int32_t>(sortKey.size());
             int cmp = memcmp(reinterpret_cast<const char *>(state->GetStrKeyAddress()), curVal,
                 std::min(state->GetStrKeyLen(), curLen));
-            if (cmp > 0 || (cmp == 0 && state->GetStrKeyLen() > curLen)) {
+            if (cmp > 0 || (cmp == 0 && state->GetStrKeyLen() >= curLen)) {
                 shouldUpdate = true;
             }
         }
@@ -389,7 +345,7 @@ void MinByVarcharAggregator<COL1_ID, COL2_ID>::ProcessGroupUnspill(std::vector<U
             state->targetIsNull = targetValueVector->IsNull(index);
             if (!state->targetIsNull) {
                 auto targetValue = targetValueVector->GetValue(index);
-                if constexpr (COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR) {
+                if constexpr (IsSupportedStringMinByType(COL1_ID)) {
                     state->ReleaseTargetValueIfOwned();
                     if (this->arenaAllocator != nullptr) {
                         char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetValue.size()));
@@ -442,46 +398,34 @@ MinByVarcharAggregator<COL1_ID, COL2_ID>::MinByVarcharAggregator(const DataTypes
 // since, compiler needs to generate each individual template instance wherever aggregator header is include
 // to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
 // and used explicit template instantiation to generate template instances
+
+// COL2 = OMNI_VARCHAR
 template class MinByVarcharAggregator<OMNI_BOOLEAN, OMNI_VARCHAR>;
-
 template class MinByVarcharAggregator<OMNI_BYTE, OMNI_VARCHAR>;
-
 template class MinByVarcharAggregator<OMNI_SHORT, OMNI_VARCHAR>;
-
 template class MinByVarcharAggregator<OMNI_INT, OMNI_VARCHAR>;
-
 template class MinByVarcharAggregator<OMNI_LONG, OMNI_VARCHAR>;
-
-template class MinByVarcharAggregator<OMNI_DOUBLE, OMNI_VARCHAR>;
-
 template class MinByVarcharAggregator<OMNI_FLOAT, OMNI_VARCHAR>;
-
-template class MinByVarcharAggregator<OMNI_DECIMAL128, OMNI_VARCHAR>;
-
+template class MinByVarcharAggregator<OMNI_DOUBLE, OMNI_VARCHAR>;
 template class MinByVarcharAggregator<OMNI_DECIMAL64, OMNI_VARCHAR>;
-
-template class MinByVarcharAggregator<OMNI_BOOLEAN, OMNI_CHAR>;
-
-template class MinByVarcharAggregator<OMNI_BYTE, OMNI_CHAR>;
-
-template class MinByVarcharAggregator<OMNI_SHORT, OMNI_CHAR>;
-
-template class MinByVarcharAggregator<OMNI_INT, OMNI_CHAR>;
-
-template class MinByVarcharAggregator<OMNI_LONG, OMNI_CHAR>;
-
-template class MinByVarcharAggregator<OMNI_DOUBLE, OMNI_CHAR>;
-
-template class MinByVarcharAggregator<OMNI_FLOAT, OMNI_CHAR>;
-
-template class MinByVarcharAggregator<OMNI_DECIMAL128, OMNI_CHAR>;
-
-template class MinByVarcharAggregator<OMNI_DECIMAL64, OMNI_CHAR>;
-
+template class MinByVarcharAggregator<OMNI_DECIMAL128, OMNI_VARCHAR>;
 template class MinByVarcharAggregator<OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MinByVarcharAggregator<OMNI_VARCHAR, OMNI_CHAR>;
 template class MinByVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;
+template class MinByVarcharAggregator<OMNI_VARBINARY, OMNI_VARCHAR>;
+
+// COL2 = OMNI_CHAR
+template class MinByVarcharAggregator<OMNI_BOOLEAN, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_BYTE, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_SHORT, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_INT, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_LONG, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_FLOAT, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_DOUBLE, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_DECIMAL64, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_DECIMAL128, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_VARCHAR, OMNI_CHAR>;
 template class MinByVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
+template class MinByVarcharAggregator<OMNI_VARBINARY, OMNI_CHAR>;
 
 // COL2 = OMNI_VARBINARY
 template class MinByVarcharAggregator<OMNI_BOOLEAN, OMNI_VARBINARY>;
@@ -495,6 +439,7 @@ template class MinByVarcharAggregator<OMNI_DECIMAL64, OMNI_VARBINARY>;
 template class MinByVarcharAggregator<OMNI_DECIMAL128, OMNI_VARBINARY>;
 template class MinByVarcharAggregator<OMNI_VARCHAR, OMNI_VARBINARY>;
 template class MinByVarcharAggregator<OMNI_CHAR, OMNI_VARBINARY>;
+template class MinByVarcharAggregator<OMNI_VARBINARY, OMNI_VARBINARY>;
 
 } // namespace op
 } // namespace omniruntime

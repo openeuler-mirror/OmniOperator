@@ -18,6 +18,8 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ExtractValues(const AggregateState 
     const auto *s = State::ConstCastState(state + aggStateOffset);
     if (this->outputPartial) {
         if (s->GetStrKeyAddress() == 0) {
+            vectors[0]->SetNull(rowIndex);
+            vectors[1]->SetNull(rowIndex);
             return;
         }
         std::string_view val(reinterpret_cast<const char *>(s->GetStrKeyAddress()), s->GetStrKeyLen());
@@ -53,6 +55,8 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ExtractValuesBatch(std::vector<Aggr
         for (int32_t i = 0; i < rowCount; i++) {
             const auto *s = State::ConstCastState(groupStates[i] + aggStateOffset);
             if (s->GetStrKeyAddress() == 0) {
+                vectors[0]->SetNull(i);
+                vectors[1]->SetNull(i);
                 continue;
             }
             std::string_view val(reinterpret_cast<const char *>(s->GetStrKeyAddress()), s->GetStrKeyLen());
@@ -156,7 +160,7 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ProcessGroupUnspill(std::vector<Uns
             int32_t curLen = static_cast<int32_t>(sortKey.size());
             int cmp = std::memcmp(reinterpret_cast<const char *>(s->GetStrKeyAddress()), curVal,
                 std::min(s->GetStrKeyLen(), curLen));
-            if (cmp < 0 || (cmp == 0 && s->GetStrKeyLen() < curLen)) {
+            if (cmp < 0 || (cmp == 0 && s->GetStrKeyLen() <= curLen)) {
                 shouldUpdate = true;
             }
         }
@@ -183,8 +187,7 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ProcessSingleInternal(AggregateStat
     using State = typename MaxByComplexVarcharAggregator<COL2_ID>::ComplexVarcharState;
     auto *s = State::CastState(state);
     BaseVector *col1Vector = this->curVectorBatch->Get(this->channels[0]);
-    auto *col2Vector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(
-        this->curVectorBatch->Get(this->channels[1]));
+    BaseVector *col2Vector = this->curVectorBatch->Get(this->channels[1]);
     for (int32_t i = rowOffset; i < rowOffset + rowCount; i++) {
         if (nullMap != nullptr && (*nullMap)[i - rowOffset]) {
             continue;
@@ -192,7 +195,7 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ProcessSingleInternal(AggregateStat
         if (col2Vector->IsNull(i)) {
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
-        std::string_view strView = col2Vector->GetValue(i);
+        std::string_view strView = VectorHelper::GetFlatValue<COL2_ID>(col2Vector, i);
         vec::BaseVector *slice = GetComplexColSlice(col1Vector, targetColTypeId_, i);
         if (ShouldSkipRowTargetNull(slice, targetColTypeId_, col1Vector, i)) {
             continue;  // Spark: only consider rows with non-null target
@@ -208,7 +211,7 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ProcessSingleInternal(AggregateStat
             int32_t curLen = static_cast<int32_t>(strView.size());
             int cmp = std::memcmp(reinterpret_cast<const char *>(s->GetStrKeyAddress()), curVal,
                 std::min(s->GetStrKeyLen(), curLen));
-            if (cmp < 0 || (cmp == 0 && s->GetStrKeyLen() < curLen)) {
+            if (cmp < 0 || (cmp == 0 && s->GetStrKeyLen() <= curLen)) {
                 s->SetStrKey(reinterpret_cast<int64_t>(strView.data()), curLen);
                 if (s->targetValue != nullptr) {
                     ReleaseComplexSliceCopy(s->targetValue, targetColTypeId_);
@@ -227,8 +230,7 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ProcessGroupInternal(std::vector<Ag
     (void)vector;
     using State = typename MaxByComplexVarcharAggregator<COL2_ID>::ComplexVarcharState;
     BaseVector *col1Vector = this->curVectorBatch->Get(this->channels[0]);
-    auto *col2Vector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(
-        this->curVectorBatch->Get(this->channels[1]));
+    BaseVector *col2Vector = this->curVectorBatch->Get(this->channels[1]);
     const size_t rowCount = rowStates.size();
     for (size_t i = 0; i < rowCount; i++) {
         if (nullMap != nullptr && (*nullMap)[i]) {
@@ -239,7 +241,7 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ProcessGroupInternal(std::vector<Ag
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
         auto *s = State::CastState(rowStates[i] + aggStateOffset);
-        std::string_view strView = col2Vector->GetValue(rowIdx);
+        std::string_view strView = VectorHelper::GetFlatValue<COL2_ID>(col2Vector, rowIdx);
         vec::BaseVector *slice = GetComplexColSlice(col1Vector, targetColTypeId_, rowIdx);
         if (ShouldSkipRowTargetNull(slice, targetColTypeId_, col1Vector, rowIdx)) {
             continue;  // Spark: only consider rows with non-null target
@@ -255,7 +257,7 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ProcessGroupInternal(std::vector<Ag
             int32_t curLen = static_cast<int32_t>(strView.size());
             int cmp = std::memcmp(reinterpret_cast<const char *>(s->GetStrKeyAddress()), curVal,
                 std::min(s->GetStrKeyLen(), curLen));
-            if (cmp < 0 || (cmp == 0 && s->GetStrKeyLen() < curLen)) {
+            if (cmp < 0 || (cmp == 0 && s->GetStrKeyLen() <= curLen)) {
                 s->SetStrKey(reinterpret_cast<int64_t>(strView.data()), curLen);
                 if (s->targetValue != nullptr) {
                     ReleaseComplexSliceCopy(s->targetValue, targetColTypeId_);

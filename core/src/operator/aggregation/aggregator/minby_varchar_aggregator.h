@@ -15,9 +15,9 @@ namespace omniruntime {
 namespace op {
 // When target col is VARCHAR/CHAR, state holds std::string_view (pointing to arena); otherwise use AggNativeAndVectorType.
 template <DataTypeId COL1_ID, DataTypeId COL2_ID> class MinByVarcharAggregator : public TypedAggregator {
-    using targetValueType = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR,
+    using targetValueType = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR || COL1_ID == OMNI_VARBINARY,
         std::string_view, typename AggNativeAndVectorType<COL1_ID>::type>;
-    using targetValueTypeVec = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR,
+    using targetValueTypeVec = std::conditional_t<COL1_ID == OMNI_VARCHAR || COL1_ID == OMNI_CHAR || COL1_ID == OMNI_VARBINARY,
         Vector<LargeStringContainer<std::string_view>>, typename AggNativeAndVectorType<COL1_ID>::vector>;
 
     // inner class for aggregate state, the member depends on targetValueType, sortKeyType of Aggregator
@@ -169,6 +169,7 @@ public:
             case OMNI_SHORT:
             case OMNI_INT:
             case OMNI_LONG:
+            case OMNI_FLOAT:
             case OMNI_DOUBLE:
             case OMNI_DECIMAL128:
             case OMNI_DECIMAL64:
@@ -179,6 +180,18 @@ public:
         }
     }
 
+    static constexpr bool IsSupportedStringMinByType(DataTypeId type_id)
+    {
+        switch (type_id) {
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+        case OMNI_VARBINARY:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
         if (inputTypes.GetType(0)->GetId() != outputTypes.GetType(0)->GetId()) {
@@ -186,10 +199,10 @@ public:
             throw omniruntime::exception::OmniException("Error in minby varchar aggregator: ", omniExceptionInfo);
         }
 
-        if constexpr (!IsSupportedBasicMinByType(COL1_ID) && COL1_ID != OMNI_VARCHAR && COL1_ID != OMNI_CHAR) {
+        if constexpr (!IsSupportedBasicMinByType(COL1_ID) && !IsSupportedStringMinByType(COL1_ID)) {
             std::string omniExceptionInfo = "unsupported target value type " + TypeUtil::TypeToStringLog(COL1_ID);
             throw omniruntime::exception::OmniException("Error in minby varchar aggregator: : ", omniExceptionInfo);
-        } else if constexpr (COL2_ID != OMNI_VARCHAR && COL2_ID != OMNI_CHAR && COL2_ID != OMNI_VARBINARY) {
+        } else if constexpr (!IsSupportedStringMinByType(COL2_ID)) {
             std::string omniExceptionInfo = "sort col type must be varchar or char";
             throw omniruntime::exception::OmniException("Error in minby varchar aggregator: : ", omniExceptionInfo);
         } else {
