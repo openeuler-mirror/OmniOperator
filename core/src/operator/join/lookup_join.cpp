@@ -318,13 +318,23 @@ void LookupJoinOperator::PrepareSerializers()
     probeSerializers.clear();
     for (size_t i = 0; i < probeHashCols.size(); ++i) {
         auto curVector = probeHashColumns[i];
-        if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
-            PushBackProbeSerializer(dicVectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
-        } else if (curVector->GetEncoding() == Encoding::OMNI_ENCODING_CONST) {
-            PushBackProbeSerializer(constVectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
-        } else {
-            PushBackProbeSerializer(vectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
+        auto typeId = static_cast<size_t>(curVector->GetTypeId());
+        VectorSerializerIgnoreNull serializer = nullptr;
+        if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY && typeId < dicVectorSerializerIgnoreNullCenter.size()) {
+            serializer = dicVectorSerializerIgnoreNullCenter[typeId];
+        } else if (curVector->GetEncoding() == Encoding::OMNI_ENCODING_CONST &&
+            typeId < constVectorSerializerIgnoreNullCenter.size()) {
+            serializer = constVectorSerializerIgnoreNullCenter[typeId];
         }
+
+        // Complex join keys (e.g. struct) may fall back to flat serializer.
+        if (serializer == nullptr && typeId < vectorSerializerIgnoreNullCenter.size()) {
+            serializer = vectorSerializerIgnoreNullCenter[typeId];
+        }
+        if (serializer == nullptr) {
+            throw OmniException("UNSUPPORTED_ERROR", "No probe serializer for join key type");
+        }
+        PushBackProbeSerializer(serializer);
     }
 }
 
