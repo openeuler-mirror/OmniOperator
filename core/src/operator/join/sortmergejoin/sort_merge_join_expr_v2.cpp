@@ -91,7 +91,7 @@ JoinType StreamedTableWithExprOperatorFactoryV2::GetJoinType()
 }
 
 StreamedTableWithExprOperatorV2::StreamedTableWithExprOperatorV2(const type::DataTypes &streamedTypes,
-    std::vector<std::unique_ptr<Projection>> &projections, st::shared_ptr<SortMergeJoinOperator> smjOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, std::shared_ptr<SortMergeJoinOperator> smjOperator)
     : streamedTypes(streamedTypes), projections(projections), smjOperator(smjOperator)
 {}
 
