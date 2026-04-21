@@ -172,7 +172,7 @@ public:
         int32_t oldSize = size;
 
         auto oldOffsetsBuffer = offsetsBuffer;
-        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(newCapacity + 1);
+        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(newCapacity + 1, true);
         offsets = offsetsBuffer->GetBuffer();
 
         if (oldOffsetsBuffer != nullptr) {
@@ -181,8 +181,6 @@ public:
                     oldOffsetsBuffer->GetBuffer(),
                     (oldSize + 1) * sizeof(int64_t)
             );
-        } else {
-            memset(offsets, 0, (newCapacity + 1) * sizeof(int64_t));
         }
 
         auto oldNullsBuffer = nullsBuffer;
