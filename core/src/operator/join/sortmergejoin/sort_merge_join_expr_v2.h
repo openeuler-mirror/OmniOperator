@@ -40,7 +40,7 @@ public:
 
     omniruntime::op::Operator *CreateOperator() override;
 
-    SortMergeJoinOperator *GetSmjOperator();
+    std::shared_ptr<SortMergeJoinOperator> GetSmjOperator();
 
     JoinType GetJoinType();
 
@@ -51,14 +51,14 @@ private:
     JoinType joinType;
     std::string filter;
     Expr* filterExpr = nullptr;
-    SortMergeJoinOperator* smjOperator;
+    std::shared_ptr<SortMergeJoinOperator> smjOperator;
     std::vector<std::unique_ptr<Projection>> projections;
 };
 
 class StreamedTableWithExprOperatorV2 : public Operator {
 public:
     StreamedTableWithExprOperatorV2(const type::DataTypes &streamedTypes,
-        std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperator *smjOperator);
+        std::vector<std::unique_ptr<Projection>> &projections, std::shared_ptr<SortMergeJoinOperator> smjOperator);
 
     ~StreamedTableWithExprOperatorV2() override;
 
@@ -118,7 +118,7 @@ public:
 private:
     const DataTypes &streamedTypes;
     std::vector<std::unique_ptr<Projection>> &projections;
-    SortMergeJoinOperator *smjOperator;
+    std::shared_ptr<SortMergeJoinOperator> smjOperator;
 };
 
 class BufferedTableWithExprOperatorFactoryV2 : public OperatorFactory {
@@ -152,7 +152,7 @@ private:
 class BufferedTableWithExprOperatorV2 : public Operator {
 public:
     BufferedTableWithExprOperatorV2(const type::DataTypes &bufferedTypes,
-        std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperator *smjOperator);
+        std::vector<std::unique_ptr<Projection>> &projections, std::shared_ptr<SortMergeJoinOperator> smjOperator);
 
     ~BufferedTableWithExprOperatorV2() override;
 
@@ -216,7 +216,7 @@ public:
 private:
     DataTypes bufferedTypes;
     std::vector<std::unique_ptr<Projection>> &projections;
-    SortMergeJoinOperator *smjOperator;
+    std::shared_ptr<SortMergeJoinOperator> smjOperator;
 };
 }
 }

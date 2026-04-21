@@ -43,7 +43,7 @@ StreamedTableWithExprOperatorFactoryV2::StreamedTableWithExprOperatorFactoryV2(c
     const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
     int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter,
     OverflowConfig *overflowConfig)
-    : joinType(joinType), filter(filter), smjOperator(new SortMergeJoinOperator(joinType, filter))
+    : joinType(joinType), filter(filter), smjOperator(std::make_shared<SortMergeJoinOperator>(joinType, filter))
 {
     std::vector<DataTypePtr> newBuildTypes;
     OperatorUtil::CreateProjections(streamedTypes, streamedKeyExprCols, newBuildTypes, projections, streamedKeyCols,
@@ -61,7 +61,7 @@ StreamedTableWithExprOperatorFactoryV2::StreamedTableWithExprOperatorFactoryV2(c
     OverflowConfig* overflowConfig)
     : joinType(joinType),
       filterExpr(filter),
-      smjOperator(new SortMergeJoinOperator(joinType, filter))
+      smjOperator(std::make_shared<SortMergeJoinOperator>(joinType, filter))
 {
     std::vector<DataTypePtr> newBuildTypes;
     OperatorUtil::CreateProjections(
@@ -73,17 +73,14 @@ StreamedTableWithExprOperatorFactoryV2::StreamedTableWithExprOperatorFactoryV2(c
         *(this->streamedTypes), streamedKeyCols, this->streamedOutputCols, streamedTypes.GetSize());
 }
 
-StreamedTableWithExprOperatorFactoryV2::~StreamedTableWithExprOperatorFactoryV2()
-{
-    delete smjOperator;
-}
+StreamedTableWithExprOperatorFactoryV2::~StreamedTableWithExprOperatorFactoryV2() {}
 
 Operator *StreamedTableWithExprOperatorFactoryV2::CreateOperator()
 {
     return new StreamedTableWithExprOperatorV2(*streamedTypes, projections, smjOperator);
 }
 
-SortMergeJoinOperator *StreamedTableWithExprOperatorFactoryV2::GetSmjOperator()
+std::shared_ptr<SortMergeJoinOperator> StreamedTableWithExprOperatorFactoryV2::GetSmjOperator()
 {
     return smjOperator;
 }
@@ -94,7 +91,7 @@ JoinType StreamedTableWithExprOperatorFactoryV2::GetJoinType()
 }
 
 StreamedTableWithExprOperatorV2::StreamedTableWithExprOperatorV2(const type::DataTypes &streamedTypes,
-    std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperator *smjOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, st::shared_ptr<SortMergeJoinOperator> smjOperator)
     : streamedTypes(streamedTypes), projections(projections), smjOperator(smjOperator)
 {}
 
@@ -189,12 +186,12 @@ BufferedTableWithExprOperatorFactoryV2::~BufferedTableWithExprOperatorFactoryV2(
 
 Operator *BufferedTableWithExprOperatorFactoryV2::CreateOperator()
 {
-    auto *smjOperator = streamTblWithExprOperatorFactory->GetSmjOperator();
+    auto smjOperator = streamTblWithExprOperatorFactory->GetSmjOperator();
     return new BufferedTableWithExprOperatorV2(*bufferedTypes, projections, smjOperator);
 }
 
 BufferedTableWithExprOperatorV2::BufferedTableWithExprOperatorV2(const type::DataTypes &bufferedTypes,
-    std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperator *smjOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, std::shared_ptr<SortMergeJoinOperator> smjOperator)
     : bufferedTypes(bufferedTypes), projections(projections), smjOperator(smjOperator)
 {}
 
