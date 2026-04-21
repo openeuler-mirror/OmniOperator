@@ -19,17 +19,15 @@ public:
           keys(std::move(keyVector)),
           values(std::move(valueVector)), capacity(static_cast<int32_t>(size))
     {
-        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
+        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1, true);
         offsets = offsetsBuffer->GetBuffer();
-        offsets[0] = 0;
     }
 
     MapVector(int64_t size)
         : BaseVector(size, OMNI_ENCODING_MAP, OMNI_MAP), capacity(static_cast<int32_t>(size))
     {
-        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
+        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1, true);
         offsets = offsetsBuffer->GetBuffer();
-        offsets[0] = 0;
     }
 
     const std::shared_ptr<AlignedBuffer<int64_t>>& GetOffsetsBuffer() const
