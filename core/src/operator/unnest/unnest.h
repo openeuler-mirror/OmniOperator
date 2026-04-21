@@ -73,6 +73,9 @@ private:
     omniruntime::vec::BaseVector* generateUnrepeatedArrayValues(omniruntime::vec::ArrayVector* elementVector,
                                          omniruntime::vec::BaseVector* inputVector, int32_t numElements);
 
+    omniruntime::vec::BaseVector* generateUnrepeatedElementValues(omniruntime::vec::BaseVector* elementVector,
+                                         omniruntime::vec::BaseVector* inputVector, int32_t numElements);
+
     void generateComplexRepeatedValuesForType(DataTypeId typeId, int32_t inputSize, auto* inputVector, auto* outputVector,
                                               BaseVector* inputElementVector, BaseVector* outputElementVector);
 
