@@ -6,6 +6,7 @@
 #include <vector>
 #include <fstream> // for testing
 #include <cassert>
+#include <limits>
 
 using namespace std;
 using namespace omniruntime::expressions;
@@ -25,9 +26,12 @@ Expr *JSONParser::ParseJSONFieldRef(const Json &jsonExpr)
     }
     auto colVal = jsonExpr["colVal"].get<int32_t>();
     if (TypeUtil::IsStringType(typeId)) {
-        int width = jsonExpr["width"].get<int32_t>();
+        int width = jsonExpr.contains("width") ? jsonExpr["width"].get<int32_t>()
+                                               : std::numeric_limits<int32_t>::max();
         if (typeId == OMNI_CHAR) {
             retType = std::make_shared<CharDataType>(width);
+        } else if (typeId == OMNI_VARBINARY) {
+            retType = std::make_shared<VarBinaryDataType>(width);
         } else {
             retType = std::make_shared<VarcharDataType>(width);
         }
