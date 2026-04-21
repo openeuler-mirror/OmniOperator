@@ -614,6 +614,16 @@ private:
     uint8_t *WriteStructChildBuffer(uint8_t *writeBuffer, BaseVector* bv)
     {
         using elementT = typename NativeType<id>::type;
+        if (bv->GetEncoding() == OMNI_DICTIONARY) {
+            SerializedValue<elementT, OMNI_DICTIONARY> serializedValue;
+            serializedValue.TransValue(bv, 0);
+            return serializedValue.WriteBuffer(writeBuffer);
+        }
+        if (bv->GetEncoding() == OMNI_ENCODING_CONST) {
+            SerializedValue<elementT, OMNI_ENCODING_CONST> serializedValue;
+            serializedValue.TransValue(bv, 0);
+            return serializedValue.WriteBuffer(writeBuffer);
+        }
         SerializedValue<elementT> serializedValue;
         using vectorType = typename TypeTraits<elementT>::type;
         serializedValue.SetValue(reinterpret_cast<vectorType*>(bv)->GetValue(0));
