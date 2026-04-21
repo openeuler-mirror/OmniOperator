@@ -782,6 +782,15 @@ TEST(JSONParserTest, Decimal64FieldReference)
     delete fieldRefExpr;
 }
 
+TEST(JSONParserTest, VarBinaryFieldReferenceWithoutWidth)
+{
+    string unparsedFieldRefJson = GetFieldRefTestJson(OMNI_VARBINARY, COL_NUM);
+    Expr *fieldRefExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFieldRefJson));
+    TestFieldExpr expectedExpr(OMNI_VARBINARY, COL_NUM);
+    expectedExpr.isEqual(fieldRefExpr);
+    delete fieldRefExpr;
+}
+
 TEST(JSONParserTest, BinaryExpr_EQ)
 {
     string unparsedBinaryJson = GetBinaryTestJson(OMNI_BOOLEAN, CmpOps.at(Operator::EQ), GetInt32TestJSON(INT32_VAL),
