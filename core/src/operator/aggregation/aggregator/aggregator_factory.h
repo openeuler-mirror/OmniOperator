@@ -509,6 +509,8 @@ protected:
                 return MinByAggregator<OMNI_VARCHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_CHAR:
                 return MinByAggregator<OMNI_CHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARBINARY:
+                return MinByAggregator<OMNI_VARBINARY, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_ARRAY:
             case OMNI_MAP:
             case OMNI_ROW:
@@ -614,6 +616,8 @@ protected:
                 return MaxByAggregator<OMNI_VARCHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_CHAR:
                 return MaxByAggregator<OMNI_CHAR, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARBINARY:
+                return MaxByAggregator<OMNI_VARBINARY, COL2_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_ARRAY:
             case OMNI_MAP:
             case OMNI_ROW:

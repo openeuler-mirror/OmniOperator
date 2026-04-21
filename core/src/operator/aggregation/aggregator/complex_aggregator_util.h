@@ -251,25 +251,25 @@ inline int CompareScalarElementsAt(vec::BaseVector *vecA, vec::BaseVector *vecB,
     using namespace vec;
     switch (elemTypeId) {
         case type::OMNI_BOOLEAN: {
-            auto a = reinterpret_cast<Vector<int8_t> *>(vecA)->GetValue(index);
-            auto b = reinterpret_cast<Vector<int8_t> *>(vecB)->GetValue(index);
+            auto a = VectorHelper::GetFlatValue<OMNI_BOOLEAN>(vecA, index);
+            auto b = VectorHelper::GetFlatValue<OMNI_BOOLEAN>(vecB, index);
             return Compare(a, b);
         }
         case type::OMNI_BYTE: {
-            auto a = reinterpret_cast<Vector<int8_t> *>(vecA)->GetValue(index);
-            auto b = reinterpret_cast<Vector<int8_t> *>(vecB)->GetValue(index);
+            auto a = VectorHelper::GetFlatValue<OMNI_BYTE>(vecA, index);
+            auto b = VectorHelper::GetFlatValue<OMNI_BYTE>(vecB, index);
             return Compare(a, b);
         }
         case type::OMNI_SHORT: {
-            auto a = reinterpret_cast<Vector<int16_t> *>(vecA)->GetValue(index);
-            auto b = reinterpret_cast<Vector<int16_t> *>(vecB)->GetValue(index);
+            auto a = VectorHelper::GetFlatValue<OMNI_SHORT>(vecA, index);
+            auto b = VectorHelper::GetFlatValue<OMNI_SHORT>(vecB, index);
             return Compare(a, b);
         }
         case type::OMNI_INT:
         case type::OMNI_DATE32:
         case type::OMNI_TIME32: {
-            auto a = reinterpret_cast<Vector<int32_t> *>(vecA)->GetValue(index);
-            auto b = reinterpret_cast<Vector<int32_t> *>(vecB)->GetValue(index);
+            auto a = VectorHelper::GetFlatValue<OMNI_INT>(vecA, index);
+            auto b = VectorHelper::GetFlatValue<OMNI_INT>(vecB, index);
             return Compare(a, b);
         }
         case type::OMNI_LONG:
@@ -277,32 +277,31 @@ inline int CompareScalarElementsAt(vec::BaseVector *vecA, vec::BaseVector *vecB,
         case type::OMNI_TIME64:
         case type::OMNI_TIMESTAMP:
         case type::OMNI_DECIMAL64: {
-            auto a = reinterpret_cast<Vector<int64_t> *>(vecA)->GetValue(index);
-            auto b = reinterpret_cast<Vector<int64_t> *>(vecB)->GetValue(index);
+            auto a = VectorHelper::GetFlatValue<OMNI_LONG>(vecA, index);
+            auto b = VectorHelper::GetFlatValue<OMNI_LONG>(vecB, index);
             return Compare(a, b);
         }
         case type::OMNI_FLOAT: {
-            auto a = reinterpret_cast<Vector<float> *>(vecA)->GetValue(index);
-            auto b = reinterpret_cast<Vector<float> *>(vecB)->GetValue(index);
+            auto a = VectorHelper::GetFlatValue<OMNI_FLOAT>(vecA, index);
+            auto b = VectorHelper::GetFlatValue<OMNI_FLOAT>(vecB, index);
             return Compare(a, b);
         }
         case type::OMNI_DOUBLE: {
-            auto a = reinterpret_cast<Vector<double> *>(vecA)->GetValue(index);
-            auto b = reinterpret_cast<Vector<double> *>(vecB)->GetValue(index);
+            auto a = VectorHelper::GetFlatValue<OMNI_DOUBLE>(vecA, index);
+            auto b = VectorHelper::GetFlatValue<OMNI_DOUBLE>(vecB, index);
             return Compare(a, b);
         }
         case type::OMNI_DECIMAL128: {
-            auto a = reinterpret_cast<Vector<type::Decimal128> *>(vecA)->GetValue(index);
-            auto b = reinterpret_cast<Vector<type::Decimal128> *>(vecB)->GetValue(index);
+            auto a = VectorHelper::GetFlatValue<OMNI_DECIMAL128>(vecA, index);
+            auto b = VectorHelper::GetFlatValue<OMNI_DECIMAL128>(vecB, index);
             return Compare(a, b);
         }
         case type::OMNI_VARCHAR:
         case type::OMNI_CHAR:
         case type::OMNI_VARBINARY: {
-            auto *varcharVecA = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vecA);
-            auto *varcharVecB = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vecB);
-            std::string_view sa = varcharVecA->GetValue(index);
-            std::string_view sb = varcharVecB->GetValue(index);
+            std::string_view sa = VectorHelper::GetFlatValue<OMNI_VARCHAR>(vecA, index);
+            std::string_view sb = VectorHelper::GetFlatValue<OMNI_VARCHAR>(vecB, index);
+
             int cmp = static_cast<int>(sa.compare(sb));
             return (cmp < 0 ? -1 : (cmp > 0 ? 1 : 0));
         }

@@ -149,23 +149,6 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
 
-    bool col1Const = (col1Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
-    bool col2Const = (col2Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
-    targetValueType constVal1{};
-    sortKeyType constVal2{};
-    targetValueType *col1ptr = nullptr;
-    sortKeyType *col2ptr = nullptr;
-    if (col1Const) {
-        constVal1 = static_cast<vec::ConstVector<targetValueType> *>(col1Vector)->GetConstValue();
-    } else {
-        col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector)) + rowOffset;
-    }
-    if (col2Const) {
-        constVal2 = static_cast<vec::ConstVector<sortKeyType> *>(col2Vector)->GetConstValue();
-    } else {
-        col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector)) + rowOffset;
-    }
-
     int col1Size = col1Vector->GetSize();
     int col2Size = col2Vector->GetSize();
 
@@ -181,13 +164,29 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessSingleInternal(AggregateState *st
         if (col2Vector->IsNull(rowOffset + i)) {
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
-        sortKeyType key = col2Const ? constVal2 : col2ptr[i];
+        sortKeyType key = VectorHelper::GetFlatValue<COL2_ID>(col2Vector, rowOffset + i);
         if (key <= minByState->sortKey) {
             minByState->isEmpty = false;
             minByState->sortKey = key;
             minByState->targetIsNull = col1Vector->IsNull(rowOffset + i);
             if (!minByState->targetIsNull) {
-                minByState->targetValue = col1Const ? constVal1 : col1ptr[i];
+                auto targetVal = VectorHelper::GetFlatValue<COL1_ID>(col1Vector, rowOffset + i);
+                if constexpr (IsSupportedStringMinByType(COL1_ID)) {
+                    if (this->arenaAllocator != nullptr) {
+                        char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        minByState->targetValue = std::string_view(copy, targetVal.size());
+                        minByState->SetTargetValueOwned(false);
+                    } else {
+                        char *copy = new char[targetVal.size() + 1];
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        copy[targetVal.size()] = '\0';
+                        minByState->targetValue = std::string_view(copy, targetVal.size());
+                        minByState->SetTargetValueOwned(true);
+                    }
+                } else {
+                    minByState->targetValue = targetVal;
+                }
             }
         }
     }
@@ -200,23 +199,6 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
     // input vector must be <targetValueType, sortKeyType>
     auto *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     auto *col2Vector = this->curVectorBatch->Get(this->channels[1]);
-
-    bool col1Const = (col1Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
-    bool col2Const = (col2Vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
-    targetValueType constVal1{};
-    sortKeyType constVal2{};
-    targetValueType *col1ptr = nullptr;
-    sortKeyType *col2ptr = nullptr;
-    if (col1Const) {
-        constVal1 = static_cast<vec::ConstVector<targetValueType> *>(col1Vector)->GetConstValue();
-    } else {
-        col1ptr = reinterpret_cast<targetValueType *>(GetValuesFromVector<COL1_ID>(col1Vector)) + rowOffset;
-    }
-    if (col2Const) {
-        constVal2 = static_cast<vec::ConstVector<sortKeyType> *>(col2Vector)->GetConstValue();
-    } else {
-        col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector)) + rowOffset;
-    }
 
     const size_t rowCount = rowStates.size();
     if (rowCount != col1Vector->GetSize() || rowCount != col2Vector->GetSize()) {
@@ -237,13 +219,29 @@ void MinByAggregator<COL1_ID, COL2_ID>::ProcessGroupInternal(std::vector<Aggrega
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
         auto *minByState = MinByState<targetValueType, sortKeyType>::CastState(rowStates[i] + aggStateOffset);
-        sortKeyType key = col2Const ? constVal2 : col2ptr[i];
+        sortKeyType key = VectorHelper::GetFlatValue<COL2_ID>(col2Vector, rowOffset + i);
         if (key <= minByState->sortKey) {
             minByState->isEmpty = false;
             minByState->sortKey = key;
             minByState->targetIsNull = col1Vector->IsNull(rowOffset + i);
             if (!minByState->targetIsNull) {
-                minByState->targetValue = col1Const ? constVal1 : col1ptr[i];
+                auto targetVal = VectorHelper::GetFlatValue<COL1_ID>(col1Vector, rowOffset + i);
+                if constexpr (IsSupportedStringMinByType(COL1_ID)) {
+                    if (this->arenaAllocator != nullptr) {
+                        char *copy = reinterpret_cast<char *>(this->arenaAllocator->Allocate(targetVal.size()));
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        minByState->targetValue = std::string_view(copy, targetVal.size());
+                        minByState->SetTargetValueOwned(false);
+                    } else {
+                        char *copy = new char[targetVal.size() + 1];
+                        std::memcpy(copy, targetVal.data(), targetVal.size());
+                        copy[targetVal.size()] = '\0';
+                        minByState->targetValue = std::string_view(copy, targetVal.size());
+                        minByState->SetTargetValueOwned(true);
+                    }
+                } else {
+                    minByState->targetValue = targetVal;
+                }
             }
         }
     }
@@ -307,145 +305,24 @@ MinByAggregator<COL1_ID, COL2_ID>::MinByAggregator(const DataTypes &inputTypes, 
 // since, compiler needs to generate each individual template instance wherever aggregator header is include
 // to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
 // and used explicit template instantiation to generate template instances
+
+// COL2 = OMNI_BOOLEAN
 template class MinByAggregator<OMNI_BOOLEAN, OMNI_BOOLEAN>;
-
-template class MinByAggregator<OMNI_BOOLEAN, OMNI_SHORT>;
-
-template class MinByAggregator<OMNI_BOOLEAN, OMNI_INT>;
-
-template class MinByAggregator<OMNI_BOOLEAN, OMNI_LONG>;
-
-template class MinByAggregator<OMNI_BOOLEAN, OMNI_DOUBLE>;
-
-template class MinByAggregator<OMNI_BOOLEAN, OMNI_DECIMAL128>;
-
-template class MinByAggregator<OMNI_BOOLEAN, OMNI_DECIMAL64>;
-
+template class MinByAggregator<OMNI_BYTE, OMNI_BOOLEAN>;
 template class MinByAggregator<OMNI_SHORT, OMNI_BOOLEAN>;
-
-template class MinByAggregator<OMNI_SHORT, OMNI_SHORT>;
-
-template class MinByAggregator<OMNI_SHORT, OMNI_INT>;
-
-template class MinByAggregator<OMNI_SHORT, OMNI_LONG>;
-
-template class MinByAggregator<OMNI_SHORT, OMNI_DOUBLE>;
-
-template class MinByAggregator<OMNI_SHORT, OMNI_DECIMAL128>;
-
-template class MinByAggregator<OMNI_SHORT, OMNI_DECIMAL64>;
-
 template class MinByAggregator<OMNI_INT, OMNI_BOOLEAN>;
-
-template class MinByAggregator<OMNI_INT, OMNI_SHORT>;
-
-template class MinByAggregator<OMNI_INT, OMNI_INT>;
-
-template class MinByAggregator<OMNI_INT, OMNI_LONG>;
-
-template class MinByAggregator<OMNI_INT, OMNI_DOUBLE>;
-
-template class MinByAggregator<OMNI_INT, OMNI_DECIMAL128>;
-
-template class MinByAggregator<OMNI_INT, OMNI_DECIMAL64>;
-
 template class MinByAggregator<OMNI_LONG, OMNI_BOOLEAN>;
-
-template class MinByAggregator<OMNI_LONG, OMNI_SHORT>;
-
-template class MinByAggregator<OMNI_LONG, OMNI_INT>;
-
-template class MinByAggregator<OMNI_LONG, OMNI_LONG>;
-
-template class MinByAggregator<OMNI_LONG, OMNI_DOUBLE>;
-
-template class MinByAggregator<OMNI_LONG, OMNI_DECIMAL128>;
-
-template class MinByAggregator<OMNI_LONG, OMNI_DECIMAL64>;
-
-template class MinByAggregator<OMNI_DOUBLE, OMNI_BOOLEAN>;
-
-template class MinByAggregator<OMNI_DOUBLE, OMNI_SHORT>;
-
-template class MinByAggregator<OMNI_DOUBLE, OMNI_INT>;
-
-template class MinByAggregator<OMNI_DOUBLE, OMNI_LONG>;
-
-template class MinByAggregator<OMNI_DOUBLE, OMNI_DOUBLE>;
-
-template class MinByAggregator<OMNI_DOUBLE, OMNI_DECIMAL128>;
-
-template class MinByAggregator<OMNI_DOUBLE, OMNI_DECIMAL64>;
-
 template class MinByAggregator<OMNI_FLOAT, OMNI_BOOLEAN>;
-
-template class MinByAggregator<OMNI_FLOAT, OMNI_SHORT>;
-
-template class MinByAggregator<OMNI_FLOAT, OMNI_INT>;
-
-template class MinByAggregator<OMNI_FLOAT, OMNI_LONG>;
-
-template class MinByAggregator<OMNI_FLOAT, OMNI_FLOAT>;
-
-template class MinByAggregator<OMNI_FLOAT, OMNI_DOUBLE>;
-
-template class MinByAggregator<OMNI_FLOAT, OMNI_DECIMAL128>;
-
-template class MinByAggregator<OMNI_FLOAT, OMNI_DECIMAL64>;
-
-template class MinByAggregator<OMNI_BOOLEAN, OMNI_FLOAT>;
-
-template class MinByAggregator<OMNI_SHORT, OMNI_FLOAT>;
-
-template class MinByAggregator<OMNI_INT, OMNI_FLOAT>;
-
-template class MinByAggregator<OMNI_LONG, OMNI_FLOAT>;
-
-template class MinByAggregator<OMNI_DOUBLE, OMNI_FLOAT>;
-
-template class MinByAggregator<OMNI_DECIMAL128, OMNI_FLOAT>;
-
-template class MinByAggregator<OMNI_DECIMAL64, OMNI_FLOAT>;
-
-template class MinByAggregator<OMNI_DECIMAL128, OMNI_BOOLEAN>;
-
-template class MinByAggregator<OMNI_DECIMAL128, OMNI_SHORT>;
-
-template class MinByAggregator<OMNI_DECIMAL128, OMNI_INT>;
-
-template class MinByAggregator<OMNI_DECIMAL128, OMNI_LONG>;
-
-template class MinByAggregator<OMNI_DECIMAL128, OMNI_DOUBLE>;
-
-template class MinByAggregator<OMNI_DECIMAL128, OMNI_DECIMAL128>;
-
-template class MinByAggregator<OMNI_DECIMAL128, OMNI_DECIMAL64>;
-
+template class MinByAggregator<OMNI_DOUBLE, OMNI_BOOLEAN>;
 template class MinByAggregator<OMNI_DECIMAL64, OMNI_BOOLEAN>;
-
-template class MinByAggregator<OMNI_DECIMAL64, OMNI_SHORT>;
-
-template class MinByAggregator<OMNI_DECIMAL64, OMNI_INT>;
-
-template class MinByAggregator<OMNI_DECIMAL64, OMNI_LONG>;
-
-template class MinByAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>;
-
-template class MinByAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>;
-
-template class MinByAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_DECIMAL128, OMNI_BOOLEAN>;
+template class MinByAggregator<OMNI_CHAR, OMNI_BOOLEAN>;
+template class MinByAggregator<OMNI_VARCHAR, OMNI_BOOLEAN>;
+template class MinByAggregator<OMNI_VARBINARY, OMNI_BOOLEAN>;
 
 // COL2 = OMNI_BYTE
 template class MinByAggregator<OMNI_BOOLEAN, OMNI_BYTE>;
-template class MinByAggregator<OMNI_BYTE, OMNI_BOOLEAN>;
 template class MinByAggregator<OMNI_BYTE, OMNI_BYTE>;
-template class MinByAggregator<OMNI_BYTE, OMNI_SHORT>;
-template class MinByAggregator<OMNI_BYTE, OMNI_INT>;
-template class MinByAggregator<OMNI_BYTE, OMNI_LONG>;
-template class MinByAggregator<OMNI_BYTE, OMNI_FLOAT>;
-template class MinByAggregator<OMNI_BYTE, OMNI_DOUBLE>;
-template class MinByAggregator<OMNI_BYTE, OMNI_DECIMAL64>;
-template class MinByAggregator<OMNI_BYTE, OMNI_DECIMAL128>;
 template class MinByAggregator<OMNI_SHORT, OMNI_BYTE>;
 template class MinByAggregator<OMNI_INT, OMNI_BYTE>;
 template class MinByAggregator<OMNI_LONG, OMNI_BYTE>;
@@ -453,6 +330,106 @@ template class MinByAggregator<OMNI_FLOAT, OMNI_BYTE>;
 template class MinByAggregator<OMNI_DOUBLE, OMNI_BYTE>;
 template class MinByAggregator<OMNI_DECIMAL64, OMNI_BYTE>;
 template class MinByAggregator<OMNI_DECIMAL128, OMNI_BYTE>;
+template class MinByAggregator<OMNI_CHAR, OMNI_BYTE>;
+template class MinByAggregator<OMNI_VARCHAR, OMNI_BYTE>;
+template class MinByAggregator<OMNI_VARBINARY, OMNI_BYTE>;
 
+// COL2 = OMNI_SHORT
+template class MinByAggregator<OMNI_BOOLEAN, OMNI_SHORT>;
+template class MinByAggregator<OMNI_BYTE, OMNI_SHORT>;
+template class MinByAggregator<OMNI_SHORT, OMNI_SHORT>;
+template class MinByAggregator<OMNI_INT, OMNI_SHORT>;
+template class MinByAggregator<OMNI_LONG, OMNI_SHORT>;
+template class MinByAggregator<OMNI_FLOAT, OMNI_SHORT>;
+template class MinByAggregator<OMNI_DOUBLE, OMNI_SHORT>;
+template class MinByAggregator<OMNI_DECIMAL64, OMNI_SHORT>;
+template class MinByAggregator<OMNI_DECIMAL128, OMNI_SHORT>;
+template class MinByAggregator<OMNI_CHAR, OMNI_SHORT>;
+template class MinByAggregator<OMNI_VARCHAR, OMNI_SHORT>;
+template class MinByAggregator<OMNI_VARBINARY, OMNI_SHORT>;
+
+// COL2 = OMNI_INT
+template class MinByAggregator<OMNI_BOOLEAN, OMNI_INT>;
+template class MinByAggregator<OMNI_BYTE, OMNI_INT>;
+template class MinByAggregator<OMNI_SHORT, OMNI_INT>;
+template class MinByAggregator<OMNI_INT, OMNI_INT>;
+template class MinByAggregator<OMNI_LONG, OMNI_INT>;
+template class MinByAggregator<OMNI_FLOAT, OMNI_INT>;
+template class MinByAggregator<OMNI_DOUBLE, OMNI_INT>;
+template class MinByAggregator<OMNI_DECIMAL64, OMNI_INT>;
+template class MinByAggregator<OMNI_DECIMAL128, OMNI_INT>;
+template class MinByAggregator<OMNI_CHAR, OMNI_INT>;
+template class MinByAggregator<OMNI_VARCHAR, OMNI_INT>;
+template class MinByAggregator<OMNI_VARBINARY, OMNI_INT>;
+
+// COL2 = OMNI_LONG
+template class MinByAggregator<OMNI_BOOLEAN, OMNI_LONG>;
+template class MinByAggregator<OMNI_BYTE, OMNI_LONG>;
+template class MinByAggregator<OMNI_SHORT, OMNI_LONG>;
+template class MinByAggregator<OMNI_INT, OMNI_LONG>;
+template class MinByAggregator<OMNI_LONG, OMNI_LONG>;
+template class MinByAggregator<OMNI_FLOAT, OMNI_LONG>;
+template class MinByAggregator<OMNI_DOUBLE, OMNI_LONG>;
+template class MinByAggregator<OMNI_DECIMAL64, OMNI_LONG>;
+template class MinByAggregator<OMNI_DECIMAL128, OMNI_LONG>;
+template class MinByAggregator<OMNI_CHAR, OMNI_LONG>;
+template class MinByAggregator<OMNI_VARCHAR, OMNI_LONG>;
+template class MinByAggregator<OMNI_VARBINARY, OMNI_LONG>;
+
+// COL2 = OMNI_FLOAT
+template class MinByAggregator<OMNI_BOOLEAN, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_BYTE, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_SHORT, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_INT, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_LONG, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_FLOAT, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_DOUBLE, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_DECIMAL64, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_DECIMAL128, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_CHAR, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_VARCHAR, OMNI_FLOAT>;
+template class MinByAggregator<OMNI_VARBINARY, OMNI_FLOAT>;
+
+// COL2 = OMNI_DOUBLE
+template class MinByAggregator<OMNI_BOOLEAN, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_BYTE, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_SHORT, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_INT, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_LONG, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_FLOAT, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_DOUBLE, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_DECIMAL128, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_CHAR, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_VARCHAR, OMNI_DOUBLE>;
+template class MinByAggregator<OMNI_VARBINARY, OMNI_DOUBLE>;
+
+// COL2 = OMNI_DECIMAL64
+template class MinByAggregator<OMNI_BOOLEAN, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_BYTE, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_SHORT, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_INT, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_LONG, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_FLOAT, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_DOUBLE, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_DECIMAL128, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_CHAR, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_VARCHAR, OMNI_DECIMAL64>;
+template class MinByAggregator<OMNI_VARBINARY, OMNI_DECIMAL64>;
+
+// COL2 = OMNI_DECIMAL128
+template class MinByAggregator<OMNI_BOOLEAN, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_BYTE, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_SHORT, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_INT, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_LONG, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_FLOAT, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_DOUBLE, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_DECIMAL128, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_CHAR, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_VARCHAR, OMNI_DECIMAL128>;
+template class MinByAggregator<OMNI_VARBINARY, OMNI_DECIMAL128>;
 } // namespace op
 } // namespace omniruntime

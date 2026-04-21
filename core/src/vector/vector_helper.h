@@ -298,16 +298,62 @@ public:
     }
 
     template <type::DataTypeId typeId>
-    static void VectorCopyValue(vec::BaseVector *srcVector, int32_t srcIndex, vec::BaseVector *dstVector, int32_t dstIndex)
+    static typename type::NativeType<typeId>::type GetFlatValue(vec::BaseVector *vector, int index)
     {
         using T = typename type::NativeType<typeId>::type;
-        if constexpr (std::is_same_v<T, std::string_view>) {
-            auto value = static_cast<Vector<LargeStringContainer<T>> *>(srcVector)->GetValue(srcIndex);
-            static_cast<Vector<LargeStringContainer<T>> *>(dstVector)->SetValue(dstIndex, value);
+        if constexpr (typeId == OMNI_VARBINARY || typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+            if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+                auto *constVector = reinterpret_cast<ConstVector<T> *>(vector);
+                return constVector->GetConstValue();
+            } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                auto *rawVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector);
+                return rawVector->GetValue(index);
+            } else {
+                auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<T>> *>(vector);
+                return rawVector->GetValue(index);
+            }
         } else {
-            auto value = static_cast<Vector<T> *>(srcVector)->GetValue(srcIndex);
-            static_cast<Vector<T> *>(dstVector)->SetValue(dstIndex, value);
+            if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+                auto *constVector = reinterpret_cast<ConstVector<T> *>(vector);
+                return constVector->GetConstValue();
+            } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                auto *rawVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector);
+                return rawVector->GetValue(index);
+            } else {
+                auto *rawVector = reinterpret_cast<Vector<T> *>(vector);
+                return rawVector->GetValue(index);
+            }
         }
+    }
+
+    template <type::DataTypeId typeId>
+    static void SetFlatValue(vec::BaseVector *vector, int index, typename type::NativeType<typeId>::type value)
+    {
+        using T = typename type::NativeType<typeId>::type;
+        if constexpr (typeId == OMNI_VARBINARY || typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+            if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                auto *rawVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector);
+                rawVector->SetValue(index, value);
+            } else {
+                auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<T>> *>(vector);
+                rawVector->SetValue(index, value);
+            }
+        } else {
+            if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                auto rawVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector);
+                rawVector->SetValue(index, value);
+            } else {
+                auto rawVector = reinterpret_cast<Vector<T> *>(vector);
+                rawVector->SetValue(index, value);
+            }
+        }
+    }
+
+    template <type::DataTypeId typeId>
+    static void VectorCopyValue(vec::BaseVector *srcVector, int32_t srcIndex, vec::BaseVector *dstVector, int32_t dstIndex)
+    {
+        auto value = GetFlatValue<typeId>(srcVector, srcIndex);
+        SetFlatValue<typeId>(dstVector, dstIndex, value);
     }
 
     static void CopyValue(vec::BaseVector *srcVector, int32_t srcIndex, vec::BaseVector *dstVector, int32_t dstIndex)

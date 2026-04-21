@@ -45,8 +45,6 @@ void MinByComplexAggregator<COL2_ID>::ProcessSingleInternal(AggregateState *stat
     auto *complexState = State::CastState(state);
     BaseVector *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     BaseVector *col2Vector = this->curVectorBatch->Get(this->channels[1]);
-    auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
-    col2ptr += rowOffset;
     for (int32_t i = 0; i < rowCount; i++) {
         if (nullMap != nullptr && (*nullMap)[i]) {
             continue;
@@ -55,7 +53,7 @@ void MinByComplexAggregator<COL2_ID>::ProcessSingleInternal(AggregateState *stat
         if (col2Vector->IsNull(rowIndex)) {
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
-        sortKeyType key = col2ptr[i];
+        sortKeyType key = VectorHelper::GetFlatValue<COL2_ID>(col2Vector, rowIndex);
         if (key <= complexState->sortKey) {
             complexState->isEmpty = false;
             complexState->sortKey = key;
@@ -83,8 +81,6 @@ void MinByComplexAggregator<COL2_ID>::ProcessGroupInternal(std::vector<Aggregate
     using State = typename MinByComplexAggregator<COL2_ID>::ComplexState;
     BaseVector *col1Vector = this->curVectorBatch->Get(this->channels[0]);
     BaseVector *col2Vector = this->curVectorBatch->Get(this->channels[1]);
-    auto *col2ptr = reinterpret_cast<sortKeyType *>(GetValuesFromVector<COL2_ID>(col2Vector));
-    col2ptr += rowOffset;
     const size_t rowCount = rowStates.size();
     for (size_t i = 0; i < rowCount; i++) {
         if (nullMap != nullptr && (*nullMap)[i]) {
@@ -95,7 +91,7 @@ void MinByComplexAggregator<COL2_ID>::ProcessGroupInternal(std::vector<Aggregate
             continue;  // Spark: NULL values are ignored from processing by aggregate functions
         }
         auto *complexState = State::CastState(rowStates[i] + aggStateOffset);
-        sortKeyType key = col2ptr[i];
+        sortKeyType key = VectorHelper::GetFlatValue<COL2_ID>(col2Vector, rowIdx);
         if (key <= complexState->sortKey) {
             complexState->isEmpty = false;
             complexState->sortKey = key;
@@ -123,6 +119,8 @@ void MinByComplexAggregator<COL2_ID>::ExtractValues(const AggregateState *state,
     const auto *complexState = State::ConstCastState(state + aggStateOffset);
     if (this->outputPartial) {
         if (complexState->isEmpty) {
+            vectors[0]->SetNull(rowIndex);
+            vectors[1]->SetNull(rowIndex);
             return;
         }
         if (complexState->targetValue == nullptr) {
@@ -155,6 +153,8 @@ void MinByComplexAggregator<COL2_ID>::ExtractValuesBatch(std::vector<AggregateSt
         for (int32_t i = 0; i < rowCount; i++) {
             const auto *complexState = State::ConstCastState(groupStates[i] + aggStateOffset);
             if (complexState->isEmpty) {
+                vectors[0]->SetNull(i);
+                vectors[1]->SetNull(i);
                 continue;
             }
             if (complexState->targetValue == nullptr) {

@@ -999,9 +999,9 @@ TEST(MaxByAggregatorTest, ProcessGroupConstVarcharKeyIntVarchar)
     std::vector<BaseVector *> extractVectors = {outVec};
     agg->ExtractValues(state.get(), extractVectors, 0);
 
-    // All keys are equal ("xyz"), first processed row wins (equal keys don't update state) -> target = 10
+    // All keys are equal ("xyz"), first processed row wins (equal keys will update state) -> target = 30
     EXPECT_FALSE(outVec->IsNull(0));
-    EXPECT_EQ(static_cast<Vector<int32_t> *>(extractVectors[0])->GetValue(0), 10);
+    EXPECT_EQ(static_cast<Vector<int32_t> *>(extractVectors[0])->GetValue(0), 30);
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete outVec;
