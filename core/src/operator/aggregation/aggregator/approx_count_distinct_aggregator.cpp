@@ -10,6 +10,8 @@
 namespace omniruntime {
 namespace op {
 
+using omniruntime::vec::VectorHelper;
+
 namespace {
 // Align with Velox approx_distinct: hash value bytes with XXH64-style (Velox uses XXH64(seed=0)),
 // so HLL (index, value) distribution matches Velox and the bias correction tables apply correctly.
@@ -206,21 +208,11 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
     if (isBooleanInput_) {
         // Boolean: accumulate seen false/true in 2-byte state [0, state]
         int8_t st = aggState->len >= 2 ? HllBooleanDeserialize(buf) : 0;
-        if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
-            bool val = static_cast<vec::ConstVector<bool> *>(vector)->GetConstValue();
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && (*nullMap)[i]) continue;
-                st |= (1 << (val ? 1 : 0));
-            }
-        } else {
-            auto *boolVec = reinterpret_cast<Vector<bool> *>(vector);
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && (*nullMap)[i]) {
-                    continue;
-                }
-                bool val = boolVec->GetValue(rowOffset + i);
-                st |= (1 << (val ? 1 : 0));
-            }
+        for (int32_t i = 0; i < rowCount; ++i) {
+            const int32_t absIdx = rowOffset + i;
+            if (nullMap && (*nullMap)[absIdx]) continue;
+            bool val = VectorHelper::GetFlatValue<type::OMNI_BOOLEAN>(vector, absIdx);
+            st |= (1 << (val ? 1 : 0));
         }
         HllBooleanSerialize(st, buf);
         aggState->len = kHllBooleanSerializedSize;
@@ -230,14 +222,11 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
     // Optional: read max standard error from second column (first row only)
     if (this->channels.size() >= 2 && !hasMaxErrorFromColumn_ && this->curVectorBatch != nullptr) {
         BaseVector *errVec = this->curVectorBatch->Get(this->channels[1]);
-        if (errVec != nullptr && errVec->GetTypeId() == OMNI_DOUBLE) {
-            auto *doubleVec = reinterpret_cast<Vector<double> *>(errVec);
-            if (!doubleVec->IsNull(rowOffset)) {
-                double maxErr = doubleVec->GetValue(rowOffset);
-                HllCheckMaxStandardError(maxErr);
-                indexBitLength_ = HllToIndexBitLength(maxErr);
-                hasMaxErrorFromColumn_ = true;
-            }
+        if (errVec != nullptr && errVec->GetTypeId() == OMNI_DOUBLE && !errVec->IsNull(rowOffset)) {
+            double maxErr = VectorHelper::GetFlatValue<type::OMNI_DOUBLE>(errVec, rowOffset);
+            HllCheckMaxStandardError(maxErr);
+            indexBitLength_ = HllToIndexBitLength(maxErr);
+            hasMaxErrorFromColumn_ = true;
         }
     }
 
@@ -246,64 +235,20 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateSt
         acc.mergeWith(buf, aggState->len);
     }
 
-    const bool isDict = (vector->GetEncoding() == vec::OMNI_DICTIONARY);
-    const bool isConst = (vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
-    if (isDict) {
-        const int32_t *ids = GetIdsFromDict<IN_ID>(vector);
+    // Flat / dictionary / const: same as max_by / approx_percentile value column.
+    constexpr int32_t valueSize = (IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE) ? 8
+        : (IN_ID == OMNI_INT || IN_ID == OMNI_FLOAT) ? 4
+        : (IN_ID == OMNI_SHORT) ? 2 : 1;
+    for (int32_t i = 0; i < rowCount; ++i) {
+        const int32_t absIdx = rowOffset + i;
+        if (nullMap && (*nullMap)[absIdx]) continue;
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR || IN_ID == OMNI_VARBINARY) {
-            auto *dictStrVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(
-                GetValuesFromDict<IN_ID>(vector));
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && (*nullMap)[i]) continue;
-                int32_t id = ids[rowOffset + i];
-                if (id < 0) continue;
-                std::string_view sv = dictStrVec->GetValue(id);
-                acc.insertHash(static_cast<uint64_t>(HashUtil::HashValue(const_cast<int8_t *>(reinterpret_cast<const int8_t *>(sv.data())), static_cast<int32_t>(sv.size()))));
-            }
+            std::string_view sv = VectorHelper::GetFlatValue<IN_ID>(vector, absIdx);
+            acc.insertHash(static_cast<uint64_t>(HashUtil::HashValue(
+                const_cast<int8_t *>(reinterpret_cast<const int8_t *>(sv.data())), static_cast<int32_t>(sv.size()))));
         } else {
-            const char *dict = reinterpret_cast<const char *>(GetValuesFromDict<IN_ID>(vector));
-            constexpr int32_t valueSize = (IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE) ? 8 : (IN_ID == OMNI_INT || IN_ID == OMNI_FLOAT) ? 4 : (IN_ID == OMNI_SHORT) ? 2 : 1;
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && (*nullMap)[i]) continue;
-                int32_t id = ids[rowOffset + i];
-                if (id < 0) continue;
-                acc.insertHash(HllHashBytes(dict + static_cast<size_t>(id) * valueSize, valueSize));
-            }
-        }
-    } else if (isConst) {
-        if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR || IN_ID == OMNI_VARBINARY) {
-            auto constValue = static_cast<vec::ConstVector<std::string_view> *>(vector)->GetConstValue();
-            uint64_t hash = static_cast<uint64_t>(HashUtil::HashValue(
-                const_cast<int8_t *>(reinterpret_cast<const int8_t *>(constValue.data())),
-                static_cast<int32_t>(constValue.size())));
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && (*nullMap)[i]) continue;
-                acc.insertHash(hash);
-            }
-        } else {
-            auto constValue = static_cast<vec::ConstVector<InType> *>(vector)->GetConstValue();
-            constexpr int32_t valueSize = (IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE) ? 8 : (IN_ID == OMNI_INT || IN_ID == OMNI_FLOAT) ? 4 : (IN_ID == OMNI_SHORT) ? 2 : 1;
-            uint64_t hash = HllHashBytes(&constValue, valueSize);
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && (*nullMap)[i]) continue;
-                acc.insertHash(hash);
-            }
-        }
-    } else {
-        if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR || IN_ID == OMNI_VARBINARY) {
-            auto *strVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && (*nullMap)[i]) continue;
-                std::string_view sv = strVec->GetValue(rowOffset + i);
-                acc.insertHash(static_cast<uint64_t>(HashUtil::HashValue(const_cast<int8_t *>(reinterpret_cast<const int8_t *>(sv.data())), static_cast<int32_t>(sv.size()))));
-            }
-        } else {
-            const char *ptr = reinterpret_cast<const char *>(GetValuesFromVector<IN_ID>(vector));
-            constexpr int32_t valueSize = (IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE) ? 8 : (IN_ID == OMNI_INT || IN_ID == OMNI_FLOAT) ? 4 : (IN_ID == OMNI_SHORT) ? 2 : 1;
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (nullMap && (*nullMap)[i]) continue;
-                acc.insertHash(HllHashBytes(ptr + static_cast<size_t>(rowOffset + i) * valueSize, valueSize));
-            }
+            InType v = VectorHelper::GetFlatValue<IN_ID>(vector, absIdx);
+            acc.insertHash(HllHashBytes(&v, valueSize));
         }
     }
 
@@ -332,13 +277,12 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessFinalMerge(AggregateSt
     int32_t capacity = kApproxCountDistinctMaxSerializedSize;
     int32_t *currentLen = &aggState->len;
 
-    auto *strVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
     for (int32_t i = 0; i < rowCount; ++i) {
         int32_t row = rowOffset + i;
         if (nullMap && (*nullMap)[row]) {
             continue;
         }
-        std::string_view sv = strVec->GetValue(row);
+        std::string_view sv = VectorHelper::GetFlatValue<type::OMNI_VARBINARY>(vector, row);
         if (sv.empty()) {
             continue;
         }
@@ -386,12 +330,12 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vect
     auto firstVecIdx = vectorIndex++;
     for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
         auto &row = unspillRows[rowIdx];
-        auto *varbinaryVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(row.batch->Get(firstVecIdx));
+        BaseVector *varbinaryVec = row.batch->Get(firstVecIdx);
         auto *aggState = ApproxCountDistinctAggState::CastState(row.state + aggStateOffset);
-        if (varbinaryVector->IsNull(row.rowIdx)) {
+        if (varbinaryVec->IsNull(row.rowIdx)) {
             continue;
         }
-        std::string_view sv = varbinaryVector->GetValue(row.rowIdx);
+        std::string_view sv = VectorHelper::GetFlatValue<type::OMNI_VARBINARY>(varbinaryVec, row.rowIdx);
         if (sv.empty()) {
             continue;
         }
@@ -425,12 +369,11 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorB
     auto *outVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(
         VectorHelper::CreateFlatVector(OMNI_VARBINARY, rowCount, kAlignBufSize * rowCount));
     if (isBooleanInput_) {
-        auto *boolVec = reinterpret_cast<Vector<bool> *>(originVector);
         for (int32_t i = 0; i < rowCount; ++i) {
             if (nullMap != nullptr && (*nullMap)[i]) {
                 outVec->SetNull(i);
             } else {
-                bool val = boolVec->GetValue(i);
+                bool val = VectorHelper::GetFlatValue<type::OMNI_BOOLEAN>(originVector, i);
                 int8_t st = (1 << (val ? 1 : 0));
                 HllBooleanSerialize(st, alignBuf);
                 std::string_view svRef(alignBuf, kHllBooleanSerializedSize);
@@ -438,64 +381,21 @@ void ApproxCountDistinctAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorB
             }
         }
     } else {
+        constexpr int32_t alignValueSize = (IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE) ? 8
+            : (IN_ID == OMNI_INT || IN_ID == OMNI_FLOAT) ? 4
+            : (IN_ID == OMNI_SHORT) ? 2 : 1;
         for (int32_t i = 0; i < rowCount; ++i) {
             if (nullMap != nullptr && (*nullMap)[i]) {
                 outVec->SetNull(i);
             } else {
                 uint64_t hash = 0;
-                if (originVector->GetEncoding() == vec::OMNI_DICTIONARY) {
-                    const int32_t *ids = GetIdsFromDict<IN_ID>(originVector);
-                    int32_t id = ids[i];
-                    if (id >= 0) {
-                        if constexpr (IN_ID == OMNI_LONG) {
-                            auto *dict = reinterpret_cast<int64_t *>(GetValuesFromDict<IN_ID>(originVector));
-                            hash = HllHashBytes(&dict[id], 8);
-                        } else if constexpr (IN_ID == OMNI_INT) {
-                            auto *dict = reinterpret_cast<int32_t *>(GetValuesFromDict<IN_ID>(originVector));
-                            hash = HllHashBytes(&dict[id], 4);
-                        } else if constexpr (IN_ID == OMNI_SHORT) {
-                            auto *dict = reinterpret_cast<int16_t *>(GetValuesFromDict<IN_ID>(originVector));
-                            hash = HllHashBytes(&dict[id], 2);
-                        } else if constexpr (IN_ID == OMNI_BYTE) {
-                            auto *dict = reinterpret_cast<int8_t *>(GetValuesFromDict<IN_ID>(originVector));
-                            hash = HllHashBytes(&dict[id], 1);
-                        } else if constexpr (IN_ID == OMNI_FLOAT) {
-                            auto *dict = reinterpret_cast<float *>(GetValuesFromDict<IN_ID>(originVector));
-                            hash = HllHashBytes(&dict[id], 4);
-                        } else if constexpr (IN_ID == OMNI_DOUBLE) {
-                            auto *dict = reinterpret_cast<double *>(GetValuesFromDict<IN_ID>(originVector));
-                            hash = HllHashBytes(&dict[id], 8);
-                        } else if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR || IN_ID == OMNI_VARBINARY) {
-                            auto *dictStrVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(
-                                GetValuesFromDict<IN_ID>(originVector));
-                            std::string_view sv = dictStrVec->GetValue(id);
-                            hash = static_cast<uint64_t>(HashUtil::HashValue(const_cast<int8_t *>(reinterpret_cast<const int8_t *>(sv.data())), static_cast<int32_t>(sv.size())));
-                        }
-                    }
+                if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR || IN_ID == OMNI_VARBINARY) {
+                    std::string_view sv = VectorHelper::GetFlatValue<IN_ID>(originVector, i);
+                    hash = static_cast<uint64_t>(HashUtil::HashValue(
+                        const_cast<int8_t *>(reinterpret_cast<const int8_t *>(sv.data())), static_cast<int32_t>(sv.size())));
                 } else {
-                    if constexpr (IN_ID == OMNI_LONG) {
-                        auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<IN_ID>(originVector));
-                        hash = HllHashBytes(&ptr[i], 8);
-                    } else if constexpr (IN_ID == OMNI_INT) {
-                        auto *ptr = reinterpret_cast<int32_t *>(GetValuesFromVector<IN_ID>(originVector));
-                        hash = HllHashBytes(&ptr[i], 4);
-                    } else if constexpr (IN_ID == OMNI_SHORT) {
-                        auto *ptr = reinterpret_cast<int16_t *>(GetValuesFromVector<IN_ID>(originVector));
-                        hash = HllHashBytes(&ptr[i], 2);
-                    } else if constexpr (IN_ID == OMNI_BYTE) {
-                        auto *ptr = reinterpret_cast<int8_t *>(GetValuesFromVector<IN_ID>(originVector));
-                        hash = HllHashBytes(&ptr[i], 1);
-                    } else if constexpr (IN_ID == OMNI_FLOAT) {
-                        auto *ptr = reinterpret_cast<float *>(GetValuesFromVector<IN_ID>(originVector));
-                        hash = HllHashBytes(&ptr[i], 4);
-                    } else if constexpr (IN_ID == OMNI_DOUBLE) {
-                        auto *ptr = reinterpret_cast<double *>(GetValuesFromVector<IN_ID>(originVector));
-                        hash = HllHashBytes(&ptr[i], 8);
-                    } else if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR || IN_ID == OMNI_VARBINARY) {
-                        auto *strVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(originVector);
-                        std::string_view sv = strVec->GetValue(i);
-                        hash = static_cast<uint64_t>(HashUtil::HashValue(const_cast<int8_t *>(reinterpret_cast<const int8_t *>(sv.data())), static_cast<int32_t>(sv.size())));
-                    }
+                    InType v = VectorHelper::GetFlatValue<IN_ID>(originVector, i);
+                    hash = HllHashBytes(&v, alignValueSize);
                 }
                 HllAccumulator acc(indexBitLength_);
                 acc.insertHash(hash);
