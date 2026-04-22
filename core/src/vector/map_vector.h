@@ -19,17 +19,15 @@ public:
           keys(std::move(keyVector)),
           values(std::move(valueVector)), capacity(static_cast<int32_t>(size))
     {
-        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
+        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1, true);
         offsets = offsetsBuffer->GetBuffer();
-        offsets[0] = 0;
     }
 
     MapVector(int64_t size)
         : BaseVector(size, OMNI_ENCODING_MAP, OMNI_MAP), capacity(static_cast<int32_t>(size))
     {
-        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
+        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1, true);
         offsets = offsetsBuffer->GetBuffer();
-        offsets[0] = 0;
     }
 
     const std::shared_ptr<AlignedBuffer<int64_t>>& GetOffsetsBuffer() const
@@ -166,7 +164,7 @@ public:
         int32_t oldSize = size;
 
         auto oldOffsetsBuffer = offsetsBuffer;
-        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(newCapacity + 1);
+        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(newCapacity + 1, true);
         offsets = offsetsBuffer->GetBuffer();
 
         if (oldOffsetsBuffer != nullptr) {
@@ -175,8 +173,6 @@ public:
                 oldOffsetsBuffer->GetBuffer(),
                 (oldSize + 1) * sizeof(int64_t)
             );
-        } else {
-            memset(offsets, 0, (newCapacity + 1) * sizeof(int64_t));
         }
 
         auto oldNullsBuffer = nullsBuffer;
