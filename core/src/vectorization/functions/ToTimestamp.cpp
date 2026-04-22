@@ -12,6 +12,10 @@
 #include "vector/vector_helper.h"
 #include "util/bit_util.h"
 #include "util/config/QueryConfig.h"
+#include "util/type_util.h"
+#include "type/TimestampConversion.h"
+#include "vectorization/functions/CastHooks.h"
+#include <memory>
 #include <ctime>
 #include <cstring>
 #include <string>
@@ -660,6 +664,181 @@ private:
     }
 };
 
+// Spark to_date: string / timestamp / date to DATE32, plus string + format.
+class ToDateFunction : public VectorFunction {
+public:
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
+        op::ExecutionContext *context) const override
+    {
+        if (context == nullptr) {
+            OMNI_THROW("ToDate function Error", "null execution context");
+        }
+        if (args.empty()) {
+            OMNI_THROW("ToDate function Error", "No input arguments");
+        }
+        hooks_ = std::make_shared<CastHooks>(context->queryConfig());
+        if (args.size() == 1) {
+            BaseVector *input = args.top();
+            args.pop();
+            ApplyOneArg(input, outputType, result, context);
+        } else if (args.size() == 2) {
+            BaseVector *formatArg = args.top();
+            args.pop();
+            BaseVector *inputArg = args.top();
+            args.pop();
+            ApplyStringWithFormat(inputArg, formatArg, outputType, result, context);
+        } else {
+            OMNI_THROW("ToDate function Error", "Invalid argument count for to_date");
+        }
+    }
+
+private:
+    const tz::TimeZone *SessionTimeZoneForToDate(const op::ExecutionContext *context) const
+    {
+        if (context->queryConfig().AdjustTimestampToTimezone()) {
+            const std::string name = context->queryConfig().SessionTimezone();
+            if (!name.empty()) {
+                return tz::locateZone(name);
+            }
+        }
+        return nullptr;
+    }
+
+    void ApplyOneArg(BaseVector *input, const DataTypePtr &outputType, BaseVector *&result,
+        const op::ExecutionContext *context) const
+    {
+        const int32_t size = input->GetSize();
+        if (result == nullptr) {
+            result = VectorHelper::CreateFlatVector(OMNI_DATE32, size);
+        }
+        const DataTypeId inputId = input->GetTypeId();
+        if (input->GetEncoding() == OMNI_ENCODING_CONST) {
+            if (inputId == OMNI_CHAR || inputId == OMNI_VARCHAR) {
+                const auto str = static_cast<ConstVector<std::string_view> *>(input)->GetConstValue();
+                const auto resultValue = hooks_->castStringToDate(str);
+                if (resultValue.hasError()) {
+                    result->SetNulls(0, true, size);
+                } else {
+                    int32_t dateValue = resultValue.value();
+                    for (int32_t row = 0; row < size; ++row) {
+                        static_cast<Vector<int32_t> *>(result)->SetValue(row, dateValue);
+                    }
+                }
+            } else if (inputId == OMNI_TIMESTAMP) {
+                int64_t temp = static_cast<ConstVector<int64_t> *>(input)->GetConstValue();
+                int32_t dateValue =
+                    type::util::toDate(Timestamp::fromMicros(temp), SessionTimeZoneForToDate(context));
+                for (int32_t row = 0; row < size; ++row) {
+                    static_cast<Vector<int32_t> *>(result)->SetValue(row, dateValue);
+                }
+            } else if (inputId == OMNI_DATE32 || inputId == OMNI_INT) {
+                int32_t v = static_cast<ConstVector<int32_t> *>(input)->GetConstValue();
+                for (int32_t row = 0; row < size; ++row) {
+                    static_cast<Vector<int32_t> *>(result)->SetValue(row, v);
+                }
+            } else {
+                delete input;
+                OMNI_THROW("ToDate function Error", "Unsupported const type for to_date");
+            }
+        } else {
+            for (int32_t row = 0; row < size; ++row) {
+                if (input->IsNull(row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                if (inputId == OMNI_CHAR || inputId == OMNI_VARCHAR) {
+                    const auto str = VectorHelper::GetStringValueFromVector(input, row);
+                    const auto resultValue = hooks_->castStringToDate(str);
+                    if (resultValue.hasError()) {
+                        result->SetNull(row);
+                    } else {
+                        static_cast<Vector<int32_t> *>(result)->SetValue(row, resultValue.value());
+                        result->SetNotNull(row);
+                    }
+                } else if (inputId == OMNI_TIMESTAMP) {
+                    auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
+                    int32_t dateValue = type::util::toDate(
+                        Timestamp::fromMicros(temp), SessionTimeZoneForToDate(context));
+                    static_cast<Vector<int32_t> *>(result)->SetValue(row, dateValue);
+                    result->SetNotNull(row);
+                } else if (inputId == OMNI_DATE32) {
+                    auto v = VectorHelper::GetValueFromVector<int32_t>(input, row);
+                    static_cast<Vector<int32_t> *>(result)->SetValue(row, v);
+                    result->SetNotNull(row);
+                } else if (inputId == OMNI_INT) {
+                    auto v = VectorHelper::GetValueFromVector<int32_t>(input, row);
+                    static_cast<Vector<int32_t> *>(result)->SetValue(row, v);
+                    result->SetNotNull(row);
+                } else {
+                    delete input;
+                    OMNI_THROW("ToDate function Error",
+                        "Unsupported type for to_date: " + TypeUtil::TypeToString(inputId));
+                }
+            }
+        }
+        delete input;
+    }
+
+    void ApplyStringWithFormat(BaseVector *inputArg, BaseVector *formatArg,
+        const DataTypePtr & /*outputType*/, BaseVector *&result, const op::ExecutionContext *context) const
+    {
+        const auto inputId = inputArg->GetTypeId();
+        if (inputId != OMNI_VARCHAR && inputId != OMNI_CHAR) {
+            delete formatArg;
+            delete inputArg;
+            OMNI_THROW("ToDate function Error", "to_date with format expects string as first input");
+        }
+        const int32_t size = inputArg->GetSize();
+        if (result == nullptr) {
+            result = VectorHelper::CreateFlatVector(OMNI_DATE32, size);
+        }
+        bool formatIsConst = (formatArg->GetEncoding() == OMNI_ENCODING_CONST);
+        std::string constFormat;
+        if (formatIsConst) {
+            auto *constFormatVec = static_cast<ConstVector<std::string_view> *>(formatArg);
+            constFormat = std::string(constFormatVec->GetConstValue());
+        }
+        const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+        constexpr bool isLegacy = true;
+        for (int32_t row = 0; row < size; ++row) {
+            if (inputArg->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+            if (!formatIsConst && formatArg->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+            std::string format;
+            if (formatIsConst) {
+                format = constFormat;
+            } else {
+                format = std::string(GetStringValueFromVector(formatArg, row));
+            }
+            std::string_view inputStr = GetStringValueFromVector(inputArg, row);
+            int64_t resultMicros = 0;
+            if (!ParseDateTimeString(inputStr, format, resultMicros, isLegacy)) {
+                result->SetNull(row);
+                continue;
+            }
+            if (sessionTz != nullptr) {
+                Timestamp ts = Timestamp::fromMicros(resultMicros);
+                auto sysSeconds = sessionTz->to_sys(
+                    std::chrono::seconds(ts.getSeconds()), tz::TimeZone::TChoose::kEarliest);
+                resultMicros = sysSeconds.count() * Timestamp::kMicrosecondsInSecond +
+                    (resultMicros % Timestamp::kMicrosecondsInSecond);
+            }
+            int32_t d = type::util::toDate(Timestamp::fromMicros(resultMicros), sessionTz);
+            static_cast<Vector<int32_t> *>(result)->SetValue(row, d);
+            result->SetNotNull(row);
+        }
+        delete inputArg;
+        delete formatArg;
+    }
+
+    mutable std::shared_ptr<CastHooks> hooks_{};
+};
+
 } // namespace
 
 void RegisterToTimestampFunction(const std::string &name)
@@ -723,6 +902,20 @@ void RegisterToUnixTimestampFunction(const std::string &name)
     VectorFunction::RegisterVectorFunction(name,
         {OMNI_INT, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_LONG,
         toUnixTimestampFunction);
+}
+
+void RegisterToDateFunction(const std::string &name)
+{
+    auto fn = std::make_shared<ToDateFunction>();
+    VectorFunction::RegisterVectorFunction(name, {OMNI_VARCHAR}, OMNI_DATE32, fn);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_CHAR}, OMNI_DATE32, fn);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_TIMESTAMP}, OMNI_DATE32, fn);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_INT}, OMNI_DATE32, fn);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_DATE32}, OMNI_DATE32, fn);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_DATE32, fn);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_VARCHAR, OMNI_CHAR}, OMNI_DATE32, fn);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_CHAR, OMNI_VARCHAR}, OMNI_DATE32, fn);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_CHAR, OMNI_CHAR}, OMNI_DATE32, fn);
 }
 
 }

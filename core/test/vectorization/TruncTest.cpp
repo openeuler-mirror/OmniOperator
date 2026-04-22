@@ -14,6 +14,7 @@
 #include "codegen/func_signature.h"
 #include "vector/vector_helper.h"
 #include "vector/vector.h"
+#include "type/Timestamp.h"
 #include "type/date_time_utils.h"
 
 using namespace omniruntime;
@@ -87,6 +88,29 @@ public:
         
         ASSERT_NO_THROW(function->Apply(args, outputType, result, &context))
             << "Trunc function threw an exception";
+    }
+
+    static void ExecuteTruncTimestamp(BaseVector* tsVec, BaseVector* formatVec, BaseVector*& result) {
+        auto signature = std::make_shared<FunctionSignature>("trunc_date",
+            std::vector<DataTypeId>{OMNI_TIMESTAMP, OMNI_VARCHAR}, OMNI_DATE32);
+        auto function = VectorFunction::Find(signature);
+        ASSERT_NE(function, nullptr) << "Trunc (timestamp) function not found for signature";
+        auto outputType = std::make_shared<DataType>(OMNI_DATE32);
+        ExecutionContext context;
+        context.SetResultRowSize(tsVec->GetSize());
+        std::stack<BaseVector*> args;
+        args.push(tsVec);
+        args.push(formatVec);
+        ASSERT_NO_THROW(function->Apply(args, outputType, result, &context));
+    }
+
+    static BaseVector* CreateTimestampVectorFromDays(const std::vector<int32_t>& dayValues) {
+        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_TIMESTAMP, dayValues.size());
+        auto* tv = static_cast<Vector<int64_t>*>(vec);
+        for (size_t i = 0; i < dayValues.size(); ++i) {
+            tv->SetValue(i, Timestamp::fromDate(dayValues[i]).toMicros());
+        }
+        return vec;
     }
     
     // Helper to convert date components to days since epoch
@@ -330,5 +354,25 @@ TEST(TruncTest, TruncWithInvalidFormat) {
     EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL (invalid format)";
     EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL (invalid format for DATE)";
 
+    delete resultVec;
+}
+
+TEST(TruncTest, TruncTimestampToMonth) {
+    int32_t d0 = TruncFunctionTestHelper::DateToDays(2024, 6, 15);
+    int32_t d1 = TruncFunctionTestHelper::DateToDays(2024, 6, 17);
+    int32_t exp0 = TruncFunctionTestHelper::DateToDays(2024, 6, 1);
+    int32_t exp1 = TruncFunctionTestHelper::DateToDays(2024, 6, 1);
+    std::vector<int32_t> days = { d0, d1 };
+    BaseVector* tsVec = TruncFunctionTestHelper::CreateTimestampVectorFromDays(days);
+    std::vector<std::string> formats = { "MON", "mm" };
+    BaseVector* formatVec = TruncFunctionTestHelper::CreateStringVector(formats);
+    BaseVector* resultVec = nullptr;
+    TruncFunctionTestHelper::ExecuteTruncTimestamp(tsVec, formatVec, resultVec);
+    ASSERT_NE(resultVec, nullptr);
+    auto* r = dynamic_cast<Vector<int32_t>*>(resultVec);
+    EXPECT_FALSE(resultVec->IsNull(0));
+    EXPECT_FALSE(resultVec->IsNull(1));
+    EXPECT_EQ(r->GetValue(0), exp0);
+    EXPECT_EQ(r->GetValue(1), exp1);
     delete resultVec;
 }

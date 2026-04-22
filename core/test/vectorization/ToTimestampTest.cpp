@@ -18,6 +18,7 @@
 #include "vector/vector_helper.h"
 #include "vector/vector.h"
 #include "type/Timestamp.h"
+#include "type/date_time_utils.h"
 #include "util/type_util.h"
 
 using namespace omniruntime;
@@ -367,6 +368,58 @@ TEST(ToTimestampTest, ToUnixTimestamp_StringDefaultFormat) {
     delete resultVec;
 }
 
+// unix_timestamp and to_unix_timestamp share one implementation; verify the alias resolves.
+TEST(ToTimestampTest, UnixTimestamp_RegisteredNameAliasMatchesToUnix) {
+    std::vector<std::string> inputs = { "1970-01-01 00:00:00" };
+    BaseVector* inputVec = ToTimestampTestHelper::CreateStringVector(inputs);
+
+    std::stack<BaseVector*> args1;
+    args1.push(inputVec);
+    std::vector<std::string> inputs2 = { "1970-01-01 00:00:00" };
+    BaseVector* inputVec2 = ToTimestampTestHelper::CreateStringVector(inputs2);
+    std::stack<BaseVector*> args2;
+    args2.push(inputVec2);
+
+    BaseVector* outAlias = nullptr;
+    BaseVector* outBase = nullptr;
+    ToTimestampTestHelper::ExecuteFunction("unix_timestamp", { OMNI_VARCHAR }, OMNI_LONG, args1, outAlias);
+    ToTimestampTestHelper::ExecuteFunction("to_unix_timestamp", { OMNI_VARCHAR }, OMNI_LONG, args2, outBase);
+
+    ASSERT_NE(outAlias, nullptr);
+    ASSERT_NE(outBase, nullptr);
+    auto* a = dynamic_cast<Vector<int64_t>*>(outAlias);
+    auto* b = dynamic_cast<Vector<int64_t>*>(outBase);
+    ASSERT_EQ(a->GetValue(0), b->GetValue(0));
+    delete outAlias;
+    delete outBase;
+}
+
+// Gluten 4-arg pushdown: (string, format, timezone, policy)
+TEST(ToTimestampTest, ToUnixTimestamp_StringWithFormatTimezonePolicy) {
+    std::vector<std::string> row = { "1970-01-01 00:00:00" };
+    BaseVector* inputVec = ToTimestampTestHelper::CreateStringVector(row);
+    BaseVector* formatVec = ToTimestampTestHelper::CreateConstStringVector("yyyy-MM-dd HH:mm:ss", 1);
+    BaseVector* tzVec = ToTimestampTestHelper::CreateConstStringVector("UTC", 1);
+    BaseVector* policyVec = ToTimestampTestHelper::CreateConstStringVector("LEGACY", 1);
+
+    std::stack<BaseVector*> args;
+    args.push(inputVec);
+    args.push(formatVec);
+    args.push(tzVec);
+    args.push(policyVec);
+
+    BaseVector* resultVec = nullptr;
+    ToTimestampTestHelper::ExecuteFunction("to_unix_timestamp",
+        { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_LONG, args, resultVec);
+
+    ASSERT_NE(resultVec, nullptr);
+    auto* r = dynamic_cast<Vector<int64_t>*>(resultVec);
+    ASSERT_NE(r, nullptr);
+    EXPECT_FALSE(resultVec->IsNull(0));
+    EXPECT_EQ(r->GetValue(0), 0LL);
+    delete resultVec;
+}
+
 TEST(ToTimestampTest, ToUnixTimestamp_StringCustomFormat) {
     std::vector<std::string> inputs = {"1970-01-01", "1970-01-02"};
     BaseVector* inputVec = ToTimestampTestHelper::CreateStringVector(inputs);
@@ -691,5 +744,55 @@ TEST(ToTimestampTest, ToUnixTimestamp_NegativeTimestamp) {
     EXPECT_FALSE(resultVec->IsNull(0));
     EXPECT_EQ(resultTyped->GetValue(0), -1LL);
 
+    delete resultVec;
+}
+
+// ========== to_date ==========
+
+TEST(ToTimestampTest, ToDate_FromTimestamp) {
+    int32_t d = 42;
+    int64_t micros = Timestamp::fromDate(d).toMicros();
+    std::vector<int64_t> vals = { micros };
+    BaseVector* inputVec = ToTimestampTestHelper::CreateTimestampVector(vals);
+    std::stack<BaseVector*> args;
+    args.push(inputVec);
+    BaseVector* resultVec = nullptr;
+    ToTimestampTestHelper::ExecuteFunction("to_date", { OMNI_TIMESTAMP }, OMNI_DATE32, args, resultVec);
+    ASSERT_NE(resultVec, nullptr);
+    auto* r = dynamic_cast<Vector<int32_t>*>(resultVec);
+    ASSERT_NE(r, nullptr);
+    EXPECT_EQ(r->GetValue(0), d);
+    delete resultVec;
+}
+
+TEST(ToTimestampTest, ToDate_DateIdentity) {
+    int32_t d = 0;
+    BaseVector* inputVec = ToTimestampTestHelper::CreateDate32Vector({ d });
+    std::stack<BaseVector*> args;
+    args.push(inputVec);
+    BaseVector* resultVec = nullptr;
+    ToTimestampTestHelper::ExecuteFunction("to_date", { OMNI_DATE32 }, OMNI_DATE32, args, resultVec);
+    ASSERT_NE(resultVec, nullptr);
+    auto* r = dynamic_cast<Vector<int32_t>*>(resultVec);
+    ASSERT_NE(r, nullptr);
+    EXPECT_EQ(r->GetValue(0), d);
+    delete resultVec;
+}
+
+TEST(ToTimestampTest, ToDate_TwoArgString) {
+    std::vector<std::string> in = { "2015-12-31" };
+    BaseVector* inputVec = ToTimestampTestHelper::CreateStringVector(in);
+    BaseVector* formatVec = ToTimestampTestHelper::CreateConstStringVector("yyyy-MM-dd", 1);
+    std::stack<BaseVector*> args;
+    args.push(inputVec);
+    args.push(formatVec);
+    BaseVector* resultVec = nullptr;
+    ToTimestampTestHelper::ExecuteFunction("to_date",
+        { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_DATE32, args, resultVec);
+    ASSERT_NE(resultVec, nullptr);
+    auto* r = dynamic_cast<Vector<int32_t>*>(resultVec);
+    ASSERT_NE(r, nullptr);
+    int32_t expected = LocalDate(2015, 12, 31).ToDays();
+    EXPECT_EQ(r->GetValue(0), expected);
     delete resultVec;
 }
