@@ -296,15 +296,23 @@ public:
         int32_t elementSize = 0;
         int32_t arraySize = bv->GetSize();
         using elementT = typename NativeType<id>::type;
-        SerializedValue<elementT> serializedValue;
-        using ElementVectorType = typename TypeTraits<elementT>::type;
-        auto elementVector = reinterpret_cast<ElementVectorType *>(bv);
-        for (int32_t index = 0; index < arraySize; index++) {
-            elementT elementValue = elementVector->GetValue(index);
-            serializedValue.SetValue(elementValue);
-            elementSize += serializedValue.CompactLength();
-            if constexpr (id == OMNI_ARRAY) {
-                delete elementValue;
+        if (bv->GetEncoding() == OMNI_DICTIONARY) {
+            SerializedValue<elementT, OMNI_DICTIONARY> serializedValue;
+            for (int32_t index = 0; index < arraySize; index++) {
+                serializedValue.TransValue(bv, index);
+                elementSize += serializedValue.CompactLength();
+            }
+        } else if (bv->GetEncoding() == OMNI_ENCODING_CONST) {
+            SerializedValue<elementT, OMNI_ENCODING_CONST> serializedValue;
+            for (int32_t index = 0; index < arraySize; index++) {
+                serializedValue.TransValue(bv, index);
+                elementSize += serializedValue.CompactLength();
+            }
+        } else {
+            SerializedValue<elementT> serializedValue;
+            for (int32_t index = 0; index < arraySize; index++) {
+                serializedValue.TransValue(bv, index);
+                elementSize += serializedValue.CompactLength();
             }
         }
         return elementSize;
@@ -512,15 +520,23 @@ private:
     {
         int32_t arraySize = bv->GetSize();
         using elementT = typename NativeType<id>::type;
-        SerializedValue<elementT> serializedValue;
-        using ElementVectorType = typename TypeTraits<elementT>::type;
-        auto elementVector = reinterpret_cast<ElementVectorType *>(bv);
-        for (int32_t index = 0; index < arraySize; index++) {
-            elementT elementValue = elementVector->GetValue(index);
-            serializedValue.SetValue(elementValue);
-            writeBuffer = serializedValue.WriteBuffer(writeBuffer);
-            if constexpr (id == OMNI_ARRAY) {
-                delete elementValue;
+        if (bv->GetEncoding() == OMNI_DICTIONARY) {
+            SerializedValue<elementT, OMNI_DICTIONARY> serializedValue;
+            for (int32_t index = 0; index < arraySize; index++) {
+                serializedValue.TransValue(bv, index);
+                writeBuffer = serializedValue.WriteBuffer(writeBuffer);
+            }
+        } else if (bv->GetEncoding() == OMNI_ENCODING_CONST) {
+            SerializedValue<elementT, OMNI_ENCODING_CONST> serializedValue;
+            for (int32_t index = 0; index < arraySize; index++) {
+                serializedValue.TransValue(bv, index);
+                writeBuffer = serializedValue.WriteBuffer(writeBuffer);
+            }
+        } else {
+            SerializedValue<elementT> serializedValue;
+            for (int32_t index = 0; index < arraySize; index++) {
+                serializedValue.TransValue(bv, index);
+                writeBuffer = serializedValue.WriteBuffer(writeBuffer);
             }
         }
         delete bv;
@@ -559,75 +575,8 @@ private:
 
         // For struct, consider as multi ARRAY to serialize.
         for (auto i = 0; i < structSize; i++) {
-            auto typeId = value[i]->GetTypeId();
-            switch (typeId) {
-                case OMNI_BYTE:
-                    writeBuffer = WriteStructChildBuffer<OMNI_BYTE>(writeBuffer, value[i]);
-                    break;
-                case OMNI_SHORT:
-                    writeBuffer = WriteStructChildBuffer<OMNI_SHORT>(writeBuffer, value[i]);
-                    break;
-                case OMNI_INT:
-                    writeBuffer = WriteStructChildBuffer<OMNI_INT>(writeBuffer, value[i]);
-                    break;
-                case OMNI_DATE32:
-                    writeBuffer = WriteStructChildBuffer<OMNI_DATE32>(writeBuffer, value[i]);
-                    break;
-                case OMNI_LONG:
-                    writeBuffer = WriteStructChildBuffer<OMNI_LONG>(writeBuffer, value[i]);
-                    break;
-                case OMNI_TIMESTAMP:
-                    writeBuffer = WriteStructChildBuffer<OMNI_TIMESTAMP>(writeBuffer, value[i]);
-                    break;
-                case OMNI_DECIMAL64:
-                    writeBuffer = WriteStructChildBuffer<OMNI_DECIMAL64>(writeBuffer, value[i]);
-                    break;
-                case OMNI_DECIMAL128:
-                    writeBuffer = WriteStructChildBuffer<OMNI_DECIMAL128>(writeBuffer, value[i]);
-                    break;
-                case OMNI_CHAR:
-                    writeBuffer = WriteStructChildBuffer<OMNI_CHAR>(writeBuffer, value[i]);
-                    break;
-                case OMNI_VARCHAR:
-                    writeBuffer = WriteStructChildBuffer<OMNI_VARCHAR>(writeBuffer, value[i]);
-                    break;
-                case OMNI_DOUBLE:
-                    writeBuffer = WriteStructChildBuffer<OMNI_DOUBLE>(writeBuffer, value[i]);
-                    break;
-                case OMNI_BOOLEAN:
-                    writeBuffer = WriteStructChildBuffer<OMNI_BOOLEAN>(writeBuffer, value[i]);
-                    break;
-                case OMNI_VARBINARY:
-                    writeBuffer = WriteStructChildBuffer<OMNI_VARBINARY>(writeBuffer, value[i]);
-                    break;
-                case OMNI_ARRAY:
-                    writeBuffer = WriteStructChildBuffer<OMNI_ARRAY>(writeBuffer, value[i]);
-                    break;
-                default:
-                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
-            }
+            writeBuffer = WriteBaseVectorBuffer(writeBuffer, value[i]);
         }
-        return writeBuffer;
-    }
-
-    template <DataTypeId id>
-    uint8_t *WriteStructChildBuffer(uint8_t *writeBuffer, BaseVector* bv)
-    {
-        using elementT = typename NativeType<id>::type;
-        if (bv->GetEncoding() == OMNI_DICTIONARY) {
-            SerializedValue<elementT, OMNI_DICTIONARY> serializedValue;
-            serializedValue.TransValue(bv, 0);
-            return serializedValue.WriteBuffer(writeBuffer);
-        }
-        if (bv->GetEncoding() == OMNI_ENCODING_CONST) {
-            SerializedValue<elementT, OMNI_ENCODING_CONST> serializedValue;
-            serializedValue.TransValue(bv, 0);
-            return serializedValue.WriteBuffer(writeBuffer);
-        }
-        SerializedValue<elementT> serializedValue;
-        using vectorType = typename TypeTraits<elementT>::type;
-        serializedValue.SetValue(reinterpret_cast<vectorType*>(bv)->GetValue(0));
-        writeBuffer = serializedValue.WriteBuffer(writeBuffer);
         return writeBuffer;
     }
 
