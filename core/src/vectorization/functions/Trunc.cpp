@@ -24,6 +24,7 @@
 namespace omniruntime::vectorization {
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
+using namespace omniruntime::tz;
 
 namespace {
 class TruncFunction : public VectorFunction {
@@ -51,11 +52,11 @@ public:
         auto *resultRaw = unsafe::UnsafeVector::GetRawValues(resultVector);
         
         const auto dateTypeId = dateArg->GetTypeId();
-        const omniruntime::type::tz::TimeZone *sessionTz = nullptr;
+        const TimeZone *sessionTz = nullptr;
         if (context != nullptr && context->queryConfig().AdjustTimestampToTimezone()) {
             const std::string tzName = context->queryConfig().SessionTimezone();
             if (!tzName.empty()) {
-                sessionTz = omniruntime::type::tz::locateZone(tzName);
+                sessionTz = locateZone(tzName);
             }
         }
         
