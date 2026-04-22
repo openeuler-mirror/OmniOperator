@@ -12,6 +12,7 @@ namespace omniruntime {
 namespace op {
 
 using namespace omniruntime::type;
+using omniruntime::vec::VectorHelper;
 namespace kll = omniruntime::op::kll;
 
 namespace {
@@ -379,7 +380,8 @@ void ApproxPercentileAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateS
 
 /**
  * Partial phase: merge input values into group's KLL sketch. Reads percentile (and optionally accuracy) from
- * curVectorBatch via percentileChannel_/accuracyChannel_. Supports flat and dictionary-encoded value column.
+ * curVectorBatch via percentileChannel_/accuracyChannel_. Value column and accuracy/percentile scalars use
+ * VectorHelper::GetFlatValue so flat, dictionary, and const encodings are supported consistently.
  *
  * @param state     This aggregator's AggregateState (accumulatorPtr).
  * @param vector    Value column (IN_ID); percentile/accuracy from curVectorBatch.
@@ -390,69 +392,60 @@ void ApproxPercentileAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateS
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void ApproxPercentileAggregator<IN_ID, OUT_ID>::ProcessPartialRaw(AggregateState* state, BaseVector* vector,
     const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap) {
-    if constexpr (IN_ID == type::OMNI_VARBINARY) return;
-    auto* aggState = ApproxPercentileAggState::CastState(state);
-    auto* acc = reinterpret_cast<ApproxPercentileAccumulator*>(aggState->accumulatorPtr);
-    if (!acc || !acc->sketch) return;
+    // Final-merge instantiations use IN_ID == OMNI_VARBINARY; do not compile GetFlatValue<IN_ID> for that case.
+    if constexpr (IN_ID != type::OMNI_VARBINARY) {
+        auto* aggState = ApproxPercentileAggState::CastState(state);
+        auto* acc = reinterpret_cast<ApproxPercentileAccumulator*>(aggState->accumulatorPtr);
+        if (!acc || !acc->sketch) return;
 
-    if (curVectorBatch && percentileChannel_ >= 0) {
-        BaseVector* pVec = curVectorBatch->Get(percentileChannel_);
-        if (pVec && !pVec->IsNull(rowOffset)) {
-            if (pVec->GetTypeId() == type::OMNI_DOUBLE) {
-                auto* dVec = reinterpret_cast<Vector<double>*>(pVec);
-                if (acc->percentiles.empty()) acc->percentiles.push_back(dVec->GetValue(rowOffset));
-            } else if (pVec->GetTypeId() == type::OMNI_ARRAY) {
-                auto* arrVec = reinterpret_cast<omniruntime::vec::ArrayVector*>(pVec);
-                std::shared_ptr<BaseVector> elemVec = arrVec->GetArrayAt(static_cast<int64_t>(rowOffset), false);
-                if (elemVec && elemVec->GetTypeId() == type::OMNI_DOUBLE && acc->percentiles.empty()) {
-                    auto* dVec = reinterpret_cast<Vector<double>*>(elemVec.get());
-                    int64_t arraySize = elemVec->GetSize();
-                    for (int64_t elemIdx = 0; elemIdx < arraySize; ++elemIdx) {
-                        if (!dVec->IsNull(static_cast<int32_t>(elemIdx)))
-                            acc->percentiles.push_back(dVec->GetValue(static_cast<int32_t>(elemIdx)));
+        if (curVectorBatch && percentileChannel_ >= 0) {
+            BaseVector* pVec = curVectorBatch->Get(percentileChannel_);
+            if (pVec && !pVec->IsNull(rowOffset)) {
+                if (pVec->GetTypeId() == type::OMNI_DOUBLE) {
+                    if (acc->percentiles.empty()) {
+                        acc->percentiles.push_back(VectorHelper::GetFlatValue<type::OMNI_DOUBLE>(pVec, rowOffset));
+                    }
+                } else if (pVec->GetTypeId() == type::OMNI_ARRAY) {
+                    auto* arrVec = reinterpret_cast<omniruntime::vec::ArrayVector*>(pVec);
+                    std::shared_ptr<BaseVector> elemVec = arrVec->GetArrayAt(static_cast<int64_t>(rowOffset), false);
+                    if (elemVec && elemVec->GetTypeId() == type::OMNI_DOUBLE && acc->percentiles.empty()) {
+                        int64_t arraySize = elemVec->GetSize();
+                        for (int64_t elemIdx = 0; elemIdx < arraySize; ++elemIdx) {
+                            const int32_t ei = static_cast<int32_t>(elemIdx);
+                            if (!elemVec->IsNull(ei)) {
+                                acc->percentiles.push_back(
+                                    VectorHelper::GetFlatValue<type::OMNI_DOUBLE>(elemVec.get(), ei));
+                            }
+                        }
+                    }
+                }
+            }
+            if (accuracyChannel_ >= 0) {
+                BaseVector* aVec = curVectorBatch->Get(accuracyChannel_);
+                if (aVec && !aVec->IsNull(rowOffset)) {
+                    double accVal = 0;
+                    // Spark passes accuracy as INT or LONG; reading LONG as INT (or vice versa) gives wrong value
+                    if (aVec->GetTypeId() == type::OMNI_INT) {
+                        accVal = static_cast<double>(VectorHelper::GetFlatValue<type::OMNI_INT>(aVec, rowOffset));
+                    } else if (aVec->GetTypeId() == type::OMNI_LONG) {
+                        accVal = static_cast<double>(VectorHelper::GetFlatValue<type::OMNI_LONG>(aVec, rowOffset));
+                    }
+                    if (std::isfinite(accVal) && accVal > 0 && acc->empty()) {
+                        acc->accuracy = accVal;
+                        double eps = (accVal >= 1.0) ? (1.0 / accVal) : accVal;
+                        if (eps > 0.0 && eps < 1.0) acc->setK(kll::kFromEpsilon(eps));
                     }
                 }
             }
         }
-        if (accuracyChannel_ >= 0) {
-            BaseVector* aVec = curVectorBatch->Get(accuracyChannel_);
-            if (aVec && !aVec->IsNull(rowOffset)) {
-                double accVal = 0;
-                // Spark passes accuracy as INT or LONG; reading LONG as INT (or vice versa) gives wrong value (e.g. 42949672970000)
-                if (aVec->GetTypeId() == type::OMNI_INT) {
-                    accVal = static_cast<double>(reinterpret_cast<Vector<int32_t>*>(aVec)->GetValue(rowOffset));
-                } else if (aVec->GetTypeId() == type::OMNI_LONG) {
-                    accVal = static_cast<double>(reinterpret_cast<Vector<int64_t>*>(aVec)->GetValue(rowOffset));
-                }
-                if (std::isfinite(accVal) && accVal > 0 && acc->empty()) {
-                    acc->accuracy = accVal;
-                    double eps = (accVal >= 1.0) ? (1.0 / accVal) : accVal;
-                    if (eps > 0.0 && eps < 1.0) acc->setK(kll::kFromEpsilon(eps));
-                }
-            }
-        }
-    }
-    if (acc->percentiles.empty()) acc->percentiles.push_back(0.5);
+        if (acc->percentiles.empty()) acc->percentiles.push_back(0.5);
 
-    if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
-        InType constValue = static_cast<vec::ConstVector<InType>*>(vector)->GetConstValue();
+        // Flat / dictionary / const: VectorHelper::GetFlatValue dispatches encoding (same pattern as max_by col2).
         for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
-            if (nullMap && (*nullMap)[rowOffset + rowIdx]) continue;
-            acc->insert(IN_ID, &constValue);
-        }
-    } else if (vector->GetEncoding() == omniruntime::vec::OMNI_DICTIONARY) {
-        const int32_t* ids = GetIdsFromDict<IN_ID>(vector);
-        const InType* dict = reinterpret_cast<const InType*>(GetValuesFromDict<IN_ID>(vector));
-        for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
-            if (nullMap && (*nullMap)[rowOffset + rowIdx]) continue;
-            int32_t id = ids[rowOffset + rowIdx];
-            acc->insert(IN_ID, &dict[id]);
-        }
-    } else {
-        const InType* valuePtr = reinterpret_cast<const InType*>(GetValuesFromVector<IN_ID>(vector));
-        for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
-            if (nullMap && (*nullMap)[rowOffset + rowIdx]) continue;
-            acc->insert(IN_ID, &valuePtr[rowOffset + rowIdx]);
+            const int32_t absIdx = rowOffset + rowIdx;
+            if (nullMap && (*nullMap)[absIdx]) continue;
+            InType v = VectorHelper::GetFlatValue<IN_ID>(vector, absIdx);
+            acc->insert(IN_ID, &v);
         }
     }
 }
@@ -473,11 +466,10 @@ void ApproxPercentileAggregator<IN_ID, OUT_ID>::ProcessFinalMerge(AggregateState
     auto* acc = reinterpret_cast<ApproxPercentileAccumulator*>(aggState->accumulatorPtr);
     if (!acc) return;
 
-    auto* strVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>>*>(vector);
     for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
         int32_t row = rowOffset + rowIdx;
         if (nullMap && (*nullMap)[row]) continue;
-        std::string_view sv = strVec->GetValue(row);
+        std::string_view sv = VectorHelper::GetFlatValue<type::OMNI_VARBINARY>(vector, row);
         if (sv.empty()) continue;
         acc->mergeDeserialized(sv.data());
     }
@@ -520,10 +512,10 @@ void ApproxPercentileAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<
     int32_t vecIdx = vectorIndex++;
     for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
         auto& unspillRow = unspillRows[rowIdx];
-        auto* varbinaryVec = static_cast<Vector<LargeStringContainer<std::string_view>>*>(unspillRow.batch->Get(vecIdx));
+        BaseVector* varbinaryVec = unspillRow.batch->Get(vecIdx);
         auto* aggState = ApproxPercentileAggState::CastState(unspillRow.state + aggStateOffset);
         if (varbinaryVec->IsNull(unspillRow.rowIdx)) continue;
-        std::string_view sv = varbinaryVec->GetValue(unspillRow.rowIdx);
+        std::string_view sv = VectorHelper::GetFlatValue<type::OMNI_VARBINARY>(varbinaryVec, unspillRow.rowIdx);
         if (sv.empty()) continue;
         auto* acc = reinterpret_cast<ApproxPercentileAccumulator*>(aggState->accumulatorPtr);
         if (acc) acc->mergeDeserialized(sv.data());
@@ -550,24 +542,16 @@ void ApproxPercentileAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatc
         int32_t rowCount = originVector->GetSize();
         auto* outVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>>*>(
             VectorHelper::CreateFlatVector(type::OMNI_VARBINARY, rowCount, 4096 * static_cast<size_t>(rowCount)));
-        const bool isConst = (originVector->GetEncoding() == vec::OMNI_ENCODING_CONST);
-        InType constValue{};
-        const InType* valuePtr = nullptr;
-        if (isConst) {
-            constValue = static_cast<vec::ConstVector<InType>*>(originVector)->GetConstValue();
-        } else {
-            valuePtr = reinterpret_cast<const InType*>(GetValuesFromVector<IN_ID>(originVector));
-        }
         for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
-            if (nullMap && !(*nullMap)[rowIdx]) {
+            if (nullMap && (*nullMap)[rowIdx]) {
                 outVec->SetNull(rowIdx);
                 continue;
             }
             ApproxPercentileAccumulator acc;
             acc.ensureSketch(IN_ID);
             acc.percentiles.push_back(0.5);
-            const InType* valPtr = isConst ? &constValue : &valuePtr[rowIdx];
-            acc.insert(IN_ID, valPtr);
+            InType value = VectorHelper::GetFlatValue<IN_ID>(originVector, rowIdx);
+            acc.insert(IN_ID, &value);
             size_t serializedSize = acc.serializedByteSize();
             std::vector<char> buf(serializedSize);
             acc.serialize(buf.data());
