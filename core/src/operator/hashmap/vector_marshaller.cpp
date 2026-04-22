@@ -777,6 +777,12 @@ bool SerializeValueIgnoreNullIntoArena(BaseVector *baseVector, int32_t rowIdx,
         } else if constexpr (std::is_same_v<RawDataType, ArrayType>) {
             auto *arrayVector = dynamic_cast<ArrayVector *>(baseVector);
             ArrayVectorSerializer(*arrayVector, rowIdx, arenaAllocator, result);
+        } else if constexpr (std::is_same_v<RawDataType, RowType>) {
+            auto *rowVector = dynamic_cast<RowVector *>(baseVector);
+            if (UNLIKELY(rowVector == nullptr)) {
+                throw OmniException("SERIALIZED FAILED : ", "Expected RowVector for OMNI_ROW join key");
+            }
+            RowVectorSerializer(*rowVector, rowIdx, arenaAllocator, result);
         } else {
             FixedLenTypeSerializerForJoin<RawDataType>(value, arenaAllocator, result);
         }
@@ -795,6 +801,12 @@ bool SerializeDictionaryValueIgnoreNullIntoArena(BaseVector *baseVector, int32_t
         if constexpr (std::is_same_v<RawDataType, ArrayType>) {
             auto *arrayVector = dynamic_cast<ArrayVector *>(baseVector);
             ArrayVectorSerializer(*arrayVector, rowIdx, arenaAllocator, result);
+        } else if constexpr (std::is_same_v<RawDataType, RowType>) {
+            auto *rowVector = dynamic_cast<RowVector *>(baseVector);
+            if (UNLIKELY(rowVector == nullptr)) {
+                throw OmniException("SERIALIZED FAILED : ", "Expected RowVector for OMNI_ROW dictionary join key");
+            }
+            RowVectorSerializer(*rowVector, rowIdx, arenaAllocator, result);
         } else {
             auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<RawDataType>> *>(baseVector);
             auto value = dictionaryVector->GetValue(rowIdx);
@@ -822,6 +834,12 @@ bool SerializeConstValueIgnoreNullIntoArena(BaseVector *baseVector, int32_t rowI
         if constexpr (std::is_same_v<RawDataType, ArrayType>) {
             auto *arrayVector = dynamic_cast<ArrayVector *>(baseVector);
             ArrayVectorSerializer(*arrayVector, rowIdx, arenaAllocator, result);
+        } else if constexpr (std::is_same_v<RawDataType, RowType>) {
+            auto *rowVector = dynamic_cast<RowVector *>(baseVector);
+            if (UNLIKELY(rowVector == nullptr)) {
+                throw OmniException("SERIALIZED FAILED : ", "Expected RowVector for OMNI_ROW const join key");
+            }
+            RowVectorSerializer(*rowVector, rowIdx, arenaAllocator, result);
         } else {
             auto constVector = static_cast<ConstVector<RawDataType> *>(baseVector);
             auto value = constVector->GetConstValue();
@@ -893,7 +911,7 @@ std::vector<VectorSerializerIgnoreNull> vectorSerializerIgnoreNullCenter = {
     nullptr,                                                  // 29
     SerializeValueIgnoreNullIntoArena<type::OMNI_ARRAY>,      // OMNI_ARRAY, 30
     nullptr,                                                  // OMNI_MAP, 31
-    nullptr,                                                  // OMNI_ROW, 32
+    SerializeValueIgnoreNullIntoArena<type::OMNI_ROW>,        // OMNI_ROW, 32
     nullptr,                                                  // OMNI_UNKNOWN, 33
     nullptr,                                                  // OMNI_FUNCTION, 34
     nullptr,                                                  // OMNI_OPAQUE, 35
@@ -933,7 +951,7 @@ std::vector<VectorSerializerIgnoreNull> dicVectorSerializerIgnoreNullCenter = {
     nullptr,                                                            // 29
     SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_ARRAY>,      // OMNI_ARRAY, 30
     nullptr,                                                            // OMNI_MAP, 31
-    nullptr,                                                            // OMNI_ROW, 32
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_ROW>,        // OMNI_ROW, 32
     nullptr,                                                            // OMNI_UNKNOWN, 33
     nullptr,                                                            // OMNI_FUNCTION, 34
     nullptr,                                                            // OMNI_OPAQUE, 35
@@ -973,7 +991,7 @@ std::vector<VectorSerializerIgnoreNull> constVectorSerializerIgnoreNullCenter = 
     nullptr,                                                            // 29
     SerializeConstValueIgnoreNullIntoArena<type::OMNI_ARRAY>,           // OMNI_ARRAY, 30
     nullptr,                                                            // OMNI_MAP, 31
-    nullptr,                                                            // OMNI_ROW, 32
+    SerializeConstValueIgnoreNullIntoArena<type::OMNI_ROW>,             // OMNI_ROW, 32
     nullptr,                                                            // OMNI_UNKNOWN, 33
     nullptr,                                                            // OMNI_FUNCTION, 34
     nullptr,                                                            // OMNI_OPAQUE, 35

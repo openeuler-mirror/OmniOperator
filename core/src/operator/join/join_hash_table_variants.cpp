@@ -39,7 +39,8 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
 
     for (const int32_t buildHashCol : buildHashCols) {
         auto type = buildTypes->GetIds()[buildHashCol];
-        if (type == OMNI_VARCHAR || type == OMNI_CHAR || type == OMNI_VARBINARY || type == OMNI_ARRAY) {
+        if (type == OMNI_VARCHAR || type == OMNI_CHAR || type == OMNI_VARBINARY || type == OMNI_ARRAY ||
+            type == OMNI_ROW) {
             isFixedKeys = false;
             break;
         }
@@ -618,15 +619,23 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildNormalHashTableWithVar
             hashTable->ResetIgnoreNullSerializer();
             for (int32_t i = 0; i < buildColNum; ++i) {
                 auto curVector = vecBatch->Get(this->buildHashCols[i]);
-                if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
-                    hashTable->PushBackIgnoreNullSerializer(
-                        dicVectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
-                } else if (curVector->GetEncoding() == Encoding::OMNI_ENCODING_CONST) {
-                    hashTable->PushBackIgnoreNullSerializer(
-                        constVectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
-                } else {
-                    hashTable->PushBackIgnoreNullSerializer(vectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
+                auto typeId = static_cast<size_t>(curVector->GetTypeId());
+                VectorSerializerIgnoreNull serializer = nullptr;
+                if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY && typeId < dicVectorSerializerIgnoreNullCenter.size()) {
+                    serializer = dicVectorSerializerIgnoreNullCenter[typeId];
+                } else if (curVector->GetEncoding() == Encoding::OMNI_ENCODING_CONST &&
+                    typeId < constVectorSerializerIgnoreNullCenter.size()) {
+                    serializer = constVectorSerializerIgnoreNullCenter[typeId];
                 }
+
+                // Complex join keys (e.g. struct) may have only flat serializer registered.
+                if (serializer == nullptr && typeId < vectorSerializerIgnoreNullCenter.size()) {
+                    serializer = vectorSerializerIgnoreNullCenter[typeId];
+                }
+                if (serializer == nullptr) {
+                    throw OmniException("UNSUPPORTED_ERROR", "No build serializer for join key type");
+                }
+                hashTable->PushBackIgnoreNullSerializer(serializer);
                 buildVectors[i] = curVector;
             }
 
