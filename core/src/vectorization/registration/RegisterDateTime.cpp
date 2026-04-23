@@ -35,6 +35,7 @@
 #include "../functions/MonthsBetween.h"
 #include "../functions/NextDay.h"
 #include "../functions/DateDiff.h"
+#include "../functions/DateFormat.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -85,5 +86,9 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterNextDayFunction(prefix + "next_day");
 
     RegisterDateDiffFunction(prefix + "date_diff");
+
+    // Registered as "DateFormat" (CamelCase) to match Gluten SubstraitParser mapping:
+    // {"date_format", {FUNCTION_OMNI_EXPR_TYPE, "DateFormat"}}
+    RegisterDateFormatFunction(prefix + "DateFormat");
 }
 }
