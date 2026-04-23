@@ -158,6 +158,7 @@ public:
                 return CompareTemplate<float>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_VARCHAR:
             case OMNI_CHAR:
+            case OMNI_VARBINARY:
                 return CompareVarchar(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_DECIMAL128:
                 return CompareTemplate<type::Decimal128>(leftColumn, leftColumnPosition, rightColumn,

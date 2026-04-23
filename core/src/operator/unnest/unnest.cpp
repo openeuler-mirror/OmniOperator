@@ -301,6 +301,7 @@ void UnnestOperator::generateComplexRepeatedValuesForType(DataTypeId typeId, int
             break;
         case OMNI_CHAR:
         case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
             generateComplexRepeatedValues(inputSize, inputVector, outputVector,
                                           dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(inputElementVector),
                                           dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(outputElementVector));
@@ -543,6 +544,7 @@ void UnnestOperator::generateRepeatedColumns(int32_t numElements, omniruntime::v
                 break;
             case OMNI_CHAR:
             case OMNI_VARCHAR:
+            case OMNI_VARBINARY:
                 generateRepeatedValues(dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(inputVector),
                                        dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(outputVector));
                 break;
@@ -913,6 +915,7 @@ omniruntime::vec::BaseVector* UnnestOperator::generateUnrepeatedValuesForType(om
             break;
         case OMNI_CHAR:
         case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
             generateUnrepeatedValues(inputVector,
                                      dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(elementVector),
                                      dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(outputVector));
