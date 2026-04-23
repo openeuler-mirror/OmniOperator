@@ -146,20 +146,12 @@ private:
 
     void MoveEntryArrayTableToHashMap(int64_t minValue);
 
-    void PrepareSerializeMarshallers(BaseVector **groupVectors, int32_t groupColNum);
-
-    void FallbackMultiNormalizeToSerialize(BaseVector **groupVectors, int32_t groupColNum);
-
-    bool TryEmplaceMultiNormalize(VectorBatch *vecBatch, BaseVector **groupVectors, int32_t groupColNum);
-
     template<bool hasAgg, typename T>
     void TraverseArrayMapGetOutput(BaseVector *groupVector,
                                    std::vector<AggregateState *> *states, int64_t minValue);
 
     template<bool hasAgg>
     void TraverseArrayMap(BaseVector *groupVector, std::vector<AggregateState *> *states);
-
-    std::unique_ptr<GroupbySingleFixHandler<DefaultHashMap<int16_t, AggregateState *>, int16_t>> fixedInt16 = nullptr;
 
     void TraverseArrayMapToGetOneResult(VectorBatch *output);
 
@@ -184,17 +176,15 @@ private:
     std::vector<DataTypes> aggOutputTypes;
     std::vector<type::DataTypePtr> outputTypes;
     HandleType groupByColumnsHandleType = HandleType::serialize;
-    std::unique_ptr<ColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;
+    std::unique_ptr<TaperColumnSerializeHandler> serialize = nullptr;
     std::unique_ptr<DefaultArrayMap<AggregateState>> arrayTable = nullptr;
 
-    std::unique_ptr<GroupbySingleFixHandler<DefaultHashMap<int32_t, AggregateState *>, int32_t>> fixedInt32 = nullptr;
-    std::unique_ptr<GroupbySingleFixHandler<DefaultHashMap<int64_t, AggregateState *>, int64_t>> fixedInt64 = nullptr;
-    std::unique_ptr<GroupbyPackedFixHandler<DefaultHashMap<int32_t, AggregateState *>, int32_t>> packedInt32 = nullptr;
-    std::unique_ptr<GroupbyPackedFixHandler<DefaultHashMap<int64_t, AggregateState *>, int64_t>> packedInt64 = nullptr;
-    std::unique_ptr<GroupbyPackedFixHandler<DefaultHashMap<omniruntime::type::int128_t, AggregateState *>,
-        omniruntime::type::int128_t>> packedInt128 = nullptr;
-    std::unique_ptr<GroupbyMultiNormalizeKeyHandler<
-        DefaultHashMap<omniruntime::type::int128_t, AggregateState *>>> normalizeMulti = nullptr;
+    std::unique_ptr<TaperGroupbySingleFixHandler<int16_t>> fixedInt16 = nullptr;
+    std::unique_ptr<TaperGroupbySingleFixHandler<int32_t>> fixedInt32 = nullptr;
+    std::unique_ptr<TaperGroupbySingleFixHandler<int64_t>> fixedInt64 = nullptr;
+    std::unique_ptr<TaperGroupbySingleFixHandler<int32_t, true>> packedInt32 = nullptr;
+    std::unique_ptr<TaperGroupbySingleFixHandler<int64_t, true>> packedInt64 = nullptr;
+    std::unique_ptr<TaperGroupbySingleFixHandler<omniruntime::type::int128_t, true>> packedInt128 = nullptr;
     bool isInited = false;
 
     OutputState outputState;
@@ -316,11 +306,6 @@ public:
 
     OmniStatus Close() override;
 
-    void SetNormalizedKeyEnabledForFactory(bool enabled)
-    {
-        normalizedKeyEnabled = enabled;
-    }
-
 private:
     std::vector<uint32_t> groupByColsVector;
     std::vector<int32_t> groupByColIndices;
@@ -336,7 +321,6 @@ private:
     std::vector<int8_t> hasAggFilters;
     OperatorConfig operatorConfig;
     AggregationNode::Step step;
-    bool normalizedKeyEnabled = false;
     void ChooseGroupByType();
 };
 } // end of namespace omniruntime::op

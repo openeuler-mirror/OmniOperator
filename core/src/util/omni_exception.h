@@ -81,4 +81,5 @@ inline std::exception_ptr toOmniException(const std::exception_ptr& exceptionPtr
         throw omniruntime::exception::OmniException("USER_ERROR", omniruntime::Format(__VA_ARGS__)); \
     } while (0)
 
+#define OMNI_CHECK_D(expr) OMNI_CHECK(expr, "checkfailed")
 #endif // OMNI_RUNTIME_OMNI_EXCEPTION_H
