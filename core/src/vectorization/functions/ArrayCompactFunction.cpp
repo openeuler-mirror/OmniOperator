@@ -5,12 +5,37 @@
 
 #include "ArrayCompactFunction.h"
 #include "vector/vector_helper.h"
+#include "type/data_type.h"
 #include "type/string_Impl.h"
 
 namespace omniruntime::vectorization {
 using namespace omniruntime::type;
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
+
+namespace {
+type::DataTypePtr ResolveArrayElementDataType(const type::DataTypePtr &outputType, const ArrayVector *arrayVec,
+    const std::shared_ptr<BaseVector> &inputElementVector)
+{
+    auto fromArrayDataType = [](const type::DataTypePtr &dt) -> type::DataTypePtr {
+        if (dt == nullptr || dt->GetId() != OMNI_ARRAY) {
+            return nullptr;
+        }
+        auto *arrTy = dynamic_cast<ArrayType *>(dt.get());
+        return arrTy != nullptr ? arrTy->ElementType() : nullptr;
+    };
+    if (auto t = fromArrayDataType(outputType)) {
+        return t;
+    }
+    if (auto t = fromArrayDataType(arrayVec->GetDataType())) {
+        return t;
+    }
+    if (inputElementVector != nullptr) {
+        return VectorHelper::GetDataType(inputElementVector.get());
+    }
+    return nullptr;
+}
+} // namespace
 
 void ArrayCompactFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
     ExecutionContext *context) const
@@ -77,8 +102,18 @@ void ArrayCompactFunction::Apply(std::stack<BaseVector *> &args, const DataTypeP
     }
 
     BaseVector *newElementVector = nullptr;
+    const bool complexElement = elementTypeId == OMNI_ARRAY || elementTypeId == OMNI_MAP || elementTypeId == OMNI_ROW;
     if (elementTypeId == OMNI_VARCHAR || elementTypeId == OMNI_CHAR) {
         newElementVector = VectorHelper::CreateStringVector(nonNullCount > 0 ? nonNullCount : 1);
+    } else if (complexElement) {
+        auto elemDt = ResolveArrayElementDataType(outputType, arrayVec, inputElementVector);
+        if (elemDt == nullptr) {
+            delete inputArg;
+            OMNI_THROW("ArrayCompactFunction Error:",
+                "Cannot resolve element type for nested array_compact (array/map/struct elements)");
+        }
+        const int32_t outElemSize = nonNullCount > 0 ? static_cast<int32_t>(nonNullCount) : 1;
+        newElementVector = VectorHelper::CreateComplexVector(elemDt.get(), outElemSize);
     } else {
         newElementVector = VectorHelper::CreateFlatVector(elementTypeId,
             nonNullCount > 0 ? nonNullCount : 1);
