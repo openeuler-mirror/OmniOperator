@@ -56,7 +56,7 @@ endif ()
 
 #-ffast-math
 #-fopt-info-vec-optimized
-set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} ${SIMD_COMPILE_LEVEL} -fno-var-tracking-assignments -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
+set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} ${SIMD_COMPILE_LEVEL} -fno-var-tracking-assignments -pipe -s -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
 if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 ${SIMD_COMPILE_LEVEL} -fno-var-tracking-assignments -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
 else()
