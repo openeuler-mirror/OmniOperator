@@ -53,6 +53,52 @@ template <DataTypeId id> const char *VariableTypeDeserializer(BaseVector *baseVe
     }
 }
 
+bool ALWAYS_INLINE DoVariableTypeCompare(const std::string_view &inValue, uint8_t *&pos)
+{
+    auto rowLenSize = *reinterpret_cast<const uint8_t *>(pos);
+    auto strLen = inValue.size();
+    if (rowLenSize == 0) {
+        return false;
+    }
+
+    size_t stringLen = 0;
+    switch (rowLenSize) {
+    case BYTE_1:
+        stringLen = *reinterpret_cast<const uint8_t *>(pos + sizeof(uint8_t));
+        break;
+    case BYTE_2:
+        stringLen = *reinterpret_cast<const uint16_t *>(pos + sizeof(uint8_t));
+        break;
+    case BYTE_4:
+        stringLen = *reinterpret_cast<const uint32_t *>(pos + sizeof(uint8_t));
+        break;
+    default:
+        throw OmniException("DESERIALIZED FAILED", "Invalid String Length");
+    }
+    if (strLen != stringLen) {
+        return false;
+    }
+    pos += sizeof(uint8_t) + rowLenSize;
+    auto comp = std::memcmp(pos, inValue.data(), strLen);
+    pos += strLen;
+    return comp == 0;
+}
+
+template <DataTypeId id> bool VariableTypeComparator(BaseVector *baseVector, size_t rowIdx, uint8_t *&pos)
+{
+    using RealVector = typename NativeAndVectorType<id>::vector;
+    auto realVector = static_cast<RealVector *>(baseVector);
+    std::string_view value = realVector->GetValue(rowIdx);
+    auto rowLenSize = *reinterpret_cast<const uint8_t *>(pos);
+
+    if (rowLenSize != 0) {
+        return DoVariableTypeCompare(value, pos);
+    } else {
+        pos += sizeof(uint8_t);
+        return baseVector->IsNull(rowIdx);
+    }
+}
+
 void ALWAYS_INLINE VariableTypeSerializer(const std::string_view &inValue, mem::SimpleArenaAllocator &arenaAllocator,
     StringRef &result)
 {
@@ -264,6 +310,58 @@ const char *ArrayVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, cons
     return begin;
 }
 
+bool ArrayVectorComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&begin) {
+    auto arrayVector = dynamic_cast<ArrayVector *>(baseVector);
+    uint8_t sizeLenSize = *reinterpret_cast<const uint8_t *>(begin);
+    begin += sizeof(uint8_t);
+    int64_t leftOffset = arrayVector->GetOffset(rowIdx);
+    int64_t leftSize = arrayVector->GetSize(rowIdx);
+
+    if (sizeLenSize == 0) {
+        return leftSize == 0;
+    }
+
+    int64_t size = 0;
+    switch (sizeLenSize) {
+        case BYTE_1:
+            size = *reinterpret_cast<const uint8_t *>(begin);
+            break;
+        case BYTE_2:
+            size = *reinterpret_cast<const uint16_t *>(begin);
+            break;
+        case BYTE_4:
+            size = *reinterpret_cast<const uint32_t *>(begin);
+            break;
+        default:
+            throw OmniException("ArrayVector Deserializer failed: ", "Invalid Array Size");
+    }
+    begin += sizeLenSize;
+    if (size != leftSize) {
+        return false;
+    }
+    auto elementVecShared = arrayVector->GetElementVector();
+    BaseVector *elementVec = elementVecShared.get();
+    int64_t start = leftOffset;
+    int64_t end = start + size;
+
+    type::DataTypeId elementTypeId = elementVec->GetTypeId();
+
+    for (int64_t i = start; i < end; i++) {
+        if (elementTypeId < 0 || elementTypeId >= vectorDeSerializerCenter.size()) {
+            throw OmniException("ArrayVector's ElementVec Deserializer failed : Invalid elementTypeId", std::to_string(elementTypeId));
+        }
+        auto comparator = vectorComparatorCenter[elementTypeId];
+        if (comparator == nullptr) {
+            throw OmniException("ArrayVector's ElementVec Deserializer failed : Unsupport elementTypeId", std::to_string(elementTypeId));
+        }
+        if (!comparator(elementVec, i, begin)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 const char *RowVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, const char *begin) {
     auto rowVector = dynamic_cast<RowVector *>(baseVector);
     rowVector->Expand(rowIdx + 1);
@@ -319,6 +417,58 @@ const char *RowVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, const 
     }
 
     return begin;
+}
+
+bool RowVectorComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&begin) {
+    auto rowVector = dynamic_cast<RowVector *>(baseVector);
+    rowVector->Expand(rowIdx + 1);
+
+    uint8_t countLenSize = *begin;
+    begin += sizeof(uint8_t);
+    int32_t childNum = rowVector->ChildSize();
+
+    if (countLenSize == 0) {
+        return baseVector->IsNull(rowIdx);
+    }
+
+    int32_t childCount = 0;
+    switch (countLenSize) {
+        case BYTE_1:
+            childCount = *reinterpret_cast<const int8_t *>(begin);
+            break;
+        case BYTE_2:
+            childCount = *reinterpret_cast<const int16_t *>(begin);
+            break;
+        case BYTE_4:
+            childCount = *reinterpret_cast<const int32_t *>(begin);
+            break;
+        default:
+            throw OmniException("RowVector Deserializer failed: ", "Invalid Field Count");
+    }
+    if (childCount != childNum) {
+        return false;
+    }
+    begin += countLenSize;
+
+    // Compare each field
+    for (int32_t i = 0; i < childCount; i++) {
+        auto &childVec = rowVector->ChildAt(i);
+        auto childTypeId = childVec->GetTypeId();
+
+        if (childTypeId < 0 || childTypeId >= vectorComparatorCenter.size()) {
+            throw OmniException("RowVector's field Comparator failed : Invalid childTypeId", std::to_string(childTypeId));
+        }
+
+        auto comparator = vectorComparatorCenter[childTypeId];
+        if (comparator == nullptr) {
+            throw OmniException("RowVector's field Comparator failed : Unsupport childTypeId", std::to_string(childTypeId));
+        }
+        if (!comparator(childVec.get(), rowIdx, begin)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 const char *Decimal128Deserializer(BaseVector *baseVector, size_t rowIdx, const char *pos)
@@ -383,6 +533,32 @@ template <DataTypeId id> const char *FixedLenTypeDeserializer(BaseVector *baseVe
         // value is null
         realVector->SetNull(rowIdx);
         return pos + sizeof(uint8_t);
+    }
+}
+
+template <typename T> const bool DoFixedLenTypeCompare(T right, uint8_t *&pos)
+{
+    auto rowDataSize = *(reinterpret_cast<const uint8_t *>(pos));
+    if (rowDataSize == 0) {
+        return false;
+    }
+    auto left = GetValue<T>(rowDataSize, pos + sizeof(uint8_t));
+    pos += sizeof(uint8_t) + rowDataSize;
+    return left == right;
+}
+
+template <DataTypeId id> const bool FixedLenTypeComparator(BaseVector *baseVector, size_t rowIdx, uint8_t *&pos)
+{
+    using RawDataType = typename NativeAndVectorType<id>::type;
+    using RealVector = typename NativeAndVectorType<id>::vector;
+    auto realVector = static_cast<RealVector *>(baseVector);
+    auto rowDataSize = *(reinterpret_cast<const uint8_t *>(pos));
+    if (rowDataSize != 0) {
+        RawDataType right = realVector->GetValue(rowIdx);
+        return DoFixedLenTypeCompare<RawDataType>(right, pos);
+    } else {
+        pos += sizeof(uint8_t);
+        return baseVector->IsNull(rowIdx);
     }
 }
 
@@ -568,6 +744,68 @@ const char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const
     }
 }
 
+template <type::DataTypeId id>
+const bool DictionaryComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&pos)
+{
+    using RawDataType = typename NativeAndVectorType<id>::type;
+    if (!baseVector->IsNull(rowIdx)) {
+        auto dictionaryVector = static_cast<Vector<DictionaryContainer<RawDataType>> *>(baseVector);
+
+        auto value = dictionaryVector->GetValue(rowIdx);
+        // the analysis of const expr  will be in compile stage
+        if constexpr (std::is_same_v<RawDataType, std::string_view>) {
+            return DoVariableTypeCompare(value, pos);
+        } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
+            // Decimal128Serializer(value, arenaAllocator, result);
+        } else {
+            return DoFixedLenTypeCompare<RawDataType>(value, pos);
+        }
+    }
+    auto rowDataSize = *(reinterpret_cast<const uint8_t *>(pos));
+    pos += sizeof(uint8_t);
+    return rowDataSize == 0;
+}
+
+template <type::DataTypeId id>
+const bool ConstComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&pos)
+{
+    using RawDataType = typename NativeAndVectorType<id>::type;
+    if (!baseVector->IsNull(rowIdx)) {
+        auto constVector = static_cast<ConstVector<RawDataType> *>(baseVector);
+        auto value = constVector->GetConstValue();
+        // the analysis of const expr  will be in compile stage
+        if constexpr (std::is_same_v<RawDataType, std::string_view>) {
+            return DoVariableTypeCompare(value, pos);
+        } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
+            //Decimal128Serializer(value, arenaAllocator, result);
+        } else {
+            return DoFixedLenTypeCompare<RawDataType>(value, pos);
+        }
+    }
+    auto rowDataSize = *(reinterpret_cast<const uint8_t *>(pos));
+    pos += sizeof(uint8_t);
+    return rowDataSize == 0;
+}
+
+template <type::DataTypeId id>
+const bool ComparatorFromPointer(BaseVector *baseVector, int32_t rowIdx, uint8_t *&row)
+{
+    using RawDataType = typename NativeAndVectorType<id>::type;
+    // the analysis of const expr  will be in compile stage
+    if constexpr (std::is_same_v<RawDataType, std::string_view>) {
+        return VariableTypeComparator<id>(baseVector, rowIdx, row);
+    } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
+        //return Decimal128Deserializer(baseVector, rowIdx, begin);
+    } else if constexpr (std::is_same_v<RawDataType, ArrayType>) {
+        return ArrayVectorComparator(baseVector, rowIdx, row);
+    } else if constexpr (std::is_same_v<RawDataType, RowType>) {
+        // OMNI_ROW - Struct type
+        return RowVectorComparator(baseVector, rowIdx, row);
+    } else {
+        return FixedLenTypeComparator<id>(baseVector, rowIdx, row);
+    }
+}
+
 std::unordered_map<DataTypeId, SerializerFunc> complexVectorSerializerCenter = {
         {type::OMNI_ARRAY, &SerializeValueIntoArena<type::OMNI_ARRAY>},
         {type::OMNI_ROW, &SerializeValueIntoArena<type::OMNI_ROW>}
@@ -658,6 +896,46 @@ std::vector<VectorSerializer> dicVectorSerializerCenter = {
     nullptr                                                   // OMNI_INVALID
 };
 
+std::vector<VectorComparator> dicVectorComparatorCenter = {
+    nullptr,                                                  // OMNI_NONE, 0
+    DictionaryComparator<type::OMNI_INT>,                     // OMNI_INT, 1
+    DictionaryComparator<type::OMNI_LONG>,                    // OMNI_LONG, 2
+    DictionaryComparator<type::OMNI_DOUBLE>,                  // OMNI_DOUBLE, 3
+    DictionaryComparator<type::OMNI_BOOLEAN>,                 // OMNI_BOOLEAN, 4
+    DictionaryComparator<type::OMNI_SHORT>,                   // OMNI_SHORT, 5
+    DictionaryComparator<type::OMNI_LONG>,                    // OMNI_DECIMAL64, 6
+    DictionaryComparator<type::OMNI_DECIMAL128>,              // OMNI_DECIMAL128, 7
+    DictionaryComparator<type::OMNI_INT>,                     // OMNI_DATE32, 8
+    DictionaryComparator<type::OMNI_LONG>,                    // OMNI_DATE64, 9
+    DictionaryComparator<type::OMNI_INT>,                     // OMNI_TIME32, 10
+    DictionaryComparator<type::OMNI_LONG>,                    // OMNI_TIME64, 11
+    DictionaryComparator<type::OMNI_LONG>,                    // OMNI_TIMESTAMP, 12
+    nullptr,                                                               // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                               // OMNI_INTERVAL_DAY_TIME, 14
+    DictionaryComparator<type::OMNI_VARCHAR>,                 // OMNI_VARCHAR, 15
+    DictionaryComparator<type::OMNI_VARCHAR>,                 // OMNI_CHAR, 16
+    nullptr,                                                               // OMNI_CONTAINER, 17
+    DictionaryComparator<type::OMNI_BYTE>,                    // OMNI_BYTE, 18
+    DictionaryComparator<type::OMNI_FLOAT>,                   // OMNI_FLOAT, 19
+    DictionaryComparator<type::OMNI_VARCHAR>,                 // OMNI_VARBINARY, 20 (same as VARCHAR)
+    nullptr,                                                  // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                  // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                  // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                  // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                  // OMNI_MULTISET, 25
+    nullptr,                                                  // 26
+    nullptr,                                                  // 27
+    nullptr,                                                  // 28
+    nullptr,                                                  // 29
+    nullptr,                                                  // OMNI_ARRAY, 30
+    nullptr,                                                  // OMNI_MAP, 31
+    nullptr,                                                  // OMNI_ROW, 32
+    nullptr,                                                  // OMNI_UNKNOWN, 33
+    nullptr,                                                  // OMNI_FUNCTION, 34
+    nullptr,                                                  // OMNI_OPAQUE, 35
+    nullptr                                                   // OMNI_INVALID
+};
+
 std::vector<VectorSerializer> constVectorSerializerCenter = {
     nullptr,                                                 // OMNI_NONE, 0
     SerializeConstValueIntoArena<type::OMNI_INT>,            // OMNI_INT, 1
@@ -680,6 +958,46 @@ std::vector<VectorSerializer> constVectorSerializerCenter = {
     SerializeConstValueIntoArena<type::OMNI_BYTE>,           // OMNI_BYTE, 18
     SerializeConstValueIntoArena<type::OMNI_FLOAT>,          // OMNI_FLOAT, 19
     SerializeConstValueIntoArena<type::OMNI_VARCHAR>,       // OMNI_VARBINARY, 20 (same as VARCHAR)
+    nullptr,                                                 // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                                 // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                                 // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                                 // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                                 // OMNI_MULTISET, 25
+    nullptr,                                                 // 26
+    nullptr,                                                 // 27
+    nullptr,                                                 // 28
+    nullptr,                                                 // 29
+    nullptr,                                                 // OMNI_ARRAY, 30
+    nullptr,                                                 // OMNI_MAP, 31
+    nullptr,                                                 // OMNI_ROW, 32
+    nullptr,                                                 // OMNI_UNKNOWN, 33
+    nullptr,                                                 // OMNI_FUNCTION, 34
+    nullptr,                                                 // OMNI_OPAQUE, 35
+    nullptr                                                  // OMNI_INVALID
+};
+
+std::vector<VectorComparator> constVectorComparatorCenter = {
+    nullptr,                                                 // OMNI_NONE, 0
+    ConstComparator<type::OMNI_INT>,            // OMNI_INT, 1
+    ConstComparator<type::OMNI_LONG>,           // OMNI_LONG, 2
+    ConstComparator<type::OMNI_DOUBLE>,         // OMNI_DOUBLE, 3
+    ConstComparator<type::OMNI_BOOLEAN>,        // OMNI_BOOLEAN, 4
+    ConstComparator<type::OMNI_SHORT>,          // OMNI_SHORT, 5
+    ConstComparator<type::OMNI_LONG>,           // OMNI_DECIMAL64, 6
+    ConstComparator<type::OMNI_DECIMAL128>,     // OMNI_DECIMAL128, 7
+    ConstComparator<type::OMNI_INT>,            // OMNI_DATE32, 8
+    ConstComparator<type::OMNI_LONG>,           // OMNI_DATE64, 9
+    ConstComparator<type::OMNI_INT>,            // OMNI_TIME32, 10
+    ConstComparator<type::OMNI_LONG>,           // OMNI_TIME64, 11
+    ConstComparator<type::OMNI_LONG>,           // OMNI_TIMESTAMP, 12
+    nullptr,                                                 // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                                 // OMNI_INTERVAL_DAY_TIME, 14
+    ConstComparator<type::OMNI_VARCHAR>,        // OMNI_VARCHAR, 15
+    ConstComparator<type::OMNI_VARCHAR>,        // OMNI_CHAR, 16
+    nullptr,                                                 // OMNI_CONTAINER, 17
+    ConstComparator<type::OMNI_BYTE>,           // OMNI_BYTE, 18
+    ConstComparator<type::OMNI_FLOAT>,          // OMNI_FLOAT, 19
+    ConstComparator<type::OMNI_VARCHAR>,       // OMNI_VARBINARY, 20 (same as VARCHAR)
     nullptr,                                                 // OMNI_TIME_WITHOUT_TIME_ZONE, 21
     nullptr,                                                 // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
     nullptr,                                                 // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
@@ -732,6 +1050,46 @@ std::vector<VectorDeSerializer> vectorDeSerializerCenter = {
     nullptr,                                       // OMNI_ARRAY, 30
     nullptr,                                       // OMNI_MAP, 31
     nullptr,                                       // OMNI_ROW, 32
+    nullptr,                                       // OMNI_UNKNOWN, 33
+    nullptr,                                       // OMNI_FUNCTION, 34
+    nullptr,                                       // OMNI_OPAQUE, 35
+    nullptr                                        // OMNI_INVALID
+};
+
+std::vector<VectorComparator> vectorComparatorCenter = {
+    nullptr,                                       // OMNI_NONE, 0
+    ComparatorFromPointer<type::OMNI_INT>,        // OMNI_INT, 1
+    ComparatorFromPointer<type::OMNI_LONG>,       // OMNI_LONG, 2
+    ComparatorFromPointer<type::OMNI_DOUBLE>,     // OMNI_DOUBLE, 3
+    ComparatorFromPointer<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN, 4
+    ComparatorFromPointer<type::OMNI_SHORT>,      // OMNI_SHORT, 5
+    ComparatorFromPointer<type::OMNI_LONG>,       // OMNI_DECIMAL64, 6
+    ComparatorFromPointer<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128, 7
+    ComparatorFromPointer<type::OMNI_INT>,        // OMNI_DATE32, 8
+    ComparatorFromPointer<type::OMNI_LONG>,       // OMNI_DATE64, 9
+    ComparatorFromPointer<type::OMNI_INT>,        // OMNI_TIME32, 10
+    ComparatorFromPointer<type::OMNI_LONG>,       // OMNI_TIME64, 11
+    ComparatorFromPointer<type::OMNI_LONG>,       // OMNI_TIMESTAMP, 12
+    nullptr,                                       // OMNI_INTERVAL_MONTHS, 13
+    nullptr,                                       // OMNI_INTERVAL_DAY_TIME, 14
+    ComparatorFromPointer<type::OMNI_VARCHAR>,    // OMNI_VARCHAR, 15
+    ComparatorFromPointer<type::OMNI_VARCHAR>,    // OMNI_CHAR, 16
+    nullptr,                                       // OMNI_CONTAINER, 17
+    ComparatorFromPointer<type::OMNI_BYTE>,       // OMNI_BYTE, 18
+    ComparatorFromPointer<type::OMNI_FLOAT>,      // OMNI_FLOAT, 19
+    ComparatorFromPointer<type::OMNI_VARCHAR>,    // OMNI_VARBINARY, 20 (same as VARCHAR)
+    nullptr,                                       // OMNI_TIME_WITHOUT_TIME_ZONE, 21
+    nullptr,                                       // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE, 22
+    nullptr,                                       // OMNI_TIMESTAMP_WITH_TIME_ZONE, 23
+    nullptr,                                       // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, 24
+    nullptr,                                       // OMNI_MULTISET, 25
+    nullptr,                                       // 26
+    nullptr,                                       // 27
+    nullptr,                                       // 28
+    nullptr,                                       // 29
+    ComparatorFromPointer<type::OMNI_ARRAY>,       // OMNI_ARRAY, 30
+    nullptr,                                       // OMNI_MAP, 31
+    ComparatorFromPointer<type::OMNI_ROW>,         // OMNI_ROW, 32
     nullptr,                                       // OMNI_UNKNOWN, 33
     nullptr,                                       // OMNI_FUNCTION, 34
     nullptr,                                       // OMNI_OPAQUE, 35
