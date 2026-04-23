@@ -3,6 +3,7 @@
  * Description: Expression evaluator
  */
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <mutex>
 #include "expr_evaluator.h"
@@ -981,18 +982,37 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
     e.VisitExpr(*filterExpr);
 
     auto selectVector = e.GetResult();
-    auto selectAddr = static_cast<bool *>(VectorHelper::UnsafeGetValues(selectVector));
-    // FIXME: The null value check here is a temporary workaround.
-    // The In expression relies on SimpleFunction.h which skips null value processing internally.
-    // This check ensures nulls are properly filtered, but can be removed once the null handling logic in SimpleFunction
-    // is updated to handle null values natively for In expressions.
-    auto* boolSelectVec = static_cast<vec::Vector<bool>*>(selectVector);
-    for (int i = 0; i < rowCount; i++) {
-        if (boolSelectVec->IsNull(i)) {
-            selectAddr[i] = false;
-        } else {
-            if (selectAddr[i]) {
-                ++numSelectedRows;
+    bool *selectAddr = nullptr;
+    std::unique_ptr<bool[]> selectMaskBuffer;
+    if (selectVector->GetEncoding() == OMNI_ENCODING_CONST) {
+        auto *constBoolSelectVec = dynamic_cast<vec::ConstVector<bool> *>(selectVector);
+        if (constBoolSelectVec == nullptr) {
+            throw OmniException("OPERATOR_RUNTIME_ERROR",
+                "Const filter result must be a boolean const vector.");
+        }
+
+        selectMaskBuffer = std::make_unique<bool[]>(rowCount);
+        const bool isNull = constBoolSelectVec->HasNull() && constBoolSelectVec->IsNull(0);
+        const bool constantValue = !isNull && constBoolSelectVec->GetConstValue();
+        for (int i = 0; i < rowCount; ++i) {
+            selectMaskBuffer[i] = constantValue;
+        }
+        selectAddr = selectMaskBuffer.get();
+        numSelectedRows = constantValue ? rowCount : 0;
+    } else {
+        selectAddr = static_cast<bool *>(VectorHelper::UnsafeGetValues(selectVector));
+        // FIXME: The null value check here is a temporary workaround.
+        // The In expression relies on SimpleFunction.h which skips null value processing internally.
+        // This check ensures nulls are properly filtered, but can be removed once the null handling logic in
+        // SimpleFunction is updated to handle null values natively for In expressions.
+        auto *boolSelectVec = static_cast<vec::Vector<bool> *>(selectVector);
+        for (int i = 0; i < rowCount; i++) {
+            if (boolSelectVec->IsNull(i)) {
+                selectAddr[i] = false;
+            } else {
+                if (selectAddr[i]) {
+                    ++numSelectedRows;
+                }
             }
         }
     }
