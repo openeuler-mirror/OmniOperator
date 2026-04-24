@@ -431,9 +431,17 @@ static uint8_t *StructRowSetVecValue(uint8_t *row, RowVector *vec, int32_t rowIn
     row += rowStructSize;
 
     for (int32_t i = 0; i < structSize; i++) {
-        auto childVector = vec->ChildAt(i)->Slice(rowIndex, 1, false);
+        auto childArraySize = (*row) & ENCODING_META_SIZE;
+        ++row;
+        int32_t arraySize = 0;
+        std::copy(row, row + childArraySize, reinterpret_cast<uint8_t*>(&arraySize));
+        row += childArraySize;
+
+        auto childVector = vec->ChildAt(i);
         DataTypeId childDataTypeId = childVector->GetTypeId();
-        row = Row2VecFuncCenter[childDataTypeId](row, childVector, rowIndex);
+        for (int32_t i = 0; i < arraySize; i++) {
+            row = Row2VecFuncCenter[childDataTypeId](row, childVector.get(), rowIndex + i);
+        }
     }
     return row;
 }
