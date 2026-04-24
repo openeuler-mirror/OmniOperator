@@ -1746,7 +1746,7 @@ public:
             OMNI_THROW("Runtime error", "DataType is marked as OMNI_ARRAY but actual object is not ArrayType");
         }
         auto emptyElements = std::shared_ptr<BaseVector>(
-                VectorHelper::CreateFlatVector(static_cast<int32_t>(arrayTypePtr->ElementType()->GetId()), 0));
+                VectorHelper::CreateComplexVector(arrayTypePtr->ElementType().get(), 0));
         arrayVec->SetElementVector(emptyElements);
         for (int32_t i = 0; i < rowSize; ++i) {
             arrayVec->SetNull(i);
@@ -1762,9 +1762,9 @@ public:
             OMNI_THROW("Runtime error", "DataType is marked as OMNI_MAP but actual object is not MapType");
         }
         auto emptyKeyElements = std::shared_ptr<BaseVector>(
-                VectorHelper::CreateFlatVector(static_cast<int32_t>(mapTypePtr->Key()->GetId()), 0));
+                VectorHelper::CreateComplexVector(mapTypePtr->Key().get(), 0));
         auto emptyValueElements = std::shared_ptr<BaseVector>(
-                VectorHelper::CreateFlatVector(static_cast<int32_t>(mapTypePtr->Value()->GetId()), 0));
+                VectorHelper::CreateComplexVector(mapTypePtr->Value().get(), 0));
         mapVec->SetKeyVector(emptyKeyElements);
         mapVec->SetValueVector(emptyValueElements);
         for (int32_t i = 0; i < rowSize; ++i) {
