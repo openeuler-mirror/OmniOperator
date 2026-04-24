@@ -134,6 +134,10 @@ template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
     using type = int64_t;
 };
 
+template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE> {
+    using type = int64_t;
+};
+
 template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
     using type = vec::BaseVector*;
 };
@@ -180,6 +184,9 @@ template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
             case OMNI_TIMESTAMP: {                                                            \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_TIMESTAMP>(__VA_ARGS__);  \
             }                                                                                 \
+            case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE: {                                                            \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE>(__VA_ARGS__);  \
+            }                                                                                     \
             default:                                                                          \
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",              \
                     "Can not handle this type " + std::to_string(typeId));                    \
@@ -276,6 +283,7 @@ using DoubleDataType = FixedWidthDataType<OMNI_DOUBLE>;
 using LongDataType = FixedWidthDataType<OMNI_LONG>;
 using BooleanDataType = FixedWidthDataType<OMNI_BOOLEAN>;
 using TimestampDataType = FixedWidthDataType<OMNI_TIMESTAMP>;
+using TimestampLtzDataType = FixedWidthDataType<OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE>;
 using InvalidDataType = FixedWidthDataType<OMNI_INVALID>;
 using NoneDataType = FixedWidthDataType<OMNI_NONE>;
 

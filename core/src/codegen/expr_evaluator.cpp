@@ -125,6 +125,7 @@ bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
         }
         case OMNI_LONG:
         case OMNI_DECIMAL64:
+        case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         case OMNI_TIMESTAMP: {
             literalVal.value.longVal = literalExpr->longVal;
             break;
@@ -258,6 +259,7 @@ bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector 
         case OMNI_LONG:
         case OMNI_DECIMAL64:
         case OMNI_TIMESTAMP:
+        case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             SetConstantValues<int64_t>(literalVal.value.longVal, outVec);
             break;
         case OMNI_DOUBLE:

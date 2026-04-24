@@ -78,6 +78,8 @@ std::shared_ptr<omniruntime::type::DataType> LongType();
 
 std::shared_ptr<omniruntime::type::DataType> TimestampType();
 
+std::shared_ptr<omniruntime::type::DataType> TimestampLtzType();
+
 std::shared_ptr<omniruntime::type::DataType> DoubleType();
 
 std::shared_ptr<omniruntime::type::DataType> BooleanType();

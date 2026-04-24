@@ -280,7 +280,8 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
             builder->CreateOr(builder->CreateOr(left->isNull, right->isNull),
                               builder->CreateLoad(llvmTypes->I1Type(), nullFlag)));
         return;
-    } else if (bExpr->left->GetReturnTypeId() == OMNI_LONG || bExpr->left->GetReturnTypeId() == OMNI_TIMESTAMP) {
+    } else if (bExpr->left->GetReturnTypeId() == OMNI_LONG || bExpr->left->GetReturnTypeId() == OMNI_TIMESTAMP ||
+    bExpr->left->GetReturnTypeId() == OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE) {
         Value *nullFlag = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "null_flag");
         builder->CreateStore(ConstantInt::get(IntegerType::getInt1Ty(*context), 0), nullFlag);
         this->value = make_shared<CodeGenValue>(
@@ -603,6 +604,7 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
             case OMNI_INT:
             case OMNI_DATE32:
             case OMNI_TIMESTAMP:
+            case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case OMNI_LONG: {
                 InExprIntegerHelper(valueToCompare, argiValue, tmpCmpData, tmpCmpNull);
                 break;
@@ -897,6 +899,7 @@ static bool GetValueOffsets(const FuncExpr &fExpr, std::vector<int32_t> &valueOf
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
+            case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case OMNI_DECIMAL64:
                 valueSize += sizeof(int64_t);
                 break;
@@ -1996,6 +1999,7 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
             break;
         }
         case OMNI_TIMESTAMP:
+        case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         case OMNI_LONG: {
             codeGenValue = new CodeGenValue(llvmTypes->CreateConstantLong(lExpr.longVal),
                 llvmTypes->CreateConstantBool(isNullLiteral));
@@ -2124,7 +2128,8 @@ bool ExpressionCodeGen::VisitBetweenExprHelper(BetweenExpr &bExpr, const std::sh
     auto cmpLeft = cmpPair.first;
     auto cmpRight = cmpPair.second;
     if (bExpr.value->GetReturnTypeId() == OMNI_INT || bExpr.value->GetReturnTypeId() == OMNI_LONG ||
-        bExpr.value->GetReturnTypeId() == OMNI_DATE32 || bExpr.value->GetReturnTypeId() == OMNI_TIMESTAMP) {
+        bExpr.value->GetReturnTypeId() == OMNI_DATE32 || bExpr.value->GetReturnTypeId() == OMNI_TIMESTAMP ||
+        bExpr.value->GetReturnTypeId() == OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE) {
         *cmpLeft = builder->CreateICmpSLE(lowerVal->data, val->data, "between_cmpleft");
         *cmpRight = builder->CreateICmpSLE(val->data, upperVal->data, "between_cmpright");
         return true;
@@ -2209,6 +2214,7 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(const omniruntime::type::Data
             break;
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
+        case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         case OMNI_DECIMAL64:
             dictionaryFuncSignature = FunctionSignature(dictionaryGetLongStr, paramTypes, OMNI_LONG);
             break;

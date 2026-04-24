@@ -547,6 +547,7 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
                 break;
             case omniruntime::type::OMNI_LONG:
             case omniruntime::type::OMNI_TIMESTAMP:
+            case omniruntime::type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case omniruntime::type::OMNI_DECIMAL64:
                 AssertVectorEquals<int64_t>(vector, va_arg(args, int64_t *));
                 break;

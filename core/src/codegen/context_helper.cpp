@@ -66,6 +66,9 @@ extern "C" DLLEXPORT
             case OMNI_LONG:
                 errorMessage << "BIGINT";
                 break;
+            case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
+                errorMessage << "TIMESTAMP_WITH_LOCAL_TIME_ZONE";
+                break;
             case OMNI_TIMESTAMP:
                 errorMessage << "TIMESTAMP";
                 break;

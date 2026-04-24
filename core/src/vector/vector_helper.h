@@ -391,6 +391,7 @@ public:
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int8_t> *>(vector));
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int64_t> *>(vector));
@@ -435,6 +436,7 @@ public:
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
@@ -487,6 +489,7 @@ public:
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<void *>(
@@ -555,6 +558,7 @@ public:
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(vector)->Slice(positionOffset, length);
@@ -611,6 +615,7 @@ public:
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:     
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<int64_t> *>(vector)->Slice(positionOffset, length);
@@ -659,6 +664,7 @@ public:
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(vector)->CopyPositions(positions,
@@ -708,6 +714,7 @@ public:
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<int64_t> *>(vector)->CopyPositions(positions, offset, length);
@@ -755,6 +762,7 @@ public:
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
@@ -805,6 +813,7 @@ public:
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 reinterpret_cast<Vector<int64_t> *>(destVector)->Append(srcVector, offset, length);
@@ -917,6 +926,7 @@ public:
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return DecodeFlatDictionaryVector<int64_t>(vector);
@@ -1005,6 +1015,7 @@ public:
             case type::OMNI_LONG:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64:
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
             case type::OMNI_TIMESTAMP: {
                 CopyFlatVector<int64_t>(destVector, srcVector, offset, length);
                 break;
@@ -1049,6 +1060,9 @@ public:
             }
             case type::OMNI_TIMESTAMP: {
                 return TimestampType();
+            }
+            case type::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE: {
+                return TimestampLtzType();
             }
             case type::OMNI_DATE64: {
                 return Date64Type();
