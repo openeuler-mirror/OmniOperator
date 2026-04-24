@@ -2303,9 +2303,23 @@ void ALWAYS_INLINE LookupJoinOutputBuilder::AppendExistenceRow(int32_t probePosi
 void NO_INLINE LookupJoinOutputBuilder::ConstructExistenceColumn(VectorBatch *vectorBatch)
 {
     auto numRows = probeRowCount;
+    
+    // Safety check: ensure the slice range is within bounds
+    if (probeRowOffset + numRows > existJoinBuildIndex.size()) {
+        throw OmniException("OPERATOR_RUNTIME_ERROR", 
+            "ExistenceJoin: probeRowOffset (" + std::to_string(probeRowOffset) + 
+            ") + numRows (" + std::to_string(numRows) + ") exceeds existJoinBuildIndex size (" + 
+            std::to_string(existJoinBuildIndex.size()) + ")");
+    }
+    
     auto ret = new Vector<bool>(numRows);
     auto values = omniruntime::vec::unsafe::UnsafeVector::GetRawValues(ret);
-    std::copy(existJoinBuildIndex.begin(), existJoinBuildIndex.end(), values);
+    
+    // Fix: copy only the current batch portion, not the entire existJoinBuildIndex
+    // Start from probeRowOffset to get the correct slice for current batch
+    std::copy(existJoinBuildIndex.begin() + probeRowOffset, 
+              existJoinBuildIndex.begin() + probeRowOffset + numRows, 
+              values);
     vectorBatch->Append(ret);
 }
 } // end of omniruntime
