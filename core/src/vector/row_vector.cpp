@@ -16,7 +16,46 @@ namespace {
         const bool bStr = (b == type::OMNI_VARCHAR || b == type::OMNI_CHAR);
         return aStr && bStr;
     }
+    void SetChildNull(BaseVector *child, int32_t index)
+    {
+        if (child == nullptr) {
+            return;
+        }
+
+        switch (child->GetTypeId()) {
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR:
+            case type::OMNI_VARBINARY:
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(child)->SetNull(index);
+                break;
+            case type::OMNI_ARRAY:
+                static_cast<ArrayVector *>(child)->SetNull(index);
+                break;
+            case type::OMNI_MAP:
+                static_cast<MapVector *>(child)->SetNull(index);
+                break;
+            case type::OMNI_ROW:
+                static_cast<RowVector *>(child)->SetNull(index);
+                break;
+            default:
+                child->SetNull(index);
+                break;
+        }
+    }
+
 } // namespace
+
+    void RowVector::SetNull(int64_t index)
+    {
+        BaseVector::SetNull(static_cast<int32_t>(index));
+        for (auto &child : children_) {
+            SetChildNull(child.get(), static_cast<int32_t>(index));
+        }
+        for (auto *rawChild : rawChildren_) {
+            SetChildNull(rawChild, static_cast<int32_t>(index));
+        }
+    }
+
     RowVector *RowVector::CopyPositions(const int *positions, int positionOffset, int length)
     {
         if (UNLIKELY((positions == nullptr) || (length < 0))) {
@@ -106,7 +145,7 @@ namespace {
             if (otherRowVector->IsNull(i)) {
                 int destIndex = positionOffset + i;
                 for (int c = 0; c < static_cast<int>(children_.size()); c++) {
-                    children_[c]->SetNull(destIndex);
+                    SetChildNull(children_[c].get(), destIndex);
                 }
             }
         }
@@ -131,61 +170,27 @@ namespace {
 
     void RowVector::SetValue(int index, RowVector* value)
     {
+        if (value == nullptr) {
+            SetNull(index);
+            return;
+        }
+
         auto childSize = ChildSize();
         if (childSize != value->ChildSize()) {
             std::string message("RowVector size not match.");
             throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
+
+        if (value->IsNull(0)) {
+            SetNull(index);
+            return;
+        }
+
+        SetNotNull(index);
         for (auto i = 0; i < childSize; i++) {
             auto child = ChildAt(i).get();
             auto valueChild = value->ChildAt(i).get();
-            auto childDataTypeId = child->GetTypeId();
-            switch (childDataTypeId) {
-                case OMNI_BOOLEAN:
-                    static_cast<Vector<bool> *>(child)->SetValue(index, static_cast<Vector<bool> *>(valueChild)->GetValue(0));
-                    break;
-                case OMNI_INT:
-                case OMNI_DATE32:
-                    static_cast<Vector<int32_t> *>(child)->SetValue(index, static_cast<Vector<int32_t> *>(valueChild)->GetValue(0));
-                    break;
-                case OMNI_SHORT:
-                    static_cast<Vector<int16_t> *>(child)->SetValue(index, static_cast<Vector<int16_t> *>(valueChild)->GetValue(0));
-                    break;
-                case OMNI_LONG:
-                case OMNI_TIMESTAMP:
-                case OMNI_DECIMAL64:
-                    static_cast<Vector<int64_t> *>(child)->SetValue(index, static_cast<Vector<int64_t> *>(valueChild)->GetValue(0));
-                    break;
-                case OMNI_DOUBLE:
-                    static_cast<Vector<double> *>(child)->SetValue(index, static_cast<Vector<double> *>(valueChild)->GetValue(0));
-                    break;
-                case OMNI_FLOAT:
-                    static_cast<Vector<float> *>(child)->SetValue(index, static_cast<Vector<float> *>(valueChild)->GetValue(0));
-                    break;
-                case OMNI_VARCHAR:
-                case OMNI_CHAR: {
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(child)->SetValue(index,
-                        static_cast<Vector<LargeStringContainer<std::string_view>> *>(valueChild)->GetValue(0));
-                    break;
-                }
-                case OMNI_DECIMAL128:
-                    static_cast<Vector<Decimal128> *>(child)->SetValue(index, static_cast<Vector<Decimal128> *>(valueChild)->GetValue(0));
-                    break;
-                case OMNI_BYTE:
-                    static_cast<Vector<int8_t> *>(child)->SetValue(index, static_cast<Vector<int8_t> *>(valueChild)->GetValue(0));
-                    break;
-                case OMNI_ARRAY:
-                    static_cast<ArrayVector *>(child)->SetValue(index, static_cast<ArrayVector *>(valueChild)->GetValue(0));
-                    break;
-                case OMNI_MAP:
-                    static_cast<MapVector *>(child)->SetValue(index, static_cast<MapVector *>(valueChild));
-                    break;
-                case OMNI_ROW:
-                    static_cast<RowVector *>(child)->SetValue(index, static_cast<RowVector *>(valueChild));
-                    break;
-                default:
-                    break;
-            }
+            VectorHelper::AppendVector(child, index, valueChild, 1);
         }
     }
 }
