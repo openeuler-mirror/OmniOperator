@@ -983,7 +983,7 @@ void UnnestOperator::generateOrdinalityColumns(int32_t numElements, omniruntime:
             if (rawMaxSizes_[i] > length) {
                 // Empty array case: length=0, outer=true, rawMaxSizes_[i]=1
                 if (length == 0 && outer_ && rawMaxSizes_[i] == 1) {
-                    ordVector->SetValue(index++, 0);
+                    ordVector->SetNull(index++);
                 } else {
                     // Padding rows: set to NULL
                     for (auto j = length; j < rawMaxSizes_[i]; ++j) {
