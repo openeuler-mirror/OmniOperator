@@ -33,7 +33,6 @@ LLVMTypes::LLVMTypes(llvm::LLVMContext &context) : context(context)
         { OMNI_DATE32, I32Type() },
         { OMNI_DATE64, I64Type() },
         { OMNI_TIMESTAMP, I64Type() },
-        { OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE, I64Type() },
         { OMNI_INTERVAL_MONTHS, I32Type() },
         { OMNI_INTERVAL_DAY_TIME, I32Type() },
         { OMNI_VARCHAR, I8PtrType() },
@@ -182,7 +181,6 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
             return I32PtrType();
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
-        case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         case OMNI_DECIMAL64:
             return I64PtrType();
         case OMNI_DOUBLE:
@@ -212,7 +210,6 @@ llvm::Type *LLVMTypes::ToBatchDataPointerType(DataTypeId typeId)
             return I32PtrType();
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
-        case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         case OMNI_DECIMAL64:
             return I64PtrType();
         case OMNI_DOUBLE:

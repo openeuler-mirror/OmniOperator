@@ -39,8 +39,6 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Date64";
         case OMNI_TIME64:
             return "Time64";
-        case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-            return "TimestampWithLocalTimeZone";
         case OMNI_TIMESTAMP:
             return "Timestamp";
         case OMNI_VARCHAR:
@@ -87,8 +85,6 @@ std::string TypeUtil::TypeToStringLog(omniruntime::type::DataTypeId id)
             return "int8";
         case OMNI_LONG:
             return "int64";
-        case OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-            return "TimestampWithLocalTimeZone (int64)";
         case OMNI_TIMESTAMP:
             return "Timestamp (int64)";
         case OMNI_VARCHAR:
@@ -183,11 +179,6 @@ std::shared_ptr<DataType> LongType()
 std::shared_ptr<omniruntime::type::DataType> TimestampType()
 {
     return TimestampDataType::Instance();
-}
-
-std::shared_ptr<omniruntime::type::DataType> TimestampLtzType()
-{
-    return TimestampLtzDataType::Instance();
 }
 
 std::shared_ptr<DataType> DoubleType()

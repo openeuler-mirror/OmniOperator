@@ -71,11 +71,6 @@ template <> struct NativeAndVectorType<type::DataTypeId::OMNI_TIMESTAMP> {
     using vector = vec::Vector<type>;
     using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE> {
-    using type = int64_t;
-    using vector = vec::Vector<type>;
-    using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
-};
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_DOUBLE> {
     using type = double;
     using vector = vec::Vector<type>;
