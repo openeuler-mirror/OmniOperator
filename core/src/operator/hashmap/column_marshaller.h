@@ -17,6 +17,7 @@
 #include "operator/execution_context.h"
 #include "vector_marshaller.h"
 #include "vector/vector.h"
+#include "row_container.h"
 
 namespace omniruntime {
 namespace op {
@@ -558,12 +559,17 @@ public:
     static constexpr bool HasSpecialNullFunc = false;
     using HashTable = TaperFlatHashTable<int64_t, true>;
     int32_t totalAggValueSize = 0;
+    int32_t totalAggStatesSize = 0;
     std::unique_ptr<HashTable> table;
-    std::vector<int64_t> workingHashVals_;
-    std::vector<int32_t> workingUpdateIndices_;
+    std::unique_ptr<RowContainer> aggRows;
+    std::vector<int64_t> workingHashVals;
+    std::vector<int32_t> workingUpdateIndices;
+    std::vector<int32_t> keyTypeSizes;
+    std::vector<bool> isVariableLenType;
+    RowContainerIterator rowContainerIter;
+    bool nullableKeys = true;
 
-
-    uint8_t*& rowFromData(char* data)
+    uint8_t*& RowFromData(char* data)
     {
         return *reinterpret_cast<uint8_t**>(data);
     }
@@ -571,59 +577,176 @@ public:
     TaperColumnSerializeHandler(mem::SimpleArenaAllocator &pool, int32_t size)
     {
         table = std::make_unique<HashTable>(pool, sizeof(uint64_t), sizeof(char*));
+        totalAggStatesSize = size;
         totalAggValueSize = size + sizeof(size_t);
+    }
+
+    /// Initialize the RowContainer with key type information.
+    /// Called after InitSize to set up the row layout with fixed-width key columns.
+    /// @param keySizes Fixed row sizes for each key column (or sizeof(char*)+sizeof(size_t) for variable-length)
+    /// @param isVariableLen True for each column that stores variable-length data (VARCHAR, ARRAY, etc.)
+    /// @param nullableKeys Whether keys can contain nulls
+    /// @param pool Memory pool for row allocation
+    void InitRowContainer(const std::vector<int32_t>& keySizes,
+                          const std::vector<bool>& isVariableLen,
+                          bool nullableKeys,
+                          mem::SimpleArenaAllocator& pool)
+    {
+        keyTypeSizes = keySizes;
+        isVariableLenType = isVariableLen;
+        nullableKeys = nullableKeys;
+        aggRows = std::make_unique<RowContainer>(
+            keySizes, static_cast<int32_t>(keySizes.size()),
+            nullableKeys, totalAggStatesSize, pool);
+    }
+
+    /// Get the offset where AggState data begins within a row.
+    int32_t AggStateOffset() const
+    {
+        return aggRows ? aggRows->AggStateOffset() : totalAggValueSize;
     }
 
     void EmplaceTable(BaseVector **groupVectors, int32_t groupColNum, int32_t rowsNum,
         std::vector<uint8_t*>& groups, std::vector<uint8_t*>& newGroups, Encoding encoding)
     {
-        auto initRow = [&](uint32_t rowIdx, char* data) {
-            auto* row = GetSerializeRow(groupVectors, groupColNum, rowIdx);
-            rowFromData(data) = reinterpret_cast<uint8_t*>(row);
-            newGroups.push_back(rowFromData(data));
+        auto initRow = [&](uint32_t rowIdx, char* data) -> char* {
+            auto* row = aggRows->NewRow();
+            RowFromData(data) = reinterpret_cast<uint8_t*>(row);
+            newGroups.push_back(RowFromData(data));
+            StoreKeys(row, groupVectors, groupColNum, rowIdx);
             return row;
         };
-        workingUpdateIndices_.clear();
-        workingHashVals_.resize(rowsNum);
+        workingUpdateIndices.clear();
+        workingHashVals.resize(rowsNum);
         for (size_t i = 0; i < groupColNum; ++i) {
             BaseVector *baseVector = groupVectors[i];
             auto type = baseVector->GetTypeId();
             if (type == type::OMNI_ARRAY) {
-                DoArrayHash(baseVector, rowsNum, workingHashVals_);
+                DoArrayHash(baseVector, rowsNum, workingHashVals);
             } else if (type == type::OMNI_ROW) {
-                DoRowHash(baseVector, rowsNum, workingHashVals_);
+                DoRowHash(baseVector, rowsNum, workingHashVals);
             } else {
-                DYNAMIC_TYPE_DISPATCH(hash, type, baseVector, rowsNum, workingHashVals_, i > 0);
+                DYNAMIC_TYPE_DISPATCH(Hash, type, baseVector, rowsNum, workingHashVals, i > 0);
             }
         }
-        table->emplaceBatch(
-        workingHashVals_.data(),
+        table->EmplaceBatch(
+        workingHashVals.data(),
             rowsNum,
         [&](uint32_t) { return false; },
         [&](uint32_t rowIdx, char* data) { initRow(rowIdx, data); },
         [&](uint32_t rowIdx, char* data, bool initFlag) {
-            groups[rowIdx] = rowFromData(data);
+            groups[rowIdx] = RowFromData(data);
           if (!initFlag) {
-            workingUpdateIndices_.push_back((rowIdx));
+            workingUpdateIndices.push_back((rowIdx));
           }
         });
-        if (workingUpdateIndices_.empty()) {
+        if (workingUpdateIndices.empty()) {
             return;
         }
-        int32_t unequalsNum = GetUnequalsNum(workingUpdateIndices_, groupVectors, groupColNum, groups);
+        int32_t unequalsNum = GetUnequalsNum(workingUpdateIndices, groupVectors, groupColNum, groups);
 
         for (int32_t i = 0; i < unequalsNum; i++) {
-            auto rowIdx = workingUpdateIndices_[i];
-            table->emplace(
-                workingHashVals_[rowIdx],
+            auto rowIdx = workingUpdateIndices[i];
+            table->Emplace(
+                workingHashVals[rowIdx],
                 [&](auto, TaperHashTableChunk& chunk, uint8_t slot) {
-                  auto* row = rowFromData(table->getChunkValue(chunk, slot).buf);
+                  auto* row = RowFromData(table->GetChunkValue(chunk, slot).buf);
                   return CompareKeys(groupVectors, row, groupColNum, rowIdx);
                 },
                 [&](char* data) {
                   auto* row = initRow(rowIdx, data);
                 },
-                [&](char* data, bool) { groups[rowIdx] = rowFromData(data); });
+                [&](char* data, bool) { groups[rowIdx] = RowFromData(data); });
+        }
+    }
+
+    /// Store key values from vectors into the RowContainer row.
+    /// For fixed-width types, store directly at the column offset.
+    /// For complex types (VARCHAR, ARRAY, ROW), use the serializer to
+    /// serialize into arena memory and store a StringRef (pointer + size)
+    /// at the column offset.
+    void StoreKeys(char* row, BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx)
+    {
+        for (int32_t colIdx = 0; colIdx < groupColNum; ++colIdx) {
+            auto* vector = groupVectors[colIdx];
+            auto typeId = vector->GetTypeId();
+            auto col = aggRows->ColumnAt(colIdx);
+            auto offset = col.Offset();
+            auto nullByte = col.NullByte();
+            auto nullMask = col.NullMask();
+
+            // Check null first
+            if (nullableKeys && vector->IsNull(rowIdx)) {
+                RowContainer::SetNullAt(row, nullByte, nullMask);
+                continue;
+            }
+            if (nullableKeys) {
+                RowContainer::ClearNullAt(row, nullByte, nullMask);
+            }
+
+            // Store value by type
+            switch (typeId) {
+                case type::OMNI_BYTE: {
+                    auto value = static_cast<Vector<int8_t>*>(vector)->GetValue(rowIdx);
+                    RowContainer::StoreValue(row, offset, value);
+                    break;
+                }
+                case type::OMNI_SHORT: {
+                    auto value = static_cast<Vector<int16_t>*>(vector)->GetValue(rowIdx);
+                    RowContainer::StoreValue(row, offset, value);
+                    break;
+                }
+                case type::OMNI_INT:
+                case type::OMNI_DATE32:
+                case type::OMNI_TIME32: {
+                    auto value = static_cast<Vector<int32_t>*>(vector)->GetValue(rowIdx);
+                    RowContainer::StoreValue(row, offset, value);
+                    break;
+                }
+                case type::OMNI_LONG:
+                case type::OMNI_TIMESTAMP:
+                case type::OMNI_DECIMAL64:
+                case type::OMNI_DATE64:
+                case type::OMNI_TIME64: {
+                    auto value = static_cast<Vector<int64_t>*>(vector)->GetValue(rowIdx);
+                    RowContainer::StoreValue(row, offset, value);
+                    break;
+                }
+                case type::OMNI_DOUBLE: {
+                    auto value = static_cast<Vector<double>*>(vector)->GetValue(rowIdx);
+                    RowContainer::StoreValue(row, offset, value);
+                    break;
+                }
+                case type::OMNI_FLOAT: {
+                    auto value = static_cast<Vector<float>*>(vector)->GetValue(rowIdx);
+                    RowContainer::StoreValue(row, offset, value);
+                    break;
+                }
+                case type::OMNI_DECIMAL128: {
+                    auto value = static_cast<Vector<Decimal128>*>(vector)->GetValue(rowIdx);
+                    RowContainer::StoreValue(row, offset, value);
+                    break;
+                }
+                case type::OMNI_BOOLEAN: {
+                    auto value = static_cast<Vector<bool>*>(vector)->GetValue(rowIdx);
+                    RowContainer::StoreValue(row, offset, value);
+                    break;
+                }
+                default: {
+                    // Complex types (VARCHAR, ARRAY, ROW): serialize into arena
+                    // and store StringRef (char* + size_t) at the column offset
+                    type::StringRef key;
+                    key.data = nullptr;
+                    key.size = 0;
+                    auto &curFunc = serializers[colIdx];
+                    curFunc(vector, rowIdx, table->Pool(), key);
+                    // Store the serialized key pointer and size at the column offset
+                    // Layout: [char* data_ptr] [size_t data_size]
+                    *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
+                    *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
+                    break;
+                }
+            }
         }
     }
 
@@ -641,32 +764,263 @@ public:
 
     bool CompareKeys(BaseVector **groupVectors, uint8_t *row, int32_t groupColNum, int32_t rowIdx)
     {
-        uint8_t *addr = row + totalAggValueSize;
         for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
-            auto curVector = groupVectors[groupColIdx];
-            auto &curFunc = comparators[groupColIdx];
-            if (!curFunc(curVector, rowIdx, addr)) {
+            auto* vector = groupVectors[groupColIdx];
+            auto typeId = vector->GetTypeId();
+            auto col = aggRows->ColumnAt(groupColIdx);
+            auto offset = col.Offset();
+            auto nullByte = col.NullByte();
+            auto nullMask = col.NullMask();
+
+            // Check nulls
+            bool rowIsNull = nullableKeys && RowContainer::IsNullAt(
+                reinterpret_cast<char*>(row), nullByte, nullMask);
+            bool vecIsNull = vector->IsNull(rowIdx);
+            if (rowIsNull != vecIsNull) {
                 return false;
+            }
+            if (rowIsNull) {
+                continue; // both null, match
+            }
+
+            // Compare fixed-width types by value
+            switch (typeId) {
+                case type::OMNI_BYTE:
+                    if (RowContainer::ReadValue<int8_t>(reinterpret_cast<char*>(row), offset) !=
+                        static_cast<Vector<int8_t>*>(vector)->GetValue(rowIdx)) return false;
+                    break;
+                case type::OMNI_SHORT:
+                    if (RowContainer::ReadValue<int16_t>(reinterpret_cast<char*>(row), offset) !=
+                        static_cast<Vector<int16_t>*>(vector)->GetValue(rowIdx)) return false;
+                    break;
+                case type::OMNI_INT:
+                case type::OMNI_DATE32:
+                case type::OMNI_TIME32:
+                    if (RowContainer::ReadValue<int32_t>(reinterpret_cast<char*>(row), offset) !=
+                        static_cast<Vector<int32_t>*>(vector)->GetValue(rowIdx)) return false;
+                    break;
+                case type::OMNI_LONG:
+                case type::OMNI_TIMESTAMP:
+                case type::OMNI_DECIMAL64:
+                case type::OMNI_DATE64:
+                case type::OMNI_TIME64:
+                    if (RowContainer::ReadValue<int64_t>(reinterpret_cast<char*>(row), offset) !=
+                        static_cast<Vector<int64_t>*>(vector)->GetValue(rowIdx)) return false;
+                    break;
+                case type::OMNI_DOUBLE:
+                    if (RowContainer::ReadValue<double>(reinterpret_cast<char*>(row), offset) !=
+                        static_cast<Vector<double>*>(vector)->GetValue(rowIdx)) return false;
+                    break;
+                case type::OMNI_FLOAT:
+                    if (RowContainer::ReadValue<float>(reinterpret_cast<char*>(row), offset) !=
+                        static_cast<Vector<float>*>(vector)->GetValue(rowIdx)) return false;
+                    break;
+                case type::OMNI_DECIMAL128:
+                    if (RowContainer::ReadValue<Decimal128>(reinterpret_cast<char*>(row), offset) !=
+                        static_cast<Vector<Decimal128>*>(vector)->GetValue(rowIdx)) return false;
+                    break;
+                default: {
+                    // Complex types: use the comparator on the serialized data
+                    auto& curFunc = comparators[groupColIdx];
+                    uint8_t* addr = reinterpret_cast<uint8_t*>(
+                        *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
+                    if (!curFunc(vector, rowIdx, addr)) {
+                        return false;
+                    }
+                    break;
+                }
             }
         }
         return true;
     }
 
-    char *GetSerializeRow(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx)
+    /// Use RowContainer::ListRows to iterate through rows for output.
+    /// Returns row pointers where each row has:
+    ///   [key data at column offsets] [null bits] [AggState at aggStateOffset]
+    template <bool withHashVal = false, class Func, class NullFunc>
+    void Extract(int32_t rowsNum, OutputState &outputState, Func func, NullFunc nullFunc)
     {
-        type::StringRef key;
-        key.data = reinterpret_cast<char*>(table->Pool().Allocate(totalAggValueSize));
-        for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
-            auto curVector = groupVectors[groupColIdx];
-            auto &curFunc = serializers[groupColIdx];
-            curFunc(curVector, rowIdx, table->Pool(), key);
+        std::vector<char*> rowPtrs(rowsNum);
+        int32_t numExtracted = aggRows->ListRows(&rowContainerIter, rowsNum, rowPtrs.data());
+
+        for (int32_t idx = 0; idx < numExtracted; ++idx) {
+            auto* row = rowPtrs[idx];
+            // Build a StringRef key for complex type columns from the row
+            // For the new RowContainer layout, keys are stored in-place
+            // We pass the row pointer directly so ParseKeyToCols can read from it
+            func(reinterpret_cast<uint8_t*>(row), reinterpret_cast<uint8_t*>(row), idx);
         }
-        *reinterpret_cast<size_t*>(const_cast<char*>(key.data) + totalAggValueSize - sizeof(size_t)) = key.size;
-        return const_cast<char*>(key.data);
+        outputState.hasBeenOutputNum += numExtracted;
+    }
+
+    /// Parse key columns from a RowContainer row into output vectors.
+    /// For fixed-width types, read directly from row offsets.
+    /// For complex types, read from the serialized StringRef stored in the row.
+    void ParseKeyToCols(uint8_t* rowPtr, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
+        const int32_t rowIdx)
+    {
+        auto* row = reinterpret_cast<char*>(rowPtr);
+        for (int32_t i = 0; i < groupColNum; ++i) {
+            auto col = aggRows->ColumnAt(i);
+            auto offset = col.Offset();
+            auto nullByte = col.NullByte();
+            auto nullMask = col.NullMask();
+            auto* outVector = groupOutputVectors[i];
+            auto typeId = outVector->GetTypeId();
+
+            // Check null
+            if (nullableKeys && RowContainer::IsNullAt(row, nullByte, nullMask)) {
+                outVector->SetNull(rowIdx);
+                continue;
+            }
+
+            // Extract value by type
+            switch (typeId) {
+                case type::OMNI_BYTE:
+                    static_cast<Vector<int8_t>*>(outVector)->SetValue(rowIdx,
+                        RowContainer::ReadValue<int8_t>(row, offset));
+                    break;
+                case type::OMNI_SHORT:
+                    static_cast<Vector<int16_t>*>(outVector)->SetValue(rowIdx,
+                        RowContainer::ReadValue<int16_t>(row, offset));
+                    break;
+                case type::OMNI_INT:
+                case type::OMNI_DATE32:
+                case type::OMNI_TIME32:
+                    static_cast<Vector<int32_t>*>(outVector)->SetValue(rowIdx,
+                        RowContainer::ReadValue<int32_t>(row, offset));
+                    break;
+                case type::OMNI_LONG:
+                case type::OMNI_TIMESTAMP:
+                case type::OMNI_DECIMAL64:
+                case type::OMNI_DATE64:
+                case type::OMNI_TIME64:
+                    static_cast<Vector<int64_t>*>(outVector)->SetValue(rowIdx,
+                        RowContainer::ReadValue<int64_t>(row, offset));
+                    break;
+                case type::OMNI_DOUBLE:
+                    static_cast<Vector<double>*>(outVector)->SetValue(rowIdx,
+                        RowContainer::ReadValue<double>(row, offset));
+                    break;
+                case type::OMNI_FLOAT:
+                    static_cast<Vector<float>*>(outVector)->SetValue(rowIdx,
+                        RowContainer::ReadValue<float>(row, offset));
+                    break;
+                case type::OMNI_DECIMAL128:
+                    static_cast<Vector<Decimal128>*>(outVector)->SetValue(rowIdx,
+                        RowContainer::ReadValue<Decimal128>(row, offset));
+                    break;
+                default: {
+                    // Complex types: deserialize from the StringRef stored in the row
+                    char* dataPtr = *reinterpret_cast<char**>(row + offset);
+                    size_t dataSize = *reinterpret_cast<size_t*>(row + offset + sizeof(char*));
+                    auto deserializeFunc = deserializers[i];
+                    const char* pos = dataPtr;
+                    deserializeFunc(outVector, rowIdx, pos);
+                    break;
+                }
+            }
+        }
+    }
+
+    void ParseNull(const char *key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
+        const int rowIdx)
+    {
+        for (int32_t i = 0; i < groupColNum; ++i) {
+            groupOutputVectors[i]->SetNull(rowIdx);
+        }
+    }
+
+    /// SpillExtract traverses the hash table for spill operations.
+    /// It uses the hash table Visitor and reconstructs serialized key data
+    /// for writing to disk. The key is reconstructed from the RowContainer
+    /// row by re-serializing each key column.
+    template <class Func, class NullFunc>
+    void SpillExtract(int32_t rowsNum, OutputState &outputState, Func func, NullFunc nullFunc)
+    {
+        auto tblVisitor = [&] {
+            if (outputState.rowBegin) {
+                return table->GetResultVisitor(
+                    outputState.rowBegin, static_cast<uint16_t>(outputState.rowOffset));
+            }
+            return table->GetResultVisitor();
+        }();
+        uint32_t idx = 0;
+        while (idx < rowsNum && !tblVisitor.Finished()) {
+            auto* row = RowFromData(tblVisitor.CurVal().buf);
+            // Reconstruct serialized key data from RowContainer row
+            // For fixed-width types, re-serialize each column into a contiguous buffer
+            // For complex types, the serialized data pointer is stored in the row
+            type::StringRef key;
+            for (int32_t colIdx = 0; colIdx < static_cast<int32_t>(serializers.size()); ++colIdx) {
+                auto col = aggRows->ColumnAt(colIdx);
+                auto offset = col.Offset();
+                auto nullByte = col.NullByte();
+                auto nullMask = col.NullMask();
+
+                // Check if this column is null in the row
+                if (nullableKeys && RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask)) {
+                    // Serialize null marker: [uint8_t: 0]
+                    auto* pos = table->Pool().AllocateContinue(sizeof(uint8_t), reinterpret_cast<const uint8_t*&>(key.data));
+                    *pos = 0;
+                    key.size += sizeof(uint8_t);
+                    continue;
+                }
+
+                // For complex types stored as StringRef in the row, copy the serialized data
+                if (isVariableLenType[colIdx]) {
+                    // This is a complex type column - copy the serialized data from the StringRef
+                    char* dataPtr = *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset);
+                    size_t dataSize = *reinterpret_cast<size_t*>(reinterpret_cast<char*>(row) + offset + sizeof(char*));
+                    if (dataPtr != nullptr && dataSize > 0) {
+                        auto* dest = table->Pool().AllocateContinue(dataSize, reinterpret_cast<const uint8_t*&>(key.data));
+                        memcpy(dest, dataPtr, dataSize);
+                        key.size += dataSize;
+                    }
+                } else {
+                    // For fixed-width types, we need to re-serialize them
+                    // using the original serializer format
+                    // The simplest approach: re-serialize using FixedLenTypeSerializer format
+                    // Format: [uint8_t rowDataSize][rowDataSize bytes of value]
+                    // Determine the size from the key column size
+                    int32_t colSize = keyTypeSizes[colIdx];
+                    uint8_t rowDataSize = static_cast<uint8_t>(colSize);
+                    // Round up to power of 2 for the serialization format
+                    if (colSize > 1) {
+                        rowDataSize = 1;
+                        auto tmp = colSize;
+                        while (tmp > 1) { tmp >>= 1; rowDataSize <<= 1; }
+                    }
+                    auto resSize = sizeof(uint8_t) + rowDataSize;
+                    auto* pos = table->Pool().AllocateContinue(resSize, reinterpret_cast<const uint8_t*&>(key.data));
+                    *pos = rowDataSize;
+                    memcpy(pos + sizeof(uint8_t), reinterpret_cast<char*>(row) + offset, rowDataSize);
+                    key.size += resSize;
+                }
+            }
+
+            // Ensure space for the key size trailer
+            table->Pool().AllocateContinue(sizeof(size_t), reinterpret_cast<const uint8_t*&>(key.data));
+
+            // Store key size trailer
+            *reinterpret_cast<size_t*>(const_cast<char*>(key.data) + key.size) = key.size;
+
+            // Adjust value pointer to AggState offset
+            uint8_t* valuePtr = reinterpret_cast<uint8_t*>(row) + aggRows->AggStateOffset();
+
+            func(key, tblVisitor.CurKey(), valuePtr, idx);
+            tblVisitor.Next();
+            idx++;
+        }
+        tblVisitor.SavePos([&](auto ptr, auto tagPos) {
+            outputState.rowBegin = reinterpret_cast<char*>(ptr);
+            outputState.rowOffset = tagPos;
+            outputState.hasBeenOutputNum += rowsNum;
+        });
     }
 
     template <DataTypeId id>
-    void hash(BaseVector *vector, int32_t rowsNum, std::vector<int64_t> &workingHashVals, bool isMix)
+    void Hash(BaseVector *vector, int32_t rowsNum, std::vector<int64_t> &workingHashVals, bool isMix)
     {
         bool isDictEncoded = (vector->GetEncoding() == vec::OMNI_DICTIONARY);
         bool isConstEncoded = (vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
@@ -708,7 +1062,7 @@ public:
         for (int32_t i = 0; i < childCount; i++) {
             auto &childVec = rowVector->ChildAt(i);
             auto childTypeId = childVec->GetTypeId();
-            DYNAMIC_TYPE_DISPATCH(hash, childTypeId, childVec.get(), rowsNum, workingHashVals_, i > 0);
+            DYNAMIC_TYPE_DISPATCH(Hash, childTypeId, childVec.get(), rowsNum, workingHashVals, i > 0);
         }
     }
 
@@ -722,7 +1076,7 @@ public:
             int64_t start = offset;
             int64_t end = offset + size;
             auto elementTypeId = elementVec->GetTypeId();
-            workingHashVals_[i] = DYNAMIC_TYPE_DISPATCH(CalculateArrayHash, elementTypeId, elementVec, start, end);
+            workingHashVals[i] = DYNAMIC_TYPE_DISPATCH(CalculateArrayHash, elementTypeId, elementVec, start, end);
         }
     }
 
@@ -741,7 +1095,7 @@ public:
         return finalHash;
     }
 
-    template <bool withHashVal = false, class Func, class NullFunc>
+    /*template <bool withHashVal = false, class Func, class NullFunc>
     void Extract(int32_t rowsNum, OutputState &outputState, Func func, NullFunc nullFunc)
     {
         auto tblVisitor = [&] {
@@ -770,7 +1124,7 @@ public:
             outputState.rowOffset = tagPos;
             outputState.hasBeenOutputNum += rowsNum;
         });
-    }
+    }*/
 
     void ParseKeyToCols(const type::StringRef &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
         const int32_t rowIdx)
@@ -782,9 +1136,6 @@ public:
             pos = deserializeFunc(curVectorPtr, rowIdx, pos);
         }
     }
-
-    void ParseNull(const char *key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
-        const int rowIdx) {}
 
     void InitSize(int groupBySize)
     {
@@ -847,12 +1198,12 @@ public:
 
     size_t GetElementsSize() const
     {
-        return table->size();
+        return table->Size();
     }
 
     void ResetHashmap()
     {
-        table->clear();
+        table->Clear();
     };
 
 private:
@@ -893,7 +1244,7 @@ public:
         }
     }
 
-    uint8_t*& rowFromData(char* data)
+    uint8_t*& RowFromData(char* data)
     {
         return *reinterpret_cast<uint8_t**>(data);
     }
@@ -904,8 +1255,8 @@ public:
         auto initRow = [&](uint32_t rowIdx, char* data) {
             if (totalAggValueSize > 0) {
                 auto* row = table->Pool().Allocate(totalAggValueSize);
-                rowFromData(data) = reinterpret_cast<uint8_t*>(row);
-                newGroups.push_back(rowFromData(data));
+                RowFromData(data) = reinterpret_cast<uint8_t*>(row);
+                newGroups.push_back(RowFromData(data));
             }
         };
 
@@ -920,13 +1271,13 @@ public:
             InitKeys(groupVectors, rowsNum, groupColNum, groups, newGroups);
         }
 
-        table->emplaceBatch(
+        table->EmplaceBatch(
         keys.data(),
             rowsNum,
         [&](uint32_t idx) { return !isPacked && curVector->IsNull(idx); },
         [&](uint32_t rowIdx, char* data) { initRow(rowIdx, data); },
         [&](uint32_t rowIdx, char* data, bool initFlag) {
-            groups[rowIdx] = rowFromData(data);
+            groups[rowIdx] = RowFromData(data);
         });
     }
 
@@ -973,10 +1324,10 @@ public:
             return;
         }
 
-        table->emplace(
+        table->Emplace(
           key,
           [&](char* data) {
-             rowFromData(data) = value;
+             RowFromData(data) = value;
           },
           [&](char* data, bool) { });
     }
@@ -986,10 +1337,10 @@ public:
     {
         auto tblVisitor = [&] {
             if (outputState.rowBegin) {
-                return table->getResultVisitor(
+                return table->GetResultVisitor(
                     outputState.rowBegin, static_cast<uint16_t>(outputState.rowOffset));
             }
-            return table->getResultVisitor();
+            return table->GetResultVisitor();
         }();
         uint32_t idx = 0;
         if (shouldExtractNull) {
@@ -998,13 +1349,13 @@ public:
             shouldExtractNull = false;
             idx++;
         }
-        while (idx < rowsNum && !tblVisitor.finished()) {
-            auto *row = rowFromData(tblVisitor.curVal().buf);
-            func(tblVisitor.curKey(), row, idx);
-            tblVisitor.next();
+        while (idx < rowsNum && !tblVisitor.Finished()) {
+            auto *row = RowFromData(tblVisitor.CurVal().buf);
+            func(tblVisitor.CurKey(), row, idx);
+            tblVisitor.Next();
             idx++;
         }
-        tblVisitor.savePos([&](auto ptr, auto tagPos) {
+        tblVisitor.SavePos([&](auto ptr, auto tagPos) {
             outputState.rowBegin = reinterpret_cast<char*>(ptr);
             outputState.rowOffset = tagPos;
             outputState.hasBeenOutputNum += rowsNum;
@@ -1044,12 +1395,12 @@ public:
 
     size_t GetElementsSize() const
     {
-        return table->size() + (shouldExtractNull ? 1 : 0);
+        return table->Size() + (shouldExtractNull ? 1 : 0);
     }
 
     void ResetHashmap()
     {
-        table->clear();
+        table->Clear();
         nullValue.clear();
     }
     private:
