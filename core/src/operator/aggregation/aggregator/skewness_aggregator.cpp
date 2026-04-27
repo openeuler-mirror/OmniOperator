@@ -163,7 +163,7 @@ namespace omniruntime {
             auto *pSkewnessState = SkewnessState::CastState(state);
             auto &centralMomentState = pSkewnessState->centralMomentState;
             if (this->inputRaw) {
-                auto *valuePtr = reinterpret_cast<Value *>(GetValuesFromVector<IN>(vector));
+                auto *valuePtr = reinterpret_cast<Value *>(VectorHelper::GetFlatValuePtr<IN>(vector));
                 valuePtr += rowOffset;
                 if (nullMap == nullptr) {
                     AddCentralMoment<MomentValue, Value, AggValueState, UpdateCentralMomentOp<MomentValue, Value> >(
@@ -185,10 +185,10 @@ namespace omniruntime {
                 auto *m2Vector = this->curVectorBatch->Get(this->channels[2]);
                 auto *m3Vector = this->curVectorBatch->Get(this->channels[3]);
 
-                auto *countPtr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(countVector));
-                auto *m1Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m1Vector));
-                auto *m2Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m2Vector));
-                auto *m3Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m3Vector));
+                auto *countPtr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(countVector));
+                auto *m1Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m1Vector));
+                auto *m2Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m2Vector));
+                auto *m3Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m3Vector));
                 countPtr += rowOffset;
                 m1Ptr += rowOffset;
                 m2Ptr += rowOffset;
@@ -231,7 +231,7 @@ namespace omniruntime {
             std::vector<AggregateState *> &rowStates, BaseVector *vector,
             const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap) {
             if (this->inputRaw) {
-                auto *valuePtr = reinterpret_cast<Value *>(GetValuesFromVector<IN>(vector));
+                auto *valuePtr = reinterpret_cast<Value *>(VectorHelper::GetFlatValuePtr<IN>(vector));
                 valuePtr += rowOffset;
                 if (nullMap == nullptr) {
                     AddCentralMomentUseRowIndex<Value, SkewnessState::template UpdateState<Value> >(rowStates,
@@ -249,10 +249,10 @@ namespace omniruntime {
                 auto *m3Vector = this->curVectorBatch->Get(this->channels[3]);
 
 
-                auto *countPtr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(countVector));
-                auto *m1Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m1Vector));
-                auto *m2Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m2Vector));
-                auto *m3Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m3Vector));
+                auto *countPtr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(countVector));
+                auto *m1Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m1Vector));
+                auto *m2Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m2Vector));
+                auto *m3Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m3Vector));
                 countPtr += rowOffset;
                 m1Ptr += rowOffset;
                 m2Ptr += rowOffset;
@@ -330,17 +330,11 @@ namespace omniruntime {
                 throw std::runtime_error(
                     "Error in SkewnessAggregator ProcessAlignAggSchema: Skip partial only supported for raw input");
             }
-            if (originVector->GetEncoding() == OMNI_DICTIONARY) {
-                ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<Value>>>(result, originVector, nullMap);
-            } else {
-                ProcessAlignAggSchemaInternal<Vector<Value>>(result, originVector, nullMap);
-            }
+            ProcessAlignAggSchemaInternal(result, originVector, nullMap);
         }
 
         template<DataTypeId IN, DataTypeId OUT>
-        template<typename T>
-        void
-        SkewnessAggregator<IN, OUT>::ProcessAlignAggSchemaInternal(
+        void SkewnessAggregator<IN, OUT>::ProcessAlignAggSchemaInternal(
             VectorBatch *result, BaseVector *originVector,
             const std::shared_ptr<NullsHelper> nullMap) {
             const int32_t rowCount = originVector->GetSize();
@@ -349,7 +343,7 @@ namespace omniruntime {
             auto *m2Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
             auto *m3Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
 
-            auto *vector = reinterpret_cast<T *>(originVector);
+            auto valuePtr = reinterpret_cast<Value *>(VectorHelper::GetFlatValuePtr<IN>(originVector));
             for (int32_t i = 0; i < rowCount; ++i) {
                 if (nullMap != nullptr && (*nullMap)[i]) {
                     countVector->SetValue(i, 0.0);
@@ -357,16 +351,7 @@ namespace omniruntime {
                     m2Vector->SetValue(i, 0.0);
                     m3Vector->SetValue(i, 0.0);
                 } else {
-                    Value val;
-                    if constexpr (std::is_same_v<T, Vector<Value>>) {
-                        val = vector->GetValue(i);
-                    } else {
-                        auto *dictVector = reinterpret_cast<Vector<DictionaryContainer<Value>> *>(originVector);
-                        Value *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictVector);
-                        const int32_t *ids = unsafe::UnsafeDictionaryVector::GetIds(dictVector);
-                        val = valuePtr[ids[i]];
-                    }
-                    MomentValue m1 = static_cast<MomentValue>(val);
+                    MomentValue m1 = static_cast<MomentValue>(valuePtr[i]);
                     countVector->SetValue(i, 1.0);
                     m1Vector->SetValue(i, m1);
                     m2Vector->SetValue(i, 0.0);

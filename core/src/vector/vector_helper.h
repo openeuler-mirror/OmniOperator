@@ -326,6 +326,36 @@ public:
         }
     }
 
+    // Get the data pointer of the flat vector (including OMNI_FLAT、 OMNI_ENCODING_CONST and OMNI_DICTIONARY)
+    template <type::DataTypeId typeId>
+    static void *GetFlatValuePtr(vec::BaseVector *vector)
+    {
+        using T = typename type::NativeType<typeId>::type;
+        if constexpr (typeId == OMNI_VARBINARY || typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+            if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+                auto *constVector = reinterpret_cast<ConstVector<T> *>(vector);
+                return const_cast<void *>(reinterpret_cast<const void *>(&constVector->GetConstValueRef()));
+            } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                auto *rawVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector);
+                return unsafe::UnsafeDictionaryVector::GetVarCharDictionary(rawVector);
+            } else {
+                auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<T>> *>(vector);
+                return unsafe::UnsafeStringVector::GetValues(rawVector);
+            }
+        } else {
+            if (vector->GetEncoding() == vec::OMNI_ENCODING_CONST) {
+                auto *constVector = reinterpret_cast<ConstVector<T> *>(vector);
+                return const_cast<void *>(reinterpret_cast<const void *>(&constVector->GetConstValueRef()));
+            } else if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                auto *dictVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector);
+                return unsafe::UnsafeDictionaryVector::GetDictionary(dictVector);
+            } else {
+                auto *rawVector = reinterpret_cast<Vector<T> *>(vector);
+                return unsafe::UnsafeVector::GetRawValues<T>(rawVector);
+            }
+        }
+    }
+
     template <type::DataTypeId typeId>
     static void SetFlatValue(vec::BaseVector *vector, int index, typename type::NativeType<typeId>::type value)
     {

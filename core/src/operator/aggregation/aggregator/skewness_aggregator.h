@@ -119,7 +119,6 @@ namespace omniruntime {
             ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
                                  const std::shared_ptr<NullsHelper> nullMap) override;
 
-            template<typename T>
             void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
                                                const std::shared_ptr<NullsHelper> nullMap);
         };
