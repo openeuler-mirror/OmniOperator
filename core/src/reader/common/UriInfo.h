@@ -47,6 +47,7 @@ public:
     /// Get the string representation of this URI.
     const std::string ToString() const;
 
+    static const std::string LOCAL_FILE;
 private:
     std::string hostString;
     std::string schemeString;

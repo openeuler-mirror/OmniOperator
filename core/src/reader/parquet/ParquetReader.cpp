@@ -38,6 +38,8 @@ static constexpr int32_t LOCAL_FILE_PREFIX = 5;
 static constexpr int32_t LOCAL_FILE_PREFIX_EXT = 7;
 static const std::string LOCAL_FILE = "file:";
 static const std::string HDFS_FILE = "hdfs:";
+static const std::string ARROW_LIST_FIELD_SUFFIX = ".list.element";
+static const std::string ARROW_MAP_FIELD_SUFFIX = ".key_value.key";
 
 namespace
 {
@@ -246,34 +248,17 @@ Status ParquetReader::GetRowGroupIndices(dataset::FileSource filesource, int64_t
     return Status::OK();
 }
 
-void BuildColumnIndexMap(const parquet::schema::Node* node,
-                         std::unordered_map<std::string, int>& mapping,
-                         int& current_index) {
-    if (node->is_primitive()) {
-        current_index++;
-    } else {
-        auto group = static_cast<const parquet::schema::GroupNode*>(node);
-        for (int i = 0; i < group->field_count(); i++) {
-            mapping[group->field(i)->name()] = current_index;
-            BuildColumnIndexMap(group->field(i).get(), mapping, current_index);
-        }
-    }
-}
-
 Status ParquetReader::GetColumnIndices(const std::vector<std::string>& fieldNames, std::vector<int> &out)
 {
     auto schema = arrow_reader->parquet_reader()->metadata()->schema();
-    auto group_node = schema->group_node();
 
-    std::unordered_map<std::string, int> field_to_index;
-    int colIdx =0;
-    BuildColumnIndexMap(group_node, field_to_index, colIdx);
     int index = 0;
     for (const auto& fieldName : fieldNames) {
-        auto it = field_to_index.find(fieldName);
-        if (it != field_to_index.end()) {
-            out.push_back(it->second);
-        } else if ((index = schema->ColumnIndex(fieldName)) != -1) {
+        if ((index = schema->ColumnIndex(fieldName)) != -1) {
+            out.push_back(index);
+        } else if ((index = schema->ColumnIndex(fieldName + ARROW_LIST_FIELD_SUFFIX)) != -1) {
+            out.push_back(index);
+        } else if ((index = schema->ColumnIndex(fieldName + ARROW_MAP_FIELD_SUFFIX)) != -1) {
             out.push_back(index);
         } else {
             return Status::Invalid("Field not found in schema: " + fieldName);

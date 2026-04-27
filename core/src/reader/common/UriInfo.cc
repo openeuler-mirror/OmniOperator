@@ -21,7 +21,7 @@
 
 #include "UriInfo.h"
 
-static const std::string LOCAL_FILE = "file";
+const std::string UriInfo::LOCAL_FILE = "file";
 
 UriInfo::UriInfo(std::string _uri, std::string _scheme, std::string _path, std::string _host,
                  std::string _port) : hostString(std::move(_host)),
@@ -31,7 +31,7 @@ UriInfo::UriInfo(std::string _uri, std::string _scheme, std::string _path, std::
                                       uriString(std::move(_uri))
 {
     // when local file, transfer to absolute path
-    if (schemeString == LOCAL_FILE) {
+    if (schemeString == UriInfo::LOCAL_FILE) {
         uriString = pathString;
     }
 }
