@@ -158,7 +158,7 @@
 **新增特性<a name="section9559165534817"></a>**
 
 - 新增InsertIntoHadoopFsRelationCommand支持插入HDFS、WriteFile支持ORC写入、Window支持Array数据分段、FileSourceScanExec支持Array数据读取、LocalLimitExec支持Array数据截取。
-- 新增支持datediff、pmod、charTypeWriteSideCheck、least、concat_ws、get_json_object表达式
+- 新增支持datediff、pmod、charTypeWriteSideCheck、least、concat_ws、get_json_object表达式。
 
 **修改特性<a name="section299616132492"></a>**
 
@@ -545,10 +545,10 @@
 
 |文档名称|内容简介|交付形式|
 |--|--|--|
-|《OmniOperator 2.1.0 版本说明书》|提供OmniOperator的版本发布信息。|开源仓|
-|《OmniOperator 安装指南》|提供OmniOperator的安装部署指导。|开源仓|
-|《OmniOperator 使用指南》|提供OmniOperator的使用操作指导。|开源仓|
-|《OmniOperator 常见问题》|记录安装、部署和使用过程中可能遇到的问题及其解决方法。|开源仓|
+|2.1.0 版本说明书|提供OmniOperator的版本发布信息。|开源仓|
+|安装指南|提供OmniOperator的安装部署指导。|开源仓|
+|使用指南|提供OmniOperator的使用操作指导。|开源仓|
+|常见问题|记录安装、部署和使用OmniOperator过程中可能遇到的问题及其解决方法。|开源仓|
 
 
 

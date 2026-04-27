@@ -1,11 +1,5 @@
 # 用户指南<a name="ZH-CN_TOPIC_0000002547462879"></a>
 
-## 修订记录<a name="修订记录"></a>
-
-发布OmniOperator 2.1.0：
-- 新增InsertIntoHadoopFsRelationCommand支持插入HDFS、WriteFile支持ORC写入、Window支持Array数据分段、FileSourceScanExec支持Array数据读取、LocalLimitExec支持Array数据截取。
-- 新增支持datediff、pmod、charTypeWriteSideCheck、least、concat_ws、get_json_object表达式。
-
 ## 使用特性<a name="ZH-CN_TOPIC_0000002515743064"></a>
 
 ### 在Spark引擎上的应用<a name="ZH-CN_TOPIC_0000002547382891"></a>
@@ -18,7 +12,7 @@
 
 如果使用的是Spark 3.3.1、Spark 3.4.3，建议优先选择通过Gluten框架启用OmniOperator；如果使用的是Spark其他版本，则可以选择通过用SparkExtension框架启用OmniOperator。
 
-如果选择通过用SparkExtension框架启用OmniOperator，需要用户安装对应的Spark以及与之匹配的SparkExtension，Spark的安装要求见[`installation_guide.md`](installation_guide.md)。本小节将介绍SparkExtension的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Spark引擎中。
+如果选择通过用SparkExtension框架启用OmniOperator，需要用户安装对应的Spark以及与之匹配的SparkExtension，Spark的安装要求见《[安装指南](installation_guide.md)》。本小节将介绍SparkExtension的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Spark引擎中。
 
 ##### 算子和表达式支持情况<a name="ZH-CN_TOPIC_0000002515902958"></a>
 
@@ -36,7 +30,7 @@
 |状态| 说明                                                               |
 |--|------------------------------------------------------------------|
 |S| 表示支持该算子或表达式。                                                     |
-|PS| 表示部分支持该算子或表达式，但存在一些限定条件。具体的限定条件请参见[README.md](https://gitcode.com/openeuler/OmniOperator/blob/master/README.md)中的约束与限制。 |
+|PS| 表示部分支持该算子或表达式，但存在一些限定条件。具体的限定条件请参见[项目介绍](../../README.md)中的约束与限制。 |
 |NS| 表示不支持该算子或表达式。                                                    |
 |NA| 表示不涉及该算子或表达式。开源版本Spark也没有此输入场景。                                  |
 |NA-2| 表示基于开源版本Spark实现的上下文函数，不涉及OmniOperator算子加速。                       |
@@ -216,7 +210,7 @@ OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计
 
 用户根据需求安装与Spark版本相对应的SparkExtension，例如Spark 3.1.1对应SparkExtension 3.1.1。可通过**spark-shell --version**命令查询Spark版本。
 
-OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加速运行时所依赖的库文件详情如[安装指南](installation_guide.md)中表3所示。
+OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加速运行时所依赖的库文件详情如《[安装指南](installation_guide.md)》中表3所示。
 
 >![](public_sys-resources/icon-note.gif) **说明：** 
 >-   boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip中包含boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip（NEON实现）和boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip（sve实现）两个包， 依据机型是否支持NEON、SVE指令进行选择。下文以boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip（NEON实现）为例进行说明。如需在支持SVE指令的服务器上安装SVE实现的依赖包，将下文的boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip换成boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip即可。
@@ -224,17 +218,17 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
 **安装SparkExtension 3.1.1<a name="section3748143825311"></a>**
 
-1. 安装Spark引擎。请参见[安装指南](installation_guide.md)中《操作系统和软件要求》。
+1. 安装Spark引擎。请参见《[安装指南](installation_guide.md)》中的`操作系统和软件要求`。
 2. 下载SparkExtension插件包并解压。
 
-    从[安装指南](installation_guide.md)的《软件安装包获取》下载得到boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip，并上传至管理节点的“/opt/omni-operator/“目录下。
+    从《[安装指南](installation_guide.md)》中的`软件安装包获取`下载得到boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的SparkExtension依赖。
 
     >![](public_sys-resources/icon-note.gif) **说明：** 
-    >如果已经安装其他版本的SparkExtension则可跳过此步骤。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为“/opt/omni-operator”。
+    >如果已经安装其他版本的SparkExtension则可跳过此步骤。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
 
-    1. 【可选】配置Yum源。以openEuler 22.03 LTS SP1为例：
+    1. **可选:**配置Yum源。以openEuler 22.03 LTS SP1为例：
 
         ```
         dnf config-manager --add-repo https://repo.oepkgs.net/openeuler/rpm/openEuler-22.03-LTS-SP1/extras/aarch64/
@@ -247,18 +241,18 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         ```
 
 4. 配置SparkExtension。
-    1. 在管理节点创建“/opt/omni-operator/“目录作为安装OmniOperator算子加速的根目录，进入该目录。
+    1. 在管理节点创建`/opt/omni-operator/`目录作为安装OmniOperator算子加速的根目录，进入该目录。
 
         ```
         mkdir /opt/omni-operator
         cd /opt/omni-operator
         ```
 
-    2. 从[安装指南](installation_guide.md)的《软件安装包获取》中获取`Dependency_library_openeuler22.03.zip`，并上传到“/opt/omni-operator“目录下，再将适用于对应操作系统的内容解压并拷贝到“/opt/omni-operator/lib“目录下。
+    2. 从《[安装指南](installation_guide.md)》的`软件安装包获取`中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的内容解压并拷贝到`/opt/omni-operator/lib`目录下。
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
-        >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为“/opt/omni-operator”。
-        >-   如果在安装指南的《安装依赖》中已拷贝libLLVM-15.so、libjemalloc.so.2两个so文件到“/opt/omni-operator/lib“目录下，则本步骤无需重复拷贝。
+        >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
+        >-   如果在安装指南的《安装依赖》中已拷贝libLLVM-15.so、libjemalloc.so.2两个so文件到`/opt/omni-operator/lib`目录下，则本步骤无需重复拷贝。
 
         ```
         unzip Dependency_library_openeuler22.03.zip
@@ -269,9 +263,9 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
         解压boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip，得到boostkit-omniop-spark-3.1.1-2.0.0-aarch64.jar和dependencies.tar.gz。
 
-        将boostkit-omniop-spark-3.1.1-2.0.0-aarch64.jar移动到“/opt/omni-operator/lib“目录下。
+        将boostkit-omniop-spark-3.1.1-2.0.0-aarch64.jar移动到`/opt/omni-operator/lib`目录下。
 
-        将dependencies.tar.gz解压到“/opt/omni-operator/lib“目录下。
+        将dependencies.tar.gz解压到`/opt/omni-operator/lib`目录下。
 
         ```
         cd /opt/omni-operator
@@ -291,7 +285,7 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
 
-5. 在管理节点的“\~/.bashrc“文件中添加如下环境变量。
+5. 在管理节点的`\~/.bashrc`文件中添加如下环境变量。
 
     ```
     echo "export OMNI_HOME=/opt/omni-operator" >> ~/.bashrc
@@ -300,17 +294,17 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
 **安装SparkExtension 3.3.1<a name="section168801148145411"></a>**
 
-1. 安装Spark引擎。具体请参见[安装指南](installation_guide.md)中《操作系统和软件要求》。
+1. 安装Spark引擎。具体请参见《[安装指南](installation_guide.md)》中的`操作系统和软件要求`。
 2. 下载SparkExtension插件包并解压。
 
-    从[安装指南](installation_guide.md)中《软件安装包获取》下载得到boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip，并上传至管理节点的“/opt/omni-operator/“目录下。
+    从《[安装指南](installation_guide.md)》中的`软件安装包获取`下载得到boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的SparkExtension依赖。
 
     >![](public_sys-resources/icon-note.gif) **说明：** 
-    >如果已经安装其他版本的SparkExtension则可跳过此步骤。查看“$OMNI_HOME“目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为“/opt/omni-operator”。
+    >如果已经安装其他版本的SparkExtension则可跳过此步骤。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
 
-    1. 【可选】配置Yum源。以openEuler 22.03 LTS SP1为例：
+    1. **可选:**配置Yum源。以openEuler 22.03 LTS SP1为例：
 
         ```
         dnf config-manager --add-repo https://repo.oepkgs.net/openeuler/rpm/openEuler-22.03-LTS-SP1/extras/aarch64/
@@ -323,18 +317,18 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         ```
 
 4. 配置SparkExtension。
-    1. 在管理节点创建“/opt/omni-operator/“目录作为安装OmniOperator算子加速的根目录，进入该目录。
+    1. 在管理节点创建`/opt/omni-operator/`目录作为安装OmniOperator算子加速的根目录，进入该目录。
 
         ```
         mkdir /opt/omni-operator
         cd /opt/omni-operator
         ```
 
-    2. 从[安装指南](installation_guide.md)的《软件安装包获取》中获取`Dependency_library_openeuler22.03.zip`，并上传到“/opt/omni-operator“目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到“/opt/omni-operator/lib“目录下。
+    2. 从《[安装指南](installation_guide.md)》的`软件安装包获取`中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
-        >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为“/opt/omni-operator”。
-        >-   如果在安装指南的《安装依赖》中已拷贝libLLVM-15.so、libjemalloc.so.2两个so文件到“/opt/omni-operator/lib“目录下，则本步骤无需重复拷贝。
+        >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
+        >-   如果在《[安装指南](installation_guide.md)》`安装依赖`中已拷贝libLLVM-15.so、libjemalloc.so.2两个so文件到`/opt/omni-operator/lib`目录下，则本步骤无需重复拷贝。
 
         ```
         unzip Dependency_library_openeuler22.03.zip
@@ -345,9 +339,9 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
         解压boostkit-omniop-spark-3.3.1-2.0.0-aarch64-openeuler.zip，得到boostkit-omniop-spark-3.3.1-2.0.0-aarch64.jar和dependencies.tar.gz。
 
-        将boostkit-omniop-spark-3.3.1-2.0.0-aarch64.jar移动到“/opt/omni-operator/lib“目录下。
+        将boostkit-omniop-spark-3.3.1-2.0.0-aarch64.jar移动到`/opt/omni-operator/lib`目录下。
 
-        将dependencies.tar.gz解压到“/opt/omni-operator/lib“目录下。
+        将dependencies.tar.gz解压到`/opt/omni-operator/lib`目录下。
 
         ```
         cd /opt/omni-operator
@@ -367,7 +361,7 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
 
-5. 在管理节点的“\~/.bashrc“文件中添加如下环境变量。
+5. 在管理节点的`\~/.bashrc`文件中添加如下环境变量。
 
     ```
     echo "export OMNI_HOME=/opt/omni-operator" >> ~/.bashrc
@@ -376,17 +370,17 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
 **安装SparkExtension 3.4.3<a name="section1522624995214"></a>**
 
-1. 安装Spark引擎。具体请参见[安装指南](installation_guide.md)中《操作系统和软件要求》。
+1. 安装Spark引擎。具体请《[安装指南](installation_guide.md)》中的`操作系统和软件要求`。
 2. 下载SparkExtension插件包并解压。
 
-    从[安装指南](installation_guide.md)的《软件安装包获取》下载得到boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip，并上传至管理节点的“/opt/omni-operator/“目录下。
+    从《[安装指南](installation_guide.md)》中的`软件安装包获取`下载得到boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的SparkExtension依赖。
 
     >![](public_sys-resources/icon-note.gif) **说明：** 
-    >如果已经安装其他版本的SparkExtension则可跳过此步骤。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为“/opt/omni-operator”。
+    >如果已经安装其他版本的SparkExtension则可跳过此步骤。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
 
-    1. 【可选】配置Yum源。以openEuler 22.03 LTS SP1为例：
+    1. **可选:**配置Yum源。以openEuler 22.03 LTS SP1为例：
 
         ```
         dnf config-manager --add-repo https://repo.oepkgs.net/openeuler/rpm/openEuler-22.03-LTS-SP1/extras/aarch64/
@@ -399,18 +393,18 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         ```
 
 4. 配置SparkExtension。
-    1. 在管理节点创建“/opt/omni-operator/“目录作为安装OmniOperator算子加速的根目录，进入该目录。
+    1. 在管理节点创建`/opt/omni-operator/`目录作为安装OmniOperator算子加速的根目录，进入该目录。
 
         ```
         mkdir /opt/omni-operator
         cd /opt/omni-operator
         ```
 
-    2. 从[安装指南](installation_guide.md)的《软件安装包获取》中获取`Dependency_library_openeuler22.03.zip`，并上传到“/opt/omni-operator”目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到“/opt/omni-operator/lib“目录下。
+    2. 从《[安装指南](installation_guide.md)》中的`软件安装包获取`中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
-        >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为“/opt/omni-operator”。
-        >-   如果在安装指南的《安装依赖》中已拷贝libLLVM-15.so、libjemalloc.so.2两个so文件到“/opt/omni-operator/lib“目录下，则本步骤无需重复拷贝。
+        >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
+        >-   如果在安装指南的《安装依赖》中已拷贝libLLVM-15.so、libjemalloc.so.2两个so文件到`/opt/omni-operator/lib`目录下，则本步骤无需重复拷贝。
 
         ```
         unzip Dependency_library_openeuler22.03.zip
@@ -421,9 +415,9 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
         解压boostkit-omniop-spark-3.4.3-2.0.0-aarch64-openeuler.zip，得到boostkit-omniop-spark-3.4.3-2.0.0-aarch64.jar和dependencies.tar.gz。
 
-        将boostkit-omniop-spark-3.4.3-2.0.0-aarch64.jar移动到“/opt/omni-operator/lib“目录下。
+        将boostkit-omniop-spark-3.4.3-2.0.0-aarch64.jar移动到`/opt/omni-operator/lib`目录下。
 
-        将dependencies.tar.gz解压到“/opt/omni-operator/lib“目录下。
+        将dependencies.tar.gz解压到`/opt/omni-operator/lib`目录下。
 
         ```
         cd /opt/omni-operator
@@ -443,7 +437,7 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
 
-5. 在管理节点的“\~/.bashrc“文件中添加如下环境变量。
+5. 在管理节点的`\~/.bashrc`文件中添加如下环境变量。
 
     ```
     echo "export OMNI_HOME=/opt/omni-operator" >> ~/.bashrc
@@ -452,17 +446,17 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
 **安装SparkExtension 3.5.2<a name="section18509455195219"></a>**
 
-1. 安装Spark引擎。具体请参见[安装指南](installation_guide.md)中《操作系统和软件要求》。
+1. 安装Spark引擎。具体请参见《[安装指南](installation_guide.md)》中的`操作系统和软件要求`。
 2. 下载SparkExtension插件包并解压。
 
-    从[安装指南](installation_guide.md)中《软件安装包获取》下载得到boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip，并上传至管理节点的“/opt/omni-operator/“目录下。
+    从《[安装指南](installation_guide.md)》中的`软件安装包获取`下载得到boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的SparkExtension依赖。
 
     >![](public_sys-resources/icon-note.gif) **说明：** 
-    >如果已经安装其他版本的SparkExtension则可跳过此步骤。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为“/opt/omni-operator”。
+    >如果已经安装其他版本的SparkExtension则可跳过此步骤。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
 
-    1. 【可选】配置Yum源。以openEuler 22.03 LTS SP1为例：
+    1. **可选:**配置Yum源。以openEuler 22.03 LTS SP1为例：
 
         ```
         dnf config-manager --add-repo https://repo.oepkgs.net/openeuler/rpm/openEuler-22.03-LTS-SP1/extras/aarch64/
@@ -475,18 +469,18 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         ```
 
 4. 配置SparkExtension。
-    1. 在管理节点创建“/opt/omni-operator/“目录作为安装OmniOperator算子加速的根目录，进入该目录。
+    1. 在管理节点创建`/opt/omni-operator/`目录作为安装OmniOperator算子加速的根目录，进入该目录。
 
         ```
         mkdir /opt/omni-operator
         cd /opt/omni-operator
         ```
 
-    2. 从[安装指南](installation_guide.md)的《软件安装包获取》中获取`Dependency_library_openeuler22.03.zip`，并上传到“/opt/omni-operator“目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到“/opt/omni-operator/lib“目录下。
+    2. 从《[安装指南](installation_guide.md)》中的`软件安装包获取`中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
-        >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为“/opt/omni-operator”。
-        >-   如果在安装指南的《安装依赖》中已拷贝libLLVM-15.so、libjemalloc.so.2两个so文件到“/opt/omni-operator/lib“目录下，则本步骤无需重复拷贝。
+        >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
+        >-   如果在安装指南的《安装依赖》中已拷贝libLLVM-15.so、libjemalloc.so.2两个so文件到`/opt/omni-operator/lib`目录下，则本步骤无需重复拷贝。
 
         ```
         unzip Dependency_library_openeuler22.03.zip
@@ -497,9 +491,9 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
         然后解压boostkit-omniop-spark-3.5.2-2.0.0-aarch64-openeuler.zip，得到boostkit-omniop-spark-3.5.2-2.0.0-aarch64.jar和dependencies.tar.gz。
 
-        最后将boostkit-omniop-spark-3.5.2-2.0.0-aarch64.jar移动到“/opt/omni-operator/lib“目录下，
+        最后将boostkit-omniop-spark-3.5.2-2.0.0-aarch64.jar移动到`/opt/omni-operator/lib`目录下，
 
-        将dependencies.tar.gz解压到“/opt/omni-operator/lib“目录下。
+        将dependencies.tar.gz解压到`/opt/omni-operator/lib`目录下。
 
         ```
         cd /opt/omni-operator
@@ -519,7 +513,7 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
 
-5. 在管理节点的“\~/.bashrc“文件中添加如下环境变量。
+5. 在管理节点的`\~/.bashrc`文件中添加如下环境变量。
 
     ```
     echo "export OMNI_HOME=/opt/omni-operator" >> ~/.bashrc
@@ -530,14 +524,14 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
 安装完Spark引擎后，还需在OmniOperator算子加速的配置文件中添加相应的Spark参数，才能正常执行业务。
 
-1. 在“/opt/omni-operator/conf/omni.conf“文件中新增Spark配置内容。
+1. 在`/opt/omni-operator/conf/omni.conf`文件中新增Spark配置内容。
     1. 打开文件。
 
         ```
         vi /opt/omni-operator/conf/omni.conf
         ```
 
-    2. 按“i“进入编辑模式，新增关于Spark配置相关内容（推荐配置）。
+    2. 按`i`进入编辑模式，新增关于Spark配置相关内容（推荐配置）。
 
         ```
         # <----Spark---->
@@ -570,17 +564,17 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         enableBatchExprEvaluate=false
         ```
 
-    3. 按“Esc“键，输入**:wq!**，按“Enter“保存并退出编辑。
+    3. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
 
 2. 将OmniOperator安装目录打包并上传至HDFS，以便多个节点可以同时访问和处理该文件。
-    1. 将管理节点上的“/opt/omni-operator“文件夹打包为**omni-operator.tar.gz**，文件名和路径可根据实际需求自行定义。
+    1. 将管理节点上的`/opt/omni-operator`文件夹打包为**omni-operator.tar.gz**，文件名和路径可根据实际需求自行定义。
 
         ```
         cd /opt
         tar -czvf /opt/omni-operator.tar.gz -C /opt omni-operator
         ```
 
-    2. 将打包好的安装包**omni-operator.tar.gz**上传到HDFS上的规划账号下。以下示例使用root账号，实际使用中可替换为其他规划账号，路径“/user/root“也可根据实际情况修改。
+    2. 将打包好的安装包**omni-operator.tar.gz**上传到HDFS上的规划账号下。以下示例使用root账号，实际使用中可替换为其他规划账号，路径`/user/root`也可根据实际情况修改。
 
         ```
         hdfs dfs -rm -r /user/root/omni-operator.tar.gz
@@ -617,7 +611,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
         ```
 
     - SparkExtension 3.1.1插件启动步骤如下。
-        1. 进入“/usr/local/spark/conf“目录创建spark-defaults-omnioperator.conf文件。
+        1. 进入`/usr/local/spark/conf`目录创建spark-defaults-omnioperator.conf文件。
 
             ```
             cd /usr/local/spark/conf
@@ -630,13 +624,13 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             chmod 640 spark-defaults-omnioperator.conf
             ```
 
-        3. 打开“spark-defaults-omnioperator.conf“文件。
+        3. 打开`spark-defaults-omnioperator.conf`文件。
 
             ```
             vi spark-defaults-omnioperator.conf
             ```
 
-        4. 按“i“进入编辑模式，在文件末尾追加以下参数。
+        4. 按`i`进入编辑模式，在文件末尾追加以下参数。
 
             ```
             spark.sql.optimizer.runtime.bloomFilter.enabled true
@@ -665,7 +659,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             spark.sql.join.columnar.preferShuffledHashJoin true
             ```
 
-        5. 按“Esc“键，输入:**wq!**，按“Enter“保存并退出编辑。
+        5. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
         6. 执行启动命令。
 
             ```
@@ -673,7 +667,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             ```
 
     - SparkExtension 3.3.1插件启动步骤如下。
-        1. 在“/usr/local/spark/conf“目录创建spark-defaults-omnioperator.conf文件。
+        1. 在`/usr/local/spark/conf`目录创建spark-defaults-omnioperator.conf文件。
 
             ```
             cd /usr/local/spark/conf
@@ -686,13 +680,13 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             chmod 640 spark-defaults-omnioperator.conf
             ```
 
-        3. 打开“spark-defaults-omnioperator.conf“文件。
+        3. 打开`spark-defaults-omnioperator.conf`文件。
 
             ```
             vi spark-defaults-omnioperator.conf
             ```
 
-        4. 按“i“进入编辑模式，在文件末尾追加以下参数。
+        4. 按`i`进入编辑模式，在文件末尾追加以下参数。
 
             ```
             spark.sql.optimizer.runtime.bloomFilter.enabled true
@@ -721,7 +715,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             spark.sql.join.columnar.preferShuffledHashJoin true
             ```
 
-        5. 按“Esc“键，输入:**wq!**，按“Enter“保存并退出编辑。
+        5. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
         6. 执行启动命令。
 
             ```
@@ -729,7 +723,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             ```
 
     - SparkExtension 3.4.3插件启动步骤如下。
-        1. 在“/usr/local/spark/conf“目录创建spark-defaults-omnioperator.conf文件。
+        1. 在`/usr/local/spark/conf`目录创建spark-defaults-omnioperator.conf文件。
 
             ```
             cd /usr/local/spark/conf
@@ -742,13 +736,13 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             chmod 640 spark-defaults-omnioperator.conf
             ```
 
-        3. 打开“spark-defaults-omnioperator.conf“文件。
+        3. 打开`spark-defaults-omnioperator.conf`文件。
 
             ```
             vi spark-defaults-omnioperator.conf
             ```
 
-        4. 按“i“进入编辑模式，在文件末尾追加以下参数。
+        4. 按`i`进入编辑模式，在文件末尾追加以下参数。
 
             ```
             spark.sql.optimizer.runtime.bloomFilter.enabled true 
@@ -777,7 +771,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             spark.sql.join.columnar.preferShuffledHashJoin true
             ```
 
-        5. 按“Esc“键，输入:**wq!**，按“Enter“保存并退出编辑。
+        5. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
         6. 执行启动命令。
 
             ```
@@ -786,7 +780,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
 
     - SparkExtension 3.5.2插件启动步骤如下。
 
-        1. 在“/usr/local/spark/conf“目录创建spark-defaults-omnioperator.conf文件。
+        1. 在`/usr/local/spark/conf`目录创建spark-defaults-omnioperator.conf文件。
 
             ```
             cd /usr/local/spark/conf
@@ -799,13 +793,13 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             chmod 640 spark-defaults-omnioperator.conf
             ```
 
-        3. 打开“spark-defaults-omnioperator.conf“文件。
+        3. 打开`spark-defaults-omnioperator.conf`文件。
 
             ```
             vi spark-defaults-omnioperator.conf
             ```
 
-        4. 按“i“进入编辑模式，在文件末尾追加以下参数。
+        4. 按`i`进入编辑模式，在文件末尾追加以下参数。
 
             ```
             spark.sql.optimizer.runtime.bloomFilter.enabled true
@@ -834,7 +828,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             spark.sql.join.columnar.preferShuffledHashJoin true
             ```
 
-        5. 按“Esc“键，输入:**wq!**，按“Enter“保存并退出编辑。
+        5. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
         6. 执行启动命令。
 
             ```
@@ -842,8 +836,8 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             ```
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
-        >-   hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni：依据用户Hadoop的core-site.xml中配置的fs.defaultFS实际值设置“hdfs://server1:9000”。“/user/root/omni-operator.tar.gz”用户可自行定义，与[2](#config-spark)的操作关联。“\#omni”表示实际运行时omni-operator.tar.gz解压的目录，用户可自行定义。
-        >-   上述启动命令为Yarn模式使用，若使用local模式启动SparkExtension插件，需将**--master yarn**改为**--master local**，同时在启动前需在所有节点的“\~/.bashrc“文件中添加`export LD_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2`并更新环境变量。启动命令中“$\{PWD\}/omni”全部替换为“/opt”。
+        >-   hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni：依据用户Hadoop的core-site.xml中配置的fs.defaultFS实际值设置`hdfs://server1:9000`。`/user/root/omni-operator.tar.gz`用户可自行定义，与[2](#config-spark)的操作关联。`\#omni`表示实际运行时omni-operator.tar.gz解压的目录，用户可自行定义。
+        >-   上述启动命令为Yarn模式使用，若使用local模式启动SparkExtension插件，需将`--master yarn`改为`--master local`，同时在启动前需在所有节点的`\~/.bashrc`文件中添加`export LD_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2`并更新环境变量。启动命令中`$\{PWD\}/omni`全部替换为`/opt`。
 
     SparkExtension相关的启动参数信息如[**表 2** SparkExtension相关启动参数信息](#SparkExtension相关启动参数信息)所示。
 
@@ -1001,7 +995,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
 
 如果使用的是Spark 3.3.1、Spark 3.4.3，建议优先选择通过Gluten框架启用OmniOperator；如果使用的是Spark其他版本，则可以选择通过用SparkExtension框架启用OmniOperator。
 
-如果选择通过Gluten框架启用OmniOperator，需要用户安装Spark和配套的Gluten依赖包，Spark的安装要求请参见[安装指南](installation_guide.md)的《操作系统和软件要求》。小节将介绍Gluten的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Spark引擎中。
+如果选择通过Gluten框架启用OmniOperator，需要用户安装Spark和配套的Gluten依赖包，Spark的安装要求请参见《[安装指南](installation_guide.md)》的`操作系统和软件要求`。小节将介绍Gluten的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Spark引擎中。
 
 ##### 算子和表达式支持情况<a name="ZH-CN_TOPIC_0000002547462867"></a>
 
@@ -1076,7 +1070,7 @@ Spark引擎使用OmniOperator算子加速特性支持的算子情况如[**表 2*
 
 OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计算节点安装Spark引擎，并配置openEuler操作系统的Gluten依赖。
 
-1. 安装Spark引擎。请参见[安装指南](installation_guide.md)的《操作系统和软件要求》。
+1. 安装Spark引擎。请参见《[安装指南](installation_guide.md)》的`操作系统和软件要求`。
 
     >![](public_sys-resources/icon-notice.gif) **须知：** 
     >当前Gluten只支持Spark 3.3.1、Spark 3.4.3。可以通过**spark-shell --version**命令确认当前Spark版本。
@@ -1089,7 +1083,7 @@ OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计
 
 2. 下载Gluten插件包并解压。
 
-    从[安装指南](installation_guide.md)的《软件安装包获取》获取`Boostkit-omniruntime-gluten-2.0.0.zip`和`Dependency_library_Gluten.zip`，并上传至管理节点的“/opt/omni-operator/”目录下。
+    从《[安装指南](installation_guide.md)》的`软件安装包获取`获取`Boostkit-omniruntime-gluten-2.0.0.zip`和`Dependency_library_Gluten.zip`，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的Gluten依赖。
     1. 配置本地Yum源。以openEuler 22.03 LTS SP1为例：
@@ -1105,7 +1099,7 @@ OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计
         ```
 
 4. 配置Gluten。
-    1. 将`Boostkit-omniruntime-gluten-2.0.0.zip`和`Dependency_library_Gluten.zip`解压到“/opt/omni-operator/lib”。
+    1. 将`Boostkit-omniruntime-gluten-2.0.0.zip`和`Dependency_library_Gluten.zip`解压到`/opt/omni-operator/lib`。
 
         ```
         cd /opt/omni-operator
@@ -1127,7 +1121,7 @@ OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
 
-5. 在管理节点的“\~/.bashrc“文件中添加如下环境变量。
+5. 在管理节点的`\~/.bashrc`文件中添加如下环境变量。
 
     ```
     echo "export OMNI_HOME=/opt/omni-operator" >> ~/.bashrc
@@ -1139,14 +1133,14 @@ OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计
 
 安装完Spark引擎后，还需在OmniOperator算子加速特性的配置文件中添加相应的Spark配置，才能正常执行业务。
 
-1. 在“/opt/omni-operator/conf/omni.conf“文件中新增Spark配置内容。
-    1. 打开“/opt/omni-operator/conf/omni.conf“文件。
+1. 在`/opt/omni-operator/conf/omni.conf`文件中新增Spark配置内容。
+    1. 打开`/opt/omni-operator/conf/omni.conf`文件。
 
         ```
         vi /opt/omni-operator/conf/omni.conf
         ```
 
-    2. 按“i“进入编辑模式，新增关于Spark配置相关内容（推荐配置）。
+    2. 按`i`进入编辑模式，新增关于Spark配置相关内容（推荐配置）。
 
         ```
         # <----Spark---->
@@ -1179,17 +1173,17 @@ OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计
         enableBatchExprEvaluate=false
         ```
 
-    3. 按“Esc“键，输入**:wq!**，按“Enter“保存并退出编辑。
+    3. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
 
 2. 将OmniOperator安装目录打包并上传至HDFS，以便多个节点可以同时访问和处理该文件。
-    1. 将管理节点上的“/opt/omni-operator“文件夹打包为**omni-operator.tar.gz**，文件名和路径可根据实际需求自行定义。
+    1. 将管理节点上的`/opt/omni-operator`文件夹打包为**omni-operator.tar.gz**，文件名和路径可根据实际需求自行定义。
 
         ```
         cd /opt
         tar -czvf /opt/omni-operator.tar.gz -C /opt omni-operator
         ```
 
-    2. 将打包好的安装包**omni-operator.tar.gz**上传到HDFS上的规划账号下。以下示例使用root账号，实际使用中可替换为其他规划账号，路径“/user/root“也可根据实际情况修改。
+    2. 将打包好的安装包**omni-operator.tar.gz**上传到HDFS上的规划账号下。以下示例使用root账号，实际使用中可替换为其他规划账号，路径`/user/root`也可根据实际情况修改。
 
         ```
         hdfs dfs -rm -r /user/root/omni-operator.tar.gz
@@ -1225,7 +1219,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
         ```
 
     - Gluten插件启动步骤如下。
-        1. 进入“/usr/local/spark/conf“目录创建spark-defaults-omnioperator.conf文件。
+        1. 进入`/usr/local/spark/conf`目录创建spark-defaults-omnioperator.conf文件。
 
             ```
             cd /usr/local/spark/conf
@@ -1238,13 +1232,13 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
             chmod 640 spark-defaults-omnioperator.conf
             ```
 
-        3. 打开“spark-defaults-omnioperator.conf“文件。
+        3. 打开`spark-defaults-omnioperator.conf`文件。
 
             ```
             vi spark-defaults-omnioperator.conf
             ```
 
-        4. 按“i“进入编辑模式，在文件末尾追加以下参数。
+        4. 按`i`进入编辑模式，在文件末尾追加以下参数。
 
             ```
             spark.plugins org.apache.gluten.GlutenPlugin
@@ -1305,7 +1299,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
             spark.gluten.sql.columnar.maxBatchSize 8192
             ```
 
-        5. 按“Esc“键，输入:**wq!**，按“Enter“保存并退出编辑。
+        5. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
         6. 执行启动命令。
 
             ```
@@ -1313,8 +1307,8 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
             ```
 
             >![](public_sys-resources/icon-note.gif) **说明：** 
-            >-   hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni：依据用户Hadoop的core-site.xml中配置的fs.defaultFS实际值设置“hdfs://server1:9000”。“/user/root/omni-operator.tar.gz”用户可自行定义，与[2](#config-spark)的操作关联。“\#omni”表示实际运行时omni-operator.tar.gz解压的目录，用户可自行定义。
-            >-   上述启动命令为Yarn模式使用，若使用local模式启动SparkExtension插件，需将**--master yarn**改为**--master local**，同时在启动前需在所有节点的“\~/.bashrc“文件中添加`export LD_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2`并更新环境变量。启动命令中“$\{PWD\}/omni”全部替换为“/opt”。
+            >-   hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni：依据用户Hadoop的core-site.xml中配置的fs.defaultFS实际值设置`hdfs://server1:9000`。`/user/root/omni-operator.tar.gz`用户可自行定义，与[2](#config-spark)的操作关联。`\#omni`表示实际运行时omni-operator.tar.gz解压的目录，用户可自行定义。
+            >-   上述启动命令为Yarn模式使用，若使用local模式启动SparkExtension插件，需将**--master yarn**改为**--master local**，同时在启动前需在所有节点的`\~/.bashrc`文件中添加`export LD_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2`并更新环境变量。启动命令中`$\{PWD\}/omni`全部替换为`/opt`。
 
             Gluten相关的启动参数信息如[**表 2** Gluten相关启动参数信息](#Gluten相关启动参数信息)所示。
 
@@ -1446,7 +1440,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
 
 如果在启动参数中已经配置了堆外内存，请跳过本章节。如果因为特殊情况无法在启动参数中配置堆外内存，可以按照如下步骤操作。
 
-1. 复制[`parse_para.sh`](https://gitee.com/kunpengcompute/boostkit-bigdata/blob/main/tools/parse_parameter/parse_para.sh)脚本到“$\{SPARK_HOME\}/bin/“目录下。
+1. 复制[`parse_para.sh`](https://gitee.com/kunpengcompute/boostkit-bigdata/blob/main/tools/parse_parameter/parse_para.sh)脚本到`$\{SPARK_HOME\}/bin/`目录下。
 2. 修改`parse_para.sh`权限。
 
     ```
@@ -1460,7 +1454,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
     vi spark-submit
     ```
 
-4. 按“i“进入编辑模式，替换最后一行内容。
+4. 按`i`进入编辑模式，替换最后一行内容。
 
     ```
     exec 3< <(bash "${SPARK_HOME}/bin/parse_para.sh" "$@")
@@ -1475,7 +1469,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
     fi
     ```
 
-5. 按“Esc“键，输入:**wq!**，按“Enter“保存并退出编辑。
+5. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
 6. 增加启动参数。
 
     ```
@@ -1490,13 +1484,10 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
 |spark.omni.borrowMemory.Fraction|90|堆外内存借用堆内内存的比例，默认为90%。如果运行时报错堆内内存不足，则减小此参数。如果运行时报错堆外内存不足，则增大此参数。|
 
 
-    >![](public_sys-resources/icon-notice.gif) **须知：** 
-    >-   如果原本参数中设置了spark.memory.offHeap.enabled为true，则无法开启内存借用，需修改此参数为false后再开启内存借用。
-    >    ```
-    >    --conf spark.memory.offHeap.enabled=false
-    >    ```
-    >-   不支持读取spark-default.conf文件中的executor-memory。
-    >-   如果原本参数中未配置executor-memory大小，无法使用内存借用特性。
+>![](public_sys-resources/icon-notice.gif) **须知：** 
+>-   如果原本参数中设置了spark.memory.offHeap.enabled为true，则无法开启内存借用，需修改此参数为false后再开启内存借用，即改为`--conf spark.memory.offHeap.enabled=false`。
+>-   不支持读取spark-default.conf文件中的executor-memory。
+>-   如果原本参数中未配置executor-memory大小，无法使用内存借用特性。
 
 #### （可选）安装并执行Spark UDF业务<a name="ZH-CN_TOPIC_0000002547382873"></a>
 
@@ -1509,10 +1500,10 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
 如需使用特定的数据处理操作，并且需要使用UDF功能，才需要安装Spark UDF插件。
 
 1. 请确认安装Spark UDF插件前已经按照《安装SparkExtension》完成Spark引擎的安装。
-2. 将UDF依赖的JAR放置到HDFS的“/user/hive-udf“目录下。
+2. 将UDF依赖的JAR放置到HDFS的`/user/hive-udf`目录下。
 
     >![](public_sys-resources/icon-note.gif) **说明：** 
-    >-   “/user/hive-udf“目录用户可自行定义。
+    >-   `/user/hive-udf`目录用户可自行定义。
     >-   UDF依赖的JAR需要用户自行提供。
 
 3. 在集群的管理节点注册Hive UDF。
@@ -1521,10 +1512,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
 
 **执行Spark UDF业务<a name="section13660151413529"></a>**
 
->![](public_sys-resources/icon-note.gif) **说明：** 
->SQL执行、执行计划查看及结果对比方式等，请参见《执行Spark引擎业务》。
-
-执行步骤请参见《执行Spark引擎业务》，只需在SparkExtension的Spark-SQL命令行启动命令基础上，补充如下命令参数。
+SQL执行、执行计划查看及结果对比等操作，[执行Spark引擎业务](#执行spark引擎任务)。只需在SparkExtension的Spark-SQL命令行启动命令基础上，补充如下命令参数。
 
 1. 在spark.driver.extraClassPath参数后追加/opt/omni-operator/lib/boostkit-omniop-udf-2.0.0-aarch64.jar。
     - Spark 3.1.1版本追加后结果如下。
@@ -1581,16 +1569,16 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
 
 #### 简介<a name="ZH-CN_TOPIC_0000002547382883"></a>
 
-OmniOperator算子加速特性需要用户安装Hive和与之版本相对应的HiveExtension，Hive的安装方法见[安装指南](installation_guide.md)。小节将介绍HiveExtension的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Hive引擎中。
+OmniOperator算子加速特性需要用户安装Hive和与之版本相对应的HiveExtension，Hive的安装方法见《[安装指南](installation_guide.md)》。小节将介绍HiveExtension的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Hive引擎中。
 
 
 #### 安装HiveExtension<a name="ZH-CN_TOPIC_0000002515902968"></a>
 
 OmniOperator算子加速特性支持Hive引擎，需在管理节点安装Hive引擎，并在管理节点和所有计算节点配置openEuler操作系统的HiveExtension依赖。
 
-1. 安装Hive引擎，具体请参见安装指南的《环境要求》表2。
+1. 安装Hive引擎，具体请参见《[安装指南](installation_guide.md)》的`环境要求`。
 2. 下载HiveExtension插件包并解压。
-    1. 从安装指南的《环境要求》表3下载boostkit-omniop-hive-3.1.0-2.0.0-aarch64.zip并解压，获得boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip（NEON实现）和boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip（SVE实现）两个包， 依据机型是否支持NEON、SVE指令进行选择。
+    1. 从《[安装指南](installation_guide.md)》的`环境要求`下载boostkit-omniop-hive-3.1.0-2.0.0-aarch64.zip并解压，获得boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip（NEON实现）和boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip（SVE实现）两个包， 依据机型是否支持NEON、SVE指令进行选择。
     2. 然后解压boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip（NEON实现）或boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip（SVE实现），获得boostkit-omniop-hive-3.1.0-2.0.0-aarch64.jar并上传至集群管理节点。
 
 3. 安装openEuler操作系统的HiveExtension依赖。
@@ -1602,21 +1590,21 @@ OmniOperator算子加速特性支持Hive引擎，需在管理节点安装Hive引
     ```
 
 4. <a name="zh-cn_topic_0000001908294293_li15544111764913"></a>配置HiveExtension。
-    1. 在管理节点和计算节点创建“/opt/omni-operator/“目录作为安装OmniOperator算子加速特性的根目录，进入该目录。
+    1. 在管理节点和计算节点创建`/opt/omni-operator/`目录作为安装OmniOperator算子加速特性的根目录，进入该目录。
 
         ```
         mkdir /opt/omni-operator
         cd /opt/omni-operator
         ```
 
-    2. 从[安装指南](installation_guide.md)的《软件安装包获取》中获取`Dependency_library_openeuler22.03.zip`，并上传到“/opt/omni-operator“目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到“/opt/omni-operator/lib“目录下。
+    2. 从《[安装指南]》(installation_guide.md)的`软件安装包获取`中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
 
         ```
         unzip Dependency_library_openeuler22.03.zip
         cp /opt/omni-operator/Dependency_library_openeuler22.03/* /opt/omni-operator/lib
         ```
 
-    3. 将boostkit-omniop-hive-3.1.0-2.0.0-aarch64.jar拷贝到“/opt/omni-operator/lib“目录下，并修改目录下文件权限为550。
+    3. 将boostkit-omniop-hive-3.1.0-2.0.0-aarch64.jar拷贝到`/opt/omni-operator/lib`目录下，并修改目录下文件权限为550。
 
         ```
         chmod -R 550 /opt/omni-operator/*
@@ -1637,7 +1625,7 @@ OmniOperator算子加速特性支持Hive引擎，需在管理节点安装Hive引
         ```
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
-        >-   `OMNI_CONF`临时变量的路径“/opt/omni-operator/hive“目录用户可自行定义，且如果环境同时部署了Spark Extension，则该目录应与默认的“/opt/omni-operator“不同。
+        >-   `OMNI_CONF`临时变量的路径`/opt/omni-operator/hive`目录用户可自行定义，且如果环境同时部署了Spark Extension，则该目录应与默认的`/opt/omni-operator`不同。
         >-   每启动一个新的shell session，都需要重新设置[4](#zh-cn_topic_0000001908294293_li15544111764913)中的环境变量。
 
 #### 配置Hive配置文件<a name="ZH-CN_TOPIC_0000002515743070"></a>
@@ -1645,14 +1633,14 @@ OmniOperator算子加速特性支持Hive引擎，需在管理节点安装Hive引
 完成Hive引擎安装后，还需在OmniOperator算子加速特性的配置文件中添加Hive相关配置内容才能执行业务。
 
 1. 新增Hive配置内容。
-    1. 在集群管理节点和所有计算节点上创建Hive配置文件“/opt/omni-operator/hive/conf/omni.conf“。
+    1. 在集群管理节点和所有计算节点上创建Hive配置文件`/opt/omni-operator/hive/conf/omni.conf`。
 
         ```
         mkdir -p /opt/omni-operator/hive
         vi /opt/omni-operator/hive/conf/omni.conf
         ```
 
-    2. 按“i“进入编辑模式，新增关于Hive配置相关内容（推荐配置）。
+    2. 按`i`进入编辑模式，新增关于Hive配置相关内容（推荐配置）。
 
         ```
         # <----Other properties---->
@@ -1667,7 +1655,7 @@ OmniOperator算子加速特性支持Hive引擎，需在管理节点安装Hive引
         SupportDecimalPrecisionImprovementRule=IS_SUPPORT
         ```
 
-    3. 按“Esc“键，输入:**wq!**，按“Enter“保存并退出编辑。
+    3. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
 
 2. 在集群管理节点的`$HIVE_HOME/conf/hive-site.xml`中添加配置。
     1. 打开文件。
@@ -1676,7 +1664,7 @@ OmniOperator算子加速特性支持Hive引擎，需在管理节点安装Hive引
         vi $HIVE_HOME/conf/hive-site.xml
         ```
 
-    2. 按“i“进入编辑模式，在文件中添加以下内容。
+    2. 按`i`进入编辑模式，在文件中添加以下内容。
 
         ```
         <property>
@@ -1689,7 +1677,7 @@ OmniOperator算子加速特性支持Hive引擎，需在管理节点安装Hive引
         </property>
         ```
 
-    3. 按“Esc“键，输入:**wq!**，按“Enter“保存并退出编辑。
+    3. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
 
 #### 执行Hive引擎业务<a name="ZH-CN_TOPIC_0000002515743050"></a>
 
@@ -1724,7 +1712,7 @@ Hive使用交互式页面命令行来执行SQL任务。在Hive侧查看HiveExten
         ```
 
     >![](public_sys-resources/icon-note.gif) **说明：** 
-    >-   上述启动命令中，`OMNI_CONF`路径应与《配置Hive配置文件》中自定义的配置文件目录一致。
+    >-   上述启动命令中，`OMNI_CONF`路径应与`配置Hive配置文件`中自定义的配置文件目录一致。
     >-   若数据集包含String类型的数据，且String类型数据单个字段数据量较大时（长度大于512），建议追加以下配置。
     >    ```
     >    --hiveconf omni.hive.string.length=2000
@@ -1843,7 +1831,7 @@ Hive使用交互式页面命令行来执行SQL任务。在Hive侧查看HiveExten
 
 OmniOperator的升级操作仅需在管理节点进行，并需确保OmniOperator算子加速特性上层引擎处于没有任务执行的状态。
 
-1. 删除依赖SO文件以及OmniOperator算子加速特性相关文件，安装目录以“/opt/omni-operator/lib“为例。
+1. 删除依赖SO文件以及OmniOperator算子加速特性相关文件，安装目录以`/opt/omni-operator/lib`为例。
 
     ```
     cd /opt/omni-operator/lib
@@ -1851,14 +1839,14 @@ OmniOperator的升级操作仅需在管理节点进行，并需确保OmniOperato
     rm -rf include libboostkit-omniop* boostkit-omniop* libsecurec.so
     ```
 
-2. 下载并上传预安装版本依赖包以及OmniOperator算子加速特性压缩包（获取方式请参见[安装指南](installation_guide.md)的《操作系统和软件要求》和《软件安装包获取》到管理节点和计算节点，分别按[安装指南](installation_guide.md)的《安装依赖》和《安装OmniOperator》完成安装。
+2. 下载并上传预安装版本依赖包以及OmniOperator算子加速特性压缩包（获取方式请参见《[安装指南](installation_guide.md)》的`操作系统和软件要求`和`软件安装包获取`到管理节点和计算节点，分别按《[安装指南](installation_guide.md)》的`安装依赖`和`安装OmniOperator`完成安装。
 3. 在Spark引擎上应用时，需按[2](#config-spark)重新打包与上传OmniOperator算子加速特性安装包。
 
 ### 卸载OmniOperator<a name="ZH-CN_TOPIC_0000002547382867"></a>
 
 OmniOperator的卸载操作仅需在管理节点进行，并确保OmniOperator算子加速特性上层引擎处于没有任务执行的状态。
 
-Spark Extension配置的目录以“/opt/omni-operator/conf“和“/opt/omni-operator/lib“为例，Hive Extension配置的目录以“/opt/omni-operator/hive“为例。
+Spark Extension配置的目录以`/opt/omni-operator/conf`和`/opt/omni-operator/lib`为例，Hive Extension配置的目录以`/opt/omni-operator/hive`为例。
 
 1. 删除conf和hive文件夹。
 
@@ -1868,7 +1856,7 @@ Spark Extension配置的目录以“/opt/omni-operator/conf“和“/opt/omni-op
     rm -rf /opt/omni-operator/hive
     ```
 
-2. 进入“/opt/omni-operator/lib“目录，删除依赖SO文件以及OmniOperator算子加速特性相关文件。
+2. 进入`/opt/omni-operator/lib`目录，删除依赖SO文件以及OmniOperator算子加速特性相关文件。
 
     ```
     cd /opt/omni-operator/lib
@@ -1883,14 +1871,14 @@ Spark Extension配置的目录以“/opt/omni-operator/conf“和“/opt/omni-op
     ```
 
 4. 更新环境变量。
-    1. 打开“\~/.bashrc“文件。
+    1. 打开`\~/.bashrc`文件。
 
         ```
         vi ~/.bashrc
         ```
 
-    2. 按“i“进入编辑模式，删除`LD_LIBRARY_PATH`中与OmniOperator算子加速特性相关的路径配置。
-    3. 按“Esc“键，输入:**wq!**，按“Enter“保存并退出编辑。
+    2. 按`i`进入编辑模式，删除`LD_LIBRARY_PATH`中与OmniOperator算子加速特性相关的路径配置。
+    3. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
     4. 使更新后环境变量生效。
 
         ```
@@ -1901,23 +1889,23 @@ Spark Extension配置的目录以“/opt/omni-operator/conf“和“/opt/omni-op
 
 卸载UDF插件仅需在管理节点操作。
 
-卸载UDF插件后，如果不使用OmniOperator算子加速特性，可参见《卸载OmniOperator》卸载OmniOperator算子加速特性软件。
+卸载UDF插件后，如果不使用OmniOperator算子加速特性，可参见[卸载OmniOperator](#卸载omnioperator)中的指导来卸载OmniOperator算子加速特性软件。
 
-1. 删除管理节点和计算节点的“/opt/omni-operator/hive-udf“目录。
+1. 删除管理节点和计算节点的`/opt/omni-operator/hive-udf`目录。
 
     ```
     ls /opt/omni-operator
     rm -rf /opt/omni-operator/hive-udf
     ```
 
-2. 更新“/opt/omni-operator/conf/omni.conf“配置文件。
+2. 更新`/opt/omni-operator/conf/omni.conf`配置文件。
     1. 打开文件。
 
         ```
         vi /opt/omni-operator/conf/omni.conf
         ```
 
-    2. 按“i“进入编辑模式，更新关于UDF配置的内容。
+    2. 按`i`进入编辑模式，更新关于UDF配置的内容。
 
         ```
         # <----UDF properties---->
@@ -1929,18 +1917,18 @@ Spark Extension配置的目录以“/opt/omni-operator/conf“和“/opt/omni-op
         #hiveUdfDir=./hive-udf/udf
         ```
 
-    3. 按“Esc“键，输入**:wq!**，按“Enter“保存并退出编辑。
+    3. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
 
 3. 在Spark引擎上应用时，需重新操作[2](#config-spark)。
 4. 更新环境变量。
-    1. 打开“\~/.bashrc“文件。
+    1. 打开`\~/.bashrc`文件。
 
         ```
         vi ~/.bashrc
         ```
 
-    2. 按“i“进入编辑模式，删除`LD_LIBRARY_PATH`中的`$\{JAVA_HOME\}/jre/lib/aarch64/server`。
-    3. 按“Esc“键，输入:**wq!**，按“Enter“保存并退出编辑。
+    2. 按`i`进入编辑模式，删除`LD_LIBRARY_PATH`中的`$\{JAVA_HOME\}/jre/lib/aarch64/server`。
+    3. 按`Esc`键，输入 **:wq!**，按`Enter`保存并退出编辑。
     4. 使更新后环境变量生效。
 
         ```

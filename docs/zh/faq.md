@@ -34,7 +34,7 @@ C 0x00000007822fef70
 
 **关键过程、根本原因分析<a name="zh-cn_topic_0000001695776349_zh-cn_topic_0000001518928837_zh-cn_topic_0000001259822511_section192720412462"></a>**
 
-这是毕昇JDK 1.8.0.262的一个Bug。如果JVM使用java.util.zip.ZipFile打开文件，并且如果该文件在磁盘上被修改时处于打开状态，JVM可能会崩溃。
+这是毕昇JDK 1.8.0.262的一个已知缺陷。如果JVM使用java.util.zip.ZipFile打开文件，并且如果该文件在磁盘上被修改时处于打开状态，JVM可能会崩溃。
 
 **结论、解决方案及效果<a name="zh-cn_topic_0000001695776349_section561918431353"></a>**
 
@@ -79,7 +79,7 @@ Compressed class space size: 1073741824 Address: 0x0000000100000000
 
 **关键过程、根本原因分析<a name="zh-cn_topic_0000001701032480_zh-cn_topic_0000001454201442_section145813300553"></a>**
 
-在10TB规模的数据集下，Spark默认的“spark.network.timeout“\`设置为120秒。在Shuffle阶段，当数据fetch出现异常（如超时）时，Spark会尝试重新Fetch数据。然而，由于Block ID错乱，可能导致重新fetch的数据内容也错乱，从而引发概率性的数据不一致问题。该问题已被确认为Spark社区代码中的Bug，并已在[Github](https://github.com/apache/spark/pull/31643)上提交了修复。
+在10TB规模的数据集下，Spark默认的“spark.network.timeout“\`设置为120秒。在Shuffle阶段，当数据fetch出现异常（如超时）时，Spark会尝试重新Fetch数据。然而，由于Block ID错乱，可能导致重新fetch的数据内容也错乱，从而引发概率性的数据不一致问题。该问题已被确认为Spark社区代码中的Bug，并已在[GitHub](https://github.com/apache/spark/pull/31643)上提交了修复。
 
 **结论、解决方案及效果<a name="zh-cn_topic_0000001701032480_section239217135912"></a>**
 

@@ -2,9 +2,9 @@
 
 ## Using the Feature<a name="EN-US_TOPIC_0000002515743064"></a>
 
-### Using on Spark<a name="EN-US_TOPIC_0000002547382891"></a>
+### Use on Spark<a name="EN-US_TOPIC_0000002547382891"></a>
 
-#### Enabling on SparkExtension<a name="EN-US_TOPIC_0000002515902952"></a>
+#### Enablement on SparkExtension<a name="EN-US_TOPIC_0000002515902952"></a>
 
 ##### Overview<a name="EN-US_TOPIC_0000002515743060"></a>
 
@@ -12,39 +12,39 @@ When using the OmniOperator feature on Spark, you can enable it through SparkExt
 
 If you are using Spark 3.3.1, it is recommended to use Gluten to enable OmniOperator. For other Spark versions, use SparkExtension.
 
-If you choose SparkExtension to enable OmniOperator, install the corresponding Spark and SparkExtension. For details about the Spark installation requirements, see \[installation\_guide.md\]\(./docs/en/installation\_guide.md\). The sections that follow describe how to install and configure SparkExtension, and how to apply the OmniOperator feature to Spark.
+If you choose SparkExtension to enable OmniOperator, install the corresponding Spark and SparkExtension. For details about the Spark installation requirements, see the [Installation Guide](installation_guide.md). The sections that follow describe how to install and configure SparkExtension, and how to apply the OmniOperator feature to Spark.
 
 When using the OmniOperator feature on Spark, you can enable it through SparkExtension or Gluten. Choose the appropriate enabling mode based on your specific scenario and requirements to maximize acceleration.
 ##### Supported Operators and Expressions<a name="EN-US_TOPIC_0000002515902958"></a>
 
-This section describes the support scope, restrictions, and usage rules for SQL operators and expressions \(including data types\) when the OmniOperator feature is used with SparkExtension.
+This section describes the support scope, restrictions, and usage rules for SQL operators and expressions (including data types) when the OmniOperator feature is used with SparkExtension.
 
-[Table 2](#table2077116295016),  [Table 3](#table20181194016205), and  [Table 4](#table1287716388260)  describe the operators, expressions, and functions supported by OmniOperator on SparkExtension. Symbols are used to indicate whether the operators and expressions are supported. For details about the meanings of the symbols, see  [Table 1](#table86091491368).
+When the OmniOperator feature is used in SparkExtension, it supports the operators, expressions, and functions listed in [**Table 2** List of supported operators](#List of supported operators), [**Table 3** List of supported expressions](#List of supported expressions), and [**Table 4** List of supported cast expressions](#List of supported cast expressions). Symbols in the tables indicate whether operators and expressions are supported. For details about the meanings of the symbols, see [**Table 1** Meanings of the symbols](#Meanings of the symbols).
 
->![](public_sys-resources/icon-notice.gif) **NOTICE:** 
+>![](public_sys-resources/icon-notice.gif) **Notice:**
 >-   This section uses Spark 3.3.1 as an example to describe the operators and expressions supported by OmniOperator.
->-   [Operator List](#section176711256181910)  and  [Expression List](#section5353103435216)  list only the data types supported by OmniOperator. Other data types \(BYTE/FLOAT/BINARY/ARRAY/MAP/STRUCT/CALENDAR/UDT\) are not supported.
->-   If you use operators and expressions that are not supported by OmniOperator, the execution plan will be rolled back to open source execution, which deteriorates the performance.
+>-   In this section, [List of supported operators](#section176711256181910) and [List of supported expressions](#section5353103435216) describe only the data types supported or involved by OmniOperator. The data types (BYTE/FLOAT/BINARY/ARRAY/MAP/STRUCT/CALENDAR/UDT), which are not listed, are not supported by OmniOperator.
+>-   If you use operators and expressions that are not supported by OmniOperator, the execution plan will be rolled back to open-source execution, which deteriorates the performance.
 
-**Table  1**  Meanings of symbols in the operator and expression support tables
+**Table 1** Meanings of the symbols<a id="Meanings of the symbols"></a>
 
-|Status|Description|
-|--|--|
-|S|Indicates that the operator or expression is supported.|
-|PS|Indicates that the operator or expression is partially supported, with some restrictions. For details about the restrictions, see Constraints.|
-|NS|Indicates that the operator or expression is not supported.|
-|NA|Indicates that the operator or expression is not involved. This scenario does not exist in open source Spark.|
-|NA-2|Indicates a context function implemented based on open source Spark, which does not involve using OmniOperator.|
-|[Blank Cell]|Indicates a scenario that is irrelevant or needs to be confirmed.|
+|Status| Description                                                              |
+|--|------------------------------------------------------------------|
+|S| Indicates that the operator or expression is supported.                                                    |
+|PS| Indicates that the operator or expression is partially supported, with some restrictions. For details about the restrictions, see [Project Introduction](../../README.md).|
+|NS| Indicates that the operator or expression is not supported.                                                   |
+|NA| Indicates that the operator or expression is not involved. This scenario does not exist in open-source Spark.                                 |
+|NA-2| Indicates a context function implemented based on open-source Spark, which does not involve using OmniOperator.                      |
+|[Blank Cell]| Indicates a scenario that is irrelevant or needs to be confirmed.                                                     |
 
 
-**Operator List<a name="section176711256181910"></a>**
+**List of Supported Operators<a name="section176711256181910" id="section176711256181910"></a>**
 
-[Table 2](#table2077116295016)  lists the operators supported by OmniOperator for the Spark engine.
+[**Table 2** List of supported operators](#List of supported operators) lists the operators supported by OmniOperator on Spark.
 
-**Table  2**  List of supported operators
+**Table 2** List of supported operators<a id="List of supported operators"></a>
 
-|**Open Source Operator**|**OmniOperator Operator**|**BOOLEAN**|**INT**|**LONG**|**DOUBLE**|**STRING**|**CHAR**|**VARCHAR**|**DATE**|**DECIMAL**|**SHORT**|**TIMESTAMP**|
+|**Open-Source Operator**|**OmniOperator Operator**|**BOOLEAN**|**INT**|**LONG**|**DOUBLE**|**STRING**|**CHAR**|**VARCHAR**|**DATE**|**DECIMAL**|**SHORT**|**TIMESTAMP**|
 |--|--|--|--|--|--|--|--|--|--|--|--|--|
 |FileSourceScanExec|ColumnarFileSourceScanExec|S|S|S|S|S|S|S|S|S|S|S|
 |ProjectExec|ColumnarProjectExec|S|S|S|S|S|S|S|S|S|NS|S|
@@ -70,162 +70,168 @@ This section describes the support scope, restrictions, and usage rules for SQL 
 |WindowGroupLimitExec|ColumnarWindowGroupLimitExec|S|S|S|S|S|S|S|S|S|NS|S|
 
 
-**Expression List<a name="section5353103435216"></a>**
+**List of Supported Expressions<a name="section5353103435216" id="section5353103435216"></a>**
 
-[Table 3](#table20181194016205)  lists the expressions and functions supported by OmniOperator for the Spark engine.
+[**Table 3** List of supported expressions](#List of supported expressions) lists the expressions and functions supported by OmniOperator on Spark.
 
-**Table  3**  List of supported expressions
+**Table 3** List of supported expressions<a id="List of supported expressions"></a>
 
-|**Expression**|**Supported by OmniOperator**|**Function Type**|**Restriction**|**BOOLEAN**|**INT**|**LONG**|**DOUBLE**|**STRING**|**CHAR**|**VARCHAR**|**DATE**|**DECIMAL**|**NULL**|**SHORT**|**TIMESTAMP**|
-|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
-|!|S|Scalar Functions|-|S|NA|NA|NA|NA|NA|NA|NA|NA|S|NA|NA|
-|%|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|*|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|+|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|-|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|/|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|<|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|<=|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|>|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|>=|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|and|S|Scalar Functions|-|S|NA|NA|NA|NA|NA|NA|NA|NA|S|NA|NA|
-|any|S|Aggregate Functions|-|S|NA|NA|NA|NA|NA|NA|NA|NA|S|NA|NA|
-|avg|S|Aggregate Functions|-|NA|S|S|S|S|S|S|NA|S|S|S|NA|
-|between|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|bool_and|S|Aggregate Functions|-|S|NA|NA|NA|NA|NA|NA|NA|NA|S|NA|NA|
-|bool_or|S|Aggregate Functions|-|S|NA|NA|NA|NA|NA|NA|NA|NA|S|NA|NA|
-|case|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|cast|S|Scalar Functions|See Table 4.|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|
-|char_length|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|character_length|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|count|PS|Aggregate Functions|Only one input parameter is allowed.|S|S|S|S|S|S|S|S|S|S|S|S|
-|count_if|S|Aggregate Functions|-|S|NA|NA|NA|NA|NA|NA|NA|NA|S|NA|NA|
-|current_catalog|NA-2|Scalar Functions|-|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|
-|current_database|NA-2|Scalar Functions|-|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|
-|current_date|NA-2|Scalar Functions|-|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|
-|current_timezone|NA-2|Scalar Functions|-|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|
-|current_user|NA-2|Scalar Functions|-|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|[Blank Cell]|
-|every|S|Aggregate Functions|-|S|NA|NA|NA|NA|NA|NA|NA|NA|S|NA|NA|
-|first|S|Aggregate Functions|-|S|S|S|S|NS|NS|NS|S|S|NS|S|S|
-|first_value|S|Aggregate Functions|-|S|S|S|S|NS|NS|NS|S|S|NS|S|S|
-|grouping_id|S|Aggregate Functions|-|NA|NA|NA|NA|NA|NA|NA|NA|NA|NA|NA|NA|
-|if|S|Scalar Functions|-|S|S|S|S|S|S|S|S|S|S|NS|S|
-|instr|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|isnotnull|S|Scalar Functions|-|S|S|S|S|S|S|S|S|S|S|NS|S|
-|isnull|S|Scalar Functions|-|S|S|S|S|S|S|S|S|S|S|NS|S|
-|lcase|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|left|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|length|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|lower|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|max|S|Aggregate Functions|-|S|S|S|S|NS|NS|NS|S|S|NS|S|S|
-|md5|PS|Scalar Functions|The input parameter must be a variable of the String type.|NA|NA|NA|NA|S|S|S|NA|NA|S|NA|NA|
-|mean|S|Aggregate Functions|-|NA|S|S|S|S|S|S|NA|S|S|S|NA|
-|min|S|Aggregate Functions|-|S|S|S|S|NS|NS|NS|S|S|NS|S|S|
-|mod|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|not|S|Scalar Functions|-|S|NA|NA|NA|NA|NA|NA|NA|NA|S|NA|NA|
-|nullif|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|nvl2|S|Scalar Functions|-|S|S|S|S|S|S|S|S|S|S|NS|S|
-|or|S|Scalar Functions|-|S|NA|NA|NA|NA|NA|NA|NA|NA|S|NA|NA|
-|positive|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|rank|S|Window Functions|No input parameter is involved.|NA|NA|NA|NA|NA|NA|NA|NA|NA|NA|NA|NA|
-|replace|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|round|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|row_number|S|Window Functions|No input parameter is involved.|NA|NA|NA|NA|NA|NA|NA|NA|NA|NA|NA|NA|
-|some|S|Aggregate Functions|-|S|NA|NA|NA|NA|NA|NA|NA|NA|S|NA|NA|
-|substr|S|Scalar Functions|-|NA|S|S|S|S|S|S|S|S|S|NS|NS|
-|substring|S|Scalar Functions|-|NA|S|S|S|S|S|S|S|S|S|NS|NS|
-|trunc|S|Scalar Functions|-|NA|NA|NA|NA|S|S|S|S|NA|S|NA|NS|
-|ucase|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|upper|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|when|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|!=|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|<>|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|=|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|==|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|abs|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|concat|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|contains|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|decode|PS|Scalar Functions|The number of input parameters must be greater than 2.|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|endswith|PS|Scalar Functions|The second input parameter must be a constant of the String type.|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|hash|S|Scalar Functions|-|S|S|S|S|S|S|S|S|S|S|NS|S|
-|ifnull|S|Scalar Functions|-|S|S|S|S|S|S|S|S|S|S|NS|S|
-|in|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|S|
-|like|PS|Scalar Functions|The second input parameter must be a constant of the String type, and the constant cannot contain underscores (_) or more than one percent sign (%).|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|nvl|S|Scalar Functions|-|S|S|S|S|S|S|S|S|S|S|NS|S|
-|regexp|PS|Scalar Functions|The second input parameter must be a constant of the String type, that is, '^\\d+$'|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|regexp_like|PS|Scalar Functions|The second input parameter must be a constant of the String type, that is, '^\\d+$'|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|regr_avgx|S|Aggregate Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|regr_avgy|S|Aggregate Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|right|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|rlike|PS|Scalar Functions|The second input parameter must be a constant of the String type, that is, '^\\d+$'|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|startswith|PS|Scalar Functions|The second input parameter must be a constant of the String type.|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|sum|S|Aggregate Functions|-|NA|S|S|S|S|S|S|NA|S|S|S|NA|
-|to_date|PS|Scalar Functions|Only one input parameter is allowed.|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|xxhash64|S|Scalar Functions|-|S|S|S|S|S|S|S|S|S|S|NS|S|
-||||S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|bigint|S|Scalar Functions|-|NS|S|S|S|S|S|S|NS|S|S|NS|NS|
-|boolean|S|Scalar Functions|-|S|NS|NS|NS|NS|NS|NS|NS|NS|S|NS|NS|
-|date|S|Scalar Functions|-|NA|NA|NA|NA|S|S|S|S|NA|S|NA|NS|
-|decimal|S|Scalar Functions|-|NS|S|S|S|S|S|S|NS|S|S|NS|NS|
-|double|S|Scalar Functions|-|NS|S|S|S|S|S|S|NS|S|S|NS|NS|
-|int|S|Scalar Functions|-|NS|S|S|S|S|S|S|NS|S|S|NS|NS|
-|string|S|Scalar Functions|-|NS|S|S|S|S|S|S|S|S|S|NS|NS|
-|coalesce|PS|Scalar Functions|Two input parameters are used.|S|S|S|S|S|S|S|S|S|S|NS|S|
-|from_unixtime|PS|Scalar Functions|Only yyyy-MM-dd and yyyy-MM-dd HH:mm:ss are supported, and the time zone must be GMT+08:00, Asia/Beijing, or Asia/Shanghai.|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|greatest|PS|Scalar Functions|Two input parameters are used.|S|S|S|S|S|S|S|NS|S|S|NS|NS|
-|unix_timestamp|PS|Scalar Functions|timeExp must be String/Date. Only yyyy-MM-dd and yyyy-MM-dd HH:mm:ss are supported, and the time zone must be GMT+08:00, Asia/Beijing, or Asia/Shanghai.|NA|NA|NA|NA|S|S|S|S|NA|S|NA|NS|
-|try_add|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|try_divide|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|try_multiply|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|try_subtract|S|Scalar Functions|-|NA|S|S|S|S|S|S|NA|S|S|NS|NA|
-|try_avg|S|Aggregate Functions|-|NA|S|S|S|S|S|S|NA|S|S|S|NA|
-|try_sum|S|Aggregate Functions|-|NA|S|S|S|S|S|S|NA|S|S|S|NA|
-
-
-**Table  4**  List of supported cast expressions
-
-|**Source/Target Type**|**BOOLEAN**|**INT**|**LONG**|**DOUBLE**|**STRING**|**CHAR**|**VARCHAR**|**DATE**|**DECIMAL**|**SHORT**|**TIMESTAMP**|
-|--|--|--|--|--|--|--|--|--|--|--|--|
-|**BOOLEAN**|S|NS|NS|NS|NS|NS|NS|NA|NS|NS|NS|
-|**INT**|NS|S|S|S|S|S|S|NA|S|NS|NS|
-|**LONG**|NS|S|S|S|S|S|S|NA|S|NS|NS|
-|**DOUBLE**|NS|S|S|S|S|S|S|NA|S|NS|NS|
-|**STRING**|NS|S|S|S|S|S|S|S|S|NS|NS|
-|**CHAR**|NS|S|S|S|S|S|S|S|S|NS|NS|
-|**VARCHAR**|NS|S|S|S|S|S|S|S|S|NS|NS|
-|**DATE**|NS|NS|NS|NS|S|S|S|S|NS|NS|NS|
-|**DECIMAL**|NS|S|S|S|S|S|S|NA|S|NS|NS|
-|**NULL**|S|S|S|S|S|S|S|S|S|NS|NS|
-|**SHORT**|NS|NS|NS|NS|NS|NS|NS|NS|NS|NS|NS|
-|**TIMESTAMP**|NS|NS|NS|NS|NS|NS|NS|NS|NS|NS|NS|
+| **Expression**               |**Supported by OmniOperator**|**Function Type**| **Restriction**                                                                                            | **BOOLEAN**      | **INT**      | **LONG**     | **DOUBLE**   | **STRING**   | **CHAR**     | **VARCHAR**  | **DATE**     | **DECIMAL**  | **NULL**     | **SHORT**    | **TIMESTAMP** | **ARRAY**    |
+|------------------------|--|--|----------------------------------------------------------------------------------------------------------------------|------------------|--------------|--------------|--------------|--------------|--------------|--------------|--------------|--------------|--------------|--------------|---------------|--------------|
+| !                      |S|Scalar Functions| -                                                                                                                    | S                | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | S            | NA           | NA            | NA           |
+| %                      |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NS           |
+| *                      |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NS           |
+| +                      |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NS           |
+| -                      |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NS           |
+| /                      |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NS           |
+| <                      |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| <=                     |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| \>                     |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| \>=                    |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| and                    |S|Scalar Functions| -                                                                                                                    | S                | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | S            | NA           | NA            | NA           |
+| any                    |S|Aggregate Functions| -                                                                                                                    | S                | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | S            | NA           | NA            | NA           |
+| avg                    |S|Aggregate Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | S            | NA            | NA           |
+| between                |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| bool_and               |S|Aggregate Functions| -                                                                                                                    | S                | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | S            | NA           | NA            | NA           |
+| bool_or                |S|Aggregate Functions| -                                                                                                                    | S                | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | S            | NA           | NA            | NA           |
+| case                   |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| cast                   |S|Scalar Functions| For details, see [**Table 4** List of supported cast expressions](#List of supported cast expressions).                                                                           | [Blank Cell]     | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell]  | [Blank Cell] |
+| char_length            |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| character_length       |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| charTypeWriteSideCheck |S|Scalar Functions| -                                                                                                                    | NA               | NA           | NA           | NA           | S            | S            | S            | NA           | NA           | S            | NA           | NA            | NA           |
+| concat_ws              |S|Scalar Functions| -                                                                                                                    | NS               | CS           | CS           | CS           | S            | S            | S            | CS           | CS           | S            | CS           | NS            | NS           |
+| count                  |PS|Aggregate Functions| Only one input parameter is allowed.                                                                                                         | S                | S            | S            | S            | S            | S            | S            | S            | S            | S            | S            | S             | NS           |
+| count_if               |S|Aggregate Functions| -                                                                                                                    | S                | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | S            | NA           | NA            | NA           |
+| current_catalog        |NA-2|Scalar Functions| -                                                                                                                    | [Blank Cell]     | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell]  | [Blank Cell] |
+| current_database       |NA-2|Scalar Functions| -                                                                                                                    | [Blank Cell]     | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell]  | [Blank Cell] |
+| current_date           |NA-2|Scalar Functions| -                                                                                                                    | [Blank Cell]     | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell]  | [Blank Cell] |
+| current_timezone       |NA-2|Scalar Functions| -                                                                                                                    | [Blank Cell]     | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell]  | [Blank Cell] |
+| current_user           |NA-2|Scalar Functions| -                                                                                                                    | [Blank Cell]     | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell] | [Blank Cell]  | [Blank Cell] |
+| datediff               |S|Scalar Functions| -                                                                                                                    | NA               | NA           | NA           | NA           | CS           | CS           | CS           | S            | NA           | S            | NA           | NA            | NA           |
+| every                  |S|Aggregate Functions| -                                                                                                                    | S                | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | S            | NA           | NA            | NA           |
+| first                  |S|Aggregate Functions| -                                                                                                                    | S                | S            | S            | S            | NS           | NS           | NS           | S            | S            | NS           | S            | S             | NS           |
+| first_value            |S|Aggregate Functions| -                                                                                                                    | S                | S            | S            | S            | NS           | NS           | NS           | S            | S            | NS           | S            | S             | NS           |
+| get_json_object        |S|Scalar Functions| -                                                                                                                    | NA                | NA           | NA            | NA           | S            | S            | S            | NA            | NA           | S| NA            | NA            | NA           |
+| grouping_id            |S|Aggregate Functions| -                                                                                                                    | NA               | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA            | NA           |
+| if                     |S|Scalar Functions| -                                                                                                                    | S                | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| instr                  |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| isnotnull              |S|Scalar Functions| -                                                                                                                    | S                | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| isnull                 |S|Scalar Functions| -                                                                                                                    | S                | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| lcase                  |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| least                  |S|Scalar Functions| Two input parameters are used.                                                                                                         | S                | S            | S            | S            | S            | S            | S            | NS           | S            | S            | S            | NS            | NS           |
+| left                   |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| length                 |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| lower                  |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| max                    |S|Aggregate Functions| -                                                                                                                    | S                | S            | S            | S            | NS           | NS           | NS           | S            | S            | NS           | S            | S             | NS           |
+| md5                    |PS|Scalar Functions| The input parameter must be a variable of the String type.                                                                                                   | NA               | NA           | NA           | NA           | S            | S            | S            | NA           | NA           | S            | NA           | NA            | NA           |
+| mean                   |S|Aggregate Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | S            | NA            | NA           |
+| min                    |S|Aggregate Functions| -                                                                                                                    | S                | S            | S            | S            | NS           | NS           | NS           | S            | S            | NS           | S            | S             | NS           |
+| mod                    |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| not                    |S|Scalar Functions| -                                                                                                                    | S                | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | S            | NA           | NA            | NA           |
+| nullif                 |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| nvl2                   |S|Scalar Functions| -                                                                                                                    | S                | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| or                     |S|Scalar Functions| -                                                                                                                    | S                | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | S            | NA           | NA            | NA           |
+| positive               |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| pmod                   |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | NS           | NS           | NS           | NS           | NA           | NS           | S            | S            | NA            | NA           |
+| rank                   |S|Window Functions| No input parameter is involved.                                                                                                               | NA               | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA            | NA           |
+| replace                |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| round                  |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| row_number             |S|Window Functions| No input parameter is involved.                                                                                                               | NA               | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA            | NA           |
+| some                   |S|Aggregate Functions| -                                                                                                                    | S                | NA           | NA           | NA           | NA           | NA           | NA           | NA           | NA           | S            | NA           | NA            | NA           |
+| substr                 |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| substring              |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| trunc                  |S|Scalar Functions| -                                                                                                                    | NA               | NA           | NA           | NA           | S            | S            | S            | S            | NA           | S            | NA           | NS            | NA           |
+| ucase                  |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| upper                  |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| when                   |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NS           |
+| !=                     |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| <>                     |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| =                      |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| ==                     |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| abs                    |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| concat                 |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NS           |
+| contains               |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| decode                 |PS|Scalar Functions| The number of input parameters must be greater than 2.                                                                                                      | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NS           |
+| endswith               |PS|Scalar Functions| The second input parameter must be a constant of the String type.                                                                                                | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| hash                   |S|Scalar Functions| -                                                                                                                    | S                | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| ifnull                 |S|Scalar Functions| -                                                                                                                    | S                | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| in                     |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| like                   |PS|Scalar Functions| The second input parameter must be a constant of the String type, and the constant cannot contain underscores (_) or more than one percent sign (%).                                                                            | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| nvl                    |S|Scalar Functions| -                                                                                                                    | S                | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| regexp                 |PS|Scalar Functions| The second input parameter must be a constant of the String type, that is, '^\\d+$'                                                                                        | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| regexp_like            |PS|Scalar Functions| The second input parameter must be a constant of the String type, that is, '^\\d+$'                                                                                        | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| regr_avgx              |S|Aggregate Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| regr_avgy              |S|Aggregate Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| right                  |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| rlike                  |PS|Scalar Functions| The second input parameter must be a constant of the String type, that is, '^\\d+$'                                                                                        | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| startswith             |PS|Scalar Functions| The second input parameter must be a constant of the String type.                                                                                                | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| sum                    |S|Aggregate Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | S            | NA            | NA           |
+| to_date                |PS|Scalar Functions| Only one input parameter is allowed.                                                                                                         | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NA           |
+| xxhash64               |S|Scalar Functions| -                                                                                                                    | S                | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+|                        ||| S                                                                                                                    | Scalar Functions | -            | NS           | S            | S            | S            | S            | S            | S            | S            | S            | S             | NS           |
+| bigint                 |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | NS           | S            | S            | NS           | NS            | NA           |
+| boolean                |S|Scalar Functions| -                                                                                                                    | S                | NS           | NS           | NS           | NS           | NS           | NS           | NS           | NS           | S            | NS           | NS            | NA           |
+| date                   |S|Scalar Functions| -                                                                                                                    | NA               | NA           | NA           | NA           | S            | S            | S            | S            | NA           | S            | NA           | NS            | NA           |
+| decimal                |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | NS           | S            | S            | NS           | NS            | NA           |
+| double                 |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | NS           | S            | S            | NS           | NS            | NA           |
+| int                    |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | NS           | S            | S            | NS           | NS            | NA           |
+| string                 |S|Scalar Functions| -                                                                                                                    | NS               | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | NS            | NS           |
+| coalesce               |PS|Scalar Functions| Two input parameters are used.                                                                                                         | S                | S            | S            | S            | S            | S            | S            | S            | S            | S            | NS           | S             | NS           |
+| from_unixtime          |PS|Scalar Functions| Only yyyy-MM-dd and yyyy-MM-dd HH:mm:ss are supported, and the time zone must be GMT+08:00, Asia/Beijing, or Asia/Shanghai.                     | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| greatest               |PS|Scalar Functions| Two input parameters are used.                                                                                                         | S                | S            | S            | S            | S            | S            | S            | NS           | S            | S            | NS           | NS            | NS           |
+| unix_timestamp         |PS|Scalar Functions| timeExp must be String/Date. Only yyyy-MM-dd and yyyy-MM-dd HH:mm:ss are supported, and the time zone must be GMT+08:00, Asia/Beijing, or Asia/Shanghai.| NA               | NA           | NA           | NA           | S            | S            | S            | S            | NA           | S            | NA           | NS            | NA           |
+| try_add                |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| try_divide             |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| try_multiply           |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| try_subtract           |S|Scalar Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | NS           | NA            | NA           |
+| try_avg                |S|Aggregate Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | S            | NA            | NA           |
+| try_sum                |S|Aggregate Functions| -                                                                                                                    | NA               | S            | S            | S            | S            | S            | S            | NA           | S            | S            | S            | NA            | NA           |
 
 
-This section describes the support scope, restrictions, and usage rules for SQL operators and expressions \(including data types\) when the OmniOperator feature is used with SparkExtension.
+**Table 4** List of supported cast expressions<a id="List of supported cast expressions"></a>
+
+|**Source/Target Type**|**BOOLEAN**|**INT**|**LONG**|**DOUBLE**|**STRING**|**CHAR**|**VARCHAR**|**DATE**|**DECIMAL**|**SHORT**|**TIMESTAMP**| **ARRAY** |
+|--|--|--|--|--|--|--|--|--|--|--|--|-----------|
+|**BOOLEAN**|S|NS|NS|NS|NS|NS|NS|NA|NS|NS|NS| NS        |
+|**INT**|NS|S|S|S|S|S|S|NA|S|NS|NS| NS        |
+|**LONG**|NS|S|S|S|S|S|S|NA|S|NS|NS| NS        |
+|**DOUBLE**|NS|S|S|S|S|S|S|NA|S|NS|NS| NS        |
+|**STRING**|NS|S|S|S|S|S|S|S|S|NS|NS| NA        |
+|**CHAR**|NS|S|S|S|S|S|S|S|S|NS|NS| NS        |
+|**VARCHAR**|NS|S|S|S|S|S|S|S|S|NS|NS| NS        |
+|**DATE**|NS|NS|NS|NS|S|S|S|S|NS|NS|NS| NS        |
+|**DECIMAL**|NS|S|S|S|S|S|S|NA|S|NS|NS| NS        |
+|**NULL**|S|S|S|S|S|S|S|S|S|NS|NS| NS        |
+|**SHORT**|NS|NS|NS|NS|NS|NS|NS|NS|NS|NS|NS| NS        |
+|**TIMESTAMP**|NS|NS|NS|NS|NS|NS|NS|NS|NS|NS|NS| NS        |
+
+
+This section describes the support scope, restrictions, and usage rules for SQL operators and expressions (including data types) when the OmniOperator feature is used with SparkExtension.
 ##### Installing SparkExtension<a name="EN-US_TOPIC_0000002547462869"></a>
 
 The OmniOperator feature supports the Spark engine. You need to install Spark on the management node and all compute nodes, and configure the SparkExtension dependency for the openEuler OS.
 
-Install the SparkExtension version specific to the used Spark version, for example, SparkExtension 3.1.1 for Spark 3.1.1. You can run the  **spark-shell --version**  command to query the Spark version.
+Install the SparkExtension version specific to the used Spark version, for example, SparkExtension 3.1.1 for Spark 3.1.1. You can run the **spark-shell --version** command to query the Spark version.
 
-Installing OmniOperator requires the Spark extension package and the library files. See  [Table 3](en-us_topic_0000002547462871.md#_table677mcpsimp).
+Installing OmniOperator requires the Spark extension package and the library files. For details, see Table 3 in the [Installation Guide](installation_guide.md).
 
->![](public_sys-resources/icon-note.gif) **NOTE:** 
->-   The  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip**  package contains  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip**  \(for NEON\) and  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip**  \(for SVE\). Select either based on whether the model supports NEON or SVE instructions. The following uses  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip**  \(for NEON\) as an example. To install the SVE dependency package on a server that supports SVE instructions, such as Kunpeng 920B, replace  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip**  with  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip**.
->-   Select the dependency package based on your OS type. The following uses openEuler 22.03 as an example and the dependency package is  **Dependency\_library\_openeuler22.03.zip**.
+>![](public_sys-resources/icon-note.gif) **Note:**
+>-   The **boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip** package contains **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip** (for NEON) and **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip** (for SVE). Select either based on whether the model supports NEON or SVE instructions. The following uses **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip** (for NEON) as an example. To install the SVE dependency package on a server that supports SVE instructions, such as Kunpeng 920B, replace **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip** with **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip**.
+>-   Select the dependency package based on your OS type. The following uses openEuler 22.03 as an example and the dependency package is `Dependency_library_openeuler22.03.zip`.
 
 **Installing SparkExtension 3.1.1<a name="section3748143825311"></a>**
 
-1. Install Spark. For details, see  [OS and Software Requirements](en-us_topic_0000002547462871.md#section112321019581).
+1. Install Spark. For details, see "OS and Software Requirements" in the [Installation Guide](installation_guide.md).
 2. Download the SparkExtension plugin package and extract it.
 
-    Download  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip**  from  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)  and upload it to the  **/opt/omni-operator/**  directory on the management node.
+    Download **boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip** from the "Obtaining the Software Package" section in the [Installation Guide](installation_guide.md) and upload it to the **/opt/omni-operator/** directory on the management node.
 
 3. Install the SparkExtension dependency of openEuler.
 
-    >![](public_sys-resources/icon-note.gif) **NOTE:** 
-    >If another version of SparkExtension has been installed, skip this step. Check the  **lib**  directory in the  **$OMNI\_HOME**  path. If it contains the  **.so**  library and  **.jar**  package, this indicates that another version of SparkExtension has been installed. In this document,  **$OMNI\_HOME**  is  **/opt/omni-operator**.
+    >![](public_sys-resources/icon-note.gif) **Note:**
+    >If another version of SparkExtension has been installed, skip this step. Check the **lib** directory in the `$OMNI_HOME` directory. If it contains the **.so** library and **.jar** package, this indicates that another version of SparkExtension has been installed. In this document, `$OMNI_HOME` is **/opt/omni-operator**.
 
-    1. Configure a local Yum repository. The following uses openEuler 22.03 LTS SP1 as an example.
+    1. (Optional) Configure the yum repository. The following uses openEuler 22.03 LTS SP1 as an example.
 
         ```
         dnf config-manager --add-repo https://repo.oepkgs.net/openeuler/rpm/openEuler-22.03-LTS-SP1/extras/aarch64/
@@ -238,31 +244,31 @@ Installing OmniOperator requires the Spark extension package and the library fil
         ```
 
 4. Configure SparkExtension.
-    1. Create an  **/opt/omni-operator/**  directory on the management and compute nodes as the root directory for installing OmniOperator. Then go to the directory.
+    1. Create an **/opt/omni-operator/** directory on the management node as the root directory for installing OmniOperator. Then go to the directory.
 
         ```
         mkdir /opt/omni-operator
         cd /opt/omni-operator
         ```
 
-    2. Obtain the  **Dependency\_library\_openeuler22.03.zip**  package from  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)  and upload it to the  **/opt/omni-operator**  directory. Then extract the package content applicable to your OS and copy it to the  **/opt/omni-operator/lib**  directory.
+    2. Download **Dependency_library_openeuler22.03.zip** from the "Obtaining the Software Package" section in the [Installation Guide](installation_guide.md) and upload it to the **/opt/omni-operator** directory. Then extract the content applicable to the corresponding OS and copy it to the **/opt/omni-operator/lib** directory.
 
-        >![](public_sys-resources/icon-note.gif) **NOTE:** 
-        >-   If another version of SparkExtension has been installed, skip this step. Check the  **lib**  directory in the  **$OMNI\_HOME**  path. If it contains the  **.so**  library and  **.jar**  package, this indicates that another version of SparkExtension has been installed. In this document,  **$OMNI\_HOME**  is  **/opt/omni-operator**.
-        >-   If you have copied  **libLLVM-15.so**  and  **libjemalloc.so.2**  to  **/opt/omni-operator/lib**  in  [Installing Dependencies](en-us_topic_0000002515743058.md), skip the copy operation in this step.
+        >![](public_sys-resources/icon-note.gif) **Note:**
+        >-   If another version of SparkExtension has been installed, skip this step. Check the **lib** directory in the `$OMNI_HOME` directory. If it contains the **.so** library and **.jar** package, this indicates that another version of SparkExtension has been installed. In this document, `$OMNI_HOME` is **/opt/omni-operator**.
+        >-   If you have copied **libLLVM-15.so** and **libjemalloc.so.2** from the "Installing the Dependencies" section in the *Installation Guide* to the **/opt/omni-operator/lib** directory, skip the copy operation in this step.
 
         ```
         unzip Dependency_library_openeuler22.03.zip
         \cp -f /opt/omni-operator/Dependency_library_openeuler22.03/* /opt/omni-operator/lib
         ```
 
-    3. Extract  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip**  to obtain  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip**.
+    3. Extract **boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip** to obtain **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip**.
 
-        Extract  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip**  to  **obtain boostkit-omniop-spark-3.1.1-2.0.0-aarch64.jar**  and  **dependencies.tar.gz**.
+        Extract **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip** to **obtain boostkit-omniop-spark-3.1.1-2.0.0-aarch64.jar** and **dependencies.tar.gz**.
 
-        Move  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64.jar**  to  **/opt/omni-operator/lib**.
+        Move **boostkit-omniop-spark-3.1.1-2.0.0-aarch64.jar** to the **/opt/omni-operator/lib** directory.
 
-        Extract  **dependencies.tar.gz**  to the  **/opt/omni-operator/lib**  directory.
+        Extract **dependencies.tar.gz** to the **/opt/omni-operator/lib** directory.
 
         ```
         cd /opt/omni-operator
@@ -274,7 +280,7 @@ Installing OmniOperator requires the Spark extension package and the library fil
         rm -f *.zip
         ```
 
-    4. Change the permission on the program file in the software package to  **550**, on the configuration file directory to  **750**, and on the configuration file to  **640**.
+    4. Change the permission on the program file in the software package to **550**, on the configuration file directory to **750**, and on the configuration file to **640**.
 
         ```
         chmod -R 550 /opt/omni-operator/*
@@ -282,7 +288,7 @@ Installing OmniOperator requires the Spark extension package and the library fil
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
 
-5. Add the following environment variable to the  **\~/.bashrc**  file on the management node:
+5. Add the following environment variable to the **\~/.bashrc** file on the management node:
 
     ```
     echo "export OMNI_HOME=/opt/omni-operator" >> ~/.bashrc
@@ -291,17 +297,17 @@ Installing OmniOperator requires the Spark extension package and the library fil
 
 **Installing SparkExtension 3.3.1<a name="section168801148145411"></a>**
 
-1. Install Spark. For details, see  [OS and Software Requirements](en-us_topic_0000002547462871.md#section112321019581).
+1. Install Spark. For details, see "OS and Software Requirements" in the [Installation Guide](installation_guide.md).
 2. Download the SparkExtension plugin package and extract it.
 
-    Download  **boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip**  from  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)  and upload it to the  **/opt/omni-operator/**  directory on the management node.
+    Download **boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip** from the "Obtaining the Software Package" section in the [Installation Guide](installation_guide.md) and upload it to the **/opt/omni-operator/** directory on the management node.
 
 3. Install the SparkExtension dependency of openEuler.
 
-    >![](public_sys-resources/icon-note.gif) **NOTE:** 
-    >If another version of SparkExtension has been installed, skip this step. Check the  **lib**  directory in the  **$OMNI\_HOME**  path. If it contains the  **.so**  library and  **.jar**  package, this indicates that another version of SparkExtension has been installed. In this document,  **$OMNI\_HOME**  is  **/opt/omni-operator**.
+    >![](public_sys-resources/icon-note.gif) **Note:**
+    >If another version of SparkExtension has been installed, skip this step. Check the **lib** directory in the **$OMNI_HOME** directory. If it contains the **.so** library and **.jar** package, this indicates that another version of SparkExtension has been installed. In this document, `$OMNI_HOME` is **/opt/omni-operator**.
 
-    1. Configure a local Yum repository. The following uses openEuler 22.03 LTS SP1 as an example.
+    1. (Optional) Configure the yum repository. The following uses openEuler 22.03 LTS SP1 as an example.
 
         ```
         dnf config-manager --add-repo https://repo.oepkgs.net/openeuler/rpm/openEuler-22.03-LTS-SP1/extras/aarch64/
@@ -314,31 +320,31 @@ Installing OmniOperator requires the Spark extension package and the library fil
         ```
 
 4. Configure SparkExtension.
-    1. Create an  **/opt/omni-operator/**  directory on the management and compute nodes as the root directory for installing OmniOperator. Then go to the directory.
+    1. Create an **/opt/omni-operator/** directory on the management node as the root directory for installing OmniOperator. Then go to the directory.
 
         ```
         mkdir /opt/omni-operator
         cd /opt/omni-operator
         ```
 
-    2. Obtain the  **Dependency\_library\_openeuler22.03.zip**  package from  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)  and upload it to the  **/opt/omni-operator**  directory. Then extract the package content applicable to your OS and copy it to the  **/opt/omni-operator/lib**  directory.
+    2. Download **Dependency_library_openeuler22.03.zip** from the "Obtaining the Software Package" section in the [Installation Guide](installation_guide.md) and upload it to the **/opt/omni-operator** directory. Then extract the content applicable to the corresponding OS and copy it to the **/opt/omni-operator/lib** directory.
 
-        >![](public_sys-resources/icon-note.gif) **NOTE:** 
-        >-   If another version of SparkExtension has been installed, skip this step. Check the  **lib**  directory in the  **$OMNI\_HOME**  path. If it contains the  **.so**  library and  **.jar**  package, this indicates that another version of SparkExtension has been installed. In this document,  **$OMNI\_HOME**  is  **/opt/omni-operator**.
-        >-   If you have copied  **libLLVM-15.so**  and  **libjemalloc.so.2**  to  **/opt/omni-operator/lib**  in  [Installing Dependencies](en-us_topic_0000002515743058.md), skip the copy operation in this step.
+        >![](public_sys-resources/icon-note.gif) **Note:**
+        >-   If another version of SparkExtension has been installed, skip this step. Check the **lib** directory in the `$OMNI_HOME` directory. If it contains the **.so** library and **.jar** package, this indicates that another version of SparkExtension has been installed. In this document, `$OMNI_HOME` is **/opt/omni-operator**.
+        >-   If you have copied **libLLVM-15.so** and **libjemalloc.so.2** from the "Installing the Dependencies" section in the *Installation Guide* to the **/opt/omni-operator/lib** directory, skip the copy operation in this step.
 
         ```
         unzip Dependency_library_openeuler22.03.zip
         \cp -f /opt/omni-operator/Dependency_library_openeuler22.03/* /opt/omni-operator/lib
         ```
 
-    3. Extract  **boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip**  to obtain  **boostkit-omniop-spark-3.3.1-2.0.0-aarch64-openeuler.zip**.
+    3. Extract **boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip** to obtain **boostkit-omniop-spark-3.3.1-2.0.0-aarch64-openeuler.zip**.
 
-        Extract  **boostkit-omniop-spark-3.3.1-2.0.0-aarch64-openeuler.zip**  to  **obtain boostkit-omniop-spark-3.3.1-2.0.0-aarch64.jar**  and  **dependencies.tar.gz**.
+        Extract **boostkit-omniop-spark-3.3.1-2.0.0-aarch64-openeuler.zip** to **obtain boostkit-omniop-spark-3.3.1-2.0.0-aarch64.jar** and **dependencies.tar.gz**.
 
-        Move  **boostkit-omniop-spark-3.3.1-2.0.0-aarch64.jar**  to  **/opt/omni-operator/lib**.
+        Move **boostkit-omniop-spark-3.3.1-2.0.0-aarch64.jar** to the **/opt/omni-operator/lib** directory.
 
-        Extract  **dependencies.tar.gz**  to the  **/opt/omni-operator/lib**  directory.
+        Extract **dependencies.tar.gz** to the **/opt/omni-operator/lib** directory.
 
         ```
         cd /opt/omni-operator
@@ -350,7 +356,7 @@ Installing OmniOperator requires the Spark extension package and the library fil
         rm -f *.zip
         ```
 
-    4. Change the permission on the program file in the software package to  **550**, on the configuration file directory to  **750**, and on the configuration file to  **640**.
+    4. Change the permission on the program file in the software package to **550**, on the configuration file directory to **750**, and on the configuration file to **640**.
 
         ```
         chmod -R 550 /opt/omni-operator/*
@@ -358,7 +364,7 @@ Installing OmniOperator requires the Spark extension package and the library fil
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
 
-5. Add the following environment variable to the  **\~/.bashrc**  file on the management node:
+5. Add the following environment variable to the **\~/.bashrc** file on the management node:
 
     ```
     echo "export OMNI_HOME=/opt/omni-operator" >> ~/.bashrc
@@ -367,17 +373,17 @@ Installing OmniOperator requires the Spark extension package and the library fil
 
 **Installing SparkExtension 3.4.3<a name="section1522624995214"></a>**
 
-1. Install Spark. For details, see  [OS and Software Requirements](en-us_topic_0000002547462871.md#section112321019581).
+1. Install Spark. For details, see "OS and Software Requirements" in the [Installation Guide](installation_guide.md).
 2. Download the SparkExtension plugin package and extract it.
 
-    Download  **boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip**  from  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)  and upload it to the  **/opt/omni-operator/**  directory on the management node.
+    Download **boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip** from the "Obtaining the Software Package" section in the [Installation Guide](installation_guide.md) and upload it to the **/opt/omni-operator/** directory on the management node.
 
 3. Install the SparkExtension dependency of openEuler.
 
-    >![](public_sys-resources/icon-note.gif) **NOTE:** 
-    >If another version of SparkExtension has been installed, skip this step. Check the  **lib**  directory in the  **$OMNI\_HOME**  path. If it contains the  **.so**  library and  **.jar**  package, this indicates that another version of SparkExtension has been installed. In this document,  **$OMNI\_HOME**  is  **/opt/omni-operator**.
+    >![](public_sys-resources/icon-note.gif) **Note:**
+    >If another version of SparkExtension has been installed, skip this step. Check the **lib** directory in the `$OMNI_HOME` directory. If it contains the **.so** library and **.jar** package, this indicates that another version of SparkExtension has been installed. In this document, `$OMNI_HOME` is **/opt/omni-operator**.
 
-    1. Configure a local Yum repository. The following uses openEuler 22.03 LTS SP1 as an example.
+    1. (Optional) Configure the yum repository. The following uses openEuler 22.03 LTS SP1 as an example.
 
         ```
         dnf config-manager --add-repo https://repo.oepkgs.net/openeuler/rpm/openEuler-22.03-LTS-SP1/extras/aarch64/
@@ -390,31 +396,31 @@ Installing OmniOperator requires the Spark extension package and the library fil
         ```
 
 4. Configure SparkExtension.
-    1. Create an  **/opt/omni-operator/**  directory on the management and compute nodes as the root directory for installing OmniOperator. Then go to the directory.
+    1. Create an **/opt/omni-operator/** directory on the management node as the root directory for installing OmniOperator. Then go to the directory.
 
         ```
         mkdir /opt/omni-operator
         cd /opt/omni-operator
         ```
 
-    2. Obtain the  **Dependency\_library\_openeuler22.03.zip**  package from  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)  and upload it to the  **/opt/omni-operator**  directory. Then extract the package content applicable to your OS and copy it to the  **/opt/omni-operator/lib**  directory.
+    2. Download **Dependency_library_openeuler22.03.zip** from the "Obtaining the Software Package" section in the [Installation Guide](installation_guide.md) and upload it to the **/opt/omni-operator** directory. Then extract the content applicable to the corresponding OS and copy it to the **/opt/omni-operator/lib** directory.
 
-        >![](public_sys-resources/icon-note.gif) **NOTE:** 
-        >-   If another version of SparkExtension has been installed, skip this step. Check the  **lib**  directory in the  **$OMNI\_HOME**  path. If it contains the  **.so**  library and  **.jar**  package, this indicates that another version of SparkExtension has been installed. In this document,  **$OMNI\_HOME**  is  **/opt/omni-operator**.
-        >-   If you have copied  **libLLVM-15.so**  and  **libjemalloc.so.2**  to  **/opt/omni-operator/lib**  in  [Installing Dependencies](en-us_topic_0000002515743058.md), skip the copy operation in this step.
+        >![](public_sys-resources/icon-note.gif) **Note:**
+        >-   If another version of SparkExtension has been installed, skip this step. Check the **lib** directory in the `$OMNI_HOME` directory. If it contains the **.so** library and **.jar** package, this indicates that another version of SparkExtension has been installed. In this document, `$OMNI_HOME` is **/opt/omni-operator**.
+        >-   If you have copied **libLLVM-15.so** and **libjemalloc.so.2** from the "Installing the Dependencies" section in the *Installation Guide* to the **/opt/omni-operator/lib** directory, skip the copy operation in this step.
 
         ```
         unzip Dependency_library_openeuler22.03.zip
         \cp -f /opt/omni-operator/Dependency_library_openeuler22.03/* /opt/omni-operator/lib
         ```
 
-    3. Extract  **boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip**  to obtain  **boostkit-omniop-spark-3.4.3-2.0.0-aarch64-openeuler.zip**.
+    3. Extract **boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip** to obtain **boostkit-omniop-spark-3.4.3-2.0.0-aarch64-openeuler.zip**.
 
-        Extract  **boostkit-omniop-spark-3.4.3-2.0.0-aarch64-openeuler.zip**  to  **obtain boostkit-omniop-spark-3.4.3-2.0.0-aarch64.jar**  and  **dependencies.tar.gz**.
+        Extract **boostkit-omniop-spark-3.4.3-2.0.0-aarch64-openeuler.zip** to **obtain boostkit-omniop-spark-3.4.3-2.0.0-aarch64.jar** and **dependencies.tar.gz**.
 
-        Move  **boostkit-omniop-spark-3.4.3-2.0.0-aarch64.jar**  to  **/opt/omni-operator/lib**.
+        Move **boostkit-omniop-spark-3.4.3-2.0.0-aarch64.jar** to the **/opt/omni-operator/lib** directory.
 
-        Extract  **dependencies.tar.gz**  to the  **/opt/omni-operator/lib**  directory.
+        Extract **dependencies.tar.gz** to the **/opt/omni-operator/lib** directory.
 
         ```
         cd /opt/omni-operator
@@ -426,7 +432,7 @@ Installing OmniOperator requires the Spark extension package and the library fil
         rm -f *.zip
         ```
 
-    4. Change the permission on the program file in the software package to  **550**, on the configuration file directory to  **750**, and on the configuration file to  **640**.
+    4. Change the permission on the program file in the software package to **550**, on the configuration file directory to **750**, and on the configuration file to **640**.
 
         ```
         chmod -R 550 /opt/omni-operator/*
@@ -434,7 +440,7 @@ Installing OmniOperator requires the Spark extension package and the library fil
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
 
-5. Add the following environment variable to the  **\~/.bashrc**  file on the management node:
+5. Add the following environment variable to the **\~/.bashrc** file on the management node:
 
     ```
     echo "export OMNI_HOME=/opt/omni-operator" >> ~/.bashrc
@@ -443,17 +449,17 @@ Installing OmniOperator requires the Spark extension package and the library fil
 
 **Installing SparkExtension 3.5.2<a name="section18509455195219"></a>**
 
-1. Install Spark. For details, see  [OS and Software Requirements](en-us_topic_0000002547462871.md#section112321019581).
+1. Install Spark. For details, see "OS and Software Requirements" in the [Installation Guide](installation_guide.md).
 2. Download the SparkExtension plugin package and extract it.
 
-    Download  **boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip**  from  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)  and upload it to the  **/opt/omni-operator/**  directory on the management node.
+    Download **boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip** from the "Obtaining the Software Package" section in the [Installation Guide](installation_guide.md) and upload it to the **/opt/omni-operator/** directory on the management node.
 
 3. Install the SparkExtension dependency of openEuler.
 
-    >![](public_sys-resources/icon-note.gif) **NOTE:** 
-    >If another version of SparkExtension has been installed, skip this step. Check the  **lib**  directory in the  **$OMNI\_HOME**  path. If it contains the  **.so**  library and  **.jar**  package, this indicates that another version of SparkExtension has been installed. In this document,  **$OMNI\_HOME**  is  **/opt/omni-operator**.
+    >![](public_sys-resources/icon-note.gif) **Note:**
+    >If another version of SparkExtension has been installed, skip this step. Check the **lib** directory in the `$OMNI_HOME` directory. If it contains the **.so** library and **.jar** package, this indicates that another version of SparkExtension has been installed. In this document, `$OMNI_HOME` is **/opt/omni-operator**.
 
-    1. Configure a local Yum repository. The following uses openEuler 22.03 LTS SP1 as an example.
+    1. (Optional) Configure the yum repository. The following uses openEuler 22.03 LTS SP1 as an example.
 
         ```
         dnf config-manager --add-repo https://repo.oepkgs.net/openeuler/rpm/openEuler-22.03-LTS-SP1/extras/aarch64/
@@ -466,31 +472,31 @@ Installing OmniOperator requires the Spark extension package and the library fil
         ```
 
 4. Configure SparkExtension.
-    1. Create an  **/opt/omni-operator/**  directory on the management and compute nodes as the root directory for installing OmniOperator. Then go to the directory.
+    1. Create an **/opt/omni-operator/** directory on the management node as the root directory for installing OmniOperator. Then go to the directory.
 
         ```
         mkdir /opt/omni-operator
         cd /opt/omni-operator
         ```
 
-    2. Obtain the  **Dependency\_library\_openeuler22.03.zip**  package from  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)  and upload it to the  **/opt/omni-operator**  directory. Then extract the package content applicable to your OS and copy it to the  **/opt/omni-operator/lib**  directory.
+    2. Download **Dependency_library_openeuler22.03.zip** from the "Obtaining the Software Package" section in the [Installation Guide](installation_guide.md) and upload it to the **/opt/omni-operator** directory. Then extract the content applicable to the corresponding OS and copy it to the **/opt/omni-operator/lib** directory.
 
-        >![](public_sys-resources/icon-note.gif) **NOTE:** 
-        >-   If another version of SparkExtension has been installed, skip this step. Check the  **lib**  directory in the  **$OMNI\_HOME**  path. If it contains the  **.so**  library and  **.jar**  package, this indicates that another version of SparkExtension has been installed. In this document,  **$OMNI\_HOME**  is  **/opt/omni-operator**.
-        >-   If you have copied  **libLLVM-15.so**  and  **libjemalloc.so.2**  to  **/opt/omni-operator/lib**  in  [Installing Dependencies](en-us_topic_0000002515743058.md), skip the copy operation in this step.
+        >![](public_sys-resources/icon-note.gif) **Note:**
+        >-   If another version of SparkExtension has been installed, skip this step. Check the **lib** directory in the `$OMNI_HOME` directory. If it contains the **.so** library and **.jar** package, this indicates that another version of SparkExtension has been installed. In this document, `$OMNI_HOME` is **/opt/omni-operator**.
+        >-   If you have copied **libLLVM-15.so** and **libjemalloc.so.2** from the "Installing the Dependencies" section in the *Installation Guide* to the **/opt/omni-operator/lib** directory, skip the copy operation in this step.
 
         ```
         unzip Dependency_library_openeuler22.03.zip
         \cp -f /opt/omni-operator/Dependency_library_openeuler22.03/* /opt/omni-operator/lib
         ```
 
-    3. Extract  **boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip**  to obtain  **boostkit-omniop-spark-3.5.2-2.0.0-aarch64-openeuler.zip**.
+    3. Extract **boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip** to obtain **boostkit-omniop-spark-3.5.2-2.0.0-aarch64-openeuler.zip**.
 
-        Extract  **boostkit-omniop-spark-3.5.2-2.0.0-aarch64-openeuler.zip**  to  **obtain boostkit-omniop-spark-3.5.2-2.0.0-aarch64.jar**  and  **dependencies.tar.gz**.
+        Extract **boostkit-omniop-spark-3.5.2-2.0.0-aarch64-openeuler.zip** to **obtain boostkit-omniop-spark-3.5.2-2.0.0-aarch64.jar** and **dependencies.tar.gz**.
 
-        Move  **boostkit-omniop-spark-3.5.2-2.0.0-aarch64.jar**  to  **/opt/omni-operator/lib**.
+        Move **boostkit-omniop-spark-3.5.2-2.0.0-aarch64.jar** to the **/opt/omni-operator/lib** directory.
 
-        Extract  **dependencies.tar.gz**  to the  **/opt/omni-operator/lib**  directory.
+        Extract **dependencies.tar.gz** to the **/opt/omni-operator/lib** directory.
 
         ```
         cd /opt/omni-operator
@@ -502,7 +508,7 @@ Installing OmniOperator requires the Spark extension package and the library fil
         rm -f *.zip
         ```
 
-    4. Change the permission on the program file in the software package to  **550**, on the configuration file directory to  **750**, and on the configuration file to  **640**.
+    4. Change the permission on the program file in the software package to **550**, on the configuration file directory to **750**, and on the configuration file to **640**.
 
         ```
         chmod -R 550 /opt/omni-operator/*
@@ -510,7 +516,7 @@ Installing OmniOperator requires the Spark extension package and the library fil
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
 
-5. Add the following environment variable to the  **\~/.bashrc**  file on the management node:
+5. Add the following environment variable to the **\~/.bashrc** file on the management node:
 
     ```
     echo "export OMNI_HOME=/opt/omni-operator" >> ~/.bashrc
@@ -518,79 +524,79 @@ Installing OmniOperator requires the Spark extension package and the library fil
     ```
 
 The OmniOperator feature supports the Spark engine. You need to install Spark on the management node and all compute nodes, and configure the SparkExtension dependency for the openEuler OS.
-##### Setting the Spark Configuration File<a name="EN-US_TOPIC_0000002515743054"></a>
+##### Configuring the Spark Configuration File<a name="EN-US_TOPIC_0000002515743054"></a>
 
 After installing the Spark engine, add Spark parameters to the OmniOperator configuration file so that services can be properly executed.
 
-1. Add the following Spark configurations to the  **/opt/omni-operator/conf/omni.conf**  file.
+1. Add the following Spark configurations to the **/opt/omni-operator/conf/omni.conf** file.
     1. Open the file.
 
         ```
         vi /opt/omni-operator/conf/omni.conf
         ```
 
-    2. Press  **I**  to enter the insert mode and add the following Spark configurations \(recommended\).
+    2. Press **i** to enter the insert mode and add the following Spark configurations (recommended).
 
         ```
         # <----Spark---->
-        # The default decimal rounding mode in mathematical operations is DOWN. HALF_UP indicates that a decimal is rounded to the nearest integer. If the distances between the decimal and two adjacent integers are the same, the decimal is rounded up. DOWN indicates truncation, that is, rounding towards zero.
+        #The default decimal rounding mode in mathematical operations is DOWN. HALF_UP indicates that a decimal is rounded to the nearest integer. If the distances between the decimal and two adjacent integers are the same, the decimal is rounded up. DOWN indicates truncation, that is, rounding towards zero.
         RoundingRule=DOWN
-        # Indicates whether to check for rescaling in the decimal operation result. The value is CHECK_RESCALE (default) or NOT_CHECK_RESCALE.
+        #Indicates whethression row-by-row processinoperation result. The value is CHECK_RESCALE (default) or NOT_CHECK_RESCALE.
         CheckReScaleRule=CHECK_RESCALE
-        # Indicates whether to replace null characters in the replace operation. The value is NOT_REPLACE (default) or REPLACE.
-        # For example, in InputStr="apple", ReplaceStr="*", SearchStr="", openLooKeng replaces null characters in the middle of the letters to obtain OutputStr="*a*p*p*l*e*", whereas Spark does not, and OutputStr="apple" is obtained.
+        #Indicates whether to replace null characters in the replace operation. The value is NOT_REPLACE (default) or REPLACE.
+        #For example, in InputStr="apple", ReplaceStr="*", SearchStr="", openLooKeng replaces null characters in the middle of the letters to obtain OutputStr="*a*p*p*l*e*", whereas Spark does not, and OutputStr="apple" is obtained.
         EmptySearchStrReplaceRule=NOT_REPLACE
-        # Indicates whether to directly convert a decimal to double data in C++. The value is CONVERT_WITH_STRING (default, indicating that the decimal is converted to a character string and then to double data) or CAST (indicating direct conversion).
+        #Indicates whether to directly convert a decimal to double data in C++. The value is CONVERT_WITH_STRING (default, indicating that the decimal is converted to a character string and then to double data) or CAST (indicating direct conversion).
         CastDecimalToDoubleRule=CONVERT_WITH_STRING
-        # Indicates whether to return an empty string or intercept a character string if a negative index is less than the minimum index in the substr operation. The value is INTERCEPT_FROM_BEYOND (default) or EMPTY_STRING.
-        # For example, in str="apple", strLength=5, startIndex=-7, subStringLength=3, the length of the character string apple is 5, and the third character is to be obtained from the position of index -7. The minimum negative index of apple is -4. Because -7 is less than -4, openLooKeng directly returns an empty string, whereas Spark still tries to obtain the third character from the position of index -7 and returns the first non-empty character a.
+        #Indicates whether to return an empty string or intercept a character string if a negative index is less than the minimum index in the substr operation. The value is INTERCEPT_FROM_BEYOND (default) or EMPTY_STRING.
+        #For example, in str="apple", strLength=5, startIndex=-7, subStringLength=3, the length of the character string "apple" is 5, and the third character is to be obtained from the position of index -7. The minimum negative index of "apple" is -4. Because -7 is less than -4, openLooKeng directly returns an empty string, whereas Spark still tries to obtain the third character from the position of index -7 and returns the first non-empty character "a".
         NegativeStartIndexOutOfBoundsRule=INTERCEPT_FROM_BEYOND
         #Indicates whether ContainerVector is supported. The value is NOT_SUPPORT (default) or SUPPORT.
         SupportContainerVecRule=NOT_SUPPORT
-        # Indicates whether the precision can be reduced when a character string is converted to a date. The value can be ALLOW_REDUCED_PRECISION (default) or NOT_ALLOW_REDUCED_PRECISION.
-        # For example, openLooKeng supports only the complete ISO date format. That is, the month and day cannot be omitted, for example, 1996-02-08. On the other hand, the month and day can be omitted in Spark, where 1996-02-28, 1996-02, and 1996 are all supported.
+        #Indicates whether the precision can be reduced when a character string is converted to a date. The value can be ALLOW_REDUCED_PRECISION (default) or NOT_ALLOW_REDUCED_PRECISION.
+        #For example, openLooKeng supports only the complete ISO date format. That is, the month and day cannot be omitted, for example, 1996-02-08. On the other hand, the month and day can be omitted in Spark, where 1996-02-28, 1996-02, and 1996 are all supported.
         StringToDateFormatRule=ALLOW_REDUCED_PRECISION
-        # Indicates whether VectorBatch contains the filter column. The value can be NO_EXPR (default, indicating that the filter column is not contained) or EXPR_FILTER (indicating that the filter column is contained).
+        #Indicates whether VectorBatch contains the filter column. The value can be NO_EXPR (default, indicating that the filter column is not contained) or EXPR_FILTER (indicating that the filter column is contained).
         SupportExprFilterRule=EXPR_FILTER
-        # Indicates whether to support obtaining an element from the first element when startIndex=0 in the substr operation. The value is IS_SUPPORT (default) or IS_NOT_SUPPORT (The default start index is 1, and an empty string is returned by default when startIndex=0.).
+        #Indicates whether to support obtaining an element from the first element when startIndex=0 in the substr operation. The value is IS_SUPPORT (default) or IS_NOT_SUPPORT (The default start index is 1, and an empty string is returned by default when startIndex=0.).
         ZeroStartIndexSupportRule=IS_SUPPORT
-        # Indicates whether to verify the expression.
+        #Indicates whether to verify the expression.
         ExpressionVerifyRule=NOT_VERIFY
         
         # <----Other properties---->
-        # Indicates whether to enable batch processing of CodeGen functions. This option is disabled by default.
+        #Indicates whether to enable batch processing of CodeGen functions. This option is disabled by default.
         enableBatchExprEvaluate=false
         ```
 
-    3. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+    3. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
 
 2. Package the OmniOperator installation directory and upload it to HDFS so that multiple nodes can access and process the file at the same time.
-    1. Compress the  **/opt/omni-operator**  folder on the management node into the  **omni-operator.tar.gz**  file. The file name and path can be customized as required.
+    1. Compress the **/opt/omni-operator** folder on the management node into the **omni-operator.tar.gz** file. The file name and path can be customized as required.
 
         ```
         cd /opt
         tar -czvf /opt/omni-operator.tar.gz -C /opt omni-operator
         ```
 
-    2. Upload the installation package  **omni-operator.tar.gz**  to the planned account on HDFS. The following uses the  **root**  account as an example. You can replace it with another planned account and change the path  **/user/root**  accordingly.
+    2. Upload the installation package **omni-operator.tar.gz** to the planned account on HDFS. The following uses the **root** account as an example. You can replace it with another planned account and change the path **/user/root** accordingly.
 
         ```
         hdfs dfs -put /opt/omni-operator.tar.gz /user/root
         ```
 
-        >![](public_sys-resources/icon-note.gif) **NOTE:** 
-        >After you upload and run  **omni-operator.tar.gz**, you have the read permission on this file.
+        >![](public_sys-resources/icon-note.gif) **Note:**
+        >After you upload and run **omni-operator.tar.gz**, you have the read permission on this file.
 
 After installing the Spark engine, add Spark parameters to the OmniOperator configuration file so that services can be properly executed.
-##### Executing Spark Services<a name="EN-US_TOPIC_0000002547382869"></a>
+##### Executing the Spark Service<a name="EN-US_TOPIC_0000002547382869"></a>
 
 Verify that SparkExtension takes effect and run a test case to show the performance optimization. Ensure that Spark engine services are running properly.
 
-Spark uses interactive command lines to execute SQL tasks. To check whether SparkExtension has taken effect, add  **EXPLAIN**  before the SQL statement or view the Spark UI to check the operator names in the execution plan. If an operator name starting with  **Omni**  is displayed, SparkExtension has taken effect.
+Spark uses interactive command lines to execute SQL tasks. To check whether SparkExtension has taken effect, add **EXPLAIN** before the SQL statement or view the Spark UI to check the operator names in the execution plan. If an operator name starting with **Omni** is displayed, SparkExtension has taken effect.
 
-This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table as the test table.  [Table 1](#en-us_topic_0000001519205317_table869619153246)  describes the test table. The test SQL statement is the TPC-DS test dataset Q82.
+This test example uses the `tpcds_bin_partitioned_varchar_orc_2` data table, as described in [**Table 1** Test table information](#Test table information). The test SQL statement is the TPC-DS test dataset Q82.
 
-**Table  1**  Test table information
+**Table 1** Test table information<a id="Test table information"></a>
 
 |Table|Format|Rows|
 |--|--|--|
@@ -602,33 +608,33 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
 
 1. Start the Spark SQL CLI.
 
-    - Command for starting open source Spark SQL:
+    - Command for starting open-source Spark SQL:
 
         ```
         /usr/local/spark/bin/spark-sql --deploy-mode client --driver-cores 8 --driver-memory 20g --master yarn --executor-cores 8 --executor-memory 26g --num-executors 36 --conf spark.executor.extraJavaOptions='-XX:+UseG1GC -XX:+UseNUMA' --conf spark.locality.wait=0 --conf spark.network.timeout=600 --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.sql.adaptive.enabled=true --conf spark.sql.autoBroadcastJoinThreshold=100M --conf spark.sql.broadcastTimeout=600 --conf spark.sql.shuffle.partitions=1000 --conf spark.sql.orc.impl=native --conf spark.task.cpus=1 --database tpcds_bin_partitioned_varchar_orc_2
         ```
 
     - Perform the following operations to start the SparkExtension 3.1.1 plugin:
-        1. Go to the  **/usr/local/spark/conf**  directory and create the  **spark-defaults-omnioperator.conf**  file.
+        1. Go to the **/usr/local/spark/conf** directory and create the **spark-defaults-omnioperator.conf** file.
 
             ```
             cd /usr/local/spark/conf
             cp spark-defaults.conf spark-defaults-omnioperator.conf
             ```
 
-        2. Change the permission on  **spark-defaults-omnioperator.conf**  to  **640**.
+        2. Change the permission on **spark-defaults-omnioperator.conf** to **640**.
 
             ```
             chmod 640 spark-defaults-omnioperator.conf
             ```
 
-        3. Open  **spark-defaults-omnioperator.conf**.
+        3. Open **spark-defaults-omnioperator.conf**.
 
             ```
             vi spark-defaults-omnioperator.conf
             ```
 
-        4. Press  **i**  to enter the insert mode and add the following content to the end of the file:
+        4. Press **i** to enter the insert mode and add the following content to the end of the file:
 
             ```
             spark.sql.optimizer.runtime.bloomFilter.enabled true
@@ -657,7 +663,7 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
             spark.sql.join.columnar.preferShuffledHashJoin true
             ```
 
-        5. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+        5. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
         6. Run the startup command.
 
             ```
@@ -665,26 +671,26 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
             ```
 
     - Perform the following operations to start the SparkExtension 3.3.1 plugin:
-        1. Go to the  **/usr/local/spark/conf**  directory and create the  **spark-defaults-omnioperator.conf**  file.
+        1. Go to the **/usr/local/spark/conf** directory and create the **spark-defaults-omnioperator.conf** file.
 
             ```
             cd /usr/local/spark/conf
             cp spark-defaults.conf spark-defaults-omnioperator.conf
             ```
 
-        2. Change the permission on  **spark-defaults-omnioperator.conf**  to  **640**.
+        2. Change the permission on **spark-defaults-omnioperator.conf** to **640**.
 
             ```
             chmod 640 spark-defaults-omnioperator.conf
             ```
 
-        3. Open  **spark-defaults-omnioperator.conf**.
+        3. Open **spark-defaults-omnioperator.conf**.
 
             ```
             vi spark-defaults-omnioperator.conf
             ```
 
-        4. Press  **i**  to enter the insert mode and add the following content to the end of the file:
+        4. Press **i** to enter the insert mode and add the following content to the end of the file:
 
             ```
             spark.sql.optimizer.runtime.bloomFilter.enabled true
@@ -713,7 +719,7 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
             spark.sql.join.columnar.preferShuffledHashJoin true
             ```
 
-        5. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+        5. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
         6. Run the startup command.
 
             ```
@@ -721,26 +727,26 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
             ```
 
     - Perform the following operations to start the SparkExtension 3.4.3 plugin:
-        1. Go to the  **/usr/local/spark/conf**  directory and create the  **spark-defaults-omnioperator.conf**  file.
+        1. Go to the **/usr/local/spark/conf** directory and create the **spark-defaults-omnioperator.conf** file.
 
             ```
             cd /usr/local/spark/conf
             cp spark-defaults.conf spark-defaults-omnioperator.con
             ```
 
-        2. Change the permission on  **spark-defaults-omnioperator.conf**  to  **640**.
+        2. Change the permission on **spark-defaults-omnioperator.conf** to **640**.
 
             ```
             chmod 640 spark-defaults-omnioperator.conf
             ```
 
-        3. Open  **spark-defaults-omnioperator.conf**.
+        3. Open **spark-defaults-omnioperator.conf**.
 
             ```
             vi spark-defaults-omnioperator.conf
             ```
 
-        4. Press  **i**  to enter the insert mode and add the following content to the end of the file:
+        4. Press **i** to enter the insert mode and add the following content to the end of the file:
 
             ```
             spark.sql.optimizer.runtime.bloomFilter.enabled true 
@@ -769,7 +775,7 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
             spark.sql.join.columnar.preferShuffledHashJoin true
             ```
 
-        5. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+        5. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
         6. Run the startup command.
 
             ```
@@ -778,26 +784,26 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
 
     - Perform the following operations to start the SparkExtension 3.5.2 plugin:
 
-        1. Go to the  **/usr/local/spark/conf**  directory and create the  **spark-defaults-omnioperator.conf**  file.
+        1. Go to the **/usr/local/spark/conf** directory and create the **spark-defaults-omnioperator.conf** file.
 
             ```
             cd /usr/local/spark/conf
             cp spark-defaults.conf spark-defaults-omnioperator.conf
             ```
 
-        2. Change the permission on  **spark-defaults-omnioperator.conf**  to  **640**.
+        2. Change the permission on **spark-defaults-omnioperator.conf** to **640**.
 
             ```
             chmod 640 spark-defaults-omnioperator.conf
             ```
 
-        3. Open  **spark-defaults-omnioperator.conf**.
+        3. Open **spark-defaults-omnioperator.conf**.
 
             ```
             vi spark-defaults-omnioperator.conf
             ```
 
-        4. Press  **i**  to enter the insert mode and add the following content to the end of the file:
+        4. Press **i** to enter the insert mode and add the following content to the end of the file:
 
             ```
             spark.sql.optimizer.runtime.bloomFilter.enabled true
@@ -826,25 +832,25 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
             spark.sql.join.columnar.preferShuffledHashJoin true
             ```
 
-        5. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+        5. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
         6. Run the startup command.
 
             ```
             /usr/local/spark/bin/spark-sql --archives hdfs://server1:9000/user/root/omni-operator.tar.gz#omni --deploy-mode client --driver-cores 8 --driver-memory 40g --master yarn --executor-cores 12 --executor-memory 5g --conf spark.memory.offHeap.enabled=true --conf spark.memory.offHeap.size=35g --num-executors 24 --conf spark.executor.extraJavaOptions='-XX:+UseG1GC' --conf spark.locality.wait=0 --conf spark.network.timeout=600 --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.sql.adaptive.enabled=true --conf spark.sql.adaptive.skewedJoin.enabled=true --conf spark.sql.autoBroadcastJoinThreshold=100M --conf spark.sql.broadcastTimeout=600 --conf spark.sql.shuffle.partitions=600 --conf spark.sql.orc.impl=native --conf spark.task.cpus=1 --properties-file /usr/local/spark/conf/spark-defaults-omnioperator.conf --database tpcds_bin_partitioned_varchar_orc_2
             ```
 
-        >![](public_sys-resources/icon-note.gif) **NOTE:** 
-        >-   hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni: Set  **hdfs://server1:9000**  based on the actual value of  **fs.defaultFS**  in the  **core-site.xml**  file of Hadoop. You can replace  **/user/root/omni-operator.tar.gz**  with a custom directory and this directory is associated with the operations in  [2](setting-the-spark-configuration-file.md#li998683755613).  **\#omni**  indicates the directory where the  **omni-operator.tar.gz**  package is extracted. You can customize the directory.
-        >-   The preceding startup command is used in Yarn mode. If the SparkExtension plugin is started in local mode, change  **--master yarn**  to  **--master local**. Before starting the plugin, add  **export LD\_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2**  to the  **\~/.bashrc**  file on all nodes and update environment variables. Replace  **$\{PWD\}/omni**  in the startup command with  **/opt**.
+        >![](public_sys-resources/icon-note.gif) **Note:**
+        >-   hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni: Set **hdfs://server1:9000** based on the actual value of **fs.defaultFS** in the **core-site.xml** file of Hadoop. You can replace **/user/root/omni-operator.tar.gz** with a custom directory and this directory is associated with the operations in [2](#config-spark). **\#omni** indicates the directory where the **omni-operator.tar.gz** package is extracted. You can customize the directory.
+        >-   The preceding startup command is used in Yarn mode. If the SparkExtension plugin is started in local mode, change **--master yarn** to **--master local**. Before starting the plugin, add **export LD_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2** to the **\~/.bashrc** file on all nodes and update environment variables. Replace **$\{PWD\}/omni** in the startup command with **/opt**.
 
-    [Table 2](#en-us_topic_0000001519205317_table188511159114320)  describes the SparkExtension startup parameters.
+     [**Table 2** SparkExtension startup parameters](#SparkExtension startup parameters) describes the SparkExtension startup parameters.
 
-    **Table  2**  SparkExtension startup parameters
+    **Table 2** SparkExtension startup parameters<a id="SparkExtension startup parameters"></a>
 
 |Parameter|Default Value|Description|
 |--|--|--|
 |spark.sql.extensions|com.huawei.boostkit.spark.ColumnarPlugin|Starts SparkExtension.|
-|spark.shuffle.manager|sort|Indicates whether to enable columnar shuffle. If you enable this function, configure the shuffleManager class of OmniShuffle and add the configuration item **--conf spark.shuffle.manager="org.apache.spark.shuffle.sort.OmniColumnarShuffleManager"**. By default, open source Shuffle is used for sorting.|
+|spark.shuffle.manager|sort|Indicates whether to enable columnar shuffle. If you enable this function, configure the shuffleManager class of OmniShuffle and add the configuration item **--conf spark.shuffle.manager="org.apache.spark.shuffle.sort.OmniColumnarShuffleManager"**. By default, open-source Shuffle is used for sorting.|
 |spark.omni.sql.columnar.hashagg|true|Indicates whether to enable columnar HashAgg. **true**: yes; **false**: no.|
 |spark.omni.sql.columnar.project|true|Indicates whether to enable columnar Project. **true**: yes; **false**: no.|
 |spark.omni.sql.columnar.projfilter|true|Indicates whether to enable columnar ConditionProject (Project + Filter convergence operator). **true**: yes; **false**: no.|
@@ -864,7 +870,7 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
 |spark.shuffle.compress|true|Indicates whether to enable compression for the shuffle output. **true**: yes; **false**: no.|
 |spark.io.compression.codec|lz4|Specifies the compression format for the shuffle output. Possible values are **uncompressed**, **zlib**, **snappy**, **lz4**, and **zstd**.|
 |spark.omni.sql.columnar.sortSpill.rowThreshold|214783647|Specifies the threshold that triggers spilling for the Sort operator, in rows. When the number of data rows to be processed exceeds the specified value, data is spilled. Adjust the parameter value based on the actual memory specifications. You can increase the value to reduce the number of Sort operator spills to drives and drive I/O operations.|
-|spark.omni.sql.columnar.sortSpill.memFraction|90|Specifies the threshold that triggers spilling for the Sort operator. When the off-heap memory usage for data processing exceeds the specified value, data is spilled. This parameter is used together with the spark.memory.offHeap.size parameter, which means the total off-heap memory size. Adjust the parameter value based on the actual memory specifications. You can increase the value to reduce the number of Sort operator spills to drives and drive I/O operations.|
+|spark.omni.sql.columnar.sortSpill.memFraction|90|Specifies the threshold that triggers spilling for the Sort operator. When the off-heap memory usage for data processing exceeds the specified value, data is spilled. This parameter is used together with the **spark.memory.offHeap.size** parameter, which means the total off-heap memory size. Adjust the parameter value based on the actual memory specifications. You can increase the value to reduce the number of Sort operator spills to drives and drive I/O operations.|
 |spark.omni.sql.columnar.broadcastJoin.shareHashtable|true|Indicates whether the builder constructs only one hash table and whether the hash table is shared by all lookup joins in Broadcast Join. **true**: yes; **false**: no.|
 |spark.omni.sql.columnar.sortSpill.dirDiskReserveSize|10737418240|Specifies the size of the available drive space reserved for data spilling of the Sort operator, in bytes. If the actual size is less than the specified value, an exception is thrown. Adjust the parameter value based on the actual drive capacity and service scenario. It is recommended that the value be less than or equal to the service data size. The upper limit of the value is the actual drive capacity.|
 |spark.omni.sql.columnar.sortSpill.enabled|false|Indicates whether to enable spilling for the Sort operator. **true**: yes; **false**: no.|
@@ -879,26 +885,26 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
 |spark.locality.wait|3|Specifies the waiting duration for data localization.|
 |spark.sql.cbo.enabled|false|Indicates whether to enable CBO. **true**: yes; **false**: no.|
 |spark.sql.codegen.wholeStage|true|Indicates whether to enable whole stage code generation. **true**: yes; **false**: no.|
-|spark.sql.orc.impl|native|**native** indicates that an open source ORC library version is used, and **hive** indicates that the ORC library in Hive is used.|
+|spark.sql.orc.impl|native|**native** indicates that an open-source ORC library version is used, and **hive** indicates that the ORC library in Hive is used.|
 |spark.serializer|-|Specifies serialization with Kryo.|
-|spark.executor.extraJavaOptions|-|Specifies the path of the local Hadoop library that the Executor uses for acceleration.|
+|spark.executor.extraJavaOptions|-|Specifies the path to the local Hadoop library that the Executor uses for acceleration.|
 |spark.driver.extraJavaOptions|-|Specifies the path to the local Hadoop library that the driver uses for acceleration.|
 |spark.network.timeout|120|Specifies the default timeout duration of all network interactions, in seconds.|
 |spark.omni.sql.columnar.RewriteSelfJoinInInPredicate|false|Indicates whether to convert Self Join in the **in** expression to HashAgg so as to delete unused columns to reduce the data volume. **true**: yes; **false**: no.|
 |spark.sql.execution.filterMerge.enabled|false|Indicates whether to combine expressions with similar structures in the same table so as to reduce the scan data volume. **true**: yes; **false**: no.|
 |spark.omni.sql.columnar.dedupLeftSemiJoin|false|Indicates whether to deduplicate the LeftSemi Join right table so as to reduce the join data volume. **true**: yes; **false**: no.|
-|spark.omni.sql.columnar.radixSort.enabled|false|Indicates whether to enable cardinality sorting optimization. When the number of rows to be sorted in a single task exceeds the threshold, cardinality sorting is invoked. The default value is **1000000**. **true**: yes; **false**: no.|
+|spark.omni.sql.columnar.radixSort.enabled|false|Indicates whether to enable cardinality sorting optimization. When the number of rows to be sorted in a single task exceeds the threshold, cardinality sorting is invoked. The default value is **1,000,000**. **true**: yes; **false**: no.|
 |spark.sql.join.columnar.preferShuffledHashJoin|false|Indicates whether to use ShuffledHashJoin whenever possible. **true**: yes; **false**: no.|
 |spark.sql.adaptive.skewedJoin.enabled|false|Indicates whether to enable adaptive skewed join optimization. During adaptive skewed join optimization, some special join algorithms are used to process skewed data if any, improving the join operation efficiency. **true**: yes; **false**: no.|
 |spark.sql.adaptive.coalescePartitions.minPartitionNum|1|Specifies the minimum number of shuffle partitions after merging. If this parameter is not set, the default degree of parallelism of the Spark cluster is used.|
 |spark.omni.sql.columnar.bloomfilterSubqueryReuse|false|Indicates whether to reuse BloomFilter subquery, that is, reuse the data table so as to reduce one scan operation when BloomFilter takes effect. **true**: yes; **false**: no.|
 |spark.omni.sql.columnar.adaptivePartialAggregation.enabled|false|Indicates whether to enable adaptive skipping of the HashAgg group aggregation operation in the partial stage. This optimization is performed during software running. The partial stage of group aggregation is skipped and data is directly output to the downstream operator if the sampling scenario is identified as a high cardinality scenario and if group aggregation is performed but the first/last aggregation does not exist. **true**: yes; **false**: no.|
-|spark.omni.sql.columnar.adaptivePartialAggregationMinRows|500000|Specifies the minimum number of rows sampled for adaptivePartialAggregation optimization. When this number of rows has been sampled, the tool calculates the aggregation of the sampled data.|
+|spark.omni.sql.columnar.adaptivePartialAggregationMinRows|500000|Specifies the minimum number of rows sampled for adaptivePartialAggregation optimization. When this number has been reached, the tool calculates the aggregation of the sampled data.|
 |spark.omni.sql.columnar.adaptivePartialAggregationRatio|0.8|Specifies the minimum aggregation threshold for adaptivePartialAggregation optimization. If the aggregation of sampled data has reached the threshold, this type of optimization is applied.|
-|spark.omni.sql.columnar.pushOrderedLimitThroughAggEnable.enabled|false|Indicates whether to enable pushOrderedLimitThroughAgg optimization. If the execution plan contains the Sort+Limit operator and the sorting field is a subset of the grouping field for the group aggregation operation, the TopNSort operator is pushed down to the partial stage of the group aggregation operation. This reduces the data processing volume of the downstream operator. **true**: yes; **false**: no.This type of optimization and the adaptivePartialAggregation optimization do not take effect at the same time.|
+|spark.omni.sql.columnar.pushOrderedLimitThroughAggEnable.enabled|false|Indicates whether to enable pushOrderedLimitThroughAgg optimization. If the execution plan contains the Sort+Limit operator and the sorting field is a subset of the grouping field for the group aggregation operation, the TopNSort operator is pushed down to the partial stage of the group aggregation operation. This reduces the data processing volume of the downstream operator. **true**: yes; **false**: no. This type of optimization and the adaptivePartialAggregation optimization do not take effect at the same time.|
 |spark.omni.sql.columnar.combineJoinedAggregates.enabled|false|Indicates whether to enable combineJoinedAggregates optimization. This type of optimization reduces repeated table read operations by merging subqueries that are based on the same data. **true**: yes; **false**: no.|
-|spark.omni.sql.columnar.wholeStage.fallback.threshold|-1|When AQE is enabled, if the number of operators rolled back in a stage is greater than or equal to the threshold, all operators (except OmniColumnarToRow and OmniAQEShuffleReadExec) of the stage are rolled back to open source operators. The value **–1** indicates that this function is disabled.|
-|spark.omni.sql.columnar.query.fallback.threshold|-1|When AQE is disabled, if the number of operators rolled back in the execution plan is greater than or equal to the threshold, all operators of the stage are rolled back to open source operators. The value **–1** indicates that this function is disabled.|
+|spark.omni.sql.columnar.wholeStage.fallback.threshold|-1|When AQE is enabled, if the number of operators rolled back in a stage is greater than or equal to the threshold, all operators (except OmniColumnarToRow and OmniAQEShuffleReadExec) of the stage are rolled back to open-source operators. The value **–1** indicates that this function is disabled.|
+|spark.omni.sql.columnar.query.fallback.threshold|-1|When AQE is disabled, if the number of operators rolled back in the execution plan is greater than or equal to the threshold, all operators of the stage are rolled back to open-source operators. The value **–1** indicates that this function is disabled.|
 |spark.omni.sql.columnar.unixTimeFunc.enabled|true|Indicates whether to enable the from_unixtime and unix_timestamp expressions. **true**: yes; **false**: no.|
 |spark.sql.orc.filterPushdown|true|Indicates whether to enable predicate pushdown for data query in ORC format.|
 |spark.omni.sql.columnar.windowGroupLimit|true|Indicates whether to enable columnar WindowGroupLimit operator. **true**: yes; **false**: no.|
@@ -906,15 +912,15 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
 |spark.omni.sql.columnar.catalog.cache.expire.time|600|Specifies the cache expiration time of the cached catalog metadata. The default value is 600 seconds.|
 |spark.omni.sql.columnar.vec.predicate.enabled|false|Indicates whether to enable the vectorized predicate pushdown function. **true**: yes; **false**: no.|
 |spark.omni.sql.columnar.numaBinding|false|Indicates whether to enable NUMA binding. This parameter is available for the NUMA architecture. **true**: yes; **false**: no. To enable NUMA binding, set **--conf spark.plugins=com.huawei.boostkit.spark.OmniSparkPlugin** and also **spark.omni.sql.columnar.coreRange**.|
-|spark.omni.sql.columnar.coreRange|-|Set this parameter when enabling NUMA binding. It indicates the core ID range for each NUMA node. Separate different NUMA nodes using vertical bars (|). For example, if the machine has 96 cores for 4 NUMA nodes, set this parameter to **0-23|24-47|48-71|72-95**.|
+|spark.omni.sql.columnar.coreRange|-|Set this parameter when enabling NUMA binding. It indicates the core ID range for each NUMA node. Separate different NUMA nodes using vertical bars. For example, for a 4-NUMA architecture with 96 cores: `0-23|24-47|48-71|72-95`.|
 
 
 2. Check whether SparkExtension has taken effect.
 
-    Run the following SQL statement in the SparkExtension CLI and open source Spark SQL CLI:
+    Run the following SQL statement in the SparkExtension CLI and open-source Spark SQL CLI:
 
-    >![](public_sys-resources/icon-note.gif) **NOTE:** 
-    >You are advised to launch two command-line interfaces simultaneously and start SparkExtension in one window and the open source Spark-SQL in the other, for easy comparison.
+    >![](public_sys-resources/icon-note.gif) **Note:**
+    >You are advised to launch two command-line interfaces simultaneously and start SparkExtension in one window and the open-source Spark SQL in the other, for easy comparison.
 
     ```
     set spark.sql.adaptive.enabled=false;
@@ -934,17 +940,17 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
     limit 100;
     ```
 
-    The following figure shows the execution plan output in the SparkExtension CLI. If the operator name starts with  **Omni**, SparkExtension has taken effect.
+    The following figure shows the execution plan output in the SparkExtension CLI. If the operator name starts with **Omni**, SparkExtension has taken effect.
 
-    ![](figures/en-us_image_0000002515902982.png)
+    ![](figures/zh-cn_image_0000002515902982.png)
 
-    Execution plan outputted by open source Spark SQL:
+    Execution plan outputted by open-source Spark SQL:
 
-    ![](figures/en-us_image_0000002515743078.png)
+    ![](figures/zh-cn_image_0000002515743078.png)
 
 3. Run the following SQL statement.
 
-    Run the following SQL statement in the SparkExtension CLI and open source Spark SQL CLI:
+    Run the following SQL statement in the SparkExtension CLI and open-source Spark SQL CLI:
 
     ```
     set spark.sql.adaptive.enabled=false;
@@ -964,30 +970,30 @@ This test case uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data tabl
     limit 100;
     ```
 
-4. Compare the query results of the TPC-DS test dataset Q82 executed by open source Spark SQL and SparkExtension, and check the performance differences before and after SparkExtension is enabled.
+4. Compare the query results of the TPC-DS test dataset Q82 executed by open-source Spark SQL and SparkExtension, and check the performance differences before and after SparkExtension is enabled.
 
-    - Open source Spark SQL execution result
+    - Open-source Spark SQL execution result
 
-        ![](figures/en-us_image_0000002547382895.png)
+        ![](figures/zh-cn_image_0000002547382895.png)
 
         The execution plan is as follows:
 
-        ![](figures/en-us_image_0000002547382893.png)
+        ![](figures/zh-cn_image_0000002547382893.png)
 
     - Execution result after SparkExtension is enabled
 
-        ![](figures/en-us_image_0000002547462889.png)
+        ![](figures/zh-cn_image_0000002547462889.png)
 
         The execution plan is as follows:
 
-        ![](figures/en-us_image_0000002547462887.png)
+        ![](figures/zh-cn_image_0000002547462887.png)
 
     Execution result comparison: The query results of the two tests are the same. After SparkExtension is enabled, the time required for executing SQL statements is reduced. SparkExtension improves the Q82 query execution efficiency without affecting the query result.
 
 Verify that SparkExtension takes effect and run a test case to show the performance optimization. Ensure that Spark engine services are running properly.
 
 
-#### Enabling on Gluten<a name="EN-US_TOPIC_0000002547462875"></a>
+#### Enablement on Gluten<a name="EN-US_TOPIC_0000002547462875"></a>
 
 ##### Overview<a name="EN-US_TOPIC_0000002547462865"></a>
 
@@ -995,78 +1001,91 @@ When using the OmniOperator feature on Spark, you can enable it through SparkExt
 
 If you are using Spark 3.3.1, it is recommended to use Gluten to enable OmniOperator. For other Spark versions, use SparkExtension.
 
-If you choose to enable OmniOperator through the Gluten framework, install Spark 3.3.1 and Gluten 1.3. For details about Spark installation requirements, see  [OS and Software Requirements](en-us_topic_0000002547462871.md#section112321019581). The sections that follow describe how to install and configure Gluten, and how to apply the OmniOperator feature to Spark.
+If you choose to enable OmniOperator through the Gluten framework, you need to install Spark 3.3.1 and Gluten 1.3. For details about Spark installation requirements, see "OS and Software Requirements" in the [Installation Guide](installation_guide.md). The sections that follow describe how to install and configure Gluten, and how to apply the OmniOperator feature to Spark.
 
 When using the OmniOperator feature on Spark, you can enable it through SparkExtension or Gluten. Choose the appropriate enabling mode based on your specific scenario and requirements to maximize acceleration.
 ##### Supported Operators and Expressions<a name="EN-US_TOPIC_0000002547462867"></a>
 
 This section describes the operators, expressions, and data types supported by OmniOperator when Spark uses OmniOperator on Gluten.
 
-[Table 2](#table2077116295016)  and  [Supported Expressions](#section5353103435216)  describe the operators, expressions, and functions supported by OmniOperator on Gluten. Symbols are used to indicate whether the operators and expressions are supported. For details about the meanings of the symbols, see  [Table 1](supported-operators-and-expressions.md#table86091491368).
+When the OmniOperator feature is used on Gluten, it supports the operators, expressions, and functions listed in [**Table 2** List of supported operators](#List of supported operators_1) and [List of supported expressions](#section5353103435216). Symbols in the tables indicate whether operators and expressions are supported. For details about the meanings of the symbols, see [**Table 1** Meanings of the symbols](#Meanings of the symbols_1).
 
->![](public_sys-resources/icon-notice.gif) **NOTICE:** 
->-   [Operator List](#section176711256181910)  and  [Supported Expressions](#section5353103435216)  list only the data types supported by OmniOperator. Other data types \(BYTE/FLOAT/BINARY/ARRAY/MAP/STRUCT/CALENDAR/UDT\) are not supported.
->-   If you use operators and expressions that are not supported by OmniOperator, the execution plan will be rolled back to open source execution, which deteriorates the performance.
+>![](public_sys-resources/icon-notice.gif) **Notice:**
+>-   [List of supported operators](#section176711256181910) and [List of supported expressions](#section5353103435216) describe only the data types supported or involved by OmniOperator. The data types (BYTE/FLOAT/BINARY/ARRAY/MAP/STRUCT/CALENDAR/UDT), which are not listed, are not supported by OmniOperator.
+>-   If you use operators and expressions that are not supported by OmniOperator, the execution plan will be rolled back to open-source execution, which deteriorates the performance.
 
-**Table  1**  Meanings of symbols in the operator and expression support tables
+**Table 1** Meanings of the symbols<a id="Meanings of the symbols_1"></a>
 
 |Status|Description|
 |--|--|
 |S|Indicates that the operator or expression is supported.|
-|PS|Indicates that the operator or expression is partially supported, with some restrictions. For details about the restrictions, see Constraints.|
+|PS|Indicates that the operator or expression is partially supported, with some restrictions. For details about the restrictions, see [README.md](https://gitcode.com/openeuler/OmniOperator/blob/master/README.md).|
 |NS|Indicates that the operator or expression is not supported.|
-|NA|Indicates that the operator or expression is not involved. This scenario does not exist in open source Spark.|
-|NA-2|Indicates a context function implemented based on open source Spark, which does not involve using OmniOperator.|
+|NA|Indicates that the operator or expression is not involved. This scenario does not exist in open-source Spark.|
+|NA-2|Indicates a context function implemented based on open-source Spark, which does not involve using OmniOperator.|
 |[Blank Cell]|Indicates a scenario that is irrelevant or needs to be confirmed.|
 
 
-**Operator List<a name="section176711256181910"></a>**
+**List of Supported Operators<a name="section176711256181910"></a>**
 
-[Table 2](#table2077116295016)  lists the operators supported by OmniOperator for the Spark engine.
+[**Table 2** List of supported operators](#List of supported operators_1) lists the operators supported by OmniOperator on Spark.
 
-**Table  2**  List of supported operators
+**Table 2** List of supported operators<a id="List of supported operators_1"></a>
 
-|**Open Source Operator**|**OmniOperator Operator**|**BOOLEAN**|**INT**|**LONG**|**DOUBLE**|**STRING**|**CHAR**|**VARCHAR**|**DATE**|**DECIMAL**|**SHORT**|**TIMESTAMP**|
-|--|--|--|--|--|--|--|--|--|--|--|--|--|
-|FileSourceScanExec|FileSourceScanExecTransformer|S|S|S|S|S|S|S|S|S|S|S|
-|ProjectExec|ProjectExecTransformer|S|S|S|S|S|S|S|S|S|NS|S|
-|FilterExec|OmniFilterExecTransformer|S|S|S|S|S|S|S|S|S|NS|S|
-|ExpandExec|ExpandExecTransformer|S|S|S|S|S|S|S|S|S|NS|S|
-|HashAggregateExec|OmniHashAggregateExecTransformer|S|S|S|S|S|S|S|S|S|S|S|
-|TopNSortExec|OmniTopNSortTransformer|S|S|S|S|S|S|S|S|S|NS|S|
-|SortExec|SortExecTransformer|S|S|S|S|S|S|S|S|S|S|S|
-|BroadcastExchangeExec|ColumnarBroadcastExchangeExec|S|S|S|S|S|S|S|S|S|S|S|
-|TakeOrderedAndProjectExec|TakeOrderedAndProjectExecTransformer|S|S|S|S|S|S|S|S|S|S|S|
-|UnionExec|UnionExecTransformer|S|S|S|S|S|S|S|S|S|S|S|
-|ShuffleExchangeExec|OmniColumnarShuffleExchangeExec|S|S|S|S|S|S|S|S|S|S|S|
-|BroadcastHashJoinExec|OmniBroadcastHashJoinExecTransformer|S|S|S|S|S|S|S|S|S|S|S|
-|SortMergeJoinExec|OmniSortMergeJoinExecTransformer|S|S|S|S|S|S|S|S|S|S|S|
-|WindowExec|WindowExecTransformer|S|S|S|S|S|S|S|S|S|S|S|
-|ShuffledHashJoinExec|OmniShuffledHashJoinExecTransformer|S|S|S|S|S|S|S|S|S|S|S|
-|LocalLimitExec|ColumnarLocalLimitExec|S|S|S|S|S|S|S|S|S|S|S|
-|GlobalLimitExec|LimitExecTransformer|S|S|S|S|S|S|S|S|S|S|S|
-|CoalesceExec|ColumnarCoalesceExec|S|S|S|S|S|S|S|S|S|S|S|
-|SubqueryBroadcastExec|ColumnarSubqueryBroadcastExec|S|S|S|S|S|S|S|S|S|S|S|
-|AQEShuffleReadExec|OmniAQEShuffleReadExec|S|S|S|S|S|S|S|S|S|S|S|
+|**Open-Source Operator**|**OmniOperator Operator**|**BOOLEAN**|**INT**|**LONG**|**DOUBLE**|**STRING**|**CHAR**|**VARCHAR**|**DATE**|**DECIMAL**|**SHORT**|**TIMESTAMP**|**ARRAY**|
+|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
+|FileSourceScanExec|FileSourceScanExecTransformer|S|S|S|S|S|S|S|S|S|S|S|S|
+|ProjectExec|ProjectExecTransformer|S|S|S|S|S|S|S|S|S|NS|S|NS|
+|FilterExec|OmniFilterExecTransformer|S|S|S|S|S|S|S|S|S|NS|S|NS|
+|ExpandExec|ExpandExecTransformer|S|S|S|S|S|S|S|S|S|NS|S|NS|
+|HashAggregateExec|OmniHashAggregateExecTransformer|S|S|S|S|S|S|S|S|S|S|S|NS|
+|TopNSortExec|OmniTopNSortTransformer|S|S|S|S|S|S|S|S|S|NS|S|NS|
+|SortExec|SortExecTransformer|S|S|S|S|S|S|S|S|S|S|S|NS|
+|BroadcastExchangeExec|ColumnarBroadcastExchangeExec|S|S|S|S|S|S|S|S|S|S|S|NS|
+|TakeOrderedAndProjectExec|TakeOrderedAndProjectExecTransformer|S|S|S|S|S|S|S|S|S|S|S|NS|
+|UnionExec|UnionExecTransformer|S|S|S|S|S|S|S|S|S|S|S|NS|
+|ShuffleExchangeExec|OmniColumnarShuffleExchangeExec|S|S|S|S|S|S|S|S|S|S|S|NS|
+|BroadcastHashJoinExec|OmniBroadcastHashJoinExecTransformer|S|S|S|S|S|S|S|S|S|S|S|NS|
+|SortMergeJoinExec|OmniSortMergeJoinExecTransformer|S|S|S|S|S|S|S|S|S|S|S|NS|
+|WindowExec|WindowExecTransformer|S|S|S|S|S|S|S|S|S|S|S|S|
+|ShuffledHashJoinExec|OmniShuffledHashJoinExecTransformer|S|S|S|S|S|S|S|S|S|S|S|NS|
+|LocalLimitExec|ColumnarLocalLimitExec|S|S|S|S|S|S|S|S|S|S|S|S|
+|GlobalLimitExec|LimitExecTransformer|S|S|S|S|S|S|S|S|S|S|S|S|
+|CoalesceExec|ColumnarCoalesceExec|S|S|S|S|S|S|S|S|S|S|S|NS|
+|SubqueryBroadcastExec|ColumnarSubqueryBroadcastExec|S|S|S|S|S|S|S|S|S|S|S|NS|
+|AQEShuffleReadExec|OmniAQEShuffleReadExec|S|S|S|S|S|S|S|S|S|S|S|NS|
 
+Operator updates:
 
-**Supported Expressions<a name="section5353103435216"></a>**
+- Currently, the WindowExecTransformer operator supports the array type, but only the row_number and rank functions are supported.
 
-For details, see  [Expression List](supported-operators-and-expressions.md#section5353103435216).
+- The WindowExecTransformer operator does not support aggregate functions.
+
+- Currently, the FileSourceScanExecTransformer operator supports the array type, but only the ORC format is supported.
+
+- InsertIntoHadoopFsRelationCommand supports insertion into HDFS.
+
+- WriteFile supports ORC write.
+
+- LocalLimitExec supports array data truncation.
+
+**List of Supported Expressions<a name="section5353103435216"></a>**
+
+For details, see [List of supported expressions] (#section5353103435216).
 
 This section describes the operators, expressions, and data types supported by OmniOperator when Spark uses OmniOperator on Gluten.
 ##### Installing Gluten<a name="EN-US_TOPIC_0000002547382885"></a>
 
 The OmniOperator feature supports the Spark engine. You need to install Spark on the management node and all compute nodes, and configure the Gluten dependency for the openEuler OS.
 
-1. Install Spark. For details, see  [OS and Software Requirements](en-us_topic_0000002547462871.md#section112321019581).
+1. Install Spark. For details, see "OS and Software Requirements" in the [Installation Guide](installation_guide.md).
 
-    >![](public_sys-resources/icon-notice.gif) **NOTICE:** 
-    >Gluten supports only Spark 3.3.1. You can run the  **spark-shell --version**  command to check the current Spark version.
+    >![](public_sys-resources/icon-notice.gif) **Notice:**
+    >Gluten supports only Spark 3.3.1. You can run the **spark-shell --version** command to check the current Spark version.
 
 2. Download the Gluten plugin package and extract it.
 
-    Obtain  **Boostkit-omniruntime-gluten-1.0.0.zip**  and  **Dependency\_library\_Gluten.zip**  from  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)  and upload them to the  **/opt/omni-operator/**  directory on the management node.
+    Obtain `Boostkit-omniruntime-gluten-1.0.0.zip` and `Dependency_library_Gluten.zip` from the "Obtaining the Software Package" section in the [Installation Guide](installation_guide.md) and upload them to the **/opt/omni-operator/** directory on the management node.
 
 3. Install the Gluten dependency of openEuler.
     1. Configure a local yum repository. The following uses openEuler 22.03 LTS SP1 as an example.
@@ -1082,7 +1101,7 @@ The OmniOperator feature supports the Spark engine. You need to install Spark on
         ```
 
 4. Configure Gluten.
-    1. Extract  **Boostkit-omniruntime-gluten-1.0.0.zip**  and  **Dependency\_library\_Gluten.zip**  to  **/opt/omni-operator/lib**.
+    1. Extract **Boostkit-omniruntime-gluten-1.0.0.zip** and **Dependency_library_Gluten.zip** to the **/opt/omni-operator/lib** directory.
 
         ```
         cd /opt/omni-operator
@@ -1096,7 +1115,7 @@ The OmniOperator feature supports the Spark engine. You need to install Spark on
         mv boostkit-omniop-operator-2.0.0-aarch64/libboostkit-omniop-* lib/
         ```
 
-    2. Change the permission on the program file in the software package to  **550**, on the configuration file directory to  **750**, and on the configuration file to  **640**.
+    2. Change the permission on the program file in the software package to **550**, on the configuration file directory to **750**, and on the configuration file to **640**.
 
         ```
         chmod -R 550 /opt/omni-operator/*
@@ -1104,7 +1123,7 @@ The OmniOperator feature supports the Spark engine. You need to install Spark on
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
 
-5. Add the following environment variable to the  **\~/.bashrc**  file on the management node:
+5. Add the following environment variable to the **\~/.bashrc** file on the management node:
 
     ```
     echo "export OMNI_HOME=/opt/omni-operator" >> ~/.bashrc
@@ -1112,43 +1131,43 @@ The OmniOperator feature supports the Spark engine. You need to install Spark on
     ```
 
 
-##### Setting the Spark Configuration File<a name="EN-US_TOPIC_0000002515743068"></a>
+##### Configure the Spark Configuration File<a name="EN-US_TOPIC_0000002515743068" id="config-spark"></a>
 
 After installing the Spark engine, add the Spark configuration to the OmniOperator configuration file so that services can be properly executed.
 
-1. Add the following Spark configurations to the  **/opt/omni-operator/conf/omni.conf**  file.
-    1. Open  **/opt/omni-operator/conf/omni.conf**.
+1. Add the following Spark configurations to the **/opt/omni-operator/conf/omni.conf** file.
+    1. Open **/opt/omni-operator/conf/omni.conf**.
 
         ```
         vi /opt/omni-operator/conf/omni.conf
         ```
 
-    2. Press  **I**  to enter the insert mode and add the following Spark configurations \(recommended\).
+    2. Press **i** to enter the insert mode and add the following Spark configurations (recommended).
 
         ```
         # <----Spark---->
-        # The default decimal rounding mode in mathematical operations is DOWN. HALF_UP indicates that a decimal is rounded to the nearest integer. If the distances between the decimal and two adjacent integers are the same, the decimal is rounded up. DOWN indicates truncation, that is, rounding towards zero.
+        #The default decimal rounding mode in mathematical operations is DOWN. HALF_UP indicates that a decimal is rounded to the nearest integer. If the distances between the decimal and two adjacent integers are the same, the decimal is rounded up. DOWN indicates truncation, that is, rounding towards zero.
         RoundingRule=DOWN
-        # Indicates whether to check for rescaling in the decimal operation result. The value is CHECK_RESCALE (default) or NOT_CHECK_RESCALE.
+        #Indicates whether to check for rescaling in the decimal operation result. The value is CHECK_RESCALE (default) or NOT_CHECK_RESCALE.
         CheckReScaleRule=CHECK_RESCALE
-        # Indicates whether to replace null characters in the replace operation. The value is NOT_REPLACE (default) or REPLACE.
-        # For example, in InputStr="apple", ReplaceStr="*", SearchStr="", openLooKeng replaces null characters in the middle of the letters to obtain OutputStr="*a*p*p*l*e*", whereas Spark does not, and OutputStr="apple" is obtained.
+        #Indicates whether to replace null characters in the replace operation. The value is NOT_REPLACE (default) or REPLACE.
+        #For example, in InputStr="apple", ReplaceStr="*", SearchStr="", openLooKeng replaces null characters in the middle of the letters to obtain OutputStr="*a*p*p*l*e*", whereas Spark does not, and OutputStr="apple" is obtained.
         EmptySearchStrReplaceRule=NOT_REPLACE
-        # Indicates whether to directly convert a decimal to double data in C++. The value is CONVERT_WITH_STRING (default, indicating that the decimal is converted to a character string and then to double data) or CAST (indicating direct conversion).
+        #Indicates whether to directly convert a decimal to double data in C++. The value is CONVERT_WITH_STRING (default, indicating that the decimal is converted to a character string and then to double data) or CAST (indicating direct conversion).
         CastDecimalToDoubleRule=CONVERT_WITH_STRING
-        # Indicates whether to return an empty string or intercept a character string if a negative index is less than the minimum index in the substr operation. The value is INTERCEPT_FROM_BEYOND (default) or EMPTY_STRING.
-        # For example, in str="apple", strLength=5, startIndex=-7, subStringLength=3, the length of the character string apple is 5, and the third character is to be obtained from the position of index -7. The minimum negative index of apple is -4. Because -7 is less than -4, openLooKeng directly returns an empty string, whereas Spark still tries to obtain the third character from the position of index -7 and returns the first non-empty character a.
+        #Indicates whether to return an empty string or intercept a character string if a negative index is less than the minimum index in the substr operation. The value is INTERCEPT_FROM_BEYOND (default) or EMPTY_STRING.
+        #For example, in str="apple", strLength=5, startIndex=-7, subStringLength=3, the length of the character string "apple" is 5, and the third character is to be obtained from the position of index -7. The minimum negative index of "apple" is -4. Because -7 is less than -4, openLooKeng directly returns an empty string, whereas Spark still tries to obtain the third character from the position of index -7 and returns the first non-empty character "a".
         NegativeStartIndexOutOfBoundsRule=INTERCEPT_FROM_BEYOND
         #Indicates whether ContainerVector is supported. The value is NOT_SUPPORT (default) or SUPPORT.
         SupportContainerVecRule=NOT_SUPPORT
-        # Indicates whether the precision can be reduced when a character string is converted to a date. The value can be ALLOW_REDUCED_PRECISION (default) or NOT_ALLOW_REDUCED_PRECISION.
-        # For example, openLooKeng supports only the complete ISO date format. That is, the month and day cannot be omitted, for example, 1996-02-08. On the other hand, the month and day can be omitted in Spark, where 1996-02-28, 1996-02, and 1996 are all supported.
+        #Indicates whether the precision can be reduced when a character string is converted to a date. The value can be ALLOW_REDUCED_PRECISION (default) or NOT_ALLOW_REDUCED_PRECISION.
+        #For example, openLooKeng supports only the complete ISO date format. That is, the month and day cannot be omitted, for example, 1996-02-08. On the other hand, the month and day can be omitted in Spark, where 1996-02-28, 1996-02, and 1996 are all supported.
         StringToDateFormatRule=ALLOW_REDUCED_PRECISION
-        # Indicates whether VectorBatch contains the filter column. The value can be NO_EXPR (default, indicating that the filter column is not contained) or EXPR_FILTER (indicating that the filter column is contained).
+        #Indicates whether VectorBatch contains the filter column. The value can be NO_EXPR (default, indicating that the filter column is not contained) or EXPR_FILTER (indicating that the filter column is contained).
         SupportExprFilterRule=EXPR_FILTER
-        # Indicates whether to support obtaining an element from the first element when startIndex=0 in the substr operation. The value is IS_SUPPORT (default) or IS_NOT_SUPPORT (The default start index is 1, and an empty string is returned by default when startIndex=0.).
+        #Indicates whether to support obtaining an element from the first element when startIndex=0 in the substr operation. The value is IS_SUPPORT (default) or IS_NOT_SUPPORT (The default start index is 1, and an empty string is returned by default when startIndex=0.).
         ZeroStartIndexSupportRule=IS_SUPPORT
-        # Indicates whether to verify the expression.
+        #Indicates whether to verify the expression.
         ExpressionVerifyRule=NOT_VERIFY
         
         # <----Other properties---->
@@ -1156,35 +1175,35 @@ After installing the Spark engine, add the Spark configuration to the OmniOperat
         enableBatchExprEvaluate=false
         ```
 
-    3. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+    3. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
 
 2. Package the OmniOperator installation directory and upload it to HDFS so that multiple nodes can access and process the file at the same time.
-    1. Compress the  **/opt/omni-operator**  folder on the management node into the  **omni-operator.tar.gz**  file. The file name and path can be customized as required.
+    1. Compress the **/opt/omni-operator** folder on the management node into the **omni-operator.tar.gz** file. The file name and path can be customized as required.
 
         ```
         cd /opt
         tar -czvf /opt/omni-operator.tar.gz -C /opt omni-operator
         ```
 
-    2. Upload the installation package  **omni-operator.tar.gz**  to the planned account on HDFS. The following uses the  **root**  account as an example. You can replace it with another planned account and change the path  **/user/root**  accordingly.
+    2. Upload the installation package **omni-operator.tar.gz** to the planned account on HDFS. The following uses the **root** account as an example. You can replace it with another planned account and change the path **/user/root** accordingly.
 
         ```
         hdfs dfs -put /opt/omni-operator.tar.gz /user/root
         ```
 
-        >![](public_sys-resources/icon-note.gif) **NOTE:** 
-        >After you upload and run  **omni-operator.tar.gz**, you have the read permission on this file.
+        >![](public_sys-resources/icon-note.gif) **Note:**
+        >After you upload and run **omni-operator.tar.gz**, you have the read permission on this file.
 
 After installing the Spark engine, add the Spark configuration to the OmniOperator configuration file so that services can be properly executed.
-##### Executing Spark Tasks<a name="EN-US_TOPIC_0000002515902956"></a>
+##### Executing the Spark Task<a name="EN-US_TOPIC_0000002515902956"></a>
 
 Verify that Gluten takes effect and run a test case to show the performance optimization. Ensure that Spark engine tasks are running properly.
 
-Spark uses interactive command lines to execute SQL tasks. To check whether Gluten has taken effect, add  **EXPLAIN**  before the SQL statement or view the Spark UI to check the operator name in the execution plan. If an operator starting with  **Omni**  or ending with  **Transformer**  is displayed, Gluten has taken effect.
+Spark uses interactive command lines to execute SQL tasks. To check whether Gluten has taken effect, add **EXPLAIN** before the SQL statement or view the Spark UI to check the operator name in the execution plan. If an operator starting with **Omni** or ending with **Transformer** is displayed, Gluten has taken effect.
 
-This example uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table as the test table.  [Table 1](#en-us_topic_0000001519205317_table869619153246)  describes the test table. The test SQL statement is the TPC-DS test dataset Q82.
+This task example uses the `tpcds_bin_partitioned_varchar_orc_2` data table, as described in [**Table 1** Test table information](#Test table information_1). The test SQL statement is the TPC-DS test dataset Q82.
 
-**Table  1**  Test table information
+**Table 1** Test table information<a id="Test table information_1"></a>
 
 |Table|Format|Rows|
 |--|--|--|
@@ -1195,33 +1214,33 @@ This example uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table 
 
 
 1. Start the Spark SQL CLI.
-    - Command for starting open source Spark SQL:
+    - Command for starting open-source Spark SQL:
 
         ```
         /usr/local/spark/bin/spark-sql --deploy-mode client --driver-cores 8 --driver-memory 20g --master yarn --executor-cores 8 --executor-memory 26g --num-executors 36 --conf spark.executor.extraJavaOptions='-XX:+UseG1GC -XX:+UseNUMA' --conf spark.locality.wait=0 --conf spark.network.timeout=600 --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.sql.adaptive.enabled=true --conf spark.sql.autoBroadcastJoinThreshold=100M --conf spark.sql.broadcastTimeout=600 --conf spark.sql.shuffle.partitions=1000 --conf spark.sql.orc.impl=native --conf spark.task.cpus=1 --database tpcds_bin_partitioned_varchar_orc_2
         ```
 
     - Perform the following operations to start the Gluten plugin.
-        1. Go to the  **/usr/local/spark/conf**  directory and create the  **spark-defaults-omnioperator.conf**  file.
+        1. Go to the **/usr/local/spark/conf** directory and create the **spark-defaults-omnioperator.conf** file.
 
             ```
             cd /usr/local/spark/conf
             cp spark-defaults.conf spark-defaults-omnioperator.conf
             ```
 
-        2. Change the permission on  **spark-defaults-omnioperator.conf**  to  **640**.
+        2. Change the permission on **spark-defaults-omnioperator.conf** to **640**.
 
             ```
             chmod 640 spark-defaults-omnioperator.conf
             ```
 
-        3. Open  **spark-defaults-omnioperator.conf**.
+        3. Open **spark-defaults-omnioperator.conf**.
 
             ```
             vi spark-defaults-omnioperator.conf
             ```
 
-        4. Press  **i**  to enter the insert mode and add the following content to the end of the file:
+        4. Press **i** to enter the insert mode and add the following content to the end of the file:
 
             ```
             spark.plugins org.apache.gluten.GlutenPlugin
@@ -1282,25 +1301,25 @@ This example uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table 
             spark.gluten.sql.columnar.maxBatchSize 8192
             ```
 
-        5. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+        5. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
         6. Run the startup command.
 
             ```
             /usr/local/spark/bin/spark-sql --archives hdfs://server1:9000/user/root/omni-operator.tar.gz#omni --deploy-mode client --driver-cores 8 --driver-memory 40g --master yarn --executor-cores 12 --executor-memory 5g --conf spark.memory.offHeap.enabled=true --conf spark.memory.offHeap.size=35g --num-executors 24 --conf spark.executor.extraJavaOptions='-XX:+UseG1GC' --conf spark.locality.wait=0 --conf spark.network.timeout=600 --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.sql.adaptive.enabled=true --conf spark.sql.adaptive.skewedJoin.enabled=true --conf spark.sql.autoBroadcastJoinThreshold=100M --conf spark.sql.broadcastTimeout=600 --conf spark.sql.shuffle.partitions=600 --conf spark.sql.orc.impl=native --conf spark.task.cpus=1 --properties-file /usr/local/spark/conf/spark-defaults-omnioperator.conf --database tpcds_bin_partitioned_varchar_orc_2
             ```
 
-            >![](public_sys-resources/icon-note.gif) **NOTE:** 
-            >-   hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni: Set  **hdfs://server1:9000**  based on the actual value of  **fs.defaultFS**  in the  **core-site.xml**  file of Hadoop. You can replace  **/user/root/omni-operator.tar.gz**  with a custom directory and this directory is associated with the operations in  [2](setting-the-spark-configuration-file-31.md#li2218182485510).  **\#omni**  indicates the directory where the  **omni-operator.tar.gz**  package is extracted. You can customize the directory.
-            >-   The preceding startup command is used in Yarn mode. If the SparkExtension plugin is started in local mode, change  **--master yarn**  to  **--master local**. Before starting the plugin, add  **export LD\_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2**  to the  **\~/.bashrc**  file on all nodes and update environment variables. Replace  **$\{PWD\}/omni**  in the startup command with  **/opt**.
+            >![](public_sys-resources/icon-note.gif) **Note:**
+            >-   hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni: Set **hdfs://server1:9000** based on the actual value of **fs.defaultFS** in the **core-site.xml** file of Hadoop. You can replace **/user/root/omni-operator.tar.gz** with a custom directory and this directory is associated with the operations in [2](#config-spark). **\#omni** indicates the directory where the **omni-operator.tar.gz** package is extracted. You can customize the directory.
+            >-   The preceding startup command is used in Yarn mode. If the SparkExtension plugin is started in local mode, change **--master yarn** to **--master local**. Before starting the plugin, add **export LD_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2** to the **\~/.bashrc** file on all nodes and update environment variables. Replace **$\{PWD\}/omni** in the startup command with **/opt**.
 
-            [Table 2](#en-us_topic_0000001519205317_table188511159114320)  describes the Gluten startup parameters.
+             [**Table 2** Gluten startup parameters](#Gluten startup parameters) describes the Gluten startup parameters.
 
-            **Table  2**  Gluten startup parameters
+            **Table 2** Gluten startup parameters<a id="Gluten startup parameters"></a>
 
 |Parameter|Default Value|Description|
 |--|--|--|
 |spark.plugins|org.apache.gluten.GlutenPlugin|Enable Gluten.|
-|spark.shuffle.manager|sort|Indicates whether to enable columnar shuffle. If you enable this function, configure the shuffleManager class of OmniShuffle and add the configuration item **--conf spark.shuffle.manager="org.apache.spark.shuffle.sort.OmniColumnarShuffleManager"**. By default, open source Shuffle is used for sorting.|
+|spark.shuffle.manager|sort|Indicates whether to enable columnar shuffle. If you enable this function, configure the shuffleManager class of OmniShuffle and add the configuration item **--conf spark.shuffle.manager="org.apache.spark.shuffle.sort.OmniColumnarShuffleManager"**. By default, open-source Shuffle is used for sorting.|
 |spark.gluten.sql.columnar.hashagg|true|Indicates whether to enable columnar HashAgg. **true**: yes; **false**: no.|
 |spark.gluten.sql.columnar.project|true|Indicates whether to enable columnar Project. **true**: yes; **false**: no.|
 |spark.gluten.sql.columnar.filter|true|Indicates whether to enable columnar Filter. **true**: yes; **false**: no.|
@@ -1318,7 +1337,7 @@ This example uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table 
 |spark.shuffle.compress|true|Indicates whether to enable compression for the shuffle output. **true**: yes; **false**: no.|
 |spark.io.compression.codec|lz4|Specifies the compression format for the shuffle output. Possible values are **uncompressed**, **zlib**, **snappy**, **lz4**, and **zstd**.|
 |spark.gluten.sql.columnar.backend.omni.sortSpill.rowThreshold|214783647|Specifies the threshold that triggers spilling for the Sort operator, in rows. When the number of data rows to be processed exceeds the specified value, data is spilled. Adjust the parameter value based on the actual memory specifications. You can increase the value to reduce the number of Sort operator spills to drives and drive I/O operations.|
-|spark.gluten.sql.columnar.backend.omni.memFraction|90|Specifies the threshold that triggers spilling for the Sort operator. When the off-heap memory usage for data processing exceeds the specified value, data is spilled. This parameter is used together with the spark.memory.offHeap.size parameter, which means the total off-heap memory size. Adjust the parameter value based on the actual memory specifications. You can increase the value to reduce the number of Sort operator spills to drives and drive I/O operations.|
+|spark.gluten.sql.columnar.backend.omni.memFraction|90|Specifies the threshold that triggers spilling for the Sort operator. When the off-heap memory usage for data processing exceeds the specified value, data is spilled. This parameter is used together with the **spark.memory.offHeap.size** parameter, which means the total off-heap memory size. Adjust the parameter value based on the actual memory specifications. You can increase the value to reduce the number of Sort operator spills to drives and drive I/O operations.|
 |spark.gluten.sql.columnar.backend.omni.broadcastJoin.sharehashtable|true|Indicates whether the builder constructs only one hash table and whether the hash table is shared by all lookup joins in Broadcast Join. **true**: yes; **false**: no.|
 |spark.gluten.sql.columnar.backend.omni.spill.dirDiskReserveSize|10737418240|Specifies the size of the available drive space reserved for data spilling of the Sort operator, in bytes. If the actual size is less than the specified value, an exception is thrown. Adjust the parameter value based on the actual drive capacity and service scenario. It is recommended that the value be less than or equal to the service data size. The upper limit of the value is the actual drive capacity.|
 |spark.gluten.sql.columnar.backend.omni.joinReorderEnhance|true|Indicates whether to enable the join reordering optimization policy. **true**: yes; **false**: no. The heuristic join reordering algorithm automatically optimizes join reordering based on the number of **where** filter criteria and the table size.|
@@ -1331,9 +1350,9 @@ This example uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table 
 |spark.locality.wait|3|Specifies the waiting duration for data localization.|
 |spark.sql.cbo.enabled|false|Indicates whether to enable CBO. **true**: yes; **false**: no.|
 |spark.sql.codegen.wholeStage|true|Indicates whether to enable whole stage code generation. **true**: yes; **false**: no.|
-|spark.sql.orc.impl|native|**native** indicates that an open source ORC library version is used, and **hive** indicates that the ORC library in Hive is used.|
+|spark.sql.orc.impl|native|**native** indicates that an open-source ORC library version is used, and **hive** indicates that the ORC library in Hive is used.|
 |spark.serializer|-|Specifies serialization with Kryo.|
-|spark.executor.extraJavaOptions|-|Specifies the path of the local Hadoop library that the Executor uses for acceleration.|
+|spark.executor.extraJavaOptions|-|Specifies the path to the local Hadoop library that the Executor uses for acceleration.|
 |spark.driver.extraJavaOptions|-|Specifies the path to the local Hadoop library that the driver uses for acceleration.|
 |spark.network.timeout|120|Specifies the default timeout duration of all network interactions, in seconds.|
 |spark.gluten.sql.columnar.backend.omni.rewriteSelfJoinInInPredicate|false|Indicates whether to convert Self Join in the **in** expression to HashAgg so as to delete unused columns to reduce the data volume. **true**: yes; **false**: no.|
@@ -1343,10 +1362,10 @@ This example uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table 
 |spark.sql.adaptive.skewedJoin.enabled|false|Indicates whether to enable adaptive skewed join optimization. During adaptive skewed join optimization, some special join algorithms are used to process skewed data if any, improving the join operation efficiency. **true**: yes; **false**: no.|
 |spark.sql.adaptive.coalescePartitions.minPartitionNum|1|Specifies the minimum number of shuffle partitions after merging. If this parameter is not set, the default degree of parallelism of the Spark cluster is used.|
 |spark.gluten.sql.columnar.backend.omni.adaptivePartialAggregation|false|Indicates whether to enable adaptive skipping of the HashAgg group aggregation operation in the partial stage. This optimization is performed during software running. The partial stage of group aggregation is skipped and data is directly output to the downstream operator if the sampling scenario is identified as a high cardinality scenario and if group aggregation is performed but the first/last aggregation does not exist. **true**: yes; **false**: no.|
-|spark.gluten.sql.columnar.backend.omni.pushOrderedLimitThroughAggEnable|false|Indicates whether to enable pushOrderedLimitThroughAgg optimization. If the execution plan contains the Sort+Limit operator and the sorting field is a subset of the grouping field for the group aggregation operation, the TopNSort operator is pushed down to the partial stage of the group aggregation operation. This reduces the data processing volume of the downstream operator. **true**: yes; **false**: no.This type of optimization and the adaptivePartialAggregation optimization do not take effect at the same time.|
+|spark.gluten.sql.columnar.backend.omni.pushOrderedLimitThroughAggEnable|false|Indicates whether to enable pushOrderedLimitThroughAgg optimization. If the execution plan contains the Sort+Limit operator and the sorting field is a subset of the grouping field for the group aggregation operation, the TopNSort operator is pushed down to the partial stage of the group aggregation operation. This reduces the data processing volume of the downstream operator. **true**: yes; **false**: no. This type of optimization and the adaptivePartialAggregation optimization do not take effect at the same time.|
 |spark.gluten.sql.columnar.backend.omni.combineJoinedAggregates|false|Indicates whether to enable combineJoinedAggregates optimization. This type of optimization reduces repeated table read operations by merging subqueries that are based on the same data. **true**: yes; **false**: no.|
-|spark.gluten.sql.columnar.wholeStage.fallback.threshold|-1|When AQE is enabled, if the number of operators rolled back in a stage is greater than or equal to the threshold, all operators (except OmniColumnarToRow and OmniAQEShuffleReadExec) of the stage are rolled back to open source operators. The value **–1** indicates that this function is disabled.|
-|spark.gluten.sql.columnar.query.fallback.threshold|-1|When AQE is disabled, if the number of operators rolled back in the execution plan is greater than or equal to the threshold, all operators of the stage are rolled back to open source operators. The value **–1** indicates that this function is disabled.|
+|spark.gluten.sql.columnar.wholeStage.fallback.threshold|-1|When AQE is enabled, if the number of operators rolled back in a stage is greater than or equal to the threshold, all operators (except OmniColumnarToRow and OmniAQEShuffleReadExec) of the stage are rolled back to open-source operators. The value **–1** indicates that this function is disabled.|
+|spark.gluten.sql.columnar.query.fallback.threshold|-1|When AQE is disabled, if the number of operators rolled back in the execution plan is greater than or equal to the threshold, all operators of the stage are rolled back to open-source operators. The value **–1** indicates that this function is disabled.|
 |spark.gluten.sql.columnar.backend.omni.unixTimeFunc.enabled|true|Indicates whether to enable the from_unixtime and unix_timestamp expressions. **true**: yes; **false**: no.|
 |spark.sql.orc.filterPushdown|true|Indicates whether to enable predicate pushdown for data query in ORC format.|
 |spark.gluten.sql.columnar.backend.omni.catalog.cache.size|128|Specifies the cache space size for the catalog metadata. If the value is less than or equal to 0, caching is disabled.|
@@ -1356,7 +1375,7 @@ This example uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table 
 
 2. Check whether Gluten takes effect.
 
-    Run the following SQL statement in the Gluten CLI and open source Spark SQL CLI:
+    Run the following SQL statement in the Gluten CLI and open-source Spark SQL CLI:
 
     ```
     set spark.sql.adaptive.enabled=false;
@@ -1376,17 +1395,17 @@ This example uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table 
     limit 100;
     ```
 
-    The following figure shows the execution plan output by Gluten. If the operator starts with  **Omni**  or ends with  **Transformer**, Gluten has taken effect.
+    The following figure shows the execution plan output by Gluten. If the operator starts with **Omni** or ends with **Transformer**, Gluten has taken effect.
 
-    ![](figures/en-us_image_0000002515902986.png)
+    ![](figures/zh-cn_image_0000002515902986.png)
 
-    The following figure shows the execution plan output by the open source Spark SQL CLI:
+    The following figure shows the execution plan output by the open-source Spark SQL CLI:
 
-    ![](figures/en-us_image_0000002515743080.png)
+    ![](figures/zh-cn_image_0000002515743080.png)
 
 3. Run the following SQL statement.
 
-    Run the following SQL statement in the Gluten CLI and open source Spark SQL CLI:
+    Run the following SQL statement in the Gluten CLI and open-source Spark SQL CLI:
 
     ```
     set spark.sql.adaptive.enabled=false;
@@ -1406,40 +1425,40 @@ This example uses the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table 
     limit 100;
     ```
 
-4. Compare the query results of the TPC-DS test dataset Q82 executed by open source Spark SQL and Gluten, and check the performance differences before and after Gluten is enabled.
+4. Compare the query results of the TPC-DS test dataset Q82 executed by open-source Spark SQL and Gluten, and check the performance differences before and after Gluten is enabled.
 
-    - Open source Spark SQL execution result
+    - Open-source Spark SQL execution result
 
-        ![](figures/en-us_image_0000002547382899.png)
+        ![](figures/zh-cn_image_0000002547382899.png)
 
     - Execution result after Gluten is enabled
 
-        ![](figures/en-us_image_0000002547462895.png)
+        ![](figures/zh-cn_image_0000002547462895.png)
 
     Execution result comparison: The query results of the two tests are the same. After Gluten is enabled, the time required for executing SQL statements is reduced. Gluten improves the Q82 query execution efficiency without affecting the query result.
 
 Verify that Gluten takes effect and run a test case to show the performance optimization. Ensure that Spark engine tasks are running properly.
 
 
-#### \(Optional\) Memory Borrowing<a name="EN-US_TOPIC_0000002515902970"></a>
+#### (Optional) Memory Borrowing<a name="EN-US_TOPIC_0000002515902970"></a>
 
 If off-heap memory has been configured in the startup parameters, skip this section. If not, perform the following steps:
 
-1. Copy the  [parse\_para.sh](https://gitee.com/kunpengcompute/boostkit-bigdata/blob/main/tools/parse_parameter/parse_para.sh)  script to the  **$\{SPARK\_HOME\}/bin/**  directory.
-2. Modify the permission on  **parse\_para.sh**.
+1. Copy the [`parse_para.sh`](https://gitee.com/kunpengcompute/boostkit-bigdata/blob/main/tools/parse_parameter/parse_para.sh) script to the **$\{SPARK_HOME\}/bin/** directory.
+2. Modify the permission on `parse_para.sh`.
 
     ```
     chmod 550 ${SPARK_HOME}/bin/parse_para.sh
     ```
 
-3. Open the  **spark-submit**  script file.
+3. Open the **spark-submit** script file.
 
     ```
     cd ${SPARK_HOME}/bin/
     vi spark-submit
     ```
 
-4. Press  **i**  to enter the insert mode and modify the last line.
+4. Press **i** to enter the insert mode and modify the last line.
 
     ```
     exec 3< <(bash "${SPARK_HOME}/bin/parse_para.sh" "$@")
@@ -1454,31 +1473,31 @@ If off-heap memory has been configured in the startup parameters, skip this sect
     fi
     ```
 
-5. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
-6. Add startup parameters.
+5. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
+6. Add the startup parameter.
 
     ```
     --conf spark.omni.enableBorrow=true --conf spark.omni.borrowMemory.Fraction=90
     ```
 
-    **Table  1**  Parameter description
+    **Table 1** Parameter description<a id="Parameter description"></a>
 
-|Parameter Name|Default Value|Description|
+|Parameter|Default Value|Description|
 |--|--|--|
 |spark.omni.enableBorrow|false|Indicates whether to enable memory borrowing. **true**: yes; **false**: no.|
 |spark.omni.borrowMemory.Fraction|90|Percentage of the memory borrowed from the heap. The default value is 90%. If an error message is displayed indicating that the heap memory is insufficient, decrease the value of this parameter. If an error message is displayed indicating that the off-heap memory is insufficient, increase the value of this parameter.|
 
 
     >![](public_sys-resources/icon-notice.gif) **NOTICE:** 
-    >-   If  **spark.memory.offHeap.enabled**  has already been set to  **true**, memory borrowing cannot be enabled. To enable memory borrowing in this case, set this parameter to  **false**.
+    >-   If "spark.memory.offHeap.enabled" has already been set to "true", memory borrowing cannot be enabled. To enable memory borrowing in this case, set this parameter to "false".
     >    ```
     >    --conf spark.memory.offHeap.enabled=false
     >    ```
-    >-   The  **executor-memory**  setting in the  **spark-default.conf**  file cannot be read.
-    >-   If the  **executor-memory**  size has not been configured, memory borrowing cannot be enabled.
+    >-   The "executor-memory" setting in the "spark-default.conf" file cannot be read.
+    >-   If the "executor-memory" size has not been configured, memory borrowing cannot be enabled.
 
 If off-heap memory has been configured in the startup parameters, skip this section. If not, perform the following steps:
-#### \(Optional\) Installing and Executing the Spark UDF Service<a name="EN-US_TOPIC_0000002547382873"></a>
+#### (Optional) Installing and Executing the Spark UDF Service<a name="EN-US_TOPIC_0000002547382873"></a>
 
 The Spark UDF service is required only when using UDFs. Before running UDFs, ensure that the Spark engine is running properly.
 
@@ -1488,25 +1507,25 @@ OmniOperator supports only simple UDFs. If OmniOperator fails to accelerate UDFs
 
 You need to install the Spark UDF plugin only when you want to use UDFs in some specific data processing scenarios.
 
-1. Check that the Spark engine has been installed \(see  [Installing SparkExtension](installing-sparkextension.md)\) before installing the Spark UDF plugin.
-2. Place the JAR packages on which the UDFs depend to the  **/user/hive-udf**  directory of HDFS.
+1. Check that the Spark engine has been installed (see "Installing SparkExtension") before installing the Spark UDF plugin.
+2. Place the JAR packages on which the UDFs depend to the **/user/hive-udf** directory of HDFS.
 
-    >![](public_sys-resources/icon-note.gif) **NOTE:** 
-    >-   The  **/user/hive-udf**  directory can be customized.
+    >![](public_sys-resources/icon-note.gif) **Note:**
+    >-   The **/user/hive-udf** directory can be customized.
     >-   The JAR packages on which the UDFs depend need to be provided by yourself.
 
 3. Register Hive UDFs on the management node of the cluster.
 
-    For details about how to register UDFs, see  [Integration with Hive UDFs/UDAFs/UDTFs](https://spark.apache.org/docs/latest/sql-ref-functions-udf-hive.html).
+    For details about the registration method, see [Integration with Hive UDFs](https://spark.apache.org/docs/latest/sql-ref-functions-udf-hive.html).
 
 **Executing the Spark UDF Service<a name="section13660151413529"></a>**
 
->![](public_sys-resources/icon-note.gif) **NOTE:** 
->For details about how to execute SQL statements, view the execution plans, and compare results, see  [Executing Spark Services](executing-spark-services.md).
+>![](public_sys-resources/icon-note.gif) **Note:**
+>For details about how to execute SQL statements, view the execution plans, and compare results, see "Executing the Spark Service."
 
-For details, see  [Executing Spark Services](executing-spark-services.md). You only need to add the following parameters to the command of starting the Spark SQL CLI of SparkExtension.
+For details about the operations, see "Executing the Spark Service." You only need to add the following parameters to the command of starting the Spark SQL CLI of SparkExtension.
 
-1. Append  **/opt/omni-operator/lib/boostkit-omniop-udf-2.0.0-aarch64.jar**  to the  **spark.driver.extraClassPath**  parameter.
+1. Append **/opt/omni-operator/lib/boostkit-omniop-udf-2.0.0-aarch64.jar** to the **spark.driver.extraClassPath** parameter.
     - The result in Spark 3.1.1 is as follows:
 
         ```
@@ -1531,7 +1550,7 @@ For details, see  [Executing Spark Services](executing-spark-services.md). You o
         --conf spark.driver.extraClassPath=/opt/omni-operator/lib/boostkit-omniop-spark-3.5.2-2.0.0-aarch64.jar:/opt/omni-operator/lib/boostkit-omniop-bindings-2.0.0-aarch64.jar:/opt/omni-operator/lib/boostkit-omniop-udf-2.0.0-aarch64.jar:/opt/omni-operator/lib/dependencies/protobuf-java-3.15.8.jar:/opt/omni-operator/lib/dependencies/boostkit-omniop-native-reader-3.5.2-2.0.0.jar
         ```
 
-2. Append  **/opt/omni-operator/lib/boostkit-omniop-udf-2.0.0-aarch64.jar**  to the  **spark.executor.extraClassPath**  parameter.
+2. Append **/opt/omni-operator/lib/boostkit-omniop-udf-2.0.0-aarch64.jar** to the **spark.executor.extraClassPath** parameter.
     - The result in Spark 3.1.1 is as follows:
 
         ```
@@ -1559,21 +1578,21 @@ For details, see  [Executing Spark Services](executing-spark-services.md). You o
 The Spark UDF service is required only when using UDFs. Before running UDFs, ensure that the Spark engine is running properly.
 
 
-### Using on Hive<a name="EN-US_TOPIC_0000002515902960"></a>
+### Use on Hive<a name="EN-US_TOPIC_0000002515902960"></a>
 
 #### Overview<a name="EN-US_TOPIC_0000002547382883"></a>
 
-To use the OmniOperator feature, you need to install Hive and also HiveExtension of the corresponding version. For details about how to install Hive, see  [Table 2](en-us_topic_0000002547462871.md#table564mcpsimp). The sections that follow describe how to install and configure HiveExtension, and how to apply the OmniOperator feature to Hive.
+To use the OmniOperator feature, you need to install Hive and also HiveExtension of the corresponding version. For details about how to install Hive, see the [Installation Guide](installation_guide.md). The sections that follow describe how to install and configure HiveExtension, and how to apply the OmniOperator feature to Hive.
 
 
 #### Installing HiveExtension<a name="EN-US_TOPIC_0000002515902968"></a>
 
 The OmniOperator feature supports the Hive engine. You need to install the Hive engine on the cluster management node, and configure the HiveExtension dependency of openEuler on the management node and all compute nodes.
 
-1. Install the Hive engine. For details, see  [Table 2](en-us_topic_0000002547462871.md#table564mcpsimp).
+1. Install Hive. For details, see Table 2 of "Environment Requirements" in the *Installation Guide*.
 2. Download the HiveExtension plugin package and extract it.
-    1. Download  **boostkit-omniop-hive-3.1.0-2.0.0-aarch64.zip**  from  [Table 3](en-us_topic_0000002547462871.md#_table677mcpsimp)  and extract it to obtain the  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip**  \(for NEON\) and  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip**  \(for SVE\) packages. Select either based on whether the model supports NEON or SVE instructions.
-    2. Extract  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip**  \(for NEON\) or  **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip**  \(for SVE\) to obtain the  **boostkit-omniop-hive-3.1.0-2.0.0-aarch64.jar**  file. Then upload the JAR file to the cluster management node.
+    1. Download **boostkit-omniop-hive-3.1.0-2.0.0-aarch64.zip** from Table 3 of "Environment Requirements" in the *Installation Guide* and extract it to obtain the **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip** (for NEON) and **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip** (for SVE) packages. Select either based on whether the model supports NEON or SVE instructions.
+    2. Extract **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler.zip** (for NEON) or **boostkit-omniop-spark-3.1.1-2.0.0-aarch64-openeuler-sve.zip** (for SVE) to obtain the **boostkit-omniop-hive-3.1.0-2.0.0-aarch64.jar** file. Then upload the JAR file to the cluster management node.
 
 3. Install the HiveExtension dependency of openEuler.
 
@@ -1584,58 +1603,68 @@ The OmniOperator feature supports the Hive engine. You need to install the Hive 
     ```
 
 4. <a name="en-us_topic_0000001908294293_li15544111764913"></a>Configure HiveExtension.
-    1. Create an  **/opt/omni-operator/**  directory on the management and compute nodes as the root directory for installing OmniOperator. Then go to the directory.
-
+   
+1. Create an **/opt/omni-operator/** directory on the management and compute nodes as the root directory for installing OmniOperator. Then go to the directory.
+   
         ```
         mkdir /opt/omni-operator
         cd /opt/omni-operator
-        ```
-
-    2. Obtain the  **Dependency\_library\_openeuler22.03.zip**  package from  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)  and upload it to the  **/opt/omni-operator**  directory. Then extract the package content applicable to your OS and copy it to the  **/opt/omni-operator/lib**  directory.
-
+    ```
+    
+    ```
+    
+2. Download **Dependency_library_openeuler22.03.zip** from the "Obtaining the Software Package" section in the [Installation Guide](installation_guide.md) and upload it to the **/opt/omni-operator** directory. Then extract the content applicable to the corresponding OS and copy it to the **/opt/omni-operator/lib** directory.
+   
         ```
         unzip Dependency_library_openeuler22.03.zip
         cp /opt/omni-operator/Dependency_library_openeuler22.03/* /opt/omni-operator/lib
-        ```
-
-    3. Copy  **boostkit-omniop-hive-3.1.0-2.0.0-aarch64.jar**  to the  **/opt/omni-operator/lib**  directory and change the permission on the files in the directory to  **550**.
-
+    ```
+    
+    ```
+    
+3. Copy **boostkit-omniop-hive-3.1.0-2.0.0-aarch64.jar** to the /opt/omni-operator/lib directory and change the permission on the files in the directory to **550**.
+   
         ```
         chmod -R 550 /opt/omni-operator/*
-        ```
-
-    4. Create a HiveExtension configuration file directory.
-
+    ```
+    
+    ```
+    
+4. Create a HiveExtension configuration file directory.
+   
         ```
         mkdir -p /opt/omni-operator/hive/conf
-        ```
-
-    5. Set the following temporary environment variables on the management node:
-
+    ```
+    
+    ```
+    
+5. Set the following temporary environment variables on the management node:
+   
         ```
         export OMNI_CONF=/opt/omni-operator/hive
         export HIVE_AUX_JARS_PATH=/opt/omni-operator/lib
         export LD_LIBRARY_PATH=/opt/omni-operator/lib:$LD_LIBRARY_PATH
-        ```
-
-        >![](public_sys-resources/icon-note.gif) **NOTE:** 
-        >-   You can customize the  **/opt/omni-operator/hive**  directory of the  **OMNI\_CONF**  variable. If SparkExtension is deployed in the environment as well, this directory must be different from the default  **/opt/omni-operator**  directory.
-        >-   Each time a new shell session is started, you need to reset the environment variables in  [4](#en-us_topic_0000001908294293_li15544111764913).
+    ```
+    
+        >![](public_sys-resources/icon-note.gif) **Note:**
+        >-   You can customize the **/opt/omni-operator/hive** directory of the **OMNI_CONF** variable. If SparkExtension is deployed in the environment as well, this directory must be different from the default **/opt/omni-operator** directory.
+        >-   Each time a new shell session is started, you need to reset the environment variables in [4](#en-us_topic_0000001908294293_li15544111764913).
+    ```
 
 The OmniOperator feature supports the Hive engine. You need to install the Hive engine on the cluster management node, and configure the HiveExtension dependency of openEuler on the management node and all compute nodes.
-#### Setting the Hive Configuration File<a name="EN-US_TOPIC_0000002515743070"></a>
+#### Configuring the Hive Configuration File<a name="EN-US_TOPIC_0000002515743070"></a>
 
 After installing Hive, you need to add the Hive configuration to the OmniOperator configuration file so that services can be executed.
 
 1. Added the Hive configuration.
-    1. Create a Hive configuration file  **/opt/omni-operator/hive/conf/omni.conf**  on the cluster management node and all compute nodes.
+    1. Create a Hive configuration file **/opt/omni-operator/hive/conf/omni.conf** on the cluster management node and all compute nodes.
 
         ```
         mkdir -p /opt/omni-operator/hive
         vi /opt/omni-operator/hive/conf/omni.conf
         ```
 
-    2. Press  **I**  to enter the insert mode and add the following Hive configurations \(recommended\).
+    2. Press **i** to enter the insert mode and add the following Hive configurations (recommended).
 
         ```
         # <----Other properties---->
@@ -1650,16 +1679,16 @@ After installing Hive, you need to add the Hive configuration to the OmniOperato
         SupportDecimalPrecisionImprovementRule=IS_SUPPORT
         ```
 
-    3. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+    3. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
 
-2. Add the following content to the  **$HIVE\_HOME/conf/hive-site.xml**  file on the management node:
+2. Add the following content to the **$HIVE_HOME/conf/hive-site.xml** file on the management node:
     1. Open the file.
 
         ```
         vi $HIVE_HOME/conf/hive-site.xml
         ```
 
-    2. Press  **i**  to enter the insert mode and add the following content to the file:
+    2. Press **i** to enter the insert mode and add the following content to the file:
 
         ```
         <property>
@@ -1672,20 +1701,20 @@ After installing Hive, you need to add the Hive configuration to the OmniOperato
         </property>
         ```
 
-    3. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+    3. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
 
 After installing Hive, you need to add the Hive configuration to the OmniOperator configuration file so that services can be executed.
-#### Executing Hive Services<a name="EN-US_TOPIC_0000002515743050"></a>
+#### Executing the Hive Service<a name="EN-US_TOPIC_0000002515743050"></a>
 
-Hive uses interactive command lines to execute SQL tasks. To check whether HiveExtension takes effect on Hive, prepend the  **EXPLAIN**  statement to the SQL statement. If the operator name starts with  **Omni**, HiveExtension has taken effect.
+Hive uses interactive command lines to execute SQL tasks. To check whether HiveExtension takes effect on Hive, prepend the **EXPLAIN** statement to the SQL statement. If the operator name starts with **Omni**, HiveExtension has taken effect.
 
-In this example, the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table is used as the test table and Q82 of the TPC-DS test dataset is used as the test SQL statement.
+In this example, the **tpcds_bin_partitioned_varchar_orc_2** data table is used as the test table and Q82 of the TPC-DS test dataset is used as the test SQL statement.
 
-[Table 1](#en-us_topic_0000001862494682_table978253616599)  lists the related tables.
+For details about the related tables and their basic information, see [**Table 1** Related tables](#Related tables).
 
-**Table  1**  Table information
+**Table 1** Table information<a id="Table information"></a>
 
-|Table|Format|Total Number of Rows|
+|Table|Format|Rows|
 |--|--|--|
 |item|orc|26000|
 |inventory|orc|16966305|
@@ -1695,7 +1724,7 @@ In this example, the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table i
 
 1. Start the Hive SQL CLI.
 
-    - Commands for starting open source Hive SQL:
+    - Commands for starting open-source Hive SQL:
 
         ```
         hive --database tpcds_bin_partitioned_varchar_orc_2 --hiveconf hive.fetch.task.conversion=none --hiveconf hive.cbo.enable=true --hiveconf hive.exec.reducers.max=600 --hiveconf hive.exec.compress.intermediate=true --hiveconf hive.tez.container.size=8192 --hiveconf tez.am.resource.memory.mb=8192 --hiveconf tez.task.resource.memory.mb=8192 --hiveconf tez.runtime.io.sort.mb=128 --hiveconf hive.merge.tezfiles=true --hiveconf tez.am.container.reuse.enabled=true 
@@ -1707,13 +1736,13 @@ In this example, the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table i
         hive --database tpcds_bin_partitioned_varchar_orc_2 --hiveconf hive.fetch.task.conversion=none --hiveconf hive.cbo.enable=true --hiveconf hive.exec.reducers.max=600 --hiveconf hive.exec.compress.intermediate=true --hiveconf hive.tez.container.size=8192 --hiveconf tez.am.resource.memory.mb=8192 --hiveconf tez.task.resource.memory.mb=8192 --hiveconf tez.runtime.io.sort.mb=128 --hiveconf hive.merge.tezfiles=true --hiveconf tez.am.container.reuse.enabled=true --hiveconf hive.exec.pre.hooks=com.huawei.boostkit.hive.OmniExecuteWithHookContext --hiveconf tez.task.launch.env=OMNI_CONF=/opt/omni-operator/hive,LD_LIBRARY_PATH=/opt/omni-operator/lib 
         ```
 
-    >![](public_sys-resources/icon-note.gif) **NOTE:** 
-    >-   In the preceding startup command, the  **OMNI\_CONF**  path must be the same as the custom configuration file directory in  [Setting the Hive Configuration File](setting-the-hive-configuration-file.md).
-    >-   If the dataset contains data of the String type and each single field of the data contains a large amount of data \(more than 512 characters\), you are advised to add the following configuration:
+    >![](public_sys-resources/icon-note.gif) **Note:**
+    >-   In the preceding startup command, the **OMNI_CONF** path must be the same as the custom configuration file directory in "Configuring the Hive Configuration File."
+    >-   If the dataset contains data of the String type and each single field of the data contains a large amount of data (more than 512 characters), you are advised to add the following configuration:
     >    ```
     >    --hiveconf omni.hive.string.length=2000
     >    ```
-    >-   If a large Parquet dataset \(for example, 10 TB\) is used, you are advised to increase the value of  **hive.tez.container.size**  and other related parameters of the Tez task. The recommended startup command is as follows:
+    >-   If a large Parquet dataset (for example, 10 TB) is used, you are advised to increase the value of **hive.tez.container.size** and other related parameters of the Tez task. The recommended startup command is as follows:
     >    ```
     >    hive --database tpcds_bin_partitioned_varchar_parquet_10000 --hiveconf tez.task.launch.env=OMNI_CONF=/opt/omni-operator/hive,LD_LIBRARY_PATH=/opt/omni-operator/lib --hiveconf hive.vectorized.execution.enabled=true --hiveconf hive.cbo.enable=true --hiveconf hive.exec.reducers.max=600 --hiveconf hive.exec.compress.intermediate=true --hiveconf hive.tez.container.size=61440 --hiveconf tez.am.resource.memory.mb=61440 --hiveconf tez.task.resource.memory.mb=61440 --hiveconf mapreduce.reduce.java.opts=-Xmx49152m --hiveconf mapreduce.map.java.opts=-Xmx49152m --hiveconf tez.runtime.io.sort.mb=128 --hiveconf hive.merge.tezfiles=true --hiveconf tez.am.container.reuse.enabled=true --hiveconf hive.exec.pre.hooks=com.huawei.boostkit.hive.OmniExecuteWithHookContext --hiveconf tez.container.max.java.heap.fraction=0.5
     >    ```
@@ -1722,9 +1751,9 @@ In this example, the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table i
     >    --hiveconf tez.local.mode=true --hiveconf tez.runtime.optimize.local.fetch=true
     >    ```
 
-    [Table 2](#en-us_topic_0000001862494682_table1637164944)  describes the HiveExtension startup parameters.
+     [**Table 2** HiveExtension startup parameters](#HiveExtension startup parameters) describes the HiveExtension startup parameters.
 
-    **Table  2**  HiveExtension startup parameters
+    **Table 2** HiveExtension startup parameters<a id="HiveExtension startup parameters"></a>
 
 |Parameter|Default Value|Description|
 |--|--|--|
@@ -1748,13 +1777,13 @@ In this example, the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table i
 |tez.container.max.java.heap.fraction|0.8|Sets the ratio of the heap memory available to the Tez main task process to the container memory.|
 |omni.hive.string.length|-|Sets the maximum String data length supported by HiveExtension.|
 |omni.hive.adaptivePartialAggregation.enabled|false|Enables adaptive skipping of the HashAgg group aggregation operation in the partial stage. This optimization is performed during running. The partial stage of group aggregation is skipped and data is directly output to the downstream operator if the sampling scenario is identified as a high cardinality scenario and group aggregation is performed.|
-|omni.hive.adaptivePartialAggregationMinRows|500000|Specifies the minimum number of rows sampled for adaptivePartialAggregation optimization. When this number of rows has been sampled, the tool calculates the aggregation of the sampled data.|
+|omni.hive.adaptivePartialAggregationMinRows|500000|Specifies the minimum number of rows sampled for adaptivePartialAggregation optimization. When this number has been reached, the tool calculates the aggregation of the sampled data.|
 |omni.hive.adaptivePartialAggregationRatio|0.8|Specifies the minimum aggregation threshold for adaptivePartialAggregation optimization. If the aggregation of sampled data has reached the threshold, this type of optimization is applied.|
 
 
 2. Check whether HiveExtension takes effect.
 
-    Run the following SQL statement in the HiveExtension CLI and open source Hive SQL CLI:
+    Run the following SQL statement in the HiveExtension CLI and open-source Hive SQL CLI:
 
     ```
     explain select i_item_id
@@ -1773,17 +1802,17 @@ In this example, the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table i
     limit 100;
     ```
 
-    The following figure shows the execution plan output in the HiveExtension CLI. If the operator name starts with  **Omni**, HiveExtension has taken effect.
+    The following figure shows the execution plan output in the HiveExtension CLI. If the operator name starts with **Omni**, HiveExtension has taken effect.
 
     ![](figures/hive-plan-1.png)
 
-    Execution plan outputted by open source Hive SQL
+    Execution plan outputted by open-source Hive SQL
 
     ![](figures/hive-plan.png)
 
 3. Run the following SQL statement.
 
-    Run the following SQL statement in the HiveExtension CLI and open source Hive SQL CLI:
+    Run the following SQL statement in the HiveExtension CLI and open-source Hive SQL CLI:
 
     ```
      select i_item_id
@@ -1803,7 +1832,7 @@ In this example, the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table i
     ```
 
 4. Compare the results.
-    - Execution result of open source Hive SQL:
+    - Execution result of open-source Hive SQL:
 
         ![](figures/hive-result.png)
 
@@ -1819,9 +1848,9 @@ In this example, the  **tpcds\_bin\_partitioned\_varchar\_orc\_2**  data table i
 
         ![](figures/omni-no.png)
 
-    - Result comparison: The SQL output data of open source Hive SQL is the same as that of HiveExtension.
+    - Result comparison: The SQL output data of open-source Hive SQL is the same as that of HiveExtension.
 
-Hive uses interactive command lines to execute SQL tasks. To check whether HiveExtension takes effect on Hive, prepend the  **EXPLAIN**  statement to the SQL statement. If the operator name starts with  **Omni**, HiveExtension has taken effect.
+Hive uses interactive command lines to execute SQL tasks. To check whether HiveExtension takes effect on Hive, prepend the **EXPLAIN** statement to the SQL statement. If the operator name starts with **Omni**, HiveExtension has taken effect.
 
 
 
@@ -1831,7 +1860,7 @@ Hive uses interactive command lines to execute SQL tasks. To check whether HiveE
 
 Perform the following steps on the management node only. Ensure that no task is being executed on the OmniOperator upper-layer engine.
 
-1. Delete the SO dependency files and OmniOperator files. The following uses the  **/opt/omni-operator/lib**  installation directory as an example.
+1. Delete the SO dependency files and OmniOperator files. The following uses the **/opt/omni-operator/lib** installation directory as an example.
 
     ```
     cd /opt/omni-operator/lib
@@ -1839,17 +1868,17 @@ Perform the following steps on the management node only. Ensure that no task is 
     rm -rf include libboostkit-omniop* boostkit-omniop* libsecurec.so
     ```
 
-2. Download and upload the version dependency packages and OmniOperator packages \(for details about how to obtain them, see  [OS and Software Requirements](en-us_topic_0000002547462871.md#section112321019581)  and  [Obtaining Software Packages](en-us_topic_0000002547462871.md#section189181357102011)\) to the management and compute nodes, and complete the installation by following instructions in  [Installing Dependencies](en-us_topic_0000002515743058.md)  and  [Installing OmniOperator](en-us_topic_0000002547462885.md).
-3. When using OmniOperator on Spark, repackage and upload the OmniOperator installation package by following instructions in  [2](setting-the-spark-configuration-file.md#li998683755613).
+2. Download the dependency packages of the preinstalled version and the OmniOperator feature package (For details about how to obtain the packages, see "OS and Software Requirements" and "Obtaining the Software Packages" in the [Installation Guide](installation_guide.md)), and upload them to the management and compute nodes. Then install the packages by following instructions in "Installing the Dependencies" and "Installing OmniOperator" in the [Installation Guide](installation_guide.md).
+3. When using OmniOperator on Spark, repackage and upload the OmniOperator installation files by following instructions in [2](#config-spark).
 
 Perform the following steps on the management node only. Ensure that no task is being executed on the OmniOperator upper-layer engine.
 ### Uninstalling OmniOperator<a name="EN-US_TOPIC_0000002547382867"></a>
 
 Perform the following steps on the management node only. Ensure that no task is being executed on the OmniOperator upper-layer engine.
 
-Assume that the SparkExtension directories are  **/opt/omni-operator/conf**  and  **/opt/omni-operator/lib**, and the HiveExtension directory is  **/opt/omni-operator/hive**.
+Assume that the SparkExtension directories are **/opt/omni-operator/conf** and **/opt/omni-operator/lib**, and the HiveExtension directory is **/opt/omni-operator/hive**.
 
-1. Delete the  **conf**  and  **hive**  folders.
+1. Delete the **conf** and **hive** folders.
 
     ```
     ls /opt/omni-operator
@@ -1857,7 +1886,7 @@ Assume that the SparkExtension directories are  **/opt/omni-operator/conf**  and
     rm -rf /opt/omni-operator/hive
     ```
 
-2. Go to the  **/opt/omni-operator/lib**  directory and delete the dependency SO files and OmniOperator files.
+2. Go to the **/opt/omni-operator/lib** directory and delete the dependency SO files and OmniOperator files.
 
     ```
     cd /opt/omni-operator/lib
@@ -1872,14 +1901,14 @@ Assume that the SparkExtension directories are  **/opt/omni-operator/conf**  and
     ```
 
 4. Update the environment variable.
-    1. Open the  **\~/.bashrc**  file.
+    1. Run the following command to open the **\~/.bashrc** file:
 
         ```
         vi ~/.bashrc
         ```
 
-    2. Press  **i**  to enter the insert mode. Delete the OmniOperator path configuration from  **LD\_LIBRARY\_PATH**.
-    3. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+    2. Press **i** to enter the insert mode. Delete the OmniOperator path configuration from **LD_LIBRARY_PATH**.
+    3. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
     4. Make the updated environment variable take effect.
 
         ```
@@ -1887,56 +1916,54 @@ Assume that the SparkExtension directories are  **/opt/omni-operator/conf**  and
         ```
 
 Perform the following steps on the management node only. Ensure that no task is being executed on the OmniOperator upper-layer engine.
-### \(Optional\) Uninstalling the UDF Plugin<a name="EN-US_TOPIC_0000002515902962"></a>
+### (Optional) Uninstalling the UDF Plugin<a name="EN-US_TOPIC_0000002515902962"></a>
 
 Perform the following steps only on the management node.
 
-If you do not need to use the OmniOperator software after uninstalling the UDF plugin, uninstall OmniOperator by following instructions in  [Uninstalling OmniOperator](uninstalling-omnioperator.md).
+If you do not need to use the OmniOperator software after uninstalling the UDF plugin, uninstall OmniOperator by following instructions in "Uninstalling OmniOperator."
 
-1. Delete the  **/opt/omni-operator/hive-udf**  directory on the management and compute nodes.
+1. Delete the **/opt/omni-operator/hive-udf** directory on the management and compute nodes.
 
     ```
     ls /opt/omni-operator
     rm -rf /opt/omni-operator/hive-udf
     ```
 
-2. Update the  **/opt/omni-operator/conf/omni.conf**  configuration file.
+2. Update the **/opt/omni-operator/conf/omni.conf** configuration file.
     1. Open the file.
 
         ```
         vi /opt/omni-operator/conf/omni.conf
         ```
 
-    2. Press  **i**  to enter the insert mode and update the UDF configuration.
+    2. Press **i** to enter the insert mode and update the UDF configuration.
 
         ```
         # <----UDF properties---->
-        # false indicates expression row-by-row processing and true indicates expression bath processing.
+        #"false" indicates expression row-by-row processing and "true" indicates expression batch processing.
         #enableBatchExprEvaluate=false
-        # UDF trustlist file path
+        #UDF trustlist file path
         #hiveUdfPropertyFilePath=./hive-udf/udf.properties
-        # Hive UDF JAR file directory
+        #Hive UDF JAR file directory
         #hiveUdfDir=./hive-udf/udf
         ```
 
-    3. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+    3. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
 
-3. When the OmniOperator UDF plugin is used on Spark, perform  [2](setting-the-spark-configuration-file.md#li998683755613)  again.
+3. When the OmniOperator UDF plugin is used on Spark, perform [2](#config-spark) again.
 4. Update the environment variable.
-    1. Open the  **\~/.bashrc**  file.
+    1. Run the following command to open the **\~/.bashrc** file:
 
         ```
         vi ~/.bashrc
         ```
 
-    2. Press  **i**  to enter the insert mode and delete  **$\{JAVA\_HOME\}/jre/lib/aarch64/server**  from  **LD\_LIBRARY\_PATH**  to update environment variables.
-    3. Press  **Esc**, type  **:wq!**, and press  **Enter**  to save the file and exit.
+    2. Press **i** to enter the insert mode and delete **$\{JAVA_HOME\}/jre/lib/aarch64/server** from **LD_LIBRARY_PATH** to update environment variables.
+    3. Press **Esc**, type **:wq!**, and press **Enter** to save the file and exit.
     4. Make the updated environment variable take effect.
 
         ```
         source ~/.bashrc
         ```
 
-Perform the following steps only on the management node.
-
-
+Perform the steps only on the management node.
