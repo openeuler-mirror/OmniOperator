@@ -407,3 +407,77 @@ TEST_F(ArrayCompactTest, BooleanArrayWithNulls)
     delete input;
     delete result;
 }
+
+/// array_compact on array<array<int>> removes only null outer elements (Velox/Spark semantics).
+TEST_F(ArrayCompactTest, NestedArrayOfIntRemovesNullOuterElements)
+{
+    using omniruntime::type::ArrayType;
+    const int rowSize = 1;
+
+    auto *intVec = new Vector<int32_t>(7);
+    intVec->SetValue(0, 1);
+    intVec->SetValue(1, 2);
+    intVec->SetValue(2, 3);
+    intVec->SetNull(3);
+    intVec->SetValue(4, 4);
+    intVec->SetNull(5);
+    intVec->SetValue(6, 6);
+
+    auto intShared = std::shared_ptr<BaseVector>(intVec);
+    auto *middle = new ArrayVector(3, intShared);
+    middle->SetOffset(0, 0);
+    middle->SetOffset(1, 4);
+    middle->SetOffset(2, 4);
+    middle->SetOffset(3, 7);
+    middle->SetNotNull(0);
+    middle->SetNull(1);
+    middle->SetNotNull(2);
+
+    auto middleShared = std::shared_ptr<BaseVector>(middle);
+    auto *outer = new ArrayVector(rowSize, middleShared);
+    outer->SetOffset(0, 0);
+    outer->SetOffset(1, 3);
+
+    auto *input = new VectorBatch(rowSize);
+    input->Append(outer);
+
+    auto innerArrTy = std::make_shared<ArrayType>(omniruntime::type::IntType());
+    auto outerArrTy = std::make_shared<ArrayType>(innerArrTy);
+
+    auto expr = FuncExpr("array_compact", {
+        new FieldExpr(0, outerArrTy)
+    }, outerArrTy);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.VisitExpr(expr);
+    auto *result = e.GetResult();
+
+    auto *resultArray = dynamic_cast<ArrayVector *>(result);
+    ASSERT_NE(resultArray, nullptr);
+    EXPECT_EQ(resultArray->GetSize(0), 2);
+
+    auto *outMiddle = dynamic_cast<ArrayVector *>(resultArray->GetElementVector().get());
+    ASSERT_NE(outMiddle, nullptr);
+    EXPECT_EQ(outMiddle->GetSize(0), 4);
+    EXPECT_EQ(outMiddle->GetSize(1), 3);
+
+    auto *outInts = dynamic_cast<Vector<int32_t> *>(outMiddle->GetElementVector().get());
+    ASSERT_NE(outInts, nullptr);
+    const int64_t m0 = outMiddle->GetOffset(0);
+    EXPECT_EQ(outInts->GetValue(m0), 1);
+    EXPECT_EQ(outInts->GetValue(m0 + 1), 2);
+    EXPECT_EQ(outInts->GetValue(m0 + 2), 3);
+    EXPECT_TRUE(outInts->IsNull(m0 + 3));
+
+    const int64_t m1 = outMiddle->GetOffset(1);
+    EXPECT_EQ(outInts->GetValue(m1), 4);
+    EXPECT_TRUE(outInts->IsNull(m1 + 1));
+    EXPECT_EQ(outInts->GetValue(m1 + 2), 6);
+
+    delete context;
+    delete input;
+    delete result;
+}
