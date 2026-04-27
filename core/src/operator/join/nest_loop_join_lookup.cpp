@@ -214,7 +214,7 @@ int32_t NestLoopJoinLookupOperator::GetNumSelectedRows()
         auto joinedSnapshot = VectorHelper::CopyVectorBatch(joinedVectorBatch.get());
         ExprEval e(joinedSnapshot.get(), context);
         e.VisitExpr(*filterExpr);
-        auto outCol = static_cast<Vector<bool> *>(e.GetResult());
+        auto *outCol = e.GetResult();
         context->SetResultRowSize(temp);
         if (context->HasError()) {
             context->GetArena()->Reset();
@@ -223,7 +223,7 @@ int32_t NestLoopJoinLookupOperator::GetNumSelectedRows()
             throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
         }
         for (int i = 0, j = 0; i < outCol->GetSize(); ++i){
-            if (!outCol->IsNull(i) && outCol->GetValue(i)){
+            if (!outCol->IsNull(i) && VectorHelper::GetValueFromVector<bool>(outCol, i)){
                 numSelectedRows++;
                 selectedRows[j++] = i;
             }
