@@ -1042,18 +1042,19 @@ TEST(PipelineTest, TestPosexplodeWithOrdinality)
 // Test posexplode_outer (withOrdinality=true, outer=true): null array should have NULL pos and NULL val
 VectorBatch *CreateTestPosexplodeOuterOutputVecBatchWithNullArray()
 {
-    // Expected output: all rows, with NULL pos and NULL val for null arrays only
+    // Expected output: all rows, with NULL pos and NULL val for null/empty arrays
     // Row 0: null -> 1 output row with NULL pos and NULL val
-    // Row 1: [] -> 1 output row with pos=0 and val=NULL (empty array, not null array)
+    // Row 1: [] -> 1 output row with NULL pos and NULL val
     // Row 2: [1, 2] -> 2 output rows with pos=0,1 and val=1,2
     // Row 3: [3] -> 1 output row with pos=0 and val=3
-    // According to Spark SQL: only null arrays have NULL pos, empty arrays have pos=0
+    // According to Spark SQL, both null arrays and empty arrays produce NULL pos
+    // for posexplode_outer.
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {1, 2, 3, 3, 4};  // Replicated id column
     int32_t data2[dataSize] = {0, 0, 1, 2, 3};  // Unnested array elements
-    int64_t data3[dataSize] = {0, 0, 0, 1, 0};  // Ordinality (0-indexed, NULL for null array only)
+    int64_t data3[dataSize] = {0, 0, 0, 1, 0};  // Ordinality (0-indexed, masked to NULL for null/empty arrays)
     bool nullMaskVal[dataSize] = {true, true, false, false, false};  // First two are null (null array and empty array both have null val)
-    bool nullMaskPos[dataSize] = {true, false, false, false, false};  // Only first pos is NULL (null array), second is 0 (empty array)
+    bool nullMaskPos[dataSize] = {true, true, false, false, false};  // Null and empty array rows both have NULL pos
     
     std::vector<DataTypePtr> types = { IntType(), IntType(), LongType() };
     DataTypes sourceTypes(types);
@@ -1067,7 +1068,7 @@ VectorBatch *CreateTestPosexplodeOuterOutputVecBatchWithNullArray()
         }
     }
     
-    // Set null mask for the ordinality column (pos) - only null array has NULL pos
+    // Set null mask for the ordinality column (pos) - null and empty arrays have NULL pos
     auto* ordCol = dynamic_cast<vec::Vector<int64_t>*>(batch->Get(2));
     for (int32_t i = 0; i < dataSize; ++i) {
         if (nullMaskPos[i]) {
