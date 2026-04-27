@@ -13,6 +13,7 @@
 #include "operator/aggregation/aggregator/only_aggregator_factory.h"
 #include "util/omni_exception.h"
 #include "window_frame.h"
+#include "window_function_options.h"
 
 namespace omniruntime {
 namespace op {
@@ -185,7 +186,7 @@ private:
 class NthValueFunction : public WindowFunction {
 public:
     NthValueFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType,
-        int32_t valueChannel, int64_t offset);
+        int32_t valueChannel, int64_t offset, int32_t offsetChannel, bool ignoreNulls);
     ~NthValueFunction() override = default;
     void Reset(WindowIndex *pWindowIndex) override;
     void ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index, int32_t peerGroupStart,
@@ -193,9 +194,14 @@ public:
 
 private:
     void CopyValueFromPartition(BaseVector *outputColumn, int32_t outputIndex, int32_t sourceRow);
+    bool IsValueNullInPartition(int32_t sourceRow);
+    int64_t GetOffsetValue(int32_t sourceRow);
 
     int32_t valueChannel_;
     int64_t offset_;
+    int32_t offsetChannel_;
+    bool ignoreNulls_;
+    int32_t currentPosition_;
     WindowIndex *windowIndex_;
 };
 
