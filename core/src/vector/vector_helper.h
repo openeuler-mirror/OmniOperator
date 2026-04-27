@@ -356,6 +356,32 @@ public:
         SetFlatValue<typeId>(dstVector, dstIndex, value);
     }
 
+    static void SetNull(vec::BaseVector *vector, int index)     {
+        if (vector == nullptr) {
+            return;
+        }
+
+        switch (vector->GetTypeId()) {
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR:
+            case type::OMNI_VARBINARY:
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(index);
+            break;
+            case type::OMNI_ARRAY:
+                static_cast<ArrayVector *>(vector)->SetNull(index);
+            break;
+            case type::OMNI_MAP:
+                static_cast<MapVector *>(vector)->SetNull(index);
+            break;
+            case type::OMNI_ROW:
+                static_cast<RowVector *>(vector)->SetNull(index);
+            break;
+            default:
+                vector->SetNull(index);
+            break;
+        }
+    }
+
     static void CopyValue(vec::BaseVector *srcVector, int32_t srcIndex, vec::BaseVector *dstVector, int32_t dstIndex)
     {
         using namespace omniruntime::type;

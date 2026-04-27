@@ -82,14 +82,13 @@ private:
             int32_t absoluteRow = windowIndex_->GetStart() + currentPosition_;
             CopyDefaultValueFromPartition(outputColumn, outputIndex, absoluteRow);
         } else {
-            outputColumn->SetNull(outputIndex);
+            VectorHelper::SetNull(outputColumn, outputIndex);
         }
     }
 
     void CopyValueFromPartition(BaseVector *outputColumn, int32_t outputIndex, int32_t sourceRow)
     {
         if (windowIndex_ == nullptr || windowIndex_->GetPagesIndex() == nullptr) {
-            outputColumn->SetNull(outputIndex);
             return;
         }
 
@@ -102,19 +101,13 @@ private:
         uint32_t vectorPosition = DecodePosition(sliceAddress);
 
         BaseVector *sourceVector = vectors[vectorIndex];
-        
-        if (sourceVector->IsNull(vectorPosition)) {
-            outputColumn->SetNull(outputIndex);
-        } else {
-            vec::VectorHelper::CopyValue(sourceVector, vectorPosition, outputColumn, outputIndex);
-        }
+        VectorHelper::CopyValue(sourceVector, vectorPosition, outputColumn, outputIndex);
     }
 
     /// Copy default value from partition at given row to output
     void CopyDefaultValueFromPartition(BaseVector *outputColumn, int32_t outputIndex, int32_t sourceRow)
     {
         if (windowIndex_ == nullptr || windowIndex_->GetPagesIndex() == nullptr || defaultValueChannel_ < 0) {
-            outputColumn->SetNull(outputIndex);
             return;
         }
 
@@ -127,12 +120,7 @@ private:
         uint32_t vectorPosition = DecodePosition(sliceAddress);
 
         BaseVector *sourceVector = vectors[vectorIndex];
-        
-        if (sourceVector->IsNull(vectorPosition)) {
-            outputColumn->SetNull(outputIndex);
-        } else {
-            vec::VectorHelper::CopyValue(sourceVector, vectorPosition, outputColumn, outputIndex);
-        }
+        VectorHelper::CopyValue(sourceVector, vectorPosition, outputColumn, outputIndex);
     }
 
     int32_t valueChannel_;
