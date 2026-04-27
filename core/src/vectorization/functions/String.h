@@ -68,6 +68,187 @@ inline int32_t Utf8FirstCodepoint(const char* data, size_t size, int& byteLen) {
     byteLen = 1;
     return -1;  // invalid lead byte
 }
+
+static ALWAYS_INLINE bool IsAsciiString(const std::string_view& input)
+{
+    return std::all_of(input.begin(), input.end(), [](char c) {
+        return (static_cast<unsigned char>(c) & 0x80) == 0;
+    });
+}
+
+static ALWAYS_INLINE void AppendUtf8Codepoint(std::string& result, int32_t codePoint)
+{
+    if (codePoint <= 0x7F) {
+        result.push_back(static_cast<char>(codePoint));
+    } else if (codePoint <= 0x7FF) {
+        result.push_back(static_cast<char>(0xC0 | (codePoint >> 6)));
+        result.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
+    } else if (codePoint <= 0xFFFF) {
+        result.push_back(static_cast<char>(0xE0 | (codePoint >> 12)));
+        result.push_back(static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F)));
+        result.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
+    } else {
+        result.push_back(static_cast<char>(0xF0 | (codePoint >> 18)));
+        result.push_back(static_cast<char>(0x80 | ((codePoint >> 12) & 0x3F)));
+        result.push_back(static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F)));
+        result.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
+    }
+}
+
+static ALWAYS_INLINE size_t PreviousUtf8Start(const std::string_view& input, size_t pos)
+{
+    size_t prev = pos - 1;
+    while (prev > 0 && (static_cast<unsigned char>(input[prev]) & 0xC0) == 0x80) {
+        --prev;
+    }
+    return prev;
+}
+
+static ALWAYS_INLINE bool IsCasedCodepoint(int32_t codePoint)
+{
+    if ((codePoint >= 'A' && codePoint <= 'Z') || (codePoint >= 'a' && codePoint <= 'z')) {
+        return true;
+    }
+    if ((codePoint >= 0x00C0 && codePoint <= 0x02AF) || (codePoint >= 0x0370 && codePoint <= 0x03FF) ||
+        (codePoint >= 0x0400 && codePoint <= 0x052F) || (codePoint >= 0x1D2C && codePoint <= 0x1D61) ||
+        (codePoint >= 0x2160 && codePoint <= 0x217F) || (codePoint >= 0x24B6 && codePoint <= 0x24E9)) {
+        return true;
+    }
+    return codePoint == 0x0345;
+}
+
+static ALWAYS_INLINE bool IsCaseIgnorableCodepoint(int32_t codePoint)
+{
+    if ((codePoint >= 0x0300 && codePoint <= 0x036F) || (codePoint >= 0xFE00 && codePoint <= 0xFE0F)) {
+        return true;
+    }
+    switch (codePoint) {
+    case 0x0027:
+    case 0x002E:
+    case 0x00B7:
+    case 0x0387:
+    case 0x05F4:
+    case 0x2018:
+    case 0x2019:
+    case 0x2024:
+    case 0x2027:
+    case 0xFE13:
+    case 0xFE52:
+    case 0xFE55:
+    case 0xFF07:
+    case 0xFF0E:
+    case 0xFF1A:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static ALWAYS_INLINE bool HasCasedBefore(const std::string_view& input, size_t sigmaStart)
+{
+    size_t pos = sigmaStart;
+    while (pos > 0) {
+        size_t prev = PreviousUtf8Start(input, pos);
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + prev, pos - prev, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        if (IsCasedCodepoint(cp)) {
+            return true;
+        }
+        if (!IsCaseIgnorableCodepoint(cp)) {
+            return false;
+        }
+        pos = prev;
+    }
+    return false;
+}
+
+static ALWAYS_INLINE bool HasCasedAfter(const std::string_view& input, size_t pos)
+{
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0 || byteLen <= 0) {
+            return false;
+        }
+        if (IsCasedCodepoint(cp)) {
+            return true;
+        }
+        if (!IsCaseIgnorableCodepoint(cp)) {
+            return false;
+        }
+        pos += static_cast<size_t>(byteLen);
+    }
+    return false;
+}
+
+static ALWAYS_INLINE bool IsFinalGreekSigma(const std::string_view& input, size_t sigmaStart, size_t afterSigma)
+{
+    return HasCasedBefore(input, sigmaStart) && !HasCasedAfter(input, afterSigma);
+}
+
+static ALWAYS_INLINE int32_t LowerUnicodeCodepoint(int32_t codePoint)
+{
+    if (codePoint >= 'A' && codePoint <= 'Z') {
+        return codePoint + ('a' - 'A');
+    }
+    if ((codePoint >= 0x00C0 && codePoint <= 0x00D6) || (codePoint >= 0x00D8 && codePoint <= 0x00DE)) {
+        return codePoint + 0x20;
+    }
+    switch (codePoint) {
+    case 0x010A:
+    case 0x0116:
+    case 0x0120:
+    case 0x017B:
+    case 0x0226:
+    case 0x022E:
+    case 0x1E02:
+    case 0x1E0A:
+    case 0x1E1E:
+    case 0x1E22:
+    case 0x1E40:
+    case 0x1E44:
+    case 0x1E56:
+    case 0x1E58:
+    case 0x1E60:
+    case 0x1E64:
+    case 0x1E66:
+    case 0x1E68:
+    case 0x1E6A:
+    case 0x1E86:
+    case 0x1E8A:
+    case 0x1E8E:
+        return codePoint + 1;
+    case 0x0386:
+        return 0x03AC;
+    case 0x0388:
+        return 0x03AD;
+    case 0x0389:
+        return 0x03AE;
+    case 0x038A:
+        return 0x03AF;
+    case 0x038C:
+        return 0x03CC;
+    case 0x038E:
+        return 0x03CD;
+    case 0x038F:
+        return 0x03CE;
+    case 0x0401:
+        return 0x0451;
+    case 0x01C5:
+        return 0x01C6;
+    default:
+        break;
+    }
+    if ((codePoint >= 0x0391 && codePoint <= 0x03A1) || (codePoint >= 0x03A3 && codePoint <= 0x03AB) ||
+        (codePoint >= 0x0410 && codePoint <= 0x042F)) {
+        return codePoint + 0x20;
+    }
+    return codePoint;
+}
+
 template <typename T>
 struct StartsWithFunction {
     ALWAYS_INLINE Status call(bool &result, const std::string_view &str, const std::string_view &pattern)
@@ -433,17 +614,42 @@ struct ChrFunction {
 
 /// lower function
 /// lower(string) -> string
-/// Converts the input string to lowercase. Aligned with Velox lower semantics:
-/// ASCII letters A-Z are converted to a-z; other bytes are unchanged (ASCII path).
+/// Converts the input string to lowercase. Keeps an ASCII fast path and handles
+/// Spark/Velox UTF-8 cases required by lower, including Greek pi and final sigma.
 /// Empty string returns empty string. NULL input yields NULL output.
 template <typename T>
 struct LowerFunction {
     ALWAYS_INLINE bool call(std::string& result, const std::string_view& input)
     {
-        result.resize(input.size());
-        for (size_t i = 0; i < input.size(); ++i) {
-            unsigned char c = static_cast<unsigned char>(input[i]);
-            result[i] = (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : input[i];
+        if (IsAsciiString(input)) {
+            result.resize(input.size());
+            for (size_t i = 0; i < input.size(); ++i) {
+                unsigned char c = static_cast<unsigned char>(input[i]);
+                result[i] = (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : input[i];
+            }
+            return true;
+        }
+
+        result.clear();
+        result.reserve(input.size() * 2);
+        size_t pos = 0;
+        while (pos < input.size()) {
+            int byteLen = 0;
+            int32_t codePoint = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+            if (codePoint < 0 || byteLen <= 0) {
+                result.append(input.data() + pos, input.size() - pos);
+                return true;
+            }
+
+            size_t nextPos = pos + static_cast<size_t>(byteLen);
+            if (codePoint == 0x0130) {
+                result.append("i\xCC\x87", 3);
+            } else if (codePoint == 0x03A3) {
+                AppendUtf8Codepoint(result, IsFinalGreekSigma(input, pos, nextPos) ? 0x03C2 : 0x03C3);
+            } else {
+                AppendUtf8Codepoint(result, LowerUnicodeCodepoint(codePoint));
+            }
+            pos = nextPos;
         }
         return true;
     }
