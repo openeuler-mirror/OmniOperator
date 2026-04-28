@@ -36,6 +36,7 @@
 #include "../functions/NextDay.h"
 #include "../functions/DateDiff.h"
 #include "../functions/DateFormat.h"
+#include "../functions/FromUnixTime.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -90,5 +91,7 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     // Registered as "DateFormat" (CamelCase) to match Gluten SubstraitParser mapping:
     // {"date_format", {FUNCTION_OMNI_EXPR_TYPE, "DateFormat"}}
     RegisterDateFormatFunction(prefix + "DateFormat");
+
+    RegisterFromUnixTimeFunction(prefix + "from_unixtime");
 }
 }
