@@ -53,6 +53,8 @@ public:
 
     BaseVector* GetValue(int index);
 
+    std::string GetValueToString(int index, const std::string_view &separator) const;
+
     const std::shared_ptr<BaseVector> GetElementVector() const
     {
         return elements;

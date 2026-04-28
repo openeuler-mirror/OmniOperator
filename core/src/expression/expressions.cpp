@@ -6,6 +6,7 @@
 #include <string>
 #include <algorithm>
 #include <utility>
+#include <vectorization/functions/ConcatFunction.h>
 #include "vectorization/functions/IsNull.h"
 #include "vectorization/functions/Cast.h"
 #include "vectorization/functions/NameStruct.h"
@@ -1016,7 +1017,6 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     : funcName(fnName), arguments(args), functionType(BUILTIN)
 {
     dataType = std::move(returnType);
-
     std::vector<DataTypeId> argTypes(arguments.size());
     std::transform(arguments.begin(), arguments.end(), argTypes.begin(), [](Expr *expr) -> DataTypeId {
         return expr->GetReturnTypeId();
@@ -1033,6 +1033,9 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     }
     if (vectorFunction == nullptr && funcName == "map" && dataType->GetId() == OMNI_MAP) {
         vectorFunction = std::make_shared<vectorization::MapFunction>();
+    }
+    if (vectorFunction == nullptr && funcName == "concat_ws") {
+        vectorFunction = std::make_shared<ConcatWsFunction>(GetInputDataTypes());
     }
     if (funcName == "CAST") {
         vectorFunction = std::make_shared<CastFunction>(args[0]->dataType, dataType);
@@ -1059,6 +1062,9 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     if (vectorFunction == nullptr && funcName == "map" && dataType->GetId() == OMNI_MAP) {
         vectorFunction = std::make_shared<vectorization::MapFunction>();
     }
+    if (vectorFunction == nullptr && funcName == "concat_ws") {
+        vectorFunction = std::make_shared<ConcatWsFunction>(GetInputDataTypes());
+    }
     if (funcName == "CAST") {
         vectorFunction = std::make_shared<CastFunction>(args[0]->dataType, dataType);
     }
@@ -1081,6 +1087,9 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     }
     if (vectorFunction == nullptr && funcName == "map" && dataType->GetId() == OMNI_MAP) {
         vectorFunction = std::make_shared<vectorization::MapFunction>();
+    }
+    if (vectorFunction == nullptr && funcName == "concat_ws") {
+        vectorFunction = std::make_shared<ConcatWsFunction>(GetInputDataTypes());
     }
     if (funcName == "CAST") {
         vectorFunction = std::make_shared<CastFunction>(args[0]->dataType, dataType);

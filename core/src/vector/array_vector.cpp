@@ -42,6 +42,32 @@ BaseVector* ArrayVector::GetValue(int index)
     return GetElementVector()->Slice(startOffset, arraySize, false);
 }
 
+/**
+ * Array<String> => String
+ * @param index
+ * @param separator separator is not nullptr
+ * @return
+ */
+std::string ArrayVector::GetValueToString(int index, const std::string_view &separator) const {
+    auto vector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(elements.get());
+    std::string result = "";
+    bool first = false;
+    for (int32_t i = offsets[index]; i < offsets[index + 1]; ++i) {
+        if (first) {
+            if (!vector->IsNull(i)) {
+                result += separator;
+                result += vector->GetValue(i);
+            }
+        } else {
+            if (!vector->IsNull(i)) {
+                result = vector->GetValue(i);
+                first = true;
+            }
+        }
+    }
+    return result;
+}
+
 /* *
  * Copies the values of the vector at the indicated positions
  * @param positions
