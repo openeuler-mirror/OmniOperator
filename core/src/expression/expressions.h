@@ -500,6 +500,14 @@ public:
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatc, uint8_t *bitMark) override;
     std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
 
+    std::vector<DataTypePtr> GetInputDataTypes() const {
+        std::vector<DataTypePtr> inputDataTypes;
+        inputDataTypes.reserve(arguments.size());
+        for (const auto &arg : arguments) {
+            inputDataTypes.push_back(arg->dataType);
+        }
+        return inputDataTypes;
+    }
     bool supportVectorized() const override
     {
         if (vectorFunction == nullptr) {

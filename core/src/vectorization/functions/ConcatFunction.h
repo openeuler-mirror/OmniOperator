@@ -34,4 +34,23 @@ namespace omniruntime::vectorization {
             const DataTypePtr &outputType, ExecutionContext *context) const;
     };
 
+    class ConcatWsFunction final : public VectorFunction {
+    public:
+        explicit ConcatWsFunction() {}
+
+        explicit ConcatWsFunction(const std::vector<DataTypePtr> &inputDataTypes) : inputDataTypes_(inputDataTypes) {}
+
+        void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
+            ExecutionContext *context) const override;
+
+    private:
+        void ApplyConcatWs(const std::vector<BaseVector *> &argVectors, BaseVector *&result,
+                           const DataTypePtr &outputType, ExecutionContext *context) const;
+
+        void ConcatWsRow(const std::vector<BaseVector *> &argVectors,
+                         Vector<LargeStringContainer<std::string_view>> *&resultVector, int32_t row) const;
+
+        std::vector<DataTypePtr> inputDataTypes_;
+    };
+
 } // namespace omniruntime::vectorization

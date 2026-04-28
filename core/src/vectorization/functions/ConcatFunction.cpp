@@ -106,4 +106,76 @@ void ConcatFunction::SetStringValueToVector(BaseVector *vec, int32_t row, std::s
     resultVec->SetValue(row, value);
 }
 
+void ConcatWsFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
+    BaseVector *&result, ExecutionContext *context) const
+{
+    std::vector<BaseVector *> argVectors;
+    for (int i = 0; i < inputDataTypes_.size(); ++i) {
+        argVectors.push_back(args.top());
+        args.pop();
+    }
+    std::reverse(argVectors.begin(), argVectors.end());
+    ApplyConcatWs(argVectors, result, outputType, context);
+    for (auto *argVec : argVectors) {
+        delete argVec;
+    }
+}
+
+void ConcatWsFunction::ApplyConcatWs(const std::vector<BaseVector *> &argVectors, BaseVector *&result,
+    const DataTypePtr &outputType, ExecutionContext *context) const
+{
+    int32_t size = context->GetResultRowSize();
+    result = VectorHelper::CreateFlatVector(OMNI_VARCHAR, size);
+    auto resultVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(result);
+    for (int32_t row = 0; row < size; ++row) {
+        ConcatWsRow(argVectors, resultVector, row);
+    }
+}
+
+/**
+ * concat_ws  one row
+ * @param argVectors
+ * @param resultVector
+ * @param row
+ */
+void ConcatWsFunction::ConcatWsRow(const std::vector<BaseVector *> &argVectors, Vector<LargeStringContainer<std::string_view>> *&resultVector, int32_t row) const {
+    auto separatorVector = argVectors[0];
+    if (separatorVector->IsNull(row)) {
+        resultVector->SetNull(row);
+        return;
+    }
+    auto separator = VectorHelper::GetStringValueFromVector(separatorVector, row);
+    std::string result = "";
+    bool first = false;
+    for (int i = 1; i < argVectors.size(); ++i) {
+        if (argVectors[i]->GetTypeId() == OMNI_VARCHAR) {
+            auto argiVec = argVectors[i];
+            if (first) {
+                if (!argiVec->IsNull(row)) {
+                    result += separator;
+                    result += VectorHelper::GetStringValueFromVector(argiVec, row);
+                }
+            } else {
+                if (!argiVec->IsNull(row)) {
+                    result = VectorHelper::GetStringValueFromVector(argiVec, row);
+                    first = true;
+                }
+            }
+        } else { // Array<String>
+            auto argiVec = static_cast<ArrayVector *>(argVectors[i]);
+            if (first) {
+                if (!argiVec->IsNull(row) && argiVec->GetSize(row) > 0) {
+                    result += separator;
+                    result += argiVec->GetValueToString(row, separator);
+                }
+            } else {
+                if (!argiVec->IsNull(row) && argiVec->GetSize(row) > 0) {
+                    result = argiVec->GetValueToString(row, separator);
+                    first = true;
+                }
+            }
+        }
+    }
+    resultVector->SetValue(row, result);
+}
 } // namespace omniruntime::vectorization
