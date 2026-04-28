@@ -170,7 +170,7 @@ namespace omniruntime {
             auto *pKurtosisState = KurtosisState::CastState(state);
             auto &centralMomentState = pKurtosisState->centralMomentState;
             if (this->inputRaw) {
-                auto *valuePtr = reinterpret_cast<Value *>(GetValuesFromVector<IN>(vector));
+                auto *valuePtr = reinterpret_cast<Value *>(VectorHelper::GetFlatValuePtr<IN>(vector));
                 valuePtr += rowOffset;
                 if (nullMap == nullptr) {
                     AddCentralMoment<MomentValue, Value, AggValueState, UpdateCentralMomentOp<MomentValue, Value> >(
@@ -193,11 +193,11 @@ namespace omniruntime {
                 auto *m3Vector = this->curVectorBatch->Get(this->channels[3]);
                 auto *m4Vector = this->curVectorBatch->Get(this->channels[4]);
 
-                auto *countPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
-                auto *m1Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m1Vector));
-                auto *m2Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m2Vector));
-                auto *m3Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m3Vector));
-                auto *m4Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m4Vector));
+                auto *countPtr = reinterpret_cast<int64_t *>(VectorHelper::GetFlatValuePtr<OMNI_LONG>(countVector));
+                auto *m1Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m1Vector));
+                auto *m2Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m2Vector));
+                auto *m3Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m3Vector));
+                auto *m4Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m4Vector));
 
                 countPtr += rowOffset;
                 double countValue = *countPtr;
@@ -240,7 +240,7 @@ namespace omniruntime {
             std::vector<AggregateState *> &rowStates, BaseVector *vector,
             const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap) {
             if (this->inputRaw) {
-                auto *valuePtr = reinterpret_cast<Value *>(GetValuesFromVector<IN>(vector));
+                auto *valuePtr = reinterpret_cast<Value *>(VectorHelper::GetFlatValuePtr<IN>(vector));
                 valuePtr += rowOffset;
                 if (nullMap == nullptr) {
                     AddCentralMomentUseRowIndex<Value, KurtosisState::template UpdateState<Value> >(rowStates,
@@ -258,11 +258,11 @@ namespace omniruntime {
                 auto *m3Vector = this->curVectorBatch->Get(this->channels[3]);
                 auto *m4Vector = this->curVectorBatch->Get(this->channels[4]);
 
-                auto *countPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
-                auto *m1Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m1Vector));
-                auto *m2Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m2Vector));
-                auto *m3Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m3Vector));
-                auto *m4Ptr = reinterpret_cast<MomentValue *>(GetValuesFromVector<OMNI_DOUBLE>(m4Vector));
+                auto *countPtr = reinterpret_cast<int64_t *>(VectorHelper::GetFlatValuePtr<OMNI_LONG>(countVector));
+                auto *m1Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m1Vector));
+                auto *m2Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m2Vector));
+                auto *m3Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m3Vector));
+                auto *m4Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m4Vector));
 
                 countPtr += rowOffset;
                 m1Ptr += rowOffset;
@@ -345,15 +345,10 @@ namespace omniruntime {
                 throw std::runtime_error(
                     "Error in KurtosisAggregator ProcessAlignAggSchema: Skip partial only supported for raw input");
             }
-            if (originVector->GetEncoding() == OMNI_DICTIONARY) {
-                ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<Value>>>(result, originVector, nullMap);
-            } else {
-                ProcessAlignAggSchemaInternal<Vector<Value>>(result, originVector, nullMap);
-            }
+            ProcessAlignAggSchemaInternal(result, originVector, nullMap);
         }
 
         template<DataTypeId IN, DataTypeId OUT>
-        template<typename T>
         void
         KurtosisAggregator<IN, OUT>::ProcessAlignAggSchemaInternal(
             VectorBatch *result, BaseVector *originVector,
@@ -365,7 +360,7 @@ namespace omniruntime {
             auto *m3Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
             auto *m4Vector = static_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
 
-            auto *vector = reinterpret_cast<T *>(originVector);
+            auto valuePtr = reinterpret_cast<Value *>(VectorHelper::GetFlatValuePtr<IN>(originVector));
             for (int32_t i = 0; i < rowCount; ++i) {
                 if (nullMap != nullptr && (*nullMap)[i]) {
                     countVector->SetValue(i, 0.0);
@@ -374,16 +369,7 @@ namespace omniruntime {
                     m3Vector->SetValue(i, 0.0);
                     m4Vector->SetValue(i, 0.0);
                 } else {
-                    Value val;
-                    if constexpr (std::is_same_v<T, Vector<Value>>) {
-                        val = vector->GetValue(i);
-                    } else {
-                        auto *dictVector = reinterpret_cast<Vector<DictionaryContainer<Value>> *>(originVector);
-                        Value *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictVector);
-                        const int32_t *ids = unsafe::UnsafeDictionaryVector::GetIds(dictVector);
-                        val = valuePtr[ids[i]];
-                    }
-                    MomentValue m1 = static_cast<MomentValue>(val);
+                    MomentValue m1 = static_cast<MomentValue>(valuePtr[i]);
                     countVector->SetValue(i, 1.0);
                     m1Vector->SetValue(i, m1);
                     m2Vector->SetValue(i, 0.0);
