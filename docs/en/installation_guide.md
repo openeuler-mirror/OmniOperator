@@ -23,9 +23,9 @@ Before installing OmniOperator, prepare the hardware and software environments t
 
 **Hardware Requirements<a name="section197116445713"></a>**
 
-[Table 1](#__d0e1171)  lists the hardware requirements for each node in the cluster.
+[**Table 1**  Hardware requirements](#hardware_requirements) lists the hardware requirements for each node in the cluster.
 
-**Table  1**  Hardware requirements
+**Table 1**  Hardware requirements<a id="hardware_requirements"></a>
 
 |Item|Management/Compute/Storage Node|
 |--|--|
@@ -39,9 +39,9 @@ Before installing OmniOperator, prepare the hardware and software environments t
 
 **OS and Software Requirements<a name="section112321019581"></a>**
 
-[Table 2](#table564mcpsimp)  lists the OS and software requirements for each node in the cluster.
+[**Table 2**  OS and software requirements](#os_and_software_requirements) lists the OS and software requirements for each node in the cluster.
 
-**Table  2**  OS and software requirements
+**Table 2**  OS and software requirements<a id="os_and_software_requirements"></a>
 
 |Item|Version|Description|Management Node (Server)|Compute/Storage Node|
 |--|--|--|--|--|
@@ -61,7 +61,7 @@ Before installing OmniOperator, prepare the hardware and software environments t
 
 **Obtaining Software Packages<a name="section189181357102011"></a>**
 
-[Table 3](#_table677mcpsimp)  lists the software packages required for installing the OmniOperator feature and explains how to obtain them. In subsequent operations, install the required installation packages based on the operation guide.
+[**Table 3**  OmniOperator software packages](#omnioperator_software_obtains_columns) lists the software packages required for installing the OmniOperator feature and explains how to obtain them. In subsequent operations, install the required installation packages based on the operation guide.
 
 >![](public_sys-resources/icon-note.gif) **NOTE:** 
 >Use on Spark:
@@ -70,20 +70,90 @@ Before installing OmniOperator, prepare the hardware and software environments t
 >Use on Hive:
 >-   HiveExtension requires installing the software packages numbered 1, 3, and 5.
 
-**Table  3**  OmniOperator software packages
+**Table 3**  OmniOperator software packages<a id="omnioperator_software_obtains_columns">
 
-|No.|Software Name|Package Name|Release Type|Description|How to Obtain|
-|--|--|--|--|--|--|
-|1|OmniRuntime package|BoostKit-omniruntime_1.9.0.zip|Closed source|OmniRuntime package (**BoostKit-omniruntime_1.9.0.zip**). Extract the package to obtain the OmniOperator software package **BoostKit-omniop_2.0.0.zip**.|Kunpeng communityBefore using the software package, read and agree to Kunpeng BoostKit User License Agreement 2.0.|
-|2|SparkExtension|boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip|Open source|Spark extension package for the OmniOperator computing base.|Link|
-|2|SparkExtension|boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip|Open source|Spark extension package for the OmniOperator computing base.|Link|
-|2|SparkExtension|boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip|Open source|Spark extension package for the OmniOperator computing base.|Link|
-|2|SparkExtension|boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip|Open source|Spark extension package for the OmniOperator computing base.|Link|
-|3|HiveExtension|boostkit-omniop-hive-3.1.0-2.0.0-aarch64.zip|Open source|Hive extension package for the OmniOperator computing base.|Link|
-|4|Gluten|Boostkit-omniruntime-gluten-1.0.0.zip|Open source|OmniOperator software installation package (adapted to Gluten)|Link|
-|4|Gluten|Dependency_library_Gluten.zip|Open source|Library file on which Gluten depends.|Link|
-|5|Dependency_library|Dependency_library_centos.zipDependency_library_openeuler20.03.zipDependency_library_openeuler22.03.zip|Open source|Library file on which OmniOperator depends. Select the dependency package that matches your OS type.|CentOS dependenciesopenEuler 20.03 dependenciesopenEuler 22.03 dependencies|
-
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+  <thead>
+    <tr style="background-color: #f2f2f2;">
+      <th>No.</th>
+      <th>Software Name</th>
+      <th>Package Name</th>
+      <th>Release Type</th>
+      <th>Description</th>
+      <th>How to Obtain</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="1">1</td>
+      <td>OmniRuntime package</td>
+      <td>BoostKit-omniruntime_1.9.0.zip</td>
+      <td>Closed source</td>
+      <td>OmniRuntime package (<strong>BoostKit-omniruntime_1.9.0.zip</strong>). Extract the package to obtain the OmniOperator software package <strong>BoostKit-omniop_2.0.0.zip</strong>.</td>
+      <td><a href="https://kunpeng-repo.obs.cn-north-4.myhuaweicloud.com/Kunpeng%20BoostKit/Kunpeng%20BoostKit%2025.3.0/BoostKit-omniruntime_1.9.0.zip">Kunpeng community</a><br>Before using the software package, read and agree to Kunpeng BoostKit User License Agreement 2.0.</td>
+    </tr>
+    <tr>
+      <td rowspan="4">2</td>
+      <td>SparkExtension</td>
+      <td>boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip</td>
+      <td>Open source</td>
+      <td>Spark extension package for the OmniOperator computing base.</td>
+      <td><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release-311/boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip">Link</a></td>
+    </tr>
+    <tr>
+      <td>SparkExtension</td>
+      <td>boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip</td>
+      <td>Open source</td>
+      <td>Spark extension package for the OmniOperator computing base.</td>
+      <td><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release/boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip">Link</a></td>
+    </tr>
+    <tr>
+      <td>SparkExtension</td>
+      <td>boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip</td>
+      <td>Open source</td>
+      <td>Spark extension package for the OmniOperator computing base.</td>
+      <td><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release/boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip">Link</a></td>
+    </tr>
+    <tr>
+      <td>SparkExtension</td>
+      <td>boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip</td>
+      <td>Open source</td>
+      <td>Spark extension package for the OmniOperator computing base.</td>
+      <td><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release/boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip">Link</a></td>
+    </tr>
+    <tr>
+      <td rowspan="1">3</td>
+      <td>HiveExtension</td>
+      <td>boostkit-omniop-hive-3.1.0-2.0.0-aarch64.zip</td>
+      <td>Open source</td>
+      <td>Hive extension package for the OmniOperator computing base.</td>
+      <td><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release-hive/boostkit-omniop-hive-3.1.0-2.0.0-aarch64.zip">Link</a></td>
+    </tr>
+    <tr>
+      <td rowspan="2">4</td>
+      <td>Gluten</td>
+      <td>Boostkit-omniruntime-gluten-2.0.0.zip</td>
+      <td>Open source</td>
+      <td>OmniOperator software installation package (adapted to Gluten)</td>
+      <td><a href="https://atomgit.com/openeuler/OmniOperator/releases/download/26.0.0-OmniOperator-2.1.0-release/BoostKit-omniruntime-gluten-2.0.0.zip">Link</a></td>
+    </tr>
+    <tr>
+      <td>Gluten</td>
+      <td>Dependency_library_Gluten.zip</td>
+      <td>Open source</td>
+      <td>Library file on which Gluten depends.</td>
+      <td><a href="https://gitcode.com/openeuler/Gluten/releases/download/25.3.0-Gluten-1.0.0-release/Dependency_library_Gluten.zip">Link</a></td>
+    </tr>
+    <tr>
+      <td rowspan="1">5</td>
+      <td>Dependency_library</td>
+      <td>Dependency_library_centos.zip<br>Dependency_library_openeuler20.03.zip<br>Dependency_library_openeuler22.03.zip</td>
+      <td>Open source</td>
+      <td>Library file on which OmniOperator depends. Select the dependency package that matches your OS type.</td>
+      <td><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release/Dependency_library_centos.zip">CentOS dependencies</a><br><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release/Dependency_library_openeuler20.03.zip">openEuler 20.03 dependencies</a><br><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release/Dependency_library_openeuler22.03.zip">openEuler 22.03 dependencies</a></td>
+    </tr>
+  </tbody>
+</table>
 
 **Verifying the Software Package Integrity<a name="section16501429204018"></a>**
 
@@ -104,31 +174,31 @@ Before installing OmniOperator, prepare the hardware and software environments t
 
 This section describes the requirements for installing dependency packages and configuring environment variables on each node before installing OmniOperator.
 
-- If you choose to perform the installation by compiling the source code, before compiling the source code, install GCC/G++, Autoconf, and CMake on each node.  [Table 1](#en-us_topic_0000001519205289_table98249491204)  lists the version requirements.
+- If you choose to perform the installation by compiling the source code, before compiling the source code, install GCC/G++, Autoconf, and CMake on each node.  [**Table  1**  Software required for source code compilation](#software)  lists the version requirements.
 
     >![](public_sys-resources/icon-note.gif) **NOTE:** 
     >-   LLVM and Jemalloc can run properly only after being compiled on the OS. If you want to run them on CentOS, compile them on CentOS. If you want to run them on openEuler 20.03 LTS SP1 or openEuler 22.03 LTS SP1, compile them on openEuler 20.03 LTS SP1 or openEuler 22.03 LTS SP1.
     >-   Gluten depends on the ABSL library and can run properly only after it is compiled and installed on the current OS \(openEuler 22.03 SP1\).
 
-    **Table  1**  Software required for source code compilation
+    **Table  1**  Software required for source code compilation<a id="software"></a>
 
 |Software Name|Version Requirement|Download URL|
 |--|--|--|
-|GCC/G++|openEuler 20.03: 7.3.0|Link|
-|GCC/G++|openEuler 22.03: 10.3.0|Link|
-|Autoconf|2.69|Link|
-|CMake|3.20.5|Link|
+|GCC/G++|openEuler 20.03: 7.3.0|[Link](https://mirrors.tuna.tsinghua.edu.cn/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.gz)|
+|GCC/G++|openEuler 22.03: 10.3.0|[Link](https://mirrors.tuna.tsinghua.edu.cn/gnu/gcc/gcc-10.3.0/gcc-10.3.0.tar.gz)|
+|Autoconf|2.69|[Link](https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz)|
+|CMake|3.20.5|[Link](https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-aarch64.tar.gz)|
 
 
-    1. Install GCC/G++. The following uses version 7.3.0 as an example.
-        1. Check whether the GCC/G++ version is the target version.
+1. Install GCC/G++. The following uses version 7.3.0 as an example.
+    1. Check whether the GCC/G++ version is the target version.
 
             ```
             gcc --version
             g++ --version
             ```
 
-        2. Compile and install GCC/G++.
+    2. Compile and install GCC/G++.
 
             ```
             # Extract the installation package and go to the gcc-7.3.0 directory.
@@ -148,14 +218,14 @@ This section describes the requirements for installing dependency packages and c
             g++ --version
             ```
 
-    2. Compile and install Autoconf.
-        1. Check whether the Autoconf version is the target version.
+2. Compile and install Autoconf.
+    1. Check whether the Autoconf version is the target version.
 
             ```
             autoconf --version
             ```
 
-        2. Compile and install Autoconf.
+    2. Compile and install Autoconf.
 
             ```
             # Extract the installation package and go to the autoconf-2.69 directory.
@@ -172,14 +242,14 @@ This section describes the requirements for installing dependency packages and c
             autoconf --version
             ```
 
-    3. Install CMake.
-        1. Check whether the CMake version is the target version.
+3. Install CMake.
+    1. Check whether the CMake version is the target version.
 
             ```
             cmake --version
             ```
 
-        2. Install CMake.
+    2. Install CMake.
 
             ```
             # Extract the installation package to any directory (/opt in this example).
@@ -191,7 +261,7 @@ This section describes the requirements for installing dependency packages and c
             cmake --version
             ```
 
-- Before installing OmniOperator, deploy necessary components in the cluster environment by following instructions in  [OS and Software Requirements](environment-requirements.md#section112321019581).
+- Before installing OmniOperator, deploy necessary components in the cluster environment by following instructions in [**Table 2**  OS and software requirements](#os_and_software_requirements).
 - Before configuring environment variables, check whether the environment variable  **LD\_LIBRARY\_PATH**  exists in your environment. If the environment variable does not exist, you do not need to add  **$LD\_LIBRARY\_PATH**  during configuration, so as to prevent irrelevant content from being introduced to the current path. Otherwise, security problems may occur. All environment variable export operations in this document comply with this principle. Take  **LD\_LIBRARY\_PATH**  as an example. If  **LD\_LIBRARY\_PATH**  already exists in your environment, use  **export LD\_LIBRARY\_PATH=_$LD\_LIBRARY\_PATH:/xxx_**. Otherwise, use  **export LD\_LIBRARY\_PATH=_/xxx_**.
 
 This section describes the requirements for installing dependency packages and configuring environment variables on each node before installing OmniOperator.
@@ -217,7 +287,7 @@ In the Spark on Yarn scenario, use the  **--archives**  parameter of Spark to si
     -
     ```
 
-2. Upload the  **Dependency\_library\_openeuler22.03.zip**  package obtained from  [Obtaining Software Packages](environment-requirements.md#section189181357102011)  to the  **/opt/omni-operator/**  directory and extract it.
+2. Upload the  **Dependency\_library\_openeuler22.03.zip**  package obtained from [**Table 3**  OmniOperator software packages](#omnioperator_software_obtains_columns) to the  **/opt/omni-operator/**  directory and extract it.
 
     ```
     unzip Dependency_library_openeuler22.03.zip
@@ -255,7 +325,7 @@ In the Spark on Yarn scenario, use the  **--archives**  parameter of Spark to si
     rm Dependency_library_Gluten.zip -rf
     ```
 
-2. Upload the  **Dependency\_library\_Gluten.zip**  package obtained from  [Obtaining Software Packages](environment-requirements.md#section189181357102011)  to the  **/opt/omni-operator/**  directory and extract it.
+2. Upload the  **Dependency\_library\_Gluten.zip**  package obtained from [**Table 3**  OmniOperator software packages](#omnioperator_software_obtains_columns) to the  **/opt/omni-operator/**  directory and extract it.
 
     ```
     unzip Dependency_library_Gluten.zip
@@ -374,7 +444,7 @@ Install OmniOperator on the management and compute nodes and set environment var
 >-   **BoostKit-omniop\_2.0.0.zip**  can be obtained by extracting  **BoostKit-omniruntime\_2.0.0.zip**. The  **BoostKit-omniop\_2.0.0.zip**  package contains the  **boostkit-omniop-operator-2.0.0-aarch64-openeuler.tar.gz**  and  **boostkit-omniop-operator-2.0.0-aarch64-centos.tar.gz**  packages, which are used for openEuler and CentOS, respectively. The following uses openEuler as an example.
 >-   To install OmniOperator on CentOS, replace  **boostkit-omniop-operator-2.0.0-aarch64-openeuler.tar.gz**  in the following commands with  **boostkit-omniop-operator-2.0.0-aarch64-centos.tar.gz**.
 
-1. Upload OmniOperator packages obtained in  [Obtaining Software Packages](environment-requirements.md#section189181357102011)  to the  **/opt/omni-operator/**  directory on the management and compute nodes.
+1. Upload OmniOperator packages obtained in [**Table 3**  OmniOperator software packages](#omnioperator_software_obtains_columns) to the  **/opt/omni-operator/**  directory on the management and compute nodes.
 2. Go to the  **/opt/omni-operator/**  directory and extract the packages.
 
     ```
