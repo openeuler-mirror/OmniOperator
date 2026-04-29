@@ -46,6 +46,8 @@
 #include <exception>
 #include <stdexcept>
 #include <stdio.h>
+#include <cerrno>
+#include <cstring>
 
 using namespace arrow;
 using namespace arrow::internal;
@@ -71,9 +73,11 @@ namespace omniruntime::writer
 
         std::string uriPath = uri.ToString();
         std::string path = uri.Path();
-        auto res = common::createDirectories(common::getParentPath(path));
-        if (res != 0) {
-          throw std::runtime_error("Create local directories fail");
+        if (uri.Scheme() == UriInfo::LOCAL_FILE) {
+            std::string dirPath = common::getParentPath(path);
+            if (common::createDirectories(dirPath) != 0) {
+                OMNI_FAIL("Create local directories fail, path: {}, err msg: {}", dirPath, strerror(errno));
+            }
         }
         std::shared_ptr<io::OutputStream> outputStream;
         ARROW_ASSIGN_OR_RAISE(outputStream, fs->filesys_ptr->OpenOutputStream(path));
