@@ -7,6 +7,8 @@
 #include <cfloat>
 #include "codegen/context_helper.h"
 #include "codegen/common_util.h"
+#include "type/Timestamp.h"
+#include "type/tz/TimeZoneMap.h"
 
 
 #ifdef _WIN32
@@ -101,6 +103,18 @@ extern "C" DLLEXPORT double CastTimestampMicrosToDoubleSeconds(int64_t microsSin
 extern "C" DLLEXPORT float CastTimestampMicrosToFloatSeconds(int64_t microsSinceEpoch)
 {
     return static_cast<float>(microsSinceEpoch) / 1000000.0f;
+}
+
+extern "C" DLLEXPORT int64_t CastDate32ToTimestampMicros(int32_t daysSinceEpoch)
+{
+    auto ts = Timestamp::fromDate(daysSinceEpoch);
+    // Keep codegen CAST(date as timestamp) timezone semantics aligned with
+    // existing codegen timestamp casts (Asia/Shanghai).
+    static const auto *sessionTimezone = tz::locateZone("Asia/Shanghai");
+    if (sessionTimezone != nullptr) {
+        ts.toGMT(*sessionTimezone);
+    }
+    return ts.toMicros();
 }
 
 extern "C" DLLEXPORT double CastFloatToDouble(float x)

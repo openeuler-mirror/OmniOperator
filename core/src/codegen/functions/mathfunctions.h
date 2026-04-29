@@ -37,6 +37,8 @@ extern "C" DLLEXPORT double CastTimestampMicrosToDoubleSeconds(int64_t microsSin
 
 extern "C" DLLEXPORT float CastTimestampMicrosToFloatSeconds(int64_t microsSinceEpoch);
 
+extern "C" DLLEXPORT int64_t CastDate32ToTimestampMicros(int32_t daysSinceEpoch);
+
 extern "C" DLLEXPORT double CastFloatToDouble(float x);
 
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x);
