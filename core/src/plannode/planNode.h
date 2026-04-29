@@ -22,6 +22,7 @@
 #include "vector/vector_batch.h"
 #include "expression/expressions.h"
 #include "operator/config/operator_config.h"
+#include "operator/window/window_function_options.h"
 #include "type/data_types.h"
 #include "util/config/QueryConfig.h"
 #include "connectors/Connector.h"
@@ -312,6 +313,7 @@ public:
         const std::vector<int32_t> &windowFrameStartChannels,
         const std::vector<int32_t> &windowFrameEndTypes,
         const std::vector<int32_t> &windowFrameEndChannels,
+        const std::vector<WindowFunctionOptions> &windowFunctionOptions,
         const PlanNodePtr &source)
         : PlanNode(id),
           windowFunctionTypes(windowFunctionTypes),
@@ -330,6 +332,7 @@ public:
           windowFrameStartChannels(windowFrameStartChannels),
           windowFrameEndTypes(windowFrameEndTypes),
           windowFrameEndChannels(windowFrameEndChannels),
+          windowFunctionOptions(windowFunctionOptions),
           sources({source}),
           sourceTypes(source->OutputType())
     {
@@ -375,6 +378,8 @@ public:
 
     const std::vector<int32_t> &GetWindowFrameEndChannels() const{ return windowFrameEndChannels; }
 
+    const std::vector<WindowFunctionOptions> &GetWindowFunctionOptions() const { return windowFunctionOptions; }
+
     const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
     /// The outputType is the concatenation of the input columns
@@ -404,6 +409,7 @@ private:
     const std::vector<int32_t> windowFrameStartChannels;
     const std::vector<int32_t> windowFrameEndTypes;
     const std::vector<int32_t> windowFrameEndChannels;
+    const std::vector<WindowFunctionOptions> windowFunctionOptions;
     const std::vector<PlanNodePtr> sources;
     const DataTypesPtr sourceTypes;
     std::vector<int32_t> outputCols;

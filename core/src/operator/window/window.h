@@ -13,6 +13,7 @@
 #include "operator/spill/spiller.h"
 #include "operator/spill/spill_merger.h"
 #include "type/data_types.h"
+#include "window_function_options.h"
 #include "window_partition.h"
 
 namespace omniruntime {
@@ -25,7 +26,8 @@ public:
         int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
         const type::DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount,
         int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-        int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig);
+        int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig,
+        WindowFunctionOptions *windowFunctionOptionsField = nullptr);
 
     ~WindowOperatorFactory() override;
 
@@ -37,7 +39,7 @@ public:
         int32_t preSortedChannelPrefixField, int32_t expectedPositionsField, const type::DataTypes &allTypesField,
         int32_t *argumentChannelsField, int32_t argumentChannelsCountField, int32_t *windowFrameTypesField,
         int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
-        int32_t *windowFrameEndChannelsField);
+        int32_t *windowFrameEndChannelsField, WindowFunctionOptions *windowFunctionOptionsField = nullptr);
 
     static WindowOperatorFactory *CreateWindowOperatorFactory(const type::DataTypes &sourceTypesField,
         int32_t *outputColsField, int32_t outputColsCountField, int32_t *windowFunctionTypesField,
@@ -47,7 +49,8 @@ public:
         int32_t preSortedChannelPrefixField, int32_t expectedPositionsField, const type::DataTypes &allTypesField,
         int32_t *argumentChannelsField, int32_t argumentChannelsCountField, int32_t *windowFrameTypesField,
         int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
-        int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig);
+        int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig,
+        WindowFunctionOptions *windowFunctionOptionsField = nullptr);
 
     Operator *CreateOperator() override;
 
@@ -176,6 +179,11 @@ public:
         return const_cast<int32_t *>(windowFrameEndChannels.data());
     }
 
+    WindowFunctionOptions *GetWindowFunctionOptions() const
+    {
+        return const_cast<WindowFunctionOptions *>(windowFunctionOptions.data());
+    }
+
     OmniStatus Init();
 
 private:
@@ -202,6 +210,7 @@ private:
     std::vector<int32_t> windowFrameStartChannels;
     std::vector<int32_t> windowFrameEndTypes;
     std::vector<int32_t> windowFrameEndChannels;
+    std::vector<WindowFunctionOptions> windowFunctionOptions;
     OperatorConfig operatorConfig;
 };
 
@@ -215,7 +224,8 @@ public:
         const type::DataTypes &allTypes, std::vector<int32_t> &argumentChannels, int32_t argumentChannelsCount,
         const std::vector<int32_t> &windowFrameTypes, const std::vector<int32_t> &windowFrameStartTypes,
         const std::vector<int32_t> &windowFrameStartChannels, const std::vector<int32_t> &windowFrameEndTypes,
-        const std::vector<int32_t> &windowFrameEndChannels, const OperatorConfig &operatorConfig);
+        const std::vector<int32_t> &windowFrameEndChannels,
+        const std::vector<WindowFunctionOptions> &windowFunctionOptions, const OperatorConfig &operatorConfig);
 
     ~WindowOperator() override;
 
@@ -268,6 +278,7 @@ private:
     const std::vector<int32_t> &windowFrameStartChannels;
     const std::vector<int32_t> &windowFrameEndTypes;
     const std::vector<int32_t> &windowFrameEndChannels;
+    const std::vector<WindowFunctionOptions> &windowFunctionOptions;
     OperatorConfig operatorConfig;
     bool isOverflowAsNull;
 

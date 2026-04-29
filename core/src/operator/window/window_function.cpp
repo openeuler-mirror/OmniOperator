@@ -301,39 +301,143 @@ void CountAllWindowFunction::ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVe
 
 // NthValueFunction implementation
 NthValueFunction::NthValueFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType,
-    DataTypePtr outputType, int32_t valueChannel, int64_t offset)
+    DataTypePtr outputType, int32_t valueChannel, int64_t offset, int32_t offsetChannel, bool ignoreNulls)
     : WindowFunction(std::move(frame), std::move(inputType), std::move(outputType)),
       valueChannel_(valueChannel),
       offset_(offset),
+      offsetChannel_(offsetChannel),
+      ignoreNulls_(ignoreNulls),
+      currentPosition_(0),
       windowIndex_(nullptr)
 {}
 
 void NthValueFunction::Reset(WindowIndex *pWindowIndex)
 {
     windowIndex_ = pWindowIndex;
+    currentPosition_ = 0;
 }
 
 void NthValueFunction::ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index,
     int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd)
 {
+    int32_t currentPosition = currentPosition_++;
     if (frameStart < 0 || frameEnd < 0) {
-        column->SetNull(index);
+        VectorHelper::SetNull(column, index);
         return;
     }
 
-    int32_t targetRow = frameStart + static_cast<int32_t>(offset_) - 1;
+    int64_t offset = GetOffsetValue(windowIndex_->GetStart() + currentPosition);
+    if (offset < 1) {
+        VectorHelper::SetNull(column, index);
+        return;
+    }
+
+    int32_t targetRow = -1;
+    if (ignoreNulls_) {
+        int64_t nonNullCount = 0;
+        for (int32_t row = frameStart; row <= frameEnd; ++row) {
+            int32_t absoluteRow = windowIndex_->GetStart() + row;
+            if (!IsValueNullInPartition(absoluteRow)) {
+                ++nonNullCount;
+                if (nonNullCount == offset) {
+                    targetRow = row;
+                    break;
+                }
+            }
+        }
+    } else if (offset <= static_cast<int64_t>(frameEnd) - frameStart + 1) {
+        targetRow = frameStart + static_cast<int32_t>(offset) - 1;
+    }
+
     if (targetRow >= frameStart && targetRow <= frameEnd) {
         int32_t absoluteRow = windowIndex_->GetStart() + targetRow;
         CopyValueFromPartition(column, index, absoluteRow);
     } else {
-        column->SetNull(index);
+        VectorHelper::SetNull(column, index);
     }
+}
+
+int64_t NthValueFunction::GetOffsetValue(int32_t sourceRow)
+{
+    if (offsetChannel_ < 0) {
+        return offset_;
+    }
+    if (windowIndex_ == nullptr || windowIndex_->GetPagesIndex() == nullptr) {
+        return 0;
+    }
+
+    PagesIndex *pagesIndex = windowIndex_->GetPagesIndex();
+    uint64_t *valueAddresses = pagesIndex->GetValueAddresses();
+    BaseVector **vectors = pagesIndex->GetColumns()[offsetChannel_];
+
+    uint64_t sliceAddress = valueAddresses[sourceRow];
+    uint32_t vectorIndex = DecodeSliceIndex(sliceAddress);
+    uint32_t vectorPosition = DecodePosition(sliceAddress);
+    BaseVector *offsetVector = vectors[vectorIndex];
+    if (offsetVector->IsNull(vectorPosition)) {
+        return 0;
+    }
+
+    auto typeId = pagesIndex->GetTypes().GetType(offsetChannel_)->GetId();
+    switch (typeId) {
+        case OMNI_BYTE:
+            if (offsetVector->GetEncoding() == OMNI_ENCODING_CONST) {
+                return static_cast<ConstVector<int8_t> *>(offsetVector)->GetConstValue();
+            }
+            if (offsetVector->GetEncoding() == OMNI_DICTIONARY) {
+                return static_cast<Vector<DictionaryContainer<int8_t>> *>(offsetVector)->GetValue(vectorPosition);
+            }
+            return static_cast<Vector<int8_t> *>(offsetVector)->GetValue(vectorPosition);
+        case OMNI_SHORT:
+            if (offsetVector->GetEncoding() == OMNI_ENCODING_CONST) {
+                return static_cast<ConstVector<int16_t> *>(offsetVector)->GetConstValue();
+            }
+            if (offsetVector->GetEncoding() == OMNI_DICTIONARY) {
+                return static_cast<Vector<DictionaryContainer<int16_t>> *>(offsetVector)->GetValue(vectorPosition);
+            }
+            return static_cast<Vector<int16_t> *>(offsetVector)->GetValue(vectorPosition);
+        case OMNI_INT:
+            if (offsetVector->GetEncoding() == OMNI_ENCODING_CONST) {
+                return static_cast<ConstVector<int32_t> *>(offsetVector)->GetConstValue();
+            }
+            if (offsetVector->GetEncoding() == OMNI_DICTIONARY) {
+                return static_cast<Vector<DictionaryContainer<int32_t>> *>(offsetVector)->GetValue(vectorPosition);
+            }
+            return static_cast<Vector<int32_t> *>(offsetVector)->GetValue(vectorPosition);
+        case OMNI_LONG:
+            if (offsetVector->GetEncoding() == OMNI_ENCODING_CONST) {
+                return static_cast<ConstVector<int64_t> *>(offsetVector)->GetConstValue();
+            }
+            if (offsetVector->GetEncoding() == OMNI_DICTIONARY) {
+                return static_cast<Vector<DictionaryContainer<int64_t>> *>(offsetVector)->GetValue(vectorPosition);
+            }
+            return static_cast<Vector<int64_t> *>(offsetVector)->GetValue(vectorPosition);
+        default:
+            return offset_;
+    }
+}
+
+bool NthValueFunction::IsValueNullInPartition(int32_t sourceRow)
+{
+    if (windowIndex_ == nullptr || windowIndex_->GetPagesIndex() == nullptr) {
+        return true;
+    }
+
+    PagesIndex *pagesIndex = windowIndex_->GetPagesIndex();
+    uint64_t *valueAddresses = pagesIndex->GetValueAddresses();
+    BaseVector **vectors = pagesIndex->GetColumns()[valueChannel_];
+
+    uint64_t sliceAddress = valueAddresses[sourceRow];
+    uint32_t vectorIndex = DecodeSliceIndex(sliceAddress);
+    uint32_t vectorPosition = DecodePosition(sliceAddress);
+
+    return vectors[vectorIndex]->IsNull(vectorPosition);
 }
 
 void NthValueFunction::CopyValueFromPartition(BaseVector *outputColumn, int32_t outputIndex, int32_t sourceRow)
 {
     if (windowIndex_ == nullptr || windowIndex_->GetPagesIndex() == nullptr) {
-        outputColumn->SetNull(outputIndex);
+        VectorHelper::SetNull(outputColumn, outputIndex);
         return;
     }
 
@@ -346,11 +450,10 @@ void NthValueFunction::CopyValueFromPartition(BaseVector *outputColumn, int32_t 
     uint32_t vectorPosition = DecodePosition(sliceAddress);
 
     BaseVector *sourceVector = vectors[vectorIndex];
-
     if (sourceVector->IsNull(vectorPosition)) {
-        outputColumn->SetNull(outputIndex);
+        VectorHelper::SetNull(outputColumn, outputIndex);
     } else {
-        vec::VectorHelper::CopyValue(sourceVector, vectorPosition, outputColumn, outputIndex);
+        VectorHelper::CopyValue(sourceVector, vectorPosition, outputColumn, outputIndex);
     }
 }
 
@@ -412,7 +515,7 @@ void NtileFunction::RankingProcessRow(BaseVector *column, int32_t index, bool ne
     int32_t peerGroupCount, int32_t currentPositionIndex)
 {
     if (numBuckets_ <= 0 || numPartitionRows_ <= 0) {
-        column->SetNull(index);
+        VectorHelper::SetNull(column, index);
         return;
     }
 

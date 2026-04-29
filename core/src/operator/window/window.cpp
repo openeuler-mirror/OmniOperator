@@ -18,7 +18,8 @@ WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32
     int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
     const DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount, int32_t *windowFrameTypesField,
     int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
-    int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig)
+    int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig,
+    WindowFunctionOptions *windowFunctionOptionsField)
     : sourceTypes(sourceTypes),
       outputColsCount(outputColsCount),
       windowFunctionCount(windowFunctionCount),
@@ -51,6 +52,17 @@ WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32
         windowFrameEndTypesField + windowFunctionCount);
     this->windowFrameEndChannels.insert(this->windowFrameEndChannels.begin(), windowFrameEndChannelsField,
         windowFrameEndChannelsField + windowFunctionCount);
+    if (windowFunctionOptionsField != nullptr) {
+        this->windowFunctionOptions.insert(this->windowFunctionOptions.begin(), windowFunctionOptionsField,
+            windowFunctionOptionsField + windowFunctionCount);
+    } else {
+        this->windowFunctionOptions.resize(windowFunctionCount);
+        for (int32_t i = 0; i < windowFunctionCount; ++i) {
+            if (this->windowFunctionTypes[i] == OMNI_WINDOW_TYPE_NTH_VALUE) {
+                this->windowFunctionOptions[i].nthValueOffset = this->windowFrameStartChannels[i];
+            }
+        }
+    }
 }
 
 OmniStatus WindowOperatorFactory::Init()
@@ -67,7 +79,8 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
     int32_t *sortNullFirstsField, int32_t sortColCountField, int32_t preSortedChannelPrefixField,
     int32_t expectedPositionsField, const DataTypes &allTypesField, int32_t *argumentChannelsField,
     int32_t argumentChannelsCountField, int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField,
-    int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
+    int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField,
+    WindowFunctionOptions *windowFunctionOptionsField)
 {
     OperatorConfig defaultConfig;
     auto operatorFactory = new WindowOperatorFactory(sourceTypesField, outputColsField, outputColsCountField,
@@ -75,7 +88,7 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
         preGroupedColsField, preGroupedCountField, sortColsField, sortAscendingsField, sortNullFirstsField,
         sortColCountField, preSortedChannelPrefixField, expectedPositionsField, allTypesField, argumentChannelsField,
         argumentChannelsCountField, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
-        windowFrameEndTypesField, windowFrameEndChannelsField, defaultConfig);
+        windowFrameEndTypesField, windowFrameEndChannelsField, defaultConfig, windowFunctionOptionsField);
     operatorFactory->Init();
     return operatorFactory;
 }
@@ -88,14 +101,14 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
     int32_t expectedPositionsField, const DataTypes &allTypesField, int32_t *argumentChannelsField,
     int32_t argumentChannelsCountField, int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField,
     int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField,
-    const OperatorConfig &operatorConfig)
+    const OperatorConfig &operatorConfig, WindowFunctionOptions *windowFunctionOptionsField)
 {
     auto operatorFactory = new WindowOperatorFactory(sourceTypesField, outputColsField, outputColsCountField,
         windowFunctionTypesField, windowFunctionCountField, partitionColsField, partitionCountField,
         preGroupedColsField, preGroupedCountField, sortColsField, sortAscendingsField, sortNullFirstsField,
         sortColCountField, preSortedChannelPrefixField, expectedPositionsField, allTypesField, argumentChannelsField,
         argumentChannelsCountField, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
-        windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig);
+        windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig, windowFunctionOptionsField);
     operatorFactory->Init();
     return operatorFactory;
 }
@@ -106,7 +119,7 @@ Operator *WindowOperatorFactory::CreateOperator()
         windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
         sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels,
         argumentChannelsCount, windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes,
-        windowFrameEndChannels, operatorConfig);
+        windowFrameEndChannels, windowFunctionOptions, operatorConfig);
     windowOperator->Init();
     return windowOperator;
 }
@@ -120,7 +133,7 @@ WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<i
     int32_t argumentChannelsCount, const std::vector<int32_t> &windowFrameTypes,
     const std::vector<int32_t> &windowFrameStartTypes, const std::vector<int32_t> &windowFrameStartChannels,
     const std::vector<int32_t> &windowFrameEndTypes, const std::vector<int32_t> &windowFrameEndChannels,
-    const OperatorConfig &operatorConfig)
+    const std::vector<WindowFunctionOptions> &windowFunctionOptions, const OperatorConfig &operatorConfig)
     : sourceTypes(sourceTypes),
       typesCount(sourceTypes.GetSize()),
       outputCols(outputCols),
@@ -146,6 +159,7 @@ WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<i
       windowFrameStartChannels(windowFrameStartChannels),
       windowFrameEndTypes(windowFrameEndTypes),
       windowFrameEndChannels(windowFrameEndChannels),
+      windowFunctionOptions(windowFunctionOptions),
       operatorConfig(operatorConfig)
 {
     for (int32_t i = 0; i < partitionCount; i++) {
@@ -193,21 +207,23 @@ OmniStatus WindowOperator::Init()
                     NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
                 break;
             case OMNI_WINDOW_TYPE_LEAD: {
+                const auto &options = windowFunctionOptions[i];
                 int64_t leadOffset = windowFrameStartChannels[i];
                 int32_t leadDefaultChannel = windowFrameEndChannels[i];
                 bool leadHasDefault = (leadDefaultChannel >= 0);
                 windowFunctions.push_back(std::move(make_unique<LeadFunction>(std::move(windowFrame),
                     sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i),
-                    argumentChannels[i], leadOffset, leadHasDefault, leadDefaultChannel)));
+                    argumentChannels[i], leadOffset, leadHasDefault, leadDefaultChannel, options.IsIgnoreNulls())));
                 break;
             }
             case OMNI_WINDOW_TYPE_LAG: {
+                const auto &options = windowFunctionOptions[i];
                 int64_t lagOffset = windowFrameStartChannels[i];
                 int32_t lagDefaultChannel = windowFrameEndChannels[i];
                 bool lagHasDefault = (lagDefaultChannel >= 0);
                 windowFunctions.push_back(std::move(make_unique<LagFunction>(std::move(windowFrame),
                     sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i),
-                    argumentChannels[i], lagOffset, lagHasDefault, lagDefaultChannel)));
+                    argumentChannels[i], lagOffset, lagHasDefault, lagDefaultChannel, options.IsIgnoreNulls())));
                 break;
             }
             // for aggregate function we use AggregateType
@@ -233,17 +249,14 @@ OmniStatus WindowOperator::Init()
                     NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
                 break;
             case OMNI_WINDOW_TYPE_NTH_VALUE: {
-                int64_t nthOffset = windowFrameStartChannels[i];
+                const auto &options = windowFunctionOptions[i];
+                int64_t nthOffset = options.nthValueOffset;
                 if (nthOffset < 1) {
                     nthOffset = 1;
                 }
-                auto nthFrame = std::make_unique<WindowFrameInfo>(
-                    static_cast<FrameType>(windowFrameTypes[i]),
-                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, -1,
-                    static_cast<FrameBoundType>(windowFrameEndTypes[i]), windowFrameEndChannels[i]);
-                windowFunctions.push_back(std::move(make_unique<NthValueFunction>(std::move(nthFrame),
+                windowFunctions.push_back(std::move(make_unique<NthValueFunction>(std::move(windowFrame),
                     sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i),
-                    argumentChannels[i], nthOffset)));
+                    argumentChannels[i], nthOffset, options.nthValueOffsetChannel, options.IsIgnoreNulls())));
                 break;
             }
             case OMNI_WINDOW_TYPE_NTILE: {

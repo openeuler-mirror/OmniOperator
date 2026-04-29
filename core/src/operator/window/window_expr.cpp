@@ -42,10 +42,15 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     int32_t expectedPositions, const type::DataTypes &outputDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig)
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig,
+    WindowFunctionOptions *windowFunctionOptionsField)
 {
     std::vector<DataTypePtr> newTypes;
     std::vector<int32_t> fullArgumentChannels;
+    std::vector<WindowFunctionOptions> fullWindowFunctionOptions(windowFunctionCount);
+    if (windowFunctionOptionsField != nullptr) {
+        fullWindowFunctionOptions.assign(windowFunctionOptionsField, windowFunctionOptionsField + windowFunctionCount);
+    }
     OperatorUtil::CreateProjections(sourceTypes, argumentKeys, newTypes,
         this->projections, this->argumentChannels, operatorConfig.GetOverflowConfig());
     this->sourceTypes = std::make_unique<DataTypes>(newTypes);
@@ -54,6 +59,14 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     for (int i = 0; i < windowFunctionCount; ++i) {
         if (HasArgument(windowFunctionTypes[i])) {
             fullArgumentChannels.push_back(this->argumentChannels[position++]);
+            if (windowFunctionTypes[i] == OMNI_WINDOW_TYPE_NTH_VALUE &&
+                fullWindowFunctionOptions[i].nthValueOffsetChannel == WindowFunctionOptions::PENDING_CHANNEL) {
+                if (position < static_cast<int>(this->argumentChannels.size())) {
+                    fullWindowFunctionOptions[i].nthValueOffsetChannel = this->argumentChannels[position++];
+                } else {
+                    fullWindowFunctionOptions[i].nthValueOffsetChannel = WindowFunctionOptions::INVALID_CHANNEL;
+                }
+            }
             if ((windowFunctionTypes[i] == OMNI_WINDOW_TYPE_LEAD ||
                  windowFunctionTypes[i] == OMNI_WINDOW_TYPE_LAG) &&
                 windowFrameEndChannelsField[i] == -2 &&
@@ -80,7 +93,8 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
         windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount,
         sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, allTypes,
         fullArgumentChannels.data(), fullArgumentChannels.size(), windowFrameTypesField, windowFrameStartTypesField,
-        windowFrameStartChannelsField, windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig);
+        windowFrameStartChannelsField, windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig,
+        fullWindowFunctionOptions.data());
 }
 
 WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
@@ -91,11 +105,12 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
     int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig,
-    const config::QueryConfig &queryConfig) : WindowWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount,
+    const config::QueryConfig &queryConfig, WindowFunctionOptions *windowFunctionOptionsField)
+    : WindowWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount,
     windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount,
     sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, outputDataTypes,
     argumentKeys, argumentChannelsCount, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
-    windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig)
+    windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig, windowFunctionOptionsField)
 {
     this->queryConfig_ = queryConfig;
 }
@@ -112,13 +127,14 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
     int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField,
+    WindowFunctionOptions *windowFunctionOptionsField)
 {
     auto factory = new WindowWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, windowFunctionTypes,
         windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
         sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeys,
         argumentChannelsCount, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
-        windowFrameEndTypesField, windowFrameEndChannelsField, OperatorConfig());
+        windowFrameEndTypesField, windowFrameEndChannelsField, OperatorConfig(), windowFunctionOptionsField);
     return factory;
 }
 
@@ -129,13 +145,14 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
     int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig)
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig,
+    WindowFunctionOptions *windowFunctionOptionsField)
 {
     auto factory = new WindowWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, windowFunctionTypes,
         windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
         sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeys,
         argumentChannelsCount, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
-        windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig);
+        windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig, windowFunctionOptionsField);
     return factory;
 }
 
@@ -160,6 +177,7 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
     auto windowFrameStartChannels = planNode->GetWindowFrameStartChannels();
     auto windowFrameEndTypes = planNode->GetWindowFrameEndTypes();
     auto windowFrameEndChannels = planNode->GetWindowFrameEndChannels();
+    auto windowFunctionOptions = planNode->GetWindowFunctionOptions();
     SpillConfig *spillConfig = planNode->CanSpill(queryConfig)
                                ? new SparkSpillConfig(true, queryConfig.SpillDir(),
                                                       queryConfig.maxSpillBytes(), queryConfig.SpillSortRowThreshold(),
@@ -174,7 +192,8 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
          preGroupedCols.data(), preGroupedCols.size(), sortCols.data(), sortAscending.data(), sortNullFirsts.data(),
          sortCols.size(), preSortedChannelPrefix, expectedPositionsCount, *windowFunctionReturnTypes.get(),
          argumentKeys, argumentKeys.size(), windowFrameTypes.data(), windowFrameStartTypes.data(),
-         windowFrameStartChannels.data(), windowFrameEndTypes.data(), windowFrameEndChannels.data(), config, queryConfig);
+         windowFrameStartChannels.data(), windowFrameEndTypes.data(), windowFrameEndChannels.data(), config,
+         queryConfig, const_cast<WindowFunctionOptions *>(windowFunctionOptions.data()));
     return operatorFactory;
 }
 

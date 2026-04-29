@@ -19,7 +19,7 @@ public:
         const type::DataTypes &outputDataTypes, const std::vector<omniruntime::expressions::Expr *> &argumentKeys,
         int32_t argumentChannelsCount, int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField,
         int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField,
-        const OperatorConfig &operatorConfig);
+        const OperatorConfig &operatorConfig, WindowFunctionOptions *windowFunctionOptionsField = nullptr);
 
     WindowWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
         int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount,
@@ -28,7 +28,8 @@ public:
         const type::DataTypes &outputDataTypes, const std::vector<omniruntime::expressions::Expr *> &argumentKeys,
         int32_t argumentChannelsCount, int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField,
         int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField,
-        const OperatorConfig &operatorConfig, const config::QueryConfig &queryConfig);
+        const OperatorConfig &operatorConfig, const config::QueryConfig &queryConfig,
+        WindowFunctionOptions *windowFunctionOptionsField = nullptr);
 
     ~WindowWithExprOperatorFactory() override;
 
@@ -39,7 +40,8 @@ public:
         int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
         const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
         int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-        int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField);
+        int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField,
+        WindowFunctionOptions *windowFunctionOptionsField = nullptr);
 
     static WindowWithExprOperatorFactory *CreateWindowWithExprOperatorFactory(const type::DataTypes &sourceTypes,
         int32_t *outputCols, int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount,
@@ -48,7 +50,8 @@ public:
         int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
         const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
         int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-        int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig);
+        int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig,
+        WindowFunctionOptions *windowFunctionOptionsField = nullptr);
 
     static WindowWithExprOperatorFactory *CreateWindowWithExprOperatorFactory(std::shared_ptr<const WindowNode> planNode,
         const config::QueryConfig &queryConfig);
