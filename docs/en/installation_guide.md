@@ -45,7 +45,7 @@ Before installing OmniOperator, prepare the hardware and software environments t
 
 |Item|Version|Description|Management Node (Server)|Compute/Storage Node|
 |--|--|--|--|--|
-|OS|CentOS 7.9openEuler 20.03 LTS SP1openEuler 22.03 LTS SP1|Later patch versions such as openEuler 20.03 LTS SP3 and openEuler 22.03 LTS SP3 are also supported.|√|√|
+|OS|CentOS 7.9</br>openEuler 20.03 LTS SP1</br>openEuler 22.03 LTS SP1|Later patch versions such as openEuler 20.03 LTS SP3 and openEuler 22.03 LTS SP3 are also supported.|√|√|
 |JDK|BiSheng JDK 1.8 (BiSheng JDK 1.8.0_342)|openEuler 22.03 LTS SP1 is incompatible with BiSheng JDK 1.8.0_262, which needs to be replaced with BiSheng JDK 1.8.0_342.For details about how to install the BiSheng JDK, see BiSheng JDK 8 Installation Guide.|√|√|
 |Hadoop|3.2.0|See Hadoop Deployment Guide (CentOS 7.6 & openEuler 20.03).|√|√|
 |Spark|3.1.13.3.13.4.33.5.2|See Spark Deployment Guide (CentOS 7.6 & openEuler 20.03).|√|-|
@@ -70,11 +70,10 @@ Before installing OmniOperator, prepare the hardware and software environments t
 >Use on Hive:
 >-   HiveExtension requires installing the software packages numbered 1, 3, and 5.
 
-**Table 3**  OmniOperator software packages<a id="omnioperator_software_obtains_columns">
-
-<table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+**Table 3**  OmniOperator software packages<a id="omnioperator_software_obtains_columns"></a>
+<table border="1" cellpadding="6" cellspacing="0">
   <thead>
-    <tr style="background-color: #f2f2f2;">
+    <tr>
       <th>No.</th>
       <th>Software Name</th>
       <th>Package Name</th>
@@ -94,28 +93,25 @@ Before installing OmniOperator, prepare the hardware and software environments t
     </tr>
     <tr>
       <td rowspan="4">2</td>
-      <td>SparkExtension</td>
+      <td rowspan="4">SparkExtension</td>
       <td>boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip</td>
       <td>Open source</td>
       <td>Spark extension package for the OmniOperator computing base.</td>
       <td><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release-311/boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip">Link</a></td>
     </tr>
-    <tr>
-      <td>SparkExtension</td>
+    <tr>      
       <td>boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip</td>
       <td>Open source</td>
       <td>Spark extension package for the OmniOperator computing base.</td>
       <td><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release/boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip">Link</a></td>
     </tr>
-    <tr>
-      <td>SparkExtension</td>
+    <tr>      
       <td>boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip</td>
       <td>Open source</td>
       <td>Spark extension package for the OmniOperator computing base.</td>
       <td><a href="https://gitcode.com/boostkit/boostkit-bigdata/releases/download/Kunpeng-BoostKit-25.3.0-OmniOperator-release/boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip">Link</a></td>
     </tr>
-    <tr>
-      <td>SparkExtension</td>
+    <tr>      
       <td>boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip</td>
       <td>Open source</td>
       <td>Spark extension package for the OmniOperator computing base.</td>
@@ -131,18 +127,17 @@ Before installing OmniOperator, prepare the hardware and software environments t
     </tr>
     <tr>
       <td rowspan="2">4</td>
-      <td>Gluten</td>
+      <td rowspan="2">Gluten</td>
       <td>Boostkit-omniruntime-gluten-2.0.0.zip</td>
       <td>Open source</td>
       <td>OmniOperator software installation package (adapted to Gluten)</td>
       <td><a href="https://atomgit.com/openeuler/OmniOperator/releases/download/26.0.0-OmniOperator-2.1.0-release/BoostKit-omniruntime-gluten-2.0.0.zip">Link</a></td>
     </tr>
-    <tr>
-      <td>Gluten</td>
+    <tr>      
       <td>Dependency_library_Gluten.zip</td>
       <td>Open source</td>
       <td>Library file on which Gluten depends.</td>
-      <td><a href="https://gitcode.com/openeuler/Gluten/releases/download/25.3.0-Gluten-1.0.0-release/Dependency_library_Gluten.zip">Link</a></td>
+      <td><a href="https://gitcode.com/openeuler/OmniOperator/releases/download/26.0.0-OmniOperator-2.1.0-release/Dependency_library_Gluten.zip">Link</a></td>
     </tr>
     <tr>
       <td rowspan="1">5</td>

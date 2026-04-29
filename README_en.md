@@ -323,9 +323,6 @@ The documents in the **_xxxdocs_** directory are licensed under CC BY 4.0. For d
     9. After your PR is approved and all tests pass, the CI system will merge it into the project's main branch.
 
 
-## Legal Statement<a name="EN-US_TOPIC_0000002515818288"></a>
-
-
 ## Suggestions and Feedback<a name="EN-US_TOPIC_0000002547258203"></a>
 
 You are welcome to contribute to the community. If you have any questions or suggestions, please submit an [issue](https://gitcode.com/openeuler/OmniAdaptor). We will respond as soon as possible. Thank you for your support.
