@@ -124,6 +124,26 @@ public:
         ASSERT_NO_THROW(function->Apply(args, outputType, result, &context))
             << "from_unixtime function threw an exception";
     }
+
+    static void ExecuteFromUnixTimeWithPolicy(BaseVector* inputVec, BaseVector* formatVec,
+        BaseVector* tzVec, BaseVector* policyVec, DataTypeId inputTypeId, BaseVector*& result) {
+        auto signature = std::make_shared<FunctionSignature>("from_unixtime",
+            std::vector<DataTypeId>{inputTypeId, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+        auto function = VectorFunction::Find(signature);
+        ASSERT_NE(function, nullptr) << "from_unixtime function not found for 4-arg signature";
+
+        auto outputType = std::make_shared<DataType>(OMNI_VARCHAR);
+        ExecutionContext context;
+        context.SetResultRowSize(inputVec->GetSize());
+        std::stack<BaseVector*> args;
+        args.push(inputVec);
+        args.push(formatVec);
+        args.push(tzVec);
+        args.push(policyVec);
+
+        ASSERT_NO_THROW(function->Apply(args, outputType, result, &context))
+            << "from_unixtime function threw an exception";
+    }
 };
 
 // Test: Basic from_unixtime with default format (2-arg, UTC)
@@ -445,6 +465,153 @@ TEST(FromUnixTimeTest, ThreeArgWithGMT8Timezone) {
     BaseVector* tzVec = new ConstVector<std::string_view>(std::string_view("GMT+08:00"), OMNI_VARCHAR, unixSeconds.size());
     BaseVector* resultVec = nullptr;
     FromUnixTimeTestHelper::ExecuteFromUnixTimeWithTz(inputVec, formatVec, tzVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: Spark CORRECTED DateTimeFormatter tokens used by from_unixtime.
+TEST(FromUnixTimeTest, SparkCorrectedExtendedFormatTokens) {
+    std::vector<int64_t> unixSeconds = {0};
+    std::vector<std::string> expected = {
+        "1970-01-01 1 Thu 1 AM 08 08 08  00 Asia/Shanghai CST GMT+8 +08 +08 +0800"
+    };
+    std::vector<bool> expectNull = {false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd q E F a hh KK kk  SS VV zz O X x Z", unixSeconds.size());
+    BaseVector* tzVec = new ConstVector<std::string_view>(
+        std::string_view("Asia/Shanghai"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTimeWithTz(inputVec, formatVec, tzVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: 4-arg signature carries spark.sql.legacy.timeParserPolicy.
+TEST(FromUnixTimeTest, FourArgCorrectedPolicy) {
+    std::vector<int64_t> unixSeconds = {0};
+    std::vector<std::string> expected = {
+        "1970-01-01 1 Thu 1 AM 08 08 08  00 Asia/Shanghai CST GMT+8 +08 +08 +0800"
+    };
+    std::vector<bool> expectNull = {false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd q E F a hh KK kk  SS VV zz O X x Z", unixSeconds.size());
+    BaseVector* tzVec = new ConstVector<std::string_view>(
+        std::string_view("Asia/Shanghai"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* policyVec = new ConstVector<std::string_view>(
+        std::string_view("CORRECTED"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTimeWithPolicy(
+        inputVec, formatVec, tzVec, policyVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: CORRECTED z/zz keeps the GMT offset zone name instead of POSIX +08.
+TEST(FromUnixTimeTest, FourArgCorrectedGMT8ZoneName) {
+    std::vector<int64_t> unixSeconds = {0};
+    std::vector<std::string> expected = {
+        "1970-01-01 1 Thu 1 AM 08 08 08  00 GMT+08:00 GMT+08:00 GMT+8 +08 +08 +0800"
+    };
+    std::vector<bool> expectNull = {false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd q E F a hh KK kk  SS VV zz O X x Z", unixSeconds.size());
+    BaseVector* tzVec = new ConstVector<std::string_view>(
+        std::string_view("GMT+08:00"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* policyVec = new ConstVector<std::string_view>(
+        std::string_view("CORRECTED"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTimeWithPolicy(
+        inputVec, formatVec, tzVec, policyVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: LEGACY uses SimpleDateFormat-style F (day-of-week-in-month).
+TEST(FromUnixTimeTest, FourArgLegacyPolicy) {
+    std::vector<int64_t> unixSeconds = {604800};
+    std::vector<std::string> expected = {"1970-01-08 2"};
+    std::vector<bool> expectNull = {false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd F", unixSeconds.size());
+    BaseVector* tzVec = new ConstVector<std::string_view>(
+        std::string_view("UTC"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* policyVec = new ConstVector<std::string_view>(
+        std::string_view("LEGACY"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTimeWithPolicy(
+        inputVec, formatVec, tzVec, policyVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
+// Test: q/v/x are not SimpleDateFormat pattern characters in LEGACY mode.
+TEST(FromUnixTimeTest, FourArgLegacyUnsupportedPatternTokens) {
+    for (char token : std::vector<char>{'q', 'v', 'x'}) {
+        SCOPED_TRACE(std::string("token=") + token);
+        std::vector<int64_t> unixSeconds = {0};
+
+        BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+        BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+            std::string("yyyy-MM-dd ") + token, unixSeconds.size());
+        BaseVector* tzVec = new ConstVector<std::string_view>(
+            std::string_view("UTC"), OMNI_VARCHAR, unixSeconds.size());
+        BaseVector* policyVec = new ConstVector<std::string_view>(
+            std::string_view("LEGACY"), OMNI_VARCHAR, unixSeconds.size());
+
+        auto signature = std::make_shared<FunctionSignature>("from_unixtime",
+            std::vector<DataTypeId>{OMNI_LONG, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+        auto function = VectorFunction::Find(signature);
+        ASSERT_NE(function, nullptr) << "from_unixtime function not found for 4-arg signature";
+
+        auto outputType = std::make_shared<DataType>(OMNI_VARCHAR);
+        ExecutionContext context;
+        context.SetResultRowSize(inputVec->GetSize());
+        std::stack<BaseVector*> args;
+        args.push(inputVec);
+        args.push(formatVec);
+        args.push(tzVec);
+        args.push(policyVec);
+        BaseVector* resultVec = nullptr;
+
+        EXPECT_ANY_THROW(function->Apply(args, outputType, resultVec, &context));
+
+        delete inputVec;
+        delete formatVec;
+        delete tzVec;
+        delete policyVec;
+        delete resultVec;
+    }
+}
+
+// Test: EXCEPTION formats with the corrected formatter path.
+TEST(FromUnixTimeTest, FourArgExceptionPolicy) {
+    std::vector<int64_t> unixSeconds = {604800};
+    std::vector<std::string> expected = {"1970-01-08 1"};
+    std::vector<bool> expectNull = {false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd F", unixSeconds.size());
+    BaseVector* tzVec = new ConstVector<std::string_view>(
+        std::string_view("UTC"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* policyVec = new ConstVector<std::string_view>(
+        std::string_view("EXCEPTION"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTimeWithPolicy(
+        inputVec, formatVec, tzVec, policyVec, OMNI_LONG, resultVec);
     FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
 
     delete resultVec;
