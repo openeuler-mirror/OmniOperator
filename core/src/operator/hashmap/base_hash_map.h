@@ -61,6 +61,7 @@
 #include <unordered_map>
 #include <functional>
 #include <jemalloc/jemalloc.h>
+#include <folly/CppAttributes.h>
 #ifdef __aarch64__
 #include <arm_neon.h>
 #endif
@@ -296,6 +297,9 @@ private:
 struct OutputState {
     uint32_t outputHashmapPos = 0;
     uint32_t hasBeenOutputNum = 0;
+    int32_t rowOffset = 0;
+    char* FOLLY_NULLABLE rowBegin{nullptr};
+
 
     void UpdateState(OutputState &o)
     {

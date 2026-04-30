@@ -12,8 +12,11 @@
 #include "type/string_ref.h"
 #include "type/data_type.h"
 #include "operator/hashmap/base_hash_map.h"
+#include "operator/hashmap/taper_hashtable.h"
+#include "operator/omni_id_type_vector_traits.h"
 #include "operator/execution_context.h"
 #include "vector_marshaller.h"
+#include "vector/vector.h"
 
 namespace omniruntime {
 namespace op {
@@ -29,6 +32,7 @@ enum class HandleType {
     fixed256Bytes,
     onlyOneKey
 };
+static constexpr uint64_t kNullHash = 1;
 
 template <typename Hashmap> class ColumnSerializeHandler {
 public:
@@ -486,6 +490,677 @@ private:
     }
 
     ALWAYS_INLINE void UnpackKey(const KeyType &key, int32_t groupColNum) const
+    {
+        UnsignedKey packed = static_cast<UnsignedKey>(key);
+        if (UNLIKELY(static_cast<size_t>(groupColNum) != plan.size())) {
+            unpackIsNull.resize(groupColNum);
+            unpackValues.resize(groupColNum);
+        }
+        for (int32_t col = groupColNum - 1; col >= 0; --col) {
+            auto width = plan[col].bitWidth;
+            auto mask = plan[col].mask;
+            unpackValues[col] = packed & mask;
+            packed >>= width;
+            unpackIsNull[col] = static_cast<uint8_t>(packed & 1);
+            packed >>= 1;
+        }
+    }
+
+    void InitPlan(std::vector<int32_t> typeIds, std::vector<uint8_t> bitWidths)
+    {
+        plan.resize(typeIds.size());
+        unpackIsNull.resize(typeIds.size());
+        unpackValues.resize(typeIds.size());
+        for (size_t i = 0; i < typeIds.size(); ++i) {
+            plan[i].typeId = typeIds[i];
+            plan[i].bitWidth = bitWidths[i];
+            plan[i].mask = MaskForWidth(bitWidths[i]);
+            switch (typeIds[i]) {
+                case OMNI_BYTE:
+                    plan[i].flatLoader = &LoadBits<int8_t, false>;
+                    plan[i].dictLoader = &LoadBits<int8_t, true>;
+                    plan[i].constLoader = &LoadBitsConst<int8_t>;
+                    break;
+                case OMNI_SHORT:
+                    plan[i].flatLoader = &LoadBits<int16_t, false>;
+                    plan[i].dictLoader = &LoadBits<int16_t, true>;
+                    plan[i].constLoader = &LoadBitsConst<int16_t>;
+                    break;
+                case OMNI_INT:
+                case OMNI_DATE32:
+                case OMNI_TIME32:
+                    plan[i].flatLoader = &LoadBits<int32_t, false>;
+                    plan[i].dictLoader = &LoadBits<int32_t, true>;
+                    plan[i].constLoader = &LoadBitsConst<int32_t>;
+                    break;
+                case OMNI_LONG:
+                case OMNI_TIMESTAMP:
+                case OMNI_DECIMAL64:
+                case OMNI_DATE64:
+                case OMNI_TIME64:
+                    plan[i].flatLoader = &LoadBits<int64_t, false>;
+                    plan[i].dictLoader = &LoadBits<int64_t, true>;
+                    plan[i].constLoader = &LoadBitsConst<int64_t>;
+                    break;
+                default:
+                    plan[i].flatLoader = nullptr;
+                    plan[i].dictLoader = nullptr;
+                    plan[i].constLoader = nullptr;
+                    break;
+            }
+            plan[i].activeLoader = plan[i].flatLoader;
+        }
+    }
+};
+
+class TaperColumnSerializeHandler {
+public:
+    static constexpr bool HasSpecialNullFunc = false;
+    using HashTable = TaperFlatHashTable<int64_t, true>;
+    int32_t totalAggValueSize = 0;
+    std::unique_ptr<HashTable> table;
+    std::vector<int64_t> workingHashVals_;
+    std::vector<int32_t> workingUpdateIndices_;
+
+
+    uint8_t*& rowFromData(char* data)
+    {
+        return *reinterpret_cast<uint8_t**>(data);
+    }
+
+    TaperColumnSerializeHandler(mem::SimpleArenaAllocator &pool, int32_t size)
+    {
+        table = std::make_unique<HashTable>(pool, sizeof(uint64_t), sizeof(char*));
+        totalAggValueSize = size + sizeof(size_t);
+    }
+
+    void EmplaceTable(BaseVector **groupVectors, int32_t groupColNum, int32_t rowsNum,
+        std::vector<uint8_t*>& groups, std::vector<uint8_t*>& newGroups, Encoding encoding)
+    {
+        auto initRow = [&](uint32_t rowIdx, char* data) {
+            auto* row = GetSerializeRow(groupVectors, groupColNum, rowIdx);
+            rowFromData(data) = reinterpret_cast<uint8_t*>(row);
+            newGroups.push_back(rowFromData(data));
+            return row;
+        };
+        workingUpdateIndices_.clear();
+        workingHashVals_.resize(rowsNum);
+        for (size_t i = 0; i < groupColNum; ++i) {
+            BaseVector *baseVector = groupVectors[i];
+            auto type = baseVector->GetTypeId();
+            if (type == type::OMNI_ARRAY) {
+                DoArrayHash(baseVector, rowsNum, workingHashVals_);
+            } else if (type == type::OMNI_ROW) {
+                DoRowHash(baseVector, rowsNum, workingHashVals_);
+            } else {
+                DYNAMIC_TYPE_DISPATCH(hash, type, baseVector, rowsNum, workingHashVals_, i > 0);
+            }
+        }
+        table->emplaceBatch(
+        workingHashVals_.data(),
+            rowsNum,
+        [&](uint32_t) { return false; },
+        [&](uint32_t rowIdx, char* data) { initRow(rowIdx, data); },
+        [&](uint32_t rowIdx, char* data, bool initFlag) {
+            groups[rowIdx] = rowFromData(data);
+          if (!initFlag) {
+            workingUpdateIndices_.push_back((rowIdx));
+          }
+        });
+        if (workingUpdateIndices_.empty()) {
+            return;
+        }
+        int32_t unequalsNum = GetUnequalsNum(workingUpdateIndices_, groupVectors, groupColNum, groups);
+
+        for (int32_t i = 0; i < unequalsNum; i++) {
+            auto rowIdx = workingUpdateIndices_[i];
+            table->emplace(
+                workingHashVals_[rowIdx],
+                [&](auto, TaperHashTableChunk& chunk, uint8_t slot) {
+                  auto* row = rowFromData(table->getChunkValue(chunk, slot).buf);
+                  return CompareKeys(groupVectors, row, groupColNum, rowIdx);
+                },
+                [&](char* data) {
+                  auto* row = initRow(rowIdx, data);
+                },
+                [&](char* data, bool) { groups[rowIdx] = rowFromData(data); });
+        }
+    }
+
+    int32_t GetUnequalsNum(std::vector<int32_t> workingUpdateIndices, BaseVector **groupVectors, int32_t groupColNum,
+        std::vector<uint8_t*>& groups)
+    {
+        uint32_t unequalsNum = 0;
+        for (int32_t index : workingUpdateIndices) {
+            if (!CompareKeys(groupVectors, groups[index], groupColNum, index)) {
+                unequalsNum++;
+            }
+        }
+        return unequalsNum;
+    }
+
+    bool CompareKeys(BaseVector **groupVectors, uint8_t *row, int32_t groupColNum, int32_t rowIdx)
+    {
+        uint8_t *addr = row + totalAggValueSize;
+        for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
+            auto curVector = groupVectors[groupColIdx];
+            auto &curFunc = comparators[groupColIdx];
+            if (!curFunc(curVector, rowIdx, addr)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    char *GetSerializeRow(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx)
+    {
+        type::StringRef key;
+        key.data = reinterpret_cast<char*>(table->Pool().Allocate(totalAggValueSize));
+        for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
+            auto curVector = groupVectors[groupColIdx];
+            auto &curFunc = serializers[groupColIdx];
+            curFunc(curVector, rowIdx, table->Pool(), key);
+        }
+        *reinterpret_cast<size_t*>(const_cast<char*>(key.data) + totalAggValueSize - sizeof(size_t)) = key.size;
+        return const_cast<char*>(key.data);
+    }
+
+    template <DataTypeId id>
+    void hash(BaseVector *vector, int32_t rowsNum, std::vector<int64_t> &workingHashVals, bool isMix)
+    {
+        bool isDictEncoded = (vector->GetEncoding() == vec::OMNI_DICTIONARY);
+        bool isConstEncoded = (vector->GetEncoding() == vec::OMNI_ENCODING_CONST);
+        if (isDictEncoded) {
+            DoHash<id, true>(vector, rowsNum, workingHashVals, isMix);
+        } else if (isConstEncoded) {
+            DoHash<id, false, true>(vector, rowsNum, workingHashVals, isMix);
+        } else {
+            DoHash<id>(vector, rowsNum, workingHashVals, isMix);
+        }
+    }
+
+    template<DataTypeId id, bool isDic = false, bool isConst = false>
+    void DoHash(BaseVector *vector, int32_t rowsNum, std::vector<int64_t> &workingHashVals, bool isMix)
+    {
+        using RealVector = typename NativeAndVectorType<id>::vector;
+        using Type = typename NativeAndVectorType<id>::type;
+        GroupbyHashCalculator<Type> calculator {};
+        for (int32_t row = 0; row < rowsNum; row++) {
+            int64_t hashVal = 0;
+            if constexpr (isDic) {
+                hashVal = vector->IsNull(row) ? kNullHash :
+                    calculator(static_cast<Vector<DictionaryContainer<Type>> *>(vector)->GetValue(row));
+            } else if constexpr (isConst) {
+                hashVal = vector->IsNull(row) ? kNullHash :
+                    calculator(static_cast<ConstVector<Type> *>(vector)->GetConstValue());
+            } else {
+                auto realVector = static_cast<RealVector *>(vector);
+                hashVal = vector->IsNull(row) ? kNullHash : calculator(realVector->GetValue(row));
+            }
+            workingHashVals[row] = isMix ? BitUtil::HashMix(workingHashVals[row], hashVal): hashVal;
+        }
+    }
+
+    void DoRowHash(BaseVector *vector, int32_t rowsNum, std::vector<int64_t> &workingHashVals)
+    {
+        auto rowVector = dynamic_cast<RowVector *>(vector);
+        int32_t childCount = rowVector->ChildSize();
+        for (int32_t i = 0; i < childCount; i++) {
+            auto &childVec = rowVector->ChildAt(i);
+            auto childTypeId = childVec->GetTypeId();
+            DYNAMIC_TYPE_DISPATCH(hash, childTypeId, childVec.get(), rowsNum, workingHashVals_, i > 0);
+        }
+    }
+
+    void DoArrayHash(BaseVector *vector, int32_t rowsNum, std::vector<int64_t> &workingHashVals)
+    {
+        auto arrayVector = dynamic_cast<ArrayVector *>(vector);
+        for (int32_t i = 0; i < rowsNum; i++) {
+            int64_t offset = arrayVector->GetOffset(i);
+            int64_t size = arrayVector->GetSize(i);
+            auto elementVec = arrayVector->GetElementVector().get();
+            int64_t start = offset;
+            int64_t end = offset + size;
+            auto elementTypeId = elementVec->GetTypeId();
+            workingHashVals_[i] = DYNAMIC_TYPE_DISPATCH(CalculateArrayHash, elementTypeId, elementVec, start, end);
+        }
+    }
+
+    template <DataTypeId id>
+    int64_t CalculateArrayHash(BaseVector *vector, int64_t start, int64_t end)
+    {
+        using RealVector = typename NativeAndVectorType<id>::vector;
+        using Type = typename NativeAndVectorType<id>::type;
+        auto realVector = static_cast<RealVector *>(vector);
+        GroupbyHashCalculator<Type> calculator {};
+        int64_t finalHash = 0;
+        for (int32_t row = start; row < end; row++) {
+            auto hash = vector->IsNull(row) ? kNullHash : calculator(realVector->GetValue(row));
+            finalHash = (row == start) ? hash : BitUtil::HashMix(finalHash, hash);
+        }
+        return finalHash;
+    }
+
+    template <bool withHashVal = false, class Func, class NullFunc>
+    void Extract(int32_t rowsNum, OutputState &outputState, Func func, NullFunc nullFunc)
+    {
+        auto tblVisitor = [&] {
+            if (outputState.rowBegin) {
+                return table->getResultVisitor(
+                    outputState.rowBegin, static_cast<uint16_t>(outputState.rowOffset));
+            }
+            return table->getResultVisitor();
+        }();
+        uint32_t idx = 0;
+        while (idx < rowsNum && !tblVisitor.finished()) {
+            auto *row = rowFromData(tblVisitor.curVal().buf);
+            type::StringRef key;
+            key.data = row + totalAggValueSize;
+            key.size = *reinterpret_cast<size_t*>(row + totalAggValueSize - sizeof(size_t));
+            if constexpr (withHashVal) {
+                func(key, tblVisitor.curKey(), row, idx);
+            } else {
+                func(key, row, idx);
+            }
+            tblVisitor.next();
+            idx++;
+        }
+        tblVisitor.savePos([&](auto ptr, auto tagPos) {
+            outputState.rowBegin = reinterpret_cast<char*>(ptr);
+            outputState.rowOffset = tagPos;
+            outputState.hasBeenOutputNum += rowsNum;
+        });
+    }
+
+    void ParseKeyToCols(const type::StringRef &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
+        const int32_t rowIdx)
+    {
+        auto *pos = key.data;
+        for (int32_t i = 0; i < groupColNum; ++i) {
+            auto curVectorPtr = groupOutputVectors[i];
+            auto deserializeFunc = deserializers[i];
+            pos = deserializeFunc(curVectorPtr, rowIdx, pos);
+        }
+    }
+
+    void ParseNull(const char *key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
+        const int rowIdx) {}
+
+    void InitSize(int groupBySize)
+    {
+        serializers.reserve(groupBySize);
+        deserializers.reserve(groupBySize);
+        comparators.reserve(groupBySize);
+    }
+
+    void ResetSerializer()
+    {
+        serializers.clear();
+        deserializers.clear();
+        comparators.clear();
+    }
+
+    void ResetIgnoreNullSerializer()
+    {
+        ignoreNullSerializers.clear();
+    }
+
+    void ResetFixedKeysIgnoreNullSerializer()
+    {
+        fixedKeysIgnoreNullSerializers.clear();
+    }
+
+    void ResetFixedKeysIgnoreNullSerializerSimd()
+    {
+        fixedKeysIgnoreNullSerializersSimd.clear();
+    }
+
+    void PushBackSerializer(VectorSerializer &serializer)
+    {
+        serializers.push_back(serializer);
+    }
+
+    void PushBackIgnoreNullSerializer(VectorSerializerIgnoreNull &serializer)
+    {
+        ignoreNullSerializers.push_back(serializer);
+    }
+
+    void PushBackFixedKeysIgnoreNullSerializer(FixedKeyVectorSerializerIgnoreNull &serializer)
+    {
+        fixedKeysIgnoreNullSerializers.push_back(serializer);
+    }
+
+    void PushBackFixedKeysIgnoreNullSerializerSimd(FixedKeyVectorSerializerIgnoreNullSimd &serializer)
+    {
+        fixedKeysIgnoreNullSerializersSimd.push_back(serializer);
+    }
+
+    void PushBackDeSerializer(VectorDeSerializer &deserializer)
+    {
+        deserializers.push_back(deserializer);
+    }
+
+    void PushBackComparator(VectorComparator &comparator)
+    {
+        comparators.push_back(comparator);
+    }
+
+    size_t GetElementsSize() const
+    {
+        return table->size();
+    }
+
+    void ResetHashmap()
+    {
+        table->clear();
+    };
+
+private:
+    std::vector<VectorSerializer> serializers;
+    std::vector<VectorDeSerializer> deserializers;
+    std::vector<VectorComparator> comparators;
+
+    std::vector<VectorSerializerIgnoreNull> ignoreNullSerializers;
+    std::vector<FixedKeyVectorSerializerIgnoreNull> fixedKeysIgnoreNullSerializers;
+
+    std::vector<FixedKeyVectorSerializerIgnoreNullSimd> fixedKeysIgnoreNullSerializersSimd;
+};
+
+template <typename T, bool isPacked = false>
+class TaperGroupbySingleFixHandler {
+public:
+    static constexpr bool HasSpecialNullFunc = true;
+    using HashTable = TaperFlatHashTable<T, true>;
+    int32_t totalAggValueSize = 0;
+    std::unique_ptr<HashTable> table;
+    bool shouldExtractNull = false;
+    std::vector<T> keys;
+    std::string nullValue;
+
+    TaperGroupbySingleFixHandler(mem::SimpleArenaAllocator &pool, int32_t size)
+    {
+        table = std::make_unique<HashTable>(pool, sizeof(T), sizeof(char*));
+        totalAggValueSize = size;
+    }
+
+    TaperGroupbySingleFixHandler(mem::SimpleArenaAllocator &pool, int32_t size,
+        std::vector<int32_t> typeIds, std::vector<uint8_t> bitWidths)
+    {
+        table = std::make_unique<HashTable>(pool, sizeof(T), sizeof(char*));
+        totalAggValueSize = size;
+        if constexpr (isPacked) {
+            InitPlan(std::move(typeIds), std::move(bitWidths));
+        }
+    }
+
+    uint8_t*& rowFromData(char* data)
+    {
+        return *reinterpret_cast<uint8_t**>(data);
+    }
+
+    void EmplaceTable(BaseVector **groupVectors, int32_t groupColNum, int32_t rowsNum,
+        std::vector<uint8_t*>& groups, std::vector<uint8_t*>& newGroups, Encoding encoding)
+    {
+        auto initRow = [&](uint32_t rowIdx, char* data) {
+            if (totalAggValueSize > 0) {
+                auto* row = table->Pool().Allocate(totalAggValueSize);
+                rowFromData(data) = reinterpret_cast<uint8_t*>(row);
+                newGroups.push_back(rowFromData(data));
+            }
+        };
+
+        bool isDictEncoded = (encoding == vec::OMNI_DICTIONARY);
+        bool isConstEncoded = (encoding == vec::OMNI_ENCODING_CONST);
+        auto *curVector = groupVectors[0];
+        if (isDictEncoded) {
+            InitKeys<true>(groupVectors, rowsNum, groupColNum, groups, newGroups);
+        } else if (isConstEncoded) {
+            InitKeys<false, true>(groupVectors, rowsNum, groupColNum, groups, newGroups);
+        } else {
+            InitKeys(groupVectors, rowsNum, groupColNum, groups, newGroups);
+        }
+
+        table->emplaceBatch(
+        keys.data(),
+            rowsNum,
+        [&](uint32_t idx) { return !isPacked && curVector->IsNull(idx); },
+        [&](uint32_t rowIdx, char* data) { initRow(rowIdx, data); },
+        [&](uint32_t rowIdx, char* data, bool initFlag) {
+            groups[rowIdx] = rowFromData(data);
+        });
+    }
+
+    template<bool isDic = false, bool isConst = false>
+    void InitKeys(BaseVector **groupVectors, int32_t rowsNum, int32_t groupColNum,
+        std::vector<uint8_t*>& groups, std::vector<uint8_t*>& newGroups)
+    {
+        auto *curVector = groupVectors[0];
+        keys.resize(rowsNum);
+        for (int32_t i = 0; i < rowsNum; i++) {
+            if constexpr (isPacked) {
+                Prepare(groupVectors, groupColNum);
+                keys[i] = PackKey(groupVectors, groupColNum, i);
+            } else {
+                if (!curVector->IsNull(i)) {
+                    if constexpr (isDic) {
+                        keys[i] = static_cast<Vector<DictionaryContainer<T>> *>(curVector)->GetValue(i);
+                    } else if constexpr  (isConst) {
+                        keys[i] = static_cast<ConstVector<T> *>(curVector)->GetConstValue();
+                    } else {
+                        keys[i] = reinterpret_cast<Vector<T>*>(curVector)->GetValue(i);
+                    }
+                } else if (totalAggValueSize > 0) {
+                    if (nullValue.empty()) {
+                        nullValue.resize(totalAggValueSize);
+                        newGroups.push_back(reinterpret_cast<uint8_t*>(nullValue.data()));
+                        shouldExtractNull = true;
+                    }
+                    groups[i] = reinterpret_cast<uint8_t*>(nullValue.data());
+                }
+            }
+        }
+    }
+
+    template<bool isNull>
+    void InsertOneValueToHashmap(T key, uint8_t *value)
+    {
+        if constexpr (isNull) {
+            if (nullValue.empty()) {
+                nullValue.resize(totalAggValueSize);
+                shouldExtractNull = true;
+                std::memcpy(nullValue.data(), value, totalAggValueSize);
+            }
+            return;
+        }
+
+        table->emplace(
+          key,
+          [&](char* data) {
+             rowFromData(data) = value;
+          },
+          [&](char* data, bool) { });
+    }
+
+   template <class Func, class NullFunc>
+   void Extract(int32_t rowsNum, OutputState &outputState, Func func, NullFunc nullFunc)
+    {
+        auto tblVisitor = [&] {
+            if (outputState.rowBegin) {
+                return table->getResultVisitor(
+                    outputState.rowBegin, static_cast<uint16_t>(outputState.rowOffset));
+            }
+            return table->getResultVisitor();
+        }();
+        uint32_t idx = 0;
+        if (shouldExtractNull) {
+            auto key = static_cast<T>(0);
+            nullFunc(key, reinterpret_cast<uint8_t*>(nullValue.data()), idx);
+            shouldExtractNull = false;
+            idx++;
+        }
+        while (idx < rowsNum && !tblVisitor.finished()) {
+            auto *row = rowFromData(tblVisitor.curVal().buf);
+            func(tblVisitor.curKey(), row, idx);
+            tblVisitor.next();
+            idx++;
+        }
+        tblVisitor.savePos([&](auto ptr, auto tagPos) {
+            outputState.rowBegin = reinterpret_cast<char*>(ptr);
+            outputState.rowOffset = tagPos;
+            outputState.hasBeenOutputNum += rowsNum;
+        });
+    }
+
+    void ParseKeyToCols(const T &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
+        const int rowIdx)
+    {
+        if constexpr (isPacked) {
+            UnpackKey(key, groupColNum);
+            for (int32_t col = 0; col < groupColNum; ++col) {
+                auto *outVector = groupOutputVectors[col];
+                if (unpackIsNull[col]) {
+                    outVector->SetNull(rowIdx);
+                    continue;
+                }
+                SetValueByType(outVector, rowIdx, plan[col].typeId, unpackValues[col]);
+            }
+        } else {
+            auto curVectorPtr = groupOutputVectors[0];
+            if (curVectorPtr->GetEncoding() == Encoding::OMNI_DICTIONARY) {
+                auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(curVectorPtr);
+                dictionaryVector->SetValue(rowIdx, key);
+            } else {
+                reinterpret_cast<Vector<T>*>(curVectorPtr)->SetValue(rowIdx, key);
+            }
+        }
+    }
+
+    void ParseNull(const T &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
+        const int rowIdx)
+    {
+        auto curVectorPtr = groupOutputVectors[0];
+        curVectorPtr->SetNull(rowIdx);
+    }
+
+    size_t GetElementsSize() const
+    {
+        return table->size() + (shouldExtractNull ? 1 : 0);
+    }
+
+    void ResetHashmap()
+    {
+        table->clear();
+        nullValue.clear();
+    }
+    private:
+    using UnsignedKey = std::conditional_t<std::is_same_v<T, omniruntime::type::int128_t>,
+        __uint128_t, std::make_unsigned_t<T>>;
+
+    using LoaderFn = UnsignedKey (*)(BaseVector *vector, int32_t rowIdx, UnsignedKey mask);
+
+    struct PlanEntry {
+        int32_t typeId = OMNI_INVALID;
+        uint8_t bitWidth = 0;
+        UnsignedKey mask = 0;
+        LoaderFn flatLoader = nullptr;
+        LoaderFn dictLoader = nullptr;
+        LoaderFn constLoader = nullptr;
+        LoaderFn activeLoader = nullptr;
+    };
+
+    std::vector<PlanEntry> plan;
+    mutable std::vector<uint8_t> unpackIsNull;
+    mutable std::vector<UnsignedKey> unpackValues;
+
+    ALWAYS_INLINE void Prepare(BaseVector **groupVectors, int32_t groupColNum)
+    {
+        for (int32_t col = 0; col < groupColNum; ++col) {
+            const auto encoding = groupVectors[col]->GetEncoding();
+            if (encoding == Encoding::OMNI_DICTIONARY) {
+                plan[col].activeLoader = plan[col].dictLoader;
+            } else if (encoding == Encoding::OMNI_ENCODING_CONST) {
+                plan[col].activeLoader = plan[col].constLoader;
+            } else {
+                plan[col].activeLoader = plan[col].flatLoader;
+            }
+        }
+    }
+
+    static ALWAYS_INLINE UnsignedKey MaskForWidth(uint8_t width)
+    {
+        if (width == 0) {
+            return 0;
+        }
+        constexpr uint8_t kBits = static_cast<uint8_t>(sizeof(UnsignedKey) * 8);
+        if (width >= kBits) {
+            return static_cast<UnsignedKey>(~static_cast<UnsignedKey>(0));
+        }
+        return (static_cast<UnsignedKey>(1) << width) - 1;
+    }
+
+    template<typename K, bool isDict>
+    static ALWAYS_INLINE UnsignedKey LoadBits(BaseVector *vector, int32_t rowIdx, UnsignedKey mask)
+    {
+        if constexpr (isDict) {
+            auto v = reinterpret_cast<Vector<DictionaryContainer<K>> *>(vector)->GetValue(rowIdx);
+            return static_cast<UnsignedKey>(static_cast<std::make_unsigned_t<K>>(v)) & mask;
+        } else {
+            auto v = reinterpret_cast<Vector<K> *>(vector)->GetValue(rowIdx);
+            return static_cast<UnsignedKey>(static_cast<std::make_unsigned_t<K>>(v)) & mask;
+        }
+    }
+
+    template<typename K>
+    static ALWAYS_INLINE UnsignedKey LoadBitsConst(BaseVector *vector, int32_t rowIdx, UnsignedKey mask)
+    {
+        (void)rowIdx;
+        auto v = reinterpret_cast<ConstVector<K> *>(vector)->GetConstValue();
+        return static_cast<UnsignedKey>(static_cast<std::make_unsigned_t<K>>(v)) & mask;
+    }
+
+    static ALWAYS_INLINE void SetValueByType(BaseVector *vector, int32_t rowIdx, int32_t typeId, UnsignedKey value)
+    {
+        switch (typeId) {
+            case OMNI_BYTE:
+                reinterpret_cast<Vector<int8_t> *>(vector)->SetValue(rowIdx, static_cast<int8_t>(value));
+                break;
+            case OMNI_SHORT:
+                reinterpret_cast<Vector<int16_t> *>(vector)->SetValue(rowIdx, static_cast<int16_t>(value));
+                break;
+            case OMNI_INT:
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+                reinterpret_cast<Vector<int32_t> *>(vector)->SetValue(rowIdx, static_cast<int32_t>(value));
+                break;
+            case OMNI_LONG:
+            case OMNI_TIMESTAMP:
+            case OMNI_DECIMAL64:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+                reinterpret_cast<Vector<int64_t> *>(vector)->SetValue(rowIdx, static_cast<int64_t>(value));
+                break;
+            default:
+                break;
+        }
+    }
+
+    ALWAYS_INLINE T PackKey(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx) const
+    {
+        UnsignedKey packed = 0;
+        for (int32_t col = 0; col < groupColNum; ++col) {
+            auto &entry = plan[col];
+            bool isNull = groupVectors[col]->IsNull(rowIdx);
+            packed = (packed << 1) | static_cast<UnsignedKey>(isNull ? 1 : 0);
+            UnsignedKey valueBits = 0;
+            if (!isNull) {
+                valueBits = entry.activeLoader(groupVectors[col], rowIdx, entry.mask);
+            }
+            packed = (packed << entry.bitWidth) | valueBits;
+        }
+        return static_cast<T>(packed);
+    }
+
+    ALWAYS_INLINE void UnpackKey(const T &key, int32_t groupColNum) const
     {
         UnsignedKey packed = static_cast<UnsignedKey>(key);
         if (UNLIKELY(static_cast<size_t>(groupColNum) != plan.size())) {
