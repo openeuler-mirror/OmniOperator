@@ -43,7 +43,12 @@ function (omni_discover_benchmark path_for_discover output_variable)
 
 endfunction()
 
-omni_discover_benchmark(operator OMNI_BENCHMARK_AUTO_DISCOVER)
+if (OMNI_BENCHMARK_ONLY_HASHAGG_NORMALIZEDKEY)
+    set(OMNI_BENCHMARK_AUTO_DISCOVER
+            ${CMAKE_CURRENT_LIST_DIR}/operator/hash_agg_normalizedkey_serialize.cpp)
+else ()
+    omni_discover_benchmark(operator OMNI_BENCHMARK_AUTO_DISCOVER)
+endif ()
 
 add_executable(${OM_BENCHMARK_TARGET} omni_benchmark.cpp ${OMNI_BENCHMARK_AUTO_DISCOVER})
 

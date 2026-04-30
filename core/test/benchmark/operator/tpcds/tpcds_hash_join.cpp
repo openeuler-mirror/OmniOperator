@@ -61,10 +61,11 @@ protected:
         auto buildOutputCols = probeMetaData["buildOutputCols"].get<std::vector<int32_t>>();
         auto probeHashKeys = GetExprsFromJson(probeMetaData["probeHashKeys"].get<std::vector<std::string>>());
 
-        auto factory = new LookupJoinWithExprOperatorFactory(DataTypes(probeTypes), probeOutputCols.data(),
-            (int32_t)probeOutputCols.size(), probeHashKeys, (int32_t)probeHashKeys.size(), buildOutputCols.data(),
-            (int32_t)buildOutputCols.size(), DataTypes(buildOutputTypes), (int64_t)hashBuilderOperatorFactory, nullptr,
-            new OverflowConfig());
+        auto factory = new LookupJoinWithExprOperatorFactory(
+            DataTypes(probeTypes), probeOutputCols.data(), static_cast<int32_t>(probeOutputCols.size()), probeHashKeys,
+            static_cast<int32_t>(probeHashKeys.size()), buildOutputCols.data(),
+            static_cast<int32_t>(buildOutputCols.size()), DataTypes(buildOutputTypes),
+            reinterpret_cast<int64_t>(hashBuilderOperatorFactory), nullptr, false, new OverflowConfig(), nullptr);
 
         Expr::DeleteExprs(probeHashKeys);
         return factory;

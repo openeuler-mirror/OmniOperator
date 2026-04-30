@@ -111,12 +111,6 @@ template <> struct hash<om_benchmark::NotPodSharedClass> {
 }
 namespace omniruntime {
 namespace op {
-template <> struct GroupbyHashCalculator<omniruntime::type::Decimal128> {
-    size_t operator () (const omniruntime::type::Decimal128 &val) const
-    {
-        return omniruntime::op::HashUtil::HashValue(val.LowBits(), val.HighBits());
-    }
-};
 // compare city hash
 template <class T> struct GroupbyCityHashCalculator {
     size_t operator () (const T &data) const

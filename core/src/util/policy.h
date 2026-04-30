@@ -60,7 +60,7 @@ enum class EmptySearchStrReplaceRule {
  * Defines switch for array join for hash agg.
  */
 enum class AggHashTableRule {
-    // use array for hash table
+    // default: let runtime analysis decide (array / normalizedKey / normal)
     ARRAY = 0,
 
     NORMAL
@@ -175,7 +175,7 @@ public:
         CastDecimalToDoubleRule::CONVERT_WITH_STRING, NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND,
         ZeroStartIndexSupportRule::IS_SUPPORT, SupportContainerVecRule::NOT_SUPPORT,
         StringToDateFormatRule::ALLOW_REDUCED_PRECISION, SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT,
-        StringToDecimalRule::OVERFLOW_AS_NULL, AggHashTableRule::NORMAL, IsComplexTypeWithCodegen::FALSE) {};
+        StringToDecimalRule::OVERFLOW_AS_NULL, AggHashTableRule::ARRAY, IsComplexTypeWithCodegen::FALSE) {};
 
     Policy(RoundingRule roundingRule, CheckReScaleRule checkReScaleRule,
         EmptySearchStrReplaceRule emptySearchStrReplaceRule, CastDecimalToDoubleRule castDecimalToDoubleRule,
