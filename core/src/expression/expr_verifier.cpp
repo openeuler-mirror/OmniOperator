@@ -322,6 +322,20 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
         return;
     }
 
+    if (funcExpr.funcName == "DateFormat") {
+        if (funcExpr.arguments.size() >= 2) {
+            auto literalArg = dynamic_cast<LiteralExpr *>(funcExpr.arguments[1]);
+            if (literalArg != nullptr) {
+                std::string fmtStr = *(literalArg->stringVal);
+                if (fmtStr != "yyyy-MM-dd") {
+                    this->isSupportCodegen_ = false;
+                    LogWarn("date_format fallback, due to unsupported formatStr, only support yyyy-MM-dd.");
+                    return;
+                }
+            }
+        }
+    }
+
     if (funcExpr.funcName == "regexp_replace") {
         auto *literalArg = dynamic_cast<LiteralExpr *>(funcExpr.arguments[1]);
         if (literalArg != nullptr && literalArg->stringVal != nullptr) {
