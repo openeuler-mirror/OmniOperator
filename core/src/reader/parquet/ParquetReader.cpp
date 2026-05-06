@@ -89,6 +89,20 @@ bool ReadAndFilterData(ParquetRowReader& rowReaderPtr,
     return false;
 }
 
+bool ContainField(const SchemaField &field, std::shared_ptr<std::unordered_set<int>> &included_leaves)
+{
+    int colIndex = field.column_index;
+    if (field.column_index != -1) {
+        return included_leaves->find(colIndex) != included_leaves->end();
+    } else {
+        for (const auto &child : field.children) {
+            if(ContainField(child, included_leaves)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
 }
 
 ParquetRowReader::ParquetRowReader(ParquetReader &parquetReader) : parquetReader_(parquetReader) {
@@ -445,6 +459,9 @@ Status ParquetReader::GetReader(const SchemaField &field, const std::shared_ptr<
         int arrow_field_idx = 0;
         std::vector<std::unique_ptr<ParquetColumnReader>> child_readers;
         for (const auto& child : field.children) {
+            if (!ContainField(child, ctx->included_leaves)) {
+                continue;
+            }
             std::unique_ptr<ParquetColumnReader> child_reader;
             RETURN_NOT_OK(GetReader(child, child.field , ctx, &child_reader));
             if (!child_reader) {
