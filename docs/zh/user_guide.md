@@ -218,10 +218,10 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
 **安装SparkExtension 3.1.1<a name="section3748143825311"></a>**
 
-1. 安装Spark引擎。请参见《[安装指南](installation_guide.md)》中的`操作系统和软件要求`。
+1. 安装Spark引擎。请参见《[安装指南](installation_guide.md)》中的“操作系统和软件要求”。
 2. 下载SparkExtension插件包并解压。
 
-    从《[安装指南](installation_guide.md)》中的`软件安装包获取`下载得到boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
+    从《[安装指南](installation_guide.md)》中的“软件安装包获取”下载得到boostkit-omniop-spark-3.1.1-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的SparkExtension依赖。
 
@@ -248,7 +248,7 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         cd /opt/omni-operator
         ```
 
-    2. 从《[安装指南](installation_guide.md)》的`软件安装包获取`中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的内容解压并拷贝到`/opt/omni-operator/lib`目录下。
+    2. 从《[安装指南](installation_guide.md)》的“软件安装包获取”中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的内容解压并拷贝到`/opt/omni-operator/lib`目录下。
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
         >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
@@ -294,10 +294,10 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
 **安装SparkExtension 3.3.1<a name="section168801148145411"></a>**
 
-1. 安装Spark引擎。具体请参见《[安装指南](installation_guide.md)》中的`操作系统和软件要求`。
+1. 安装Spark引擎。具体请参见《[安装指南](installation_guide.md)》中的“操作系统和软件要求”。
 2. 下载SparkExtension插件包并解压。
 
-    从《[安装指南](installation_guide.md)》中的`软件安装包获取`下载得到boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
+    从《[安装指南](installation_guide.md)》中的“软件安装包获取”下载得到boostkit-omniop-spark-3.3.1-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的SparkExtension依赖。
 
@@ -324,11 +324,11 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         cd /opt/omni-operator
         ```
 
-    2. 从《[安装指南](installation_guide.md)》的`软件安装包获取`中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
+    2. 从《[安装指南](installation_guide.md)》的“软件安装包获取”中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
         >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
-        >-   如果在《[安装指南](installation_guide.md)》`安装依赖`中已拷贝libLLVM-15.so、libjemalloc.so.2两个so文件到`/opt/omni-operator/lib`目录下，则本步骤无需重复拷贝。
+        >-   如果在《[安装指南](installation_guide.md)》“安装依赖”中已拷贝libLLVM-15.so、libjemalloc.so.2两个so文件到`/opt/omni-operator/lib`目录下，则本步骤无需重复拷贝。
 
         ```
         unzip Dependency_library_openeuler22.03.zip
@@ -370,10 +370,10 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
 **安装SparkExtension 3.4.3<a name="section1522624995214"></a>**
 
-1. 安装Spark引擎。具体请《[安装指南](installation_guide.md)》中的`操作系统和软件要求`。
+1. 安装Spark引擎。具体请《[安装指南](installation_guide.md)》中的“操作系统和软件要求”。
 2. 下载SparkExtension插件包并解压。
 
-    从《[安装指南](installation_guide.md)》中的`软件安装包获取`下载得到boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
+    从《[安装指南](installation_guide.md)》中的“软件安装包获取”下载得到boostkit-omniop-spark-3.4.3-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的SparkExtension依赖。
 
@@ -400,7 +400,7 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         cd /opt/omni-operator
         ```
 
-    2. 从《[安装指南](installation_guide.md)》中的`软件安装包获取`中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
+    2. 从《[安装指南](installation_guide.md)》中的“软件安装包获取”中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
         >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
@@ -446,10 +446,10 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
 
 **安装SparkExtension 3.5.2<a name="section18509455195219"></a>**
 
-1. 安装Spark引擎。具体请参见《[安装指南](installation_guide.md)》中的`操作系统和软件要求`。
+1. 安装Spark引擎。具体请参见《[安装指南](installation_guide.md)》中的“操作系统和软件要求”。
 2. 下载SparkExtension插件包并解压。
 
-    从《[安装指南](installation_guide.md)》中的`软件安装包获取`下载得到boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
+    从《[安装指南](installation_guide.md)》中的“软件安装包获取”下载得到boostkit-omniop-spark-3.5.2-2.0.0-aarch64.zip，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的SparkExtension依赖。
 
@@ -476,7 +476,7 @@ OmniOperator算子加速安装所需Spark引擎扩展包和OmniOperator算子加
         cd /opt/omni-operator
         ```
 
-    2. 从《[安装指南](installation_guide.md)》中的`软件安装包获取`中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
+    2. 从《[安装指南](installation_guide.md)》中的“软件安装包获取”中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
         >-   如果已经安装其他版本的SparkExtension则可跳过该步。查看`$OMNI_HOME`目录下的lib目录，如果已经包含相关so库和JAR包即表明已经安装其他版本的SparkExtension。本文档中`$OMNI_HOME`为`/opt/omni-operator`。
@@ -995,7 +995,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
 
 如果使用的是Spark 3.3.1、Spark 3.4.3，建议优先选择通过Gluten框架启用OmniOperator；如果使用的是Spark其他版本，则可以选择通过用SparkExtension框架启用OmniOperator。
 
-如果选择通过Gluten框架启用OmniOperator，需要用户安装Spark和配套的Gluten依赖包，Spark的安装要求请参见《[安装指南](installation_guide.md)》的`操作系统和软件要求`。小节将介绍Gluten的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Spark引擎中。
+如果选择通过Gluten框架启用OmniOperator，需要用户安装Spark和配套的Gluten依赖包，Spark的安装要求请参见《[安装指南](installation_guide.md)》的“操作系统和软件要求”。小节将介绍Gluten的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Spark引擎中。
 
 ##### 算子和表达式支持情况<a name="ZH-CN_TOPIC_0000002547462867"></a>
 
@@ -1070,7 +1070,7 @@ Spark引擎使用OmniOperator算子加速特性支持的算子情况如[**表 2*
 
 OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计算节点安装Spark引擎，并配置openEuler操作系统的Gluten依赖。
 
-1. 安装Spark引擎。请参见《[安装指南](installation_guide.md)》的`操作系统和软件要求`。
+1. 安装Spark引擎。请参见《[安装指南](installation_guide.md)》的“操作系统和软件要求”。
 
     >![](public_sys-resources/icon-notice.gif) **须知：** 
     >当前Gluten只支持Spark 3.3.1、Spark 3.4.3。可以通过**spark-shell --version**命令确认当前Spark版本。
@@ -1083,7 +1083,7 @@ OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计
 
 2. 下载Gluten插件包并解压。
 
-    从《[安装指南](installation_guide.md)》的`软件安装包获取`获取`Boostkit-omniruntime-gluten-2.0.0.zip`和`Dependency_library_Gluten.zip`，并上传至管理节点的`/opt/omni-operator/`目录下。
+    从《[安装指南](installation_guide.md)》的“软件安装包获取”获取`Boostkit-omniruntime-gluten-2.0.0.zip`和`Dependency_library_Gluten.zip`，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的Gluten依赖。
     1. 配置本地Yum源。以openEuler 22.03 LTS SP1为例：
@@ -1597,7 +1597,7 @@ OmniOperator算子加速特性支持Hive引擎，需在管理节点安装Hive引
         cd /opt/omni-operator
         ```
 
-    2. 从《[安装指南]》(installation_guide.md)的`软件安装包获取`中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
+    2. 从《[安装指南]》(installation_guide.md)的“软件安装包获取”中获取`Dependency_library_openeuler22.03.zip`，并上传到`/opt/omni-operator`目录下，再将适用于对应操作系统的压缩包内容解压并拷贝到`/opt/omni-operator/lib`目录下。
 
         ```
         unzip Dependency_library_openeuler22.03.zip
@@ -1839,7 +1839,7 @@ OmniOperator的升级操作仅需在管理节点进行，并需确保OmniOperato
     rm -rf include libboostkit-omniop* boostkit-omniop* libsecurec.so
     ```
 
-2. 下载并上传预安装版本依赖包以及OmniOperator算子加速特性压缩包（获取方式请参见《[安装指南](installation_guide.md)》的`操作系统和软件要求`和`软件安装包获取`到管理节点和计算节点，分别按《[安装指南](installation_guide.md)》的`安装依赖`和`安装OmniOperator`完成安装。
+2. 下载并上传预安装版本依赖包以及OmniOperator算子加速特性压缩包（获取方式请参见《[安装指南](installation_guide.md)》的“操作系统和软件要求”和“软件安装包获取”到管理节点和计算节点，分别按《[安装指南](installation_guide.md)》的“安装依赖”和`安装OmniOperator`完成安装。
 3. 在Spark引擎上应用时，需按[2](#config-spark)重新打包与上传OmniOperator算子加速特性安装包。
 
 ### 卸载OmniOperator<a name="ZH-CN_TOPIC_0000002547382867"></a>
