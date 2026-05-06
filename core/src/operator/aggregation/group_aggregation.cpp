@@ -210,9 +210,6 @@ void HashAggregationOperatorFactory::ChooseGroupByType()
         } else if (totalBits <= 64) {
             handleType = HandleType::packedInt64;
             return;
-        } else if (totalBits <= 128) {
-            handleType = HandleType::packedInt128;
-            return;
         }
     }
     handleType = HandleType::serialize;
