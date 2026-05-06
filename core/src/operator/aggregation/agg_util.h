@@ -32,7 +32,7 @@ public:
             values[vecIdx] = OperatorUtil::GetValuePtrAndLength(vector, rowId, lengths + vecIdx, originTypeIds[vecIdx]);
         }
 
-        return aggSimpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(&executionContext));
+        return aggSimpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));
     }
 
     static inline bool IsColumnFilter(VectorBatch *inputVecBatch, SimpleFilter *aggSimpleFilter)
