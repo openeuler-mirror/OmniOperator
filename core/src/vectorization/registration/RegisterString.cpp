@@ -32,6 +32,8 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "RTrim", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<UpperFunction, std::string, std::string_view>(prefix + "upper", {OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<UpperFunction, std::string, std::string_view>(prefix + "upper", {OMNI_CHAR}, OMNI_VARCHAR);
     RegisterFunction<SoundexFunction, std::string, std::string_view>(prefix + "soundex", {OMNI_VARCHAR}, OMNI_VARCHAR);
 
     // char_length / character_length / length(string) -> integer (character count, Unicode-aware)
