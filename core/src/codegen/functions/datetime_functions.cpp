@@ -208,7 +208,9 @@ extern "C" DLLEXPORT char *DateFormat(int64_t contextPtr, int64_t timestamp, con
         SetError(contextPtr, " Error: date_format now only support formatStr = \"yyyy-MM-dd\" ! ");
         return nullptr;
     }
-    const char *tzStr = "UTC";
+    const auto &queryConfig = GetQueryConfig(contextPtr);
+    std::string sessionTimeZone = queryConfig.SessionTimezone();
+    const char *tzStr = sessionTimeZone.empty() ? "UTC" : sessionTimeZone.c_str();
     time_t timeStampVal = timestamp / 1e6;
     setenv("TZ",TimeZoneUtil::GetTZ(tzStr), 1);
     tzset();

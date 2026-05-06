@@ -102,6 +102,16 @@ extern "C" DLLEXPORT
     std::string GetDataString(type::DataTypeId type, int count, ...);
 }
 
+inline op::ExecutionContext *GetExecutionContext(int64_t contextPtr)
+{
+    return reinterpret_cast<op::ExecutionContext *>(contextPtr);
+}
+
+inline const config::QueryConfig &GetQueryConfig(int64_t contextPtr)
+{
+    return GetExecutionContext(contextPtr)->queryConfigRef();
+}
+
 template <typename T>
 std::string CastErrorMessage(type::DataTypeId from, type::DataTypeId to, T value, type::OpStatus reason, ...)
 {

@@ -243,6 +243,11 @@ public:
         return queryConfig_;
     }
 
+    const config::QueryConfig &queryConfigRef() const
+    {
+        return queryConfig_;
+    }
+
     /// Boolean indicating whether to capture details when storing exceptions for
     /// later processing (throwOnError_ == true).
     ///
