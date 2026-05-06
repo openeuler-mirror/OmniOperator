@@ -151,6 +151,12 @@ extern "C" DLLEXPORT void BatchToLowerStr(int64_t contextPtr, uint8_t **str, int
 extern "C" DLLEXPORT void BatchToLowerChar(int64_t contextPtr, uint8_t **str, int32_t width, int32_t *strLen,
     bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
 
+extern "C" DLLEXPORT void BatchJsonSplitStr(int64_t contextPtr, uint8_t **jsonStr, int32_t *jsonStrLen,
+    bool *jsonStrIsNull, bool *outIsNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchJsonSplitChar(int64_t contextPtr, uint8_t **jsonStr, int32_t jsonStrWidth,
+    int32_t *jsonStrLen, bool *jsonStrIsNull, bool *outIsNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
 extern "C" DLLEXPORT void BatchLikeStr(uint8_t **str, int32_t *strLen, uint8_t **regexToMatch, int32_t *regexLen,
     bool *isAnyNull, bool *output, int32_t rowCnt);
 

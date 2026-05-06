@@ -880,6 +880,24 @@ TEST(JSONParserTest, FuncExpr_substr)
     delete funcExpr;
 }
 
+TEST(JSONParserTest, FuncExpr_jsonSplitCharInput)
+{
+    vector<string> argsJson = { GetFieldRefTestJson(OMNI_CHAR, COL_NUM) };
+    string unparsedFuncJson = GetFuncTestJson(OMNI_VARCHAR, "json_split", argsJson);
+    Expr *funcExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFuncJson));
+
+    ASSERT_NE(funcExpr, nullptr);
+    EXPECT_EQ(funcExpr->GetType(), ExprType::FUNC_E);
+    EXPECT_EQ(funcExpr->GetReturnTypeId(), OMNI_VARCHAR);
+
+    auto typedFuncExpr = dynamic_cast<FuncExpr *>(funcExpr);
+    ASSERT_NE(typedFuncExpr, nullptr);
+    ASSERT_EQ(typedFuncExpr->arguments.size(), 1);
+    EXPECT_EQ(typedFuncExpr->arguments[0]->GetReturnTypeId(), OMNI_CHAR);
+
+    delete funcExpr;
+}
+
 TEST(JSONParserTest, InExpr)
 {
     vector<string> argsJson = { GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(0), GetInt32TestJSON(2) };

@@ -76,6 +76,11 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
     const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
     bool *outIsNull, int32_t *outLen);
 
+extern "C" DLLEXPORT const char* JsonSplitScalarChar(
+    int64_t contextPtr,
+    const char *jsonStr, int32_t jsonStrWidth, int32_t jsonStrLen, bool jsonStrIsNull,
+    bool *outIsNull, int32_t *outLen);
+
 extern "C" DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
     int32_t bpLen, bool isNull, int32_t *outLen);
 

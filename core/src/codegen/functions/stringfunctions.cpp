@@ -663,6 +663,125 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
     }
 }
 
+namespace {
+bool TryParseJson(const std::string &jsonContent, nlohmann::json *jsonData)
+{
+    try {
+        *jsonData = nlohmann::json::parse(jsonContent);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+std::string RepairEscapedQuotes(const std::string &jsonContent)
+{
+    std::string fixedJsonContent;
+    fixedJsonContent.reserve(jsonContent.size());
+    for (size_t index = 0; index < jsonContent.size(); index++) {
+        if (jsonContent[index] == '\\') {
+            if (index + 1 < jsonContent.size()) {
+                char next = jsonContent[index + 1];
+                if (next == '\\' || next == '"') {
+                    fixedJsonContent += jsonContent[index];
+                } else {
+                    fixedJsonContent += '"';
+                }
+            } else {
+                fixedJsonContent += '"';
+            }
+        } else {
+            fixedJsonContent += jsonContent[index];
+        }
+    }
+    return fixedJsonContent;
+}
+
+std::string NormalizeSingleQuotedJsonLike(const std::string &jsonContent)
+{
+    std::string normalized;
+    normalized.reserve(jsonContent.size() + 8);
+    bool inSingleQuotedString = false;
+    bool inDoubleQuotedString = false;
+    for (size_t index = 0; index < jsonContent.size(); index++) {
+        char current = jsonContent[index];
+        if (inSingleQuotedString) {
+            if (current == '\\') {
+                if (index + 1 < jsonContent.size()) {
+                    char next = jsonContent[index + 1];
+                    if (next == '\'' ) {
+                        normalized += '\'';
+                        index++;
+                        continue;
+                    }
+                    if (next == '"') {
+                        normalized += "\\\"";
+                        index++;
+                        continue;
+                    }
+                    if (next == '\\') {
+                        normalized += "\\\\";
+                        index++;
+                        continue;
+                    }
+                }
+                normalized += "\\\\";
+                continue;
+            }
+            if (current == '\'') {
+                inSingleQuotedString = false;
+                normalized += '"';
+                continue;
+            }
+            if (current == '"') {
+                normalized += "\\\"";
+                continue;
+            }
+            normalized += current;
+            continue;
+        }
+        if (inDoubleQuotedString) {
+            normalized += current;
+            if (current == '\\' && index + 1 < jsonContent.size()) {
+                normalized += jsonContent[++index];
+                continue;
+            }
+            if (current == '"') {
+                inDoubleQuotedString = false;
+            }
+            continue;
+        }
+        if (current == '\'') {
+            inSingleQuotedString = true;
+            normalized += '"';
+            continue;
+        }
+        if (current == '"') {
+            inDoubleQuotedString = true;
+        }
+        normalized += current;
+    }
+    return normalized;
+}
+
+bool TryParseJsonSplitContent(const std::string &jsonContent, nlohmann::json *jsonData)
+{
+    if (TryParseJson(jsonContent, jsonData)) {
+        return true;
+    }
+    std::string repairedJsonContent = RepairEscapedQuotes(jsonContent);
+    if (repairedJsonContent != jsonContent && TryParseJson(repairedJsonContent, jsonData)) {
+        return true;
+    }
+    std::string normalizedJsonContent = NormalizeSingleQuotedJsonLike(jsonContent);
+    if (normalizedJsonContent != jsonContent && TryParseJson(normalizedJsonContent, jsonData)) {
+        return true;
+    }
+    return normalizedJsonContent != repairedJsonContent &&
+        TryParseJson(RepairEscapedQuotes(normalizedJsonContent), jsonData);
+}
+} // namespace
+
 // JSON_SPLIT_SCALAR function: splits JSON array and joins all elements with CRLF
 // Matches the semantics of the jsontest UDF (1 STRING argument -> STRING result)
 extern "C" DLLEXPORT const char* JsonSplitScalar(
@@ -684,31 +803,11 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
     std::string jsonContent(jsonStr, jsonStrLen);
 
     try {
-        // Parse JSON
         nlohmann::json jsonData;
-        try {
-            jsonData = nlohmann::json::parse(jsonContent);
-        } catch (...) {
-            // Try to fix escaped quotes
-            std::string fixedJsonContent;
-            fixedJsonContent.reserve(jsonContent.size());
-            for (size_t j = 0; j < jsonContent.size(); j++) {
-                if (jsonContent[j] == '\\') {
-                    if (j + 1 < jsonContent.size()) {
-                        char next = jsonContent[j + 1];
-                        if (next == '\\' || next == '"') {
-                            fixedJsonContent += jsonContent[j];
-                        } else {
-                            fixedJsonContent += '"';
-                        }
-                    } else {
-                        fixedJsonContent += '"';
-                    }
-                } else {
-                    fixedJsonContent += jsonContent[j];
-                }
-            }
-            jsonData = nlohmann::json::parse(fixedJsonContent);
+        if (!TryParseJsonSplitContent(jsonContent, &jsonData)) {
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
         }
 
         // Check if it's an array
@@ -752,6 +851,15 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
         *outLen = 0;
         return nullptr;
     }
+}
+
+extern "C" DLLEXPORT const char* JsonSplitScalarChar(
+    int64_t contextPtr,
+    const char *jsonStr, int32_t jsonStrWidth, int32_t jsonStrLen, bool jsonStrIsNull,
+    bool *outIsNull, int32_t *outLen)
+{
+    static_cast<void>(jsonStrWidth);
+    return JsonSplitScalar(contextPtr, jsonStr, jsonStrLen, jsonStrIsNull, outIsNull, outLen);
 }
 
 extern "C" DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,

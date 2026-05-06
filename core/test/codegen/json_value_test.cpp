@@ -388,9 +388,40 @@ static void JsonSplitScalarTest(const std::string &jsonStr,
     delete context;
 }
 
+    static void JsonSplitScalarCharTest(const std::string &jsonStr, int32_t width,
+                                        const std::string &expectedResult, bool expectIsNull)
+    {
+        auto context = new ExecutionContext();
+        int64_t contextPtr = reinterpret_cast<int64_t>(context);
+
+        bool outIsNull = false;
+        int32_t outLen = 0;
+
+        const char *result = JsonSplitScalarChar(
+            contextPtr,
+            jsonStr.c_str(), width, static_cast<int32_t>(jsonStr.size()), false,
+            &outIsNull, &outLen
+        );
+
+        if (expectIsNull) {
+            EXPECT_TRUE(outIsNull);
+            EXPECT_EQ(outLen, 0);
+        } else {
+            EXPECT_FALSE(outIsNull);
+            EXPECT_EQ(expectedResult, std::string(result, outLen));
+        }
+
+        delete context;
+    }
+
 TEST(JsonSplitScalarTest, SimpleArray)
 {
     JsonSplitScalarTest(R"(["a","b","c"])", "a\r\nb\r\nc", false);
+}
+
+TEST(JsonSplitScalarTest, CharInput)
+{
+    JsonSplitScalarCharTest(R"(["'dIPFMXtJL"])", 1, "'dIPFMXtJL", false);
 }
 
 TEST(JsonSplitScalarTest, NumericArray)
@@ -411,6 +442,16 @@ TEST(JsonSplitScalarTest, NestedArray)
 TEST(JsonSplitScalarTest, ObjectArray)
 {
     JsonSplitScalarTest(R"([{"name":"Alice"},{"name":"Bob"}])", "{\"name\":\"Alice\"}\r\n{\"name\":\"Bob\"}", false);
+}
+
+TEST(JsonSplitScalarTest, SingleQuotedStringArray)
+{
+    JsonSplitScalarTest(R"(['apple','banana'])", "apple\r\nbanana", false);
+}
+
+TEST(JsonSplitScalarTest, SingleQuotedJsonStringArray)
+{
+    JsonSplitScalarTest(R"(['{"id":865,"name":"Alice"}'])", "{\"id\":865,\"name\":\"Alice\"}", false);
 }
 
 TEST(JsonSplitScalarTest, SingleElementArray)

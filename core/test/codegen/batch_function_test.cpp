@@ -2320,6 +2320,59 @@ TEST(BatchFunctionTest, BatchEndsWithStr)
     AssertBoolEquals(expect, output);
 }
 
+TEST(BatchFunctionTest, BatchJsonSplitStr)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::vector<std::string> jsonStr { "[\"a\",\"b\"]", "invalid json", "[\"only\"]" };
+    std::vector<int32_t> jsonStrLen {
+        static_cast<int32_t>(jsonStr[0].length()),
+        static_cast<int32_t>(jsonStr[1].length()),
+        static_cast<int32_t>(jsonStr[2].length()) };
+    std::vector<uint8_t *> jsonStrAddr {
+        reinterpret_cast<uint8_t *>(const_cast<char *>(jsonStr[0].c_str())),
+        reinterpret_cast<uint8_t *>(const_cast<char *>(jsonStr[1].c_str())),
+        reinterpret_cast<uint8_t *>(const_cast<char *>(jsonStr[2].c_str())) };
+    int32_t rowCnt = static_cast<int32_t>(jsonStr.size());
+    bool jsonStrIsNull[] = { false, false, true };
+    bool outIsNull[] = { false, false, false };
+    std::vector<uint8_t *> output(rowCnt);
+    std::vector<int32_t> outLen(rowCnt);
+
+    BatchJsonSplitStr(contextPtr, jsonStrAddr.data(), jsonStrLen.data(), jsonStrIsNull, outIsNull, output.data(),
+        outLen.data(), rowCnt);
+
+    EXPECT_FALSE(outIsNull[0]);
+    EXPECT_EQ(std::string(reinterpret_cast<char *>(output[0]), outLen[0]), "a\r\nb");
+    EXPECT_TRUE(outIsNull[1]);
+    EXPECT_EQ(output[1], nullptr);
+    EXPECT_TRUE(outIsNull[2]);
+    EXPECT_EQ(output[2], nullptr);
+    delete context;
+}
+
+TEST(BatchFunctionTest, BatchJsonSplitChar)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::vector<std::string> jsonStr { "[\"'dIPFMXtJL\"]" };
+    std::vector<int32_t> jsonStrLen { static_cast<int32_t>(jsonStr[0].length()) };
+    std::vector<uint8_t *> jsonStrAddr {
+        reinterpret_cast<uint8_t *>(const_cast<char *>(jsonStr[0].c_str())) };
+    int32_t rowCnt = 1;
+    bool jsonStrIsNull[] = { false };
+    bool outIsNull[] = { false };
+    std::vector<uint8_t *> output(rowCnt);
+    std::vector<int32_t> outLen(rowCnt);
+
+    BatchJsonSplitChar(contextPtr, jsonStrAddr.data(), 1, jsonStrLen.data(), jsonStrIsNull, outIsNull, output.data(),
+        outLen.data(), rowCnt);
+
+    EXPECT_FALSE(outIsNull[0]);
+    EXPECT_EQ(std::string(reinterpret_cast<char *>(output[0]), outLen[0]), "'dIPFMXtJL");
+    delete context;
+}
+
 TEST(BatchFunctionTest, BatchCastStringToDate)
 {
     // year-month-day
