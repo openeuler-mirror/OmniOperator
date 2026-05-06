@@ -249,6 +249,92 @@ static ALWAYS_INLINE int32_t LowerUnicodeCodepoint(int32_t codePoint)
     return codePoint;
 }
 
+static ALWAYS_INLINE int32_t UpperUnicodeCodepoint(int32_t codePoint)
+{
+    if (codePoint >= 'a' && codePoint <= 'z') {
+        return codePoint - ('a' - 'A');
+    }
+    if ((codePoint >= 0x00E0 && codePoint <= 0x00F6) || (codePoint >= 0x00F8 && codePoint <= 0x00FE)) {
+        return codePoint - 0x20;
+    }
+    switch (codePoint) {
+    case 0x010B:
+        return 0x010A;
+    case 0x0117:
+        return 0x0116;
+    case 0x0121:
+        return 0x0120;
+    case 0x017C:
+        return 0x017B;
+    case 0x0227:
+        return 0x0226;
+    case 0x022F:
+        return 0x022E;
+    case 0x1E03:
+        return 0x1E02;
+    case 0x1E0B:
+        return 0x1E0A;
+    case 0x1E1F:
+        return 0x1E1E;
+    case 0x1E23:
+        return 0x1E22;
+    case 0x1E41:
+        return 0x1E40;
+    case 0x1E45:
+        return 0x1E44;
+    case 0x1E57:
+        return 0x1E56;
+    case 0x1E59:
+        return 0x1E58;
+    case 0x1E61:
+        return 0x1E60;
+    case 0x1E65:
+        return 0x1E64;
+    case 0x1E67:
+        return 0x1E66;
+    case 0x1E69:
+        return 0x1E68;
+    case 0x1E6B:
+        return 0x1E6A;
+    case 0x1E87:
+        return 0x1E86;
+    case 0x1E8B:
+        return 0x1E8A;
+    case 0x1E8F:
+        return 0x1E8E;
+    case 0x03AC:
+        return 0x0386;
+    case 0x03AD:
+        return 0x0388;
+    case 0x03AE:
+        return 0x0389;
+    case 0x03AF:
+        return 0x038A;
+    case 0x03CC:
+        return 0x038C;
+    case 0x03CD:
+        return 0x038E;
+    case 0x03CE:
+        return 0x038F;
+    case 0x0451:
+        return 0x0401;
+    case 0x01C6:
+        return 0x01C5;
+    default:
+        break;
+    }
+    if (codePoint >= 0x0430 && codePoint <= 0x044F) {
+        return codePoint - 0x20;
+    }
+    if (codePoint >= 0x03B1 && codePoint <= 0x03C1) {
+        return codePoint - 0x20;
+    }
+    if (codePoint >= 0x03C4 && codePoint <= 0x03C9) {
+        return codePoint - 0x20;
+    }
+    return codePoint;
+}
+
 template <typename T>
 struct StartsWithFunction {
     ALWAYS_INLINE Status call(bool &result, const std::string_view &str, const std::string_view &pattern)
@@ -650,6 +736,69 @@ struct LowerFunction {
                 AppendUtf8Codepoint(result, LowerUnicodeCodepoint(codePoint));
             }
             pos = nextPos;
+        }
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string& result, const std::string_view* input)
+    {
+        if (input == nullptr) {
+            return false;
+        }
+        return call(result, *input);
+    }
+};
+
+/// upper function
+/// upper(string) -> string
+/// Converts the input string to uppercase. ASCII fast path; UTF-8 mirrors Spark/Velox upper,
+/// including Greek sigma/final-sigma to Σ and Latin dotted specials.
+/// Empty string returns empty string. NULL input yields NULL output.
+template <typename T>
+struct UpperFunction {
+    ALWAYS_INLINE bool call(std::string& result, const std::string_view& input)
+    {
+        if (IsAsciiString(input)) {
+            result.resize(input.size());
+            for (size_t i = 0; i < input.size(); ++i) {
+                unsigned char c = static_cast<unsigned char>(input[i]);
+                result[i] = (c >= 'a' && c <= 'z') ? static_cast<char>(c - 32) : input[i];
+            }
+            return true;
+        }
+
+        result.clear();
+        result.reserve(input.size() * 2);
+        size_t pos = 0;
+        while (pos < input.size()) {
+            int byteLen = 0;
+            int32_t codePoint = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+            if (codePoint < 0 || byteLen <= 0) {
+                result.append(input.data() + pos, input.size() - pos);
+                return true;
+            }
+
+            size_t nextPos = pos + static_cast<size_t>(byteLen);
+            if (codePoint == 0x03C2 || codePoint == 0x03C3) {
+                AppendUtf8Codepoint(result, 0x03A3);
+                pos = nextPos;
+            } else if (codePoint == 'i') {
+                result.push_back('I');
+                if (nextPos < input.size()) {
+                    int dotLen = 0;
+                    int32_t nextCp =
+                        Utf8FirstCodepoint(input.data() + nextPos, input.size() - nextPos, dotLen);
+                    if (nextCp == 0x0307 && dotLen > 0) {
+                        AppendUtf8Codepoint(result, 0x0307);
+                        pos = nextPos + static_cast<size_t>(dotLen);
+                        continue;
+                    }
+                }
+                pos = nextPos;
+            } else {
+                AppendUtf8Codepoint(result, UpperUnicodeCodepoint(codePoint));
+                pos = nextPos;
+            }
         }
         return true;
     }
