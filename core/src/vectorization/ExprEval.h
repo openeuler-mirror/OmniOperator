@@ -12,8 +12,11 @@ class ExprEval : public ExprVisitor {
 public:
     ExprEval(vec::VectorBatch *vectorBatch, op::ExecutionContext *context);
     ExprEval(op::ExecutionContext *context);
+    ExprEval() = default;
 
     ~ExprEval() override {}
+
+    void Reset(vec::VectorBatch *vectorBatch, op::ExecutionContext *ctx);
 
     void Visit(const expressions::LiteralExpr &e) override;
 

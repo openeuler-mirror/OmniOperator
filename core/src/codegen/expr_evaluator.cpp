@@ -538,9 +538,9 @@ void Projection::ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAd
 BaseVector *Projection::ProjectVec(VectorBatch *vecBatch, ExecutionContext *context)
 {
     context->SetResultRowSize(vecBatch->GetRowCount());
-    ExprEval e(vecBatch, context);
-    e.VisitExpr(*expr);
-    auto outCol = e.GetResult();
+    exprEval_->Reset(vecBatch, context);
+    exprEval_->VisitExpr(*expr);
+    auto outCol = exprEval_->GetResult();
     return outCol;
 }
 

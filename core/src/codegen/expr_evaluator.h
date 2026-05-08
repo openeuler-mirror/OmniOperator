@@ -21,6 +21,7 @@
 #include "vector/vector_helper.h"
 #include "util/cache_map.h"
 #include "expression/expressions.h"
+#include "vectorization/ExprEval.h"
 #include <vector>
 
 namespace omniruntime::codegen {
@@ -157,6 +158,7 @@ private:
     LiteralValue literalVal;
     DataTypePtr outType;
     ProjFunc projector;
+    std::unique_ptr<vectorization::ExprEval> exprEval_ = std::make_unique<vectorization::ExprEval>();
 
     bool Initialize(bool filter, const DataTypes &inputDataTypes, OverflowConfig *overflowConfig);
     BaseVector *ColumnProjectionProxy(VectorBatch *vecBatch, int32_t selectedRows[], int32_t numSelectedRows,
