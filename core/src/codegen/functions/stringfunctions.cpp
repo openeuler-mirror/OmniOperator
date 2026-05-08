@@ -386,6 +386,14 @@ static nlohmann::json* ResolveJsonPathTarget(nlohmann::json* jsonData, const std
     return current;
 }
 
+static std::string FormatJsonValueResult(const nlohmann::json& value)
+{
+    if (value.is_string()) {
+        return value.get<std::string>();
+    }
+    return value.dump();
+}
+
 extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
                                                    const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
                                                    bool *outIsNull, int32_t *outLen)
@@ -412,18 +420,7 @@ extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char
             return nullptr;
         }
 
-        std::string result;
-        if (current->is_string()) {
-            result = current->get<std::string>();
-        } else if (current->is_number_integer()) {
-            result = std::to_string(current->get<int64_t>());
-        } else if (current->is_number_float()) {
-            result = std::to_string(current->get<double>());
-        } else if (current->is_boolean()) {
-            result = current->get<bool>() ? "true" : "false";
-        } else {
-            result = current->dump();
-        }
+        std::string result = FormatJsonValueResult(*current);
         
         *outIsNull = false;
         *outLen = static_cast<int32_t>(result.size());
@@ -622,18 +619,7 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
             }
         }
         
-        std::string result;
-        if (current->is_string()) {
-            result = current->get<std::string>();
-        } else if (current->is_number_integer()) {
-            result = std::to_string(current->get<int64_t>());
-        } else if (current->is_number_float()) {
-            result = std::to_string(current->get<double>());
-        } else if (current->is_boolean()) {
-            result = current->get<bool>() ? "true" : "false";
-        } else {
-            result = current->dump();
-        }
+        std::string result = FormatJsonValueResult(*current);
         
         *outIsNull = false;
         *outLen = static_cast<int32_t>(result.size());

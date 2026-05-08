@@ -91,7 +91,7 @@ TEST(JsonValueTest, DifferentValueTypes)
     JsonValueTest(R"({"negative":-100})", "$.negative", "-100", false);
     
     // Float
-    JsonValueTest(R"({"price":19.99})", "$.price", "19.990000", false);
+    JsonValueTest(R"({"price":19.99})", "$.price", "19.99", false);
 }
 
 // Test complex nested structures
