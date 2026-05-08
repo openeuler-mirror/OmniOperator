@@ -14,6 +14,8 @@
 #include <unordered_map>
 
 namespace omniruntime::codegen::function {
+using JsonDocument = nlohmann::ordered_json;
+
 extern "C" DLLEXPORT int64_t CountChar(const char *str, int32_t strLen, const char *target, int32_t targetWidth, int32_t targetLen, bool isNull)
 {
     if (isNull) {
@@ -189,7 +191,7 @@ namespace {
 
     struct JsonCache {
         uint64_t hash = 0;
-        nlohmann::json parsedJson;
+        JsonDocument parsedJson;
         std::string lastJsonContent;
         
         bool IsCacheValid(const std::string& jsonContent) const
@@ -197,7 +199,7 @@ namespace {
             return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
         }
         
-        void SetCache(const std::string& jsonContent, const nlohmann::json& json)
+        void SetCache(const std::string& jsonContent, const JsonDocument& json)
         {
             hash = HashJsonContent(jsonContent);
             lastJsonContent = jsonContent;
@@ -314,15 +316,15 @@ static std::vector<std::string> ParseJsonPath(const std::string& path)
     return keys;
 }
 
-static nlohmann::json* GetParsedJsonWithCache(std::string& jsonContent)
+static JsonDocument* GetParsedJsonWithCache(std::string& jsonContent)
 {
     if (THREAD_LOCAL_JSON_CACHE.IsCacheValid(jsonContent)) {
         return &THREAD_LOCAL_JSON_CACHE.parsedJson;
     }
 
-    nlohmann::json newJson;
+    JsonDocument newJson;
     try {
-        newJson = nlohmann::json::parse(jsonContent);
+        newJson = JsonDocument::parse(jsonContent);
     } catch (...) {
         std::string fixedJsonContent;
         fixedJsonContent.reserve(jsonContent.size());
@@ -342,7 +344,7 @@ static nlohmann::json* GetParsedJsonWithCache(std::string& jsonContent)
                 fixedJsonContent += jsonContent[j];
             }
         }
-        newJson = nlohmann::json::parse(fixedJsonContent);
+        newJson = JsonDocument::parse(fixedJsonContent);
         jsonContent = fixedJsonContent;
     }
 
@@ -350,14 +352,14 @@ static nlohmann::json* GetParsedJsonWithCache(std::string& jsonContent)
     return &THREAD_LOCAL_JSON_CACHE.parsedJson;
 }
 
-static nlohmann::json* ResolveJsonPathTarget(nlohmann::json* jsonData, const std::string& pathContent)
+static JsonDocument* ResolveJsonPathTarget(JsonDocument* jsonData, const std::string& pathContent)
 {
     std::vector<std::string> keys = ParseJsonPath(pathContent);
     if (keys.empty()) {
         return nullptr;
     }
 
-    nlohmann::json* current = jsonData;
+    JsonDocument* current = jsonData;
     for (const auto& key : keys) {
         if (current->is_object()) {
             if (!current->contains(key)) {
@@ -386,7 +388,7 @@ static nlohmann::json* ResolveJsonPathTarget(nlohmann::json* jsonData, const std
     return current;
 }
 
-static std::string FormatJsonValueResult(const nlohmann::json& value)
+static std::string FormatJsonValueResult(const JsonDocument& value)
 {
     if (value.is_string()) {
         return value.get<std::string>();
@@ -412,8 +414,8 @@ extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char
     std::string pathContent(pathStr, pathStrLen);
     
     try {
-        nlohmann::json* jsonData = GetParsedJsonWithCache(jsonContent);
-        nlohmann::json* current = ResolveJsonPathTarget(jsonData, pathContent);
+        JsonDocument* jsonData = GetParsedJsonWithCache(jsonContent);
+        JsonDocument* current = ResolveJsonPathTarget(jsonData, pathContent);
         if (current == nullptr || current->is_null()) {
             *outIsNull = true;
             *outLen = 0;
@@ -453,8 +455,8 @@ extern "C" DLLEXPORT const char* JsonQueryRetNull(int64_t contextPtr, const char
     std::string pathContent(pathStr, pathStrLen);
 
     try {
-        nlohmann::json* jsonData = GetParsedJsonWithCache(jsonContent);
-        nlohmann::json* current = ResolveJsonPathTarget(jsonData, pathContent);
+        JsonDocument* jsonData = GetParsedJsonWithCache(jsonContent);
+        JsonDocument* current = ResolveJsonPathTarget(jsonData, pathContent);
         if (current == nullptr || current->is_null() || (!current->is_object() && !current->is_array())) {
             *outIsNull = true;
             *outLen = 0;
@@ -514,13 +516,13 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
     
     try {
         // Use cached JSON if available, otherwise parse and cache
-        nlohmann::json* jsonData;
+        JsonDocument* jsonData;
         if (THREAD_LOCAL_JSON_CACHE.IsCacheValid(jsonContent)) {
             jsonData = &THREAD_LOCAL_JSON_CACHE.parsedJson;
         } else {
-            nlohmann::json newJson;
+            JsonDocument newJson;
             try {
-                newJson = nlohmann::json::parse(jsonContent);
+                newJson = JsonDocument::parse(jsonContent);
             } catch (...) {
                 std::string fixedJsonContent;
                 fixedJsonContent.reserve(jsonContent.size());
@@ -540,7 +542,7 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
                         fixedJsonContent += jsonContent[j];
                     }
                 }
-                newJson = nlohmann::json::parse(fixedJsonContent);
+                newJson = JsonDocument::parse(fixedJsonContent);
                 jsonContent = fixedJsonContent;
             }
             THREAD_LOCAL_JSON_CACHE.SetCache(jsonContent, newJson);
@@ -569,7 +571,7 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
             }
         }
         
-        nlohmann::json* current = jsonData;
+        JsonDocument* current = jsonData;
         bool found = true;
         
         for (const auto& key : keys) {
@@ -650,10 +652,10 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
 }
 
 namespace {
-bool TryParseJson(const std::string &jsonContent, nlohmann::json *jsonData)
+bool TryParseJson(const std::string &jsonContent, JsonDocument *jsonData)
 {
     try {
-        *jsonData = nlohmann::json::parse(jsonContent);
+        *jsonData = JsonDocument::parse(jsonContent);
         return true;
     } catch (const std::exception&) {
         return false;
@@ -750,7 +752,7 @@ std::string NormalizeSingleQuotedJsonLike(const std::string &jsonContent)
     return normalized;
 }
 
-bool TryParseJsonSplitContent(const std::string &jsonContent, nlohmann::json *jsonData)
+bool TryParseJsonSplitContent(const std::string &jsonContent, JsonDocument *jsonData)
 {
     if (TryParseJson(jsonContent, jsonData)) {
         return true;
@@ -789,7 +791,7 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
     std::string jsonContent(jsonStr, jsonStrLen);
 
     try {
-        nlohmann::json jsonData;
+        JsonDocument jsonData;
         if (!TryParseJsonSplitContent(jsonContent, &jsonData)) {
             *outIsNull = true;
             *outLen = 0;
@@ -809,7 +811,7 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
             if (i > 0) {
                 result += "\r\n";
             }
-            const nlohmann::json& element = jsonData[i];
+            const JsonDocument& element = jsonData[i];
             if (element.is_string()) {
                 result += element.get<std::string>();
             } else if (element.is_number_integer()) {
