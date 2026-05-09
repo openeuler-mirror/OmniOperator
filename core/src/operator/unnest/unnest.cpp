@@ -109,6 +109,18 @@ omniruntime::vec::BaseVector* CreateOutputVectorLike(omniruntime::vec::BaseVecto
         return VectorHelper::CreateVector(OMNI_FLAT, source->GetTypeId(), size);
     }
 }
+
+bool IsPrimitiveFlatVector(const omniruntime::vec::BaseVector* vector)
+{
+    if (vector == nullptr || vector->GetEncoding() != omniruntime::vec::OMNI_FLAT) {
+        return false;
+    }
+
+    auto typeId = vector->GetTypeId();
+    return typeId != omniruntime::type::OMNI_ARRAY &&
+           typeId != omniruntime::type::OMNI_MAP &&
+           typeId != omniruntime::type::OMNI_ROW;
+}
 } // anonymous namespace
 
 UnnestOperatorFactory* UnnestOperatorFactory::CreateUnnestOperatorFactory(
@@ -335,6 +347,17 @@ void UnnestOperator::generateArrayRepeatedValues(omniruntime::vec::BaseVector* i
     auto outputElementVector = outputArrayVector->GetElementVector().get();
     auto typeId = inputElementVector->GetTypeId();
     auto inputSize = inputVector->GetSize();
+
+    if (!IsPrimitiveFlatVector(inputElementVector)) {
+        generateGenericRepeatedValues(inputVector, outputVector);
+        return;
+    }
+
+    int64_t totalSize = 0;
+    for (int32_t i = 0; i < inputSize; ++i) {
+        totalSize += inputArrayVector->GetSize(i) * rawMaxSizes_[i];
+    }
+    outputElementVector->Expand(static_cast<int32_t>(totalSize));
     generateComplexRepeatedValuesForType(typeId, inputSize, inputArrayVector, outputArrayVector, inputElementVector, outputElementVector);
 }
 
@@ -350,6 +373,18 @@ void UnnestOperator::generateMapRepeatedValues(omniruntime::vec::BaseVector* inp
     auto keyTypeId = inputKeyVector->GetTypeId();
     auto valueTypeid = inputValueVector->GetTypeId();
     auto inputSize = inputVector->GetSize();
+
+    if (!IsPrimitiveFlatVector(inputKeyVector) || !IsPrimitiveFlatVector(inputValueVector)) {
+        generateGenericRepeatedValues(inputVector, outputVector);
+        return;
+    }
+
+    int64_t totalSize = 0;
+    for (int32_t i = 0; i < inputSize; ++i) {
+        totalSize += inputMapVector->GetSize(i) * rawMaxSizes_[i];
+    }
+    outputKeyVector->Expand(static_cast<int32_t>(totalSize));
+    outputValueVector->Expand(static_cast<int32_t>(totalSize));
 
     generateComplexRepeatedValuesForType(keyTypeId, inputSize, inputMapVector, outputMapVector, inputKeyVector, outputKeyVector);
     generateComplexRepeatedValuesForType(valueTypeid, inputSize, inputMapVector, outputMapVector, inputValueVector, outputValueVector);
@@ -386,6 +421,21 @@ void UnnestOperator::generateStructRepeatedValues(omniruntime::vec::BaseVector* 
                 }
                 index++;
             }
+        }
+    }
+}
+
+void UnnestOperator::generateGenericRepeatedValues(omniruntime::vec::BaseVector* inputVector,
+                                                   omniruntime::vec::BaseVector* outputVector)
+{
+    int32_t index = 0;
+    int32_t inputSize = inputVector->GetSize();
+    for (int32_t i = 0; i < inputSize; ++i) {
+        if (rawMaxSizes_[i] == 0) {
+            continue;
+        }
+        for (int32_t j = 0; j < rawMaxSizes_[i]; ++j) {
+            VectorHelper::CopyValue(inputVector, i, outputVector, index++);
         }
     }
 }
@@ -488,30 +538,35 @@ void UnnestOperator::generateRepeatedColumns(int32_t numElements, omniruntime::v
         auto typeId = inputVector->GetTypeId();
         omniruntime::vec::BaseVector* outputVector = nullptr;
         if (auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(inputVector)) {
-            int64_t totalSize = 0;
-            for (auto i = 0; i < inputVector->GetSize(); ++i) {
-                totalSize += arrayVector->GetSize(i) * rawMaxSizes_[i];
-            }
             auto elementVector = arrayVector->GetElementVector().get();
-            if (elementVector->GetEncoding() != OMNI_FLAT) {
-                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Unnest not support this encoding.");
+            if (IsPrimitiveFlatVector(elementVector)) {
+                int64_t totalSize = 0;
+                for (auto i = 0; i < inputVector->GetSize(); ++i) {
+                    totalSize += arrayVector->GetSize(i) * rawMaxSizes_[i];
+                }
+                auto elementTypeId = elementVector->GetTypeId();
+                auto newElementVector = std::shared_ptr<BaseVector>(
+                    VectorHelper::CreateVector(OMNI_FLAT, elementTypeId, static_cast<int32_t>(totalSize)));
+                outputVector = new omniruntime::vec::ArrayVector(numElements, newElementVector);
+            } else {
+                outputVector = CreateOutputVectorLike(inputVector, numElements);
             }
-            auto typeId = elementVector->GetTypeId();
-            auto newElementVector = std::shared_ptr<BaseVector>(VectorHelper::CreateVector(OMNI_FLAT, typeId, totalSize));
-            outputVector = new omniruntime::vec::ArrayVector(numElements, newElementVector);
         } else if (auto mapVector = dynamic_cast<omniruntime::vec::MapVector*>(inputVector)) {
-            int64_t totalSize = 0;
-            for (auto i = 0; i < inputVector->GetSize(); ++i) {
-                totalSize += mapVector->GetSize(i) * rawMaxSizes_[i];
-            }
             auto keyVector = mapVector->GetKeyVector().get();
             auto valueVector = mapVector->GetValueVector().get();
-            if (keyVector->GetEncoding() != OMNI_FLAT || valueVector->GetEncoding() != OMNI_FLAT) {
-                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Unnest not support this encoding.");
+            if (IsPrimitiveFlatVector(keyVector) && IsPrimitiveFlatVector(valueVector)) {
+                int64_t totalSize = 0;
+                for (auto i = 0; i < inputVector->GetSize(); ++i) {
+                    totalSize += mapVector->GetSize(i) * rawMaxSizes_[i];
+                }
+                auto newKeyVector = std::shared_ptr<BaseVector>(
+                    VectorHelper::CreateVector(OMNI_FLAT, keyVector->GetTypeId(), static_cast<int32_t>(totalSize)));
+                auto newValueVector = std::shared_ptr<BaseVector>(
+                    VectorHelper::CreateVector(OMNI_FLAT, valueVector->GetTypeId(), static_cast<int32_t>(totalSize)));
+                outputVector = new omniruntime::vec::MapVector(numElements, newKeyVector, newValueVector);
+            } else {
+                outputVector = CreateOutputVectorLike(inputVector, numElements);
             }
-            auto newKeyVector = std::shared_ptr<BaseVector>(VectorHelper::CreateVector(OMNI_FLAT, keyVector->GetTypeId(), totalSize));
-            auto newValueVector = std::shared_ptr<BaseVector>(VectorHelper::CreateVector(OMNI_FLAT, valueVector->GetTypeId(), totalSize));
-            outputVector = new omniruntime::vec::MapVector(numElements, newKeyVector, newValueVector);
         } else if (dynamic_cast<omniruntime::vec::RowVector*>(inputVector)) {
             outputVector = CreateOutputVectorLike(inputVector, numElements);
         } else {

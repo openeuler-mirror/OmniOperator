@@ -91,6 +91,9 @@ private:
     void generateStructRepeatedValues(omniruntime::vec::BaseVector* inputVector,
                                       omniruntime::vec::BaseVector* outputVector);
 
+    void generateGenericRepeatedValues(omniruntime::vec::BaseVector* inputVector,
+                                       omniruntime::vec::BaseVector* outputVector);
+
     template<typename VectorType>
     void generateComplexRepeatedValues(int32_t inputSize, auto* inputVector, auto* outputVector,
                                          VectorType* inputElementVector, VectorType* outputElementVector);

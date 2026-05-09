@@ -209,7 +209,13 @@ inline const char *DeserializeElementByType(type::DataTypeId elementTypeId, Base
     }
     auto deser = vectorDeSerializerCenter[elementTypeId];
     if (deser == nullptr) {
-        throw OmniException("ArrayVector's ElementVec Deserializer failed : Unsupport elementTypeId", std::to_string(elementTypeId));
+        auto it = complexVectorDeSerializerCenter.find(elementTypeId);
+        if (it != complexVectorDeSerializerCenter.end()) {
+            deser = it->second;
+        } else {
+            throw OmniException("ArrayVector's ElementVec Deserializer failed : Unsupport elementTypeId",
+                std::to_string(elementTypeId));
+        }
     }
     return deser(elementVector, rowIdx, begin);
 }
