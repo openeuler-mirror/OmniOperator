@@ -124,6 +124,14 @@ string GetFieldRefTestJson(int32_t dt, int32_t colval)
     return ss.str();
 }
 
+string GetStringFieldRefTestJson(int32_t dt, int32_t colval, int32_t width)
+{
+    ss.str("");
+    ss << R"({ "exprType": "FIELD_REFERENCE", "dataType": )" << dt << R"(, "colVal": )" << colval <<
+        R"(, "width": )" << width << R"(})";
+    return ss.str();
+}
+
 string GetDecimalFieldRefTestJson(int32_t dt, int32_t colval, int32_t precision, int32_t scale)
 {
     ss.str("");
@@ -882,7 +890,7 @@ TEST(JSONParserTest, FuncExpr_substr)
 
 TEST(JSONParserTest, FuncExpr_jsonSplitCharInput)
 {
-    vector<string> argsJson = { GetFieldRefTestJson(OMNI_CHAR, COL_NUM) };
+    vector<string> argsJson = { GetStringFieldRefTestJson(OMNI_CHAR, COL_NUM, 8) };
     string unparsedFuncJson = GetFuncTestJson(OMNI_VARCHAR, "json_split", argsJson);
     Expr *funcExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFuncJson));
 
@@ -896,6 +904,14 @@ TEST(JSONParserTest, FuncExpr_jsonSplitCharInput)
     EXPECT_EQ(typedFuncExpr->arguments[0]->GetReturnTypeId(), OMNI_CHAR);
 
     delete funcExpr;
+}
+
+TEST(JSONParserTest, FieldReference_StringWithoutWidth)
+{
+    string unparsedFieldRefJson = GetFieldRefTestJson(OMNI_CHAR, COL_NUM);
+    Expr *fieldRefExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFieldRefJson));
+
+    EXPECT_EQ(fieldRefExpr, nullptr);
 }
 
 TEST(JSONParserTest, FuncExpr_jsonValueWithBehaviors)

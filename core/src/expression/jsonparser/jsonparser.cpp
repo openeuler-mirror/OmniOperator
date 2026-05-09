@@ -17,10 +17,17 @@ using Json = nlohmann::json;
 
 Expr *JSONParser::ParseJSONFieldRef(const Json &jsonExpr)
 {
+    if (!jsonExpr.is_object() || !jsonExpr.contains("dataType") || !jsonExpr.contains("colVal")) {
+        return nullptr;
+    }
+
     auto typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
     DataTypePtr retType;
     auto colVal = jsonExpr["colVal"].get<int32_t>();
     if (TypeUtil::IsStringType(typeId)) {
+        if (!jsonExpr.contains("width")) {
+            return nullptr;
+        }
         int width = jsonExpr["width"].get<int32_t>();
         if (typeId == OMNI_CHAR) {
             retType = std::make_shared<CharDataType>(width);
@@ -28,6 +35,9 @@ Expr *JSONParser::ParseJSONFieldRef(const Json &jsonExpr)
             retType = std::make_shared<VarcharDataType>(width);
         }
     } else if (TypeUtil::IsDecimalType(typeId)) {
+        if (!jsonExpr.contains("precision") || !jsonExpr.contains("scale")) {
+            return nullptr;
+        }
         int precision = jsonExpr["precision"].get<int32_t>();
         int scale = jsonExpr["scale"].get<int32_t>();
         if (typeId == OMNI_DECIMAL64) {
