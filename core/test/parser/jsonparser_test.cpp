@@ -898,6 +898,50 @@ TEST(JSONParserTest, FuncExpr_jsonSplitCharInput)
     delete funcExpr;
 }
 
+TEST(JSONParserTest, FuncExpr_jsonValueWithBehaviors)
+{
+    string unparsedFuncJson = R"({
+        "exprType": "FUNCTION",
+        "returnType": 15,
+        "function_name": "json_value",
+        "arguments": [
+            { "exprType": "FIELD_REFERENCE", "dataType": 15, "colVal": 0, "width": 32 },
+            { "exprType": "LITERAL", "dataType": 16, "isNull": false, "value": "$.age", "width": 5 }
+        ],
+        "emptyBehavior": {
+            "type": "DEFAULT",
+            "defaultValue": { "exprType": "LITERAL", "dataType": 15, "isNull": false, "value": "unknown", "width": 7 }
+        },
+        "errorBehavior": {
+            "type": "ERROR"
+        },
+        "width": 32
+    })";
+    Expr *funcExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFuncJson));
+
+    ASSERT_NE(funcExpr, nullptr);
+    auto typedFuncExpr = dynamic_cast<FuncExpr *>(funcExpr);
+    ASSERT_NE(typedFuncExpr, nullptr);
+    ASSERT_EQ(typedFuncExpr->arguments.size(), 6);
+    EXPECT_EQ(typedFuncExpr->arguments[2]->GetReturnTypeId(), OMNI_INT);
+    EXPECT_EQ(typedFuncExpr->arguments[3]->GetReturnTypeId(), OMNI_VARCHAR);
+    EXPECT_EQ(typedFuncExpr->arguments[4]->GetReturnTypeId(), OMNI_INT);
+    EXPECT_EQ(typedFuncExpr->arguments[5]->GetReturnTypeId(), OMNI_VARCHAR);
+
+    auto emptyBehaviorExpr = dynamic_cast<LiteralExpr *>(typedFuncExpr->arguments[2]);
+    auto errorBehaviorExpr = dynamic_cast<LiteralExpr *>(typedFuncExpr->arguments[4]);
+    auto defaultOnEmptyExpr = dynamic_cast<LiteralExpr *>(typedFuncExpr->arguments[3]);
+    ASSERT_NE(emptyBehaviorExpr, nullptr);
+    ASSERT_NE(errorBehaviorExpr, nullptr);
+    ASSERT_NE(defaultOnEmptyExpr, nullptr);
+    EXPECT_EQ(emptyBehaviorExpr->intVal, 2);
+    EXPECT_EQ(errorBehaviorExpr->intVal, 1);
+    ASSERT_NE(defaultOnEmptyExpr->stringVal, nullptr);
+    EXPECT_EQ(*defaultOnEmptyExpr->stringVal, "unknown");
+
+    delete funcExpr;
+}
+
 TEST(JSONParserTest, InExpr)
 {
     vector<string> argsJson = { GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(0), GetInt32TestJSON(2) };

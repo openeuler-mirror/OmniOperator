@@ -361,6 +361,29 @@ TEST(JsonValueTest, ExtendedNullInput)
     delete context;
 }
 
+TEST(JsonValueTest, WrappedExtendedOnEmptyDefault)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+
+    bool outIsNull = false;
+    int32_t outLen = 0;
+    std::string json = R"({"name":"John"})";
+    std::string path = "$.age";
+    std::string defaultValue = "unknown";
+
+    const char *result = JsonValueWithBehaviors(contextPtr,
+        json.c_str(), static_cast<int32_t>(json.size()), false,
+        path.c_str(), 0, static_cast<int32_t>(path.size()), false,
+        2, false, defaultValue.c_str(), static_cast<int32_t>(defaultValue.size()), false,
+        0, false, nullptr, 0, true, &outIsNull, &outLen);
+
+    EXPECT_FALSE(outIsNull);
+    EXPECT_EQ("unknown", std::string(result, outLen));
+
+    delete context;
+}
+
 // Test JsonSplitScalar function
 static void JsonSplitScalarTest(const std::string &jsonStr,
                                 const std::string &expectedResult, bool expectIsNull)
@@ -427,6 +450,11 @@ TEST(JsonSplitScalarTest, CharInput)
 TEST(JsonSplitScalarTest, NumericArray)
 {
     JsonSplitScalarTest(R"([1,2,3,4,5])", "1\r\n2\r\n3\r\n4\r\n5", false);
+}
+
+TEST(JsonSplitScalarTest, FloatingPointFormatting)
+{
+    JsonSplitScalarTest(R"([1.2,3.14,-2.5])", "1.2\r\n3.14\r\n-2.5", false);
 }
 
 TEST(JsonSplitScalarTest, MixedArray)

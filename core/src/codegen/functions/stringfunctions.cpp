@@ -651,6 +651,24 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
     }
 }
 
+extern "C" DLLEXPORT const char* JsonValueWithBehaviors(
+    int64_t contextPtr,
+    const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
+    const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
+    int32_t emptyBehavior, bool emptyBehaviorIsNull,
+    const char *defaultOnEmpty, int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull,
+    int32_t errorBehavior, bool errorBehaviorIsNull,
+    const char *defaultOnError, int32_t defaultOnErrorLen, bool defaultOnErrorIsNull,
+    bool *outIsNull, int32_t *outLen)
+{
+    static_cast<void>(pathStrWidth);
+    int32_t normalizedEmptyBehavior = emptyBehaviorIsNull ? 0 : emptyBehavior;
+    int32_t normalizedErrorBehavior = errorBehaviorIsNull ? 0 : errorBehavior;
+    return JsonValueExtended(contextPtr, jsonStr, jsonStrLen, jsonStrIsNull, pathStr, pathStrWidth, pathStrLen,
+        pathStrIsNull, normalizedEmptyBehavior, defaultOnEmpty, defaultOnEmptyLen, defaultOnEmptyIsNull,
+        normalizedErrorBehavior, defaultOnError, defaultOnErrorLen, defaultOnErrorIsNull, outIsNull, outLen);
+}
+
 namespace {
 bool TryParseJson(const std::string &jsonContent, JsonDocument *jsonData)
 {
@@ -814,16 +832,7 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
             const JsonDocument& element = jsonData[i];
             if (element.is_string()) {
                 result += element.get<std::string>();
-            } else if (element.is_number_integer()) {
-                result += std::to_string(element.get<int64_t>());
-            } else if (element.is_number_float()) {
-                result += std::to_string(element.get<double>());
-            } else if (element.is_boolean()) {
-                result += element.get<bool>() ? "true" : "false";
-            } else if (element.is_null()) {
-                result += "null";
             } else {
-                // For objects and arrays, return JSON string
                 result += element.dump();
             }
         }
