@@ -302,6 +302,11 @@ namespace omniruntime::reader {
         }
 
         double readDouble() {
+            if (bufferEnd - bufferPointer >= sizeof(double)) {
+                const double *ptr = reinterpret_cast<const double *>(bufferPointer);
+                bufferPointer += sizeof(double);
+                return *ptr;
+            }
             int64_t bits = 0;
             for (uint64_t i=0; i < 8; i++) {
                 bits |= static_cast<int64_t>(readByte()) << (i*8);
@@ -311,6 +316,11 @@ namespace omniruntime::reader {
         }
 
         double readFloat() {
+            if (bufferEnd - bufferPointer >= sizeof(float)) {
+                const float *ptr = reinterpret_cast<const float *>(bufferPointer);
+                bufferPointer += sizeof(float);
+                return *ptr;
+            }
             int32_t bits = 0;
             for (uint64_t i=0; i < 4; i++) {
                 bits |= readByte() << (i*8);
