@@ -1,9 +1,9 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
- * Description: NameStruct function implementation
+ * Description: NamedStruct function implementation
  */
 
-#include "NameStruct.h"
+#include "NamedStruct.h"
 #include "vector/vector.h"
 #include "vector/array_vector.h"
 #include "vector/map_vector.h"
@@ -14,20 +14,19 @@ namespace omniruntime::vectorization {
 using namespace omniruntime::type;
 using namespace omniruntime::vec;
 
-void NameStructFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
+void NamedStructFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
                                BaseVector *&result, ExecutionContext *context) const {
-    if (args.empty()) {
-        OMNI_THROW("NameStruct Error", "No input arguments");
-    }
+    size_t argCount = inputDataTypes_.size();
     std::vector<BaseVector *> allArgs;
-    while (!args.empty()) {
+    for (int i = 0; i < argCount; ++i) {
         allArgs.push_back(args.top());
         args.pop();
     }
     std::reverse(allArgs.begin(), allArgs.end());
+
     auto *rowType = dynamic_cast<const RowType *>(outputType.get());
     if (rowType == nullptr) {
-        OMNI_THROW("NameStruct Error", "Output type must be RowType");
+        OMNI_THROW("NamedStruct Error", "Output type must be RowType");
     }
     size_t fieldCount = static_cast<size_t>(rowType->Size());
     size_t consumedCount = 0;
@@ -78,14 +77,14 @@ void NameStructFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr
     } else if (allArgs.size() > fieldCount) {
         takeFromSuffix(fieldCount);
     } else {
-        OMNI_THROW("NameStruct Error", "Argument count mismatch: expected " +
+        OMNI_THROW("NamedStruct Error", "Argument count mismatch: expected " +
                    std::to_string(fieldCount) + " or " + std::to_string(2 * fieldCount) +
                    " but got " + std::to_string(allArgs.size()));
     }
     int32_t size = argVectors[0]->GetSize();
     for (size_t i = 1; i < argVectors.size(); ++i) {
         if (argVectors[i]->GetSize() != size) {
-            OMNI_THROW("NameStruct Error", "All arguments must have the same size");
+            OMNI_THROW("NamedStruct Error", "All arguments must have the same size");
         }
     }
     result = VectorHelper::CreateComplexVector(const_cast<DataType *>(outputType.get()), size);
@@ -120,7 +119,7 @@ void NameStructFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr
     }
 }
 
-void NameStructFunction::CopyFieldAtRow(BaseVector *srcVec, BaseVector *dstVec, int32_t dstRow,
+void NamedStructFunction::CopyFieldAtRow(BaseVector *srcVec, BaseVector *dstVec, int32_t dstRow,
                                         DataTypeId typeId, int32_t srcRow,
                                         int64_t *mapRunningOffset) const {
     switch (typeId) {
@@ -223,12 +222,12 @@ void NameStructFunction::CopyFieldAtRow(BaseVector *srcVec, BaseVector *dstVec, 
             break;
         }
         default:
-            OMNI_THROW("NameStruct Error", "Unsupported field type: " + TypeUtil::TypeToString(typeId));
+            OMNI_THROW("NamedStruct Error", "Unsupported field type: " + TypeUtil::TypeToString(typeId));
     }
 }
 
 template <typename T>
-T NameStructFunction::GetValueFromVector(BaseVector *vec, int32_t row) const {
+T NamedStructFunction::GetValueFromVector(BaseVector *vec, int32_t row) const {
     Encoding encoding = vec->GetEncoding();
     if (encoding == OMNI_ENCODING_CONST) {
         auto *constVec = static_cast<ConstVector<T> *>(vec);
@@ -242,10 +241,10 @@ T NameStructFunction::GetValueFromVector(BaseVector *vec, int32_t row) const {
         auto *dictVec = static_cast<Vector<DictionaryContainer<T>> *>(vec);
         return dictVec->GetValue(row);
     }
-    OMNI_THROW("NameStruct Error", "Unsupported encoding type");
+    OMNI_THROW("NamedStruct Error", "Unsupported encoding type");
 }
 
-std::string_view NameStructFunction::GetStringValueFromVector(BaseVector *vec, int32_t row) const {
+std::string_view NamedStructFunction::GetStringValueFromVector(BaseVector *vec, int32_t row) const {
     Encoding encoding = vec->GetEncoding();
     if (encoding == OMNI_ENCODING_CONST) {
         auto *constVec = static_cast<ConstVector<std::string_view> *>(vec);
@@ -259,35 +258,35 @@ std::string_view NameStructFunction::GetStringValueFromVector(BaseVector *vec, i
         auto *dictVec = static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vec);
         return dictVec->GetValue(row);
     }
-    OMNI_THROW("NameStruct Error", "Unsupported encoding type for string");
+    OMNI_THROW("NamedStruct Error", "Unsupported encoding type for string");
 }
 
 template <typename T>
-void NameStructFunction::SetValueToVector(BaseVector *vec, int32_t row, const T &value) const {
+void NamedStructFunction::SetValueToVector(BaseVector *vec, int32_t row, const T &value) const {
     auto *resultVec = static_cast<Vector<T> *>(vec);
     resultVec->SetValue(row, value);
 }
 
-void NameStructFunction::SetStringValueToVector(BaseVector *vec, int32_t row, std::string_view &value) const {
+void NamedStructFunction::SetStringValueToVector(BaseVector *vec, int32_t row, std::string_view &value) const {
     auto *resultVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
     resultVec->SetValue(row, value);
 }
 
-template int8_t NameStructFunction::GetValueFromVector<int8_t>(BaseVector *, int32_t) const;
-template int16_t NameStructFunction::GetValueFromVector<int16_t>(BaseVector *, int32_t) const;
-template int32_t NameStructFunction::GetValueFromVector<int32_t>(BaseVector *, int32_t) const;
-template int64_t NameStructFunction::GetValueFromVector<int64_t>(BaseVector *, int32_t) const;
-template float NameStructFunction::GetValueFromVector<float>(BaseVector *, int32_t) const;
-template double NameStructFunction::GetValueFromVector<double>(BaseVector *, int32_t) const;
-template bool NameStructFunction::GetValueFromVector<bool>(BaseVector *, int32_t) const;
-template omniruntime::type::Decimal128 NameStructFunction::GetValueFromVector<omniruntime::type::Decimal128>(BaseVector *, int32_t) const;
+template int8_t NamedStructFunction::GetValueFromVector<int8_t>(BaseVector *, int32_t) const;
+template int16_t NamedStructFunction::GetValueFromVector<int16_t>(BaseVector *, int32_t) const;
+template int32_t NamedStructFunction::GetValueFromVector<int32_t>(BaseVector *, int32_t) const;
+template int64_t NamedStructFunction::GetValueFromVector<int64_t>(BaseVector *, int32_t) const;
+template float NamedStructFunction::GetValueFromVector<float>(BaseVector *, int32_t) const;
+template double NamedStructFunction::GetValueFromVector<double>(BaseVector *, int32_t) const;
+template bool NamedStructFunction::GetValueFromVector<bool>(BaseVector *, int32_t) const;
+template omniruntime::type::Decimal128 NamedStructFunction::GetValueFromVector<omniruntime::type::Decimal128>(BaseVector *, int32_t) const;
 
-template void NameStructFunction::SetValueToVector<int8_t>(BaseVector *, int32_t, const int8_t &) const;
-template void NameStructFunction::SetValueToVector<int16_t>(BaseVector *, int32_t, const int16_t &) const;
-template void NameStructFunction::SetValueToVector<int32_t>(BaseVector *, int32_t, const int32_t &) const;
-template void NameStructFunction::SetValueToVector<int64_t>(BaseVector *, int32_t, const int64_t &) const;
-template void NameStructFunction::SetValueToVector<float>(BaseVector *, int32_t, const float &) const;
-template void NameStructFunction::SetValueToVector<double>(BaseVector *, int32_t, const double &) const;
-template void NameStructFunction::SetValueToVector<bool>(BaseVector *, int32_t, const bool &) const;
-template void NameStructFunction::SetValueToVector<omniruntime::type::Decimal128>(BaseVector *, int32_t, const omniruntime::type::Decimal128 &) const;
+template void NamedStructFunction::SetValueToVector<int8_t>(BaseVector *, int32_t, const int8_t &) const;
+template void NamedStructFunction::SetValueToVector<int16_t>(BaseVector *, int32_t, const int16_t &) const;
+template void NamedStructFunction::SetValueToVector<int32_t>(BaseVector *, int32_t, const int32_t &) const;
+template void NamedStructFunction::SetValueToVector<int64_t>(BaseVector *, int32_t, const int64_t &) const;
+template void NamedStructFunction::SetValueToVector<float>(BaseVector *, int32_t, const float &) const;
+template void NamedStructFunction::SetValueToVector<double>(BaseVector *, int32_t, const double &) const;
+template void NamedStructFunction::SetValueToVector<bool>(BaseVector *, int32_t, const bool &) const;
+template void NamedStructFunction::SetValueToVector<omniruntime::type::Decimal128>(BaseVector *, int32_t, const omniruntime::type::Decimal128 &) const;
 }

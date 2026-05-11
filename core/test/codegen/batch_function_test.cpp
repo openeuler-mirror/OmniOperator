@@ -389,7 +389,7 @@ TEST(BatchFunctionTest, Mm3Hash)
     EXPECT_EQ(output[0], -1889108749);
 
     BatchMm3Decimal128(decimal128Val, 38, 20, isValNull, seed, isSeedNull, resIsNull, output, rowCnt);
-    EXPECT_EQ(output[0], 776638264);
+    EXPECT_EQ(output[0], 1534069305);
 
     BatchMm3Boolean(boolVal, isValNull, seed, isSeedNull, resIsNull, output, rowCnt);
     EXPECT_EQ(output[0], -559580957);

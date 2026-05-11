@@ -44,8 +44,6 @@ extern void RegisterLambdaFunctions(const std::string &prefix);
 
 extern void RegisterHashFunctions(const std::string &prefix);
 
-extern void RegisterStructFunctions(const std::string &prefix);
-
 extern void RegisterCollectionFunctions(const std::string &prefix);
 
 int RegisterFunctions::Register()
@@ -71,7 +69,6 @@ void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
     RegisterLambdaFunctions(prefix);
     RegisterRegexpFunctions(prefix);
     RegisterHashFunctions(prefix);
-    RegisterStructFunctions(prefix);
     RegisterCollectionFunctions(prefix);
 }
 

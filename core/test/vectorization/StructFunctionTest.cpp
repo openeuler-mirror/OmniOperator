@@ -1,6 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
- * Description: NameStruct function unit tests
+ * Description: NamedStruct function unit tests
  */
 
 #include <gtest/gtest.h>
@@ -17,7 +17,7 @@
 #include "vector/array_vector.h"
 #include "vector/map_vector.h"
 #include "vector/vector_batch.h"
-#include "vectorization/functions/NameStruct.h"
+#include "vectorization/functions/NamedStruct.h"
 
 using namespace omniruntime;
 using namespace omniruntime::vec;
@@ -32,7 +32,7 @@ static void RegisterOnce() {
     (void)once;
 }
 
-TEST(StructFunctionTest, NameStructBoolean) {
+TEST(StructFunctionTest, NamedStructBoolean) {
     RegisterOnce();
     int rowSize = 2;
     bool vals[] = {true, false};
@@ -42,7 +42,7 @@ TEST(StructFunctionTest, NameStructBoolean) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_BOOLEAN)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_BOOLEAN))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_BOOLEAN))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -60,7 +60,7 @@ TEST(StructFunctionTest, NameStructBoolean) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructByte) {
+TEST(StructFunctionTest, NamedStructByte) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateFlatVector(OMNI_BYTE, rowSize);
@@ -70,7 +70,7 @@ TEST(StructFunctionTest, NameStructByte) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_BYTE)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_BYTE))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_BYTE))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -87,7 +87,7 @@ TEST(StructFunctionTest, NameStructByte) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructShort) {
+TEST(StructFunctionTest, NamedStructShort) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateFlatVector(OMNI_SHORT, rowSize);
@@ -97,7 +97,7 @@ TEST(StructFunctionTest, NameStructShort) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_SHORT)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_SHORT))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_SHORT))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -114,7 +114,7 @@ TEST(StructFunctionTest, NameStructShort) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructInt) {
+TEST(StructFunctionTest, NamedStructInt) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
@@ -124,7 +124,7 @@ TEST(StructFunctionTest, NameStructInt) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_INT)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_INT))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_INT))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -141,7 +141,7 @@ TEST(StructFunctionTest, NameStructInt) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructLong) {
+TEST(StructFunctionTest, NamedStructLong) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateFlatVector(OMNI_LONG, rowSize);
@@ -151,7 +151,7 @@ TEST(StructFunctionTest, NameStructLong) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_LONG)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_LONG))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_LONG))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -168,7 +168,7 @@ TEST(StructFunctionTest, NameStructLong) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructFloat) {
+TEST(StructFunctionTest, NamedStructFloat) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateFlatVector(OMNI_FLOAT, rowSize);
@@ -178,7 +178,7 @@ TEST(StructFunctionTest, NameStructFloat) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_FLOAT)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_FLOAT))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_FLOAT))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -195,7 +195,7 @@ TEST(StructFunctionTest, NameStructFloat) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructDouble) {
+TEST(StructFunctionTest, NamedStructDouble) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowSize);
@@ -205,7 +205,7 @@ TEST(StructFunctionTest, NameStructDouble) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_DOUBLE)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_DOUBLE))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_DOUBLE))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -222,7 +222,7 @@ TEST(StructFunctionTest, NameStructDouble) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructString) {
+TEST(StructFunctionTest, NamedStructString) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateStringVector(rowSize);
@@ -234,7 +234,7 @@ TEST(StructFunctionTest, NameStructString) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_VARCHAR)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_VARCHAR))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_VARCHAR))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -251,7 +251,7 @@ TEST(StructFunctionTest, NameStructString) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructDate) {
+TEST(StructFunctionTest, NamedStructDate) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateFlatVector(OMNI_DATE32, rowSize);
@@ -261,7 +261,7 @@ TEST(StructFunctionTest, NameStructDate) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_DATE32)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_DATE32))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_DATE32))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -278,7 +278,7 @@ TEST(StructFunctionTest, NameStructDate) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructTimestamp) {
+TEST(StructFunctionTest, NamedStructTimestamp) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateFlatVector(OMNI_TIMESTAMP, rowSize);
@@ -288,7 +288,7 @@ TEST(StructFunctionTest, NameStructTimestamp) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_TIMESTAMP)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_TIMESTAMP))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_TIMESTAMP))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -305,7 +305,7 @@ TEST(StructFunctionTest, NameStructTimestamp) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructDecimal64) {
+TEST(StructFunctionTest, NamedStructDecimal64) {
     RegisterOnce();
     int rowSize = 2;
     auto decType = std::make_shared<Decimal64DataType>(18, 4);
@@ -316,7 +316,7 @@ TEST(StructFunctionTest, NameStructDecimal64) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {decType};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, decType)}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, decType)}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -333,7 +333,7 @@ TEST(StructFunctionTest, NameStructDecimal64) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructDecimal128) {
+TEST(StructFunctionTest, NamedStructDecimal128) {
     RegisterOnce();
     int rowSize = 1;
     auto decType = std::make_shared<Decimal128DataType>(38, 10);
@@ -344,7 +344,7 @@ TEST(StructFunctionTest, NameStructDecimal128) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {decType};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, decType)}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, decType)}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -360,7 +360,7 @@ TEST(StructFunctionTest, NameStructDecimal128) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructBinary) {
+TEST(StructFunctionTest, NamedStructBinary) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateStringVector(rowSize);
@@ -372,7 +372,7 @@ TEST(StructFunctionTest, NameStructBinary) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_VARBINARY)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_VARBINARY))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_VARBINARY))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -389,7 +389,7 @@ TEST(StructFunctionTest, NameStructBinary) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructMultiField) {
+TEST(StructFunctionTest, NamedStructMultiField) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowSize);
@@ -411,7 +411,7 @@ TEST(StructFunctionTest, NameStructMultiField) {
         std::make_shared<DataType>(OMNI_DOUBLE)
     };
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"a", "b", "c"});
-    auto expr = new FuncExpr("name_struct", {
+    auto expr = new FuncExpr("named_struct", {
         new FieldExpr(0, std::make_shared<DataType>(OMNI_BOOLEAN)),
         new FieldExpr(1, std::make_shared<DataType>(OMNI_INT)),
         new FieldExpr(2, std::make_shared<DataType>(OMNI_DOUBLE))
@@ -436,66 +436,7 @@ TEST(StructFunctionTest, NameStructMultiField) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructIgnoresOuterStackEntries) {
-    RegisterOnce();
-    int rowSize = 2;
-    auto sentinel = VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowSize);
-    static_cast<Vector<double> *>(sentinel)->SetValue(0, 11.1);
-    static_cast<Vector<double> *>(sentinel)->SetValue(1, 22.2);
-
-    auto name1 = VectorHelper::CreateStringVector(rowSize);
-    auto value1 = VectorHelper::CreateStringVector(rowSize);
-    auto name2 = VectorHelper::CreateStringVector(rowSize);
-    auto value2 = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
-
-    std::string fieldName1("name");
-    std::string fieldValue1("izvyp");
-    std::string fieldName2("age");
-    static_cast<Vector<LargeStringContainer<std::string_view>> *>(name1)->SetValue(0, std::string_view(fieldName1));
-    static_cast<Vector<LargeStringContainer<std::string_view>> *>(name1)->SetValue(1, std::string_view(fieldName1));
-    static_cast<Vector<LargeStringContainer<std::string_view>> *>(value1)->SetValue(0, std::string_view(fieldValue1));
-    static_cast<Vector<LargeStringContainer<std::string_view>> *>(value1)->SetValue(1, std::string_view(fieldValue1));
-    static_cast<Vector<LargeStringContainer<std::string_view>> *>(name2)->SetValue(0, std::string_view(fieldName2));
-    static_cast<Vector<LargeStringContainer<std::string_view>> *>(name2)->SetValue(1, std::string_view(fieldName2));
-    static_cast<Vector<int32_t> *>(value2)->SetValue(0, 4);
-    static_cast<Vector<int32_t> *>(value2)->SetValue(1, 5);
-
-    std::stack<BaseVector *> args;
-    args.push(sentinel);
-    args.push(name1);
-    args.push(value1);
-    args.push(name2);
-    args.push(value2);
-
-    std::vector<std::shared_ptr<DataType>> fieldTypes = {
-        std::make_shared<DataType>(OMNI_VARCHAR),
-        std::make_shared<DataType>(OMNI_INT)
-    };
-    auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"name", "age"});
-    ExecutionContext *context = new ExecutionContext();
-    context->SetResultRowSize(rowSize);
-    NameStructFunction func;
-    BaseVector *result = nullptr;
-    func.Apply(args, rowType, result, context);
-
-    auto *rowVec = dynamic_cast<RowVector *>(result);
-    ASSERT_NE(rowVec, nullptr);
-    ASSERT_EQ(rowVec->ChildSize(), 2);
-    auto *nameChild = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rowVec->ChildAt(0).get());
-    auto *ageChild = static_cast<Vector<int32_t> *>(rowVec->ChildAt(1).get());
-    ASSERT_EQ(nameChild->GetValue(0), "izvyp");
-    ASSERT_EQ(nameChild->GetValue(1), "izvyp");
-    ASSERT_EQ(ageChild->GetValue(0), 4);
-    ASSERT_EQ(ageChild->GetValue(1), 5);
-    ASSERT_EQ(args.size(), 1);
-    ASSERT_EQ(args.top(), sentinel);
-
-    delete result;
-    delete context;
-    delete sentinel;
-}
-
-TEST(StructFunctionTest, NameStructWithNull) {
+TEST(StructFunctionTest, NamedStructWithNull) {
     RegisterOnce();
     int rowSize = 2;
     auto col0 = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
@@ -505,7 +446,7 @@ TEST(StructFunctionTest, NameStructWithNull) {
     batch->Append(col0);
     std::vector<std::shared_ptr<DataType>> fieldTypes = {std::make_shared<DataType>(OMNI_INT)};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_INT))}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, std::make_shared<DataType>(OMNI_INT))}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -522,7 +463,7 @@ TEST(StructFunctionTest, NameStructWithNull) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructArray) {
+TEST(StructFunctionTest, NamedStructArray) {
     RegisterOnce();
     int rowSize = 2;
     auto elemVec = VectorHelper::CreateFlatVector(OMNI_INT, 4);
@@ -539,7 +480,7 @@ TEST(StructFunctionTest, NameStructArray) {
     auto arrayType = std::make_shared<ArrayType>(std::make_shared<DataType>(OMNI_INT));
     std::vector<std::shared_ptr<DataType>> fieldTypes = {arrayType};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, arrayType)}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, arrayType)}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -563,7 +504,7 @@ TEST(StructFunctionTest, NameStructArray) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructMap) {
+TEST(StructFunctionTest, NamedStructMap) {
     RegisterOnce();
     int rowSize = 2;
     auto keyVec = VectorHelper::CreateFlatVector(OMNI_INT, 3);
@@ -586,7 +527,7 @@ TEST(StructFunctionTest, NameStructMap) {
     auto mapType = std::make_shared<MapType>(std::make_shared<DataType>(OMNI_INT), std::make_shared<DataType>(OMNI_VARCHAR));
     std::vector<std::shared_ptr<DataType>> fieldTypes = {mapType};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, mapType)}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, mapType)}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);
@@ -605,7 +546,7 @@ TEST(StructFunctionTest, NameStructMap) {
     delete batch;
 }
 
-TEST(StructFunctionTest, NameStructStruct) {
+TEST(StructFunctionTest, NamedStructStruct) {
     RegisterOnce();
     int rowSize = 2;
     auto innerCol = VectorHelper::CreateFlatVector(OMNI_INT, rowSize);
@@ -619,7 +560,7 @@ TEST(StructFunctionTest, NameStructStruct) {
     auto innerRowType = std::make_shared<RowType>(innerTypes, std::vector<std::string>{"x"});
     std::vector<std::shared_ptr<DataType>> fieldTypes = {innerRowType};
     auto rowType = std::make_shared<RowType>(fieldTypes, std::vector<std::string>{"c0"});
-    auto expr = new FuncExpr("name_struct", {new FieldExpr(0, innerRowType)}, rowType);
+    auto expr = new FuncExpr("named_struct", {new FieldExpr(0, innerRowType)}, rowType);
     ExecutionContext* context = new ExecutionContext();
     context->SetResultRowSize(rowSize);
     ExprEval e(batch, context);

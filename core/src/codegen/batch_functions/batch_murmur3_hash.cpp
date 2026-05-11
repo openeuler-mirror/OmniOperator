@@ -3,6 +3,7 @@
  * Description: batch mmh3 functions implementation
  */
 #include "codegen/functions/murmur3_hash.h"
+#include "operator/util/mm3_util.h"
 #include "type/decimal128_utils.h"
 #include "batch_murmur3_hash.h"
 
@@ -15,7 +16,7 @@ extern "C" DLLEXPORT void BatchMm3Int32(int32_t *val, bool *isValNull, int32_t *
     for (int i = 0; i < rowCnt; ++i) {
         seed[i] = isSeedNull[i] ? 0 : seed[i];
         output[i] = static_cast<int32_t>(
-            HashInt(static_cast<uint32_t>(val[i] * !isValNull[i]), static_cast<uint32_t>(seed[i])));
+            op::HashInt(static_cast<uint32_t>(val[i] * !isValNull[i]), static_cast<uint32_t>(seed[i])));
     }
 }
 
@@ -25,7 +26,7 @@ extern "C" DLLEXPORT void BatchMm3Int64(int64_t *val, bool *isValNull, int32_t *
     for (int i = 0; i < rowCnt; ++i) {
         seed[i] = isSeedNull[i] ? 0 : seed[i];
         output[i] = static_cast<int32_t>(
-            HashLong(static_cast<uint64_t>(val[i] * !isValNull[i]), static_cast<uint32_t>(seed[i])));
+            op::HashLong(static_cast<uint64_t>(val[i] * !isValNull[i]), static_cast<uint32_t>(seed[i])));
     }
 }
 
@@ -35,7 +36,7 @@ extern "C" DLLEXPORT void BatchMm3String(uint8_t **val, int32_t *valLen, bool *i
     for (int i = 0; i < rowCnt; ++i) {
         seed[i] = isSeedNull[i] ? 0 : seed[i];
         valLen[i] = valLen[i] * !isValNull[i];
-        output[i] = static_cast<int32_t>(HashUnsafeBytes(reinterpret_cast<char *>(val[i]),
+        output[i] = static_cast<int32_t>(op::HashUnsafeBytes(reinterpret_cast<char *>(val[i]),
             static_cast<uint32_t>(valLen[i]), static_cast<uint32_t>(seed[i])));
     }
 }
@@ -51,7 +52,7 @@ extern "C" DLLEXPORT void BatchMm3Double(double *val, bool *isValNull, int32_t *
     for (int i = 0; i < rowCnt; ++i) {
         uVal.dVal = val[i] * !isValNull[i];
         seed[i] = isSeedNull[i] ? 0 : seed[i];
-        output[i] = static_cast<int32_t>(HashLong(uVal.lVal, static_cast<uint32_t>(seed[i])));
+        output[i] = static_cast<int32_t>(op::HashLong(uVal.lVal, static_cast<uint32_t>(seed[i])));
     }
 }
 
@@ -60,7 +61,7 @@ extern "C" DLLEXPORT void BatchMm3Decimal64(int64_t *val, int32_t precision, int
 {
     for (int i = 0; i < rowCnt; ++i) {
         seed[i] = isSeedNull[i] ? 0 : seed[i];
-        output[i] = static_cast<int32_t>(HashLong(val[i] * !isValNull[i], static_cast<uint32_t>(seed[i])));
+        output[i] = static_cast<int32_t>(op::HashLong(val[i] * !isValNull[i], static_cast<uint32_t>(seed[i])));
     }
 }
 
@@ -70,7 +71,7 @@ extern "C" DLLEXPORT void BatchMm3Decimal128(omniruntime::type::Decimal128 *x, i
     int32_t byteLen = 0;
     for (int i = 0; i < rowCnt; ++i) {
         auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(x[i].HighBits(), x[i].LowBits(), byteLen);
-        output[i] = static_cast<int32_t>(HashUnsafeBytes(reinterpret_cast<char *>(bytes), byteLen, seed[i]));
+        output[i] = static_cast<int32_t>(op::HashUnsafeBytes(reinterpret_cast<char *>(bytes), byteLen, seed[i]));
         delete[] bytes;
     }
 }
@@ -81,7 +82,7 @@ extern "C" DLLEXPORT void BatchMm3Boolean(bool *val, bool *isValNull, int32_t *s
     for (int i = 0; i < rowCnt; ++i) {
         seed[i] = isSeedNull[i] ? 0 : seed[i];
         output[i] = static_cast<int32_t>(
-            HashInt(static_cast<uint32_t>((val[i] ? 1 : 0) * !isValNull[i]), static_cast<uint32_t>(seed[i])));
+            op::HashInt(static_cast<uint32_t>((val[i] ? 1 : 0) * !isValNull[i]), static_cast<uint32_t>(seed[i])));
     }
 }
 

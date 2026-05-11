@@ -20,6 +20,9 @@ using namespace omniruntime::op;
 
 class MapFunction : public VectorFunction {
 public:
+    explicit MapFunction() {}
+    explicit MapFunction(const std::vector<DataTypePtr> &inputDataTypes) : inputDataTypes_(inputDataTypes) {}
+
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
                ExecutionContext *context) const override;
 
@@ -39,5 +42,6 @@ private:
     bool StringValuesEqual(BaseVector *vec1, int32_t row1, BaseVector *vec2, int32_t row2) const;
     bool ElementsEqual(BaseVector *vec1, int32_t row1, BaseVector *vec2, int32_t row2,
                        DataTypeId typeId) const;
+    std::vector<DataTypePtr> inputDataTypes_;
 };
 }
