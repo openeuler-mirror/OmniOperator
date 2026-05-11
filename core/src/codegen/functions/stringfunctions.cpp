@@ -8,10 +8,12 @@
 #include "md5.h"
 #include "dtoa.h"
 #include "type/string_Impl.h"
+#include <algorithm>
 #include <nlohmann/json.hpp>
 #include <cctype>
 #include <functional>
 #include <unordered_map>
+#include <vector>
 
 namespace omniruntime::codegen::function {
 using JsonDocument = nlohmann::ordered_json;
@@ -770,6 +772,150 @@ std::string NormalizeSingleQuotedJsonLike(const std::string &jsonContent)
     return normalized;
 }
 
+uint32_t DecodeUtf8CodePoint(const std::string &value, size_t *index)
+{
+    unsigned char firstByte = static_cast<unsigned char>(value[*index]);
+    if (firstByte < 0x80) {
+        ++(*index);
+        return firstByte;
+    }
+
+    if ((firstByte & 0xE0) == 0xC0 && *index + 1 < value.size()) {
+        uint32_t codePoint = (static_cast<uint32_t>(firstByte & 0x1F) << 6) |
+            static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 1]) & 0x3F);
+        *index += 2;
+        return codePoint;
+    }
+
+    if ((firstByte & 0xF0) == 0xE0 && *index + 2 < value.size()) {
+        uint32_t codePoint = (static_cast<uint32_t>(firstByte & 0x0F) << 12) |
+            (static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 1]) & 0x3F) << 6) |
+            static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 2]) & 0x3F);
+        *index += 3;
+        return codePoint;
+    }
+
+    if ((firstByte & 0xF8) == 0xF0 && *index + 3 < value.size()) {
+        uint32_t codePoint = (static_cast<uint32_t>(firstByte & 0x07) << 18) |
+            (static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 1]) & 0x3F) << 12) |
+            (static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 2]) & 0x3F) << 6) |
+            static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 3]) & 0x3F);
+        *index += 4;
+        return codePoint;
+    }
+
+    ++(*index);
+    return firstByte;
+}
+
+uint32_t JavaStringHash(const std::string &value)
+{
+    uint32_t hash = 0;
+    for (size_t index = 0; index < value.size();) {
+        uint32_t codePoint = DecodeUtf8CodePoint(value, &index);
+        if (codePoint <= 0xFFFF) {
+            hash = 31U * hash + codePoint;
+            continue;
+        }
+
+        codePoint -= 0x10000;
+        uint32_t highSurrogate = 0xD800U + (codePoint >> 10);
+        uint32_t lowSurrogate = 0xDC00U + (codePoint & 0x3FFU);
+        hash = 31U * hash + highSurrogate;
+        hash = 31U * hash + lowSurrogate;
+    }
+    return hash;
+}
+
+size_t JavaHashMapCapacity(size_t size)
+{
+    size_t capacity = 16;
+    while (size > (capacity * 3) / 4) {
+        capacity <<= 1;
+    }
+    return capacity;
+}
+
+size_t JavaHashMapBucket(const std::string &key, size_t capacity)
+{
+    uint32_t hash = JavaStringHash(key);
+    hash ^= (hash >> 16);
+    return static_cast<size_t>(hash & static_cast<uint32_t>(capacity - 1));
+}
+
+std::string SerializeJsonSplitValue(const JsonDocument &value);
+
+struct JsonSplitObjectEntry {
+    std::string key;
+    const JsonDocument *value;
+    size_t insertionIndex;
+    size_t bucket;
+};
+
+std::string SerializeJsonSplitObject(const JsonDocument &value)
+{
+    std::vector<JsonSplitObjectEntry> entries;
+    entries.reserve(value.size());
+    size_t capacity = JavaHashMapCapacity(value.size());
+    size_t insertionIndex = 0;
+    for (auto it = value.begin(); it != value.end(); ++it, ++insertionIndex) {
+        entries.push_back({ it.key(), &it.value(), insertionIndex, JavaHashMapBucket(it.key(), capacity) });
+    }
+
+    std::stable_sort(entries.begin(), entries.end(), [](const JsonSplitObjectEntry &left, const JsonSplitObjectEntry &right) {
+        if (left.bucket != right.bucket) {
+            return left.bucket < right.bucket;
+        }
+        return left.insertionIndex < right.insertionIndex;
+    });
+
+    std::string result = "{";
+    for (size_t index = 0; index < entries.size(); ++index) {
+        if (index > 0) {
+            result += ",";
+        }
+        result += JsonDocument(entries[index].key).dump();
+        result += ":";
+        result += SerializeJsonSplitValue(*entries[index].value);
+    }
+    result += "}";
+    return result;
+}
+
+std::string SerializeJsonSplitArray(const JsonDocument &value)
+{
+    std::string result = "[";
+    for (size_t index = 0; index < value.size(); ++index) {
+        if (index > 0) {
+            result += ",";
+        }
+        result += SerializeJsonSplitValue(value[index]);
+    }
+    result += "]";
+    return result;
+}
+
+std::string SerializeJsonSplitNumber(const JsonDocument &value)
+{
+    std::string result = value.dump();
+    std::replace(result.begin(), result.end(), 'e', 'E');
+    return result;
+}
+
+std::string SerializeJsonSplitValue(const JsonDocument &value)
+{
+    if (value.is_object()) {
+        return SerializeJsonSplitObject(value);
+    }
+    if (value.is_array()) {
+        return SerializeJsonSplitArray(value);
+    }
+    if (value.is_number()) {
+        return SerializeJsonSplitNumber(value);
+    }
+    return value.dump();
+}
+
 bool TryParseJsonSplitContent(const std::string &jsonContent, JsonDocument *jsonData)
 {
     if (TryParseJson(jsonContent, jsonData)) {
@@ -833,7 +979,7 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
             if (element.is_string()) {
                 result += element.get<std::string>();
             } else {
-                result += element.dump();
+                result += SerializeJsonSplitValue(element);
             }
         }
 
