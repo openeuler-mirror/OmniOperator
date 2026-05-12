@@ -12,9 +12,12 @@
 #include "operator/operator.h"
 #include "join_hash_table_variants.h"
 #include "common_join.h"
+#include "join_sub_partitioner.h"
 
 namespace omniruntime {
 namespace op {
+class JoinSpillState;
+
 class HashBuilderOperatorFactory : public OperatorFactory {
 public:
     HashBuilderOperatorFactory(JoinType joinType, const DataTypes &buildTypes, const int32_t *buildHashCols,
@@ -29,9 +32,19 @@ public:
         const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(JoinType joinType, BuildSide buildSide,
         const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
+    /// when Join run without spill, we only need one HashBuilderOperator
+    /// But when Join run with spill, we need muti HashBuilderOperator that every join sub partition o
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(
-        std::shared_ptr<const HashJoinNode> planNode);
+        std::shared_ptr<const HashJoinNode> planNode, int32_t operatorCount = 1);
     omniruntime::op::Operator *CreateOperator() override;
+    void SetJoinSpillSubPartitionPolicy(bool joinSpillEnabled, uint64_t maxSpillRunRows,
+        JoinSubPartitionConfig joinSubPartCfg);
+    void SetJoinSpillState(std::shared_ptr<JoinSpillState> joinSpillState);
+
+    std::shared_ptr<JoinSpillState> GetJoinSpillState() const
+    {
+        return joinSpillState_;
+    }
 
     HashTableVariants *GetHashTablesVariants()
     {
@@ -43,6 +56,10 @@ private:
     std::vector<int32_t> buildHashCols;
     HashTableVariants *hashTablesVariants;
     std::atomic<int32_t> operatorIndex;
+    bool joinSpillEnabled_ = false;
+    uint64_t joinMaxSpillRunRows_ = 0;
+    JoinSubPartitionConfig joinSubPartCfg_;
+    std::shared_ptr<JoinSpillState> joinSpillState_;
 
     template <class RowRefListType>
     HashTableVariants *InitVariant(int32_t buildHashColsCount, int32_t operatorCount, JoinType joinType,
@@ -51,7 +68,9 @@ private:
 
 class HashBuilderOperator : public Operator {
 public:
-    HashBuilderOperator(const DataTypes &buildTypes, HashTableVariants *hashTables, int32_t partitionIndex);
+    HashBuilderOperator(const DataTypes &buildTypes, HashTableVariants *hashTables, int32_t partitionIndex,
+        bool joinSpillEnabled, uint64_t joinMaxSpillRunRows, JoinSubPartitionConfig joinSubPartCfg,
+        std::vector<int32_t> buildHashCols, JoinSpillState *joinSpillState);
 
     ~HashBuilderOperator() = default;
 
@@ -85,9 +104,24 @@ public:
     }
 
 private:
+    /// True when join spill sub-partition layout applies (computed once in ctor). Spill/replay still require
+    /// \c joinSpillState_ and (for spill) row count >= \c joinMaxSpillRunRows_ at the call site.
+    bool UseJoinSubPartitioning() const;
+    bool AddSubPartitionedInput(omniruntime::vec::VectorBatch *vecBatch);
+
     DataTypes buildTypes;
     int32_t partitionIndex;
     HashTableVariants *hashTablesVariants;
+    bool joinSpillEnabled_ = false;
+    uint64_t joinMaxSpillRunRows_ = 0;
+    uint64_t cumulativeBuildRows_ = 0;
+    bool joinSpillBoundaryLogged_ = false;
+    bool joinSubPartitionLogged_ = false;
+    JoinSubPartitionConfig joinSubPartCfg_;
+    /// Cached at construction; matches the former \c UseJoinSubPartitioning() predicate (no spill-state / batch).
+    const bool useJoinSubPartitioning_;
+    std::vector<int32_t> buildHashCols_;
+    JoinSpillState *joinSpillState_ = nullptr;
 };
 
 int32_t GetTypeLength(int buildHashColsCount, DataTypes& buildTypes, std::vector<int32_t>& buildHashCols);

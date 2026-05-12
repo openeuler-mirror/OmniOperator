@@ -733,9 +733,21 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceFixedKeyToNormalHash
     }
 }
 
+/// partitionIndex is from 0 to hashTableCount - 1
+/// there are always one HashTable for one BuildSize partition, so partitionIndex is always 0
+/// after subpartition function is developed, there are `numSubPartition` HashTables, so it can be from 0 to numSubPartition - 1
 template <typename KeyType, typename RowRefListType>
 void JoinHashTableVariants<KeyType, RowRefListType>::BuildHashTable(int32_t partitionIndex)
 {
+    /// if build size partition is an empty partition, we need to provide a empty HashTable for probe size.
+    if (totalRowCount[partitionIndex] == 0) {
+        if (isFixedKeys) {
+            BuildNormalHashTableWithFixedKey(partitionIndex, MIN_DEGREE);
+        } else {
+            BuildNormalHashTableWithVariableKey(partitionIndex, MIN_DEGREE);
+        }
+        return;
+    }
     auto initDegree = static_cast<uint8_t>(std::ceil(log2(totalRowCount[partitionIndex] / LOAD_FACTOR)));
     auto lengthOfArrayHT = static_cast<int64_t>(std::pow(2, initDegree));
     bool shouldBuildArrayTable = false;

@@ -14,9 +14,13 @@
 #include "type/data_type.h"
 #include "hash_builder.h"
 #include "common_join.h"
+#include "join_sub_partitioner.h"
+#include "operator/spill/spill_merger.h"
 
 namespace omniruntime {
 namespace op {
+class JoinSpillState;
+
 class LookupJoinOutputBuilder {
 public:
     LookupJoinOutputBuilder(std::vector<int32_t> &probeOutputCols, const int32_t *probeOutputTypes,
@@ -166,6 +170,10 @@ public:
         HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig &queryConfig);
     Operator *CreateOperator() override;
 
+    void SetJoinSpillPolicy(bool joinSpillEnabled, uint64_t maxSpillRunRows,
+        JoinSubPartitionConfig joinSubPartCfg = {});
+    void SetJoinSpillState(std::shared_ptr<JoinSpillState> joinSpillState);
+
 private:
     void CommonInitActions(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
@@ -185,6 +193,10 @@ private:
     SimpleFilter *simpleFilter = nullptr;
     // this is for lookup join with expression operator when join key and join filter both are expressions
     int32_t originalProbeColsCount;
+    bool joinSpillEnabled_ = false;
+    uint64_t joinMaxSpillRunRows_ = 0;
+    JoinSubPartitionConfig joinSubPartCfg_;
+    std::shared_ptr<JoinSpillState> joinSpillState_;
 };
 
 class LookupJoinOperator : public Operator {
@@ -193,18 +205,23 @@ public:
         std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes,
         std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
         SimpleFilter *simpleFilter, int32_t originalProbeColsCount,
-        int32_t outputRowSize, bool isShuffleExchangeBuildPlan);
+        int32_t outputRowSize, bool isShuffleExchangeBuildPlan, bool joinSpillEnabled = false,
+        uint64_t joinMaxSpillRunRows = 0, JoinSubPartitionConfig joinSubPartCfg = {},
+        JoinSpillState *joinSpillState = nullptr);
 
     LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
                        std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes,
                        std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
                        SimpleFilter *simpleFilter, int32_t originalProbeColsCount,
-                       int32_t outputRowSize, bool isShuffleExchangeBuildPlan, std::vector<int32_t> &outputList);
+                       int32_t outputRowSize, bool isShuffleExchangeBuildPlan, std::vector<int32_t> &outputList,
+                       bool joinSpillEnabled = false, uint64_t joinMaxSpillRunRows = 0,
+                       JoinSubPartitionConfig joinSubPartCfg = {}, JoinSpillState *joinSpillState = nullptr);
     ~LookupJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
     OmniStatus Close() override;
     BlockingReason IsBlocked(ContinueFuture* future) override;
+    bool needsInput() override;
 
 private:
     void InitFirst();
@@ -238,9 +255,23 @@ private:
                            uint32_t buildBatchIdx, ExecutionContext *contextPtr);
     void PrepareCurrentProbe();
     void PrepareSerializers();
+    bool TrySpillCurrentProbeInput(omniruntime::vec::VectorBatch *vecBatch);
+    bool LoadNextSpilledProbeInput();
+    bool HasPendingSpilledProbeInput() const;
     void PopulateProbeHashes();
     void PopulateProbeNulls();
     void ProcessProbe();
+    /// True when join spill sub-partitioning layout applies (computed once in ctor). Spill/replay still require
+    /// \c joinSpillState_ and (for spill) row count >= \c joinMaxSpillRunRows_ at the call site.
+    bool UseJoinSubPartitioning() const;
+    uint32_t GetProbePartition(int32_t probePosition) const;
+    ALWAYS_INLINE int32_t ProbePhysicalRow(int32_t probePosition) const
+    {
+        if (!subPartitionProbePermutation_.empty()) {
+            return subPartitionProbePermutation_[static_cast<size_t>(probePosition)];
+        }
+        return probePosition;
+    }
 
     template <bool hasJoinFilter>
     ALWAYS_INLINE void InitForProbe(uint32_t partition, bool initSize = true)
@@ -277,6 +308,8 @@ private:
     omniruntime::vec::BaseVector **probeOutputColumns = nullptr;
     std::vector<int64_t> curProbeHashes;
     std::vector<int8_t> curProbeNulls;
+    std::vector<uint32_t> curProbeSubPartitions;
+    std::vector<int32_t> subPartitionProbePermutation_;
 
     std::unique_ptr<LookupJoinOutputBuilder> outputBuilder;
     omniruntime::vec::VectorBatch *curInputBatch = nullptr;
@@ -305,6 +338,21 @@ private:
     std::vector<BaseVector **> *buildFilterColPtrs = nullptr;
     size_t probeFilterColsSize = 0;
     size_t buildFilterColsSize = 0;
+    bool joinSpillEnabled_ = false;
+    uint64_t joinMaxSpillRunRows_ = 0;
+    JoinSubPartitionConfig joinSubPartCfg_;
+    /// Cached at construction; matches the former \c UseJoinSubPartitioning() predicate (no spill-state / batch).
+    const bool useJoinSubPartitioning_;
+    JoinSpillState *joinSpillState_ = nullptr;
+    struct ProbeSpillFile {
+        uint64_t runId;
+        uint32_t subPartition;
+        SpillFileInfo file;
+    };
+    std::vector<std::vector<ProbeSpillFile>> probeSpillFiles_;
+    uint32_t probeSpillReadSubPartition_ = 0;
+    size_t probeSpillReadFileIndex_ = 0;
+    uint64_t probeSpilledRows_ = 0;
 };
 } // end of op
 } // end of omniruntime

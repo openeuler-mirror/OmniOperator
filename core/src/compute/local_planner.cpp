@@ -13,6 +13,7 @@
 #include <operator/aggregation/group_aggregation_expr.h>
 
 #include "operator/join/hash_builder_expr.h"
+#include "operator/join/join_spill_state.h"
 #include "operator/join/lookup_join_expr.h"
 #include "operator/join/lookup_join_wrapper.h"
 #include "operator/join/nest_loop_join_builder.h"
@@ -31,11 +32,46 @@
 #include "operator/unnest/unnest.h"
 #include "operator/tablescan/TableScan.h"
 #include "compute/task.h"
+#include "operator/join/join_sub_partitioner.h"
 
 namespace omniruntime::compute {
 
 // Returns ture if source nodes must run in a separate pipeline
 bool MustStartNewPipeline(int sourceId) { return sourceId != 0; }
+
+/// todo: only support Long and Varchar for first version of Join Spill
+bool IsLongOrVarcharTypes(const omniruntime::type::DataTypes &types)
+{
+    auto ids = types.GetIds();
+    for (int32_t i = 0; i < types.GetSize(); ++i) {
+        if (ids[i] != omniruntime::type::OMNI_LONG && ids[i] != omniruntime::type::OMNI_VARCHAR) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/// todo: only support inner join for first version
+bool IsJoinSpillV1Supported(const std::shared_ptr<const HashJoinNode> &joinNode)
+{
+    if (!joinNode->IsInnerJoin() || !IsLongOrVarcharTypes(*joinNode->LeftOutputType()) ||
+        !IsLongOrVarcharTypes(*joinNode->RightOutputType())) {
+        return false;
+    }
+
+    /// todo: only support field key, not support expression key for first version
+    for (auto *key : joinNode->LeftKeys()) {
+        if (key->GetType() != omniruntime::expressions::ExprType::FIELD_E) {
+            return false;
+        }
+    }
+    for (auto *key : joinNode->RightKeys()) {
+        if (key->GetType() != omniruntime::expressions::ExprType::FIELD_E) {
+            return false;
+        }
+    }
+    return true;
+}
 
 std::shared_ptr<omniruntime::op::Operator> createOperator(
     OperatorFactory* factory, const std::shared_ptr<const PlanNode>& planNode)
@@ -128,8 +164,15 @@ std::pair<OperatorFactory*, HashBuilderOperatorFactory*> createHashBuilderOperat
         auto hashBuilderOperatorFactory = hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory();
         return std::make_pair(hashBuilderWithExprOperatorFactory, hashBuilderOperatorFactory);
     } else {
+        const auto subPartCfg = op::JoinSubPartitionConfig::FromQueryConfig(queryConfig);
+        const int32_t hashTableCount = queryConfig.joinSpillEnabled() && queryConfig.maxSpillRunRows() != 0
+                && subPartCfg.IsEnabled() && IsJoinSpillV1Supported(joinNode)
+            ? static_cast<int32_t>(subPartCfg.numSubPartitions)
+            : 1;
+
+        /// hashTableCount is equal to join sub partitions count.
         auto hashBuilderOperatorFactory =
-            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
+            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode, hashTableCount);
         return std::make_pair(hashBuilderOperatorFactory, hashBuilderOperatorFactory);
     }
 }
@@ -164,11 +207,20 @@ void planDetail(
     // JoinNode and UnionNode has multiple sources, so we need to create a builder driver for each source
     if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
         auto res = createHashBuilderOperatorPairFactory(joinNode, queryConfig);
+        auto subPartCfg = op::JoinSubPartitionConfig::FromQueryConfig(queryConfig);
+        const bool joinSpillV1Enabled = queryConfig.joinSpillEnabled() && queryConfig.maxSpillRunRows() != 0
+            && subPartCfg.IsEnabled() && IsJoinSpillV1Supported(joinNode);
+        std::shared_ptr<op::JoinSpillState> joinSpillState = nullptr;
+        if (joinSpillV1Enabled) {
+            joinSpillState = std::make_shared<op::JoinSpillState>(queryConfig.SpillDir(),
+                *joinNode->RightOutputType(), *joinNode->LeftOutputType(), subPartCfg.numSubPartitions);
+        }
+        res.second->SetJoinSpillSubPartitionPolicy(joinSpillV1Enabled, queryConfig.maxSpillRunRows(), subPartCfg);
+        res.second->SetJoinSpillState(joinSpillState);
         auto builderDriver = builderDrivers[1][0];
         builderDriver->operators()->emplace_back(createOperator(res.first, joinNode));
         factories->emplace_back(res.first);
 
-        auto joinType = joinNode->GetJoinType();
         if (joinNode->IsFullJoin() || (joinNode->IsLeftJoin() && joinNode->IsBuildLeft()) || (joinNode->IsRightJoin() && joinNode->IsBuildRight())) {
             factory =
                 LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(joinNode, res.second, queryConfig);

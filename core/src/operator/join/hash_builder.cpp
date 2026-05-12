@@ -3,11 +3,28 @@
  * @Description: hash builder implementations
  */
 #include "hash_builder.h"
+#include <iostream>
 #include <vector>
 #include <memory>
+#include <utility>
+#include "join_spill_state.h"
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {
+void HashBuilderOperatorFactory::SetJoinSpillSubPartitionPolicy(
+    bool joinSpillEnabled, uint64_t maxSpillRunRows, JoinSubPartitionConfig joinSubPartCfg)
+{
+    joinSpillEnabled_ = joinSpillEnabled;
+    joinMaxSpillRunRows_ = maxSpillRunRows;
+    joinSubPartCfg_ = joinSubPartCfg;
+}
+
+void HashBuilderOperatorFactory::SetJoinSpillState(std::shared_ptr<JoinSpillState> joinSpillState)
+{
+    joinSpillState_ = std::move(joinSpillState);
+}
+
 HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, const DataTypes &buildTypes,
     const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
     : buildTypes(buildTypes),
@@ -137,8 +154,9 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperato
         operatorCount);
 }
 
+/// operatorCount is equal to HashTableCount
 HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
-    std::shared_ptr<const HashJoinNode> planNode)
+    std::shared_ptr<const HashJoinNode> planNode, int32_t operatorCount)
 {
     // Extract necessary information from planNode
     auto joinType = planNode->GetJoinType();
@@ -153,21 +171,95 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperato
     }
 
     auto buildHashColsCount = (int32_t) buildHashCols.size();
-    return new HashBuilderOperatorFactory(joinType, buildSide, *buildTypes, buildHashCols.data(), buildHashColsCount, 1);
+    return new HashBuilderOperatorFactory(joinType, buildSide, *buildTypes, buildHashCols.data(), buildHashColsCount,
+        operatorCount);
 }
 
 Operator *HashBuilderOperatorFactory::CreateOperator()
 {
+    /// operatorIndex is start by 0, so partitionIdex is start by 0
     int32_t partitionIndex =
         operatorIndex++ % std::visit([&](auto &&arg) { return arg.GetHashTableCount(); }, *hashTablesVariants);
-    return new HashBuilderOperator(this->buildTypes, hashTablesVariants, partitionIndex);
+    return new HashBuilderOperator(this->buildTypes, hashTablesVariants, partitionIndex, joinSpillEnabled_,
+        joinMaxSpillRunRows_, joinSubPartCfg_, buildHashCols, joinSpillState_.get());
 }
 
 HashBuilderOperator::HashBuilderOperator(const DataTypes &buildTypes, HashTableVariants *hashTables,
-    int32_t partitionIndex)
-    : buildTypes(buildTypes), partitionIndex(partitionIndex), hashTablesVariants(hashTables)
+    int32_t partitionIndex, bool joinSpillEnabled, uint64_t joinMaxSpillRunRows,
+    JoinSubPartitionConfig joinSubPartCfg, std::vector<int32_t> buildHashCols, JoinSpillState *joinSpillState)
+    : buildTypes(buildTypes),
+      partitionIndex(partitionIndex),
+      hashTablesVariants(hashTables),
+      joinSpillEnabled_(joinSpillEnabled),
+      joinMaxSpillRunRows_(joinMaxSpillRunRows),
+      joinSubPartCfg_(joinSubPartCfg),
+      useJoinSubPartitioning_(joinSpillEnabled && joinMaxSpillRunRows > 0 && joinSubPartCfg.IsEnabled() &&
+          std::visit([&](auto &&arg) { return arg.GetHashTableCount(); }, *hashTables) ==
+              joinSubPartCfg.numSubPartitions),
+      buildHashCols_(std::move(buildHashCols)),
+      joinSpillState_(joinSpillState)
 {
     SetOperatorName(opNameForHashBuilder);
+}
+
+bool HashBuilderOperator::UseJoinSubPartitioning() const
+{
+    return useJoinSubPartitioning_;
+}
+
+/// add each subpartition data in buildSize to the each HashTable.
+bool HashBuilderOperator::AddSubPartitionedInput(omniruntime::vec::VectorBatch *vecBatch)
+{
+    if (!UseJoinSubPartitioning()) {
+        return false;
+    }
+    const bool spillCurrentBatch = joinSpillState_ != nullptr &&
+        static_cast<uint64_t>(vecBatch->GetRowCount()) >= joinMaxSpillRunRows_;
+    const uint64_t runId = spillCurrentBatch ? joinSpillState_->NextRunId() : 0;
+
+    // here we will do the sub partition spilt for source vectorbatch
+    JoinSubPartitioner partitioner(joinSubPartCfg_);
+    const auto buckets = partitioner.PartitionRowsByKeyColumns(vecBatch, buildTypes, buildHashCols_);
+    std::vector<std::vector<int32_t>> positions(joinSubPartCfg_.numSubPartitions);
+    for (size_t row = 0; row < buckets.size(); ++row) {
+        positions[buckets[row]].push_back(static_cast<int32_t>(row));
+    }
+
+    const int32_t vectorCount = vecBatch->GetVectorCount();
+    for (uint32_t subPartition = 0; subPartition < positions.size(); ++subPartition) {
+        auto &bucketPositions = positions[subPartition];
+        if (bucketPositions.empty()) {
+            continue;
+        }
+        auto *subBatch = new omniruntime::vec::VectorBatch(bucketPositions.size());
+        subBatch->ResizeVectorCount(vectorCount);
+        for (int32_t col = 0; col < vectorCount; ++col) {
+            subBatch->SetVector(col, omniruntime::vec::VectorHelper::CopyPositionsVector(
+                vecBatch->Get(col), bucketPositions.data(), 0, static_cast<int32_t>(bucketPositions.size())));
+        }
+        // keep subpartiton 0 in memory for compute, other subpartition should be spilled to disk
+        if (spillCurrentBatch && subPartition != 0) {
+            joinSpillState_->SpillBuildSubPartition(runId, subPartition, subBatch);
+            // free the batch in memory
+            omniruntime::vec::VectorHelper::FreeVecBatch(subBatch);
+        } else {
+            std::visit([&](auto &&arg) { arg.AddVecBatch(static_cast<int32_t>(subPartition), subBatch); },
+                *hashTablesVariants);
+        }
+    }
+    if (UNLIKELY(IsDebugEnable())) {
+        std::cout << "[OmniRuntime][JoinSubPartitioner][build] partitioned_input_rows=" << vecBatch->GetRowCount()
+                  << " outputSubPartitions=" << positions.size();
+        if (spillCurrentBatch) {
+            std::cout << " runId=" << runId << " activeSubPartition=0 spilledSubPartitions="
+                      << (positions.size() > 0 ? positions.size() - 1 : 0);
+        }
+        std::cout << "\n";
+        std::cout.flush();
+    }
+    omniruntime::vec::VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
+    return true;
 }
 
 int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
@@ -179,6 +271,9 @@ int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
         return 0;
     }
     UpdateAddInputInfo(rowCount);
+    if (AddSubPartitionedInput(vecBatch)) {
+        return 0;
+    }
     std::visit([&](auto &&arg) { arg.AddVecBatch(partitionIndex, vecBatch); }, *hashTablesVariants);
     return 0;
 }
@@ -194,8 +289,23 @@ int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVec
     }
     std::visit(
         [&](auto &&arg) {
-            arg.Prepare(partitionIndex);
-            arg.BuildHashTable(partitionIndex);
+            if (UseJoinSubPartitioning()) {
+                if (joinSpillState_ != nullptr) {
+                    joinSpillState_->ReplayBuildInput(hashTablesVariants);
+                }
+                for (uint32_t partition = 0; partition < arg.GetHashTableCount(); ++partition) {
+                    arg.Prepare(static_cast<int32_t>(partition));
+                    arg.BuildHashTable(static_cast<int32_t>(partition));
+                }
+                if (UNLIKELY(IsDebugEnable())) {
+                    std::cout << "[OmniRuntime][JoinSubPartitioner][build] built_subpartition_hash_tables="
+                              << arg.GetHashTableCount() << "\n";
+                    std::cout.flush();
+                }
+            } else {
+                arg.Prepare(partitionIndex);
+                arg.BuildHashTable(partitionIndex);
+            }
         },
         *hashTablesVariants);
     if (UNLIKELY(IsDebugEnable())) {
