@@ -2448,6 +2448,103 @@ TEST(BatchFunctionTest, BatchJsonValueWithBehaviors)
     delete context;
 }
 
+TEST(BatchFunctionTest, BatchJsonValueComplexTypesReturnNull)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::vector<std::string> jsonStr { R"({"data":{"x":1}})", R"({"items":[1,2,3]})", R"({"flag":true})" };
+    std::vector<int32_t> jsonStrLen {
+        static_cast<int32_t>(jsonStr[0].length()),
+        static_cast<int32_t>(jsonStr[1].length()),
+        static_cast<int32_t>(jsonStr[2].length()) };
+    std::vector<uint8_t *> jsonStrAddr {
+        reinterpret_cast<uint8_t *>(const_cast<char *>(jsonStr[0].c_str())),
+        reinterpret_cast<uint8_t *>(const_cast<char *>(jsonStr[1].c_str())),
+        reinterpret_cast<uint8_t *>(const_cast<char *>(jsonStr[2].c_str())) };
+    std::vector<std::string> pathStr { "$.data", "$.items", "$.flag" };
+    std::vector<int32_t> pathStrLen {
+        static_cast<int32_t>(pathStr[0].length()),
+        static_cast<int32_t>(pathStr[1].length()),
+        static_cast<int32_t>(pathStr[2].length()) };
+    std::vector<uint8_t *> pathStrAddr {
+        reinterpret_cast<uint8_t *>(const_cast<char *>(pathStr[0].c_str())),
+        reinterpret_cast<uint8_t *>(const_cast<char *>(pathStr[1].c_str())),
+        reinterpret_cast<uint8_t *>(const_cast<char *>(pathStr[2].c_str())) };
+    int32_t rowCnt = static_cast<int32_t>(jsonStr.size());
+    bool jsonStrIsNull[] = { false, false, false };
+    bool pathStrIsNull[] = { false, false, false };
+    bool outIsNull[] = { false, false, false };
+    std::vector<uint8_t *> output(rowCnt);
+    std::vector<int32_t> outLen(rowCnt);
+
+    BatchJsonValue(contextPtr, jsonStrAddr.data(), jsonStrLen.data(), jsonStrIsNull, pathStrAddr.data(), 0,
+        pathStrLen.data(), pathStrIsNull, outIsNull, output.data(), outLen.data(), rowCnt);
+
+    EXPECT_TRUE(outIsNull[0]);
+    EXPECT_EQ(output[0], nullptr);
+    EXPECT_TRUE(outIsNull[1]);
+    EXPECT_EQ(output[1], nullptr);
+    EXPECT_FALSE(outIsNull[2]);
+    EXPECT_EQ(std::string(reinterpret_cast<char *>(output[2]), outLen[2]), "true");
+    delete context;
+}
+
+TEST(BatchFunctionTest, BatchJsonValueWithBehaviorsComplexTypesUseEmptyBehavior)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::vector<std::string> jsonStr { R"({"data":{"x":1}})", R"({"items":[1,2,3]})" };
+    std::vector<int32_t> jsonStrLen {
+        static_cast<int32_t>(jsonStr[0].length()),
+        static_cast<int32_t>(jsonStr[1].length()) };
+    std::vector<uint8_t *> jsonStrAddr {
+        reinterpret_cast<uint8_t *>(const_cast<char *>(jsonStr[0].c_str())),
+        reinterpret_cast<uint8_t *>(const_cast<char *>(jsonStr[1].c_str())) };
+    std::vector<std::string> pathStr { "$.data", "$.items" };
+    std::vector<int32_t> pathStrLen {
+        static_cast<int32_t>(pathStr[0].length()),
+        static_cast<int32_t>(pathStr[1].length()) };
+    std::vector<uint8_t *> pathStrAddr {
+        reinterpret_cast<uint8_t *>(const_cast<char *>(pathStr[0].c_str())),
+        reinterpret_cast<uint8_t *>(const_cast<char *>(pathStr[1].c_str())) };
+    std::vector<std::string> defaultOnEmpty { "missing", "" };
+    std::vector<std::string> defaultOnError { "", "" };
+    std::vector<int32_t> defaultOnEmptyLen {
+        static_cast<int32_t>(defaultOnEmpty[0].length()),
+        static_cast<int32_t>(defaultOnEmpty[1].length()) };
+    std::vector<int32_t> defaultOnErrorLen {
+        static_cast<int32_t>(defaultOnError[0].length()),
+        static_cast<int32_t>(defaultOnError[1].length()) };
+    std::vector<uint8_t *> defaultOnEmptyAddr {
+        reinterpret_cast<uint8_t *>(const_cast<char *>(defaultOnEmpty[0].c_str())),
+        reinterpret_cast<uint8_t *>(const_cast<char *>(defaultOnEmpty[1].c_str())) };
+    std::vector<uint8_t *> defaultOnErrorAddr {
+        reinterpret_cast<uint8_t *>(const_cast<char *>(defaultOnError[0].c_str())),
+        reinterpret_cast<uint8_t *>(const_cast<char *>(defaultOnError[1].c_str())) };
+    int32_t emptyBehavior[] = { 2, 0 };
+    int32_t errorBehavior[] = { 0, 0 };
+    bool jsonStrIsNull[] = { false, false };
+    bool pathStrIsNull[] = { false, false };
+    bool emptyBehaviorIsNull[] = { false, false };
+    bool errorBehaviorIsNull[] = { false, false };
+    bool defaultOnEmptyIsNull[] = { false, true };
+    bool defaultOnErrorIsNull[] = { true, true };
+    bool outIsNull[] = { false, false };
+    std::vector<uint8_t *> output(2);
+    std::vector<int32_t> outLen(2);
+
+    BatchJsonValueWithBehaviors(contextPtr, jsonStrAddr.data(), jsonStrLen.data(), jsonStrIsNull, pathStrAddr.data(), 0,
+        pathStrLen.data(), pathStrIsNull, emptyBehavior, emptyBehaviorIsNull, defaultOnEmptyAddr.data(),
+        defaultOnEmptyLen.data(), defaultOnEmptyIsNull, errorBehavior, errorBehaviorIsNull, defaultOnErrorAddr.data(),
+        defaultOnErrorLen.data(), defaultOnErrorIsNull, outIsNull, output.data(), outLen.data(), 2);
+
+    EXPECT_FALSE(outIsNull[0]);
+    EXPECT_EQ(std::string(reinterpret_cast<char *>(output[0]), outLen[0]), "missing");
+    EXPECT_TRUE(outIsNull[1]);
+    EXPECT_EQ(output[1], nullptr);
+    delete context;
+}
+
 TEST(BatchFunctionTest, BatchJsonQuery)
 {
     auto context = new ExecutionContext();
@@ -2532,6 +2629,27 @@ TEST(BatchFunctionTest, BatchJsonSplitFloatFormatting)
 
     EXPECT_FALSE(outIsNull[0]);
     EXPECT_EQ(std::string(reinterpret_cast<char *>(output[0]), outLen[0]), "1.2\r\n3.14\r\n-2.5");
+    delete context;
+}
+
+TEST(BatchFunctionTest, BatchJsonSplitScientificNotationFormatting)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::vector<std::string> jsonStr { "[1.171815966525443e+77]" };
+    std::vector<int32_t> jsonStrLen { static_cast<int32_t>(jsonStr[0].length()) };
+    std::vector<uint8_t *> jsonStrAddr {
+        reinterpret_cast<uint8_t *>(const_cast<char *>(jsonStr[0].c_str())) };
+    bool jsonStrIsNull[] = { false };
+    bool outIsNull[] = { false };
+    std::vector<uint8_t *> output(1);
+    std::vector<int32_t> outLen(1);
+
+    BatchJsonSplitStr(contextPtr, jsonStrAddr.data(), jsonStrLen.data(), jsonStrIsNull, outIsNull, output.data(),
+        outLen.data(), 1);
+
+    EXPECT_FALSE(outIsNull[0]);
+    EXPECT_EQ(std::string(reinterpret_cast<char *>(output[0]), outLen[0]), "1.171815966525443E+77");
     delete context;
 }
 

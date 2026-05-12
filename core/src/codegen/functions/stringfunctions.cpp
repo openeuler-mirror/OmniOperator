@@ -390,12 +390,58 @@ static JsonDocument* ResolveJsonPathTarget(JsonDocument* jsonData, const std::st
     return current;
 }
 
-static std::string FormatJsonValueResult(const JsonDocument& value)
+static bool TryFormatJsonValueScalar(const JsonDocument& value, std::string *result)
 {
-    if (value.is_string()) {
-        return value.get<std::string>();
+    if (result == nullptr) {
+        return false;
     }
-    return value.dump();
+
+    if (value.is_string()) {
+        *result = value.get<std::string>();
+        return true;
+    }
+
+    if (value.is_boolean()) {
+        *result = value.get<bool>() ? "true" : "false";
+        return true;
+    }
+
+    if (value.is_number_integer()) {
+        *result = std::to_string(value.get<JsonDocument::number_integer_t>());
+        return true;
+    }
+
+    if (value.is_number_unsigned()) {
+        *result = std::to_string(value.get<JsonDocument::number_unsigned_t>());
+        return true;
+    }
+
+    if (value.is_number_float()) {
+        *result = DoubleToString::DoubleToStringConverter(value.get<double>());
+        return true;
+    }
+
+    return false;
+}
+
+static const char *HandleJsonValueEmptyBehavior(int64_t contextPtr, int32_t emptyBehavior,
+    const char *defaultOnEmpty, int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull, bool *outIsNull,
+    int32_t *outLen)
+{
+    if (emptyBehavior == 2 && !defaultOnEmptyIsNull) {
+        *outIsNull = false;
+        *outLen = defaultOnEmptyLen;
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy_s(ret, *outLen + 1, defaultOnEmpty, *outLen + 1);
+        return ret;
+    }
+
+    if (emptyBehavior == 1) {
+        SetError(contextPtr, "JSON_VALUE error: Empty result");
+    }
+    *outIsNull = true;
+    *outLen = 0;
+    return nullptr;
 }
 
 extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
@@ -424,7 +470,12 @@ extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char
             return nullptr;
         }
 
-        std::string result = FormatJsonValueResult(*current);
+        std::string result;
+        if (!TryFormatJsonValueScalar(*current, &result)) {
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
         
         *outIsNull = false;
         *outLen = static_cast<int32_t>(result.size());
@@ -604,26 +655,15 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
         }
         
         if (!found || current->is_null()) {
-            // Empty result - apply empty behavior
-            if (emptyBehavior == 2 && !defaultOnEmptyIsNull) { // DEFAULT
-                *outIsNull = false;
-                *outLen = defaultOnEmptyLen;
-                auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-                memcpy_s(ret, *outLen + 1, defaultOnEmpty, *outLen + 1);
-                return ret;
-            } else if (emptyBehavior == 1) { // ERROR
-                SetError(contextPtr, "JSON_VALUE error: Empty result");
-                *outIsNull = true;
-                *outLen = 0;
-                return nullptr;
-            } else { // NULL
-                *outIsNull = true;
-                *outLen = 0;
-                return nullptr;
-            }
+            return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
+                defaultOnEmptyIsNull, outIsNull, outLen);
         }
-        
-        std::string result = FormatJsonValueResult(*current);
+
+        std::string result;
+        if (!TryFormatJsonValueScalar(*current, &result)) {
+            return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
+                defaultOnEmptyIsNull, outIsNull, outLen);
+        }
         
         *outIsNull = false;
         *outLen = static_cast<int32_t>(result.size());
@@ -902,6 +942,88 @@ std::string SerializeJsonSplitNumber(const JsonDocument &value)
     return result;
 }
 
+std::string TrimJsonSplitToken(const std::string &token)
+{
+    size_t start = 0;
+    while (start < token.size() && std::isspace(static_cast<unsigned char>(token[start]))) {
+        ++start;
+    }
+
+    size_t end = token.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(token[end - 1]))) {
+        --end;
+    }
+    return token.substr(start, end - start);
+}
+
+bool ExtractJsonSplitTopLevelElements(const std::string &jsonContent, std::vector<std::string> *elements)
+{
+    if (elements == nullptr) {
+        return false;
+    }
+
+    elements->clear();
+    std::string trimmedContent = TrimJsonSplitToken(jsonContent);
+    if (trimmedContent.size() < 2 || trimmedContent.front() != '[' || trimmedContent.back() != ']') {
+        return false;
+    }
+
+    size_t contentStart = 1;
+    size_t contentEnd = trimmedContent.size() - 1;
+    size_t elementStart = contentStart;
+    int32_t nestedDepth = 0;
+    bool inString = false;
+    bool isEscaped = false;
+
+    for (size_t index = contentStart; index < contentEnd; ++index) {
+        char current = trimmedContent[index];
+        if (inString) {
+            if (isEscaped) {
+                isEscaped = false;
+                continue;
+            }
+            if (current == '\\') {
+                isEscaped = true;
+                continue;
+            }
+            if (current == '"') {
+                inString = false;
+            }
+            continue;
+        }
+
+        if (current == '"') {
+            inString = true;
+            continue;
+        }
+        if (current == '[' || current == '{') {
+            ++nestedDepth;
+            continue;
+        }
+        if (current == ']' || current == '}') {
+            --nestedDepth;
+            continue;
+        }
+        if (current == ',' && nestedDepth == 0) {
+            elements->push_back(TrimJsonSplitToken(trimmedContent.substr(elementStart, index - elementStart)));
+            elementStart = index + 1;
+        }
+    }
+
+    std::string lastElement = TrimJsonSplitToken(trimmedContent.substr(elementStart, contentEnd - elementStart));
+    if (!lastElement.empty()) {
+        elements->push_back(lastElement);
+    }
+    return true;
+}
+
+std::string NormalizeJsonSplitNumberToken(const std::string &token)
+{
+    std::string normalized = TrimJsonSplitToken(token);
+    std::replace(normalized.begin(), normalized.end(), 'e', 'E');
+    return normalized;
+}
+
 std::string SerializeJsonSplitValue(const JsonDocument &value)
 {
     if (value.is_object()) {
@@ -916,21 +1038,37 @@ std::string SerializeJsonSplitValue(const JsonDocument &value)
     return value.dump();
 }
 
-bool TryParseJsonSplitContent(const std::string &jsonContent, JsonDocument *jsonData)
+bool TryParseJsonSplitContent(const std::string &jsonContent, JsonDocument *jsonData,
+    std::string *parsedJsonContent = nullptr)
 {
     if (TryParseJson(jsonContent, jsonData)) {
+        if (parsedJsonContent != nullptr) {
+            *parsedJsonContent = jsonContent;
+        }
         return true;
     }
     std::string repairedJsonContent = RepairEscapedQuotes(jsonContent);
     if (repairedJsonContent != jsonContent && TryParseJson(repairedJsonContent, jsonData)) {
+        if (parsedJsonContent != nullptr) {
+            *parsedJsonContent = repairedJsonContent;
+        }
         return true;
     }
     std::string normalizedJsonContent = NormalizeSingleQuotedJsonLike(jsonContent);
     if (normalizedJsonContent != jsonContent && TryParseJson(normalizedJsonContent, jsonData)) {
+        if (parsedJsonContent != nullptr) {
+            *parsedJsonContent = normalizedJsonContent;
+        }
         return true;
     }
-    return normalizedJsonContent != repairedJsonContent &&
-        TryParseJson(RepairEscapedQuotes(normalizedJsonContent), jsonData);
+    std::string repairedNormalizedJsonContent = RepairEscapedQuotes(normalizedJsonContent);
+    if (normalizedJsonContent != repairedJsonContent && TryParseJson(repairedNormalizedJsonContent, jsonData)) {
+        if (parsedJsonContent != nullptr) {
+            *parsedJsonContent = repairedNormalizedJsonContent;
+        }
+        return true;
+    }
+    return false;
 }
 } // namespace
 
@@ -956,7 +1094,8 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
 
     try {
         JsonDocument jsonData;
-        if (!TryParseJsonSplitContent(jsonContent, &jsonData)) {
+        std::string parsedJsonContent;
+        if (!TryParseJsonSplitContent(jsonContent, &jsonData, &parsedJsonContent)) {
             *outIsNull = true;
             *outLen = 0;
             return nullptr;
@@ -969,6 +1108,10 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
             return nullptr;
         }
 
+        std::vector<std::string> rawElements;
+        bool hasRawElements = ExtractJsonSplitTopLevelElements(parsedJsonContent, &rawElements)
+            && rawElements.size() == jsonData.size();
+
         // Join all elements with CRLF delimiter
         std::string result;
         for (size_t i = 0; i < jsonData.size(); i++) {
@@ -978,6 +1121,9 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
             const JsonDocument& element = jsonData[i];
             if (element.is_string()) {
                 result += element.get<std::string>();
+            } else if (hasRawElements && element.is_number()) {
+                // Preserve the original numeric token so json_split matches Fastjson BigDecimal text semantics.
+                result += NormalizeJsonSplitNumberToken(rawElements[i]);
             } else {
                 result += SerializeJsonSplitValue(element);
             }
