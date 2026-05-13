@@ -10,4 +10,5 @@
 namespace omniruntime::vectorization {
 void RegisterToTimestampFunction(const std::string &name);
 void RegisterToUnixTimestampFunction(const std::string &name);
+void RegisterToDateFunction(const std::string &name);
 }

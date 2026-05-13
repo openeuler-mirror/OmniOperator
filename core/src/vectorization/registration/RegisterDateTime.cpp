@@ -56,8 +56,9 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterWeekdayFunction(prefix + "weekday");
     RegisterYearOfWeekFunction(prefix + "year_of_week");
     // Register as "trunc_date" to match Gluten mapping (Substrait "trunc" -> "trunc_date")
-    // and codegen layer registration
+    // and codegen layer registration; "trunc" alias for direct Omni function lookup
     RegisterTruncFunction(prefix + "trunc_date");
+    RegisterTruncFunction(prefix + "trunc");
     RegisterAddMonthsFunction(prefix + "add_months");
     RegisterDateAddFunction(prefix + "date_add");
     RegisterDateSubFunction(prefix + "date_sub");
@@ -74,6 +75,7 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterDateFromUnixDateFunction(prefix + "date_from_unix_date");
 
     RegisterToTimestampFunction(prefix + "get_timestamp");
+    RegisterToDateFunction(prefix + "to_date");
     RegisterToUnixTimestampFunction(prefix + "to_unix_timestamp");
     RegisterToUnixTimestampFunction(prefix + "unix_timestamp");
 
