@@ -84,10 +84,10 @@ bool ALWAYS_INLINE DoVariableTypeCompare(const std::string_view &inValue, uint8_
     return comp == 0;
 }
 
-template <DataTypeId id> bool VariableTypeComparator(BaseVector *baseVector, size_t rowIdx, uint8_t *&pos)
+template <DataTypeId id> bool VariableTypeComparator(BaseVector &baseVector, size_t rowIdx, uint8_t *&pos)
 {
     using RealVector = typename NativeAndVectorType<id>::vector;
-    auto realVector = static_cast<RealVector *>(baseVector);
+    auto realVector = static_cast<RealVector *>(&baseVector);
     std::string_view value = realVector->GetValue(rowIdx);
     auto rowLenSize = *reinterpret_cast<const uint8_t *>(pos);
 
@@ -95,7 +95,7 @@ template <DataTypeId id> bool VariableTypeComparator(BaseVector *baseVector, siz
         return DoVariableTypeCompare(value, pos);
     } else {
         pos += sizeof(uint8_t);
-        return baseVector->IsNull(rowIdx);
+        return baseVector.IsNull(rowIdx);
     }
 }
 
@@ -310,8 +310,8 @@ const char *ArrayVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, cons
     return begin;
 }
 
-bool ArrayVectorComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&begin) {
-    auto arrayVector = dynamic_cast<ArrayVector *>(baseVector);
+bool ArrayVectorComparator(BaseVector &baseVector, int32_t rowIdx, uint8_t *&begin) {
+    auto arrayVector = dynamic_cast<ArrayVector *>(&baseVector);
     uint8_t sizeLenSize = *reinterpret_cast<const uint8_t *>(begin);
     begin += sizeof(uint8_t);
     int64_t leftOffset = arrayVector->GetOffset(rowIdx);
@@ -354,7 +354,7 @@ bool ArrayVectorComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&beg
         if (comparator == nullptr) {
             throw OmniException("ArrayVector's ElementVec Deserializer failed : Unsupport elementTypeId", std::to_string(elementTypeId));
         }
-        if (!comparator(elementVec, i, begin)) {
+        if (!comparator(*elementVec, i, begin)) {
             return false;
         }
     }
@@ -419,8 +419,8 @@ const char *RowVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, const 
     return begin;
 }
 
-bool RowVectorComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&begin) {
-    auto rowVector = dynamic_cast<RowVector *>(baseVector);
+bool RowVectorComparator(BaseVector &baseVector, int32_t rowIdx, uint8_t *&begin) {
+    auto rowVector = dynamic_cast<RowVector *>(&baseVector);
     rowVector->Expand(rowIdx + 1);
 
     uint8_t countLenSize = *begin;
@@ -428,7 +428,7 @@ bool RowVectorComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&begin
     int32_t childNum = rowVector->ChildSize();
 
     if (countLenSize == 0) {
-        return baseVector->IsNull(rowIdx);
+        return baseVector.IsNull(rowIdx);
     }
 
     int32_t childCount = 0;
@@ -463,7 +463,7 @@ bool RowVectorComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&begin
         if (comparator == nullptr) {
             throw OmniException("RowVector's field Comparator failed : Unsupport childTypeId", std::to_string(childTypeId));
         }
-        if (!comparator(childVec.get(), rowIdx, begin)) {
+        if (!comparator(*childVec, rowIdx, begin)) {
             return false;
         }
     }
@@ -547,18 +547,18 @@ template <typename T> const bool DoFixedLenTypeCompare(T right, uint8_t *&pos)
     return left == right;
 }
 
-template <DataTypeId id> const bool FixedLenTypeComparator(BaseVector *baseVector, size_t rowIdx, uint8_t *&pos)
+template <DataTypeId id> const bool FixedLenTypeComparator(BaseVector &baseVector, size_t rowIdx, uint8_t *&pos)
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
     using RealVector = typename NativeAndVectorType<id>::vector;
-    auto realVector = static_cast<RealVector *>(baseVector);
+    auto realVector = static_cast<RealVector *>(&baseVector);
     auto rowDataSize = *(reinterpret_cast<const uint8_t *>(pos));
     if (rowDataSize != 0) {
         RawDataType right = realVector->GetValue(rowIdx);
         return DoFixedLenTypeCompare<RawDataType>(right, pos);
     } else {
         pos += sizeof(uint8_t);
-        return baseVector->IsNull(rowIdx);
+        return baseVector.IsNull(rowIdx);
     }
 }
 
@@ -745,11 +745,11 @@ const char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const
 }
 
 template <type::DataTypeId id>
-const bool DictionaryComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&pos)
+const bool DictionaryComparator(BaseVector &baseVector, int32_t rowIdx, uint8_t *&pos)
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
-    if (!baseVector->IsNull(rowIdx)) {
-        auto dictionaryVector = static_cast<Vector<DictionaryContainer<RawDataType>> *>(baseVector);
+    if (!baseVector.IsNull(rowIdx)) {
+        auto dictionaryVector = static_cast<Vector<DictionaryContainer<RawDataType>> *>(&baseVector);
 
         auto value = dictionaryVector->GetValue(rowIdx);
         // the analysis of const expr  will be in compile stage
@@ -767,11 +767,11 @@ const bool DictionaryComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t 
 }
 
 template <type::DataTypeId id>
-const bool ConstComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&pos)
+const bool ConstComparator(BaseVector &baseVector, int32_t rowIdx, uint8_t *&pos)
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
-    if (!baseVector->IsNull(rowIdx)) {
-        auto constVector = static_cast<ConstVector<RawDataType> *>(baseVector);
+    if (!baseVector.IsNull(rowIdx)) {
+        auto constVector = static_cast<ConstVector<RawDataType> *>(&baseVector);
         auto value = constVector->GetConstValue();
         // the analysis of const expr  will be in compile stage
         if constexpr (std::is_same_v<RawDataType, std::string_view>) {
@@ -788,7 +788,7 @@ const bool ConstComparator(BaseVector *baseVector, int32_t rowIdx, uint8_t *&pos
 }
 
 template <type::DataTypeId id>
-const bool ComparatorFromPointer(BaseVector *baseVector, int32_t rowIdx, uint8_t *&row)
+const bool ComparatorFromPointer(BaseVector &baseVector, int32_t rowIdx, uint8_t *&row)
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
     // the analysis of const expr  will be in compile stage

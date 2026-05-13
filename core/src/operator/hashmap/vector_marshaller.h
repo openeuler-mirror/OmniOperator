@@ -37,7 +37,7 @@ using SerializerFunc = void (*)(BaseVector *baseVector, int32_t rowIdx, mem::Sim
                                 type::StringRef &result);
 using DeSerializerFunc = const char *(*)(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
 
-using VectorComparator = const bool (*)(BaseVector *baseVector, int32_t rowIdx, uint8_t *&begin);
+using VectorComparator = const bool (*)(BaseVector &baseVector, int32_t rowIdx, uint8_t *&begin);
 
 template <type::DataTypeId id> char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
 

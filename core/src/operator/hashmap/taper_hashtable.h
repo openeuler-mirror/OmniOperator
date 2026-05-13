@@ -413,7 +413,7 @@ class TaperHashTableBase : public TaperContainer {
 
   void Init(uint32_t lastChunkIdx) {
     auto chunkCapacity = lastChunkIdx + 1;
-    OMNI_CHECK_D(isValidCapacity(chunkCapacity));
+    OMNI_CHECK_D(IsValidCapacity(chunkCapacity));
 
     auto bytesNum = chunkCapacity * sizeof(TaperHashTableChunk);
     chunks_ = reinterpret_cast<ChunkPtr>(pool.Allocate(bytesNum));
@@ -461,10 +461,10 @@ class TaperHashTableBase : public TaperContainer {
         p1RehashCollisionCount_++;
       }
 #endif
-      OMNI_CHECK_D(collisionBatch <= getChunksCapacity());
-      if (shouldExpand()) {
-        expandCapacityDirectly(derived);
-        chunkPos = getChunkPos(hashVal);
+      OMNI_CHECK_D(collisionBatch <= GetChunksCapacity());
+      if (ShouldExpand()) {
+        ExpandCapacityDirectly(derived);
+        chunkPos = GetChunkPos(hashVal);
         collisionBatch = 1;
       } else {
         chunkPos = GetRehashPos(collisionBatch, chunkPos);
@@ -717,7 +717,7 @@ class TaperHashTableBase : public TaperContainer {
     while (collisionCount > 0) {
       auto curCount = collisionCount;
       collisionCount = 0;
-      OMNI_CHECK_D(collisionBatch < getChunksCapacity());
+      OMNI_CHECK_D(collisionBatch < GetChunksCapacity());
       collisionBatch++;
       HwpPrefetch(rehashContext_.chunkPositions, curCount);
       for (size_t srcItemIdx = 0; srcItemIdx < curCount; srcItemIdx++) {
