@@ -219,6 +219,8 @@ private:
     int32_t totalAggStatesSize = 0;
     VectorAnalyzer *vectorAnalyzer = nullptr;
     std::vector<AggregateState *> rowsAggStates;
+    std::vector<AggregateState *> currentRowStates;
+    std::vector<AggregateState *> newGroupStates;
     int8_t resizeArrayMapCnt = 0;
 };
 

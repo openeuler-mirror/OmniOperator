@@ -239,6 +239,25 @@ OmniStatus HashAggregationOperator::Init()
     if (groupByColumnsHandleType == HandleType::serialize) {
         serialize = std::make_unique<TaperColumnSerializeHandler>(*executionContext->GetArena(), totalAggStatesSize);
         serialize->InitSize(groupByCols.size());
+        // Initialize RowContainer with key type sizes for the serialize handler
+        // Multi-column group-by uses nullable keys (speculative mode)
+        std::vector<int32_t> keySizes;
+        keySizes.reserve(groupByCols.size());
+        for (const auto &c : groupByCols) {
+            keySizes.push_back(OperatorUtil::GetTypeSize(c.input));
+        }
+        // For complex types (VARCHAR, ARRAY, ROW), we need extra space for StringRef (char* + size_t)
+        std::vector<bool> isVariableLen(groupByCols.size(), false);
+        for (size_t i = 0; i < groupByCols.size(); ++i) {
+            auto typeId = groupByCols[i].input->GetId();
+            if (typeId == type::OMNI_CHAR || typeId == type::OMNI_VARCHAR || typeId == type::OMNI_VARBINARY ||
+                typeId == type::OMNI_ARRAY || typeId == type::OMNI_MAP || typeId == type::OMNI_ROW) {
+                // Override the key size to sizeof(char*) + sizeof(size_t) for StringRef storage
+                keySizes[i] = sizeof(char*) + sizeof(size_t);
+                isVariableLen[i] = true;
+            }
+        }
+        serialize->InitRowContainer(keySizes, isVariableLen, *executionContext->GetArena());
     } else if (groupByColumnsHandleType == HandleType::fixedInt32) {
         fixedInt32 = std::make_unique<TaperGroupbySingleFixHandler<int32_t>>(*executionContext->GetArena(), totalAggStatesSize);
     } else if (groupByColumnsHandleType == HandleType::fixedInt64) {
@@ -367,7 +386,6 @@ void HashAggregationOperator::MoveEntryArrayTableToHashMap(int64_t minValue)
 
 int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
-    // VectorHelper::PrintVecBatch(vecBatch);
     setInputedData(true);
     auto rowCount = vecBatch->GetRowCount();
     if (rowCount <= 0) {
@@ -990,11 +1008,26 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
     size_t aggNum = aggregators.size();
     auto *curVector = groupVectors[0];
     auto curEncoding = curVector->GetEncoding();
-    std::vector<AggregateState *> currentRowStates(rowCount);
-    std::vector<AggregateState *> newGroupStates;
+    currentRowStates.resize(rowCount);
+    newGroupStates.reserve(rowCount);
     emplaceKey->EmplaceTable(groupVectors, groupColNum, rowCount, currentRowStates, newGroupStates, curEncoding);
     if (aggNum == 0) {
         return;
+    }
+
+    // For the serialize handler, adjust state pointers to point to AggState offset
+    // In the new RowContainer layout, keys are at the beginning and
+    // AggState is at aggStateOffset(). The pointers returned by EmplaceTable
+    // point to the row beginning (key data). We need to shift them to
+    // point to the AggState region for aggregator processing.
+    if (groupByColumnsHandleType == HandleType::serialize && serialize != nullptr) {
+        int32_t aggStateOffset = serialize->AggStateOffset();
+        for (int32_t i = 0; i < rowCount; ++i) {
+            currentRowStates[i] = currentRowStates[i] + aggStateOffset;
+        }
+        for (auto &state : newGroupStates) {
+            state = state + aggStateOffset;
+        }
     }
 
     if (aggFiltersCount > 0) {
@@ -1020,6 +1053,7 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
             aggregator->ProcessGroup(currentRowStates, vecBatch, 0);
         }
     }
+    newGroupStates.clear();
 }
 
 template<typename Deserialize>
@@ -1034,14 +1068,33 @@ void HashAggregationOperator::TraverseHashmapToGetOneResult(Deserialize &deseria
 
     std::vector<AggregateState *> groupStates(expectSize);
 
-    deserializeHashmap->Extract(expectSize, outputState,
-        [&](const auto &key, uint8_t *value, int32_t idx) mutable {
-            deserializeHashmap->ParseKeyToCols(key, groupOutputVectors, groupColNum, idx);
-            groupStates[idx] = value;
-        }, [&](const auto &key, uint8_t *value, int32_t idx) mutable {
-            deserializeHashmap->ParseNull(key, groupOutputVectors, groupColNum, idx);
-            groupStates[idx] = value;
-    });
+    // For the serialize handler, use the new RowContainer-based Extract
+    // which returns row pointers with key data at column offsets and
+    // AggState at aggStateOffset
+    if (groupByColumnsHandleType == HandleType::serialize && serialize != nullptr) {
+        int32_t aggStateOffset = serialize->AggStateOffset();
+        serialize->Extract(expectSize, outputState,
+            [&](uint8_t* rowPtr, uint8_t* value, int32_t idx) mutable {
+                // Parse key columns from RowContainer row
+                serialize->ParseKeyToCols(rowPtr, groupOutputVectors, groupColNum, idx);
+                // AggState is at row + aggStateOffset
+                groupStates[idx] = reinterpret_cast<AggregateState*>(rowPtr + aggStateOffset);
+            }, [&](uint8_t* rowPtr, uint8_t* value, int32_t idx) mutable {
+                // Null key row
+                serialize->ParseNull(reinterpret_cast<char*>(rowPtr), groupOutputVectors, groupColNum, idx);
+                groupStates[idx] = reinterpret_cast<AggregateState*>(rowPtr + aggStateOffset);
+            });
+    } else {
+        // For fixed/packed handlers, use the existing hash table traversal
+        deserializeHashmap->Extract(expectSize, outputState,
+            [&](const auto &key, uint8_t *value, int32_t idx) mutable {
+                deserializeHashmap->ParseKeyToCols(key, groupOutputVectors, groupColNum, idx);
+                groupStates[idx] = value;
+            }, [&](const auto &key, uint8_t *value, int32_t idx) mutable {
+                deserializeHashmap->ParseNull(key, groupOutputVectors, groupColNum, idx);
+                groupStates[idx] = value;
+        });
+    }
 
     const size_t aggNum = this->aggregators.size();
     if (aggNum > 0) {
@@ -1159,7 +1212,7 @@ ErrorCode HashAggregationOperator::SpillToDisk()
     OutputState curOutputState;
     {
         if (serialize != nullptr) {
-            serialize->Extract<true>(totalSpillCount, spillOutputState,
+            serialize->SpillExtract(totalSpillCount, spillOutputState,
             [&](const auto &key, int64_t hashVal, uint8_t *value, int32_t idx) mutable {
                 aggregationSortPtr->ParseHashMapToVectorWithHashVal(key, value, idx, hashVal);
                 }, [&](const auto &key, int64_t hashVal, uint8_t *value, int32_t idx) mutable {
