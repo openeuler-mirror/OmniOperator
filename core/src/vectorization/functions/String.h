@@ -1848,4 +1848,78 @@ struct StaticInvokeCharReadPaddingFunction {
     }
 };
 
+template <typename T>
+struct InstrFunction {
+    ALWAYS_INLINE void call(int32_t &result, const std::string_view &string, const std::string_view &subString)
+    {
+        if (subString.empty()) {
+            result = 1;
+            return;
+        }
+        if (subString.size() > string.size()) {
+            result = 0;
+            return;
+        }
+
+        auto pos = stringImpl::StringPosition<false, true>(string, subString, 1);
+        result = static_cast<int32_t>(pos);
+    }
+};
+
+template <typename T>
+struct ReplaceFunction {
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &str, 
+        const std::string_view &pattern, const std::string_view &replacement)
+    {
+        return doReplace(result, str, pattern, replacement);
+    }
+
+private:
+    ALWAYS_INLINE bool doReplace(std::string &result, const std::string_view &str, 
+        const std::string_view &pattern, const std::string_view &replacement)
+    {
+        // If pattern is empty, return original string
+        if (pattern.empty()) {
+            result.assign(str.data(), str.size());
+            return true;
+        }
+
+        // If str is empty, return empty string
+        if (str.empty()) {
+            result.clear();
+            return true;
+        }
+
+        // Count occurrences to pre-allocate result buffer
+        size_t count = 0;
+        size_t pos = 0;
+        size_t patternLen = pattern.size();
+        
+        while ((pos = str.find(pattern, pos)) != std::string_view::npos) {
+            count++;
+            pos += patternLen;
+        }
+
+        // Calculate result size and reserve memory
+        size_t resultSize = str.size() + count * (replacement.size() - patternLen);
+        result.reserve(resultSize);
+
+        // Perform replacement
+        pos = 0;
+        size_t lastPos = 0;
+        while ((pos = str.find(pattern, lastPos)) != std::string_view::npos) {
+            // Append part before the match
+            result.append(str.data() + lastPos, pos - lastPos);
+            // Append replacement
+            result.append(replacement.data(), replacement.size());
+            lastPos = pos + patternLen;
+        }
+
+        // Append remaining part after last match
+        result.append(str.data() + lastPos, str.size() - lastPos);
+
+        return true;
+    }
+};
+
 }
