@@ -37,6 +37,14 @@ template <> struct GroupbyHashCalculator<std::string> {
     }
 };
 
+template <> struct GroupbyHashCalculator<std::string_view> {
+    size_t operator () (const std::string_view &str) const
+    {
+        return static_cast<size_t>(omniruntime::op::HashUtil::HashValue(
+            reinterpret_cast<int8_t *>(const_cast<char *>(str.data())), static_cast<int32_t>(str.size())));
+    }
+};
+
 template <> struct GroupbyHashCalculator<int32_t> {
     size_t operator () (const int32_t data) const
     {

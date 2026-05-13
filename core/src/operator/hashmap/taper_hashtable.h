@@ -1132,6 +1132,6 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
     }
   }
 };
-} // namespace bytedance::bolt::exec
+} // namespace omniruntime::op
 
 #undef DUMMY_CMP
