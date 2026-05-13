@@ -463,6 +463,8 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     }
 
     if (LIKELY(groupByColumnsHandleType == HandleType::serialize)) {
+        // Decode all group-by columns upfront to eliminate encoding branches in hot path
+        serialize->DecodeGroupByColumns(groupVectors, groupColNum, rowCount);
         Emplace(serialize, vecBatch, groupVectors, groupColNum);
     } else if (groupByColumnsHandleType == HandleType::fixedInt32) {
         Emplace(fixedInt32, vecBatch, groupVectors, groupColNum);
@@ -1006,16 +1008,17 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
 {
     int32_t rowCount = vecBatch->GetRowCount();
     size_t aggNum = aggregators.size();
-    auto *curVector = groupVectors[0];
-    auto curEncoding = curVector->GetEncoding();
     currentRowStates.resize(rowCount);
     newGroupStates.reserve(rowCount);
+
+    auto *curVector = groupVectors[0];
+    auto curEncoding = curVector->GetEncoding();
     emplaceKey->EmplaceTable(groupVectors, groupColNum, rowCount, currentRowStates, newGroupStates, curEncoding);
     if (aggNum == 0) {
         return;
     }
 
-    // For the serialize handler, adjust state pointers to point to AggState offset
+    // Adjust state pointers to point to AggState offset
     // In the new RowContainer layout, keys are at the beginning and
     // AggState is at aggStateOffset(). The pointers returned by EmplaceTable
     // point to the row beginning (key data). We need to shift them to
