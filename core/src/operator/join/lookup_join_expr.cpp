@@ -172,6 +172,7 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
         probeOutputColsCount, this->probeHashCols.data(), probeHashKeysCount, buildOutputCols, buildOutputColsCount,
         std::move(buildOutputTypes), (int64_t)(hashBuilderOperatorFactory),
         filterExpr, probeTypes.GetSize(), isShuffleExchangeBuildPlan, overflowConfig, outputList);
+    this->operatorFactory->SetJoinSpillState(hashBuilderOperatorFactory->GetJoinSpillState());
 }
 
 LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataTypes &probeTypes,
@@ -185,6 +186,8 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     overflowConfig, outputList)
 {
     this->queryConfig_ = queryConfig;
+    this->operatorFactory->SetJoinSpillPolicy(queryConfig.joinSpillEnabled(),
+        queryConfig.maxSpillRunRows(), JoinSubPartitionConfig::FromQueryConfig(queryConfig));
 }
 
 LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()

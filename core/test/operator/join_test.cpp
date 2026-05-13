@@ -14,6 +14,7 @@
 #include "operator/join/lookup_outer_join.h"
 #include "vector/vector_helper.h"
 #include "util/config_util.h"
+#include "util/native_log.h"
 #include "util/test_util.h"
 
 using namespace omniruntime::op;
@@ -33,6 +34,22 @@ const int32_t VEC_BATCH_COUNT_1 = 1;
 const int32_t BUILD_POSITION_COUNT = 1000;
 const int32_t PROBE_POSITION_COUNT = 1000;
 const int32_t TIME_TO_SLEEP = 100;
+
+class DebugLogGuard {
+public:
+    DebugLogGuard() : oldDebugEnable_(g_isDebugEnable)
+    {
+        g_isDebugEnable = true;
+    }
+
+    ~DebugLogGuard()
+    {
+        g_isDebugEnable = oldDebugEnable_;
+    }
+
+private:
+    bool oldDebugEnable_;
+};
 
 void DeleteJoinOperatorFactory(HashBuilderOperatorFactory *hashBuilderOperatorFactory,
     LookupJoinOperatorFactory *lookupJoinOperatorFactory,
@@ -299,6 +316,50 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithOneBuildOp)
     VectorBatch *expectVecBatch = ConstructSimpleExpectedData();
     EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
+    DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
+}
+
+TEST(NativeOmniJoinTest, TestInnerJoinWithInMemorySubPartition)
+{
+    JoinTest::DebugLogGuard debugLogGuard;
+    JoinSubPartitionConfig subPartCfg;
+    subPartCfg.numSubPartitions = 4;
+    subPartCfg.startPartitionBit = 0;
+    subPartCfg.activeSubPartition = 0;
+
+    VectorBatch *vecBatch = ConstructSimpleBuildData();
+    HashBuilderOperatorFactory *hashBuilderFactory = CreateSimpleBuildFactory(4, OMNI_JOIN_TYPE_INNER);
+    hashBuilderFactory->SetJoinSpillSubPartitionPolicy(true, 1, subPartCfg);
+    auto *hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(hashBuilderFactory->CreateOperator());
+
+    testing::internal::CaptureStdout();
+    hashBuilderOperator->AddInput(vecBatch);
+    VectorBatch *hashBuildOutput = nullptr;
+    hashBuilderOperator->GetOutput(&hashBuildOutput);
+    const auto buildLogs = testing::internal::GetCapturedStdout();
+
+    VectorBatch *probeVecBatch = ConstructSimpleProbeData();
+    LookupJoinOperatorFactory *lookupJoinFactory = CreateSimpleProbeFactory(hashBuilderFactory);
+    lookupJoinFactory->SetJoinSpillPolicy(true, 1, subPartCfg);
+    auto *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
+
+    testing::internal::CaptureStdout();
+    lookupJoinOperator->AddInput(probeVecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    lookupJoinOperator->GetOutput(&outputVecBatch);
+    const auto probeLogs = testing::internal::GetCapturedStdout();
+
+    VectorBatch *expectVecBatch = ConstructSimpleExpectedData();
+    EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_NE(buildLogs.find("partitioned_input_rows=10"), std::string::npos);
+    EXPECT_NE(buildLogs.find("built_subpartition_hash_tables=4"), std::string::npos);
+    EXPECT_NE(probeLogs.find("merged_subpartition_output_rows="), std::string::npos);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);

@@ -4,10 +4,16 @@
  */
 #include <vector>
 #include <memory>
+#include <iostream>
+#include <algorithm>
+#include <sstream>
+#include <utility>
+#include "operator/spill/spiller.h"
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
 #include "simd/simd.h"
 #include "hash_builder.h"
+#include "join_spill_state.h"
 #include "lookup_join.h"
 
 
@@ -15,6 +21,39 @@ static constexpr int8_t BUFFER_SIZE = 8;
 
 using namespace omniruntime::vec;
 namespace omniruntime::op {
+namespace {
+
+/// estimate the disk space required for data spill.
+/// estimate one element of table can use a maximum of 4096 bytes.
+/// todo: is it better that we get an actural bytes of batch?
+uint64_t EstimateJoinSpillVectorBatchSize(VectorBatch *batch)
+{
+    if (batch == nullptr || batch->GetRowCount() <= 0) {
+        return 0;
+    }
+
+    // estimate=max(4096, R * C * 4096)
+    return std::max<uint64_t>(4096, static_cast<uint64_t>(batch->GetRowCount()) *
+        static_cast<uint64_t>(std::max(1, batch->GetVectorCount())) * 4096);
+}
+
+/// we get a positions vector after sub partition, and we do copy for geting one subBatch by rowIds from source VectorBatch
+VectorBatch *CopyRowsForJoinSpill(VectorBatch *source, const std::vector<int32_t> &positions)
+{
+    if (source == nullptr || positions.empty()) {
+        return nullptr;
+    }
+    auto *subBatch = new VectorBatch(static_cast<int32_t>(positions.size()));
+    const int32_t vectorCount = source->GetVectorCount();
+    subBatch->ResizeVectorCount(vectorCount);
+    for (int32_t col = 0; col < vectorCount; ++col) {
+        subBatch->SetVector(col, VectorHelper::CopyPositionsVector(
+            source->Get(col), positions.data(), 0, static_cast<int32_t>(positions.size())));
+    }
+    return subBatch;
+}
+
+} // namespace
 
 void LookupJoinOperatorFactory::CommonInitActions(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
@@ -161,6 +200,9 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
 
     delete overflowConfig;
     overflowConfig = nullptr;
+    pLookupJoinOperatorFactory->SetJoinSpillPolicy(queryConfig.joinSpillEnabled(),
+        queryConfig.maxSpillRunRows(), JoinSubPartitionConfig::FromQueryConfig(queryConfig));
+    pLookupJoinOperatorFactory->SetJoinSpillState(hashBuilderOperatorFactory->GetJoinSpillState());
     return pLookupJoinOperatorFactory;
 }
 
@@ -168,8 +210,22 @@ Operator *LookupJoinOperatorFactory::CreateOperator()
 {
     auto pLookupJoinOperator = new LookupJoinOperator(probeTypes, probeOutputCols, probeHashCols, probeHashColTypes,
         buildOutputCols, buildOutputTypes, hashTables, simpleFilter,
-        originalProbeColsCount, rowSize, isShuffleExchangeBuildPlan, outputList);
+        originalProbeColsCount, rowSize, isShuffleExchangeBuildPlan, outputList, joinSpillEnabled_,
+        joinMaxSpillRunRows_, joinSubPartCfg_, joinSpillState_.get());
     return pLookupJoinOperator;
+}
+
+void LookupJoinOperatorFactory::SetJoinSpillPolicy(
+    bool joinSpillEnabled, uint64_t maxSpillRunRows, JoinSubPartitionConfig joinSubPartCfg)
+{
+    joinSpillEnabled_ = joinSpillEnabled;
+    joinMaxSpillRunRows_ = maxSpillRunRows;
+    joinSubPartCfg_ = joinSubPartCfg;
+}
+
+void LookupJoinOperatorFactory::SetJoinSpillState(std::shared_ptr<JoinSpillState> joinSpillState)
+{
+    joinSpillState_ = std::move(joinSpillState);
 }
 
 void LookupJoinOperatorFactory::JoinFilterCodeGen(Expr *filterExpr, OverflowConfig *overflowConfig)
@@ -189,7 +245,8 @@ void LookupJoinOperatorFactory::JoinFilterCodeGen(Expr *filterExpr, OverflowConf
 LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
     std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes, std::vector<int32_t> &buildOutputCols,
     const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables, SimpleFilter *simpleFilter,
-    int32_t originalProbeColsCount, int32_t outputRowSize, bool isShuffleExchangeBuildPlan)
+    int32_t originalProbeColsCount, int32_t outputRowSize, bool isShuffleExchangeBuildPlan, bool joinSpillEnabled,
+    uint64_t joinMaxSpillRunRows, JoinSubPartitionConfig joinSubPartCfg, JoinSpillState *joinSpillState)
     : probeTypes(probeTypes),
       probeOutputCols(probeOutputCols),
       probeHashCols(probeHashCols),
@@ -199,8 +256,16 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
       hashTables(hashTables),
       simpleFilter(simpleFilter),
       originalProbeColsCount(originalProbeColsCount),
-      isShuffleExchangeBuildPlan(isShuffleExchangeBuildPlan)
+      isShuffleExchangeBuildPlan(isShuffleExchangeBuildPlan),
+      joinSpillEnabled_(joinSpillEnabled),
+      joinMaxSpillRunRows_(joinMaxSpillRunRows),
+      joinSubPartCfg_(joinSubPartCfg),
+      useJoinSubPartitioning_(joinSpillEnabled && joinMaxSpillRunRows > 0 && joinSubPartCfg.IsEnabled() &&
+          std::visit([&](auto &&arg) { return arg.GetHashTableCount(); }, *hashTables) ==
+              joinSubPartCfg.numSubPartitions),
+      joinSpillState_(joinSpillState)
 {
+    probeSpillFiles_.resize(joinSubPartCfg_.numSubPartitions);
     std::vector<DataTypePtr> tmpProbeOutputTypesVec;
     for (size_t i = 0; i < probeOutputCols.size(); i++) {
         tmpProbeOutputTypesVec.emplace_back(probeTypes.GetType(probeOutputCols[i]));
@@ -246,9 +311,12 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
 LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
     std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes, std::vector<int32_t> &buildOutputCols,
     const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables, SimpleFilter *simpleFilter,
-    int32_t originalProbeColsCount, int32_t outputRowSize, bool isShuffleExchangeBuildPlan, std::vector<int32_t> &outputList)
+    int32_t originalProbeColsCount, int32_t outputRowSize, bool isShuffleExchangeBuildPlan, std::vector<int32_t> &outputList,
+    bool joinSpillEnabled, uint64_t joinMaxSpillRunRows, JoinSubPartitionConfig joinSubPartCfg,
+    JoinSpillState *joinSpillState)
     : LookupJoinOperator(probeTypes, probeOutputCols, probeHashCols, probeHashColTypes, buildOutputCols, buildOutputTypes,
-    hashTables, simpleFilter, originalProbeColsCount, outputRowSize, isShuffleExchangeBuildPlan)
+    hashTables, simpleFilter, originalProbeColsCount, outputRowSize, isShuffleExchangeBuildPlan, joinSpillEnabled,
+    joinMaxSpillRunRows, joinSubPartCfg, joinSpillState)
 {
 	this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeOutputCols, probeOutputTypes.GetIds(),
 																	buildOutputCols, buildOutputTypes,
@@ -267,6 +335,148 @@ LookupJoinOperator::~LookupJoinOperator()
     delete[] buildFilterTypeIds;
 }
 
+/// One Join Task has one probeSize partition, one probeSize partition has multi batches input
+bool LookupJoinOperator::TrySpillCurrentProbeInput(omniruntime::vec::VectorBatch *vecBatch)
+{
+    if (!UseJoinSubPartitioning() || joinSpillState_ == nullptr ||
+        static_cast<uint64_t>(vecBatch->GetRowCount()) < joinMaxSpillRunRows_) {
+        return false;
+    }
+    if (probeSpillFiles_.size() != joinSubPartCfg_.numSubPartitions) {
+        probeSpillFiles_.assign(joinSubPartCfg_.numSubPartitions, {});
+    }
+    const uint64_t runId = joinSpillState_->NextRunId();
+
+    // do subpartition for probeSize, get partitionId for every row
+    // also all NULL value will be puted in subpartition 0.
+    JoinSubPartitioner partitioner(joinSubPartCfg_);
+    const auto buckets = partitioner.PartitionRowsByKeyColumns(vecBatch, probeTypes, probeHashCols);
+    std::vector<std::vector<int32_t>> positions(joinSubPartCfg_.numSubPartitions);
+    // store multi postition vector for probeSize, one subpartition one position vector
+    for (size_t row = 0; row < buckets.size(); ++row) {
+        // std::vector<std::vector<int32_t>>: (partitionId : {rowId1, rowId2, ....})
+        // get rowId vector for each partitionId
+        positions[buckets[row]].push_back(static_cast<int32_t>(row));
+    }
+
+    // keep subpartition 0 in memory
+    std::unique_ptr<VectorBatch> activeBatch(CopyRowsForJoinSpill(vecBatch, positions[0]));
+    bool spilledAny = false;
+
+    for (uint32_t subPartition = 1; subPartition < joinSubPartCfg_.numSubPartitions; ++subPartition) {
+        // spilt source batch to subbatches by rowIds
+        auto subBatch = std::unique_ptr<VectorBatch>(CopyRowsForJoinSpill(vecBatch, positions[subPartition]));
+        if (subBatch == nullptr) {
+            continue;
+        }
+        const std::string path = joinSpillState_->ProbeSubPartitionDir(runId, subPartition);
+
+
+        // spill subBatch to disk
+        SpillWriter writer(probeTypes, path);
+        auto status = writer.WriteVecBatch(subBatch.get(), EstimateJoinSpillVectorBatchSize(subBatch.get()));
+        if (status != ErrorCode::SUCCESS) {
+            throw OmniException("JOIN_SPILL_WRITE_FAILED", "Failed to spill probe side input.");
+        }
+        status = writer.Close();
+        if (status != ErrorCode::SUCCESS) {
+            throw OmniException("JOIN_SPILL_WRITE_FAILED", "Failed to close probe side spill writer.");
+        }
+
+        auto file = writer.GetSpillFileInfo();
+        probeSpillFiles_[subPartition].push_back(ProbeSpillFile{runId, subPartition, file});
+        probeSpilledRows_ += static_cast<uint64_t>(subBatch->GetRowCount());
+        if (UNLIKELY(IsDebugEnable())) {
+            std::ostringstream oss;
+            oss << "[OmniRuntime][JoinSpill][probe] write runId=" << runId << " subPartition=" << subPartition
+                << " rows=" << subBatch->GetRowCount() << " path=" << file.filePath << " fileLength="
+                << file.fileLength << "\n";
+            std::cout << oss.str();
+            std::cout.flush();
+        }
+        spilledAny = true;
+    }
+    if (UNLIKELY(IsDebugEnable())) {
+        std::cout << "[OmniRuntime][JoinSpill][probe] input_batch_partitioned runId=" << runId
+                  << " rows=" << vecBatch->GetRowCount() << " activeSubPartition=0 spilled=" << (spilledAny ? 1 : 0)
+                  << "\n";
+        std::cout.flush();
+    }
+    VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
+    if (activeBatch != nullptr) {
+        if (firstVecBatch) {
+            firstVecBatch = false;
+            InitFirst();
+        }
+        curInputBatch = activeBatch.release();
+        curProbePosition = 0;
+        PrepareCurrentProbe();
+        PrepareSerializers();
+        SetStatus(OMNI_STATUS_NORMAL);
+    } else {
+        (void)LoadNextSpilledProbeInput();
+    }
+    return true;
+}
+
+/// after activeBatch is reseted, we need to load the next batch from disk to the active partition 0.
+bool LookupJoinOperator::LoadNextSpilledProbeInput()
+{
+    if (!UseJoinSubPartitioning() || joinSpillState_ == nullptr) {
+        return false;
+    }
+    while (probeSpillReadSubPartition_ < probeSpillFiles_.size()) {
+        auto &files = probeSpillFiles_[probeSpillReadSubPartition_];
+        if (probeSpillReadFileIndex_ >= files.size()) {
+            ++probeSpillReadSubPartition_;
+            probeSpillReadFileIndex_ = 0;
+            continue;
+        }
+        const auto record = files[probeSpillReadFileIndex_++];
+        const auto subPartition = record.subPartition;
+        const auto &file = record.file;
+        SpillReader reader(probeTypes, file.filePath, file.fileLength, file.totalRowCount, false);
+        std::unique_ptr<VectorBatch> spilledBatch = nullptr;
+        bool isEnd = false;
+        auto status = reader.ReadVecBatch(spilledBatch, isEnd);
+        if (status != ErrorCode::SUCCESS) {
+            throw OmniException("JOIN_SPILL_READ_FAILED", "Failed to replay probe side spill file.");
+        }
+        if (isEnd || spilledBatch == nullptr) {
+            continue;
+        }
+        std::unique_ptr<VectorBatch> closeBatch = nullptr;
+        bool closeIsEnd = false;
+
+        // read batch from disk and make VectorBatch in memory
+        (void)reader.ReadVecBatch(closeBatch, closeIsEnd);
+        std::ostringstream oss;
+        if (UNLIKELY(IsDebugEnable())) {
+            oss << "[OmniRuntime][JoinSpill][probe] read runId=" << record.runId << " subPartition=" << subPartition
+                << " rows=" << spilledBatch->GetRowCount() << " path=" << file.filePath << "\n";
+            std::cout << oss.str();
+            std::cout.flush();
+        }
+        if (firstVecBatch) {
+            firstVecBatch = false;
+            InitFirst();
+        }
+        curInputBatch = spilledBatch.release();
+        curProbePosition = 0;
+        PrepareCurrentProbe();
+        PrepareSerializers();
+        SetStatus(OMNI_STATUS_NORMAL);
+        return true;
+    }
+    for (auto &files : probeSpillFiles_) {
+        files.clear();
+    }
+    probeSpillReadSubPartition_ = 0;
+    probeSpillReadFileIndex_ = 0;
+    return false;
+}
+
 BlockingReason LookupJoinOperator::IsBlocked(ContinueFuture* future)
 {
     OmniStatus tableStatus = std::visit([&](auto&& arg) { return arg.GetStatus(); }, *hashTables);
@@ -274,6 +484,34 @@ BlockingReason LookupJoinOperator::IsBlocked(ContinueFuture* future)
         return BlockingReason::kWaitForJoinBuild;
     }
     return BlockingReason::kNotBlocked;
+}
+
+/// one Join Task has one probeSize partition, one probeSize partition has multi batches input.
+/// one round spill is doing for one batch, if needs input, then we need to do next round spill.
+bool LookupJoinOperator::needsInput()
+{
+    return Operator::needsInput() && curInputBatch == nullptr && !HasPendingSpilledProbeInput();
+}
+
+/// check that if all probe spilled files is readed to memory and finish compute, will read next batch from upstream op if return false
+bool LookupJoinOperator::HasPendingSpilledProbeInput() const
+{
+    if (probeSpillReadSubPartition_ >= probeSpillFiles_.size()) {
+        return false;
+    }
+    for (uint32_t subPartition = probeSpillReadSubPartition_; subPartition < probeSpillFiles_.size(); ++subPartition) {
+        const auto &files = probeSpillFiles_[subPartition];
+        if (subPartition == probeSpillReadSubPartition_) {
+            if (probeSpillReadFileIndex_ < files.size()) {
+                return true;
+            }
+            continue;
+        }
+        if (!files.empty()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void LookupJoinOperator::PrepareCurrentProbe()
@@ -311,6 +549,39 @@ void LookupJoinOperator::PrepareCurrentProbe()
             probeFilterColumns[index++] = probeAllColumns[col];
         }
     }
+
+    // init config and val of join spill.
+    subPartitionProbePermutation_.clear();
+    if (UseJoinSubPartitioning()) {
+        JoinSubPartitioner partitioner(joinSubPartCfg_);
+        curProbeSubPartitions = partitioner.PartitionRowsByKeyColumns(curInputBatch, probeTypes, probeHashCols);
+        const int32_t rows = curInputBatch->GetRowCount();
+        subPartitionProbePermutation_.reserve(static_cast<size_t>(rows));
+        for (uint32_t part = 0; part < joinSubPartCfg_.numSubPartitions; ++part) {
+            for (int32_t r = 0; r < rows; ++r) {
+                if (curProbeSubPartitions[static_cast<size_t>(r)] == part) {
+                    subPartitionProbePermutation_.push_back(r);
+                }
+            }
+        }
+        probeSimd = false;
+    } else {
+        curProbeSubPartitions.clear();
+    }
+}
+
+bool LookupJoinOperator::UseJoinSubPartitioning() const
+{
+    return useJoinSubPartitioning_;
+}
+
+// one curBatch of probeSize owns one curProbeSubPartitions
+uint32_t LookupJoinOperator::GetProbePartition(int32_t probePosition) const
+{
+    if (UseJoinSubPartitioning() && static_cast<size_t>(probePosition) < curProbeSubPartitions.size()) {
+        return curProbeSubPartitions[static_cast<size_t>(probePosition)];
+    }
+    return HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
 }
 
 void LookupJoinOperator::PrepareSerializers()
@@ -437,6 +708,14 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
         return 0;
     }
     UpdateAddInputInfo(vecBatch->GetRowCount());
+
+    // spill case: AddInput we will compute active sub partition 0 first, other sub partition will be spilled
+    // if active sub partition 0 batch has 0 rows, will LoadNextSpilledProbeInput, read next sub partition from disk to be active.
+    // curInputBatch will be next spilled sub partition, NULL or Not NULL.
+    if (TrySpillCurrentProbeInput(vecBatch)) {
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
     if (firstVecBatch) {
         firstVecBatch = false;
         InitFirst();
@@ -456,6 +735,10 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (curInputBatch == nullptr) {
+        // curInputBatch is NULL means active sub partition has no data, need to load next spilled sub partition to memory
+        if (LoadNextSpilledProbeInput()) {
+            return GetOutput(outputVecBatch);
+        }
         if (noMoreInput_) {
             SetStatus(OMNI_STATUS_FINISHED);
         }
@@ -472,6 +755,11 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
     // handle the output
     if (!outputBuilder->IsEmpty()) {
         outputBuilder->BuildOutput(probeOutputColumns, joinType, isShuffleExchangeBuildPlan, outputVecBatch, buildSide);
+        if (UNLIKELY(IsDebugEnable()) && UseJoinSubPartitioning() && *outputVecBatch != nullptr) {
+            std::cout << "[OmniRuntime][JoinSubPartitioner][probe] merged_subpartition_output_rows="
+                      << (*outputVecBatch)->GetRowCount() << "\n";
+            std::cout.flush();
+        }
     }
     if (curProbePosition >= inputRowCount && outputBuilder->IsEmpty()) {
         VectorHelper::FreeVecBatch(curInputBatch);
@@ -479,8 +767,11 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
         curProbePosition = 0;
         outputBuilder->Clear();
 
-        if (noMoreInput_) {
-            SetStatus(OMNI_STATUS_FINISHED);
+        // finish curInputBatch processProbe, we update next spilled sub partition to curInputBatch
+        if (!LoadNextSpilledProbeInput()) {
+            if (noMoreInput_) {
+                SetStatus(OMNI_STATUS_FINISHED);
+            }
         }
     }
     if ((*outputVecBatch != nullptr)) {
@@ -520,10 +811,13 @@ template <typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
 void LookupJoinOperator::ArrayJoinProbe(BaseVector*** buildColumns, size_t probeHashColsCount, T&& arg,
                                         ExecutionContext* contextPtr)
 {
-    int32_t probePosition = curProbePosition;
+    int32_t tmpProbePosition = curProbePosition;
     int32_t numProbeRows = curInputBatch->GetRowCount();
     bool hasProduceRow = false;
-    for (; probePosition < numProbeRows; probePosition++) {
+    for (; tmpProbePosition < numProbeRows; tmpProbePosition++) {
+        // spill case: get probePosition from subPartitionProbePermutation_
+        // nomal case: probePosition = tmpProbePosition
+        int32_t probePosition = ProbePhysicalRow(tmpProbePosition);
         if constexpr (hasNull) {
             if (probeHashColumns[0]->IsNull(probePosition)) {
                 if constexpr (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL ||
@@ -942,7 +1236,7 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
             uint32_t partition = partitionMask;
             auto buildColumns = arg.GetColumns(partition);
             auto probeHashColsCount = probeHashCols.size();
-            int32_t probePosition = curProbePosition;
+            int32_t tmpProbePosition = curProbePosition;
             InitForProbe<hasJoinFilter>(partition);
             bool isInsert = true;
             typename std::decay_t<decltype(arg)>::Mapped *rowRefList = nullptr;
@@ -962,12 +1256,15 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                 }
             }
             if (std::remove_reference_t<decltype(arg)>::IS_SIMPLE_KEY && !arg.GetIsMultiCols()) {
-                for (; probePosition < inputRowCount; probePosition++) {
+                for (; tmpProbePosition < inputRowCount; tmpProbePosition++) {
+                    int32_t probePosition = ProbePhysicalRow(tmpProbePosition);
                     if (curProbeNulls[probePosition]) {
                         continue;
                     }
                     if constexpr (!singleHT) {
-                        partition = HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
+                        // spill case: curProbeSubPartitions[static_cast<size_t>(probePosition)];
+                        // normal case: HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
+                        partition = GetProbePartition(probePosition);
                     }
 
                     auto result = arg.Find(probeSerializers, contextPtr, probeHashColumns, probeHashColsCount,
@@ -982,13 +1279,14 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                 }
             }
 
-            for (; probePosition < inputRowCount; probePosition++) {
+            for (; tmpProbePosition < inputRowCount; tmpProbePosition++) {
+                int32_t probePosition = ProbePhysicalRow(tmpProbePosition);
                 if (curProbeNulls[probePosition]) {
                     continue;
                 }
 
                 if constexpr (!singleHT) {
-                    partition = HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
+                    partition = GetProbePartition(probePosition);
                     buildColumns = arg.GetColumns(partition);
                     InitForProbe<hasJoinFilter>(partition, false);
                 }
@@ -1070,14 +1368,15 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     return;
                 }
             }
-            for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+            for (int32_t tmpProbePosition = curProbePosition; tmpProbePosition < inputRowCount; tmpProbePosition++) {
+                int32_t probePosition = ProbePhysicalRow(tmpProbePosition);
                 if (curProbeNulls[probePosition]) {
                     outputBuilder->AppendRow(probePosition, nullptr, 0);
                     continue;
                 }
 
                 if constexpr (!singleHT) {
-                    partition = HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
+                    partition = GetProbePartition(probePosition);
                     buildColumns = arg.GetColumns(partition);
                     InitForProbe<hasJoinFilter>(partition, false);
                 }
@@ -1142,13 +1441,14 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                         return;
                     }
                 }
-                for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+                for (int32_t tmpProbePosition = curProbePosition; tmpProbePosition < inputRowCount; tmpProbePosition++) {
+                int32_t probePosition = ProbePhysicalRow(tmpProbePosition);
                     if (curProbeNulls[probePosition]) {
                         continue;
                     }
 
                     if constexpr (!singleHT) {
-                        partition = HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
+                        partition = GetProbePartition(probePosition);
                         buildColumns = arg.GetColumns(partition);
                         InitForProbe<hasJoinFilter>(partition, false);
                     }
@@ -1209,13 +1509,14 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                         return;
                     }
                 }
-                for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+                for (int32_t tmpProbePosition = curProbePosition; tmpProbePosition < inputRowCount; tmpProbePosition++) {
+                int32_t probePosition = ProbePhysicalRow(tmpProbePosition);
                     if (curProbeNulls[probePosition]) {
                         outputBuilder->AppendRow(probePosition, nullptr, 0);
                         continue;
                     }
                     if constexpr (!singleHT) {
-                        partition = HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
+                        partition = GetProbePartition(probePosition);
                         buildColumns = arg.GetColumns(partition);
                         InitForProbe<hasJoinFilter>(partition, false);
                     }
@@ -1278,12 +1579,13 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     return;
                 }
             }
-            for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+            for (int32_t tmpProbePosition = curProbePosition; tmpProbePosition < inputRowCount; tmpProbePosition++) {
+                int32_t probePosition = ProbePhysicalRow(tmpProbePosition);
                 if (curProbeNulls[probePosition]) {
                     continue;
                 }
                 if constexpr (!singleHT) {
-                    partition = HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
+                    partition = GetProbePartition(probePosition);
                     buildColumns = arg.GetColumns(partition);
                     InitForProbe<hasJoinFilter>(partition, false);
                 }
@@ -1343,14 +1645,15 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     return;
                 }
             }
-            for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+            for (int32_t tmpProbePosition = curProbePosition; tmpProbePosition < inputRowCount; tmpProbePosition++) {
+                int32_t probePosition = ProbePhysicalRow(tmpProbePosition);
                 if (curProbeNulls[probePosition]) {
                     outputBuilder->AppendRow(probePosition, nullptr, 0);
                     continue;
                 }
 
                 if constexpr (!singleHT) {
-                    partition = HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
+                    partition = GetProbePartition(probePosition);
                     InitForProbe<hasJoinFilter>(partition, false);
                 }
                 bool hasProduceRow = false;
@@ -1399,13 +1702,14 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
             uint32_t partition = partitionMask;
             auto probeHashColsCount = probeHashCols.size();
             InitForProbe<hasJoinFilter>(partition);
-            for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+            for (int32_t tmpProbePosition = curProbePosition; tmpProbePosition < inputRowCount; tmpProbePosition++) {
+                int32_t probePosition = ProbePhysicalRow(tmpProbePosition);
                 if (curProbeNulls[probePosition]) {
                     outputBuilder->AppendExistenceRow<false>(probePosition);
                     continue;
                 }
                 if constexpr (!singleHT) {
-                    partition = HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
+                    partition = GetProbePartition(probePosition);
                     InitForProbe<hasJoinFilter>(partition);
                 }
                 auto result = arg.Find(probeSerializers, contextPtr, probeHashColumns, probeHashColsCount,
@@ -1854,12 +2158,13 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
                 }
             }
             parallelNum = 0;
+            preVecBatchIdx = vecBatchIdx;
             preVector = array == nullptr ? nullptr : array[outputCol][vecBatchIdx];
             continue;
         }
 
         BaseVector *buildVector = array[outputCol][vecBatchIdx];
-        if (vecBatchIdx == preVecBatchIdx) {
+        if (vecBatchIdx == preVecBatchIdx && buildVector == preVector) {
             rowIdxes[parallelNum] = rowIdx;
             parallelNum++;
             if (parallelNum == parallelism) {

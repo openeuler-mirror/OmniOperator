@@ -16,10 +16,11 @@
 
 #pragma once
 
-#include <unordered_map>
-#include <string>
+#include <algorithm>
 #include <memory>
 #include <optional>
+#include <string>
+#include <unordered_map>
 #include "ConfigBase.h"
 
 namespace omniruntime::config {
@@ -256,7 +257,8 @@ public:
 
     bool joinSpillEnabled() const
     {
-        return get<bool>(kJoinSpillEnabled, true);
+        // todo: join spill is not ready, set fix false. return `get<bool>(kJoinSpillEnabled, true)` in final version
+        return false;
     }
 
     bool orderBySpillEnabled() const
@@ -291,15 +293,23 @@ public:
 
     uint8_t spillStartPartitionBit() const
     {
-        constexpr uint8_t kDefaultStartBit = 48;
-        return get<uint8_t>(kSpillStartPartitionBit, kDefaultStartBit);
+        // Avoid get<uint8_t>: on many platforms uint8_t is unsigned char
+        // in configBase stringstream will read a single digit character, not a decimal value.
+        constexpr int32_t kDefaultStartBit = 48;
+        const int32_t parsed = get<int32_t>(kSpillStartPartitionBit, kDefaultStartBit);
+        if (parsed < 0 || parsed > 255) {
+            return static_cast<uint8_t>(kDefaultStartBit);
+        }
+        return static_cast<uint8_t>(parsed);
     }
 
     uint8_t spillNumPartitionBits() const
     {
-        constexpr uint8_t kDefaultBits = 3;
-        constexpr uint8_t kMaxBits = 3;
-        return std::min(kMaxBits, get<uint8_t>(kSpillNumPartitionBits, kDefaultBits));
+        constexpr int32_t kDefaultBits = 3;
+        constexpr int32_t kMaxBits = 3;
+        const int32_t parsed = get<int32_t>(kSpillNumPartitionBits, kDefaultBits);
+        const int32_t clamped = std::min(kMaxBits, std::max<int32_t>(0, parsed));
+        return static_cast<uint8_t>(clamped);
     }
 
     uint64_t maxSpillFileSize() const
@@ -438,4 +448,4 @@ private:
 
     std::shared_ptr<ConfigBase> config_;
 };
-} // namespace facebook::velox::core
+} // namespace omniruntime::config
