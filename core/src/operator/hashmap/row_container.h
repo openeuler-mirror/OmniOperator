@@ -61,18 +61,16 @@ public:
     /// Constructor.
     /// @param keyTypeSizes  Size in bytes of each key column type (fixed-width only)
     /// @param numKeys       Number of key columns
-    /// @param nullableKeys  Whether key columns can be null
     /// @param aggStateSize  Total size in bytes of all AggState data per row
     /// @param pool          Arena allocator for row memory
     RowContainer(const std::vector<int32_t>& keyTypeSizes,
                  int32_t numKeys,
-                 bool nullableKeys,
                  int32_t aggStateSize,
                  mem::SimpleArenaAllocator& pool);
 
     /// Allocate a new row and return a pointer to its start.
-    /// The row is zero-initialized for the null bits region (AggState null bits
-    /// are set to 1, key null bits are set to 0).
+    /// The entire row is zero-initialized, then AggState null bits
+    /// are set to 1 (aggregates start as null).
     char* NewRow();
 
     /// Check if a column is null in the given row.
@@ -124,7 +122,7 @@ public:
 
     /// Extract a key column from a set of rows into an output vector.
     /// This dispatches by type to the appropriate vector setter.
-    void ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
+    void ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
                        vec::BaseVector* outputVector);
 
     /// Compare a key column in a row against a decoded vector value.
@@ -143,7 +141,6 @@ private:
 
     // Layout configuration
     int32_t numKeys;
-    bool nullableKeys;
     int32_t aggStateSize;
     int32_t fixedRowSize = 0;
     int32_t aggStateOffset = 0;
@@ -158,8 +155,6 @@ private:
     std::vector<int32_t> nullOffsets; // bit offset of null flags
     std::vector<RowColumn> rowColumns;
 
-    // Null bits initialization template
-    std::vector<uint8_t> initialNulls;
     int32_t nullBytes = 0;
     int32_t firstAggregateNullBit = 0; // first null bit position for AggState
 

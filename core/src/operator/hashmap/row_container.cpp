@@ -14,11 +14,9 @@ namespace omniruntime::op {
 
 RowContainer::RowContainer(const std::vector<int32_t>& keyTypeSizes,
                            int32_t numKeys,
-                           bool nullableKeys,
                            int32_t aggStateSize,
                            mem::SimpleArenaAllocator& pool)
     : numKeys(numKeys),
-      nullableKeys(nullableKeys),
       aggStateSize(aggStateSize),
       pool(pool)
 {
@@ -55,17 +53,12 @@ RowContainer::RowContainer(const std::vector<int32_t>& keyTypeSizes,
 
     // Key column null bits
     for (int32_t i = 0; i < numKeys; ++i) {
-        if (nullableKeys) {
-            // nullByte = offset + nullBitPos / 8, nullMask = 1 << (nullBitPos % 8)
-            nullOffsets[i] = nullBitPos;
-            nullBitPos++;
-        } else {
-            nullOffsets[i] = RowColumn::kNotNullOffset;
-        }
+        nullOffsets[i] = nullBitPos;
+        nullBitPos++;
     }
 
     // Pad key null bits to fill 8-bit boundary (like bolt's TINYINT padding)
-    if (nullableKeys && (numKeys % 8 != 0)) {
+    if (numKeys % 8 != 0) {
         nullBitPos += (8 - numKeys % 8);
     }
 
@@ -96,33 +89,13 @@ RowContainer::RowContainer(const std::vector<int32_t>& keyTypeSizes,
     alignment = std::max(alignment, static_cast<int32_t>(sizeof(void*)));
     fixedRowSize = BitUtil::RoundUp(offset, alignment);
 
-    // Build initial nulls template: all zeros, then set accumulator null bits to 1
-    initialNulls.resize(nullBytes, 0);
-    // Set accumulator null bits to 1 (aggregates start as null)
-    for (int32_t bit = firstAggregateNullBit; bit < freeFlagOffset; ++bit) {
-        initialNulls[bit / 8] |= (1 << (bit & 7));
-    }
-
     // Build RowColumn descriptors
     // nullByte = nullBlockStart + (nullBitPos / 8)
     // nullMask = (1 << (nullBitPos % 8))
     rowColumns.reserve(numKeys);
     for (int32_t i = 0; i < numKeys; ++i) {
-        if (nullableKeys) {
-            int32_t absNullByte = nullBlockStart + nullOffsets[i] / 8;
-            uint8_t absNullMask = 1 << (nullOffsets[i] % 8);
-            // Store as absolute bit position for RowColumn
-            // RowColumn.packOffsets expects: offset (column data), nullOffset (absolute bit pos)
-            // We need to convert: the RowColumn PackOffsets formula uses nullOffset as a bit pos
-            // where nullByte() = (nullOffset / 8) and nullMask() = (1 << (nullOffset % 8))
-            // But we need absolute byte positions in the row, not relative to null block.
-            // So we set nullOffset = nullBlockStart * 8 + relativeBitPos to make
-            // nullByte() return absolute row offset.
-            int32_t absNullBitPos = nullBlockStart * 8 + nullOffsets[i];
-            rowColumns.emplace_back(offsets[i], absNullBitPos);
-        } else {
-            rowColumns.emplace_back(offsets[i], RowColumn::kNotNullOffset);
-        }
+        int32_t absNullBitPos = nullBlockStart * 8 + nullOffsets[i];
+        rowColumns.emplace_back(offsets[i], absNullBitPos);
     }
 
     // Also compute the absolute byte offset for the free flag
@@ -152,17 +125,12 @@ char* RowContainer::NewRow()
 
 char* RowContainer::InitializeRow(char* row)
 {
-    // Zero out the entire row (keys, nulls, aggState)
     memset(row, 0, fixedRowSize);
 
-    // Copy initial nulls template (sets accumulator null bits to 1, key null bits to 0)
-    // The null block starts at nullBlockStart offset within the row
-    if (nullBytes > 0) {
-        memcpy(row + nullBlockStart, initialNulls.data(), initialNulls.size());
+    // Set accumulator null bits to 1 (aggregates start as null)
+    for (int32_t bit = firstAggregateNullBit; bit < freeFlagOffset; ++bit) {
+        row[nullBlockStart + bit / 8] |= (1 << (bit & 7));
     }
-
-    // Clear the free flag bit (mark row as in-use)
-    row[freeFlagByteOffset] &= ~(1 << freeFlagBitInByte);
 
     return row;
 }
@@ -170,28 +138,27 @@ char* RowContainer::InitializeRow(char* row)
 int32_t RowContainer::ListRows(RowContainerIterator* iter, int32_t maxRows, char** rows)
 {
     int32_t count = 0;
-    int32_t startIdx = iter->allocationIndex;
-    int32_t endIdx = std::min(startIdx + maxRows, static_cast<int32_t>(allocations.size()));
+    int32_t numAllocations = static_cast<int32_t>(allocations.size());
 
-    for (int32_t idx = startIdx; idx < endIdx; ++idx) {
-        char* row = allocations[idx];
+    while (count < maxRows && iter->allocationIndex < numAllocations) {
+        char* row = allocations[iter->allocationIndex];
+        iter->allocationIndex++;
+
         // Skip freed rows
         if ((row[freeFlagByteOffset] & (1 << freeFlagBitInByte)) == 0) {
             rows[count++] = row;
         }
     }
 
-    iter->allocationIndex = endIdx;
-
     // Signal completion if we've exhausted all allocations
-    if (endIdx >= static_cast<int32_t>(allocations.size())) {
+    if (iter->allocationIndex >= numAllocations) {
         iter->allocationIndex = std::numeric_limits<int32_t>::max();
     }
 
     return count;
 }
 
-void RowContainer::ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
+void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
                                   vec::BaseVector* outputVector)
 {
     if (colIdx >= numKeys) {
@@ -211,8 +178,8 @@ void RowContainer::ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
         case type::OMNI_DATE32:
         case type::OMNI_TIME32: {
             auto* vec = static_cast<Vector<int32_t>*>(outputVector);
-            for (int32_t i = 0; i < numRows; ++i) {
-                if (nullableKeys && IsNullAt(rows[i], nullByte, nullMask)) {
+            for (int32_t i = 0; i < totalRows; ++i) {
+                if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
                 } else {
                     vec->SetValue(i, ReadValue<int32_t>(rows[i], offset));
@@ -226,8 +193,8 @@ void RowContainer::ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
         case type::OMNI_DATE64:
         case type::OMNI_TIME64: {
             auto* vec = static_cast<Vector<int64_t>*>(outputVector);
-            for (int32_t i = 0; i < numRows; ++i) {
-                if (nullableKeys && IsNullAt(rows[i], nullByte, nullMask)) {
+            for (int32_t i = 0; i < totalRows; ++i) {
+                if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
                 } else {
                     vec->SetValue(i, ReadValue<int64_t>(rows[i], offset));
@@ -237,8 +204,8 @@ void RowContainer::ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
         }
         case type::OMNI_SHORT: {
             auto* vec = static_cast<Vector<int16_t>*>(outputVector);
-            for (int32_t i = 0; i < numRows; ++i) {
-                if (nullableKeys && IsNullAt(rows[i], nullByte, nullMask)) {
+            for (int32_t i = 0; i < totalRows; ++i) {
+                if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
                 } else {
                     vec->SetValue(i, ReadValue<int16_t>(rows[i], offset));
@@ -248,8 +215,8 @@ void RowContainer::ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
         }
         case type::OMNI_BYTE: {
             auto* vec = static_cast<Vector<int8_t>*>(outputVector);
-            for (int32_t i = 0; i < numRows; ++i) {
-                if (nullableKeys && IsNullAt(rows[i], nullByte, nullMask)) {
+            for (int32_t i = 0; i < totalRows; ++i) {
+                if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
                 } else {
                     vec->SetValue(i, ReadValue<int8_t>(rows[i], offset));
@@ -259,8 +226,8 @@ void RowContainer::ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
         }
         case type::OMNI_DOUBLE: {
             auto* vec = static_cast<Vector<double>*>(outputVector);
-            for (int32_t i = 0; i < numRows; ++i) {
-                if (nullableKeys && IsNullAt(rows[i], nullByte, nullMask)) {
+            for (int32_t i = 0; i < totalRows; ++i) {
+                if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
                 } else {
                     vec->SetValue(i, ReadValue<double>(rows[i], offset));
@@ -270,8 +237,8 @@ void RowContainer::ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
         }
         case type::OMNI_FLOAT: {
             auto* vec = static_cast<Vector<float>*>(outputVector);
-            for (int32_t i = 0; i < numRows; ++i) {
-                if (nullableKeys && IsNullAt(rows[i], nullByte, nullMask)) {
+            for (int32_t i = 0; i < totalRows; ++i) {
+                if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
                 } else {
                     vec->SetValue(i, ReadValue<float>(rows[i], offset));
@@ -281,8 +248,8 @@ void RowContainer::ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
         }
         case type::OMNI_BOOLEAN: {
             auto* vec = static_cast<Vector<bool>*>(outputVector);
-            for (int32_t i = 0; i < numRows; ++i) {
-                if (nullableKeys && IsNullAt(rows[i], nullByte, nullMask)) {
+            for (int32_t i = 0; i < totalRows; ++i) {
+                if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
                 } else {
                     vec->SetValue(i, ReadValue<int8_t>(rows[i], offset) != 0);
@@ -292,8 +259,8 @@ void RowContainer::ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
         }
         case type::OMNI_DECIMAL128: {
             auto* vec = static_cast<Vector<Decimal128>*>(outputVector);
-            for (int32_t i = 0; i < numRows; ++i) {
-                if (nullableKeys && IsNullAt(rows[i], nullByte, nullMask)) {
+            for (int32_t i = 0; i < totalRows; ++i) {
+                if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
                 } else {
                     vec->SetValue(i, ReadValue<Decimal128>(rows[i], offset));
@@ -302,8 +269,6 @@ void RowContainer::ExtractColumn(char** rows, int32_t numRows, int32_t colIdx,
             break;
         }
         default:
-            // For complex types (VARCHAR, ARRAY, ROW), we still use the serializer approach
-            // These are handled separately via serialized key extraction
             break;
     }
 }
@@ -319,14 +284,12 @@ bool RowContainer::Equals(const char* row, int32_t colIdx, vec::BaseVector* vect
     auto nullByte = Col.NullByte();
     auto nullMask = Col.NullMask();
 
-    // Check nulls first
-    bool rowIsNull = nullableKeys && IsNullAt(row, nullByte, nullMask);
-    bool vecIsNull = vector->IsNull(rowIdx);
-    if (rowIsNull != vecIsNull) {
-        return false;
+    if (IsNullAt(row, nullByte, nullMask)) {
+        return vector->IsNull(rowIdx);
     }
-    if (rowIsNull) {
-        return true; // both null, match
+
+    if (vector->IsNull(rowIdx)) {
+        return false;
     }
 
     // Compare values by type

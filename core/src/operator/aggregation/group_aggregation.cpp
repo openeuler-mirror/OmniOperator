@@ -257,7 +257,7 @@ OmniStatus HashAggregationOperator::Init()
                 isVariableLen[i] = true;
             }
         }
-        serialize->InitRowContainer(keySizes, isVariableLen, true, *executionContext->GetArena());
+        serialize->InitRowContainer(keySizes, isVariableLen, *executionContext->GetArena());
     } else if (groupByColumnsHandleType == HandleType::fixedInt32) {
         fixedInt32 = std::make_unique<TaperGroupbySingleFixHandler<int32_t>>(*executionContext->GetArena(), totalAggStatesSize);
     } else if (groupByColumnsHandleType == HandleType::fixedInt64) {
@@ -1008,8 +1008,8 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
     size_t aggNum = aggregators.size();
     auto *curVector = groupVectors[0];
     auto curEncoding = curVector->GetEncoding();
-    std::vector<AggregateState *> currentRowStates(rowCount);
-    std::vector<AggregateState *> newGroupStates;
+    currentRowStates.resize(rowCount);
+    newGroupStates.reserve(rowCount);
     emplaceKey->EmplaceTable(groupVectors, groupColNum, rowCount, currentRowStates, newGroupStates, curEncoding);
     if (aggNum == 0) {
         return;
@@ -1053,6 +1053,7 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
             aggregator->ProcessGroup(currentRowStates, vecBatch, 0);
         }
     }
+    newGroupStates.clear();
 }
 
 template<typename Deserialize>
