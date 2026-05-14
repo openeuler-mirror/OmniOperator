@@ -16,7 +16,7 @@ fi
 check_set_prerequisites
 
 # init variables
-BINDING_TARGET_EXPR='boostkit-omniop-\1-binding-2.1.0-aarch64'
+BINDING_TARGET_EXPR='boostkit-omniop-\1-binding-2.2.0-aarch64'
 CWD=$(pwd)
 OPTIONS=""
 TARGETS="--target all"
