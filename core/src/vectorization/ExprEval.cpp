@@ -199,6 +199,7 @@ void ExprEval::Reset(VectorBatch *vectorBatch, ExecutionContext *ctx)
         typeIds.push_back(vectorBatch->Get(i)->GetTypeId());
     }
     std::stack<vec::BaseVector *>().swap(inputValues_);
+    rowSize = vectorBatch->GetRowCount();
 }
 
 void ExprEval::Visit(const LiteralExpr &e)
