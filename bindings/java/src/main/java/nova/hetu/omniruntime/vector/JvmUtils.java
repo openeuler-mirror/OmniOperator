@@ -42,6 +42,8 @@ public final class JvmUtils {
 
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
 
+    private static final long BITS_MAX_DIRECT_MEMORY;
+
     static {
         try {
             Field field = Unsafe.class.getDeclaredField("theUnsafe");
@@ -92,8 +94,21 @@ public final class JvmUtils {
                     UNSAFE.freeMemory(address);
                 }
             }
-        } catch (ReflectiveOperationException var1) {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, var1);
+
+            Class<?> bitsClass =
+                    Class.forName("java.nio.Bits");
+            int javaVersion = majorVersion(System.getProperty("java.specification.version"));
+            String fieldName = javaVersion >= 11 ? "MAX_MEMORY" : "maxMemory";
+            Field maxMemoryField = bitsClass.getDeclaredField(fieldName);
+            if (maxMemoryField.getType() == long.class) {
+                long offset = UNSAFE.staticFieldOffset(maxMemoryField);
+                Object object = UNSAFE.staticFieldBase(maxMemoryField);
+                BITS_MAX_DIRECT_MEMORY = UNSAFE.getLong(object, offset);
+            } else {
+                BITS_MAX_DIRECT_MEMORY = -1;
+            }
+        } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, e);
         }
     }
 
@@ -104,6 +119,20 @@ public final class JvmUtils {
         if (actualIndexScale != expectedIndexScale) {
             throw new IllegalStateException(
                     name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
+        }
+    }
+
+    private static int majorVersion(final String javaSpecVersion) {
+        final String[] components = javaSpecVersion.split("\\.");
+        final int[] version = new int[components.length];
+        for (int i = 0; i < components.length; i++) {
+            version[i] = Integer.parseInt(components[i]);
+        }
+
+        if (version[0] == 1) {
+            return version[1];
+        } else {
+            return version[0];
         }
     }
 
@@ -129,5 +158,9 @@ public final class JvmUtils {
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, e);
         }
+    }
+
+    public static long estimateMaxDirectMemory() {
+        return BITS_MAX_DIRECT_MEMORY;
     }
 }
