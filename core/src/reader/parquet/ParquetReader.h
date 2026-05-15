@@ -65,6 +65,8 @@ public:
 
     uint64_t Next(std::vector<BaseVector *> **batch, int *omniTypeId, uint64_t batchLen) override;
 
+    uint64_t LastReadRowPosition() const override;
+
 private:
     ParquetReader &parquetReader_;
 };
@@ -87,6 +89,11 @@ public:
         Expression pushedFilterArray, const std::vector<std::string>& fieldNames);
 
     arrow::Status ReadNextBatch(std::vector<omniruntime::vec::BaseVector*> &batch, long *batchRowSize);
+
+    uint64_t LastReadRowPosition() const
+    {
+        return lastReadRowPosition_;
+    }
 
     std::unique_ptr<parquet::arrow::FileReader> arrow_reader;
 
@@ -137,6 +144,9 @@ private:
     std::unique_ptr<common::TimeRebaseInfo> rebaseInfoPtr;
 
     std::shared_ptr<arrow::io::RandomAccessFile> file;
+
+    uint64_t nextRowPosition_ = 0;
+    uint64_t lastReadRowPosition_ = 0;
 };
 
 class Filesystem {
