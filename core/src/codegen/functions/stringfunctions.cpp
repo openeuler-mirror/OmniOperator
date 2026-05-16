@@ -1394,8 +1394,22 @@ extern "C" DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *st
     if (isNull) {
         return 0;
     }
+
     int64_t result;
-    Status status = ConvertStringToInteger<int64_t, false>(result, str, strLen);
+    Status status = ConvertDateStringToInteger(result, str, strLen);
+    if (status == Status::CONVERT_SUCCESS) {
+        return result;
+    }
+
+    if (status == Status::CONVERT_OVERFLOW) {
+        std::string s(str, strLen);
+        std::ostringstream errorMessage;
+        errorMessage << "Cannot cast '" << s << "' to BIGINT. Date year out of range (0-9999).";
+        SetError(contextPtr, errorMessage.str());
+        return 0;
+    }
+
+    status = ConvertStringToInteger<int64_t, false>(result, str, strLen);
     if (status == Status::IS_NOT_A_NUMBER) {
         std::string s = std::string(str, strLen);
         std::ostringstream errorMessage;
