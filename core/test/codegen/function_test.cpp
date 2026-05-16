@@ -4171,4 +4171,5 @@ TEST(FunctionTest, DateAddDays)
     EXPECT_FALSE(retIsNull);
     EXPECT_EQ(result, -1000 * MILLIS_PER_DAY);
 }
+
 }

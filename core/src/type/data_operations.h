@@ -20,7 +20,7 @@ namespace type {
 static std::regex g_decimalRegex("[+-]?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?");
 static std::regex g_doubleRegex(
     "[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*");
-static std::regex g_dateRegex(R"(\d{4}-\d{2}-\d{2}$)");
+static std::regex g_dateRegex(R"([[:blank:]]*\d{1,5}-\d{2}-\d{2}[[:blank:]]*$)");
 
 template<typename T, bool allowTruncate = true>
 inline Status ConvertStringToInteger(T &result, const char *bytes, int length)
@@ -92,10 +92,6 @@ inline Status ConvertStringToInteger(T &result, const char *bytes, int length)
 
 inline Status ConvertDateStringToInteger(int64_t& result, const char* bytes, int length)
 {
-    // covert string "yyyy-MM-dd" to int64_t
-    if (!regex_match(bytes, length, g_dateRegex)) {
-        return Status::IS_NOT_A_NUMBER;
-    }
     int offset = 0;
     while (offset < length && bytes[offset] == ' ') offset++;
     if (offset == length) return Status::IS_NOT_A_NUMBER;
@@ -104,21 +100,32 @@ inline Status ConvertDateStringToInteger(int64_t& result, const char* bytes, int
     while (end > offset && bytes[end] == ' ') end--;
     end++;
 
-    if (end - offset != 10) return Status::IS_NOT_A_NUMBER;
+    int contentLen = end - offset;
+    if (contentLen < 10) return Status::IS_NOT_A_NUMBER;
 
+    int dash1 = -1, dash2 = -1;
     for (int i = offset; i < end; i++) {
         char c = bytes[i];
-        if (i == offset + 4 || i == offset + 7) {
-            if (c != '-') return Status::IS_NOT_A_NUMBER;
-        } else {
-            if (c < '0' || c > '9') return Status::IS_NOT_A_NUMBER;
+        if (c == '-') {
+            if (dash1 == -1) dash1 = i;
+            else if (dash2 == -1) dash2 = i;
+            else return Status::IS_NOT_A_NUMBER;
+        } else if (c < '0' || c > '9') {
+            return Status::IS_NOT_A_NUMBER;
         }
     }
+    if (dash1 == -1 || dash2 == -1) return Status::IS_NOT_A_NUMBER;
+
+    int yearLen = dash1 - offset;
+    int monthLen = dash2 - dash1 - 1;
+    int dayLen = end - dash2 - 1;
+    if (yearLen < 1 || monthLen != 2 || dayLen != 2) return Status::IS_NOT_A_NUMBER;
 
     int year, month, day;
-    char temp[11];
-    memcpy(temp, bytes + offset, 10);
-    temp[10] = '\0';
+    char temp[16];
+    int copyLen = contentLen < 15 ? contentLen : 15;
+    memcpy(temp, bytes + offset, copyLen);
+    temp[copyLen] = '\0';
 
     if (sscanf(temp, "%d-%d-%d", &year, &month, &day) != 3) {
         return Status::IS_NOT_A_NUMBER;

@@ -14,9 +14,17 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
+#include <ctime>
+#include <chrono>
 
 namespace omniruntime::codegen::function {
 using JsonDocument = nlohmann::ordered_json;
+
+
+// Valid epoch time range constants (same as Flink's DateTimeUtils)
+static constexpr int64_t MIN_EPOCH_MILLS = -62167219200000LL;     // '0000-01-01 00:00:00.000 UTC+0'
+static constexpr int64_t MAX_EPOCH_MILLS = 253402300799999LL;     // '9999-12-31 23:59:59.999 UTC+0'
+static constexpr int64_t MILLIS_PER_SECOND = 1000LL;
 
 extern "C" DLLEXPORT int64_t CountChar(const char *str, int32_t strLen, const char *target, int32_t targetWidth, int32_t targetLen, bool isNull)
 {
