@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+#include <algorithm>
 #include <unordered_map>
 #include "ParquetReader.h"
 #include "reader/common/UriInfo.h"
@@ -142,6 +143,11 @@ uint64_t ParquetRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omn
         return 0;
     }
     return static_cast<uint64_t>(batchRowSize);
+}
+
+uint64_t ParquetRowReader::LastReadRowPosition() const
+{
+    return parquetReader_.LastReadRowPosition();
 }
 
 // the ugi is UserGroupInformation
@@ -283,7 +289,11 @@ Status ParquetReader::GetColumnIndices(const std::vector<std::string>& fieldName
 
 Status ParquetReader::ReadNextBatch(std::vector<omniruntime::vec::BaseVector*> &batch, long *batchRowSize)
 {
+    lastReadRowPosition_ = nextRowPosition_;
     ARROW_RETURN_NOT_OK(rb_reader->ReadNext(batch, batchRowSize));
+    if (*batchRowSize > 0) {
+        nextRowPosition_ += static_cast<uint64_t>(*batchRowSize);
+    }
     return arrow::Status::OK();
 }
 
@@ -293,9 +303,20 @@ Status ParquetReader::GetRecordBatchReader(const std::vector<int> &row_group_ind
     std::shared_ptr<::arrow::Schema> batch_schema;
     RETURN_NOT_OK(GetFieldReaders(row_group_indices, column_indices, &columnReaders, &batch_schema));
 
+    auto metadata = arrow_reader->parquet_reader()->metadata();
+    nextRowPosition_ = 0;
+    lastReadRowPosition_ = 0;
+    if (!row_group_indices.empty()) {
+        auto firstRowGroup = *std::min_element(row_group_indices.begin(), row_group_indices.end());
+        for (int i = 0; i < firstRowGroup; i++) {
+            nextRowPosition_ += static_cast<uint64_t>(metadata->RowGroup(i)->num_rows());
+        }
+        lastReadRowPosition_ = nextRowPosition_;
+    }
+
     int64_t num_rows = 0;
     for(int row_group : row_group_indices) {
-        num_rows += arrow_reader->parquet_reader()->metadata()->RowGroup(row_group)->num_rows();
+        num_rows += metadata->RowGroup(row_group)->num_rows();
     }
     // Use lambda function to generate BaseVectors
     auto batches = [num_rows, this](std::vector<omniruntime::vec::BaseVector*> &batch,

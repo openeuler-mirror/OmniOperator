@@ -373,7 +373,8 @@ void ParsePredicateJson(nlohmann::json &jsonConfig, std::shared_ptr<common::Pred
 
 void ReaderOptions::ParseEnhanceJson(const std::string &enhancementJson)
 {
-    enhancementJson_ = std::make_shared<nlohmann::json>(nlohmann::json::parse(enhancementJson));
+    const std::string jsonStr = enhancementJson.empty() ? "{}" : enhancementJson;
+    enhancementJson_ = std::make_shared<nlohmann::json>(nlohmann::json::parse(jsonStr));
 
     if (enhancementJson_->contains("ugi")) {
         ugiString_ = enhancementJson_->at("ugi").get<std::string>();
@@ -416,7 +417,8 @@ void ReaderOptions::ParseParquetPredicate()
 
 void ReaderOptions::ParseEnhanceJson(const std::string &enhancementJson, FileFormat format)
 {
-    enhancementJson_ = std::make_shared<nlohmann::json>(nlohmann::json::parse(enhancementJson));
+    const std::string jsonStr = enhancementJson.empty() ? "{}" : enhancementJson;
+    enhancementJson_ = std::make_shared<nlohmann::json>(nlohmann::json::parse(jsonStr));
 
     switch (format) {
         case FileFormat::ORC: {
