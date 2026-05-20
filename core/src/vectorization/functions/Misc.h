@@ -12,6 +12,7 @@
 #include <random>
 #include <cstdint>
 #include <string>
+#include <iostream>
 
 namespace omniruntime::vectorization {
 
@@ -39,6 +40,8 @@ struct SparkPartitionIdFunction {
                     const config::QueryConfig& config)
     {
         partitionId_ = config.sparkPartitionId();
+        std::cout << "[DEBUG SparkPartitionIdFunction::initialize] Read partitionId=" << partitionId_ 
+                  << " from QueryConfig" << std::endl;
     }
 
     /// call() method for no-input function
@@ -46,6 +49,7 @@ struct SparkPartitionIdFunction {
     ALWAYS_INLINE Status call(int32_t& result)
     {
         result = partitionId_;
+        std::cout << "[DEBUG SparkPartitionIdFunction::call] Returning partitionId=" << result << std::endl;
         return Status::OK();
     }
 
