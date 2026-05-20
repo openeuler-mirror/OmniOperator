@@ -4,7 +4,6 @@
  */
 
 #include "ExprEval.h"
-#include <iostream>
 #include <string>
 #include "codegen/expr_evaluator.h"
 #include "type/data_type.h"
@@ -538,8 +537,6 @@ void ExprEval::Visit(const FuncExpr &e)
     std::transform(e.arguments.begin(), e.arguments.end(), argTypes.begin(),
         [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
     auto signature = std::make_shared<codegen::FunctionSignature>(e.funcName, argTypes, e.dataType->GetId());
-    std::cout << "[DEBUG ExprEval::Visit] Finding function: " << e.funcName 
-              << ", QueryConfig spark.partition_id=" << context->queryConfigRef().sparkPartitionId() << std::endl;
     auto resolved = VectorFunction::Find(signature, e.constantInputs, context->queryConfigRef());
     if (resolved == nullptr) {
         resolved = VectorFunction::Find(signature, context->queryConfigRef());
