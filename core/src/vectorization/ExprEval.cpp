@@ -533,20 +533,24 @@ void ExprEval::Visit(const FuncExpr &e)
         context->setInputParamsNUms(e.arguments.size());
     }
     BaseVector *result = nullptr;
-    std::vector<DataTypeId> argTypes(e.arguments.size());
-    std::transform(e.arguments.begin(), e.arguments.end(), argTypes.begin(),
-        [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
-    auto signature = std::make_shared<codegen::FunctionSignature>(e.funcName, argTypes, e.dataType->GetId());
-    auto resolved = VectorFunction::Find(signature, e.constantInputs, context->queryConfigRef());
-    if (resolved == nullptr) {
-        resolved = VectorFunction::Find(signature, context->queryConfigRef());
-    }
-    if (resolved != nullptr) {
-        const_cast<FuncExpr &>(e).vectorFunction = resolved;
-    } else if (e.vectorFunction != nullptr) {
-        resolved = e.vectorFunction;
-    } else {
-        OMNI_THROW("Vectorization Error:", "Vector function not found for function: " + e.funcName);
+    auto resolved = e.vectorFunction;
+    bool needQueryConfig = (e.funcName == "spark_partition_id" || e.funcName == "uuid" || e.funcName == "rand");
+    if (resolved == nullptr || needQueryConfig) {
+        std::vector<DataTypeId> argTypes(e.arguments.size());
+        std::transform(e.arguments.begin(), e.arguments.end(), argTypes.begin(),
+            [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
+        auto signature = std::make_shared<codegen::FunctionSignature>(e.funcName, argTypes, e.dataType->GetId());
+        resolved = VectorFunction::Find(signature, e.constantInputs, context->queryConfigRef());
+        if (resolved == nullptr) {
+            resolved = VectorFunction::Find(signature, context->queryConfigRef());
+        }
+        if (resolved != nullptr) {
+            const_cast<FuncExpr &>(e).vectorFunction = resolved;
+        } else if (e.vectorFunction != nullptr && !needQueryConfig) {
+            resolved = e.vectorFunction;
+        } else {
+            OMNI_THROW("Vectorization Error:", "Vector function not found for function: " + e.funcName);
+        }
     }
     
     resolved->Apply(inputValues_, e.dataType, result, context);
