@@ -40,6 +40,11 @@ public:
     virtual uint64_t
     Next(std::vector<BaseVector *> **batch, int *omniTypeId, uint64_t batchLen) = 0;
 
+    virtual uint64_t LastReadRowPosition() const
+    {
+        return 0;
+    }
+
     std::shared_ptr<common::JulianGregorianRebase> &GetJulianPtr()
     {
         return julianPtr;

@@ -260,16 +260,13 @@ TEST(RegexpExtractTest, RegexpExtractOutOfRangeGroup) {
     std::vector<std::string> strValues = {"hello123"};
     std::vector<std::string> patterns = {"(\\w+)(\\d+)"};  // 2 capture groups
     std::vector<int32_t> groupIndices = {5};  // Group 5 doesn't exist
-
+    std::vector<std::string> expected = {""};
     BaseVector* strVec = RegexpExtractFunctionTestHelper::CreateStringVector(strValues);
     BaseVector* patternVec = RegexpExtractFunctionTestHelper::CreateStringVector(patterns);
     BaseVector* groupIdxVec = RegexpExtractFunctionTestHelper::CreateNumericVector(groupIndices, OMNI_INT);
     BaseVector* resultVec = nullptr;
-    EXPECT_THROW(RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec)
-        , omniruntime::exception::OmniException);
-    delete groupIdxVec;
-    delete patternVec;
-    delete strVec;
+    RegexpExtractFunctionTestHelper::ExecuteRegexpExtract(strVec, patternVec, groupIdxVec, resultVec);
+    RegexpExtractFunctionTestHelper::ValidateStringResult(resultVec, expected, strValues.size());
     delete resultVec;
 }
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
- * Description: NameStruct function for constructing ROW vectors
+ * Description: NamedStruct function for constructing ROW vectors
  */
 
 #pragma once
@@ -15,8 +15,11 @@ using namespace omniruntime::type;
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
 
-class NameStructFunction : public VectorFunction {
+class NamedStructFunction : public VectorFunction {
 public:
+    explicit NamedStructFunction() {}
+    explicit NamedStructFunction(const std::vector<DataTypePtr> &inputDataTypes) : inputDataTypes_(inputDataTypes) {}
+
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
                ExecutionContext *context) const override;
 
@@ -29,5 +32,6 @@ private:
     void SetStringValueToVector(BaseVector *vec, int32_t row, std::string_view &value) const;
     void CopyFieldAtRow(BaseVector *srcVec, BaseVector *dstVec, int32_t dstRow, DataTypeId typeId, int32_t srcRow,
                        int64_t *mapRunningOffset = nullptr) const;
+    std::vector<DataTypePtr> inputDataTypes_;
 };
 }

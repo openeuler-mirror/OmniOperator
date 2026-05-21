@@ -59,7 +59,7 @@ public:
         const type::RowTypePtr &readerOutputType,
         const std::shared_ptr <codegen::ScanSpec> &scanSpec);
 
-    virtual ~SplitReader() = default;
+    virtual ~SplitReader();
 
     uint64_t next(vec::VectorBatch **output_, int *omniTypeId, uint64_t batchLen);
 
@@ -83,8 +83,14 @@ protected:
     bool emptySplit_;
     omniruntime::type::RowTypePtr rowType_;
     omniruntime::type::RowTypePtr fileRowType_;
+    struct PositionDeleteReader;
+    std::vector<std::unique_ptr<PositionDeleteReader>> positionDeleteReaders_;
 
     void createRowReader(omniruntime::type::RowTypePtr &rowType, uint64_t batchLen);
+
+    void initIcebergPositionDeleteReaders(uint64_t batchLen);
+
+    uint64_t applyIcebergPositionDeletes(vec::VectorBatch **output, uint64_t batchRowSize);
 
     int64_t StringToTimestamp(const std::string &timeStr)
     {

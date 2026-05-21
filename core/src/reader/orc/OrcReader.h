@@ -42,6 +42,11 @@ public:
 
     uint64_t Next(std::vector<BaseVector *> **batch, int *omniTypeId, uint64_t batchLen) override;
 
+    uint64_t LastReadRowPosition() const override
+    {
+        return previousRow;
+    }
+
     void StartNextStripe();
 
 private:

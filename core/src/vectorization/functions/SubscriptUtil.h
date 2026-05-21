@@ -84,22 +84,23 @@ public:
         memset(dicIndex, -1, sizeof(dicIndex));
         auto arrayVector = dynamic_cast<ArrayVector *>(arrayArg);
 
-        I index = 0;
-        if (auto indexVector = dynamic_cast<ConstVector<I> *>(indexArg)) {
-            index = indexVector->GetConstValue();
-        } else {
-            OMNI_THROW("Runtime Error:", "Index only supported const type!");
-        }
         auto offset = arrayVector->GetOffsets();
         rows.applyToSelected([&](auto row) {
-            if (index < 0) {
-                dicIndex[row] = -1;
-                return;
+            I index = VectorHelper::GetValueFromVector<I>(indexArg, row);
+            if (index == 0) {
+                OMNI_THROW("Runtime Error:", "The index 0 is invalid!. An index shall be either < 0 or > 0 (the first element has index 1)");
             }
-            if (offset[row] + index < offset[row + 1]) {
-                dicIndex[row] = offset[row] + index;
-            } else {
+            auto rowArraySize = offset[row+1] - offset[row];
+            if (rowArraySize <= 0) {
                 dicIndex[row] = -1;
+            } else {
+                int32_t realIndex;
+                if (index > 0) {
+                    realIndex = index - 1;
+                } else if (index < 0) {
+                    realIndex = rowArraySize + index;
+                }
+                dicIndex[row] = rowArraySize <= realIndex ? -1 : offset[row] + realIndex;
             }
         });
 

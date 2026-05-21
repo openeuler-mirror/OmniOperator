@@ -67,6 +67,7 @@ namespace omniruntime::reader {
     class OmniStructColumnReader: public OmniColumnReader {
     private:
         std::vector<std::unique_ptr<ColumnReader>> children;
+        std::vector<uint64_t> selectedChildIndices_;
         const ::orc::Type *type_;
 
     public:

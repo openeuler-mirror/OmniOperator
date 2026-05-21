@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+#include <algorithm>
 #include <unordered_map>
 #include "ParquetReader.h"
 #include "reader/common/UriInfo.h"
@@ -38,8 +39,10 @@ static constexpr int32_t LOCAL_FILE_PREFIX = 5;
 static constexpr int32_t LOCAL_FILE_PREFIX_EXT = 7;
 static const std::string LOCAL_FILE = "file:";
 static const std::string HDFS_FILE = "hdfs:";
-static const std::string ARROW_LIST_FIELD_SUFFIX = ".list.element";
-static const std::string ARROW_MAP_FIELD_SUFFIX = ".key_value.key";
+static const std::string SPARK_LIST_FIELD_SUFFIX = ".list.element";
+static const std::string SPARK_MAP_FIELD_SUFFIX = ".key_value.key";
+static const std::string HIVE_LIST_FIELD_SUFFIX = ".bag.array_element";
+static const std::string HIVE_MAP_FIELD_SUFFIX = ".map.key";
 
 namespace
 {
@@ -142,6 +145,11 @@ uint64_t ParquetRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omn
         return 0;
     }
     return static_cast<uint64_t>(batchRowSize);
+}
+
+uint64_t ParquetRowReader::LastReadRowPosition() const
+{
+    return parquetReader_.LastReadRowPosition();
 }
 
 // the ugi is UserGroupInformation
@@ -270,10 +278,13 @@ Status ParquetReader::GetColumnIndices(const std::vector<std::string>& fieldName
     for (const auto& fieldName : fieldNames) {
         if ((index = schema->ColumnIndex(fieldName)) != -1) {
             out.push_back(index);
-        } else if ((index = schema->ColumnIndex(fieldName + ARROW_LIST_FIELD_SUFFIX)) != -1) {
+        } else if ((index = schema->ColumnIndex(fieldName + SPARK_LIST_FIELD_SUFFIX)) != -1 ||
+            (index = schema->ColumnIndex(fieldName + HIVE_LIST_FIELD_SUFFIX)) != -1) {
             out.push_back(index);
-        } else if ((index = schema->ColumnIndex(fieldName + ARROW_MAP_FIELD_SUFFIX)) != -1) {
+        } else if ((index = schema->ColumnIndex(fieldName + SPARK_MAP_FIELD_SUFFIX)) != -1 ||
+            (index = schema->ColumnIndex(fieldName + HIVE_MAP_FIELD_SUFFIX)) != -1) {
             out.push_back(index);
+            out.push_back(index + 1);
         } else {
             return Status::Invalid("Field not found in schema: " + fieldName);
         }
@@ -283,7 +294,11 @@ Status ParquetReader::GetColumnIndices(const std::vector<std::string>& fieldName
 
 Status ParquetReader::ReadNextBatch(std::vector<omniruntime::vec::BaseVector*> &batch, long *batchRowSize)
 {
+    lastReadRowPosition_ = nextRowPosition_;
     ARROW_RETURN_NOT_OK(rb_reader->ReadNext(batch, batchRowSize));
+    if (*batchRowSize > 0) {
+        nextRowPosition_ += static_cast<uint64_t>(*batchRowSize);
+    }
     return arrow::Status::OK();
 }
 
@@ -293,9 +308,20 @@ Status ParquetReader::GetRecordBatchReader(const std::vector<int> &row_group_ind
     std::shared_ptr<::arrow::Schema> batch_schema;
     RETURN_NOT_OK(GetFieldReaders(row_group_indices, column_indices, &columnReaders, &batch_schema));
 
+    auto metadata = arrow_reader->parquet_reader()->metadata();
+    nextRowPosition_ = 0;
+    lastReadRowPosition_ = 0;
+    if (!row_group_indices.empty()) {
+        auto firstRowGroup = *std::min_element(row_group_indices.begin(), row_group_indices.end());
+        for (int i = 0; i < firstRowGroup; i++) {
+            nextRowPosition_ += static_cast<uint64_t>(metadata->RowGroup(i)->num_rows());
+        }
+        lastReadRowPosition_ = nextRowPosition_;
+    }
+
     int64_t num_rows = 0;
     for(int row_group : row_group_indices) {
-        num_rows += arrow_reader->parquet_reader()->metadata()->RowGroup(row_group)->num_rows();
+        num_rows += metadata->RowGroup(row_group)->num_rows();
     }
     // Use lambda function to generate BaseVectors
     auto batches = [num_rows, this](std::vector<omniruntime::vec::BaseVector*> &batch,

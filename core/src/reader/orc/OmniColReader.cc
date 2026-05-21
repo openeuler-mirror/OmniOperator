@@ -266,6 +266,7 @@ namespace omniruntime::reader {
                     const Type& child = *type.getSubtype(i);
                     if (selectedColumns[static_cast<uint64_t>(child.getColumnId())]) {
                         children.push_back(omniBuildReader(child, stripe, julianPtr));
+                        selectedChildIndices_.push_back(i);
                     }
                 }
                 break;
@@ -302,7 +303,7 @@ namespace omniruntime::reader {
 
         uint64_t i = 0;
         for(auto iter = children.begin(); iter != children.end(); ++iter, ++i) {
-            const orc::Type *child = type_->getSubtype(i);
+            const orc::Type *child = type_->getSubtype(selectedChildIndices_[i]);
             auto dataTypeId = getDefaultOmniType(child);
 
             // For dictionary-encoded string columns, output DictionaryVector directly
@@ -343,7 +344,7 @@ namespace omniruntime::reader {
         uint64_t i = 0;
 
         for(auto iter = children.begin(); iter != children.end(); ++iter, ++i) {
-            const Type* orcType = baseTp.getSubtype(i);
+            const Type* orcType = baseTp.getSubtype(selectedChildIndices_[i]);
             omniruntime::type::DataTypeId dataTypeId;
             if (omniTypeId == nullptr) {
                 dataTypeId = getDefaultOmniType(orcType);
