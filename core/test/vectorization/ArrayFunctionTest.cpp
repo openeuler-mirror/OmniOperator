@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "../../src/vector/vector_helper.h"
 #include "test/util/test_util.h"
 #include "vectorization/registration/Register.h"
 #include "vectorization/ExprEval.h"
@@ -36,7 +37,7 @@ TEST(ArrayFunctionTest, GetArrayItemTest)
 
     auto expr = FuncExpr("get_array_item", {
         new FieldExpr(0, std::make_shared<DataType>(OMNI_ARRAY)),
-        new LiteralExpr(0, type)
+        new LiteralExpr(1, type)
     }, type);
 
     auto context = new ExecutionContext();
@@ -45,12 +46,16 @@ TEST(ArrayFunctionTest, GetArrayItemTest)
     ExprEval e(input, context);
     e.VisitExpr(expr);
     auto result = e.GetResult();
-    VectorBatch vectorBatch(rowSize);
-    vectorBatch.Append(result);
-    VectorHelper::PrintVecBatch(&vectorBatch);
+
+    // Verify results: first element of each array should be [1, 4, 5]
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(VectorHelper::GetValueFromVector<int32_t>(result, 0), 1);
+    ASSERT_EQ(VectorHelper::GetValueFromVector<int32_t>(result, 1), 4);
+    ASSERT_EQ(VectorHelper::GetValueFromVector<int32_t>(result, 2), 5);
 
     delete context;
     delete input;
+    delete result;
 }
 
 TEST(ArrayFunctionTest, TransformTest)

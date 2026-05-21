@@ -24,10 +24,6 @@ namespace omniruntime::vectorization {
         void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
                    ExecutionContext *context) const override
         {
-            if (args.size() != 2) {
-                OMNI_THROW("MapFromArrays Error:", "map_from_arrays requires exactly 2 array arguments");
-            }
-
             BaseVector* valueVec = args.top();
             args.pop();
             BaseVector* keyVec = args.top();

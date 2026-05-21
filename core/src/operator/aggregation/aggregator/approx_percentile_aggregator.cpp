@@ -12,8 +12,7 @@ namespace omniruntime {
 namespace op {
 
 using namespace omniruntime::type;
-using omniruntime::vec::VectorHelper;
-namespace kll = omniruntime::op::kll;
+using vec::VectorHelper;
 
 namespace {
 

@@ -99,12 +99,8 @@ namespace omniruntime::vectorization {
 
     template <typename T>
     struct CotFunction {
-        template <typename TInput>
-        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
-        {
-            double tanVal = std::tan(static_cast<double>(a));
-            result = static_cast<TInput>(1.0 / tanVal);
-            return Status::OK();
+        ALWAYS_INLINE void call(double &result, double a) {
+            result = 1 / std::tan(a);
         }
     };
 
@@ -130,11 +126,8 @@ namespace omniruntime::vectorization {
 
     template <typename T>
     struct CbrtFunction {
-        template <typename TInput>
-        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
-        {
+        ALWAYS_INLINE void call(double &result, double a) {
             result = std::cbrt(a);
-            return Status::OK();
         }
     };
 
@@ -276,61 +269,59 @@ namespace omniruntime::vectorization {
 
     template <typename T>
     struct SecFunction {
-        template <typename TInput>
-        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
-        {
-            double cosVal = std::cos(static_cast<double>(a));
-            result = static_cast<TInput>(1.0 / cosVal);
-            return Status::OK();
+        ALWAYS_INLINE void call(double &result, double a) {
+            result = 1 / std::cos(a);
         }
     };
 
     template <typename T>
     struct CscFunction {
-        template <typename TInput>
-        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
-        {
-            double sinVal = std::sin(static_cast<double>(a));
-            result = static_cast<TInput>(1.0 / sinVal);
-            return Status::OK();
+        ALWAYS_INLINE void call(double &result, double a) {
+            result = 1 / std::sin(a);
         }
     };
 
     template <typename T>
     struct Log10Function {
-         template <typename TInput>
-         ALWAYS_INLINE Status call(TInput &result, const TInput &a) {
-             result = std::log10(a);
-             return Status::OK();
-         }
+        ALWAYS_INLINE bool call(double &result, double a) {
+            if (a <= 0.0) {
+                return false;
+            }
+            result = std::log10(a);
+            return true;
+        }
      };
 
     template <typename T>
     struct Log1pFunction {
-        template <typename TInput>
-        ALWAYS_INLINE Status call(TInput &result, const TInput &a) {
+        ALWAYS_INLINE bool call(double &result, double a) {
+            if (a <= -1) {
+                return false;
+            }
             result = std::log1p(a);
-            return Status::OK();
+            return true;
         }
     };
 
     template <typename T>
     struct Log2Function {
-        template <typename TInput>
-        ALWAYS_INLINE Status call(TInput &result, const TInput &a) {
+        ALWAYS_INLINE bool call(double &result, double a) {
+            if (a <= 0.0) {
+                return false;
+            }
             result = std::log2(a);
-            return Status::OK();
+            return true;
         }
     };
 
     template <typename T>
     struct LogarithmFunction {
-        template <typename TInput>
-        ALWAYS_INLINE Status call(TInput &result, const TInput &a, const TInput &b) {
-            double logBase = std::log(static_cast<double>(a));
-            double logVal = std::log(static_cast<double>(b));
-            result = static_cast<TInput>(logVal / logBase);
-            return Status::OK();
+        ALWAYS_INLINE bool call(double &result, double a, double b) {
+            if (a <= 0 || b <= 0) {
+                return false;
+            }
+            result = std::log(b) / std::log(a);
+            return true;
         }
     };
 

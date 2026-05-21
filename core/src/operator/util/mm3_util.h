@@ -14,7 +14,6 @@
 #include <cstdint>
 #include <arm_neon.h>
 
-
 namespace omniruntime::op {
 static const uint32_t MM3_C1 = 0xcc9e2d51;
 static const uint32_t MM3_C2 = 0x1b873593;
@@ -34,8 +33,12 @@ static const uint32_t FMIX_MULTIPLY_N = 0xc2b2ae35;
 
 static const uint32_t HASH_LONG_RIGHT_SHIFT = 32;
 
+static const uint32_t MM3_SIZE_BYTE = 1;
+static const uint32_t MM3_SIZE_SHORT = 2;
 static const uint32_t MM3_SIZE_INT = 4;
 static const uint32_t MM3_SIZE_LONG = 8;
+
+static const uint32_t MM3_INT_ONE = 1;
 
 static const uint32_t REVERSE_SHIFT_M = 24;
 static const uint32_t REVERSE_SHIFT_N = 8;
@@ -97,6 +100,24 @@ uint32_t inline HashBytesByInt(char *base, uint32_t lengthInBytes, uint32_t seed
     return h1;
 }
 
+static uint32_t HashByte(uint8_t input, uint32_t seed)
+{
+    uint32_t k1 = static_cast<uint32_t>(input);
+    k1 = MixK1(k1);
+    uint32_t h1 = MixH1(seed, k1);
+
+    return Fmix(h1, MM3_SIZE_BYTE);
+}
+
+static uint32_t HashShort(uint16_t input, uint32_t seed)
+{
+    uint32_t k1 = static_cast<uint32_t>(input);
+    k1 = MixK1(k1);
+    uint32_t h1 = MixH1(seed, k1);
+
+    return Fmix(h1, MM3_SIZE_SHORT);
+}
+
 static uint32_t HashInt(uint32_t input, uint32_t seed)
 {
     uint32_t k1 = MixK1(input);
@@ -124,10 +145,8 @@ static uint32_t HashUnsafeBytes(char *base, uint32_t lengthInBytes, uint32_t see
     uint32_t lengthAligned = lengthInBytes - lengthInBytes % MM3_SIZE_INT;
     uint32_t h1 = HashBytesByInt(base, lengthAligned, seed);
     for (uint32_t i = lengthAligned; i < lengthInBytes; i++) {
-        auto charVal = *(base + i);
-        auto halfWord = static_cast<int32_t>(charVal);
-        halfWord &= 0x000000FF; // get the lower eight bits
-        uint32_t k1 = MixK1(halfWord);
+        int32_t halfWord = static_cast<int32_t>(static_cast<int8_t>(base[i]));
+        uint32_t k1 = MixK1(static_cast<uint32_t>(halfWord));
         h1 = MixH1(h1, k1);
     }
     return Fmix(h1, lengthInBytes);

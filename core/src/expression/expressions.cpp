@@ -9,7 +9,7 @@
 #include <vectorization/functions/ConcatFunction.h>
 #include "vectorization/functions/IsNull.h"
 #include "vectorization/functions/Cast.h"
-#include "vectorization/functions/NameStruct.h"
+#include "vectorization/functions/NamedStruct.h"
 #include "vectorization/functions/MapFunction.h"
 #include "type/data_type.h"
 #include "vector/vector.h"
@@ -1028,13 +1028,13 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     if (vectorFunction == nullptr) {
         vectorFunction = VectorFunction::Find(signature);
     }
-    if (vectorFunction == nullptr && funcName == "name_struct" && dataType->GetId() == OMNI_ROW) {
-        vectorFunction = std::make_shared<vectorization::NameStructFunction>();
+    if (funcName == "named_struct") {
+        vectorFunction = std::make_shared<NamedStructFunction>(GetInputDataTypes());
     }
-    if (vectorFunction == nullptr && funcName == "map" && dataType->GetId() == OMNI_MAP) {
-        vectorFunction = std::make_shared<vectorization::MapFunction>();
+    if (funcName == "map") {
+        vectorFunction = std::make_shared<MapFunction>(GetInputDataTypes());
     }
-    if (vectorFunction == nullptr && funcName == "concat_ws") {
+    if (funcName == "concat_ws") {
         vectorFunction = std::make_shared<ConcatWsFunction>(GetInputDataTypes());
     }
     if (funcName == "CAST") {
@@ -1056,13 +1056,13 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
         this->function = FunctionRegistry::LookupFunction(signature.get());
     }
     vectorFunction = VectorFunction::Find(signature);
-    if (vectorFunction == nullptr && funcName == "name_struct" && dataType->GetId() == OMNI_ROW) {
-        vectorFunction = std::make_shared<vectorization::NameStructFunction>();
+    if (funcName == "named_struct") {
+        vectorFunction = std::make_shared<NamedStructFunction>(GetInputDataTypes());
     }
-    if (vectorFunction == nullptr && funcName == "map" && dataType->GetId() == OMNI_MAP) {
-        vectorFunction = std::make_shared<vectorization::MapFunction>();
+    if (funcName == "map") {
+        vectorFunction = std::make_shared<MapFunction>(GetInputDataTypes());
     }
-    if (vectorFunction == nullptr && funcName == "concat_ws") {
+    if (funcName == "concat_ws") {
         vectorFunction = std::make_shared<ConcatWsFunction>(GetInputDataTypes());
     }
     if (funcName == "CAST") {
@@ -1082,13 +1082,13 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
     this->function = FunctionRegistry::LookupFunction(signature.get());
     vectorFunction = VectorFunction::Find(signature);
-    if (vectorFunction == nullptr && funcName == "name_struct" && dataType->GetId() == OMNI_ROW) {
-        vectorFunction = std::make_shared<vectorization::NameStructFunction>();
+    if (funcName == "named_struct") {
+        vectorFunction = std::make_shared<NamedStructFunction>(GetInputDataTypes());
     }
-    if (vectorFunction == nullptr && funcName == "map" && dataType->GetId() == OMNI_MAP) {
-        vectorFunction = std::make_shared<vectorization::MapFunction>();
+    if (funcName == "map") {
+        vectorFunction = std::make_shared<MapFunction>(GetInputDataTypes());
     }
-    if (vectorFunction == nullptr && funcName == "concat_ws") {
+    if (funcName == "concat_ws") {
         vectorFunction = std::make_shared<ConcatWsFunction>(GetInputDataTypes());
     }
     if (funcName == "CAST") {

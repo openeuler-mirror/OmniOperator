@@ -18,17 +18,16 @@ using namespace omniruntime::vec;
 void MapFunction::Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
                         BaseVector *&result, ExecutionContext *context) const
 {
+    size_t argCount = inputDataTypes_.size();
+    if (argCount % 2 != 0) {
+        OMNI_THROW("MapFunction Error", "map requires an even number of arguments (>= 2)");
+    }
     std::vector<BaseVector *> allArgs;
-    while (!args.empty()) {
+    for (int i = 0; i < argCount; ++i) {
         allArgs.push_back(args.top());
         args.pop();
     }
     std::reverse(allArgs.begin(), allArgs.end());
-
-    size_t argCount = allArgs.size();
-    if (argCount % 2 != 0) {
-        OMNI_THROW("MapFunction Error", "map requires an even number of arguments (>= 2)");
-    }
 
     auto *mapType = dynamic_cast<const MapType *>(outputType.get());
     if (mapType == nullptr) {
