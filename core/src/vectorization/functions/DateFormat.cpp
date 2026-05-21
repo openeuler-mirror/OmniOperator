@@ -4,10 +4,15 @@
  * Formats a timestamp value into a string according to the format specifier.
  * Follows Velox Spark SQL behavior: date_format(timestamp, format) -> varchar
  * Aligned with Spark/Java DateTimeFormatter pattern semantics. Shares pattern
- * parsing approach (including timezone token handling via setenv/localtime_r)
- * with FromUnixTime.cpp. The key difference vs. from_unixtime is that the
- * input here is microsecond-precision TIMESTAMP, so the fraction-of-second
- * token 'S' produces real sub-second digits.
+ * parsing approach with FromUnixTime.cpp. The key differences vs. from_unixtime:
+ *   1) input is microsecond-precision TIMESTAMP, so 'S' token outputs real
+ *      sub-second digits (FormatFractionOfSecond).
+ *   2) setenv("TZ") + tzset() are non-thread-safe and modify global process
+ *      state; they are called exactly once per Apply (per batch), hoisted out
+ *      of the per-row loop, never per-row.
+ *   3) timeParserPolicy is hardcoded to "CORRECTED" (Spark's default after
+ *      Spark 3.0); legacy SimpleDateFormat semantics are not supported, so
+ *      all isLegacy branches are removed.
  */
 
 #include "DateFormat.h"
@@ -57,26 +62,9 @@ std::string FormatNumber(int64_t value, size_t count)
     return count >= 2 ? PadNumber(value, count) : std::to_string(value);
 }
 
-std::string ToUpperAscii(std::string value)
-{
-    std::transform(value.begin(), value.end(), value.begin(),
-        [](unsigned char ch) { return static_cast<char>(std::toupper(ch)); });
-    return value;
-}
-
-bool IsLegacyPolicy(const std::string &policy)
-{
-    return ToUpperAscii(policy) == "LEGACY";
-}
-
 void ThrowUnsupportedPattern(char token)
 {
     OMNI_THROW("DateFormat function Error", "Illegal pattern character '" + std::string(1, token) + "'");
-}
-
-int GetLegacyDayOfWeekInMonth(const struct tm &timeInfo)
-{
-    return ((timeInfo.tm_mday - 1) / 7) + 1;
 }
 
 int GetGmtOffsetSeconds(const struct tm &timeInfo)
@@ -223,34 +211,41 @@ std::string_view GetStringValueFromVector(BaseVector *vec, int32_t row)
     return std::string_view();
 }
 
-/// Format a timestamp using Spark/Java DateTimeFormatter pattern tokens.
-/// timestampMicros: microseconds since epoch.
-/// When timeZoneStr is non-empty, setenv("TZ") + localtime_r is used so that
-/// tm_gmtoff / tm_zone are populated correctly for the timezone tokens
-/// ('v', 'z', 'O', 'X', 'x', 'Z'). When empty, gmtime_r (UTC) is used.
-std::string FormatTimestamp(int64_t timestampMicros, const std::string &sparkFormat,
-    const std::string &timeZoneStr, const std::string &policy)
+/// Resolve a microsecond timestamp into a broken-down struct tm in the given
+/// timezone. Uses localtime_r when useLocalTime is true so glibc populates
+/// tm_gmtoff / tm_zone (required by timezone tokens). Otherwise uses gmtime_r.
+///
+/// IMPORTANT: setenv("TZ") + tzset() are NOT thread-safe and MUST be called
+/// by the caller exactly once per batch (outside per-row loops), not here.
+/// This function only reads the thread-local time conversion functions.
+void ResolveLocalTime(int64_t timestampMicros, bool useLocalTime,
+    struct tm &outLtm, int64_t &outMicroInSecond)
 {
-    // Split microseconds into seconds + sub-second microseconds with floor semantics.
     int64_t seconds = timestampMicros / 1000000;
     int64_t microInSecond = timestampMicros % 1000000;
     if (microInSecond < 0) {
         microInSecond += 1000000;
         seconds -= 1;
     }
+    outMicroInSecond = microInSecond;
 
     time_t timeStampVal = static_cast<time_t>(seconds);
-    struct tm ltm = {};
-
-    if (!timeZoneStr.empty()) {
-        std::string normalizedTz = NormalizeTimeZone(timeZoneStr);
-        setenv("TZ", normalizedTz.c_str(), 1);
-        tzset();
-        localtime_r(&timeStampVal, &ltm);
+    outLtm = {};
+    if (useLocalTime) {
+        localtime_r(&timeStampVal, &outLtm);
     } else {
-        gmtime_r(&timeStampVal, &ltm);
+        gmtime_r(&timeStampVal, &outLtm);
     }
+}
 
+/// Format a broken-down time using Spark/Java DateTimeFormatter pattern tokens.
+/// ltm must already be populated for the desired timezone (tm_gmtoff / tm_zone
+/// filled in for timezone tokens to work).
+/// timeZoneStr is the display timezone id (e.g. "Asia/Shanghai"), only used by
+/// 'v'/'z'/'V' tokens for canonicalization.
+std::string FormatTimestamp(const struct tm &ltm, int64_t microInSecond,
+    const std::string &sparkFormat, const std::string &timeZoneStr)
+{
     std::string result;
     result.reserve(sparkFormat.size() * 2);
     const int offsetSeconds = GetGmtOffsetSeconds(ltm);
@@ -258,7 +253,6 @@ std::string FormatTimestamp(int64_t timestampMicros, const std::string &sparkFor
     const int hour = ltm.tm_hour;
     const int month = ltm.tm_mon + 1;
     const int dayOfMonth = ltm.tm_mday;
-    const bool isLegacy = IsLegacyPolicy(policy);
 
     size_t i = 0;
     while (i < sparkFormat.size()) {
@@ -342,14 +336,10 @@ std::string FormatTimestamp(int64_t timestampMicros, const std::string &sparkFor
                 result += count >= 4 ? FULL_WEEKDAY_NAMES[ltm.tm_wday] : SHORT_WEEKDAY_NAMES[ltm.tm_wday];
                 break;
             case 'F':
-                result += std::to_string(isLegacy ? GetLegacyDayOfWeekInMonth(ltm)
-                                                  : ((dayOfMonth - 1) % 7) + 1);
+                result += std::to_string(((dayOfMonth - 1) / 7) + 1);
                 break;
             case 'q':
             case 'Q':
-                if (isLegacy) {
-                    ThrowUnsupportedPattern(token);
-                }
                 result += FormatNumber(((month - 1) / 3) + 1, count);
                 break;
             case 'w': {
@@ -363,33 +353,19 @@ std::string FormatTimestamp(int64_t timestampMicros, const std::string &sparkFor
                 break;
             }
             case 'V':
-                if (isLegacy) {
-                    ThrowUnsupportedPattern(token);
-                }
                 result += zoneId;
                 break;
             case 'v':
-                if (isLegacy) {
-                    ThrowUnsupportedPattern(token);
-                }
-                result += FormatZoneName(ltm, timeZoneStr, offsetSeconds);
-                break;
             case 'z':
                 result += FormatZoneName(ltm, timeZoneStr, offsetSeconds);
                 break;
             case 'O':
-                if (isLegacy) {
-                    ThrowUnsupportedPattern(token);
-                }
                 result += FormatLocalizedOffset(offsetSeconds, count);
                 break;
             case 'X':
                 result += FormatIsoOffset(offsetSeconds, count, true);
                 break;
             case 'x':
-                if (isLegacy) {
-                    ThrowUnsupportedPattern(token);
-                }
                 result += FormatIsoOffset(offsetSeconds, count, false);
                 break;
             case 'Z':
@@ -443,14 +419,22 @@ public:
 
         auto *resultFlatVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(result);
 
-        // Resolve timezone from session config (same approach as FromUnixTime).
-        // Using setenv("TZ") + localtime_r ensures tm_gmtoff / tm_zone are
-        // populated, so timezone tokens (v/z/O/X/x/Z) produce correct values.
+        // Resolve timezone from session config once per batch.
+        // setenv("TZ") + tzset() are NOT thread-safe and modify global process
+        // state, so they are called exactly once here, outside the per-row
+        // loop. Once set, localtime_r reads tzname/timezone/daylight via the
+        // process-wide state, which is sufficient for tm_gmtoff / tm_zone
+        // population required by timezone tokens (v/z/O/X/x/Z).
         std::string timeZoneStr;
         if (context->queryConfig().AdjustTimestampToTimezone()) {
             timeZoneStr = context->queryConfig().SessionTimezone();
         }
-        const std::string policy = "CORRECTED";
+        const bool useLocalTime = !timeZoneStr.empty();
+        if (useLocalTime) {
+            std::string normalizedTz = NormalizeTimeZone(timeZoneStr);
+            setenv("TZ", normalizedTz.c_str(), 1);
+            tzset();
+        }
 
         bool tsIsConst = (timestampArg->GetEncoding() == OMNI_ENCODING_CONST);
         int64_t constTsValue = 0;
@@ -521,9 +505,13 @@ public:
                 sparkFormat = std::string(GetStringValueFromVector(formatArg, i));
             }
 
+            struct tm ltm = {};
+            int64_t microInSecond = 0;
+            ResolveLocalTime(micros, useLocalTime, ltm, microInSecond);
+
             std::string formatted;
             try {
-                formatted = FormatTimestamp(micros, sparkFormat, timeZoneStr, policy);
+                formatted = FormatTimestamp(ltm, microInSecond, sparkFormat, timeZoneStr);
             } catch (...) {
                 result->SetNull(i);
                 return;

@@ -770,6 +770,108 @@ TEST(DateFormatTest, ZoneIdToken_V) {
     delete resultVec;
 }
 
+// =============================================================================
+// Code review fix regression tests
+//   - GetLegacyDayOfWeekInMonth removed: 'F' token now always uses
+//     ((dayOfMonth - 1) % 7) + 1 (Java DateTimeFormatter aligned-week-of-month).
+//   - setenv/tzset hoisted out of per-row loop: must remain consistent within
+//     a batch even when input rows span multiple distinct days.
+//   - Dead isLegacy branches removed: q/Q/V/v/O/x tokens must succeed
+//     unconditionally (no spurious ThrowUnsupportedPattern path).
+// =============================================================================
+
+// Test: 'F' (aligned-week-of-month) for representative same-weekday days.
+// Per Java DateTimeFormatter, F is ordinal of same-weekday occurrence in
+// the month: day 1..7 -> 1, day 8..14 -> 2, ... regardless of weekday.
+TEST(DateFormatTest, AlignedWeekOfMonth_F) {
+    std::vector<int64_t> tsValues = {
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 1, 0, 0, 0),   // 1st of month
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 7, 0, 0, 0),   // 7th
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 8, 0, 0, 0),   // 8th
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 14, 0, 0, 0),  // 14th
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 0, 0, 0),  // 15th
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 30, 0, 0, 0)   // 30th
+    };
+    std::vector<std::string> fmtValues(tsValues.size(), "F");
+    std::vector<std::string> expected = {"1", "1", "2", "2", "3", "5"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormat(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, resultVec);
+
+    for (size_t i = 0; i < expected.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " 'F' token mismatch";
+    }
+
+    delete resultVec;
+}
+
+// Test: timezone is applied consistently to ALL rows in a batch even when
+// they span different dates. Regression for the case where setenv/tzset
+// was previously called per-row (now hoisted out of the row loop).
+TEST(DateFormatTest, TimezoneConsistentAcrossBatch) {
+    // Multiple distinct timestamps spanning different days; all should be
+    // formatted in Asia/Shanghai (UTC+8) consistently.
+    std::vector<int64_t> tsValues = {
+        DateFormatFunctionTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),    // -> 08:00 next day
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0),  // -> 20:00 same day
+        DateFormatFunctionTestHelper::ToMicros(2024, 12, 31, 16, 0, 0), // -> 00:00 next day
+        DateFormatFunctionTestHelper::ToMicros(2024, 3, 10, 23, 30, 0)  // -> 07:30 next day
+    };
+    std::vector<std::string> fmtValues(tsValues.size(), "yyyy-MM-dd HH:mm XXX");
+    std::vector<std::string> expected = {
+        "2024-01-01 08:00 +08:00",
+        "2024-06-15 20:00 +08:00",
+        "2025-01-01 00:00 +08:00",
+        "2024-03-11 07:30 +08:00"
+    };
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "Asia/Shanghai", resultVec);
+
+    for (size_t i = 0; i < expected.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " batch-timezone consistency mismatch";
+    }
+
+    delete resultVec;
+}
+
+// Test: tokens that previously had an isLegacy-gated ThrowUnsupportedPattern
+// branch (q/Q/V/v/O/x) must all succeed under default CORRECTED policy.
+TEST(DateFormatTest, NoLegacyThrow_FormerlyGatedTokens) {
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 4, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues(6, ts);
+    std::vector<std::string> fmtValues = {"q", "Q", "V", "v", "O", "x"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "Asia/Shanghai", resultVec);
+
+    for (size_t i = 0; i < fmtValues.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i))
+            << "Token '" << fmtValues[i] << "' must not throw / become NULL under CORRECTED policy";
+        std::string actual = DateFormatFunctionTestHelper::GetStringValue(resultVec, i);
+        EXPECT_FALSE(actual.empty())
+            << "Token '" << fmtValues[i] << "' produced empty output";
+    }
+
+    delete resultVec;
+}
+
 // Test: pre-epoch (negative microseconds) - floor-semantics split must
 // correctly produce non-negative sub-second microseconds and a
 // floor-rounded seconds count. Without floor handling, the sub-second
