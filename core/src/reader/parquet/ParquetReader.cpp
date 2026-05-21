@@ -39,8 +39,10 @@ static constexpr int32_t LOCAL_FILE_PREFIX = 5;
 static constexpr int32_t LOCAL_FILE_PREFIX_EXT = 7;
 static const std::string LOCAL_FILE = "file:";
 static const std::string HDFS_FILE = "hdfs:";
-static const std::string ARROW_LIST_FIELD_SUFFIX = ".list.element";
-static const std::string ARROW_MAP_FIELD_SUFFIX = ".key_value.key";
+static const std::string SPARK_LIST_FIELD_SUFFIX = ".list.element";
+static const std::string SPARK_MAP_FIELD_SUFFIX = ".key_value.key";
+static const std::string HIVE_LIST_FIELD_SUFFIX = ".bag.array_element";
+static const std::string HIVE_MAP_FIELD_SUFFIX = ".map.key";
 
 namespace
 {
@@ -276,10 +278,13 @@ Status ParquetReader::GetColumnIndices(const std::vector<std::string>& fieldName
     for (const auto& fieldName : fieldNames) {
         if ((index = schema->ColumnIndex(fieldName)) != -1) {
             out.push_back(index);
-        } else if ((index = schema->ColumnIndex(fieldName + ARROW_LIST_FIELD_SUFFIX)) != -1) {
+        } else if ((index = schema->ColumnIndex(fieldName + SPARK_LIST_FIELD_SUFFIX)) != -1 ||
+            (index = schema->ColumnIndex(fieldName + HIVE_LIST_FIELD_SUFFIX)) != -1) {
             out.push_back(index);
-        } else if ((index = schema->ColumnIndex(fieldName + ARROW_MAP_FIELD_SUFFIX)) != -1) {
+        } else if ((index = schema->ColumnIndex(fieldName + SPARK_MAP_FIELD_SUFFIX)) != -1 ||
+            (index = schema->ColumnIndex(fieldName + HIVE_MAP_FIELD_SUFFIX)) != -1) {
             out.push_back(index);
+            out.push_back(index + 1);
         } else {
             return Status::Invalid("Field not found in schema: " + fieldName);
         }
