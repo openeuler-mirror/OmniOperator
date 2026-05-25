@@ -8,6 +8,7 @@
 #include "vector/array_vector.h"
 #include "vector/row_vector.h"
 #include "vector/vector.h"
+#include "util/omni_exception.h"
 #include <unordered_map>
 
 static constexpr int32_t BYTE_1 = 1;
@@ -21,16 +22,16 @@ static constexpr int32_t BIT_64 = 64;
 
 namespace omniruntime {
 namespace op {
-template <DataTypeId id> const char *VariableTypeDeserializer(BaseVector *baseVector, size_t rowIdx, const char *pos)
-{
-    using RealVector = typename NativeAndVectorType<id>::vector;
-    auto realVector = static_cast<RealVector *>(baseVector);
-    auto rowLenSize = *reinterpret_cast<const uint8_t *>(pos);
+    template <DataTypeId id> const char *VariableTypeDeserializer(BaseVector *baseVector, size_t rowIdx, const char *pos)
+    {
+        using RealVector = typename NativeAndVectorType<id>::vector;
+        auto realVector = static_cast<RealVector *>(baseVector);
+        auto rowLenSize = *reinterpret_cast<const uint8_t *>(pos);
 
-    if (rowLenSize != 0) {
-        // decompress rowLenSize byte to stringLen.
-        size_t stringLen = 0;
-        switch (rowLenSize) {
+        if (rowLenSize != 0) {
+            // decompress rowLenSize byte to stringLen.
+            size_t stringLen = 0;
+            switch (rowLenSize) {
             case BYTE_1:
                 stringLen = *reinterpret_cast<const uint8_t *>(pos + sizeof(uint8_t));
                 break;
@@ -42,46 +43,42 @@ template <DataTypeId id> const char *VariableTypeDeserializer(BaseVector *baseVe
                 break;
             default:
                 throw OmniException("DESERIALIZED FAILED", "Invalid String Length");
+            }
+            pos = pos + sizeof(uint8_t) + rowLenSize;
+            std::string_view strView(pos, stringLen);
+            realVector->SetValue(rowIdx, strView);
+            return pos + stringLen;
+        } else {
+            realVector->SetNull(rowIdx);
+            return pos + sizeof(uint8_t);
         }
-        pos = pos + sizeof(uint8_t) + rowLenSize;
-        std::string_view strView(pos, stringLen);
-        realVector->SetValue(rowIdx, strView);
-        return pos + stringLen;
-    } else {
-        realVector->SetNull(rowIdx);
-        return pos + sizeof(uint8_t);
     }
-}
 
-bool ALWAYS_INLINE DoVariableTypeCompare(const std::string_view &inValue, uint8_t *&pos)
+ALWAYS_INLINE bool DoVariableTypeCompare(const std::string_view &inValue, uint8_t *&pos)
 {
-    auto rowLenSize = *reinterpret_cast<const uint8_t *>(pos);
-    auto strLen = inValue.size();
+    uint8_t rowLenSize = *pos;
     if (rowLenSize == 0) {
+        pos += sizeof(uint8_t);
         return false;
     }
-
     size_t stringLen = 0;
     switch (rowLenSize) {
-    case BYTE_1:
-        stringLen = *reinterpret_cast<const uint8_t *>(pos + sizeof(uint8_t));
-        break;
-    case BYTE_2:
-        stringLen = *reinterpret_cast<const uint16_t *>(pos + sizeof(uint8_t));
-        break;
-    case BYTE_4:
-        stringLen = *reinterpret_cast<const uint32_t *>(pos + sizeof(uint8_t));
-        break;
-    default:
-        throw OmniException("DESERIALIZED FAILED", "Invalid String Length");
+        case BYTE_1:
+            stringLen = *reinterpret_cast<const uint8_t *>(pos + sizeof(uint8_t));
+            break;
+        case BYTE_2:
+            stringLen = *reinterpret_cast<const uint16_t *>(pos + sizeof(uint8_t));
+            break;
+        case BYTE_4:
+            stringLen = *reinterpret_cast<const uint32_t *>(pos + sizeof(uint8_t));
+            break;
+        default:
+            throw OmniException("COMPARE FAILED", "Invalid String Length");
     }
-    if (strLen != stringLen) {
-        return false;
-    }
-    pos += sizeof(uint8_t) + rowLenSize;
-    auto comp = std::memcmp(pos, inValue.data(), strLen);
-    pos += strLen;
-    return comp == 0;
+    if (inValue.size() != stringLen) return false;
+    const char* rowData = reinterpret_cast<const char*>(pos) + sizeof(uint8_t) + rowLenSize;
+    pos += sizeof(uint8_t) + rowLenSize + stringLen;
+    return std::memcmp(rowData, inValue.data(), stringLen) == 0;
 }
 
 template <DataTypeId id> bool VariableTypeComparator(BaseVector &baseVector, size_t rowIdx, uint8_t *&pos)
@@ -89,17 +86,15 @@ template <DataTypeId id> bool VariableTypeComparator(BaseVector &baseVector, siz
     using RealVector = typename NativeAndVectorType<id>::vector;
     auto realVector = static_cast<RealVector *>(&baseVector);
     std::string_view value = realVector->GetValue(rowIdx);
-    auto rowLenSize = *reinterpret_cast<const uint8_t *>(pos);
-
-    if (rowLenSize != 0) {
-        return DoVariableTypeCompare(value, pos);
-    } else {
+    uint8_t rowLenSize = *pos;
+    if (rowLenSize == 0) {
         pos += sizeof(uint8_t);
         return baseVector.IsNull(rowIdx);
     }
+    return DoVariableTypeCompare(value, pos);
 }
 
-void ALWAYS_INLINE VariableTypeSerializer(const std::string_view &inValue, mem::SimpleArenaAllocator &arenaAllocator,
+ALWAYS_INLINE void VariableTypeSerializer(const std::string_view &inValue, mem::SimpleArenaAllocator &arenaAllocator,
     StringRef &result)
 {
     auto stringLen = static_cast<int32_t>(inValue.size());

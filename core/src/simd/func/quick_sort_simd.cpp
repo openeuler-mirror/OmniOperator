@@ -1,8 +1,6 @@
 /*
 * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-fsanitize=address"
 #include <algorithm>
 #include <cfloat>
 #include <cmath>

@@ -172,6 +172,14 @@ template <> struct NativeType<DataTypeId::OMNI_TIME64> {
     static constexpr bool isPrimitiveType = true;
     static constexpr bool isFixedWidth = true;
 };
+
+template <> struct NativeType<DataTypeId::OMNI_TIME32> {
+    using type = int32_t;
+    static constexpr const char* name = "TIME32";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
+};
+
 template <> struct NativeType<DataTypeId::OMNI_VARCHAR> {
     using type = std::string_view;
     static constexpr const char* name = "VARCHAR";

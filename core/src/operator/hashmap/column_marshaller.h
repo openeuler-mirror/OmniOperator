@@ -10,6 +10,7 @@
 #include <utility>
 #include "vector/vector_helper.h"
 #include "type/string_ref.h"
+
 #include "type/data_type.h"
 #include "operator/hashmap/base_hash_map.h"
 #include "operator/hashmap/taper_hashtable.h"
@@ -17,6 +18,7 @@
 #include "operator/execution_context.h"
 #include "vector_marshaller.h"
 #include "vector/vector.h"
+#include "vector/decoded_vector.h"
 #include "row_container.h"
 
 namespace omniruntime {
@@ -238,322 +240,6 @@ private:
     std::vector<FixedKeyVectorSerializerIgnoreNullSimd> fixedKeysIgnoreNullSerializersSimd;
 };
 
-template <typename Hashmap, typename T>
-class GroupbySingleFixHandler {
-public:
-    static constexpr bool HasSpecialNullFunc = true;
-    Hashmap hashmap;
-    using Result = typename Hashmap::ResultType;
-
-    Result InsertValueToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
-        mem::SimpleArenaAllocator &arenaAllocator)
-    {
-        auto *curVector = groupVectors[0];
-        if (curVector->IsNull(rowIdx)) {
-            T value = 0;
-            return hashmap.EmplaceNullValue(value);
-        }
-        return hashmap.Emplace(reinterpret_cast<Vector<T>*>(curVector)->GetValue(rowIdx));
-    }
-
-    Result InsertDictValueToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
-                                mem::SimpleArenaAllocator &arenaAllocator)
-    {
-        auto *curVector = groupVectors[0];
-        if (curVector->IsNull(rowIdx)) {
-            T value = 0;
-            return hashmap.EmplaceNullValue(value);
-        }
-        auto dictionaryVector = static_cast<Vector<DictionaryContainer<T>> *>(curVector);
-        auto value = dictionaryVector->GetValue(rowIdx);
-        return hashmap.Emplace(value);
-    }
-
-    Result InsertConstValueToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
-                                mem::SimpleArenaAllocator &arenaAllocator)
-    {
-        auto *curVector = groupVectors[0];
-        if (curVector->IsNull(rowIdx)) {
-            T value = 0;
-            return hashmap.EmplaceNullValue(value);
-        }
-        auto constVector = static_cast<ConstVector<T> *>(curVector);
-        return hashmap.Emplace(constVector->GetConstValue());
-    }
-
-    template<bool isNull>
-    Result InsertOneValueToHashmap(T value)
-    {
-        if constexpr (isNull) {
-            value = 0;
-            return hashmap.EmplaceNullValue(value);
-        }
-        return hashmap.Emplace(value);
-    }
-
-    void ParseKeyToCols(const T &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
-        const int rowIdx)
-    {
-        auto curVectorPtr = groupOutputVectors[0];
-        if (curVectorPtr->GetEncoding() == Encoding::OMNI_DICTIONARY) {
-            auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(curVectorPtr);
-            dictionaryVector->SetValue(rowIdx, key);
-        } else {
-            reinterpret_cast<Vector<T>*>(curVectorPtr)->SetValue(rowIdx, key);
-        }
-    }
-
-    void ParseNull(const T &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
-        const int rowIdx)
-    {
-        auto curVectorPtr = groupOutputVectors[0];
-        curVectorPtr->SetNull(rowIdx);
-    }
-
-    size_t GetElementsSize() const
-    {
-        return hashmap.GetElementsSize();
-    }
-
-    void ResetHashmap()
-    {
-        hashmap.Reset();
-    }
-};
-
-template <typename Hashmap, typename KeyType>
-class GroupbyPackedFixHandler {
-public:
-    static constexpr bool HasSpecialNullFunc = false;
-    Hashmap hashmap;
-    using Result = typename Hashmap::ResultType;
-
-    explicit GroupbyPackedFixHandler(std::vector<int32_t> typeIds, std::vector<uint8_t> bitWidths)
-        : hashmap(16)
-    {
-        InitPlan(std::move(typeIds), std::move(bitWidths));
-    }
-
-    Result InsertValueToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
-        mem::SimpleArenaAllocator &arenaAllocator)
-    {
-        (void)arenaAllocator;
-        auto key = PackKey(groupVectors, groupColNum, rowIdx);
-        return hashmap.Emplace(key);
-    }
-
-    Result InsertDictValueToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
-        mem::SimpleArenaAllocator &arenaAllocator)
-    {
-        (void)arenaAllocator;
-        auto key = PackKey(groupVectors, groupColNum, rowIdx);
-        return hashmap.Emplace(key);
-    }
-
-    Result InsertConstValueToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
-        mem::SimpleArenaAllocator &arenaAllocator)
-    {
-        (void)arenaAllocator;
-        auto key = PackKey(groupVectors, groupColNum, rowIdx);
-        return hashmap.Emplace(key);
-    }
-
-    void Prepare(BaseVector **groupVectors, int32_t groupColNum)
-    {
-        for (int32_t col = 0; col < groupColNum; ++col) {
-            const auto encoding = groupVectors[col]->GetEncoding();
-            if (encoding == Encoding::OMNI_DICTIONARY) {
-                plan[col].activeLoader = plan[col].dictLoader;
-            } else if (encoding == Encoding::OMNI_ENCODING_CONST) {
-                plan[col].activeLoader = plan[col].constLoader;
-            } else {
-                plan[col].activeLoader = plan[col].flatLoader;
-            }
-        }
-    }
-
-    void ParseKeyToCols(const KeyType &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
-        const int rowIdx)
-    {
-        UnpackKey(key, groupColNum);
-        for (int32_t col = 0; col < groupColNum; ++col) {
-            auto *outVector = groupOutputVectors[col];
-            if (unpackIsNull[col]) {
-                outVector->SetNull(rowIdx);
-                continue;
-            }
-            SetValueByType(outVector, rowIdx, plan[col].typeId, unpackValues[col]);
-        }
-    }
-
-    size_t GetElementsSize() const
-    {
-        return hashmap.GetElementsSize();
-    }
-
-    void ResetHashmap()
-    {
-        hashmap.Reset();
-    }
-
-private:
-    using UnsignedKey = std::conditional_t<std::is_same_v<KeyType, omniruntime::type::int128_t>,
-        __uint128_t, std::make_unsigned_t<KeyType>>;
-
-    using LoaderFn = UnsignedKey (*)(BaseVector *vector, int32_t rowIdx, UnsignedKey mask);
-
-    struct PlanEntry {
-        int32_t typeId = OMNI_INVALID;
-        uint8_t bitWidth = 0;
-        UnsignedKey mask = 0;
-        LoaderFn flatLoader = nullptr;
-        LoaderFn dictLoader = nullptr;
-        LoaderFn constLoader = nullptr;
-        LoaderFn activeLoader = nullptr;
-    };
-
-    std::vector<PlanEntry> plan;
-    mutable std::vector<uint8_t> unpackIsNull;
-    mutable std::vector<UnsignedKey> unpackValues;
-
-    static ALWAYS_INLINE UnsignedKey MaskForWidth(uint8_t width)
-    {
-        if (width == 0) {
-            return 0;
-        }
-        constexpr uint8_t kBits = static_cast<uint8_t>(sizeof(UnsignedKey) * 8);
-        if (width >= kBits) {
-            return static_cast<UnsignedKey>(~static_cast<UnsignedKey>(0));
-        }
-        return (static_cast<UnsignedKey>(1) << width) - 1;
-    }
-
-    template<typename T, bool isDict>
-    static ALWAYS_INLINE UnsignedKey LoadBits(BaseVector *vector, int32_t rowIdx, UnsignedKey mask)
-    {
-        if constexpr (isDict) {
-            auto v = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector)->GetValue(rowIdx);
-            return static_cast<UnsignedKey>(static_cast<std::make_unsigned_t<T>>(v)) & mask;
-        } else {
-            auto v = reinterpret_cast<Vector<T> *>(vector)->GetValue(rowIdx);
-            return static_cast<UnsignedKey>(static_cast<std::make_unsigned_t<T>>(v)) & mask;
-        }
-    }
-
-    template<typename T>
-    static ALWAYS_INLINE UnsignedKey LoadBitsConst(BaseVector *vector, int32_t rowIdx, UnsignedKey mask)
-    {
-        (void)rowIdx;
-        auto v = reinterpret_cast<ConstVector<T> *>(vector)->GetConstValue();
-        return static_cast<UnsignedKey>(static_cast<std::make_unsigned_t<T>>(v)) & mask;
-    }
-
-    static ALWAYS_INLINE void SetValueByType(BaseVector *vector, int32_t rowIdx, int32_t typeId, UnsignedKey value)
-    {
-        switch (typeId) {
-            case OMNI_BYTE:
-                reinterpret_cast<Vector<int8_t> *>(vector)->SetValue(rowIdx, static_cast<int8_t>(value));
-                break;
-            case OMNI_SHORT:
-                reinterpret_cast<Vector<int16_t> *>(vector)->SetValue(rowIdx, static_cast<int16_t>(value));
-                break;
-            case OMNI_INT:
-            case OMNI_DATE32:
-            case OMNI_TIME32:
-                reinterpret_cast<Vector<int32_t> *>(vector)->SetValue(rowIdx, static_cast<int32_t>(value));
-                break;
-            case OMNI_LONG:
-            case OMNI_TIMESTAMP:
-            case OMNI_DECIMAL64:
-            case OMNI_DATE64:
-            case OMNI_TIME64:
-                reinterpret_cast<Vector<int64_t> *>(vector)->SetValue(rowIdx, static_cast<int64_t>(value));
-                break;
-            default:
-                break;
-        }
-    }
-
-    ALWAYS_INLINE KeyType PackKey(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx) const
-    {
-        UnsignedKey packed = 0;
-        for (int32_t col = 0; col < groupColNum; ++col) {
-            auto &entry = plan[col];
-            bool isNull = groupVectors[col]->IsNull(rowIdx);
-            packed = (packed << 1) | static_cast<UnsignedKey>(isNull ? 1 : 0);
-            UnsignedKey valueBits = 0;
-            if (!isNull) {
-                valueBits = entry.activeLoader(groupVectors[col], rowIdx, entry.mask);
-            }
-            packed = (packed << entry.bitWidth) | valueBits;
-        }
-        return static_cast<KeyType>(packed);
-    }
-
-    ALWAYS_INLINE void UnpackKey(const KeyType &key, int32_t groupColNum) const
-    {
-        UnsignedKey packed = static_cast<UnsignedKey>(key);
-        if (UNLIKELY(static_cast<size_t>(groupColNum) != plan.size())) {
-            unpackIsNull.resize(groupColNum);
-            unpackValues.resize(groupColNum);
-        }
-        for (int32_t col = groupColNum - 1; col >= 0; --col) {
-            auto width = plan[col].bitWidth;
-            auto mask = plan[col].mask;
-            unpackValues[col] = packed & mask;
-            packed >>= width;
-            unpackIsNull[col] = static_cast<uint8_t>(packed & 1);
-            packed >>= 1;
-        }
-    }
-
-    void InitPlan(std::vector<int32_t> typeIds, std::vector<uint8_t> bitWidths)
-    {
-        plan.resize(typeIds.size());
-        unpackIsNull.resize(typeIds.size());
-        unpackValues.resize(typeIds.size());
-        for (size_t i = 0; i < typeIds.size(); ++i) {
-            plan[i].typeId = typeIds[i];
-            plan[i].bitWidth = bitWidths[i];
-            plan[i].mask = MaskForWidth(bitWidths[i]);
-            switch (typeIds[i]) {
-                case OMNI_BYTE:
-                    plan[i].flatLoader = &LoadBits<int8_t, false>;
-                    plan[i].dictLoader = &LoadBits<int8_t, true>;
-                    plan[i].constLoader = &LoadBitsConst<int8_t>;
-                    break;
-                case OMNI_SHORT:
-                    plan[i].flatLoader = &LoadBits<int16_t, false>;
-                    plan[i].dictLoader = &LoadBits<int16_t, true>;
-                    plan[i].constLoader = &LoadBitsConst<int16_t>;
-                    break;
-                case OMNI_INT:
-                case OMNI_DATE32:
-                case OMNI_TIME32:
-                    plan[i].flatLoader = &LoadBits<int32_t, false>;
-                    plan[i].dictLoader = &LoadBits<int32_t, true>;
-                    plan[i].constLoader = &LoadBitsConst<int32_t>;
-                    break;
-                case OMNI_LONG:
-                case OMNI_TIMESTAMP:
-                case OMNI_DECIMAL64:
-                case OMNI_DATE64:
-                case OMNI_TIME64:
-                    plan[i].flatLoader = &LoadBits<int64_t, false>;
-                    plan[i].dictLoader = &LoadBits<int64_t, true>;
-                    plan[i].constLoader = &LoadBitsConst<int64_t>;
-                    break;
-                default:
-                    plan[i].flatLoader = nullptr;
-                    plan[i].dictLoader = nullptr;
-                    plan[i].constLoader = nullptr;
-                    break;
-            }
-            plan[i].activeLoader = plan[i].flatLoader;
-        }
-    }
-};
-
 class TaperColumnSerializeHandler {
 public:
     static constexpr bool HasSpecialNullFunc = false;
@@ -569,6 +255,22 @@ public:
     std::vector<bool> isVariableLenType;
     RowContainerIterator rowContainerIter;
     std::vector<char*> rowPtrs;
+    std::vector<uint8_t*> groups;
+
+    // Decoded vectors cache: populated once per batch to eliminate encoding branches in hot path
+    std::vector<DecodedVector> decodedCols;
+
+    struct ColInfo {
+        BaseVector* vector;
+        int32_t typeId;
+        int32_t offset;
+        uint8_t nullByte;
+        uint8_t nullMask;
+        uint8_t isDictVarchar;
+        uint8_t isConstVarchar;
+        void* typedVector;
+    };
+    std::vector<ColInfo> colInfos;
 
     uint8_t*& RowFromData(char* data)
     {
@@ -607,261 +309,803 @@ public:
     void EmplaceTable(BaseVector **groupVectors, int32_t groupColNum, int32_t rowsNum,
         std::vector<uint8_t*>& groups, std::vector<uint8_t*>& newGroups, Encoding encoding)
     {
+        // Caller must call DecodeGroupByColumns() first. This delegates to the
+        // decoded path which eliminates all encoding branches in the hot loop.
+        (void)encoding;
+        EmplaceTableWithDecode(groupColNum, rowsNum, groups, newGroups);
+    }
+
+    /// Decode all group-by columns upfront. Call once per batch before EmplaceTable.
+    void DecodeGroupByColumns(BaseVector** groupVectors, int32_t groupColNum, int32_t rowsNum)
+    {
+        if (static_cast<int32_t>(decodedCols.size()) != groupColNum) {
+            decodedCols.resize(groupColNum);
+        }
+        for (int32_t i = 0; i < groupColNum; ++i) {
+            decodedCols[i].Decode(groupVectors[i], rowsNum);
+        }
+    }
+
+    /// Templated dispatch for GetUnequalsNum using DecodedVector.
+    /// TypeId and HasNull are compile-time constants → zero runtime branches in the hot loop.
+    template <DataTypeId Kind, bool HasNull>
+    int32_t GetUnequalsNumTyped(int32_t colIdx, int32_t count, int32_t offset,
+                                uint8_t nullByte, uint8_t nullMask,
+                                int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
+    {
+        using T = typename NativeType<Kind>::type;
+        const DecodedVector& decoded = decodedCols[colIdx];
+        auto layout = decoded.GetLayout();
+
+        if (layout == DVecLayout::Constant) {
+            return BatchCompareDecodedConst<T, HasNull>(decoded, count, offset, nullByte, nullMask, indices, idxFrom, groups);
+        } else if (layout == DVecLayout::Dictionary) {
+            return BatchCompareDecoded<T, HasNull, true>(decoded, count, offset, nullByte, nullMask, indices, idxFrom, groups);
+        }
+        return BatchCompareDecoded<T, HasNull>(decoded, count, offset, nullByte, nullMask, indices, idxFrom, groups);
+    }
+
+    /// Varchar specialization for GetUnequalsNumTyped.
+    template <bool HasNull>
+    int32_t GetUnequalsNumVarcharTyped(int32_t colIdx, int32_t count, int32_t offset,
+                                       uint8_t nullByte, uint8_t nullMask,
+                                       int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
+    {
+        return BatchCompareVarcharDecoded<HasNull>(decodedCols[colIdx], count, offset, nullByte, nullMask, indices, idxFrom, groups);
+    }
+
+    /// Templated dispatch for BatchStoreKeyColumn using DecodedVector.
+    template <DataTypeId Kind, bool HasNull>
+    void BatchStoreKeyColumnTyped(int32_t colIdx, int32_t offset, uint8_t nullByte, uint8_t nullMask,
+                                  uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
+    {
+        using T = typename NativeType<Kind>::type;
+        const DecodedVector& decoded = decodedCols[colIdx];
+        auto layout = decoded.GetLayout();
+
+        if (layout == DVecLayout::Constant) {
+            BatchStoreDecodedConst<T, HasNull>(decoded, offset, nullByte, nullMask, rows, rowIndices, rowCount);
+        } else if (layout == DVecLayout::Dictionary) {
+            BatchStoreDecoded<T, HasNull, true>(decoded, offset, nullByte, nullMask, rows, rowIndices, rowCount);
+        } else {
+            BatchStoreDecoded<T, HasNull>(decoded, offset, nullByte, nullMask, rows, rowIndices, rowCount);
+        }
+    }
+
+    /// Varchar specialization for BatchStoreKeyColumnTyped.
+    template <bool HasNull>
+    void BatchStoreKeyColumnVarcharTyped(int32_t colIdx, int32_t offset, uint8_t nullByte, uint8_t nullMask,
+                                         uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
+    {
+        BatchStoreVarcharDecoded<HasNull>(decodedCols[colIdx], colIdx, offset, nullByte, nullMask, rows, rowIndices, rowCount);
+    }
+
+    /// EmplaceTable variant that uses DecodedVector for compare/store — zero encoding branches in hot path.
+    /// Caller must call DecodeGroupByColumns() first.
+    void EmplaceTableWithDecode(int32_t groupColNum, int32_t rowsNum,
+        std::vector<uint8_t*>& groups, std::vector<uint8_t*>& newGroups)
+    {
+        groups.resize(rowsNum);
+        std::vector<uint32_t> newGroupRowIndices(rowsNum);
+        int32_t newGroupCount = 0;
+        size_t newGroupsStartIdx = newGroups.size();
         auto initRow = [&](uint32_t rowIdx, char* data) -> char* {
             auto* row = aggRows->NewRow();
             RowFromData(data) = reinterpret_cast<uint8_t*>(row);
             newGroups.push_back(RowFromData(data));
-            StoreKeys(row, groupVectors, groupColNum, rowIdx);
+            newGroupRowIndices[newGroupCount++] = rowIdx;
             return row;
         };
         workingUpdateIndices.resize(rowsNum);
         workingUpdateCount = 0;
         workingHashVals.resize(rowsNum);
-        for (size_t i = 0; i < groupColNum; ++i) {
-            BaseVector *baseVector = groupVectors[i];
-            auto type = baseVector->GetTypeId();
+
+        // Hash using decoded columns — zero runtime encoding branches
+        for (int32_t i = 0; i < groupColNum; ++i) {
+            auto type = decodedCols[i].GetTypeId();
             if (type == type::OMNI_ARRAY) {
-                DoArrayHash(baseVector, rowsNum, workingHashVals);
+                DoArrayHashWithDecode(decodedCols[i], rowsNum, i > 0);
             } else if (type == type::OMNI_ROW) {
-                DoRowHash(baseVector, rowsNum, workingHashVals);
+                DoRowHash(decodedCols[i].Base(), rowsNum, workingHashVals);
             } else {
-                DYNAMIC_TYPE_DISPATCH(Hash, type, baseVector, rowsNum, workingHashVals, i > 0);
+                #define HASH_DECODE_DISPATCH(TID) \
+                    case TID: \
+                        DoHashWithDecode<TID>(decodedCols[i], rowsNum, i > 0); \
+                        break;
+
+                switch (type) {
+                    HASH_DECODE_DISPATCH(type::OMNI_BYTE)
+                    HASH_DECODE_DISPATCH(type::OMNI_SHORT)
+                    HASH_DECODE_DISPATCH(type::OMNI_INT)
+                    HASH_DECODE_DISPATCH(type::OMNI_DATE32)
+                    HASH_DECODE_DISPATCH(type::OMNI_TIME32)
+                    HASH_DECODE_DISPATCH(type::OMNI_LONG)
+                    HASH_DECODE_DISPATCH(type::OMNI_TIMESTAMP)
+                    HASH_DECODE_DISPATCH(type::OMNI_DECIMAL64)
+                    HASH_DECODE_DISPATCH(type::OMNI_DATE64)
+                    HASH_DECODE_DISPATCH(type::OMNI_TIME64)
+                    HASH_DECODE_DISPATCH(type::OMNI_DOUBLE)
+                    HASH_DECODE_DISPATCH(type::OMNI_FLOAT)
+                    HASH_DECODE_DISPATCH(type::OMNI_DECIMAL128)
+                    HASH_DECODE_DISPATCH(type::OMNI_BOOLEAN)
+                    HASH_DECODE_DISPATCH(type::OMNI_VARCHAR)
+                    HASH_DECODE_DISPATCH(type::OMNI_CHAR)
+                    HASH_DECODE_DISPATCH(type::OMNI_VARBINARY)
+                    default: break;
+                }
+                #undef HASH_DECODE_DISPATCH
             }
         }
+
         table->EmplaceBatch(
             workingHashVals.data(),
             rowsNum,
             [&](uint32_t) { return false; },
             [&](uint32_t rowIdx, char* data) { initRow(rowIdx, data); },
             [&](uint32_t rowIdx, char* data, bool initFlag) {
-            groups[rowIdx] = RowFromData(data);
-            if (!initFlag) {
-                workingUpdateIndices[workingUpdateCount++] = rowIdx;
+                groups[rowIdx] = RowFromData(data);
+                if (!initFlag) {
+                    workingUpdateIndices[workingUpdateCount++] = rowIdx;
+                }
+            });
+
+        if (newGroupCount > 0) {
+            // Store keys for new groups using decoded vectors
+            for (int32_t colIdx = 0; colIdx < groupColNum; ++colIdx) {
+                auto col = aggRows->ColumnAt(colIdx);
+                auto offset = col.Offset();
+                auto nullByte = col.NullByte();
+                auto nullMask = col.NullMask();
+                bool hasNull = decodedCols[colIdx].HasNull();
+                auto typeId = decodedCols[colIdx].GetTypeId();
+
+                if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR || typeId == type::OMNI_VARBINARY) {
+                    if (hasNull) {
+                        BatchStoreKeyColumnVarcharTyped<true>(colIdx, offset, nullByte, nullMask,
+                            newGroups.data() + newGroupsStartIdx, newGroupRowIndices.data(), newGroupCount);
+                    } else {
+                        BatchStoreKeyColumnVarcharTyped<false>(colIdx, offset, nullByte, nullMask,
+                            newGroups.data() + newGroupsStartIdx, newGroupRowIndices.data(), newGroupCount);
+                    }
+                } else if (typeId == type::OMNI_ARRAY || typeId == type::OMNI_ROW) {
+                    // Complex types: fall back to original BatchStoreComplex
+                    for (int32_t i = 0; i < newGroupCount; ++i) {
+                        char* row = reinterpret_cast<char*>(newGroups[newGroupsStartIdx + i]);
+                        auto rowIdx = newGroupRowIndices[i];
+                        if (hasNull && decodedCols[colIdx].IsNull(rowIdx)) {
+                            RowContainer::SetNullAt(row, nullByte, nullMask);
+                        } else {
+                            RowContainer::ClearNullAt(row, nullByte, nullMask);
+                            type::StringRef key; key.data = nullptr; key.size = 0;
+                            auto& curFunc = serializers[colIdx];
+                            curFunc(decodedCols[colIdx].Base(), rowIdx, table->Pool(), key);
+                            *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
+                            *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
+                        }
+                    }
+                } else {
+                    // Fixed-width types: dispatch on TypeId + HasNull
+                    #define STORE_DISPATCH(TID, CPP_TYPE) \
+                        case TID: \
+                            if (hasNull) { \
+                                BatchStoreKeyColumnTyped<TID, true>(colIdx, offset, nullByte, nullMask, \
+                                    newGroups.data() + newGroupsStartIdx, newGroupRowIndices.data(), newGroupCount); \
+                            } else { \
+                                BatchStoreKeyColumnTyped<TID, false>(colIdx, offset, nullByte, nullMask, \
+                                    newGroups.data() + newGroupsStartIdx, newGroupRowIndices.data(), newGroupCount); \
+                            } \
+                            break;
+
+                    switch (typeId) {
+                        STORE_DISPATCH(type::OMNI_BYTE, int8_t)
+                        STORE_DISPATCH(type::OMNI_SHORT, int16_t)
+                        STORE_DISPATCH(type::OMNI_INT, int32_t)
+                        STORE_DISPATCH(type::OMNI_DATE32, int32_t)
+                        STORE_DISPATCH(type::OMNI_TIME32, int32_t)
+                        STORE_DISPATCH(type::OMNI_LONG, int64_t)
+                        STORE_DISPATCH(type::OMNI_TIMESTAMP, int64_t)
+                        STORE_DISPATCH(type::OMNI_DECIMAL64, int64_t)
+                        STORE_DISPATCH(type::OMNI_DATE64, int64_t)
+                        STORE_DISPATCH(type::OMNI_TIME64, int64_t)
+                        STORE_DISPATCH(type::OMNI_DOUBLE, double)
+                        STORE_DISPATCH(type::OMNI_FLOAT, float)
+                        STORE_DISPATCH(type::OMNI_DECIMAL128, Decimal128)
+                        STORE_DISPATCH(type::OMNI_BOOLEAN, bool)
+                        default: break;
+                    }
+                    #undef STORE_DISPATCH
+                }
             }
-        });
+        }
+
         if (workingUpdateCount == 0) {
             return;
         }
-        int32_t unequalsNum = GetUnequalsNum(workingUpdateIndices.data(), workingUpdateCount, groupVectors, groupColNum, groups);
+
+        // Compare keys for existing groups using decoded vectors
+        PrepareColInfosForDecode(groupColNum);
+        int32_t unequalsNum = GetUnequalsNumWithDecode(workingUpdateCount, groupColNum, groups.data());
 
         for (int32_t i = 0; i < unequalsNum; i++) {
             auto rowIdx = workingUpdateIndices[i];
             table->Emplace(
                 workingHashVals[rowIdx],
                 [&](auto, TaperHashTableChunk& chunk, uint8_t slot) {
-                  auto* row = RowFromData(table->GetChunkValue(chunk, slot).buf);
-                  return CompareKeys(groupVectors, row, groupColNum, rowIdx);
+                    auto* row = RowFromData(table->GetChunkValue(chunk, slot).buf);
+                    return CompareKeysWithDecode(row, groupColNum, rowIdx);
                 },
                 [&](char* data) {
-                  auto* row = initRow(rowIdx, data);
+                    auto* row = initRow(rowIdx, data);
+                    for (int32_t colIdx = 0; colIdx < groupColNum; ++colIdx) {
+                        StoreKeyOneRowFromDecode(colIdx, row, rowIdx);
+                    }
                 },
                 [&](char* data, bool) { groups[rowIdx] = RowFromData(data); });
         }
         workingUpdateCount = 0;
     }
 
-    /// Store key values from vectors into the RowContainer row.
-    /// For fixed-width types, store directly at the column offset.
-    /// For complex types (VARCHAR, ARRAY, ROW), use the serializer to
-    /// serialize into arena memory and store a StringRef (pointer + size)
-    /// at the column offset.
-    void StoreKeys(char* row, BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx)
+    /// Cache column info for CompareKeysWithDecode (avoids repeated RowContainer::ColumnAt lookups).
+    void PrepareColInfosForDecode(int32_t groupColNum)
     {
-        for (int32_t colIdx = 0; colIdx < groupColNum; ++colIdx) {
-            auto* vector = groupVectors[colIdx];
-            auto typeId = vector->GetTypeId();
-            auto col = aggRows->ColumnAt(colIdx);
+        if (static_cast<int32_t>(colInfos.size()) != groupColNum) {
+            colInfos.resize(groupColNum);
+        }
+        for (int32_t i = 0; i < groupColNum; ++i) {
+            auto col = aggRows->ColumnAt(i);
+            colInfos[i].vector = decodedCols[i].Base();
+            colInfos[i].typeId = decodedCols[i].GetTypeId();
+            colInfos[i].offset = col.Offset();
+            colInfos[i].nullByte = col.NullByte();
+            colInfos[i].nullMask = col.NullMask();
+            auto tid = colInfos[i].typeId;
+            if (tid == type::OMNI_VARCHAR || tid == type::OMNI_CHAR || tid == type::OMNI_VARBINARY) {
+                auto enc = decodedCols[i].Base()->GetEncoding();
+                colInfos[i].isDictVarchar = (enc == vec::OMNI_DICTIONARY) ? 1 : 0;
+                colInfos[i].isConstVarchar = (enc == vec::OMNI_ENCODING_CONST) ? 1 : 0;
+            } else {
+                colInfos[i].isDictVarchar = 0;
+                colInfos[i].isConstVarchar = 0;
+            }
+            colInfos[i].typedVector = nullptr;
+        }
+    }
+
+    /// GetUnequalsNum using DecodedVector — dispatch once per column, then zero branches in hot loop.
+    int32_t GetUnequalsNumWithDecode(int32_t count, int32_t groupColNum, uint8_t* const* groups)
+    {
+        int32_t idxFrom = 0;
+        for (int32_t groupColIdx = 0; groupColIdx < groupColNum; ++groupColIdx) {
+            if (idxFrom >= count) break;
+            auto col = aggRows->ColumnAt(groupColIdx);
             auto offset = col.Offset();
             auto nullByte = col.NullByte();
             auto nullMask = col.NullMask();
-            if (vector->IsNull(rowIdx)) {
-                RowContainer::SetNullAt(row, nullByte, nullMask);
-                continue;
-            }
-            RowContainer::ClearNullAt(row, nullByte, nullMask);
+            bool hasNull = decodedCols[groupColIdx].HasNull();
+            auto typeId = decodedCols[groupColIdx].GetTypeId();
 
+            #define COMPARE_DISPATCH(TID) \
+                case TID: \
+                    if (hasNull) { \
+                        GetUnequalsNumTyped<TID, true>(groupColIdx, count, offset, nullByte, nullMask, workingUpdateIndices.data(), idxFrom, groups); \
+                    } else { \
+                        GetUnequalsNumTyped<TID, false>(groupColIdx, count, offset, nullByte, nullMask, workingUpdateIndices.data(), idxFrom, groups); \
+                    } \
+                    break;
+
+            if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR || typeId == type::OMNI_VARBINARY) {
+                if (hasNull) {
+                    GetUnequalsNumVarcharTyped<true>(groupColIdx, count, offset, nullByte, nullMask, workingUpdateIndices.data(), idxFrom, groups);
+                } else {
+                    GetUnequalsNumVarcharTyped<false>(groupColIdx, count, offset, nullByte, nullMask, workingUpdateIndices.data(), idxFrom, groups);
+                }
+            } else {
+                switch (typeId) {
+                    COMPARE_DISPATCH(type::OMNI_BYTE)
+                    COMPARE_DISPATCH(type::OMNI_SHORT)
+                    COMPARE_DISPATCH(type::OMNI_INT)
+                    COMPARE_DISPATCH(type::OMNI_DATE32)
+                    COMPARE_DISPATCH(type::OMNI_TIME32)
+                    COMPARE_DISPATCH(type::OMNI_LONG)
+                    COMPARE_DISPATCH(type::OMNI_TIMESTAMP)
+                    COMPARE_DISPATCH(type::OMNI_DECIMAL64)
+                    COMPARE_DISPATCH(type::OMNI_DATE64)
+                    COMPARE_DISPATCH(type::OMNI_TIME64)
+                    COMPARE_DISPATCH(type::OMNI_DOUBLE)
+                    COMPARE_DISPATCH(type::OMNI_FLOAT)
+                    COMPARE_DISPATCH(type::OMNI_DECIMAL128)
+                    COMPARE_DISPATCH(type::OMNI_BOOLEAN)
+                    default: break;
+                }
+            }
+            #undef COMPARE_DISPATCH
+        }
+        return idxFrom;
+    }
+
+    /// CompareKeys using DecodedVector — zero encoding branches per row.
+    bool CompareKeysWithDecode(uint8_t* row, int32_t groupColNum, int32_t rowIdx)
+    {
+        for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
+            auto& ci = colInfos[groupColIdx];
+            auto offset = ci.offset;
+            bool rowIsNull = RowContainer::IsNullAt(
+                reinterpret_cast<char*>(row), ci.nullByte, ci.nullMask);
+            bool vecIsNull = decodedCols[groupColIdx].IsNull(rowIdx);
+            if (rowIsNull != vecIsNull) return false;
+            if (rowIsNull) continue;
+
+            auto typeId = ci.typeId;
+            #define COMPARE_KEY_DISPATCH(TID, CPP_TYPE) \
+                case TID: \
+                    if (RowContainer::ReadValue<CPP_TYPE>(reinterpret_cast<char*>(row), offset) != \
+                        decodedCols[groupColIdx].GetValue<CPP_TYPE>(rowIdx)) return false; \
+                    break;
+
+            if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR || typeId == type::OMNI_VARBINARY) {
+                uint8_t* rowData = reinterpret_cast<uint8_t*>(
+                    *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
+                if (rowData[0] == 0) return false;
+                std::string_view val;
+                auto layout = decodedCols[groupColIdx].GetLayout();
+                if (layout == DVecLayout::Constant) {
+                    val = static_cast<ConstVector<std::string_view>*>(decodedCols[groupColIdx].Base())->GetConstValue();
+                } else if (layout == DVecLayout::Dictionary) {
+                    val = static_cast<Vector<DictionaryContainer<std::string_view>>*>(decodedCols[groupColIdx].Base())->GetValue(rowIdx);
+                } else {
+                    val = static_cast<Vector<LargeStringContainer<std::string_view>>*>(decodedCols[groupColIdx].Base())->GetValue(rowIdx);
+                }
+                if (!CompareVarcharFromRow(rowData, val)) return false;
+            } else {
+                switch (typeId) {
+                    COMPARE_KEY_DISPATCH(type::OMNI_BYTE, int8_t)
+                    COMPARE_KEY_DISPATCH(type::OMNI_SHORT, int16_t)
+                    COMPARE_KEY_DISPATCH(type::OMNI_INT, int32_t)
+                    COMPARE_KEY_DISPATCH(type::OMNI_DATE32, int32_t)
+                    COMPARE_KEY_DISPATCH(type::OMNI_TIME32, int32_t)
+                    COMPARE_KEY_DISPATCH(type::OMNI_LONG, int64_t)
+                    COMPARE_KEY_DISPATCH(type::OMNI_TIMESTAMP, int64_t)
+                    COMPARE_KEY_DISPATCH(type::OMNI_DECIMAL64, int64_t)
+                    COMPARE_KEY_DISPATCH(type::OMNI_DATE64, int64_t)
+                    COMPARE_KEY_DISPATCH(type::OMNI_TIME64, int64_t)
+                    COMPARE_KEY_DISPATCH(type::OMNI_DOUBLE, double)
+                    COMPARE_KEY_DISPATCH(type::OMNI_FLOAT, float)
+                    COMPARE_KEY_DISPATCH(type::OMNI_DECIMAL128, Decimal128)
+                    COMPARE_KEY_DISPATCH(type::OMNI_BOOLEAN, bool)
+                    default: {
+                        auto& curFunc = comparators[groupColIdx];
+                        uint8_t* addr = reinterpret_cast<uint8_t*>(
+                            *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
+                        if (!curFunc(*decodedCols[groupColIdx].Base(), rowIdx, addr)) return false;
+                        break;
+                    }
+                }
+            }
+            #undef COMPARE_KEY_DISPATCH
+        }
+        return true;
+    }
+
+    /// Store one key column value from decoded vector for a single row.
+    void StoreKeyOneRowFromDecode(int32_t colIdx, char* row, int32_t rowIdx)
+    {
+        auto col = aggRows->ColumnAt(colIdx);
+        auto offset = col.Offset();
+        auto nullByte = col.NullByte();
+        auto nullMask = col.NullMask();
+        auto& decoded = decodedCols[colIdx];
+
+        if (decoded.IsNull(rowIdx)) {
+            RowContainer::SetNullAt(row, nullByte, nullMask);
+            return;
+        }
+        RowContainer::ClearNullAt(row, nullByte, nullMask);
+
+        auto typeId = decoded.GetTypeId();
+        #define STORE_ONE_DISPATCH(TID, CPP_TYPE) \
+            case TID: \
+                RowContainer::StoreValue(row, offset, decoded.GetValue<CPP_TYPE>(rowIdx)); \
+                break;
+
+        if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR || typeId == type::OMNI_VARBINARY) {
+            type::StringRef key; key.data = nullptr; key.size = 0;
+            auto& curFunc = serializers[colIdx];
+            curFunc(decoded.Base(), rowIdx, table->Pool(), key);
+            *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
+            *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
+        } else {
             switch (typeId) {
-                case type::OMNI_BYTE: {
-                    auto value = static_cast<Vector<int8_t>*>(vector)->GetValue(rowIdx);
-                    RowContainer::StoreValue(row, offset, value);
-                    break;
-                }
-                case type::OMNI_SHORT: {
-                    auto value = static_cast<Vector<int16_t>*>(vector)->GetValue(rowIdx);
-                    RowContainer::StoreValue(row, offset, value);
-                    break;
-                }
-                case type::OMNI_INT:
-                case type::OMNI_DATE32:
-                case type::OMNI_TIME32: {
-                    auto value = static_cast<Vector<int32_t>*>(vector)->GetValue(rowIdx);
-                    RowContainer::StoreValue(row, offset, value);
-                    break;
-                }
-                case type::OMNI_LONG:
-                case type::OMNI_TIMESTAMP:
-                case type::OMNI_DECIMAL64:
-                case type::OMNI_DATE64:
-                case type::OMNI_TIME64: {
-                    auto value = static_cast<Vector<int64_t>*>(vector)->GetValue(rowIdx);
-                    RowContainer::StoreValue(row, offset, value);
-                    break;
-                }
-                case type::OMNI_DOUBLE: {
-                    auto value = static_cast<Vector<double>*>(vector)->GetValue(rowIdx);
-                    RowContainer::StoreValue(row, offset, value);
-                    break;
-                }
-                case type::OMNI_FLOAT: {
-                    auto value = static_cast<Vector<float>*>(vector)->GetValue(rowIdx);
-                    RowContainer::StoreValue(row, offset, value);
-                    break;
-                }
-                case type::OMNI_DECIMAL128: {
-                    auto value = static_cast<Vector<Decimal128>*>(vector)->GetValue(rowIdx);
-                    RowContainer::StoreValue(row, offset, value);
-                    break;
-                }
-                case type::OMNI_BOOLEAN: {
-                    auto value = static_cast<Vector<bool>*>(vector)->GetValue(rowIdx);
-                    RowContainer::StoreValue(row, offset, value);
-                    break;
-                }
+                STORE_ONE_DISPATCH(type::OMNI_BYTE, int8_t)
+                STORE_ONE_DISPATCH(type::OMNI_SHORT, int16_t)
+                STORE_ONE_DISPATCH(type::OMNI_INT, int32_t)
+                STORE_ONE_DISPATCH(type::OMNI_DATE32, int32_t)
+                STORE_ONE_DISPATCH(type::OMNI_TIME32, int32_t)
+                STORE_ONE_DISPATCH(type::OMNI_LONG, int64_t)
+                STORE_ONE_DISPATCH(type::OMNI_TIMESTAMP, int64_t)
+                STORE_ONE_DISPATCH(type::OMNI_DECIMAL64, int64_t)
+                STORE_ONE_DISPATCH(type::OMNI_DATE64, int64_t)
+                STORE_ONE_DISPATCH(type::OMNI_TIME64, int64_t)
+                STORE_ONE_DISPATCH(type::OMNI_DOUBLE, double)
+                STORE_ONE_DISPATCH(type::OMNI_FLOAT, float)
+                STORE_ONE_DISPATCH(type::OMNI_DECIMAL128, Decimal128)
+                STORE_ONE_DISPATCH(type::OMNI_BOOLEAN, bool)
                 default: {
-                    type::StringRef key;
-                    key.data = nullptr;
-                    key.size = 0;
-                    auto &curFunc = serializers[colIdx];
-                    curFunc(vector, rowIdx, table->Pool(), key);
+                    type::StringRef key; key.data = nullptr; key.size = 0;
+                    auto& curFunc = serializers[colIdx];
+                    curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                     *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
                     *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                     break;
                 }
             }
         }
+        #undef STORE_ONE_DISPATCH
     }
 
-    int32_t GetUnequalsNum(const int32_t* workingUpdateIndices, int32_t count, BaseVector **groupVectors, int32_t groupColNum,
-        std::vector<uint8_t*>& groups)
+    /// Compare VARCHAR data in serialized row format directly with std::string_view.
+    /// Row format: [rowLenSize(1B)][length(rowLenSize bytes)][data]
+    /// Callers MUST guarantee rowData[0] != 0 (null case handled before calling).
+    static ALWAYS_INLINE bool CompareVarcharFromRow(const uint8_t* rowData, std::string_view sv) {
+        uint8_t rowLenSize = rowData[0];
+        size_t stringLen;
+        switch (rowLenSize) {
+        case 1: stringLen = *reinterpret_cast<const uint8_t*>(rowData + 1); break;
+        case 2: stringLen = *reinterpret_cast<const uint16_t*>(rowData + 1); break;
+        case 4: stringLen = *reinterpret_cast<const uint32_t*>(rowData + 1); break;
+        default: __builtin_unreachable();
+        }
+
+        if (stringLen != sv.size()) return false;
+        if (stringLen == 0) return true;
+
+        const char* rowDataPtr = reinterpret_cast<const char*>(rowData + 1 + rowLenSize);
+        return memcmp(rowDataPtr, sv.data(), stringLen) == 0;
+    }
+
+    // ========== DecodedVector-based templated helpers (zero runtime encoding branches) ==========
+
+    /// Batch compare using DecodedVector — flat values accessed directly, no encoding switch.
+    template <typename T, bool HasNull, bool isDic = false>
+    int32_t BatchCompareDecoded(const DecodedVector& decoded, int32_t count, int32_t offset,
+                                uint8_t nullByte, uint8_t nullMask,
+                                int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
-        uint32_t unequalsNum = 0;
-        for (int32_t i = 0; i < count; ++i) {
-            int32_t index = workingUpdateIndices[i];
-            if (!CompareKeys(groupVectors, groups[index], groupColNum, index)) {
-                unequalsNum++;
+        const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+        const T* flatVals = decoded.FlatValues<T>();
+        const int32_t* ids = decoded.Ids();
+
+        auto getValue = [&](int32_t idx) {
+            if constexpr (isDic) { return flatVals[ids[idx]]; }
+            else { return flatVals[idx]; }
+        };
+
+        if constexpr (HasNull) {
+            for (int32_t i = idxFrom; i < count; ++i) {
+                int32_t idx = indices[i];
+                uint8_t* row = groups[idx];
+                bool rowIsNull = RowContainer::IsNullAt(
+                    reinterpret_cast<char*>(row), nullByte, nullMask);
+                bool vecIsNull = BitUtil::IsBitSet(rawNulls, idx);
+                if (rowIsNull != vecIsNull) {
+                    std::swap(indices[i], indices[idxFrom]);
+                    idxFrom++;
+                    continue;
+                }
+                if (rowIsNull) continue;
+                if (RowContainer::ReadValue<T>(reinterpret_cast<char*>(row), offset) != getValue(idx)) {
+                    std::swap(indices[i], indices[idxFrom]);
+                    idxFrom++;
+                }
+            }
+        } else {
+            for (int32_t i = idxFrom; i < count; ++i) {
+                int32_t idx = indices[i];
+                uint8_t* row = groups[idx];
+                if (RowContainer::ReadValue<T>(reinterpret_cast<char*>(row), offset) != getValue(idx)) {
+                    std::swap(indices[i], indices[idxFrom]);
+                    idxFrom++;
+                }
             }
         }
-        return unequalsNum;
+        return idxFrom;
     }
 
-    bool CompareKeys(BaseVector **groupVectors, uint8_t *row, int32_t groupColNum, int32_t rowIdx)
+    /// Specialization for Constant layout — compare against single broadcast value.
+    template <typename T, bool HasNull>
+    int32_t BatchCompareDecodedConst(const DecodedVector& decoded, int32_t count, int32_t offset,
+                                     uint8_t nullByte, uint8_t nullMask,
+                                     int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
-        for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
-            auto* vector = groupVectors[groupColIdx];
-            auto typeId = vector->GetTypeId();
-            auto col = aggRows->ColumnAt(groupColIdx);
-            auto offset = col.Offset();
-            auto nullByte = col.NullByte();
-            auto nullMask = col.NullMask();
-            bool rowIsNull = RowContainer::IsNullAt(
-                reinterpret_cast<char*>(row), nullByte, nullMask);
-            bool vecIsNull = vector->IsNull(rowIdx);
-            if (rowIsNull != vecIsNull) {
-                return false;
+        T constVal = decoded.GetConstValue<T>();
+        if constexpr (HasNull) {
+            const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+            for (int32_t i = idxFrom; i < count; ++i) {
+                int32_t idx = indices[i];
+                uint8_t* row = groups[idx];
+                bool rowIsNull = RowContainer::IsNullAt(
+                    reinterpret_cast<char*>(row), nullByte, nullMask);
+                bool vecIsNull = BitUtil::IsBitSet(rawNulls, idx);
+                if (rowIsNull != vecIsNull) {
+                    std::swap(indices[i], indices[idxFrom]);
+                    idxFrom++;
+                    continue;
+                }
+                if (rowIsNull) continue;
+                if (RowContainer::ReadValue<T>(reinterpret_cast<char*>(row), offset) != constVal) {
+                    std::swap(indices[i], indices[idxFrom]);
+                    idxFrom++;
+                }
             }
-            if (rowIsNull) {
-                continue;
+        } else {
+            for (int32_t i = idxFrom; i < count; ++i) {
+                int32_t idx = indices[i];
+                uint8_t* row = groups[idx];
+                if (RowContainer::ReadValue<T>(reinterpret_cast<char*>(row), offset) != constVal) {
+                    std::swap(indices[i], indices[idxFrom]);
+                    idxFrom++;
+                }
             }
+        }
+        return idxFrom;
+    }
 
-            // Compare fixed-width types by value
-            switch (typeId) {
-                case type::OMNI_BYTE:
-                    if (RowContainer::ReadValue<int8_t>(reinterpret_cast<char*>(row), offset) !=
-                        static_cast<Vector<int8_t>*>(vector)->GetValue(rowIdx)) return false;
-                    break;
-                case type::OMNI_SHORT:
-                    if (RowContainer::ReadValue<int16_t>(reinterpret_cast<char*>(row), offset) !=
-                        static_cast<Vector<int16_t>*>(vector)->GetValue(rowIdx)) return false;
-                    break;
-                case type::OMNI_INT:
-                case type::OMNI_DATE32:
-                case type::OMNI_TIME32:
-                    if (RowContainer::ReadValue<int32_t>(reinterpret_cast<char*>(row), offset) !=
-                        static_cast<Vector<int32_t>*>(vector)->GetValue(rowIdx)) return false;
-                    break;
-                case type::OMNI_LONG:
-                case type::OMNI_TIMESTAMP:
-                case type::OMNI_DECIMAL64:
-                case type::OMNI_DATE64:
-                case type::OMNI_TIME64:
-                    if (RowContainer::ReadValue<int64_t>(reinterpret_cast<char*>(row), offset) !=
-                        static_cast<Vector<int64_t>*>(vector)->GetValue(rowIdx)) return false;
-                    break;
-                case type::OMNI_DOUBLE:
-                    if (RowContainer::ReadValue<double>(reinterpret_cast<char*>(row), offset) !=
-                        static_cast<Vector<double>*>(vector)->GetValue(rowIdx)) return false;
-                    break;
-                case type::OMNI_FLOAT:
-                    if (RowContainer::ReadValue<float>(reinterpret_cast<char*>(row), offset) !=
-                        static_cast<Vector<float>*>(vector)->GetValue(rowIdx)) return false;
-                    break;
-                case type::OMNI_DECIMAL128:
-                    if (RowContainer::ReadValue<Decimal128>(reinterpret_cast<char*>(row), offset) !=
-                        static_cast<Vector<Decimal128>*>(vector)->GetValue(rowIdx)) return false;
-                    break;
-                case type::OMNI_VARCHAR:
-                case type::OMNI_CHAR:
-                case type::OMNI_VARBINARY: {
-                    // Inline string comparison: avoid function pointer indirection.
-                    // Row stores serialized format: [rowLenSize(1B)][stringLen(rowLenSize B)][string data]
-                    uint8_t* rowData = reinterpret_cast<uint8_t*>(
-                        *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
-                    uint8_t rowLenSize = rowData[0];
-                    if (rowLenSize == 0) return false; // null
+    /// Batch compare for VARCHAR using DecodedVector — encoding resolved at decode time.
+    template <bool HasNull>
+    int32_t BatchCompareVarcharDecoded(const DecodedVector& decoded, int32_t count, int32_t offset,
+                                       uint8_t nullByte, uint8_t nullMask,
+                                       int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
+    {
+        auto layout = decoded.GetLayout();
 
-                    size_t stringLen = 0;
-                    switch (rowLenSize) {
-                    case 1:
-                        stringLen = *reinterpret_cast<const uint8_t*>(rowData + sizeof(uint8_t));
-                        break;
-                    case 2:
-                        stringLen = *reinterpret_cast<const uint16_t*>(rowData + sizeof(uint8_t));
-                        break;
-                    case 4:
-                        stringLen = *reinterpret_cast<const uint32_t*>(rowData + sizeof(uint8_t));
-                        break;
-                    default:
-                        return false;
+        if (layout == DVecLayout::Constant) {
+            std::string_view constVal = static_cast<ConstVector<std::string_view>*>(decoded.Base())->GetConstValue();
+            if constexpr (HasNull) {
+                const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+                for (int32_t i = idxFrom; i < count; ++i) {
+                    int32_t idx = indices[i];
+                    uint8_t* row = groups[idx];
+                    bool rowIsNull = RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask);
+                    bool vecIsNull = BitUtil::IsBitSet(rawNulls, idx);
+                    if (rowIsNull != vecIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    if (rowIsNull) continue;
+                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
+                    if (rowData[0] == 0 || !CompareVarcharFromRow(rowData, constVal)) {
+                        std::swap(indices[i], indices[idxFrom]); idxFrom++;
                     }
+                }
+            } else {
+                for (int32_t i = idxFrom; i < count; ++i) {
+                    int32_t idx = indices[i];
+                    uint8_t* row = groups[idx];
+                    bool rowIsNull = RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask);
+                    if (rowIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
+                    if (rowData[0] == 0 || !CompareVarcharFromRow(rowData, constVal)) {
+                        std::swap(indices[i], indices[idxFrom]); idxFrom++;
+                    }
+                }
+            }
+        } else if (layout == DVecLayout::Dictionary) {
+            auto* dicVec = static_cast<Vector<DictionaryContainer<std::string_view>>*>(decoded.Base());
+            if constexpr (HasNull) {
+                const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+                for (int32_t i = idxFrom; i < count; ++i) {
+                    int32_t idx = indices[i];
+                    uint8_t* row = groups[idx];
+                    bool rowIsNull = RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask);
+                    bool vecIsNull = BitUtil::IsBitSet(rawNulls, idx);
+                    if (rowIsNull != vecIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    if (rowIsNull) continue;
+                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
+                    if (rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    std::string_view val = dicVec->GetValue(idx);
+                    if (!CompareVarcharFromRow(rowData, val)) { std::swap(indices[i], indices[idxFrom]); idxFrom++; }
+                }
+            } else {
+                for (int32_t i = idxFrom; i < count; ++i) {
+                    int32_t idx = indices[i];
+                    uint8_t* row = groups[idx];
+                    bool rowIsNull = RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask);
+                    if (rowIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
+                    if (rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    std::string_view val = dicVec->GetValue(idx);
+                    if (!CompareVarcharFromRow(rowData, val)) { std::swap(indices[i], indices[idxFrom]); idxFrom++; }
+                }
+            }
+        } else {
+            auto* strVec = static_cast<Vector<LargeStringContainer<std::string_view>>*>(decoded.Base());
+            int32_t* strOffsets = unsafe::UnsafeStringVector::GetOffsets(strVec);
+            char* strData = unsafe::UnsafeStringVector::GetValues(strVec);
+            if constexpr (HasNull) {
+                const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+                for (int32_t i = idxFrom; i < count; ++i) {
+                    int32_t idx = indices[i];
+                    uint8_t* row = groups[idx];
+                    bool rowIsNull = RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask);
+                    bool vecIsNull = BitUtil::IsBitSet(rawNulls, idx);
+                    if (rowIsNull != vecIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    if (rowIsNull) continue;
+                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
+                    if (rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    auto len = strOffsets[idx + 1] - strOffsets[idx];
+                    std::string_view val(strData + strOffsets[idx], len);
+                    if (!CompareVarcharFromRow(rowData, val)) { std::swap(indices[i], indices[idxFrom]); idxFrom++; }
+                }
+            } else {
+                for (int32_t i = idxFrom; i < count; ++i) {
+                    int32_t idx = indices[i];
+                    uint8_t* row = groups[idx];
+                    bool rowIsNull = RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask);
+                    if (rowIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
+                    if (rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    auto len = strOffsets[idx + 1] - strOffsets[idx];
+                    std::string_view val(strData + strOffsets[idx], len);
+                    if (!CompareVarcharFromRow(rowData, val)) { std::swap(indices[i], indices[idxFrom]); idxFrom++; }
+                }
+            }
+        }
+        return idxFrom;
+    }
 
-                    std::string_view val;
-                    auto encoding = vector->GetEncoding();
-                    if (encoding == vec::OMNI_DICTIONARY) {
-                        val = static_cast<Vector<DictionaryContainer<std::string_view>>*>(vector)->GetValue(rowIdx);
-                    } else if (encoding == vec::OMNI_ENCODING_CONST) {
-                        val = static_cast<ConstVector<std::string_view>*>(vector)->GetConstValue();
+    /// Batch store using DecodedVector — flat values accessed directly, no encoding switch.
+    template <typename T, bool HasNull, bool isDic = false>
+    void BatchStoreDecoded(const DecodedVector& decoded, int32_t offset, uint8_t nullByte, uint8_t nullMask,
+                           uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
+    {
+        const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+        const T* flatVals = decoded.FlatValues<T>();
+        const int32_t* ids = decoded.Ids();
+
+        auto getValue = [&](int32_t idx) {
+            if constexpr (isDic) { return flatVals[ids[idx]]; }
+            else { return flatVals[idx]; }
+        };
+
+        if constexpr (HasNull) {
+            for (int32_t i = 0; i < rowCount; ++i) {
+                char* row = reinterpret_cast<char*>(rows[i]);
+                auto rowIdx = rowIndices[i];
+                if (BitUtil::IsBitSet(rawNulls, rowIdx)) {
+                    RowContainer::SetNullAt(row, nullByte, nullMask);
+                } else {
+                    RowContainer::ClearNullAt(row, nullByte, nullMask);
+                    RowContainer::StoreValue(row, offset, getValue(rowIdx));
+                }
+            }
+        } else {
+            for (int32_t i = 0; i < rowCount; ++i) {
+                char* row = reinterpret_cast<char*>(rows[i]);
+                auto rowIdx = rowIndices[i];
+                RowContainer::ClearNullAt(row, nullByte, nullMask);
+                RowContainer::StoreValue(row, offset, getValue(rowIdx));
+            }
+        }
+    }
+
+    /// Specialization for Constant layout — store single broadcast value.
+    template <typename T, bool HasNull>
+    void BatchStoreDecodedConst(const DecodedVector& decoded, int32_t offset, uint8_t nullByte, uint8_t nullMask,
+                                uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
+    {
+        T constVal = decoded.GetConstValue<T>();
+        const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+
+        if constexpr (HasNull) {
+            for (int32_t i = 0; i < rowCount; ++i) {
+                char* row = reinterpret_cast<char*>(rows[i]);
+                auto rowIdx = rowIndices[i];
+                if (BitUtil::IsBitSet(rawNulls, rowIdx)) {
+                    RowContainer::SetNullAt(row, nullByte, nullMask);
+                } else {
+                    RowContainer::ClearNullAt(row, nullByte, nullMask);
+                    RowContainer::StoreValue(row, offset, constVal);
+                }
+            }
+        } else {
+            for (int32_t i = 0; i < rowCount; ++i) {
+                char* row = reinterpret_cast<char*>(rows[i]);
+                RowContainer::ClearNullAt(row, nullByte, nullMask);
+                RowContainer::StoreValue(row, offset, constVal);
+            }
+        }
+    }
+
+    /// Batch store for VARCHAR using DecodedVector.
+    template <bool HasNull>
+    void BatchStoreVarcharDecoded(const DecodedVector& decoded, int32_t colIdx, int32_t offset,
+                                  uint8_t nullByte, uint8_t nullMask,
+                                  uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
+    {
+        auto& curFunc = serializers[colIdx];
+        auto layout = decoded.GetLayout();
+
+        if (layout == DVecLayout::Constant) {
+            if constexpr (HasNull) {
+                const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+                for (int32_t i = 0; i < rowCount; ++i) {
+                    char* row = reinterpret_cast<char*>(rows[i]);
+                    auto rowIdx = rowIndices[i];
+                    if (BitUtil::IsBitSet(rawNulls, rowIdx)) {
+                        RowContainer::SetNullAt(row, nullByte, nullMask);
                     } else {
-                        val = static_cast<Vector<LargeStringContainer<std::string_view>>*>(vector)->GetValue(rowIdx);
+                        RowContainer::ClearNullAt(row, nullByte, nullMask);
+                        type::StringRef key; key.data = nullptr; key.size = 0;
+                        curFunc(decoded.Base(), rowIdx, table->Pool(), key);
+                        *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
+                        *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                     }
-                    if (stringLen != val.size()) return false;
-                    if (stringLen > 0 && memcmp(rowData + sizeof(uint8_t) + rowLenSize, val.data(), stringLen) != 0)
-                        return false;
-                    break;
                 }
-                default: {
-                    // Complex types (ARRAY, ROW): use the comparator on the serialized data
-                    auto& curFunc = comparators[groupColIdx];
-                    uint8_t* addr = reinterpret_cast<uint8_t*>(
-                        *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
-                    if (!curFunc(*vector, rowIdx, addr)) {
-                        return false;
+            } else {
+                for (int32_t i = 0; i < rowCount; ++i) {
+                    char* row = reinterpret_cast<char*>(rows[i]);
+                    auto rowIdx = rowIndices[i];
+                    RowContainer::ClearNullAt(row, nullByte, nullMask);
+                    type::StringRef key; key.data = nullptr; key.size = 0;
+                    curFunc(decoded.Base(), rowIdx, table->Pool(), key);
+                    *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
+                    *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
+                }
+            }
+        } else if (layout == DVecLayout::Dictionary) {
+            if constexpr (HasNull) {
+                const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+                for (int32_t i = 0; i < rowCount; ++i) {
+                    char* row = reinterpret_cast<char*>(rows[i]);
+                    auto rowIdx = rowIndices[i];
+                    if (BitUtil::IsBitSet(rawNulls, rowIdx)) {
+                        RowContainer::SetNullAt(row, nullByte, nullMask);
+                    } else {
+                        RowContainer::ClearNullAt(row, nullByte, nullMask);
+                        type::StringRef key; key.data = nullptr; key.size = 0;
+                        curFunc(decoded.Base(), rowIdx, table->Pool(), key);
+                        *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
+                        *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                     }
-                    break;
+                }
+            } else {
+                for (int32_t i = 0; i < rowCount; ++i) {
+                    char* row = reinterpret_cast<char*>(rows[i]);
+                    auto rowIdx = rowIndices[i];
+                    RowContainer::ClearNullAt(row, nullByte, nullMask);
+                    type::StringRef key; key.data = nullptr; key.size = 0;
+                    curFunc(decoded.Base(), rowIdx, table->Pool(), key);
+                    *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
+                    *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
+                }
+            }
+        } else {
+            if constexpr (HasNull) {
+                const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+                for (int32_t i = 0; i < rowCount; ++i) {
+                    char* row = reinterpret_cast<char*>(rows[i]);
+                    auto rowIdx = rowIndices[i];
+                    if (BitUtil::IsBitSet(rawNulls, rowIdx)) {
+                        RowContainer::SetNullAt(row, nullByte, nullMask);
+                    } else {
+                        RowContainer::ClearNullAt(row, nullByte, nullMask);
+                        type::StringRef key; key.data = nullptr; key.size = 0;
+                        curFunc(decoded.Base(), rowIdx, table->Pool(), key);
+                        *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
+                        *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
+                    }
+                }
+            } else {
+                for (int32_t i = 0; i < rowCount; ++i) {
+                    char* row = reinterpret_cast<char*>(rows[i]);
+                    auto rowIdx = rowIndices[i];
+                    RowContainer::ClearNullAt(row, nullByte, nullMask);
+                    type::StringRef key; key.data = nullptr; key.size = 0;
+                    curFunc(decoded.Base(), rowIdx, table->Pool(), key);
+                    *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
+                    *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                 }
             }
         }
-        return true;
     }
+
+    // ========== End of DecodedVector helpers ==========
 
     /// Use RowContainer::ListRows to iterate through rows for output.
     /// Returns row pointers where each row has:
@@ -897,7 +1141,7 @@ public:
             auto nullByte = col.NullByte();
             auto nullMask = col.NullMask();
             if (RowContainer::IsNullAt(row, nullByte, nullMask)) {
-                outVector->SetNull(rowIdx);
+                vec::VectorHelper::SetNull(outVector, rowIdx);
                 continue;
             }
 
@@ -952,7 +1196,7 @@ public:
         const int rowIdx)
     {
         for (int32_t i = 0; i < groupColNum; ++i) {
-            groupOutputVectors[i]->SetNull(rowIdx);
+            vec::VectorHelper::SetNull(groupOutputVectors[i], rowIdx);
         }
     }
 
@@ -1054,41 +1298,182 @@ public:
         return a ^ (b + 0x9e3779b97f4a7c15ULL + (a << 6) + (a >> 2));
     }
 
+    /// Hash using DecodedVector — dispatch on layout to eliminate runtime encoding branches.
+    template<DataTypeId id, bool HasNull, bool isMix>
+    void DoHashWithDecodeFlat(const DecodedVector& decoded, int32_t rowsNum)
+    {
+        using RealVector = typename NativeAndVectorType<id>::vector;
+        using Type = typename NativeAndVectorType<id>::type;
+        GroupbyHashCalculator<Type> calculator {};
+        auto* realVector = static_cast<RealVector*>(decoded.Base());
+        if constexpr (HasNull) {
+            const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+            for (int32_t row = 0; row < rowsNum; row++) {
+                int64_t hashVal = BitUtil::IsBitSet(rawNulls, row) ? kNullHash : calculator(realVector->GetValue(row));
+                if constexpr (isMix) {
+                    workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal);
+                } else {
+                    workingHashVals[row] = hashVal;
+                }
+            }
+        } else {
+            for (int32_t row = 0; row < rowsNum; row++) {
+                int64_t hashVal = calculator(realVector->GetValue(row));
+                if constexpr (isMix) {
+                    workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal);
+                } else {
+                    workingHashVals[row] = hashVal;
+                }
+            }
+        }
+    }
+
+    template<DataTypeId id, bool HasNull, bool isMix>
+    void DoHashWithDecodeDict(const DecodedVector& decoded, int32_t rowsNum)
+    {
+        using Type = typename NativeAndVectorType<id>::type;
+        GroupbyHashCalculator<Type> calculator {};
+        if constexpr (std::is_same_v<Type, std::string_view>) {
+            if constexpr (HasNull) {
+                const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+                for (int32_t row = 0; row < rowsNum; row++) {
+                    int64_t hashVal = BitUtil::IsBitSet(rawNulls, row) ? kNullHash : calculator(decoded.GetValue<Type>(row));
+                    if constexpr (isMix) { workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal); }
+                    else { workingHashVals[row] = hashVal; }
+                }
+            } else {
+                for (int32_t row = 0; row < rowsNum; row++) {
+                    int64_t hashVal = calculator(decoded.GetValue<Type>(row));
+                    if constexpr (isMix) { workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal); }
+                    else { workingHashVals[row] = hashVal; }
+                }
+            }
+        } else {
+            const Type* dictVals = decoded.FlatValues<Type>();
+            const int32_t* ids = decoded.Ids();
+            if constexpr (HasNull) {
+                const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+                for (int32_t row = 0; row < rowsNum; row++) {
+                    int64_t hashVal = BitUtil::IsBitSet(rawNulls, row) ? kNullHash : calculator(dictVals[ids[row]]);
+                    if constexpr (isMix) { workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal); }
+                    else { workingHashVals[row] = hashVal; }
+                }
+            } else {
+                for (int32_t row = 0; row < rowsNum; row++) {
+                    int64_t hashVal = calculator(dictVals[ids[row]]);
+                    if constexpr (isMix) { workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal); }
+                    else { workingHashVals[row] = hashVal; }
+                }
+            }
+        }
+    }
+
+    template<DataTypeId id, bool HasNull, bool isMix>
+    void DoHashWithDecodeConst(const DecodedVector& decoded, int32_t rowsNum)
+    {
+        using Type = typename NativeAndVectorType<id>::type;
+        GroupbyHashCalculator<Type> calculator {};
+        auto hashVal = decoded.IsNull(0) ? kNullHash : calculator(static_cast<ConstVector<Type>*>(decoded.Base())->GetConstValue());
+        for (int32_t row = 0; row < rowsNum; row++) {
+            if constexpr (isMix) {
+                workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal);
+            } else {
+                workingHashVals[row] = hashVal;
+            }
+        }
+    }
+
+    template<DataTypeId id>
+    void DoHashWithDecode(const DecodedVector& decoded, int32_t rowsNum, bool isMix)
+    {
+        auto layout = decoded.GetLayout();
+        bool hasNull = decoded.HasNull();
+        if (layout == DVecLayout::Constant) {
+            if (hasNull && isMix) { DoHashWithDecodeConst<id, true, true>(decoded, rowsNum); }
+            else if (hasNull && !isMix) { DoHashWithDecodeConst<id, true, false>(decoded, rowsNum); }
+            else if (isMix) { DoHashWithDecodeConst<id, false, true>(decoded, rowsNum); }
+            else { DoHashWithDecodeConst<id, false, false>(decoded, rowsNum); }
+        } else if (layout == DVecLayout::Dictionary) {
+            if (hasNull && isMix) { DoHashWithDecodeDict<id, true, true>(decoded, rowsNum); }
+            else if (hasNull && !isMix) { DoHashWithDecodeDict<id, true, false>(decoded, rowsNum); }
+            else if (isMix) { DoHashWithDecodeDict<id, false, true>(decoded, rowsNum); }
+            else { DoHashWithDecodeDict<id, false, false>(decoded, rowsNum); }
+        } else {
+            if (hasNull && isMix) { DoHashWithDecodeFlat<id, true, true>(decoded, rowsNum); }
+            else if (hasNull && !isMix) { DoHashWithDecodeFlat<id, true, false>(decoded, rowsNum); }
+            else if (isMix) { DoHashWithDecodeFlat<id, false, true>(decoded, rowsNum); }
+            else { DoHashWithDecodeFlat<id, false, false>(decoded, rowsNum); }
+        }
+    }
+
     template<DataTypeId id, bool isDic = false, bool isConst = false>
     void DoHash(BaseVector *vector, int32_t rowsNum, std::vector<int64_t> &workingHashVals, bool isMix)
     {
         using RealVector = typename NativeAndVectorType<id>::vector;
         using Type = typename NativeAndVectorType<id>::type;
         GroupbyHashCalculator<Type> calculator {};
-        if (isMix) {
-            for (int32_t row = 0; row < rowsNum; row++) {
-                int64_t hashVal = 0;
-                if constexpr (isDic) {
-                    hashVal = vector->IsNull(row) ? kNullHash :
-                        calculator(static_cast<Vector<DictionaryContainer<Type>> *>(vector)->GetValue(row));
-                } else if constexpr (isConst) {
-                    hashVal = vector->IsNull(row) ? kNullHash :
-                        calculator(static_cast<ConstVector<Type> *>(vector)->GetConstValue());
-                } else {
-                    auto realVector = static_cast<RealVector *>(vector);
-                    hashVal = vector->IsNull(row) ? kNullHash : calculator(realVector->GetValue(row));
+        if constexpr (isConst) {
+            auto hashVal = vector->IsNull(0) ? kNullHash : calculator(static_cast<ConstVector<Type> *>(vector)->GetConstValue());
+            if (isMix) {
+                for (int32_t row = 0; row < rowsNum; row++) {
+                    workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal);
                 }
-                workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal);
+            } else {
+                for (int32_t row = 0; row < rowsNum; row++) {
+                    workingHashVals[row] = hashVal;
+                }
+            }
+        } else if constexpr (isDic) {
+            auto* dicVec = static_cast<Vector<DictionaryContainer<Type>> *>(vector);
+            if (vector->HasNull()) {
+                auto* rawNulls = reinterpret_cast<const uint64_t*>(unsafe::UnsafeBaseVector::GetNulls(vector));
+                if (isMix) {
+                    for (int32_t row = 0; row < rowsNum; row++) {
+                        int64_t hashVal = BitUtil::IsBitSet(rawNulls, row) ? kNullHash : calculator(dicVec->GetValue(row));
+                        workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal);
+                    }
+                } else {
+                    for (int32_t row = 0; row < rowsNum; row++) {
+                        int64_t hashVal = BitUtil::IsBitSet(rawNulls, row) ? kNullHash : calculator(dicVec->GetValue(row));
+                        workingHashVals[row] = hashVal;
+                    }
+                }
+            } else {
+                if (isMix) {
+                    for (int32_t row = 0; row < rowsNum; row++) {
+                        workingHashVals[row] = FastHashMix(workingHashVals[row], calculator(dicVec->GetValue(row)));
+                    }
+                } else {
+                    for (int32_t row = 0; row < rowsNum; row++) {
+                        workingHashVals[row] = calculator(dicVec->GetValue(row));
+                    }
+                }
             }
         } else {
-            for (int32_t row = 0; row < rowsNum; row++) {
-                int64_t hashVal = 0;
-                if constexpr (isDic) {
-                    hashVal = vector->IsNull(row) ? kNullHash :
-                        calculator(static_cast<Vector<DictionaryContainer<Type>> *>(vector)->GetValue(row));
-                } else if constexpr (isConst) {
-                    hashVal = vector->IsNull(row) ? kNullHash :
-                        calculator(static_cast<ConstVector<Type> *>(vector)->GetConstValue());
+            auto realVector = static_cast<RealVector *>(vector);
+            if (vector->HasNull()) {
+                auto* rawNulls = reinterpret_cast<const uint64_t*>(unsafe::UnsafeBaseVector::GetNulls(vector));
+                if (isMix) {
+                    for (int32_t row = 0; row < rowsNum; row++) {
+                        int64_t hashVal = BitUtil::IsBitSet(rawNulls, row) ? kNullHash : calculator(realVector->GetValue(row));
+                        workingHashVals[row] = FastHashMix(workingHashVals[row], hashVal);
+                    }
                 } else {
-                    auto realVector = static_cast<RealVector *>(vector);
-                    hashVal = vector->IsNull(row) ? kNullHash : calculator(realVector->GetValue(row));
+                    for (int32_t row = 0; row < rowsNum; row++) {
+                        int64_t hashVal = BitUtil::IsBitSet(rawNulls, row) ? kNullHash : calculator(realVector->GetValue(row));
+                        workingHashVals[row] = hashVal;
+                    }
                 }
-                workingHashVals[row] = hashVal;
+            } else {
+                if (isMix) {
+                    for (int32_t row = 0; row < rowsNum; row++) {
+                        workingHashVals[row] = FastHashMix(workingHashVals[row], calculator(realVector->GetValue(row)));
+                    }
+                } else {
+                    for (int32_t row = 0; row < rowsNum; row++) {
+                        workingHashVals[row] = calculator(realVector->GetValue(row));
+                    }
+                }
             }
         }
     }
@@ -1104,65 +1489,114 @@ public:
         }
     }
 
-    void DoArrayHash(BaseVector *vector, int32_t rowsNum, std::vector<int64_t> &workingHashVals)
+    /// Hash array elements using DecodedVector layout — eliminates runtime encoding branches.
+    void DoArrayHashWithDecode(const DecodedVector& decoded, int32_t rowsNum, bool isMix)
     {
-        auto arrayVector = dynamic_cast<ArrayVector *>(vector);
-        for (int32_t i = 0; i < rowsNum; i++) {
-            int64_t offset = arrayVector->GetOffset(i);
-            int64_t size = arrayVector->GetSize(i);
-            auto elementVec = arrayVector->GetElementVector().get();
-            int64_t start = offset;
-            int64_t end = offset + size;
-            auto elementTypeId = elementVec->GetTypeId();
-            workingHashVals[i] = DYNAMIC_TYPE_DISPATCH(CalculateArrayHash, elementTypeId, elementVec, start, end);
+        auto layout = decoded.GetLayout();
+        if (layout == DVecLayout::Flat) {
+            auto* arrayVector = static_cast<ArrayVector*>(decoded.Base());
+            DoArrayHashElementDispatch(arrayVector, rowsNum, isMix);
+        } else if (layout == DVecLayout::Dictionary) {
+            auto* dictVec = static_cast<Vector<DictionaryContainer<ArrayVector*>>*>(decoded.Base());
+            DoArrayHashDictDispatch(dictVec, rowsNum, isMix);
+        } else {
+            auto* constVec = static_cast<ConstVector<ArrayVector*>*>(decoded.Base());
+            DoArrayHashConstDispatch(constVec, rowsNum, isMix);
         }
     }
 
     template <DataTypeId id>
-    int64_t CalculateArrayHash(BaseVector *vector, int64_t start, int64_t end)
+    void DoArrayHashElementFlat(ArrayVector* arrayVector, int32_t rowsNum, bool isMix)
     {
         using RealVector = typename NativeAndVectorType<id>::vector;
         using Type = typename NativeAndVectorType<id>::type;
-        auto realVector = static_cast<RealVector *>(vector);
+        auto* elementVec = arrayVector->GetElementVector().get();
+        auto* realVector = static_cast<RealVector*>(elementVec);
         GroupbyHashCalculator<Type> calculator {};
-        int64_t finalHash = 0;
-        for (int32_t row = start; row < end; row++) {
-            auto hash = vector->IsNull(row) ? kNullHash : calculator(realVector->GetValue(row));
-            finalHash = (row == start) ? hash : FastHashMix(finalHash, hash);
+        bool hasNull = elementVec->HasNull();
+        for (int32_t i = 0; i < rowsNum; i++) {
+            int64_t start = arrayVector->GetOffset(i);
+            int64_t end = arrayVector->GetOffset(i + 1);
+            int64_t finalHash = 0;
+            bool first = true;
+            if (hasNull) {
+                for (int64_t row = start; row < end; row++) {
+                    auto hash = elementVec->IsNull(row) ? kNullHash : calculator(realVector->GetValue(row));
+                    if (first) { finalHash = hash; first = false; }
+                    else { finalHash = FastHashMix(finalHash, hash); }
+                }
+            } else {
+                for (int64_t row = start; row < end; row++) {
+                    auto hash = calculator(realVector->GetValue(row));
+                    if (first) { finalHash = hash; first = false; }
+                    else { finalHash = FastHashMix(finalHash, hash); }
+                }
+            }
+            if (isMix) {
+                workingHashVals[i] = FastHashMix(workingHashVals[i], finalHash);
+            } else {
+                workingHashVals[i] = finalHash;
+            }
         }
-        return finalHash;
     }
 
-    /*template <bool withHashVal = false, class Func, class NullFunc>
-    void Extract(int32_t rowsNum, OutputState &outputState, Func func, NullFunc nullFunc)
+    void DoArrayHashElementDispatch(ArrayVector* arrayVector, int32_t rowsNum, bool isMix)
     {
-        auto tblVisitor = [&] {
-            if (outputState.rowBegin) {
-                return table->getResultVisitor(
-                    outputState.rowBegin, static_cast<uint16_t>(outputState.rowOffset));
-            }
-            return table->getResultVisitor();
-        }();
-        uint32_t idx = 0;
-        while (idx < rowsNum && !tblVisitor.finished()) {
-            auto *row = rowFromData(tblVisitor.curVal().buf);
-            type::StringRef key;
-            key.data = row + totalAggValueSize;
-            key.size = *reinterpret_cast<size_t*>(row + totalAggValueSize - sizeof(size_t));
-            if constexpr (withHashVal) {
-                func(key, tblVisitor.curKey(), row, idx);
-            } else {
-                func(key, row, idx);
-            }
-            tblVisitor.next();
-            idx++;
+        auto elementVec = arrayVector->GetElementVector().get();
+        auto elementTypeId = elementVec->GetTypeId();
+        #define ARRAY_HASH_DISPATCH(TID) \
+            case TID: \
+                DoArrayHashElementFlat<TID>(arrayVector, rowsNum, isMix); \
+                break;
+        switch (elementTypeId) {
+            ARRAY_HASH_DISPATCH(type::OMNI_BYTE)
+            ARRAY_HASH_DISPATCH(type::OMNI_SHORT)
+            ARRAY_HASH_DISPATCH(type::OMNI_INT)
+            ARRAY_HASH_DISPATCH(type::OMNI_DATE32)
+            ARRAY_HASH_DISPATCH(type::OMNI_TIME32)
+            ARRAY_HASH_DISPATCH(type::OMNI_LONG)
+            ARRAY_HASH_DISPATCH(type::OMNI_TIMESTAMP)
+            ARRAY_HASH_DISPATCH(type::OMNI_DECIMAL64)
+            ARRAY_HASH_DISPATCH(type::OMNI_DATE64)
+            ARRAY_HASH_DISPATCH(type::OMNI_TIME64)
+            ARRAY_HASH_DISPATCH(type::OMNI_DOUBLE)
+            ARRAY_HASH_DISPATCH(type::OMNI_FLOAT)
+            ARRAY_HASH_DISPATCH(type::OMNI_DECIMAL128)
+            ARRAY_HASH_DISPATCH(type::OMNI_BOOLEAN)
+            ARRAY_HASH_DISPATCH(type::OMNI_VARCHAR)
+            ARRAY_HASH_DISPATCH(type::OMNI_CHAR)
+            ARRAY_HASH_DISPATCH(type::OMNI_VARBINARY)
+            default: break;
         }
-        tblVisitor.savePos([&](auto ptr, auto tagPos) {
-            outputState.rowBegin = reinterpret_cast<char*>(ptr);
-            outputState.rowOffset = tagPos;
-            outputState.hasBeenOutputNum += rowsNum;
-        });
-    }*/
+        #undef ARRAY_HASH_DISPATCH
+    }
+
+    void DoArrayHashDictDispatch(Vector<DictionaryContainer<ArrayVector*>>* dictVec, int32_t rowsNum, bool isMix)
+    {
+        for (int32_t i = 0; i < rowsNum; i++) {
+            auto* arrayVector = dictVec->GetValue(i);
+            DoArrayHashElementDispatch(arrayVector, 1, false);
+            if (isMix) {
+                workingHashVals[i] = FastHashMix(workingHashVals[i], workingHashVals[0]);
+            } else {
+                workingHashVals[i] = workingHashVals[0];
+            }
+        }
+    }
+
+    void DoArrayHashConstDispatch(ConstVector<ArrayVector*>* constVec, int32_t rowsNum, bool isMix)
+    {
+        auto* arrayVector = constVec->GetConstValue();
+        DoArrayHashElementDispatch(arrayVector, 1, false);
+        int64_t constHash = workingHashVals[0];
+        for (int32_t i = 0; i < rowsNum; i++) {
+            if (isMix) {
+                workingHashVals[i] = FastHashMix(workingHashVals[i], constHash);
+            } else {
+                workingHashVals[i] = constHash;
+            }
+        }
+    }
 
     void ParseKeyToCols(const type::StringRef &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
         const int32_t rowIdx)
@@ -1402,6 +1836,19 @@ public:
         });
     }
 
+    template<bool isDict = false>
+    void ParseKeyToColsSingle(const T &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
+        const int rowIdx)
+    {
+        auto curVectorPtr = groupOutputVectors[0];
+        if constexpr (isDict) {
+            auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(curVectorPtr);
+            dictionaryVector->SetValue(rowIdx, key);
+        } else {
+            reinterpret_cast<Vector<T>*>(curVectorPtr)->SetValue(rowIdx, key);
+        }
+    }
+
     void ParseKeyToCols(const T &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
         const int rowIdx)
     {
@@ -1410,18 +1857,18 @@ public:
             for (int32_t col = 0; col < groupColNum; ++col) {
                 auto *outVector = groupOutputVectors[col];
                 if (unpackIsNull[col]) {
-                    outVector->SetNull(rowIdx);
+                    vec::VectorHelper::SetNull(outVector, rowIdx);
                     continue;
                 }
                 SetValueByType(outVector, rowIdx, plan[col].typeId, unpackValues[col]);
             }
         } else {
             auto curVectorPtr = groupOutputVectors[0];
-            if (curVectorPtr->GetEncoding() == Encoding::OMNI_DICTIONARY) {
-                auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(curVectorPtr);
-                dictionaryVector->SetValue(rowIdx, key);
+            bool isDictEncoded = (curVectorPtr->GetEncoding() == Encoding::OMNI_DICTIONARY);
+            if (isDictEncoded) {
+                ParseKeyToColsSingle<true>(key, groupOutputVectors, groupColNum, rowIdx);
             } else {
-                reinterpret_cast<Vector<T>*>(curVectorPtr)->SetValue(rowIdx, key);
+                ParseKeyToColsSingle<false>(key, groupOutputVectors, groupColNum, rowIdx);
             }
         }
     }
@@ -1430,7 +1877,7 @@ public:
         const int rowIdx)
     {
         auto curVectorPtr = groupOutputVectors[0];
-        curVectorPtr->SetNull(rowIdx);
+        vec::VectorHelper::SetNull(curVectorPtr, rowIdx);
     }
 
     size_t GetElementsSize() const
