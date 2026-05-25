@@ -35,13 +35,161 @@ public:
         auto size = context->GetResultRowSize();
         DataTypeId typeId = outputType->GetId();
         CreateResultVector(typeId, size, trueVec, result);
+
+        bool condHasNull = boolVec->HasNull();
+        bool trueHasNull = trueVec->HasNull();
+        bool falseHasNull = falseVec->HasNull();
+        bool anyNull = condHasNull || trueHasNull || falseHasNull;
+
+        switch (typeId) {
+            case OMNI_BOOLEAN:
+                ApplyTyped<bool>(boolVec, trueVec, falseVec, result, size, anyNull, condHasNull);
+                break;
+            case OMNI_BYTE:
+                ApplyTyped<int8_t>(boolVec, trueVec, falseVec, result, size, anyNull, condHasNull);
+                break;
+            case OMNI_SHORT:
+                ApplyTyped<int16_t>(boolVec, trueVec, falseVec, result, size, anyNull, condHasNull);
+                break;
+            case OMNI_INT:
+            case OMNI_DATE32:
+                ApplyTyped<int32_t>(boolVec, trueVec, falseVec, result, size, anyNull, condHasNull);
+                break;
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIMESTAMP:
+            case OMNI_DECIMAL64:
+                ApplyTyped<int64_t>(boolVec, trueVec, falseVec, result, size, anyNull, condHasNull);
+                break;
+            case OMNI_FLOAT:
+                ApplyTyped<float>(boolVec, trueVec, falseVec, result, size, anyNull, condHasNull);
+                break;
+            case OMNI_DOUBLE:
+                ApplyTyped<double>(boolVec, trueVec, falseVec, result, size, anyNull, condHasNull);
+                break;
+            case OMNI_VARCHAR:
+            case OMNI_VARBINARY:
+                ApplyString(boolVec, trueVec, falseVec, result, size, anyNull, condHasNull);
+                break;
+            case OMNI_DECIMAL128:
+                ApplyTyped<Decimal128>(boolVec, trueVec, falseVec, result, size, anyNull, condHasNull);
+                break;
+            case OMNI_ARRAY:
+                ApplyComplex(boolVec, trueVec, falseVec, result, size, typeId, anyNull, condHasNull);
+                break;
+            case OMNI_MAP:
+                ApplyComplex(boolVec, trueVec, falseVec, result, size, typeId, anyNull, condHasNull);
+                break;
+            case OMNI_ROW:
+                ApplyComplex(boolVec, trueVec, falseVec, result, size, typeId, anyNull, condHasNull);
+                break;
+            default:
+                OMNI_THROW("If expr Error", "Unsupported output type Id:" + std::to_string(typeId));
+        }
+
+        delete falseVec;
+        delete trueVec;
+        delete condVec;
+    }
+
+private:
+    template <typename T>
+    void ApplyTyped(Vector<bool> *boolVec, BaseVector *trueVec, BaseVector *falseVec,
+        BaseVector *result, int32_t size, bool anyNull, bool condHasNull) const
+    {
+        bool trueIsFlat = (trueVec->GetEncoding() == OMNI_FLAT);
+        bool falseIsFlat = (falseVec->GetEncoding() == OMNI_FLAT);
+
+        auto *resVec = static_cast<Vector<T> *>(result);
+        T *resData = resVec->GetValuesBuffer();
+
+        T *trueData = nullptr;
+        T *falseData = nullptr;
+        if (trueIsFlat) {
+            trueData = static_cast<Vector<T> *>(trueVec)->GetValuesBuffer();
+        }
+        if (falseIsFlat) {
+            falseData = static_cast<Vector<T> *>(falseVec)->GetValuesBuffer();
+        }
+
+        if (!anyNull && trueIsFlat && falseIsFlat) {
+            for (int32_t row = 0; row < size; ++row) {
+                resData[row] = boolVec->GetValue(row) ? trueData[row] : falseData[row];
+            }
+            return;
+        }
+
         for (int32_t row = 0; row < size; ++row) {
-            BaseVector* temp = nullptr;
-            if (boolVec->IsNull(row)) {
+            BaseVector *temp = nullptr;
+            if (condHasNull && boolVec->IsNull(row)) {
                 temp = falseVec;
             } else {
                 temp = boolVec->GetValue(row) ? trueVec : falseVec;
             }
+
+            if (temp->IsNull(row)) {
+                result->SetNull(row);
+                continue;
+            }
+
+            if (trueIsFlat && temp == trueVec) {
+                resData[row] = static_cast<Vector<T> *>(trueVec)->GetValue(row);
+            } else if (falseIsFlat && temp == falseVec) {
+                resData[row] = static_cast<Vector<T> *>(falseVec)->GetValue(row);
+            } else {
+                resData[row] = VectorHelper::GetValueFromVector<T>(temp, row);
+            }
+        }
+    }
+
+    void ApplyString(Vector<bool> *boolVec, BaseVector *trueVec, BaseVector *falseVec,
+        BaseVector *result, int32_t size, bool anyNull, bool condHasNull) const
+    {
+        auto *resVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(result);
+
+        if (!anyNull) {
+            bool trueIsFlat = (trueVec->GetEncoding() == OMNI_FLAT);
+            bool falseIsFlat = (falseVec->GetEncoding() == OMNI_FLAT);
+
+            if (trueIsFlat && falseIsFlat) {
+                auto *trueStrVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(trueVec);
+                auto *falseStrVec = static_cast<Vector<LargeStringContainer<std::string_view>> *>(falseVec);
+                for (int32_t row = 0; row < size; ++row) {
+                    resVec->SetValue(row, boolVec->GetValue(row) ? trueStrVec->GetValue(row) : falseStrVec->GetValue(row));
+                }
+                return;
+            }
+        }
+
+        for (int32_t row = 0; row < size; ++row) {
+            BaseVector *temp = nullptr;
+            if (condHasNull && boolVec->IsNull(row)) {
+                temp = falseVec;
+            } else {
+                temp = boolVec->GetValue(row) ? trueVec : falseVec;
+            }
+
+            if (temp->IsNull(row)) {
+                resVec->SetNull(row);
+                continue;
+            }
+
+            auto res = VectorHelper::GetStringValueFromVector(temp, row);
+            resVec->SetValue(row, res);
+        }
+    }
+
+    void ApplyComplex(Vector<bool> *boolVec, BaseVector *trueVec, BaseVector *falseVec,
+        BaseVector *result, int32_t size, DataTypeId typeId, bool anyNull, bool condHasNull) const
+    {
+        for (int32_t row = 0; row < size; ++row) {
+            BaseVector *temp = nullptr;
+            if (condHasNull && boolVec->IsNull(row)) {
+                temp = falseVec;
+            } else {
+                temp = boolVec->GetValue(row) ? trueVec : falseVec;
+            }
+
             if (temp->IsNull(row)) {
                 if (typeId == OMNI_ARRAY) {
                     static_cast<ArrayVector *>(result)->SetNull(row);
@@ -52,91 +200,23 @@ public:
                 }
                 continue;
             }
+
             switch (typeId) {
-                case OMNI_BOOLEAN :
-                {
-                    auto res = VectorHelper::GetValueFromVector<bool>(temp, row);
-                    VectorHelper::SetValue(result, row, &res);
-                    break;
-                }
-                case OMNI_BYTE :
-                {
-                    auto res = VectorHelper::GetValueFromVector<int8_t>(temp, row);
-                    VectorHelper::SetValue(result, row, &res);
-                    break;
-                }
-                case OMNI_SHORT :
-                {
-                    auto res = VectorHelper::GetValueFromVector<int16_t>(temp, row);
-                    VectorHelper::SetValue(result, row, &res);
-                    break;
-                }
-                case OMNI_INT :
-                case OMNI_DATE32 :
-                {
-                    auto res = VectorHelper::GetValueFromVector<int32_t>(temp, row);
-                    VectorHelper::SetValue(result, row, &res);
-                    break;
-                }
-                case OMNI_LONG :
-                case OMNI_DATE64 :
-                case OMNI_TIMESTAMP :
-                case OMNI_DECIMAL64 :
-                {
-                    auto res = VectorHelper::GetValueFromVector<int64_t>(temp, row);
-                    VectorHelper::SetValue(result, row, &res);
-                    break;
-                }
-                case OMNI_FLOAT :
-                {
-                    auto res = VectorHelper::GetValueFromVector<float>(temp, row);
-                    VectorHelper::SetValue(result, row, &res);
-                    break;
-                }
-                case OMNI_DOUBLE :
-                {
-                    auto res = VectorHelper::GetValueFromVector<double>(temp, row);
-                    VectorHelper::SetValue(result, row, &res);
-                    break;
-                }
-                case OMNI_VARCHAR :
-                case OMNI_VARBINARY :
-                {
-                    auto res = VectorHelper::GetStringValueFromVector(temp, row);
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row, res);
-                    break;
-                }
-                case OMNI_DECIMAL128 :
-                {
-                    auto res = VectorHelper::GetValueFromVector<Decimal128>(temp, row);
-                    VectorHelper::SetValue(result, row, &res);
-                    break;
-                }
-                case OMNI_ARRAY :
-                {
+                case OMNI_ARRAY:
                     CopyArrayValue(temp, result, row);
                     break;
-                }
-                case OMNI_MAP :
-                {
+                case OMNI_MAP:
                     CopyMapValue(temp, result, row);
                     break;
-                }
-                case OMNI_ROW :
-                {
+                case OMNI_ROW:
                     CopyRowValue(temp, result, row);
                     break;
-                }
-                default :
-                    OMNI_THROW("If expr Error", "Unsupported output type Id:" + std::to_string(typeId));
+                default:
+                    break;
             }
         }
-        delete falseVec;
-        delete trueVec;
-        delete condVec;
     }
 
-private:
     void CreateResultVector(DataTypeId typeId, int32_t size, BaseVector *sourceVec,
         BaseVector *&result) const
     {

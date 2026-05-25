@@ -198,6 +198,7 @@ private:
         BitUtil::Negate(nullBuffer, rowSize);
         if constexpr (std::is_same_v<return_type_traits, std::string>) {
             auto tempResult = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(result);
+            std::string out;
             if (context.hasFilter()) {
                 auto isSelect = context.GetIsSelectRow();
                 int selectRow = 0;
@@ -205,11 +206,7 @@ private:
                     if (!isSelect[row]) {
                         return;
                     }
-                    // Passing a stack variable have shown to be boost the performance
-                    // of functions that repeatedly update the output. The opposite
-                    // optimization (eliminating the temp) is easier to do by the
-                    // compiler (assuming the function call is inlined).
-                    std::string out;
+                    out.clear();
                     bool notNull;
                     auto status = doApplyNotNull<0>(row, out, notNull, readers...);
                     if (!status.ok()) {
@@ -226,11 +223,7 @@ private:
                 });
             } else {
                 context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
-                    // Passing a stack variable have shown to be boost the performance
-                    // of functions that repeatedly update the output. The opposite
-                    // optimization (eliminating the temp) is easier to do by the
-                    // compiler (assuming the function call is inlined).
-                    std::string out;
+                    out.clear();
                     bool notNull;
                     auto status = doApplyNotNull<0>(row, out, notNull, readers...);
                     if (!status.ok()) {

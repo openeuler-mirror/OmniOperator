@@ -184,6 +184,24 @@ ExprEval::ExprEval(VectorBatch *vectorBatch, ExecutionContext *context): context
 ExprEval::ExprEval(ExecutionContext *context): context(context)
 {}
 
+void ExprEval::Reset(VectorBatch *vectorBatch, ExecutionContext *ctx)
+{
+    context = ctx;
+    int32_t vecCount = vectorBatch->GetVectorCount();
+    vecBatch_.clear();
+    vecBatch_.reserve(vecCount);
+    for (int i = 0; i < vecCount; i++) {
+        vecBatch_.push_back(vectorBatch->Get(i));
+    }
+    typeIds.clear();
+    typeIds.reserve(vecCount);
+    for (int i = 0; i < vecCount; i++) {
+        typeIds.push_back(vectorBatch->Get(i)->GetTypeId());
+    }
+    std::stack<vec::BaseVector *>().swap(inputValues_);
+    rowSize = vectorBatch->GetRowCount();
+}
+
 void ExprEval::Visit(const LiteralExpr &e)
 {
     if (!e.isRoot) {

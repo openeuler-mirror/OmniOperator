@@ -508,14 +508,66 @@ private:
         if (start == 0) {
             start = 1;
         }
-        int32_t numCharacters = static_cast<int32_t>(std::min(
-            stringImpl::length<false>(input), static_cast<int64_t>(std::numeric_limits<int32_t>::max())));
+
+        // ASCII fast path: when all bytes < 0x80, char_count == byte_count
+        if (IsAsciiString(input)) {
+            int32_t numCharacters = static_cast<int32_t>(input.size());
+            if (start < 0) {
+                start = numCharacters + start + 1;
+            }
+            int32_t last;
+            if (numCharacters - start + 1 < length) {
+                last = numCharacters;
+            } else {
+                last = start + length - 1;
+            }
+            if (start <= 0) {
+                start = 1;
+            }
+            length = last - start + 1;
+            if (length <= 0) {
+                result.clear();
+                return true;
+            }
+            size_t byteStart = static_cast<size_t>(start - 1);
+            size_t byteLen = static_cast<size_t>(length);
+            if (byteStart >= input.size()) {
+                result.clear();
+                return true;
+            }
+            if (byteStart + byteLen > input.size()) {
+                byteLen = input.size() - byteStart;
+            }
+            result.assign(input.data() + byteStart, byteLen);
+            return true;
+        }
+
+        // Unicode path: single-pass to compute numCharacters and startByte,
+        // then one cappedByteLengthUnicode for the segment length.
+        int64_t numCharacters = 0;
+        size_t startByte = input.size();
+        const int32_t adjustedStart = (start > 0) ? start : 1;
+        const size_t targetStartChar = static_cast<size_t>(adjustedStart - 1);
+        bool startByteFound = false;
+
+        const char* ptr = input.data();
+        const char* end = ptr + input.size();
+        while (ptr < end) {
+            if (!startByteFound && numCharacters == static_cast<int64_t>(targetStartChar)) {
+                startByte = static_cast<size_t>(ptr - input.data());
+                startByteFound = true;
+            }
+            auto charSize = stringImpl::utf8proc_char_length(ptr);
+            ptr += UNLIKELY(charSize < 0) ? 1 : charSize;
+            numCharacters++;
+        }
+
         if (start < 0) {
-            start = numCharacters + start + 1;
+            start = static_cast<int32_t>(numCharacters) + start + 1;
         }
         int32_t last;
         if (numCharacters - start + 1 < length) {
-            last = numCharacters;
+            last = static_cast<int32_t>(numCharacters);
         } else {
             last = start + length - 1;
         }
@@ -527,8 +579,13 @@ private:
             result.clear();
             return true;
         }
-        size_t startByte = static_cast<size_t>(stringImpl::cappedByteLengthUnicode(
-            input.data(), static_cast<int64_t>(input.size()), static_cast<int64_t>(start - 1)));
+
+        // Recompute startByte if start changed due to negative adjustment
+        if (!startByteFound || static_cast<int64_t>(targetStartChar) != static_cast<int64_t>(start - 1)) {
+            startByte = static_cast<size_t>(stringImpl::cappedByteLengthUnicode(
+                input.data(), static_cast<int64_t>(input.size()), static_cast<int64_t>(start - 1)));
+        }
+
         size_t segmentByteLen = static_cast<size_t>(stringImpl::cappedByteLengthUnicode(
             input.data() + startByte, static_cast<int64_t>(input.size()) - static_cast<int64_t>(startByte),
             static_cast<int64_t>(length)));
