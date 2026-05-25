@@ -16,6 +16,7 @@
 #include "vector/vector_helper.h"
 #include "vector/vector.h"
 #include "type/date_time_utils.h"
+#include "util/config/QueryConfig.h"
 
 using namespace omniruntime;
 using namespace omniruntime::vec;
@@ -72,6 +73,15 @@ public:
 
     static void ExecuteDateFormat(BaseVector* timestampVec, BaseVector* formatVec,
         DataTypeId timestampTypeId, DataTypeId formatTypeId, BaseVector*& result) {
+        ExecuteDateFormatWithTz(timestampVec, formatVec, timestampTypeId, formatTypeId, "", result);
+    }
+
+    /// Execute date_format with an explicit session timezone configured into
+    /// the ExecutionContext, so the timezone-related tokens (v/z/O/X/x/Z)
+    /// can be exercised. Pass empty string to fall back to UTC behavior.
+    static void ExecuteDateFormatWithTz(BaseVector* timestampVec, BaseVector* formatVec,
+        DataTypeId timestampTypeId, DataTypeId formatTypeId,
+        const std::string& sessionTimezone, BaseVector*& result) {
         auto signature = std::make_shared<FunctionSignature>("DateFormat",
             std::vector<DataTypeId>{timestampTypeId, formatTypeId}, OMNI_VARCHAR);
         auto function = VectorFunction::Find(signature);
@@ -81,8 +91,17 @@ public:
         auto outputType = std::make_shared<DataType>(OMNI_VARCHAR);
         ExecutionContext context;
         context.SetResultRowSize(timestampVec->GetSize());
-        std::stack<BaseVector*> args;
 
+        if (!sessionTimezone.empty()) {
+            std::unordered_map<std::string, std::string> values{
+                {omniruntime::config::QueryConfig::kSessionTimezone, sessionTimezone},
+                {omniruntime::config::QueryConfig::kAdjustTimestampToTimezone, "true"}
+            };
+            omniruntime::config::QueryConfig queryConfig(std::move(values));
+            context.SetConfig(queryConfig);
+        }
+
+        std::stack<BaseVector*> args;
         args.push(timestampVec);
         args.push(formatVec);
 
@@ -361,6 +380,150 @@ TEST(DateFormatTest, LeapYear) {
     delete resultVec;
 }
 
+// Test: extended Spark/Java DateTimeFormatter tokens (q/Q quarter, K/k hour variants,
+//       D day-of-year, E weekday name, MMM/MMMM month name, a AM/PM, h clock-hour)
+TEST(DateFormatTest, ExtendedTokens) {
+    // 2024-04-15 (Mon, Q2, day-of-year=106, week ~16) at 09:30:45
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 4, 15, 9, 30, 45);
+    std::vector<int64_t> tsValues(8, ts);
+    std::vector<std::string> fmtValues = {
+        "Q",            // quarter as number
+        "QQQ",          // quarter padded to 3 digits ("002")
+        "MMM",          // short month name
+        "MMMM",         // full month name
+        "EEE",          // short day-of-week
+        "EEEE",         // full day-of-week
+        "D",            // day-of-year
+        "h:mm a"        // 12-hour clock + AM/PM
+    };
+    std::vector<std::string> expected = {
+        "2",
+        "002",
+        "Apr",
+        "April",
+        "Mon",
+        "Monday",
+        "106",
+        "9:30 AM"
+    };
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormat(tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, resultVec);
+
+    for (size_t i = 0; i < expected.size(); ++i) {
+        EXPECT_FALSE(resultVec->IsNull(i)) << "Row " << i << " should not be NULL";
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " value mismatch (format: " << fmtValues[i] << ")";
+    }
+
+    delete resultVec;
+}
+
+// Test: hour-of-day variants H/h/K/k at boundary hours 0, 11, 12, 23
+TEST(DateFormatTest, HourVariants) {
+    std::vector<int64_t> tsValues = {
+        DateFormatFunctionTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
+        DateFormatFunctionTestHelper::ToMicros(2024, 1, 1, 11, 0, 0),
+        DateFormatFunctionTestHelper::ToMicros(2024, 1, 1, 12, 0, 0),
+        DateFormatFunctionTestHelper::ToMicros(2024, 1, 1, 23, 0, 0)
+    };
+    // H=0-23, h=1-12, K=0-11, k=1-24
+    std::vector<std::string> fmtValues = {
+        "HH:hh:KK:kk a",
+        "HH:hh:KK:kk a",
+        "HH:hh:KK:kk a",
+        "HH:hh:KK:kk a"
+    };
+    std::vector<std::string> expected = {
+        "00:12:00:24 AM",
+        "11:11:11:11 AM",
+        "12:12:00:12 PM",
+        "23:11:11:23 PM"
+    };
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormat(tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, resultVec);
+
+    for (size_t i = 0; i < expected.size(); ++i) {
+        EXPECT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " hour variant mismatch";
+    }
+
+    delete resultVec;
+}
+
+// Test: fraction-of-second token S with various widths (real microsecond values)
+TEST(DateFormatTest, FractionOfSecond) {
+    // 2024-01-01 00:00:00.123456 UTC -> 123456 microseconds
+    int64_t baseMicros = DateFormatFunctionTestHelper::ToMicros(2024, 1, 1, 0, 0, 0) + 123456;
+    std::vector<int64_t> tsValues(5, baseMicros);
+    std::vector<std::string> fmtValues = {
+        "S",          // tenths
+        "SS",         // hundredths
+        "SSS",        // milliseconds (3 digits)
+        "SSSSSS",     // microseconds (6 digits)
+        "ss.SSSSSS"   // combined seconds + microseconds
+    };
+    std::vector<std::string> expected = {
+        "1",
+        "12",
+        "123",
+        "123456",
+        "00.123456"
+    };
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormat(tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, resultVec);
+
+    for (size_t i = 0; i < expected.size(); ++i) {
+        EXPECT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " fraction-of-second mismatch (format: " << fmtValues[i] << ")";
+    }
+
+    delete resultVec;
+}
+
+// Test: literal text escape with single quotes (Java DateTimeFormatter semantics)
+TEST(DateFormatTest, LiteralEscape) {
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 4, 15, 9, 30, 0);
+    std::vector<int64_t> tsValues(3, ts);
+    std::vector<std::string> fmtValues = {
+        "yyyy'-'MM'-'dd",        // ' literally escapes "-" (no token meaning anyway, just exercise escape)
+        "yyyy'年'MM'月'dd'日'",   // CJK literal text
+        "''yyyy''"                // doubled single-quotes -> single literal '
+    };
+    std::vector<std::string> expected = {
+        "2024-04-15",
+        "2024年04月15日",
+        "'2024'"
+    };
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormat(tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, resultVec);
+
+    for (size_t i = 0; i < expected.size(); ++i) {
+        EXPECT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " literal-escape mismatch (format: " << fmtValues[i] << ")";
+    }
+
+    delete resultVec;
+}
+
 // Test: both timestamp and format NULL at same row
 TEST(DateFormatTest, BothNull) {
     std::vector<int64_t> tsValues = {
@@ -380,6 +543,357 @@ TEST(DateFormatTest, BothNull) {
     EXPECT_TRUE(resultVec->IsNull(0)) << "Row 0 should be NULL (both NULL)";
     EXPECT_FALSE(resultVec->IsNull(1));
     EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, 1), "2024-01-29");
+
+    delete resultVec;
+}
+
+// =============================================================================
+// Timezone token regression tests
+// Fix verifies that 'v', 'z', 'O', 'X', 'x', 'Z' tokens produce correct results
+// (no garbage zone names, no wrong negative offsets) when the session timezone
+// is set in QueryConfig. The previous implementation used util::GetDateTime
+// which did not populate tm_gmtoff / tm_zone, leading to corrupted output.
+// =============================================================================
+
+// Test: zone name token 'z' / 'v' should not be garbage and should reflect
+// the configured session timezone.
+TEST(DateFormatTest, TimeZoneNameTokens_AsiaShanghai) {
+    // 2024-06-15 12:00:00 UTC -> 2024-06-15 20:00:00 Asia/Shanghai
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues = {ts, ts};
+    std::vector<std::string> fmtValues = {"z", "v"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "Asia/Shanghai", resultVec);
+
+    // For Asia/Shanghai, glibc populates tm_zone as "CST".
+    // The exact spelling depends on tzdata, but it must be non-empty ASCII
+    // and free of control / garbage bytes.
+    for (size_t i = 0; i < fmtValues.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i)) << "Row " << i << " should not be NULL";
+        std::string actual = DateFormatFunctionTestHelper::GetStringValue(resultVec, i);
+        EXPECT_FALSE(actual.empty()) << "Row " << i << " ('" << fmtValues[i]
+            << "') zone name should not be empty";
+        for (unsigned char ch : actual) {
+            EXPECT_TRUE(std::isprint(ch))
+                << "Row " << i << " ('" << fmtValues[i] << "') contains non-printable byte: 0x"
+                << std::hex << static_cast<int>(ch) << " (output=\"" << actual << "\")";
+        }
+    }
+
+    delete resultVec;
+}
+
+// Test: 'z' / 'v' tokens with GMT-prefixed timezone string should produce
+// the GMT-prefixed string itself (per Spark behavior on GMT offsets).
+TEST(DateFormatTest, TimeZoneNameTokens_GmtPrefix) {
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues = {ts, ts};
+    std::vector<std::string> fmtValues = {"z", "v"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "GMT+08:00", resultVec);
+
+    for (size_t i = 0; i < fmtValues.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), "GMT+08:00")
+            << "Row " << i << " ('" << fmtValues[i] << "') mismatch";
+    }
+
+    delete resultVec;
+}
+
+// Test: localized offset token 'O' / 'OOOO' should produce GMT+8 / GMT+08:00
+// when session timezone is Asia/Shanghai (positive offset, no wrong negatives).
+TEST(DateFormatTest, LocalizedOffsetToken_O) {
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues(2, ts);
+    std::vector<std::string> fmtValues = {"O", "OOOO"};
+    std::vector<std::string> expected = {"GMT+8", "GMT+08:00"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "Asia/Shanghai", resultVec);
+
+    for (size_t i = 0; i < fmtValues.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " ('" << fmtValues[i] << "') localized offset mismatch";
+    }
+
+    delete resultVec;
+}
+
+// Test: ISO offset token 'X' with various widths.
+// Asia/Shanghai is +08:00 (positive), so output must start with '+' and never
+// produce a wrong negative offset.
+TEST(DateFormatTest, IsoOffsetToken_X) {
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues(3, ts);
+    std::vector<std::string> fmtValues = {"X", "XX", "XXX"};
+    std::vector<std::string> expected = {"+08", "+0800", "+08:00"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "Asia/Shanghai", resultVec);
+
+    for (size_t i = 0; i < fmtValues.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " ('" << fmtValues[i] << "') ISO offset mismatch";
+    }
+
+    delete resultVec;
+}
+
+// Test: ISO offset token 'X' at UTC offset 0 should output "Z" (per Spark).
+TEST(DateFormatTest, IsoOffsetToken_X_Utc) {
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues = {ts};
+    std::vector<std::string> fmtValues = {"X"};
+    std::vector<std::string> expected = {"Z"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "UTC", resultVec);
+
+    ASSERT_FALSE(resultVec->IsNull(0));
+    EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, 0), expected[0]);
+
+    delete resultVec;
+}
+
+// Test: lower-case 'x' token never produces "Z" for zero offset (per Spark).
+TEST(DateFormatTest, IsoOffsetToken_x_LowerCase) {
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues = {ts, ts};
+    std::vector<std::string> fmtValues = {"x", "xxx"};
+    // For UTC: 'x' -> "+00", 'xxx' -> "+00:00".
+    std::vector<std::string> expected = {"+00", "+00:00"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "UTC", resultVec);
+
+    for (size_t i = 0; i < fmtValues.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " ('" << fmtValues[i] << "') lower-x mismatch";
+    }
+
+    delete resultVec;
+}
+
+// Test: 'Z' token: count <=3 outputs RFC offset, count >=4 outputs localized.
+TEST(DateFormatTest, OffsetToken_Z) {
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues(2, ts);
+    std::vector<std::string> fmtValues = {"Z", "ZZZZ"};
+    std::vector<std::string> expected = {"+0800", "GMT+08:00"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "Asia/Shanghai", resultVec);
+
+    for (size_t i = 0; i < fmtValues.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " ('" << fmtValues[i] << "') Z token mismatch";
+    }
+
+    delete resultVec;
+}
+
+// Test: combined timestamp + timezone token, should produce local-time
+// digits plus offset, all consistent.
+TEST(DateFormatTest, FullPatternWithTimezoneTokens) {
+    // 2024-06-15 12:00:00 UTC -> 2024-06-15 20:00:00 Asia/Shanghai
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues = {ts};
+    std::vector<std::string> fmtValues = {"yyyy-MM-dd HH:mm:ss XXX"};
+    std::vector<std::string> expected = {"2024-06-15 20:00:00 +08:00"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "Asia/Shanghai", resultVec);
+
+    ASSERT_FALSE(resultVec->IsNull(0));
+    EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, 0), expected[0]);
+
+    delete resultVec;
+}
+
+// Test: 'V' token outputs the session timezone ID (uses GetDisplayTimeZoneId
+// canonicalization, not tm_zone, so it works regardless of glibc state).
+TEST(DateFormatTest, ZoneIdToken_V) {
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues = {ts};
+    std::vector<std::string> fmtValues = {"V"};
+    std::vector<std::string> expected = {"Asia/Shanghai"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "Asia/Shanghai", resultVec);
+
+    ASSERT_FALSE(resultVec->IsNull(0));
+    EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, 0), expected[0]);
+
+    delete resultVec;
+}
+
+// =============================================================================
+// Code review fix regression tests
+//   - GetLegacyDayOfWeekInMonth removed: 'F' token now always uses
+//     ((dayOfMonth - 1) % 7) + 1 (Java DateTimeFormatter aligned-week-of-month).
+//   - setenv/tzset hoisted out of per-row loop: must remain consistent within
+//     a batch even when input rows span multiple distinct days.
+//   - Dead isLegacy branches removed: q/Q/V/v/O/x tokens must succeed
+//     unconditionally (no spurious ThrowUnsupportedPattern path).
+// =============================================================================
+
+// Test: 'F' (aligned-week-of-month) for representative same-weekday days.
+// Per Java DateTimeFormatter, F is ordinal of same-weekday occurrence in
+// the month: day 1..7 -> 1, day 8..14 -> 2, ... regardless of weekday.
+TEST(DateFormatTest, AlignedWeekOfMonth_F) {
+    std::vector<int64_t> tsValues = {
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 1, 0, 0, 0),   // 1st of month
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 7, 0, 0, 0),   // 7th
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 8, 0, 0, 0),   // 8th
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 14, 0, 0, 0),  // 14th
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 0, 0, 0),  // 15th
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 30, 0, 0, 0)   // 30th
+    };
+    std::vector<std::string> fmtValues(tsValues.size(), "F");
+    std::vector<std::string> expected = {"1", "1", "2", "2", "3", "5"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormat(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, resultVec);
+
+    for (size_t i = 0; i < expected.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " 'F' token mismatch";
+    }
+
+    delete resultVec;
+}
+
+// Test: timezone is applied consistently to ALL rows in a batch even when
+// they span different dates. Regression for the case where setenv/tzset
+// was previously called per-row (now hoisted out of the row loop).
+TEST(DateFormatTest, TimezoneConsistentAcrossBatch) {
+    // Multiple distinct timestamps spanning different days; all should be
+    // formatted in Asia/Shanghai (UTC+8) consistently.
+    std::vector<int64_t> tsValues = {
+        DateFormatFunctionTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),    // -> 08:00 next day
+        DateFormatFunctionTestHelper::ToMicros(2024, 6, 15, 12, 0, 0),  // -> 20:00 same day
+        DateFormatFunctionTestHelper::ToMicros(2024, 12, 31, 16, 0, 0), // -> 00:00 next day
+        DateFormatFunctionTestHelper::ToMicros(2024, 3, 10, 23, 30, 0)  // -> 07:30 next day
+    };
+    std::vector<std::string> fmtValues(tsValues.size(), "yyyy-MM-dd HH:mm XXX");
+    std::vector<std::string> expected = {
+        "2024-01-01 08:00 +08:00",
+        "2024-06-15 20:00 +08:00",
+        "2025-01-01 00:00 +08:00",
+        "2024-03-11 07:30 +08:00"
+    };
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "Asia/Shanghai", resultVec);
+
+    for (size_t i = 0; i < expected.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i));
+        EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, i), expected[i])
+            << "Row " << i << " batch-timezone consistency mismatch";
+    }
+
+    delete resultVec;
+}
+
+// Test: tokens that previously had an isLegacy-gated ThrowUnsupportedPattern
+// branch (q/Q/V/v/O/x) must all succeed under default CORRECTED policy.
+TEST(DateFormatTest, NoLegacyThrow_FormerlyGatedTokens) {
+    int64_t ts = DateFormatFunctionTestHelper::ToMicros(2024, 4, 15, 12, 0, 0);
+    std::vector<int64_t> tsValues(6, ts);
+    std::vector<std::string> fmtValues = {"q", "Q", "V", "v", "O", "x"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    DateFormatFunctionTestHelper::ExecuteDateFormatWithTz(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, "Asia/Shanghai", resultVec);
+
+    for (size_t i = 0; i < fmtValues.size(); ++i) {
+        ASSERT_FALSE(resultVec->IsNull(i))
+            << "Token '" << fmtValues[i] << "' must not throw / become NULL under CORRECTED policy";
+        std::string actual = DateFormatFunctionTestHelper::GetStringValue(resultVec, i);
+        EXPECT_FALSE(actual.empty())
+            << "Token '" << fmtValues[i] << "' produced empty output";
+    }
+
+    delete resultVec;
+}
+
+// Test: pre-epoch (negative microseconds) - floor-semantics split must
+// correctly produce non-negative sub-second microseconds and a
+// floor-rounded seconds count. Without floor handling, the sub-second
+// fraction or the seconds field would be off by one.
+// Choose: 1969-12-31 23:59:59.123456 UTC -> -876544 microseconds.
+TEST(DateFormatTest, NegativeTimestampFloorSplit) {
+    int64_t epochZero = DateFormatFunctionTestHelper::ToMicros(1970, 1, 1, 0, 0, 0);
+    int64_t ts = epochZero - 876544;  // 1969-12-31 23:59:59.123456 UTC
+    std::vector<int64_t> tsValues = {ts};
+    std::vector<std::string> fmtValues = {"yyyy-MM-dd HH:mm:ss.SSSSSS"};
+    std::vector<std::string> expected = {"1969-12-31 23:59:59.123456"};
+
+    BaseVector* tsVec = DateFormatFunctionTestHelper::CreateTimestampVector(tsValues);
+    BaseVector* fmtVec = DateFormatFunctionTestHelper::CreateStringVector(fmtValues);
+    BaseVector* resultVec = nullptr;
+
+    // No timezone -> UTC path.
+    DateFormatFunctionTestHelper::ExecuteDateFormat(
+        tsVec, fmtVec, OMNI_TIMESTAMP, OMNI_VARCHAR, resultVec);
+
+    ASSERT_FALSE(resultVec->IsNull(0));
+    EXPECT_EQ(DateFormatFunctionTestHelper::GetStringValue(resultVec, 0), expected[0]);
 
     delete resultVec;
 }
