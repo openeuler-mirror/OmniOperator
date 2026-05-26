@@ -37,7 +37,7 @@ TEST(ArrayFunctionTest, GetArrayItemTest)
 
     auto expr = FuncExpr("get_array_item", {
         new FieldExpr(0, std::make_shared<DataType>(OMNI_ARRAY)),
-        new LiteralExpr(1, type)
+        new LiteralExpr(0, type)
     }, type);
 
     auto context = new ExecutionContext();
