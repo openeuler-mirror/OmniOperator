@@ -4,6 +4,8 @@ add_library(${CODEGEN_TARGET} SHARED ${CODE_GEN_LIST})
 
 # from command 'llvm-config-15 --cxxflags --ldflags --libs'
 target_include_directories(${CODEGEN_TARGET} PUBLIC /usr/lib/llvm-15/include)
+target_include_directories(${CODEGEN_TARGET} PUBLIC /opt/buildtools/rapidjson/include)
+target_include_directories(${CODEGEN_TARGET} PUBLIC /opt/buildtools/rapidjson/include)
 target_compile_options(${CODEGEN_TARGET} PRIVATE -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
 target_link_libraries(${CODEGEN_TARGET} PRIVATE LLVM-15 boundscheck ${OMNI_VECTOR_SO} util expression udf re2::re2)
 install(TARGETS ${CODEGEN_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})

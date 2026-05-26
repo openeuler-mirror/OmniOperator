@@ -10,6 +10,9 @@
 #include "type/string_Impl.h"
 #include <algorithm>
 #include <nlohmann/json.hpp>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 #include <cctype>
 #include <functional>
 #include <unordered_map>
@@ -220,6 +223,147 @@ namespace {
     // Thread-local cache for JSON parsing
     // This avoids re-parsing the same JSON in the same thread
     thread_local JsonCache THREAD_LOCAL_JSON_CACHE;
+
+    // RapidJSON cache for target functions
+    struct RapidJsonCache {
+        uint64_t hash = 0;
+        rapidjson::Document parsedJson;
+        std::string lastJsonContent;
+
+        bool IsCacheValid(const std::string& jsonContent) const
+        {
+            return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
+        }
+
+        void SetCache(const std::string& jsonContent)
+        {
+            hash = HashJsonContent(jsonContent);
+            lastJsonContent = jsonContent;
+        }
+    };
+
+    thread_local RapidJsonCache RAPIDJSON_CACHE;
+
+    rapidjson::Document* GetParsedJsonWithCacheRapidJson(std::string& jsonContent)
+    {
+        if (RAPIDJSON_CACHE.IsCacheValid(jsonContent)) {
+            return &RAPIDJSON_CACHE.parsedJson;
+        }
+
+        RAPIDJSON_CACHE.parsedJson.Parse(jsonContent.c_str());
+        if (RAPIDJSON_CACHE.parsedJson.HasParseError()) {
+            std::string fixedJsonContent;
+            fixedJsonContent.reserve(jsonContent.size());
+            for (size_t j = 0; j < jsonContent.size(); j++) {
+                if (jsonContent[j] == '\\') {
+                    if (j + 1 < jsonContent.size()) {
+                        char next = jsonContent[j + 1];
+                        if (next == '\\' || next == '"') {
+                            fixedJsonContent += jsonContent[j];
+                        } else {
+                            fixedJsonContent += '"';
+                        }
+                    } else {
+                        fixedJsonContent += '"';
+                    }
+                } else {
+                    fixedJsonContent += jsonContent[j];
+                }
+            }
+            RAPIDJSON_CACHE.parsedJson.Parse(fixedJsonContent.c_str());
+            if (RAPIDJSON_CACHE.parsedJson.HasParseError()) {
+                return nullptr;
+            }
+            jsonContent = fixedJsonContent;
+        }
+
+        RAPIDJSON_CACHE.SetCache(jsonContent);
+        return &RAPIDJSON_CACHE.parsedJson;
+    }
+
+    rapidjson::Value* ResolveJsonPathTargetRapidJson(rapidjson::Value* jsonData, const std::vector<std::string>& keys)
+    {
+        rapidjson::Value* current = jsonData;
+        for (const auto& key : keys) {
+            if (current->IsObject()) {
+                rapidjson::Value::MemberIterator it = current->FindMember(rapidjson::StringRef(key.c_str(), key.size()));
+                if (it == current->MemberEnd()) {
+                    return nullptr;
+                }
+                current = &it->value;
+                continue;
+            }
+
+            if (current->IsArray()) {
+                try {
+                    size_t index = std::stoul(key);
+                    if (index >= current->Size()) {
+                        return nullptr;
+                    }
+                    current = &current->GetArray()[index];
+                    continue;
+                } catch (...) {
+                    return nullptr;
+                }
+            }
+
+            return nullptr;
+        }
+
+        return current;
+    }
+
+    bool TryFormatJsonValueScalarRapidJson(const rapidjson::Value& value, std::string* result)
+    {
+        if (result == nullptr) {
+            return false;
+        }
+
+        if (value.IsString()) {
+            *result = std::string(value.GetString(), value.GetStringLength());
+            return true;
+        }
+
+        if (value.IsBool()) {
+            *result = value.GetBool() ? "true" : "false";
+            return true;
+        }
+
+        if (value.IsInt()) {
+            *result = std::to_string(value.GetInt());
+            return true;
+        }
+
+        if (value.IsUint()) {
+            *result = std::to_string(value.GetUint());
+            return true;
+        }
+
+        if (value.IsInt64()) {
+            *result = std::to_string(value.GetInt64());
+            return true;
+        }
+
+        if (value.IsUint64()) {
+            *result = std::to_string(value.GetUint64());
+            return true;
+        }
+
+        if (value.IsDouble()) {
+            *result = DoubleToString::DoubleToStringConverter(value.GetDouble());
+            return true;
+        }
+
+        return false;
+    }
+
+    std::string SerializeRapidJsonValue(const rapidjson::Value& value)
+    {
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        value.Accept(writer);
+        return buffer.GetString();
+    }
 }
 
 // Legacy function for backward compatibility - converts advanced segments to simple keys
@@ -456,6 +600,7 @@ extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char
                                                    const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
                                                    bool *outIsNull, int32_t *outLen)
 {
+    static_cast<void>(pathStrWidth);
     if (outIsNull == nullptr || outLen == nullptr) {
         return nullptr;
     }
@@ -470,16 +615,22 @@ extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char
     std::string pathContent(pathStr, pathStrLen);
     
     try {
-        JsonDocument* jsonData = GetParsedJsonWithCache(jsonContent);
-        JsonDocument* current = ResolveJsonPathTarget(jsonData, pathContent);
-        if (current == nullptr || current->is_null()) {
+        rapidjson::Document* jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
+        if (jsonData == nullptr) {
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        std::vector<std::string> keys = ParseJsonPath(pathContent);
+        rapidjson::Value* current = ResolveJsonPathTargetRapidJson(jsonData, keys);
+        if (current == nullptr || current->IsNull()) {
             *outIsNull = true;
             *outLen = 0;
             return nullptr;
         }
 
         std::string result;
-        if (!TryFormatJsonValueScalar(*current, &result)) {
+        if (!TryFormatJsonValueScalarRapidJson(*current, &result)) {
             *outIsNull = true;
             *outLen = 0;
             return nullptr;
