@@ -1774,9 +1774,11 @@ public:
                     } else {
                         keys[i] = reinterpret_cast<Vector<T>*>(curVector)->GetValue(i);
                     }
-                } else if (totalAggValueSize > 0) {
-                    if (nullValue.empty()) {
-                        nullValue.resize(totalAggValueSize);
+                } else {
+                    if (!shouldExtractNull) {
+                        if (totalAggValueSize > 0) {
+                            nullValue.resize(totalAggValueSize);
+                        }
                         newGroups.push_back(reinterpret_cast<uint8_t*>(nullValue.data()));
                         shouldExtractNull = true;
                     }
@@ -1790,10 +1792,12 @@ public:
     void InsertOneValueToHashmap(T key, uint8_t *value)
     {
         if constexpr (isNull) {
-            if (nullValue.empty()) {
-                nullValue.resize(totalAggValueSize);
+            if (!shouldExtractNull) {
+                if (totalAggValueSize > 0) {
+                    nullValue.resize(totalAggValueSize);
+                    std::memcpy(nullValue.data(), value, totalAggValueSize);
+                }
                 shouldExtractNull = true;
-                std::memcpy(nullValue.data(), value, totalAggValueSize);
             }
             return;
         }
