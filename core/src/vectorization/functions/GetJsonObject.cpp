@@ -184,14 +184,13 @@ void GetJsonObjectFunction::ProcessJsonPathWithNormalizedPath(const std::string_
                      return;
                  }
  
-                // Remove any remaining quotes if present.
-                std::string_view fieldName(indexStr);
-                if (fieldName.length() >= 2 &&
-                    ((fieldName[0] == '\'' && fieldName[fieldName.length() - 1] == '\'') ||
-                     (fieldName[0] == '"' && fieldName[fieldName.length() - 1] == '"'))) {
-                    fieldName.remove_prefix(1);
-                    fieldName.remove_suffix(1);
-                 }
+// Remove single quotes if present (double quotes are not supported by native Spark/Hive)
+                 std::string_view fieldName(indexStr);
+                 if (fieldName.length() >= 2 &&
+                     fieldName[0] == '\'' && fieldName[fieldName.length() - 1] == '\'') {
+                     fieldName.remove_prefix(1);
+                     fieldName.remove_suffix(1);
+                  }
  
                 rapidjson::Value fieldNameValue(rapidjson::StringRef(fieldName.data(),
                     static_cast<rapidjson::SizeType>(fieldName.size())));
