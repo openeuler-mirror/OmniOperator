@@ -430,14 +430,14 @@ void RegrAlignAppendPartialColumnsWithSkip(VectorBatch *result, VectorBatch *inp
 
 void RegrAlignAppendEmptyReplacementPartial3(VectorBatch *result)
 {
-    result->Append(new Vector<int64_t>(0));
+    result->Append(new Vector<double>(0));
     result->Append(new Vector<double>(0));
     result->Append(new Vector<double>(0));
 }
 
 void RegrAlignAppendReplacementPartial3AllNullRows(VectorBatch *result, int32_t rowCount)
 {
-    auto *nVec = new Vector<int64_t>(rowCount);
+    auto *nVec = new Vector<double>(rowCount);
     auto *avgVec = new Vector<double>(rowCount);
     auto *m2Vec = new Vector<double>(rowCount);
     for (int32_t i = 0; i < rowCount; ++i) {
@@ -453,7 +453,7 @@ void RegrAlignAppendReplacementPartial3AllNullRows(VectorBatch *result, int32_t 
 void RegrAlignAppendReplacementPartial3RawDouble(VectorBatch *result, BaseVector *valVec,
     const std::shared_ptr<NullsHelper> &rowSkip, int32_t rowCount)
 {
-    auto *nVec = new Vector<int64_t>(rowCount);
+    auto *nVec = new Vector<double>(rowCount);
     auto *avgVec = new Vector<double>(rowCount);
     auto *m2Vec = new Vector<double>(rowCount);
     for (int32_t i = 0; i < rowCount; ++i) {
@@ -463,7 +463,7 @@ void RegrAlignAppendReplacementPartial3RawDouble(VectorBatch *result, BaseVector
             m2Vec->SetNull(i);
             continue;
         }
-        nVec->SetValue(i, static_cast<int64_t>(1));
+        nVec->SetValue(i, 1.0);
         avgVec->SetValue(i, RegrGetDoubleAt(valVec, i));
         m2Vec->SetValue(i, 0.0);
     }
