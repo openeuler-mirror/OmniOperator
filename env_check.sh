@@ -90,12 +90,6 @@ setup_dependencies() {
     cmake -E chdir "build" cmake -DCMAKE_BUILD_TYPE=Release ../
     sudo cmake --build "build" --config Release --target install
   fi
-
-  cd /tmp || { echo "ERROR: Failed to change to /tmp directory"; exit 1; }
-  if [ ! -d "rapidjson" ]; then
-    git clone https://gitee.com/mirrors/rapidjson.git || { echo "ERROR: Failed to clone rapidjson repository"; exit 1; }
-  fi
-  sudo cp -r rapidjson/include/rapidjson /usr/local/include/ || { echo "ERROR: Failed to copy rapidjson headers"; exit 1; }
 }
 
 # package build_script/build.sh functionality here
