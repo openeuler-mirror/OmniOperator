@@ -235,10 +235,11 @@ namespace {
             return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
         }
 
-        void SetCache(const std::string& jsonContent)
+        void SetCache(const std::string& jsonContent, rapidjson::Document& json)
         {
             hash = HashJsonContent(jsonContent);
-            lastJsonContent = jsonContent;
+            std::string(jsonContent).swap(lastJsonContent);
+            parsedJson.Swap(json);
         }
     };
 
@@ -250,8 +251,9 @@ namespace {
             return &RAPIDJSON_CACHE.parsedJson;
         }
 
-        RAPIDJSON_CACHE.parsedJson.Parse(jsonContent.c_str());
-        if (RAPIDJSON_CACHE.parsedJson.HasParseError()) {
+        rapidjson::Document parsedJson;
+        parsedJson.Parse(jsonContent.c_str());
+        if (parsedJson.HasParseError()) {
             std::string fixedJsonContent;
             fixedJsonContent.reserve(jsonContent.size());
             for (size_t j = 0; j < jsonContent.size(); j++) {
@@ -270,14 +272,14 @@ namespace {
                     fixedJsonContent += jsonContent[j];
                 }
             }
-            RAPIDJSON_CACHE.parsedJson.Parse(fixedJsonContent.c_str());
-            if (RAPIDJSON_CACHE.parsedJson.HasParseError()) {
+            parsedJson.Parse(fixedJsonContent.c_str());
+            if (parsedJson.HasParseError()) {
                 return nullptr;
             }
             jsonContent = fixedJsonContent;
         }
 
-        RAPIDJSON_CACHE.SetCache(jsonContent);
+        RAPIDJSON_CACHE.SetCache(jsonContent, parsedJson);
         return &RAPIDJSON_CACHE.parsedJson;
     }
 
