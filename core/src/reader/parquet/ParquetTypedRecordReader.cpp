@@ -535,18 +535,19 @@ void DefLevelsToNulls(const int16_t* def_levels, int64_t num_def_levels, LevelIn
         DefLevelsToNullsSIMD(def_levels, num_def_levels, level_info.def_level, values_read, null_count, nulls,
                             nullsOffset);
     } else {
-        ::parquet::internal::ValidityBitmapInputOutput output;
+        std::vector<uint8_t> valid_bits(omniruntime::BitUtil::Nbytes(static_cast<int32_t>(num_def_levels)), 0);
+        ::parquet::internal::ValidityBitmapInputOutput output{};
         output.values_read_upper_bound = num_def_levels;
-        output.valid_bits = nulls;
-        output.valid_bits_offset = nullsOffset;
+        output.valid_bits = valid_bits.data();
+        output.valid_bits_offset = 0;
         ::parquet::internal::standard::DefLevelsToBitmapSimd<true>(def_levels, num_def_levels, level_info, &output);
         *null_count = output.null_count;
         *values_read = output.values_read;
-        int32_t nRead = output.values_read >> 3;
-        nulls += nullsOffset;
-        for (int32_t i =0; i <= nRead; i++) {
-            *nulls = ~(*nulls);
-            nulls++;
+        for (int64_t i = 0; i < output.values_read; ++i) {
+            omniruntime::BitUtil::SetBit(
+                nulls,
+                static_cast<uint32_t>(nullsOffset + i),
+                !omniruntime::BitUtil::IsBitSet(valid_bits.data(), static_cast<int32_t>(i)));
         }
     }
 }

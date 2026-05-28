@@ -411,6 +411,10 @@ Status ParquetReader::GetReader(const SchemaField &field, const std::shared_ptr<
 {
     BEGIN_PARQUET_CATCH_EXCEPTIONS
 
+    if (arrow_field == nullptr) {
+        return Status::Invalid("Parquet schema field is nullptr");
+    }
+
     auto type_id = arrow_field->type()->id();
 
     if (type_id == ::arrow::Type::EXTENSION) {
@@ -429,11 +433,17 @@ Status ParquetReader::GetReader(const SchemaField &field, const std::shared_ptr<
                type_id == ::arrow::Type::LARGE_LIST) {
         auto list_field = arrow_field;
         auto child = &field.children[0];
+        if (child->field == nullptr) {
+            return Status::Invalid("Parquet list/map child field is nullptr");
+        }
         std::unique_ptr<ParquetColumnReader> child_reader;
         RETURN_NOT_OK(GetReader(*child, child->field, ctx, &child_reader));
         if (child_reader == nullptr) {
             *out = nullptr;
             return Status::OK();
+        }
+        if (child_reader->field() == nullptr) {
+            return Status::Invalid("Parquet child reader field is nullptr");
         }
 
         // These two types might not be equal if there column pruning occurred.

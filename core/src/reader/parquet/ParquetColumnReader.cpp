@@ -80,18 +80,25 @@ void ParquetColumnReader::NextRowGroup()
 }
 
 ::arrow::Status ListReader::LoadBatch(int64_t records_to_read, BaseVector **out) {
-    auto type_id = field_->type()->id();
+    auto current_field = field();
+    if (current_field == nullptr) {
+        return Status::Invalid("ListReader field is nullptr");
+    }
+    auto type_id = current_field->type()->id();
     BaseVector *childOut;
-    item_reader_->LoadBatch(records_to_read, &childOut);
+    RETURN_NOT_OK(item_reader_->LoadBatch(records_to_read, &childOut));
+    if (childOut == nullptr) {
+        return Status::Invalid("ListReader child vector is nullptr");
+    }
     const int16_t *def_levels;
     const int16_t *rep_levels;
     int64_t num_levels;
-    GetDefLevels(&def_levels, &num_levels);
-    GetRepLevels(&rep_levels, &num_levels);
+    RETURN_NOT_OK(GetDefLevels(&def_levels, &num_levels));
+    RETURN_NOT_OK(GetRepLevels(&rep_levels, &num_levels));
     std::shared_ptr<::arrow::ResizableBuffer> validity_buffer;
-    ::parquet::internal::ValidityBitmapInputOutput validity_io;
+    ::parquet::internal::ValidityBitmapInputOutput validity_io{};
     validity_io.values_read_upper_bound = records_to_read;
-    if (field_->nullable()) {
+    if (current_field->nullable()) {
         ARROW_ASSIGN_OR_RAISE(validity_buffer,
                               ::arrow::AllocateResizableBuffer(
                                       ::arrow::bit_util::BytesForBits(records_to_read), ctx_->pool));
@@ -112,7 +119,7 @@ void ParquetColumnReader::NextRowGroup()
     uint8_t *valid_bits = validity_io.valid_bits;
     int64_t null_count = validity_io.null_count;
     int64_t nRead = validity_io.values_read;
-    int64_t nBytes = nRead >> 3;
+    int64_t nBytes = ::arrow::bit_util::BytesForBits(nRead);
     uint8_t *nulls;
     int64_t *offsets;
     if (type_id == ::arrow::Type::LIST) {
@@ -134,12 +141,12 @@ void ParquetColumnReader::NextRowGroup()
     }
     std::copy(offset_data, offset_data + nRead + 1, offsets);
     if (null_count == nRead) {
-        for (int64_t i = 0; i <= nBytes; ++i) {
+        for (int64_t i = 0; i < nBytes; ++i) {
             nulls[i] = 0xff;
         }
     } else if (valid_bits != nullptr) {
         valid_bits += validity_io.valid_bits_offset;
-        for (int64_t i = 0; i <= nBytes; ++i) {
+        for (int64_t i = 0; i < nBytes; ++i) {
             nulls[i] = ~valid_bits[i];
         }
     }
@@ -185,7 +192,7 @@ void ParquetColumnReader::NextRowGroup()
     }
 
     std::shared_ptr<::arrow::ResizableBuffer> null_bitmap;
-    ::parquet::internal::ValidityBitmapInputOutput validity_io;
+    ::parquet::internal::ValidityBitmapInputOutput validity_io{};
     validity_io.values_read_upper_bound = records_to_read;
     // This simplifies accounting below.
     validity_io.values_read = records_to_read;
@@ -226,15 +233,15 @@ void ParquetColumnReader::NextRowGroup()
 
     uint8_t *valid_bits = validity_io.valid_bits;
     int64_t null_count = validity_io.null_count;
-    int64_t nBytes = nRead >> 3;
+    int64_t nBytes = ::arrow::bit_util::BytesForBits(nRead);
     uint8_t *nulls = reinterpret_cast<uint8_t *>(rowVec->GetNullsBuffer()->GetNulls());
     if (nRead == null_count) {
-        for (int64_t i = 0; i <= nBytes; ++i) {
+        for (int64_t i = 0; i < nBytes; ++i) {
             nulls[i] = 0xff;
         }
     } else if (valid_bits != nullptr) {
         valid_bits += validity_io.valid_bits_offset;
-        for (int64_t i = 0; i <= nBytes; ++i) {
+        for (int64_t i = 0; i < nBytes; ++i) {
             nulls[i] = ~valid_bits[i];
         }
     }

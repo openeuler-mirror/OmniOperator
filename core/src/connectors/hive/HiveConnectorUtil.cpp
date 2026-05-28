@@ -197,8 +197,13 @@ void configureRowReaderOptions(
             break;
         }
         case FileFormat::PARQUET: {
-            baseReaderOpts->SetSplitStart(hiveSplit->start);
-            baseReaderOpts->SetSplitEnd(hiveSplit->start + hiveSplit->length);
+            baseReaderOpts->SetRowType(rowType);
+            baseReaderOpts->SetFileRowType(fileRowType);
+            baseReaderOpts->SetSplitStart(static_cast<int64_t>(hiveSplit->start));
+            uint64_t splitEnd = (hiveSplit->length == std::numeric_limits<uint64_t>::max())
+                                ? hiveSplit->length
+                                : (hiveSplit->start + hiveSplit->length);
+            baseReaderOpts->SetSplitEnd(static_cast<int64_t>(splitEnd));
             break;
         }
         default: {

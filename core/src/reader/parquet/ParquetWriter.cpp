@@ -107,32 +107,30 @@ namespace omniruntime::writer
         }
 
         int64_t vectorSize = endPos - startPos;
-        bool values[vectorSize];
+        std::vector<uint8_t> values(vectorSize);
         int64_t index = 0;
         auto bitmapBuffer = AllocateBitmap(vectorSize).ValueOrDie();
         arrow::internal::Bitmap bitmap(bitmapBuffer, 0, vectorSize);
         bitmap.SetBitsTo(true);
 
-        if (vector->HasNull()) {
+        const bool useBufferedValues = isSplitWrite || baseVector->GetEncoding() != OMNI_FLAT;
+        if (baseVector->HasNull() || useBufferedValues) {
             for (long j = startPos; j < endPos; j++) {
-                if (vector->IsNull(j)) {
+                if (baseVector->IsNull(j)) {
                     bitmap.SetBitTo(index, false);
-                } else if(isSplitWrite) {
-                    values[index] = vector->GetValue(j);
+                } else if (useBufferedValues) {
+                    values[index] = VectorHelper::GetFlatValue<OMNI_BOOLEAN>(baseVector, j);
                 }
                 index++;
             }
-        } else if (isSplitWrite) {
-              for (long j = startPos; j < endPos; j++) {
-                   values[index] = vector->GetValue(j);
-                   index++;
-              }
         }
 
         TypedBufferBuilder<bool> builder;
         builder.Resize(vectorSize);
 
-        builder.Append(reinterpret_cast<uint8_t *>(isSplitWrite?values:VectorHelper::UnsafeGetValues(vector)), vectorSize);
+        builder.Append(
+            useBufferedValues ? values.data() : reinterpret_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector)),
+            vectorSize);
         std::shared_ptr<arrow::Buffer> databuffer = *(builder.Finish());
 
         std::vector<std::shared_ptr<Buffer>> buffers;
@@ -161,31 +159,29 @@ namespace omniruntime::writer
             endPos = vector->GetSize();
         }
         int64_t vectorSize = endPos - startPos;
-        ChunkType values[vectorSize];
+        std::vector<ChunkType> values(vectorSize);
         int64_t index = 0;
 
         auto bitmapBuffer = AllocateBitmap(vectorSize).ValueOrDie();
         arrow::internal::Bitmap bitmap(bitmapBuffer, 0, vectorSize);
         bitmap.SetBitsTo(true);
-        if (vector->HasNull()) {
+        const bool useBufferedValues = isSplitWrite || baseVector->GetEncoding() != OMNI_FLAT;
+        if (baseVector->HasNull() || useBufferedValues) {
             for (long j = startPos; j < endPos; j++) {
-                if (vector->IsNull(j)) {
+                if (baseVector->IsNull(j)) {
                     bitmap.SetBitTo(index, false);
-                } else if (isSplitWrite) {
-                    values[index] = vector->GetValue(j);
+                } else if (useBufferedValues) {
+                    values[index] = static_cast<ChunkType>(VectorHelper::GetFlatValue<Type_ID>(baseVector, j));
                 }
                 index++;
             }
-        } else if (isSplitWrite) {
-               for (long j = startPos; j < endPos; j++) {
-                    values[index] = vector->GetValue(j);
-                    index++;
-               }
         }
 
         TypedBufferBuilder<ChunkType> builder;
         builder.Resize(vectorSize);
-        builder.Append(reinterpret_cast<T *>(isSplitWrite?values:VectorHelper::UnsafeGetValues(vector)), vectorSize);
+        builder.Append(
+            useBufferedValues ? values.data() : reinterpret_cast<ChunkType *>(VectorHelper::UnsafeGetValues(vector)),
+            vectorSize);
         auto dataBuffer = *builder.Finish();
         std::vector<std::shared_ptr<Buffer>> buffers;
         buffers.emplace_back(bitmapBuffer);
@@ -282,10 +278,10 @@ namespace omniruntime::writer
 
             int64_t index = 0;
             for (long j = startPos; j < endPos; j++) {
-                if (vector->IsNull(j)) {
+                if (baseVector->IsNull(j)) {
                     bitmap.SetBitTo(index, false);
                 } else {
-                    auto value = vector->GetValue(j);
+                    auto value = VectorHelper::GetFlatValue<OMNI_VARCHAR>(baseVector, j);
                     auto length = static_cast<int64_t>(value.size());
                     currentOffset += length;
                     valuesBuilder.Append(reinterpret_cast<const uint8_t *>(value.data()), length);
@@ -314,10 +310,10 @@ namespace omniruntime::writer
 
         int64_t index = 0;
         for (long j = startPos; j < endPos; j++) {
-            if (vector->IsNull(j)) {
+            if (baseVector->IsNull(j)) {
                 bitmap.SetBitTo(index, false);
             } else {
-                auto value = vector->GetValue(j);
+                auto value = VectorHelper::GetFlatValue<OMNI_VARCHAR>(baseVector, j);
                 auto length = static_cast<int32_t>(value.size());
                 currentOffset += length;
                 valuesBuilder.Append(reinterpret_cast<const uint8_t *>(value.data()), length);
@@ -368,10 +364,10 @@ namespace omniruntime::writer
 
             int64_t index = 0;
             for (long j = startPos; j < endPos; j++) {
-                if (vector->IsNull(j)) {
+                if (baseVector->IsNull(j)) {
                     bitmap.SetBitTo(index, false);
                 } else {
-                    auto value = vector->GetValue(j);
+                    auto value = VectorHelper::GetFlatValue<OMNI_VARBINARY>(baseVector, j);
                     auto length = static_cast<int64_t>(value.size());
                     currentOffset += length;
                     valuesBuilder.Append(reinterpret_cast<const uint8_t *>(value.data()), length);
@@ -400,10 +396,10 @@ namespace omniruntime::writer
 
         int64_t index = 0;
         for (long j = startPos; j < endPos; j++) {
-            if (vector->IsNull(j)) {
+            if (baseVector->IsNull(j)) {
                 bitmap.SetBitTo(index, false);
             } else {
-                auto value = vector->GetValue(j);
+                auto value = VectorHelper::GetFlatValue<OMNI_VARBINARY>(baseVector, j);
                 auto length = static_cast<int32_t>(value.size());
                 currentOffset += length;
                 valuesBuilder.Append(reinterpret_cast<const uint8_t *>(value.data()), length);
@@ -446,9 +442,10 @@ namespace omniruntime::writer
 
         int64_t index = 0;
         for (long j = startPos; j < endPos; j++) {
-             BasicDecimal128 basicDecimal128(0, vector->GetValue(j));
-             decimalArray.emplace_back(BasicDecimal128(basicDecimal128));
-            if (vector->IsNull(j)) {
+            auto decimalValue = VectorHelper::GetFlatValue<OMNI_DECIMAL64>(baseVector, j);
+            BasicDecimal128 basicDecimal128(0, decimalValue);
+            decimalArray.emplace_back(BasicDecimal128(basicDecimal128));
+            if (baseVector->IsNull(j)) {
                 bitmap.SetBitTo(index, false);
             }
             index++;
@@ -489,10 +486,10 @@ namespace omniruntime::writer
 
         int64_t index = 0;
         for (long j = startPos; j < endPos; j++) {
-            auto decimalValue = vector->GetValue(j);
-            BasicDecimal128 basicDecimal128(vector->GetValue(j).HighBits(), vector->GetValue(j).LowBits());
+            auto decimalValue = VectorHelper::GetFlatValue<OMNI_DECIMAL128>(baseVector, j);
+            BasicDecimal128 basicDecimal128(decimalValue.HighBits(), decimalValue.LowBits());
             decimalArray.emplace_back(BasicDecimal128(basicDecimal128));
-            if (vector->IsNull(j)) {
+            if (baseVector->IsNull(j)) {
                 bitmap.SetBitTo(index, false);
             }
             index++;
@@ -525,31 +522,29 @@ namespace omniruntime::writer
             endPos = vector->GetSize();
         }
         int64_t vectorSize = endPos - startPos;
-        int64_t values[vectorSize];
+        std::vector<int64_t> values(vectorSize);
         int64_t index = 0;
 
         auto bitmapBuffer = AllocateBitmap(vectorSize).ValueOrDie();
         arrow::internal::Bitmap bitmap(bitmapBuffer, 0, vectorSize);
         bitmap.SetBitsTo(true);
-        if (vector->HasNull()) {
+        const bool useBufferedValues = isSplitWrite || baseVector->GetEncoding() != OMNI_FLAT;
+        if (baseVector->HasNull() || useBufferedValues) {
             for (long j = startPos; j < endPos; j++) {
-                if (vector->IsNull(j)) {
+                if (baseVector->IsNull(j)) {
                     bitmap.SetBitTo(index, false);
-                } else if (isSplitWrite) {
-                    values[index] = vector->GetValue(j);
+                } else if (useBufferedValues) {
+                    values[index] = VectorHelper::GetFlatValue<OMNI_TIMESTAMP>(baseVector, j);
                 }
-                index++;
-            }
-        } else if (isSplitWrite) {
-            for (long j = startPos; j < endPos; j++) {
-                values[index] = vector->GetValue(j);
                 index++;
             }
         }
 
         TypedBufferBuilder<int64_t> builder;
         builder.Resize(vectorSize);
-        builder.Append(reinterpret_cast<int64_t *>(isSplitWrite ? values : VectorHelper::UnsafeGetValues(vector)), vectorSize);
+        builder.Append(
+            useBufferedValues ? values.data() : reinterpret_cast<int64_t *>(VectorHelper::UnsafeGetValues(vector)),
+            vectorSize);
         auto dataBuffer = *builder.Finish();
         std::vector<std::shared_ptr<Buffer>> buffers;
         buffers.emplace_back(bitmapBuffer);

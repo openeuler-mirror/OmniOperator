@@ -572,7 +572,7 @@ namespace omniruntime::reader {
                     parquet_vec_capacity_ = values_capacity_;
                 }
             } else {
-                InitVec(extra_values);
+                InitVec(values_capacity_);
             }
         }
 
