@@ -146,6 +146,12 @@ private:
 
     void MoveEntryArrayTableToHashMap(int64_t minValue);
 
+    void PrepareSerializeMarshallers(BaseVector **groupVectors, int32_t groupColNum);
+
+    void FallbackMultiNormalizeToSerialize(BaseVector **groupVectors, int32_t groupColNum);
+
+    bool TryEmplaceMultiNormalize(VectorBatch *vecBatch, BaseVector **groupVectors, int32_t groupColNum);
+
     template<bool hasAgg, typename T>
     void TraverseArrayMapGetOutput(BaseVector *groupVector,
                                    std::vector<AggregateState *> *states, int64_t minValue);
@@ -187,6 +193,8 @@ private:
     std::unique_ptr<GroupbyPackedFixHandler<DefaultHashMap<int64_t, AggregateState *>, int64_t>> packedInt64 = nullptr;
     std::unique_ptr<GroupbyPackedFixHandler<DefaultHashMap<omniruntime::type::int128_t, AggregateState *>,
         omniruntime::type::int128_t>> packedInt128 = nullptr;
+    std::unique_ptr<GroupbyMultiNormalizeKeyHandler<
+        DefaultHashMap<omniruntime::type::int128_t, AggregateState *>>> normalizeMulti = nullptr;
     bool isInited = false;
 
     OutputState outputState;
@@ -308,6 +316,11 @@ public:
 
     OmniStatus Close() override;
 
+    void SetNormalizedKeyEnabledForFactory(bool enabled)
+    {
+        normalizedKeyEnabled = enabled;
+    }
+
 private:
     std::vector<uint32_t> groupByColsVector;
     std::vector<int32_t> groupByColIndices;
@@ -323,6 +336,7 @@ private:
     std::vector<int8_t> hasAggFilters;
     OperatorConfig operatorConfig;
     AggregationNode::Step step;
+    bool normalizedKeyEnabled = false;
     void ChooseGroupByType();
 };
 } // end of namespace omniruntime::op

@@ -34,7 +34,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};              // c3
 
     DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     // groupByKeys
@@ -86,6 +86,244 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     delete hashAggWithExprOperatorFactory;
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
+TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_multi_normalize_key)
+{
+    using namespace omniruntime::expressions;
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    auto oldRule = ConfigUtil::GetAggHashTableRule();
+    ConfigUtil::SetAggHashTableRule(AggHashTableRule::ARRAY);
+
+    const int32_t dataSize = 8;
+    const int32_t groupByNum = 2;
+    const int32_t expectDataSize = 2;
+
+    int64_t data1[] = {2L, 5L, 8L, 11L, 14L, 17L, 20L, 23L}; // c0
+    int64_t data2[] = {1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L};      // c1
+    int32_t data3[] = {1, 1, 2, 2, 1, 1, 2, 2};              // c2
+    int32_t data4[] = {10, 20, 10, 20, 10, 20, 10, 20};      // c3
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
+
+    // sum(c1*5), sum(c3+5) group by c0%3, c2+1 => (2,2)->70,80 ; (2,3)->110,80
+    LiteralExpr *modRight = new LiteralExpr(3, LongType());
+    modRight->longVal = 3;
+    BinaryExpr *modExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::MOD, new FieldExpr(0, LongType()), modRight, LongType());
+    LiteralExpr *groupAddRight = new LiteralExpr(1, IntType());
+    groupAddRight->intVal = 1;
+    BinaryExpr *groupAddExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::ADD, new FieldExpr(2, IntType()), groupAddRight, IntType());
+    std::vector<Expr *> groupByKeys = { modExpr, groupAddExpr };
+
+    LiteralExpr *mulRight = new LiteralExpr(5, LongType());
+    mulRight->longVal = 5;
+    BinaryExpr *mulExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, new FieldExpr(1, LongType()), mulRight, LongType());
+    LiteralExpr *aggAddRight = new LiteralExpr(5, IntType());
+    aggAddRight->intVal = 5;
+    BinaryExpr *aggAddExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::ADD, new FieldExpr(3, IntType()), aggAddRight, IntType());
+    std::vector<Expr *> aggKeys1 = { mulExpr };
+    std::vector<Expr *> aggKeys2 = { aggAddExpr };
+    std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys = { aggKeys1, aggKeys2 };
+
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM };
+    std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
+
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
+    std::vector<omniruntime::expressions::Expr *> aggFilters;
+    auto *hashAggWithExprOperatorFactory =
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, OperatorConfig());
+    auto *hashAggWithExprOperator =
+        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
+
+    hashAggWithExprOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
+
+    int64_t expData1[] = {2, 2};
+    int32_t expData2[] = {2, 3};
+    int64_t expData3[] = {70, 110};
+    int64_t expData4[] = {80, 80};
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType() }));
+    VectorBatch *expectVecorBatch =
+        CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecorBatch));
+
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggAllKeys);
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
+    delete hashAggWithExprOperatorFactory;
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+
+    ConfigUtil::SetAggHashTableRule(oldRule);
+}
+
+TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_multi_normalize_key_mixed_range_distinct)
+{
+    using namespace omniruntime::expressions;
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    auto oldRule = ConfigUtil::GetAggHashTableRule();
+    ConfigUtil::SetAggHashTableRule(AggHashTableRule::ARRAY);
+
+    const int32_t dataSize = 8;
+    const int32_t groupByNum = 2;
+    const int32_t expectDataSize = 4;
+
+    // c0(short): range path, c1(long): distinct path
+    int16_t data1[] = {1, 1, 2, 2, 1, 1, 2, 2}; // c0
+    int64_t data2[] = {100L, 101L, 100L, 101L, 100L, 101L, 100L, 101L}; // c1
+    int32_t data3[] = {1, 2, 3, 4, 5, 6, 7, 8}; // c2
+    int32_t data4[] = {10, 20, 30, 40, 50, 60, 70, 80}; // c3
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ ShortType(), LongType(), IntType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
+
+    LiteralExpr *groupAddRight = new LiteralExpr(1, ShortType());
+    groupAddRight->shortVal = 1;
+    BinaryExpr *groupAddExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::ADD, new FieldExpr(0, ShortType()), groupAddRight, ShortType());
+    LiteralExpr *groupModRight = new LiteralExpr(2, LongType());
+    groupModRight->longVal = 2;
+    BinaryExpr *groupModExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::MOD, new FieldExpr(1, LongType()), groupModRight, LongType());
+    std::vector<Expr *> groupByKeys = { groupAddExpr, groupModExpr };
+
+    LiteralExpr *mulRight = new LiteralExpr(2, IntType());
+    mulRight->intVal = 2;
+    BinaryExpr *mulExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, new FieldExpr(2, IntType()), mulRight, IntType());
+    LiteralExpr *aggAddRight = new LiteralExpr(1, IntType());
+    aggAddRight->intVal = 1;
+    BinaryExpr *aggAddExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::ADD, new FieldExpr(3, IntType()), aggAddRight, IntType());
+    std::vector<Expr *> aggKeys1 = { mulExpr };
+    std::vector<Expr *> aggKeys2 = { aggAddExpr };
+    std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys = { aggKeys1, aggKeys2 };
+
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM };
+    std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
+    std::vector<omniruntime::expressions::Expr *> aggFilters;
+    auto *hashAggWithExprOperatorFactory =
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, OperatorConfig());
+    auto *hashAggWithExprOperator =
+        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
+
+    hashAggWithExprOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
+
+    int16_t expData1[] = {2, 2, 3, 3};
+    int64_t expData2[] = {0, 1, 0, 1};
+    int64_t expData3[] = {12, 16, 20, 24};
+    int64_t expData4[] = {62, 82, 102, 122};
+    DataTypes expectTypes(std::vector<DataTypePtr>({ ShortType(), LongType(), LongType(), LongType() }));
+    VectorBatch *expectVecorBatch =
+        CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecorBatch));
+
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggAllKeys);
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
+    delete hashAggWithExprOperatorFactory;
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    ConfigUtil::SetAggHashTableRule(oldRule);
+}
+
+TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_multi_normalize_key_with_null)
+{
+    using namespace omniruntime::expressions;
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    auto oldRule = ConfigUtil::GetAggHashTableRule();
+    ConfigUtil::SetAggHashTableRule(AggHashTableRule::ARRAY);
+
+    const int32_t dataSize = 8;
+    const int32_t groupByNum = 2;
+    const int32_t expectDataSize = 3;
+
+    int64_t data1[] = {2L, 5L, 8L, 11L, 14L, 17L, 20L, 23L}; // c0
+    int32_t data2[] = {1, 1, 2, 2, 1, 1, 2, 2}; // c1
+    int64_t data3[] = {1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L}; // c2
+    int32_t data4[] = {10, 20, 30, 40, 50, 60, 70, 80}; // c3
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
+    vecBatch->Get(0)->SetNull(0);
+    vecBatch->Get(0)->SetNull(4);
+
+    LiteralExpr *modRight = new LiteralExpr(3, LongType());
+    modRight->longVal = 3;
+    BinaryExpr *modExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::MOD, new FieldExpr(0, LongType()), modRight, LongType());
+    LiteralExpr *groupAddRight = new LiteralExpr(1, IntType());
+    groupAddRight->intVal = 1;
+    BinaryExpr *groupAddExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::ADD, new FieldExpr(1, IntType()), groupAddRight, IntType());
+    std::vector<Expr *> groupByKeys = { modExpr, groupAddExpr };
+
+    LiteralExpr *mulRight = new LiteralExpr(5, LongType());
+    mulRight->longVal = 5;
+    BinaryExpr *mulExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, new FieldExpr(2, LongType()), mulRight, LongType());
+    LiteralExpr *aggAddRight = new LiteralExpr(5, IntType());
+    aggAddRight->intVal = 5;
+    BinaryExpr *aggAddExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::ADD, new FieldExpr(3, IntType()), aggAddRight, IntType());
+    std::vector<Expr *> aggKeys1 = { mulExpr };
+    std::vector<Expr *> aggKeys2 = { aggAddExpr };
+    std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys = { aggKeys1, aggKeys2 };
+
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM };
+    std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
+    std::vector<omniruntime::expressions::Expr *> aggFilters;
+    auto *hashAggWithExprOperatorFactory =
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, OperatorConfig());
+    auto *hashAggWithExprOperator =
+        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
+
+    hashAggWithExprOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
+
+    int64_t expData1[] = {0, 2, 2};
+    int32_t expData2[] = {2, 2, 3};
+    int64_t expData3[] = {30, 40, 110};
+    int64_t expData4[] = {70, 90, 240};
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType() }));
+    VectorBatch *expectVecorBatch =
+        CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
+    expectVecorBatch->Get(0)->SetNull(0);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecorBatch));
+
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggAllKeys);
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
+    delete hashAggWithExprOperatorFactory;
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    ConfigUtil::SetAggHashTableRule(oldRule);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)

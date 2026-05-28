@@ -6,6 +6,7 @@
 #include "group_aggregation_expr.h"
 #include "agg_util.h"
 #include "operator/util/operator_util.h"
+#include "util/debug.h"
 #include "vector/vector_helper.h"
 
 using namespace std;
@@ -109,6 +110,10 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     this->hashAggOperatorFactory =
         new HashAggregationOperatorFactory(groupByCol, *groupByTypes, aggColIdx, aggInputDataTypes, aggOutputTypes,
         aggFuncTypes, maskColumns, inputRaws, outputPartial, hasAggFilters, operatorConfig, step);
+    const bool normalizedKeyEnabled = queryConfig.HashAggNormalizedKeyEnabled();
+    LogError("[HashAggModeProbe] HashAggregationWithExprOperatorFactory: normalizedKeyEnabled=%d, groupByNum=%u",
+        normalizedKeyEnabled ? 1 : 0, groupByNum);
+    this->hashAggOperatorFactory->SetNormalizedKeyEnabledForFactory(normalizedKeyEnabled);
     this->hashAggOperatorFactory->Init();
 }
 

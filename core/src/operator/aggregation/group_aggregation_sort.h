@@ -7,9 +7,11 @@
 #define OMNI_RUNTIME_GROUP_AGGREATION_SORT_H
 
 #include <string>
+#include <type_traits>
 #include "aggregator/aggregator.h"
 #include "type/data_types.h"
 #include "type/string_ref.h"
+#include "type/width_integer.h"
 #include "operator/hashmap/base_hash_map.h"
 
 
@@ -51,7 +53,11 @@ public:
     void ParseHashMapToVector(const T &key, AggregateState *value, size_t groupIndex)
     {
         auto &kv = kvVec[groupIndex];
-        kvString[groupIndex] = std::to_string(key);
+        if constexpr (std::is_same_v<T, omniruntime::type::int128_t>) {
+            kvString[groupIndex] = omniruntime::type::ToString(key);
+        } else {
+            kvString[groupIndex] = std::to_string(key);
+        }
         kv.keyAddr = const_cast<char *>(kvString[groupIndex].c_str());
         kv.keyLen = kvString[groupIndex].size();
         kv.value = value;
@@ -71,7 +77,11 @@ public:
     void ParseNullHashMapToVector(const T &key, AggregateState *value, size_t groupIndex)
     {
         auto &kv = kvVec[groupIndex];
-        kvString[groupIndex] = std::to_string(key);
+        if constexpr (std::is_same_v<T, omniruntime::type::int128_t>) {
+            kvString[groupIndex] = omniruntime::type::ToString(key);
+        } else {
+            kvString[groupIndex] = std::to_string(key);
+        }
         kv.keyAddr = const_cast<char *>(kvString[groupIndex].c_str());
         kv.keyLen = 0;
         kv.value = value;
