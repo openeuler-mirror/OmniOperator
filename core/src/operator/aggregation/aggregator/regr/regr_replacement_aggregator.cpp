@@ -157,10 +157,7 @@ void RegrReplacementAggregator::ExtractValues(const AggregateState *state, std::
             static_cast<Vector<double> *>(vectors[2])->SetNull(rowIndex);
             return;
         }
-        if (outputTypes.GetType(0)->GetId() == OMNI_LONG)
-            static_cast<Vector<int64_t> *>(vectors[0])->SetValue(rowIndex, s->n);
-        else
-            static_cast<Vector<double> *>(vectors[0])->SetValue(rowIndex, static_cast<double>(s->n));
+        static_cast<Vector<double> *>(vectors[0])->SetValue(rowIndex, static_cast<double>(s->n));
         static_cast<Vector<double> *>(vectors[1])->SetValue(rowIndex, s->avg);
         static_cast<Vector<double> *>(vectors[2])->SetValue(rowIndex, s->m2);
     } else {
@@ -178,7 +175,7 @@ void RegrReplacementAggregator::ExtractValuesBatch(std::vector<AggregateState *>
     if (outputPartial) {
         if (vectors.size() < 3)
             return;
-        bool firstLong = (outputTypes.GetType(0)->GetId() == OMNI_LONG);
+        auto *v0 = static_cast<Vector<double> *>(vectors[0]);
         auto *v1 = static_cast<Vector<double> *>(vectors[1]);
         auto *v2 = static_cast<Vector<double> *>(vectors[2]);
         for (int32_t i = 0; i < rowCount; i++) {
@@ -189,10 +186,7 @@ void RegrReplacementAggregator::ExtractValuesBatch(std::vector<AggregateState *>
                 v1->SetNull(row);
                 v2->SetNull(row);
             } else {
-                if (firstLong)
-                    static_cast<Vector<int64_t> *>(vectors[0])->SetValue(row, s->n);
-                else
-                    static_cast<Vector<double> *>(vectors[0])->SetValue(row, static_cast<double>(s->n));
+                v0->SetValue(row, static_cast<double>(s->n));
                 v1->SetValue(row, s->avg);
                 v2->SetValue(row, s->m2);
             }
@@ -288,8 +282,7 @@ void RegrReplacementAggregator::AlignAggSchemaWithFilter(VectorBatch *result, Ve
     GetVector(inputVecBatch, 0, rc, &baseNull);
     std::shared_ptr<NullsHelper> rowSkip = RegrAlignMergeYxNullsWithFilter(baseNull, filterVec, needFilter, rc);
     if (!inputRaw) {
-        bool firstLong = inputVecBatch->Get(channels[0])->GetTypeId() == OMNI_LONG;
-        RegrAlignAppendPartialColumnsWithSkip(result, inputVecBatch, channels, 3, rc, rowSkip, firstLong);
+        RegrAlignAppendPartialColumnsWithSkip(result, inputVecBatch, channels, 3, rc, rowSkip, false);
         return;
     }
     BaseVector *valVec = inputVecBatch->Get(channels[0]);

@@ -525,6 +525,9 @@ namespace omniruntime::vectorization {
             } else {
                 const double factor = std::pow(10, scale);
                 result = static_cast<TInput>(std::round(a * factor) / factor);
+                if (result == static_cast<TInput>(0)) {
+                    result = static_cast<TInput>(0);
+                }
             }
             return Status::OK();
         }

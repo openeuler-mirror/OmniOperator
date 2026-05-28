@@ -19,7 +19,7 @@ using namespace omniruntime::vec;
 TEST(RegrReplacementAggregatorTest, GetStateSize)
 {
     DataTypes inRaw({DoubleType()});
-    DataTypes outP({LongType(), DoubleType(), DoubleType()});
+    DataTypes outP({DoubleType(), DoubleType(), DoubleType()});
     std::vector<int32_t> ch = {0};
     RegrReplacementAggregatorFactory factory;
     auto agg = factory.CreateAggregator(inRaw, outP, ch, true, true, false);
@@ -29,7 +29,7 @@ TEST(RegrReplacementAggregatorTest, GetStateSize)
 TEST(RegrReplacementAggregatorTest, GetSpillTypeLayout)
 {
     DataTypes inRaw({DoubleType()});
-    DataTypes outP({LongType(), DoubleType(), DoubleType()});
+    DataTypes outP({DoubleType(), DoubleType(), DoubleType()});
     std::vector<int32_t> ch = {0};
     RegrReplacementAggregatorFactory factory;
     auto agg = factory.CreateAggregator(inRaw, outP, ch, true, true, false);
@@ -43,7 +43,7 @@ TEST(RegrReplacementAggregatorTest, GetSpillTypeLayout)
 TEST(RegrReplacementAggregatorTest, AlignAggSchemaEmpty)
 {
     DataTypes inRaw({DoubleType()});
-    DataTypes outP({LongType(), DoubleType(), DoubleType()});
+    DataTypes outP({DoubleType(), DoubleType(), DoubleType()});
     std::vector<int32_t> ch = {0};
     RegrReplacementAggregatorFactory factory;
     auto agg = factory.CreateAggregator(inRaw, outP, ch, true, true, false);
@@ -57,7 +57,7 @@ TEST(RegrReplacementAggregatorTest, AlignAggSchemaEmpty)
 TEST(RegrReplacementAggregatorTest, AlignAggSchemaRawOneRow)
 {
     DataTypes inRaw({DoubleType()});
-    DataTypes outP({LongType(), DoubleType(), DoubleType()});
+    DataTypes outP({DoubleType(), DoubleType(), DoubleType()});
     std::vector<int32_t> ch = {0};
     RegrReplacementAggregatorFactory factory;
     auto agg = factory.CreateAggregator(inRaw, outP, ch, true, true, false);
@@ -68,7 +68,7 @@ TEST(RegrReplacementAggregatorTest, AlignAggSchemaRawOneRow)
     auto *batchOut = new VectorBatch(0);
     agg->AlignAggSchema(batchOut, batchIn);
     ASSERT_EQ(batchOut->GetVectorCount(), 3);
-    EXPECT_EQ(static_cast<Vector<int64_t> *>(batchOut->Get(0))->GetValue(0), 1);
+    EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(0))->GetValue(0), 1.0);
     EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(1))->GetValue(0), 2.5);
     EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(2))->GetValue(0), 0.0);
     VectorHelper::FreeVecBatch(batchIn);
@@ -78,7 +78,7 @@ TEST(RegrReplacementAggregatorTest, AlignAggSchemaRawOneRow)
 TEST(RegrReplacementAggregatorTest, AlignAggSchemaWithFilterSkipsRow)
 {
     DataTypes inRaw({DoubleType()});
-    DataTypes outP({LongType(), DoubleType(), DoubleType()});
+    DataTypes outP({DoubleType(), DoubleType(), DoubleType()});
     std::vector<int32_t> ch = {0};
     RegrReplacementAggregatorFactory factory;
     auto agg = factory.CreateAggregator(inRaw, outP, ch, true, true, false);
@@ -91,20 +91,20 @@ TEST(RegrReplacementAggregatorTest, AlignAggSchemaWithFilterSkipsRow)
     batchIn->Append(f);
     auto *batchOut = new VectorBatch(0);
     agg->AlignAggSchemaWithFilter(batchOut, batchIn, 1);
-    EXPECT_TRUE(static_cast<Vector<int64_t> *>(batchOut->Get(0))->IsNull(0));
+    EXPECT_TRUE(static_cast<Vector<double> *>(batchOut->Get(0))->IsNull(0));
     VectorHelper::FreeVecBatch(batchIn);
     VectorHelper::FreeVecBatch(batchOut);
 }
 
 TEST(RegrReplacementAggregatorTest, AlignAggSchemaPartialPassthroughSlices)
 {
-    DataTypes mergeIn({LongType(), DoubleType(), DoubleType()});
+    DataTypes mergeIn({DoubleType(), DoubleType(), DoubleType()});
     DataTypes outF({DoubleType()});
     std::vector<int32_t> ch = {0, 1, 2};
     RegrReplacementAggregatorFactory factory;
     auto agg = factory.CreateAggregator(mergeIn, outF, ch, false, false, false);
     auto *batchIn = new VectorBatch(2);
-    auto *n = new Vector<int64_t>(2);
+    auto *n = new Vector<double>(2);
     auto *a = new Vector<double>(2);
     auto *m = new Vector<double>(2);
     n->SetValue(0, 3);
@@ -118,7 +118,7 @@ TEST(RegrReplacementAggregatorTest, AlignAggSchemaPartialPassthroughSlices)
     batchIn->Append(m);
     auto *batchOut = new VectorBatch(0);
     agg->AlignAggSchema(batchOut, batchIn);
-    EXPECT_EQ(static_cast<Vector<int64_t> *>(batchOut->Get(0))->GetValue(1), 1);
+    EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(0))->GetValue(1), 1.0);
     EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(2))->GetValue(1), 0.0);
     VectorHelper::FreeVecBatch(batchIn);
     VectorHelper::FreeVecBatch(batchOut);
@@ -127,7 +127,7 @@ TEST(RegrReplacementAggregatorTest, AlignAggSchemaPartialPassthroughSlices)
 TEST(RegrReplacementAggregatorTest, ProcessAlignAggSchemaNullOriginAppendsEmptyPartial)
 {
     DataTypes inRaw({DoubleType()});
-    DataTypes outP({LongType(), DoubleType(), DoubleType()});
+    DataTypes outP({DoubleType(), DoubleType(), DoubleType()});
     std::vector<int32_t> ch = {0};
     RegrReplacementAggregatorFactory factory;
     auto agg = factory.CreateAggregator(inRaw, outP, ch, true, true, false);
@@ -140,7 +140,7 @@ TEST(RegrReplacementAggregatorTest, ProcessAlignAggSchemaNullOriginAppendsEmptyP
 TEST(RegrReplacementAggregatorTest, SpillUnspillPreservesPartialM2)
 {
     DataTypes inRaw({DoubleType()});
-    DataTypes outP({LongType(), DoubleType(), DoubleType()});
+    DataTypes outP({DoubleType(), DoubleType(), DoubleType()});
     std::vector<int32_t> ch = {0};
     RegrReplacementAggregatorFactory factory;
     auto agg = factory.CreateAggregator(inRaw, outP, ch, true, true, false);
@@ -169,12 +169,12 @@ TEST(RegrReplacementAggregatorTest, SpillUnspillPreservesPartialM2)
     agg->ProcessGroupUnspill(rows, 1, vi);
     EXPECT_EQ(vi, 3);
 
-    auto *nOut = new Vector<int64_t>(1);
+    auto *nOut = new Vector<double>(1);
     auto *aOut = new Vector<double>(1);
     auto *m2Out = new Vector<double>(1);
     std::vector<BaseVector *> ov = {nOut, aOut, m2Out};
     agg->ExtractValues(reinterpret_cast<const AggregateState *>(buf2.data()), ov, 0);
-    EXPECT_EQ(nOut->GetValue(0), 2);
+    EXPECT_DOUBLE_EQ(nOut->GetValue(0), 2.0);
     EXPECT_DOUBLE_EQ(aOut->GetValue(0), 3.0);
     EXPECT_DOUBLE_EQ(m2Out->GetValue(0), 2.0);
     delete nOut;
@@ -186,7 +186,7 @@ TEST(RegrReplacementAggregatorTest, SpillUnspillPreservesPartialM2)
 TEST(RegrReplacementAggregatorTest, UnspillAcceptsDoubleCountColumn)
 {
     DataTypes mergeIn({DoubleType(), DoubleType(), DoubleType()});
-    DataTypes outP({LongType(), DoubleType(), DoubleType()});
+    DataTypes outP({DoubleType(), DoubleType(), DoubleType()});
     std::vector<int32_t> ch = {0, 1, 2};
     RegrReplacementAggregatorFactory factory;
     auto agg = factory.CreateAggregator(mergeIn, outP, ch, false, true, false);
@@ -204,12 +204,12 @@ TEST(RegrReplacementAggregatorTest, UnspillAcceptsDoubleCountColumn)
     std::vector<UnspillRowInfo> rows = {ur};
     int32_t vi = 0;
     agg->ProcessGroupUnspill(rows, 1, vi);
-    auto *nOut = new Vector<int64_t>(1);
+    auto *nOut = new Vector<double>(1);
     auto *aOut = new Vector<double>(1);
     auto *m2Out = new Vector<double>(1);
     std::vector<BaseVector *> ov = {nOut, aOut, m2Out};
     agg->ExtractValues(reinterpret_cast<const AggregateState *>(buf.data()), ov, 0);
-    EXPECT_EQ(nOut->GetValue(0), 2);
+    EXPECT_DOUBLE_EQ(nOut->GetValue(0), 2.0);
     EXPECT_DOUBLE_EQ(m2Out->GetValue(0), 2.0);
     delete nOut;
     delete aOut;

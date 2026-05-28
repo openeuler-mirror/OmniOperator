@@ -58,7 +58,7 @@ void RegrAlignAppendPartialColumnsWithSkip(vec::VectorBatch *result, vec::Vector
     const std::vector<int32_t> &channels, int32_t numCols, int32_t rowCount,
     const std::shared_ptr<vec::NullsHelper> &rowSkip, bool firstColIsLong);
 
-/** regr_replacement / RegrReplacement partial: LONG n + avg DOUBLE + m2 DOUBLE (same as GetSpillType). */
+/** regr_replacement / RegrReplacement partial: Spark-compatible DOUBLE n + avg DOUBLE + m2 DOUBLE. */
 void RegrAlignAppendEmptyReplacementPartial3(vec::VectorBatch *result);
 void RegrAlignAppendReplacementPartial3AllNullRows(vec::VectorBatch *result, int32_t rowCount);
 void RegrAlignAppendReplacementPartial3RawDouble(vec::VectorBatch *result, vec::BaseVector *valVec,
