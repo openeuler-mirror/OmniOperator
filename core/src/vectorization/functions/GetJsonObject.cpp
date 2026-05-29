@@ -243,8 +243,10 @@ void GetJsonObjectFunction::ProcessJsonPathWithNormalizedPath(const std::string_
          char c = path[i];
  
          if (c == ' ') {
-             if (state == State::kInToken) {
-                 // Spaces within tokens are preserved
+             // Spaces inside dot-tokens and bracket keys are significant key characters
+             // (e.g. $.misc['with space'] -> key "with space"). Only spaces outside of
+             // keys (after '$', after '.') are insignificant and dropped.
+             if (state == State::kInToken || state == State::kInBracket) {
                  result.push_back(c);
              }
              continue;
