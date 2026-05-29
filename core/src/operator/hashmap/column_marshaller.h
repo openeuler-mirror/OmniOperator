@@ -1697,8 +1697,24 @@ public:
     int32_t totalAggValueSize = 0;
     std::unique_ptr<HashTable> table;
     bool shouldExtractNull = false;
+    int nullValueSize = 0;
     std::vector<T> keys;
     std::string nullValue;
+
+    /// DecodedVector cache — resolves encoding once per batch so hot path
+    /// runs with zero encoding branches (follows bolt TaperGroupFlatAgg pattern).
+    std::vector<DecodedVector> decodedCols;
+
+    /// Decode all group-by columns upfront. Call once per batch before EmplaceTable.
+    void DecodeGroupByColumns(BaseVector** groupVectors, int32_t groupColNum, int32_t rowsNum)
+    {
+        if (static_cast<int32_t>(decodedCols.size()) != groupColNum) {
+            decodedCols.resize(groupColNum);
+        }
+        for (int32_t i = 0; i < groupColNum; ++i) {
+            decodedCols[i].Decode(groupVectors[i], rowsNum);
+        }
+    }
 
     TaperGroupbySingleFixHandler(mem::SimpleArenaAllocator &pool, int32_t size)
     {
@@ -1724,6 +1740,8 @@ public:
     void EmplaceTable(BaseVector **groupVectors, int32_t groupColNum, int32_t rowsNum,
         std::vector<uint8_t*>& groups, std::vector<uint8_t*>& newGroups, Encoding encoding)
     {
+        (void)encoding;
+
         auto initRow = [&](uint32_t rowIdx, char* data) {
             if (totalAggValueSize > 0) {
                 auto* row = table->Pool().Allocate(totalAggValueSize);
@@ -1732,59 +1750,96 @@ public:
             }
         };
 
-        bool isDictEncoded = (encoding == vec::OMNI_DICTIONARY);
-        bool isConstEncoded = (encoding == vec::OMNI_ENCODING_CONST);
-        auto *curVector = groupVectors[0];
-        if (isDictEncoded) {
-            InitKeys<true>(groupVectors, rowsNum, groupColNum, groups, newGroups);
-        } else if (isConstEncoded) {
-            InitKeys<false, true>(groupVectors, rowsNum, groupColNum, groups, newGroups);
+        DecodeGroupByColumns(groupVectors, groupColNum, rowsNum);
+
+        if constexpr (isPacked) {
+            InitKeysPackedFromDecode(rowsNum, groups, newGroups);
         } else {
-            InitKeys(groupVectors, rowsNum, groupColNum, groups, newGroups);
+            auto& decoded = decodedCols[0];
+            auto layout = decoded.GetLayout();
+            switch (layout) {
+                case DVecLayout::Flat:
+                    InitKeysFromDecode<false, false>(rowsNum, groups, newGroups);
+                    break;
+                case DVecLayout::Dictionary:
+                    InitKeysFromDecode<true, false>(rowsNum, groups, newGroups);
+                    break;
+                case DVecLayout::Constant:
+                    InitKeysFromDecode<false, true>(rowsNum, groups, newGroups);
+                    break;
+            }
         }
 
         table->EmplaceBatch(
-        keys.data(),
+            keys.data(),
             rowsNum,
-        [&](uint32_t idx) { return !isPacked && curVector->IsNull(idx); },
-        [&](uint32_t rowIdx, char* data) { initRow(rowIdx, data); },
-        [&](uint32_t rowIdx, char* data, bool initFlag) {
-            groups[rowIdx] = RowFromData(data);
-        });
+            [&](uint32_t idx) { return !isPacked && decodedCols[0].IsNull(idx); },
+            [&](uint32_t rowIdx, char* data) { initRow(rowIdx, data); },
+            [&](uint32_t rowIdx, char* data, bool initFlag) {
+                groups[rowIdx] = RowFromData(data);
+            });
     }
 
+    /// Zero-branch key initialization using DecodedVector.
+    /// Template parameters isDic/isConst are compile-time constants → no runtime encoding checks in hot loop.
     template<bool isDic = false, bool isConst = false>
-    void InitKeys(BaseVector **groupVectors, int32_t rowsNum, int32_t groupColNum,
-        std::vector<uint8_t*>& groups, std::vector<uint8_t*>& newGroups)
+    void InitKeysFromDecode(int32_t rowsNum, std::vector<uint8_t*>& groups, std::vector<uint8_t*>& newGroups)
     {
-        auto *curVector = groupVectors[0];
+        auto& decoded = decodedCols[0];
         keys.resize(rowsNum);
-        if constexpr (isPacked) {
-            Prepare(groupVectors, groupColNum);
-        }
-        for (int32_t i = 0; i < rowsNum; i++) {
-            if constexpr (isPacked) {
-                keys[i] = PackKey(groupVectors, groupColNum, i);
-            } else {
-                if (!curVector->IsNull(i)) {
-                    if constexpr (isDic) {
-                        keys[i] = static_cast<Vector<DictionaryContainer<T>> *>(curVector)->GetValue(i);
-                    } else if constexpr  (isConst) {
-                        keys[i] = static_cast<ConstVector<T> *>(curVector)->GetConstValue();
-                    } else {
-                        keys[i] = reinterpret_cast<Vector<T>*>(curVector)->GetValue(i);
-                    }
+        const uint64_t* rawNulls = decoded.HasNull() ?
+            reinterpret_cast<const uint64_t*>(decoded.Nulls()) : nullptr;
+
+        auto handleNull = [&](int32_t i) {
+            if (!shouldExtractNull) {
+                if (totalAggValueSize > 0) {
+                    nullValue.resize(totalAggValueSize);
+                }
+                newGroups.push_back(reinterpret_cast<uint8_t*>(nullValue.data()));
+                shouldExtractNull = true;
+                nullValueSize = 1;
+            }
+            groups[i] = reinterpret_cast<uint8_t*>(nullValue.data());
+        };
+
+        if constexpr (isConst) {
+            T constVal = decoded.GetConstValue<T>();
+            for (int32_t i = 0; i < rowsNum; i++) {
+                if (rawNulls && BitUtil::IsBitSet(rawNulls, i)) {
+                    handleNull(i);
                 } else {
-                    if (!shouldExtractNull) {
-                        if (totalAggValueSize > 0) {
-                            nullValue.resize(totalAggValueSize);
-                        }
-                        newGroups.push_back(reinterpret_cast<uint8_t*>(nullValue.data()));
-                        shouldExtractNull = true;
-                    }
-                    groups[i] = reinterpret_cast<uint8_t*>(nullValue.data());
+                    keys[i] = constVal;
                 }
             }
+        } else if constexpr (isDic) {
+            const T* dictVals = decoded.FlatValues<T>();
+            const int32_t* ids = decoded.Ids();
+            for (int32_t i = 0; i < rowsNum; i++) {
+                if (rawNulls && BitUtil::IsBitSet(rawNulls, i)) {
+                    handleNull(i);
+                } else {
+                    keys[i] = dictVals[ids[i]];
+                }
+            }
+        } else {
+            const T* flatVals = decoded.FlatValues<T>();
+            for (int32_t i = 0; i < rowsNum; i++) {
+                if (rawNulls && BitUtil::IsBitSet(rawNulls, i)) {
+                    handleNull(i);
+                } else {
+                    keys[i] = flatVals[i];
+                }
+            }
+        }
+    }
+
+    /// Packed mode: initialize keys using DecodedVector (multi-column).
+    void InitKeysPackedFromDecode(int32_t rowsNum, std::vector<uint8_t*>& groups, std::vector<uint8_t*>& newGroups)
+    {
+        keys.resize(rowsNum);
+        PrepareFromDecode();
+        for (int32_t i = 0; i < rowsNum; i++) {
+            keys[i] = PackKeyFromDecode(i);
         }
     }
 
@@ -1798,6 +1853,7 @@ public:
                     std::memcpy(nullValue.data(), value, totalAggValueSize);
                 }
                 shouldExtractNull = true;
+                nullValueSize = 1;
             }
             return;
         }
@@ -1886,7 +1942,7 @@ public:
 
     size_t GetElementsSize() const
     {
-        return table->Size() + (shouldExtractNull ? 1 : 0);
+        return table->Size() + nullValueSize;
     }
 
     void ResetHashmap()
@@ -1914,13 +1970,14 @@ public:
     mutable std::vector<uint8_t> unpackIsNull;
     mutable std::vector<UnsignedKey> unpackValues;
 
-    ALWAYS_INLINE void Prepare(BaseVector **groupVectors, int32_t groupColNum)
+    /// Set activeLoaders based on decoded layout (zero runtime encoding branches).
+    ALWAYS_INLINE void PrepareFromDecode()
     {
-        for (int32_t col = 0; col < groupColNum; ++col) {
-            const auto encoding = groupVectors[col]->GetEncoding();
-            if (encoding == Encoding::OMNI_DICTIONARY) {
+        for (size_t col = 0; col < decodedCols.size(); ++col) {
+            const auto layout = decodedCols[col].GetLayout();
+            if (layout == DVecLayout::Dictionary) {
                 plan[col].activeLoader = plan[col].dictLoader;
-            } else if (encoding == Encoding::OMNI_ENCODING_CONST) {
+            } else if (layout == DVecLayout::Constant) {
                 plan[col].activeLoader = plan[col].constLoader;
             } else {
                 plan[col].activeLoader = plan[col].flatLoader;
@@ -1986,16 +2043,17 @@ public:
         }
     }
 
-    ALWAYS_INLINE T PackKey(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx) const
+    /// Pack key from DecodedVector — uses pre-decoded null bitmap and value pointers.
+    ALWAYS_INLINE T PackKeyFromDecode(int32_t rowIdx) const
     {
         UnsignedKey packed = 0;
-        for (int32_t col = 0; col < groupColNum; ++col) {
+        for (size_t col = 0; col < decodedCols.size(); ++col) {
             auto &entry = plan[col];
-            bool isNull = groupVectors[col]->IsNull(rowIdx);
+            bool isNull = decodedCols[col].IsNull(rowIdx);
             packed = (packed << 1) | static_cast<UnsignedKey>(isNull ? 1 : 0);
             UnsignedKey valueBits = 0;
             if (!isNull) {
-                valueBits = entry.activeLoader(groupVectors[col], rowIdx, entry.mask);
+                valueBits = entry.activeLoader(decodedCols[col].Base(), rowIdx, entry.mask);
             }
             packed = (packed << entry.bitWidth) | valueBits;
         }
