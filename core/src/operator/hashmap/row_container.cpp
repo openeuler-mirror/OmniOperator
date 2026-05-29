@@ -6,9 +6,14 @@
 #include "row_container.h"
 #include "vector/vector.h"
 #include "vector/vector_helper.h"
+#include "vector/unsafe_vector.h"
 #include "type/data_type.h"
 #include "type/decimal128.h"
 #include "util/bit_util.h"
+
+#ifdef __ARM_FEATURE_SVE
+#include <arm_sve.h>
+#endif
 
 namespace omniruntime::op {
 
@@ -158,6 +163,89 @@ int32_t RowContainer::ListRows(RowContainerIterator* iter, int32_t maxRows, char
     return count;
 }
 
+#ifdef __ARM_FEATURE_SVE
+template <typename T>
+static void SveExtractColumnImpl(char** rows, int32_t totalRows, int32_t offset,
+                                  int32_t nullByte, uint8_t nullMask,
+                                  Vector<T>* vec)
+{
+    T* outValues = vec::unsafe::UnsafeVector::GetRawValues(vec);
+    uint64_t* outNulls = reinterpret_cast<uint64_t*>(vec::unsafe::UnsafeBaseVector::GetNulls(vec));
+    bool hasNull = false;
+
+    svbool_t pgAll = svptrue_b64();
+    int64_t tmpBuf[32];
+
+    for (int32_t i = 0; i < totalRows;) {
+        svbool_t pg = svwhilelt_b64_s64((int64_t)i, (int64_t)totalRows);
+        int32_t activeCount = svcntp_b64(pgAll, pg);
+
+        svuint64_t vIdx = svindex_u64(i, 1);
+        svuint64_t vPtrOffsets = svlsl_n_u64_x(pg, vIdx, 3);
+        svuint64_t vRowPtrs = svld1_gather_offset_u64(pg, vPtrOffsets, (uint64_t)rows);
+
+        svuint64_t vNullAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)nullByte);
+        svuint64_t vRowNullByte = svld1ub_gather_u64(pg, vNullAddr);
+        svbool_t vRowIsNull = svcmpne_n_u64(pg, svand_n_u64_x(pg, vRowNullByte, (uint64_t)nullMask), 0);
+
+        if (svptest_any(pgAll, vRowIsNull)) {
+            hasNull = true;
+        }
+
+        svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+        svint64_t vZero = svdup_n_s64(0);
+
+        if constexpr (std::is_same_v<T, int64_t>) {
+            svint64_t vRowValues = svld1_gather_s64(pg, vValueAddr);
+            svst1_s64(pg, outValues + i, svsel_s64(vRowIsNull, vZero, vRowValues));
+        } else if constexpr (std::is_same_v<T, double>) {
+            svfloat64_t vRowValues = svld1_gather_f64(pg, vValueAddr);
+            svfloat64_t vZeroF = svdup_n_f64(0.0);
+            svst1_f64(pg, outValues + i, svsel_f64(vRowIsNull, vZeroF, vRowValues));
+        } else {
+            svint64_t vRowValues;
+            if constexpr (std::is_same_v<T, int32_t>) {
+                vRowValues = svld1sw_gather_s64(pg, vValueAddr);
+            } else if constexpr (std::is_same_v<T, int16_t>) {
+                vRowValues = svld1sh_gather_s64(pg, vValueAddr);
+            } else if constexpr (std::is_same_v<T, int8_t>) {
+                vRowValues = svld1sb_gather_s64(pg, vValueAddr);
+            } else {
+                for (int32_t j = 0; j < activeCount; j++) {
+                    if (RowContainer::IsNullAt(rows[i + j], nullByte, nullMask)) {
+                        outValues[i + j] = T{};
+                    } else {
+                        outValues[i + j] = RowContainer::ReadValue<T>(rows[i + j], offset);
+                    }
+                }
+                i += activeCount;
+                continue;
+            }
+
+            svint64_t vSelected = svsel_s64(vRowIsNull, vZero, vRowValues);
+            svst1_s64(pg, tmpBuf, vSelected);
+            for (int32_t j = 0; j < activeCount; j++) {
+                outValues[i + j] = static_cast<T>(tmpBuf[j]);
+            }
+        }
+
+        if (hasNull) {
+            for (int32_t j = 0; j < activeCount; j++) {
+                if (RowContainer::IsNullAt(rows[i + j], nullByte, nullMask)) {
+                    BitUtil::SetBit(outNulls, i + j);
+                }
+            }
+        }
+
+        i += activeCount;
+    }
+
+    if (hasNull) {
+        vec->SetNullFlag(true);
+    }
+}
+#endif
+
 void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
                                   vec::BaseVector* outputVector)
 {
@@ -178,6 +266,9 @@ void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
         case type::OMNI_DATE32:
         case type::OMNI_TIME32: {
             auto* vec = static_cast<Vector<int32_t>*>(outputVector);
+#ifdef __ARM_FEATURE_SVE
+            SveExtractColumnImpl<int32_t>(rows, totalRows, offset, nullByte, nullMask, vec);
+#else
             for (int32_t i = 0; i < totalRows; ++i) {
                 if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
@@ -185,6 +276,7 @@ void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
                     vec->SetValue(i, ReadValue<int32_t>(rows[i], offset));
                 }
             }
+#endif
             break;
         }
         case type::OMNI_LONG:
@@ -193,6 +285,9 @@ void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
         case type::OMNI_DATE64:
         case type::OMNI_TIME64: {
             auto* vec = static_cast<Vector<int64_t>*>(outputVector);
+#ifdef __ARM_FEATURE_SVE
+            SveExtractColumnImpl<int64_t>(rows, totalRows, offset, nullByte, nullMask, vec);
+#else
             for (int32_t i = 0; i < totalRows; ++i) {
                 if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
@@ -200,10 +295,14 @@ void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
                     vec->SetValue(i, ReadValue<int64_t>(rows[i], offset));
                 }
             }
+#endif
             break;
         }
         case type::OMNI_SHORT: {
             auto* vec = static_cast<Vector<int16_t>*>(outputVector);
+#ifdef __ARM_FEATURE_SVE
+            SveExtractColumnImpl<int16_t>(rows, totalRows, offset, nullByte, nullMask, vec);
+#else
             for (int32_t i = 0; i < totalRows; ++i) {
                 if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
@@ -211,10 +310,14 @@ void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
                     vec->SetValue(i, ReadValue<int16_t>(rows[i], offset));
                 }
             }
+#endif
             break;
         }
         case type::OMNI_BYTE: {
             auto* vec = static_cast<Vector<int8_t>*>(outputVector);
+#ifdef __ARM_FEATURE_SVE
+            SveExtractColumnImpl<int8_t>(rows, totalRows, offset, nullByte, nullMask, vec);
+#else
             for (int32_t i = 0; i < totalRows; ++i) {
                 if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
@@ -222,10 +325,14 @@ void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
                     vec->SetValue(i, ReadValue<int8_t>(rows[i], offset));
                 }
             }
+#endif
             break;
         }
         case type::OMNI_DOUBLE: {
             auto* vec = static_cast<Vector<double>*>(outputVector);
+#ifdef __ARM_FEATURE_SVE
+            SveExtractColumnImpl<double>(rows, totalRows, offset, nullByte, nullMask, vec);
+#else
             for (int32_t i = 0; i < totalRows; ++i) {
                 if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
@@ -233,10 +340,14 @@ void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
                     vec->SetValue(i, ReadValue<double>(rows[i], offset));
                 }
             }
+#endif
             break;
         }
         case type::OMNI_FLOAT: {
             auto* vec = static_cast<Vector<float>*>(outputVector);
+#ifdef __ARM_FEATURE_SVE
+            SveExtractColumnImpl<float>(rows, totalRows, offset, nullByte, nullMask, vec);
+#else
             for (int32_t i = 0; i < totalRows; ++i) {
                 if (IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
@@ -244,6 +355,7 @@ void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
                     vec->SetValue(i, ReadValue<float>(rows[i], offset));
                 }
             }
+#endif
             break;
         }
         case type::OMNI_BOOLEAN: {

@@ -21,6 +21,10 @@
 #include "vector/decoded_vector.h"
 #include "row_container.h"
 
+#ifdef __ARM_FEATURE_SVE
+#include <arm_sve.h>
+#endif
+
 namespace omniruntime {
 namespace op {
 using namespace vec;
@@ -764,12 +768,212 @@ public:
 
     // ========== DecodedVector-based templated helpers (zero runtime encoding branches) ==========
 
+#ifdef __ARM_FEATURE_SVE
+    /// SVE-optimized batch compare for primitive types with null handling.
+    /// Uses ARM SVE instructions for vectorized comparison on aarch64.
+    template <typename T, bool HasNull>
+    int32_t SveBatchCompareDecoded(const DecodedVector& decoded, int32_t count, int32_t offset,
+                                    uint8_t nullByte, uint8_t nullMask,
+                                    int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
+    {
+        const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+        const T* flatVals = decoded.FlatValues<T>();
+
+        if (!rawNulls || !flatVals) {
+            return BatchCompareDecoded<T, HasNull>(decoded, count, offset, nullByte, nullMask, indices, idxFrom, groups);
+        }
+
+        const int32_t n = count;
+        svbool_t pgAll = svptrue_b64();
+
+        for (int32_t i = idxFrom; i < n;) {
+            svbool_t pg = svwhilelt_b64_s64((int64_t)i, (int64_t)n);
+            int32_t activeCount = svcntp_b64(pgAll, pg);
+
+            svuint64_t vIdx = svld1uw_u64(pg, (uint32_t*)&indices[i]);
+
+            svuint64_t vWordIdx = svlsr_n_u64_x(pg, vIdx, 6);
+            svuint64_t vNullByteOff = svlsl_n_u64_x(pg, vWordIdx, 3);
+            svuint64_t vNullWords = svld1_gather_offset_u64(pg, vNullByteOff, (uint64_t)rawNulls);
+
+            svuint64_t vPtrOffsets = svlsl_n_u64_x(pg, vIdx, 3);
+            svuint64_t vRowPtrs = svld1_gather_offset_u64(pg, vPtrOffsets, (uint64_t)groups);
+
+            svuint64_t vBitIdx = svand_n_u64_x(pg, vIdx, 63);
+            svuint64_t vNullMasks = svlsl_u64_x(pg, svdup_n_u64(1), vBitIdx);
+            svuint64_t vDecodedNotNull = svand_u64_x(pg, vNullWords, vNullMasks);
+            svbool_t vDecodedIsNull = svcmpeq_n_u64(pg, vDecodedNotNull, 0);
+
+            svuint64_t vNullAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)nullByte);
+            svuint64_t vRowNullByte = svld1ub_gather_u64(pg, vNullAddr);
+            svbool_t vRowIsNull = svcmpne_n_u64(pg, svand_n_u64_x(pg, vRowNullByte, (uint64_t)nullMask), 0);
+
+            svbool_t vNullXor = sveor_b_z(pg, vRowIsNull, vDecodedIsNull);
+            svbool_t vNullMatch = svnot_b_z(pg, vNullXor);
+            svbool_t vBothNull = svand_b_z(pg, vRowIsNull, vDecodedIsNull);
+
+            svbool_t vValueMatch;
+
+            if constexpr (std::is_same_v<T, int8_t>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svint64_t vRowValues = svld1sb_gather_s64(pg, vValueAddr);
+                svint64_t vDecodedValues = svld1sb_s64(pg, flatVals + i);
+                vValueMatch = svcmpeq_s64(pg, vRowValues, vDecodedValues);
+            } else if constexpr (std::is_same_v<T, int16_t>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svint64_t vRowValues = svld1sh_gather_s64(pg, vValueAddr);
+                svint64_t vDecodedValues = svld1sh_s64(pg, flatVals + i);
+                vValueMatch = svcmpeq_s64(pg, vRowValues, vDecodedValues);
+            } else if constexpr (std::is_same_v<T, int32_t>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svint64_t vRowValues = svld1sw_gather_s64(pg, vValueAddr);
+                svint64_t vDecodedValues = svld1sw_s64(pg, flatVals + i);
+                vValueMatch = svcmpeq_s64(pg, vRowValues, vDecodedValues);
+            } else if constexpr (std::is_same_v<T, int64_t>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svint64_t vRowValues = svld1_gather_s64(pg, vValueAddr);
+                svint64_t vDecodedValues = svld1_s64(pg, flatVals + i);
+                vValueMatch = svcmpeq_s64(pg, vRowValues, vDecodedValues);
+            } else if constexpr (std::is_same_v<T, double>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svfloat64_t vRowValues = svld1_gather_f64(pg, vValueAddr);
+                svfloat64_t vDecodedValues = svld1_f64(pg, flatVals + i);
+                vValueMatch = svcmpeq_f64(pg, vRowValues, vDecodedValues);
+            } else if constexpr (std::is_same_v<T, uint8_t>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svuint64_t vRowValues = svld1ub_gather_u64(pg, vValueAddr);
+                svuint64_t vDecodedValues = svld1ub_u64(pg, flatVals + i);
+                vValueMatch = svcmpeq_u64(pg, vRowValues, vDecodedValues);
+            } else {
+                return BatchCompareDecoded<T, HasNull>(decoded, count, offset, nullByte, nullMask, indices, idxFrom, groups);
+            }
+
+            svbool_t vMatch = svand_b_z(pg, vNullMatch, svorr_b_z(pg, vBothNull, vValueMatch));
+
+            if (!svptest_any(pg, svnot_b_z(pg, vMatch))) {
+                i += activeCount;
+                continue;
+            }
+
+            svuint64_t vMatchFlag = svsel_u64(vMatch, svdup_n_u64(1), svdup_n_u64(0));
+            uint64_t matchFlags[32];
+            svst1_u64(pg, matchFlags, vMatchFlag);
+
+            for (int32_t j = 0; j < activeCount; j++) {
+                if (matchFlags[j] == 0) {
+                    std::swap(indices[i + j], indices[idxFrom]);
+                    idxFrom++;
+                }
+            }
+
+            i += activeCount;
+        }
+        return idxFrom;
+    }
+
+    /// SVE-optimized batch compare for no-null case.
+    template <typename T>
+    int32_t SveBatchCompareNoNullDecoded(const DecodedVector& decoded, int32_t count, int32_t offset,
+                                          int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
+    {
+        const T* flatVals = decoded.FlatValues<T>();
+        if (!flatVals) {
+            return BatchCompareDecoded<T, false>(decoded, count, offset, 0, 0, indices, idxFrom, groups);
+        }
+
+        const int32_t n = count;
+        svbool_t pgAll = svptrue_b64();
+
+        for (int32_t i = idxFrom; i < n;) {
+            svbool_t pg = svwhilelt_b64_s64((int64_t)i, (int64_t)n);
+            int32_t activeCount = svcntp_b64(pgAll, pg);
+
+            svuint64_t vIdx = svld1uw_u64(pg, (uint32_t*)&indices[i]);
+            svuint64_t vPtrOffsets = svlsl_n_u64_x(pg, vIdx, 3);
+            svuint64_t vRowPtrs = svld1_gather_offset_u64(pg, vPtrOffsets, (uint64_t)groups);
+
+            svbool_t vValueMatch;
+
+            if constexpr (std::is_same_v<T, int8_t>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svint64_t vRowValues = svld1sb_gather_s64(pg, vValueAddr);
+                svint64_t vDecodedValues = svld1sb_s64(pg, flatVals + i);
+                vValueMatch = svcmpeq_s64(pg, vRowValues, vDecodedValues);
+            } else if constexpr (std::is_same_v<T, int16_t>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svint64_t vRowValues = svld1sh_gather_s64(pg, vValueAddr);
+                svint64_t vDecodedValues = svld1sh_s64(pg, flatVals + i);
+                vValueMatch = svcmpeq_s64(pg, vRowValues, vDecodedValues);
+            } else if constexpr (std::is_same_v<T, int32_t>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svint64_t vRowValues = svld1sw_gather_s64(pg, vValueAddr);
+                svint64_t vDecodedValues = svld1sw_s64(pg, flatVals + i);
+                vValueMatch = svcmpeq_s64(pg, vRowValues, vDecodedValues);
+            } else if constexpr (std::is_same_v<T, int64_t>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svint64_t vRowValues = svld1_gather_s64(pg, vValueAddr);
+                svint64_t vDecodedValues = svld1_s64(pg, flatVals + i);
+                vValueMatch = svcmpeq_s64(pg, vRowValues, vDecodedValues);
+            } else if constexpr (std::is_same_v<T, double>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svfloat64_t vRowValues = svld1_gather_f64(pg, vValueAddr);
+                svfloat64_t vDecodedValues = svld1_f64(pg, flatVals + i);
+                vValueMatch = svcmpeq_f64(pg, vRowValues, vDecodedValues);
+            } else if constexpr (std::is_same_v<T, uint8_t>) {
+                svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+                svuint64_t vRowValues = svld1ub_gather_u64(pg, vValueAddr);
+                svuint64_t vDecodedValues = svld1ub_u64(pg, flatVals + i);
+                vValueMatch = svcmpeq_u64(pg, vRowValues, vDecodedValues);
+            } else {
+                return BatchCompareDecoded<T, false>(decoded, count, offset, 0, 0, indices, idxFrom, groups);
+            }
+
+            if (!svptest_any(pg, svnot_b_z(pg, vValueMatch))) {
+                i += activeCount;
+                continue;
+            }
+
+            svuint64_t vMatchFlag = svsel_u64(vValueMatch, svdup_n_u64(1), svdup_n_u64(0));
+            uint64_t matchFlags[32];
+            svst1_u64(pg, matchFlags, vMatchFlag);
+
+            for (int32_t j = 0; j < activeCount; j++) {
+                if (matchFlags[j] == 0) {
+                    std::swap(indices[i + j], indices[idxFrom]);
+                    idxFrom++;
+                }
+            }
+
+            i += activeCount;
+        }
+        return idxFrom;
+    }
+#endif
+
     /// Batch compare using DecodedVector — flat values accessed directly, no encoding switch.
     template <typename T, bool HasNull, bool isDic = false>
     int32_t BatchCompareDecoded(const DecodedVector& decoded, int32_t count, int32_t offset,
                                 uint8_t nullByte, uint8_t nullMask,
                                 int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
+#ifdef __ARM_FEATURE_SVE
+        if constexpr (!isDic) {
+            if constexpr (HasNull) {
+                if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t> ||
+                              std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
+                              std::is_same_v<T, double> || std::is_same_v<T, uint8_t>) {
+                    return SveBatchCompareDecoded<T, HasNull>(decoded, count, offset, nullByte, nullMask, indices, idxFrom, groups);
+                }
+            } else {
+                if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t> ||
+                              std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
+                              std::is_same_v<T, double> || std::is_same_v<T, uint8_t>) {
+                    return SveBatchCompareNoNullDecoded<T>(decoded, count, offset, indices, idxFrom, groups);
+                }
+            }
+        }
+#endif
+
         const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
         const T* flatVals = decoded.FlatValues<T>();
         const int32_t* ids = decoded.Ids();
@@ -817,6 +1021,146 @@ public:
                                      int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
         T constVal = decoded.GetConstValue<T>();
+
+#ifdef __ARM_FEATURE_SVE
+        if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t> ||
+                      std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
+                      std::is_same_v<T, double> || std::is_same_v<T, uint8_t>) {
+            const uint64_t* rawNulls = nullptr;
+            if constexpr (HasNull) {
+                rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
+            }
+
+            const int32_t n = count;
+            svbool_t pgAll = svptrue_b64();
+
+            for (int32_t i = idxFrom; i < n;) {
+                svbool_t pg = svwhilelt_b64_s64((int64_t)i, (int64_t)n);
+                int32_t activeCount = svcntp_b64(pgAll, pg);
+
+                svuint64_t vIdx = svld1uw_u64(pg, (uint32_t*)&indices[i]);
+                svuint64_t vPtrOffsets = svlsl_n_u64_x(pg, vIdx, 3);
+                svuint64_t vRowPtrs = svld1_gather_offset_u64(pg, vPtrOffsets, (uint64_t)groups);
+
+                svbool_t vRowIsNull;
+                svbool_t vDecodedIsNull;
+
+                if constexpr (HasNull) {
+                    svuint64_t vNullAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)nullByte);
+                    svuint64_t vRowNullByte = svld1ub_gather_u64(pg, vNullAddr);
+                    vRowIsNull = svcmpne_n_u64(pg, svand_n_u64_x(pg, vRowNullByte, (uint64_t)nullMask), 0);
+
+                    svuint64_t vWordIdx = svlsr_n_u64_x(pg, vIdx, 6);
+                    svuint64_t vNullByteOff = svlsl_n_u64_x(pg, vWordIdx, 3);
+                    svuint64_t vNullWords = svld1_gather_offset_u64(pg, vNullByteOff, (uint64_t)rawNulls);
+                    svuint64_t vBitIdx = svand_n_u64_x(pg, vIdx, 63);
+                    svuint64_t vNullMasks = svlsl_u64_x(pg, svdup_n_u64(1), vBitIdx);
+                    svuint64_t vDecodedNotNull = svand_u64_x(pg, vNullWords, vNullMasks);
+                    vDecodedIsNull = svcmpeq_n_u64(pg, vDecodedNotNull, 0);
+
+                    svbool_t vNullXor = sveor_b_z(pg, vRowIsNull, vDecodedIsNull);
+                    svbool_t vNullMatch = svnot_b_z(pg, vNullXor);
+                    svbool_t vBothNull = svand_b_z(pg, vRowIsNull, vDecodedIsNull);
+
+                    svbool_t vValueMatch;
+                    svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+
+                    if constexpr (std::is_same_v<T, int8_t>) {
+                        svint64_t vRowValues = svld1sb_gather_s64(pg, vValueAddr);
+                        svint64_t vConst = svdup_n_s64(static_cast<int64_t>(constVal));
+                        vValueMatch = svcmpeq_s64(pg, vRowValues, vConst);
+                    } else if constexpr (std::is_same_v<T, int16_t>) {
+                        svint64_t vRowValues = svld1sh_gather_s64(pg, vValueAddr);
+                        svint64_t vConst = svdup_n_s64(static_cast<int64_t>(constVal));
+                        vValueMatch = svcmpeq_s64(pg, vRowValues, vConst);
+                    } else if constexpr (std::is_same_v<T, int32_t>) {
+                        svint64_t vRowValues = svld1sw_gather_s64(pg, vValueAddr);
+                        svint64_t vConst = svdup_n_s64(static_cast<int64_t>(constVal));
+                        vValueMatch = svcmpeq_s64(pg, vRowValues, vConst);
+                    } else if constexpr (std::is_same_v<T, int64_t>) {
+                        svint64_t vRowValues = svld1_gather_s64(pg, vValueAddr);
+                        svint64_t vConst = svdup_n_s64(constVal);
+                        vValueMatch = svcmpeq_s64(pg, vRowValues, vConst);
+                    } else if constexpr (std::is_same_v<T, double>) {
+                        svfloat64_t vRowValues = svld1_gather_f64(pg, vValueAddr);
+                        svfloat64_t vConst = svdup_n_f64(constVal);
+                        vValueMatch = svcmpeq_f64(pg, vRowValues, vConst);
+                    } else if constexpr (std::is_same_v<T, uint8_t>) {
+                        svuint64_t vRowValues = svld1ub_gather_u64(pg, vValueAddr);
+                        svuint64_t vConst = svdup_n_u64(static_cast<uint64_t>(constVal));
+                        vValueMatch = svcmpeq_u64(pg, vRowValues, vConst);
+                    }
+
+                    svbool_t vMatch = svand_b_z(pg, vNullMatch, svorr_b_z(pg, vBothNull, vValueMatch));
+
+                    if (!svptest_any(pg, svnot_b_z(pg, vMatch))) {
+                        i += activeCount;
+                        continue;
+                    }
+
+                    svuint64_t vMatchFlag = svsel_u64(vMatch, svdup_n_u64(1), svdup_n_u64(0));
+                    uint64_t matchFlags[32];
+                    svst1_u64(pg, matchFlags, vMatchFlag);
+
+                    for (int32_t j = 0; j < activeCount; j++) {
+                        if (matchFlags[j] == 0) {
+                            std::swap(indices[i + j], indices[idxFrom]);
+                            idxFrom++;
+                        }
+                    }
+                } else {
+                    svbool_t vValueMatch;
+                    svuint64_t vValueAddr = svadd_n_u64_x(pg, vRowPtrs, (uint64_t)offset);
+
+                    if constexpr (std::is_same_v<T, int8_t>) {
+                        svint64_t vRowValues = svld1sb_gather_s64(pg, vValueAddr);
+                        svint64_t vConst = svdup_n_s64(static_cast<int64_t>(constVal));
+                        vValueMatch = svcmpeq_s64(pg, vRowValues, vConst);
+                    } else if constexpr (std::is_same_v<T, int16_t>) {
+                        svint64_t vRowValues = svld1sh_gather_s64(pg, vValueAddr);
+                        svint64_t vConst = svdup_n_s64(static_cast<int64_t>(constVal));
+                        vValueMatch = svcmpeq_s64(pg, vRowValues, vConst);
+                    } else if constexpr (std::is_same_v<T, int32_t>) {
+                        svint64_t vRowValues = svld1sw_gather_s64(pg, vValueAddr);
+                        svint64_t vConst = svdup_n_s64(static_cast<int64_t>(constVal));
+                        vValueMatch = svcmpeq_s64(pg, vRowValues, vConst);
+                    } else if constexpr (std::is_same_v<T, int64_t>) {
+                        svint64_t vRowValues = svld1_gather_s64(pg, vValueAddr);
+                        svint64_t vConst = svdup_n_s64(constVal);
+                        vValueMatch = svcmpeq_s64(pg, vRowValues, vConst);
+                    } else if constexpr (std::is_same_v<T, double>) {
+                        svfloat64_t vRowValues = svld1_gather_f64(pg, vValueAddr);
+                        svfloat64_t vConst = svdup_n_f64(constVal);
+                        vValueMatch = svcmpeq_f64(pg, vRowValues, vConst);
+                    } else if constexpr (std::is_same_v<T, uint8_t>) {
+                        svuint64_t vRowValues = svld1ub_gather_u64(pg, vValueAddr);
+                        svuint64_t vConst = svdup_n_u64(static_cast<uint64_t>(constVal));
+                        vValueMatch = svcmpeq_u64(pg, vRowValues, vConst);
+                    }
+
+                    if (!svptest_any(pg, svnot_b_z(pg, vValueMatch))) {
+                        i += activeCount;
+                        continue;
+                    }
+
+                    svuint64_t vMatchFlag = svsel_u64(vValueMatch, svdup_n_u64(1), svdup_n_u64(0));
+                    uint64_t matchFlags[32];
+                    svst1_u64(pg, matchFlags, vMatchFlag);
+
+                    for (int32_t j = 0; j < activeCount; j++) {
+                        if (matchFlags[j] == 0) {
+                            std::swap(indices[i + j], indices[idxFrom]);
+                            idxFrom++;
+                        }
+                    }
+                }
+
+                i += activeCount;
+            }
+            return idxFrom;
+        }
+#endif
+
         if constexpr (HasNull) {
             const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
             for (int32_t i = idxFrom; i < count; ++i) {
