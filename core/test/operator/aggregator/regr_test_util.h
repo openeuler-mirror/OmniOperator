@@ -115,6 +115,23 @@ inline VectorBatch *MakeRegrYxLinearBatch(int32_t rowCount = 5)
     return MakeRegrYxLinearSlice(0, rowCount);
 }
 
+inline VectorBatch *MakeRegrYxIdenticalLargeSlice(int32_t startInclusive, int32_t rowCount)
+{
+    auto *batch = new VectorBatch(rowCount);
+    auto *yCol = new Vector<double>(rowCount);
+    auto *xCol = new Vector<double>(rowCount);
+    constexpr double base = 6.626e17;
+    constexpr double step = 4096.0;
+    for (int32_t i = 0; i < rowCount; ++i) {
+        double v = base + step * static_cast<double>(startInclusive + i);
+        yCol->SetValue(i, v);
+        xCol->SetValue(i, v);
+    }
+    batch->Append(yCol);
+    batch->Append(xCol);
+    return batch;
+}
+
 inline double RunNonGroupRegrGetDouble(uint32_t aggFuncType)
 {
     DataTypes sourceTypes({DoubleType(), DoubleType()});
@@ -545,6 +562,48 @@ inline double RegrUtSlopeFamilyMergeFromPartialRow(FunctionType ft, int32_t rawR
 
     VectorHelper::FreeVecBatch(yx);
     return vMerge;
+}
+
+inline double RegrUtMergeTwoPartialRows(FunctionType ft, VectorBatch *left, VectorBatch *right, int32_t partialCols)
+{
+    RegrAggregatorFactory fac(ft);
+    DataTypes inRaw({DoubleType(), DoubleType()});
+    std::vector<DataTypePtr> partialTypes(static_cast<size_t>(partialCols), DoubleType());
+    DataTypes outPart(partialTypes);
+    DataTypes inMerge(partialTypes);
+    DataTypes outF({DoubleType()});
+    std::vector<int32_t> chR = {0, 1};
+    std::vector<int32_t> chM;
+    for (int32_t i = 0; i < partialCols; ++i) {
+        chM.push_back(i);
+    }
+
+    auto partAgg = fac.CreateAggregator(inRaw, outPart, chR, true, true, false);
+    partAgg->SetStateOffset(0);
+    std::vector<uint8_t> leftState(partAgg->GetStateSize());
+    std::vector<uint8_t> rightState(partAgg->GetStateSize());
+    partAgg->InitState(leftState.data());
+    partAgg->InitState(rightState.data());
+    partAgg->ProcessGroup(leftState.data(), left, 0, left->GetRowCount());
+    partAgg->ProcessGroup(rightState.data(), right, 0, right->GetRowCount());
+
+    VectorBatch partialBatch(2);
+    std::vector<BaseVector *> partialVectors;
+    partialVectors.reserve(static_cast<size_t>(partialCols));
+    for (int32_t i = 0; i < partialCols; ++i) {
+        auto *v = new Vector<double>(2);
+        partialBatch.Append(v);
+        partialVectors.push_back(v);
+    }
+    partAgg->ExtractValues(leftState.data(), partialVectors, 0);
+    partAgg->ExtractValues(rightState.data(), partialVectors, 1);
+
+    auto mergeAgg = fac.CreateAggregator(inMerge, outF, chM, false, false, false);
+    mergeAgg->SetStateOffset(0);
+    std::vector<uint8_t> mergeState(mergeAgg->GetStateSize());
+    mergeAgg->InitState(mergeState.data());
+    mergeAgg->ProcessGroup(mergeState.data(), &partialBatch, 0, partialBatch.GetRowCount());
+    return RegrUtExtractFinalDouble(mergeAgg.get(), reinterpret_cast<const AggregateState *>(mergeState.data()));
 }
 
 } // namespace omniruntime::test
