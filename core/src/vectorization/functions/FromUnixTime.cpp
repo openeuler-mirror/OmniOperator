@@ -12,6 +12,7 @@
 #include "util/config/QueryConfig.h"
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <ctime>
 #include <cstring>
 #include <string>
@@ -19,6 +20,7 @@
 #include <cmath>
 #include <array>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 
 namespace omniruntime::vectorization {
@@ -36,8 +38,9 @@ static constexpr std::array<const char *, 7> SHORT_WEEKDAY_NAMES = {
     "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 static constexpr std::array<const char *, 7> FULL_WEEKDAY_NAMES = {
     "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+static constexpr int64_t MICROS_PER_SECOND = 1000000LL;
 
-std::string PadNumber(int value, size_t width)
+std::string PadNumber(int64_t value, size_t width)
 {
     std::ostringstream oss;
     oss << std::setw(static_cast<int>(width)) << std::setfill('0') << value;
@@ -47,6 +50,72 @@ std::string PadNumber(int value, size_t width)
 std::string FormatNumber(int value, size_t count)
 {
     return count >= 2 ? PadNumber(value, count) : std::to_string(value);
+}
+
+std::string FormatYear(int64_t year, size_t count)
+{
+    if (count == 2) {
+        return PadNumber((year % 100 + 100) % 100, 2);
+    }
+
+    size_t width = std::max<size_t>(4, count);
+    if (year < 0) {
+        return "-" + PadNumber(-year, width);
+    }
+
+    std::string yearString = PadNumber(year, width);
+    if (yearString.size() > width) {
+        return "+" + yearString;
+    }
+    return yearString;
+}
+
+int64_t WrapToSparkLong(__int128_t value)
+{
+    constexpr __int128_t UINT64_MODULUS =
+        static_cast<__int128_t>(std::numeric_limits<uint64_t>::max()) + 1;
+    constexpr __int128_t INT64_SIGN_BIT = static_cast<__int128_t>(1) << 63;
+
+    __int128_t wrapped = value % UINT64_MODULUS;
+    if (wrapped < 0) {
+        wrapped += UINT64_MODULUS;
+    }
+    if (wrapped >= INT64_SIGN_BIT) {
+        wrapped -= UINT64_MODULUS;
+    }
+    return static_cast<int64_t>(wrapped);
+}
+
+int64_t FloorDiv(int64_t dividend, int64_t divisor)
+{
+    int64_t quotient = dividend / divisor;
+    int64_t remainder = dividend % divisor;
+    if (remainder != 0 && ((remainder < 0) != (divisor < 0))) {
+        --quotient;
+    }
+    return quotient;
+}
+
+struct SparkTimestampParts {
+    int64_t seconds;
+    int32_t microsOfSecond;
+};
+
+SparkTimestampParts ConvertUnixSecondsToSparkTimestamp(int64_t unixSeconds)
+{
+    int64_t micros = WrapToSparkLong(static_cast<__int128_t>(unixSeconds) * MICROS_PER_SECOND);
+    int64_t seconds = FloorDiv(micros, MICROS_PER_SECOND);
+    return {seconds, static_cast<int32_t>(micros - seconds * MICROS_PER_SECOND)};
+}
+
+std::string FormatFraction(int32_t microsOfSecond, size_t count)
+{
+    std::string fraction = PadNumber(static_cast<int64_t>(microsOfSecond) * 1000, 9);
+    if (count <= fraction.size()) {
+        return fraction.substr(0, count);
+    }
+    fraction.append(count - fraction.size(), '0');
+    return fraction;
 }
 
 std::string ToUpperAscii(std::string value)
@@ -133,11 +202,12 @@ std::string FormatLocalizedOffset(int offsetSeconds, size_t count)
 
 std::string FormatPercentToken(char token, const struct tm &timeInfo, int offsetSeconds)
 {
+    const int64_t year = static_cast<int64_t>(timeInfo.tm_year) + 1900;
     switch (token) {
         case 'Y':
-            return PadNumber(timeInfo.tm_year + 1900, 4);
+            return FormatYear(year, 4);
         case 'y':
-            return PadNumber((timeInfo.tm_year + 1900) % 100, 2);
+            return FormatYear(year, 2);
         case 'm':
             return PadNumber(timeInfo.tm_mon + 1, 2);
         case 'd':
@@ -207,14 +277,16 @@ static std::string NormalizeTimeZone(const std::string &tzStr)
     return tzStr;
 }
 
-/// Format a timestamp (seconds since epoch) using Spark/Java datetime pattern tokens.
+/// Format from_unixtime input using Spark/Java datetime pattern tokens.
+/// Spark first converts seconds to microseconds with signed long overflow semantics.
 /// If timeZoneStr is non-empty, sets TZ env and uses localtime_r (local time).
 /// If timeZoneStr is empty, uses gmtime_r (UTC time).
 /// This matches the codegen layer's approach for consistency with Spark.
 std::string FormatTimestamp(int64_t secondsSinceEpoch, const std::string &sparkFormat,
     const std::string &timeZoneStr, const std::string &policy)
 {
-    time_t timeStampVal = static_cast<time_t>(secondsSinceEpoch);
+    SparkTimestampParts timestampParts = ConvertUnixSecondsToSparkTimestamp(secondsSinceEpoch);
+    time_t timeStampVal = static_cast<time_t>(timestampParts.seconds);
     struct tm ltm = {};
 
     if (!timeZoneStr.empty()) {
@@ -235,6 +307,7 @@ std::string FormatTimestamp(int64_t secondsSinceEpoch, const std::string &sparkF
     const int hour = ltm.tm_hour;
     const int month = ltm.tm_mon + 1;
     const int dayOfMonth = ltm.tm_mday;
+    const int64_t year = static_cast<int64_t>(ltm.tm_year) + 1900;
     const bool isLegacy = IsLegacyPolicy(policy);
 
     size_t i = 0;
@@ -271,8 +344,7 @@ std::string FormatTimestamp(int64_t secondsSinceEpoch, const std::string &sparkF
         switch (token) {
             case 'y':
             case 'Y':
-                result += count == 2 ? PadNumber((ltm.tm_year + 1900) % 100, 2) :
-                    PadNumber(ltm.tm_year + 1900, std::max<size_t>(4, count));
+                result += FormatYear(year, count);
                 break;
             case 'M':
                 if (count == 3) {
@@ -307,7 +379,7 @@ std::string FormatTimestamp(int64_t secondsSinceEpoch, const std::string &sparkF
                 result += FormatNumber(ltm.tm_sec, count);
                 break;
             case 'S':
-                result.append(count, '0');
+                result += FormatFraction(timestampParts.microsOfSecond, count);
                 break;
             case 'a':
                 result += hour < 12 ? "AM" : "PM";
