@@ -1520,6 +1520,10 @@ public:
                     static_cast<Vector<float>*>(outVector)->SetValue(rowIdx,
                         RowContainer::ReadValue<float>(row, offset));
                     break;
+                case type::OMNI_BOOLEAN:
+                    static_cast<Vector<bool>*>(outVector)->SetValue(rowIdx,
+                        RowContainer::ReadValue<int8_t>(row, offset) != 0);
+                    break;
                 case type::OMNI_DECIMAL128:
                     static_cast<Vector<Decimal128>*>(outVector)->SetValue(rowIdx,
                         RowContainer::ReadValue<Decimal128>(row, offset));
@@ -2382,6 +2386,9 @@ public:
             case OMNI_TIME64:
                 reinterpret_cast<Vector<int64_t> *>(vector)->SetValue(rowIdx, static_cast<int64_t>(value));
                 break;
+            case OMNI_BOOLEAN:
+                reinterpret_cast<Vector<bool> *>(vector)->SetValue(rowIdx, static_cast<bool>(value));
+                break;
             default:
                 break;
         }
@@ -2456,6 +2463,11 @@ public:
                     plan[i].flatLoader = &LoadBits<int64_t, false>;
                     plan[i].dictLoader = &LoadBits<int64_t, true>;
                     plan[i].constLoader = &LoadBitsConst<int64_t>;
+                    break;
+                case OMNI_BOOLEAN:
+                    plan[i].flatLoader = &LoadBits<int8_t, false>;
+                    plan[i].dictLoader = &LoadBits<int8_t, true>;
+                    plan[i].constLoader = &LoadBitsConst<int8_t>;
                     break;
                 default:
                     plan[i].flatLoader = nullptr;
