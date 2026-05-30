@@ -869,8 +869,30 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceNotNullKeyToArrayTab
     int32_t vecBatchCount = vecBatchesOnePartition.size();
     for (auto j = 0; j < vecBatchCount; j++) {
         auto vecBatch = vecBatchesOnePartition[j];
-        auto curVector = reinterpret_cast<Vector<T> *>(vecBatch->Get(buildHashCol));
+        auto baseVector = vecBatch->Get(buildHashCol);
         auto rowCount = vecBatch->GetRowCount();
+
+        if (baseVector->GetEncoding() == OMNI_ENCODING_CONST) {
+            if (baseVector->IsNull(0)) {
+                continue;
+            }
+            key = static_cast<ConstVector<T> *>(baseVector)->GetConstValue();
+            auto pos = static_cast<size_t>(key - min);
+            for (auto offset = 0; offset < rowCount; offset++) {
+                auto ret = hashTable->InsertJoinKeysToHashmap(pos);
+                if (ret.IsInsert()) {
+                    rowRef = reinterpret_cast<RowRefListType *>(arenaAllocator.Allocate(sizeOfRowRefList));
+                    *rowRef = RowRefListType(static_cast<uint32_t>(offset), static_cast<uint32_t>(j));
+                    ret.SetValue(rowRef);
+                } else {
+                    rowRef = ret.GetValue();
+                    rowRef->Insert({ static_cast<uint32_t>(offset), static_cast<uint32_t>(j) }, arenaAllocator);
+                }
+            }
+            continue;
+        }
+
+        auto curVector = reinterpret_cast<Vector<T> *>(baseVector);
         if (!curVector->HasNull()) {
             for (auto offset = 0; offset < rowCount; offset++) {
                 key = curVector->GetValue(offset);
