@@ -45,6 +45,10 @@ public:
         return vec;
     }
 
+    static BaseVector* CreateConstInt32Vector(int32_t value, int32_t size) {
+        return new ConstVector<int32_t>(value, OMNI_INT, size);
+    }
+
     static BaseVector* CreateDoubleVector(const std::vector<double>& values) {
         BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_DOUBLE, values.size());
         vec->SetIsField(true);
@@ -56,10 +60,14 @@ public:
         return vec;
     }
 
+    static BaseVector* CreateConstDecimal64Vector(int64_t value, int32_t size) {
+        return new ConstVector<int64_t>(value, OMNI_DECIMAL64, size);
+    }
+
     static void ExecuteMakeTimestamp(BaseVector* yearVec, BaseVector* monthVec, BaseVector* dayVec,
         BaseVector* hourVec, BaseVector* minVec, BaseVector* secVec, BaseVector*& result) {
         auto sig = std::make_shared<FunctionSignature>("make_timestamp",
-            std::vector<DataTypeId>{OMNI_INT, OMNI_INT, OMNI_INT, OMNI_INT, OMNI_INT, OMNI_DOUBLE},
+            std::vector<DataTypeId>{OMNI_INT, OMNI_INT, OMNI_INT, OMNI_INT, OMNI_INT, secVec->GetTypeId()},
             OMNI_TIMESTAMP);
         auto fn = VectorFunction::Find(sig);
         ASSERT_NE(fn, nullptr) << "make_timestamp function not found";
@@ -107,6 +115,32 @@ TEST(MakeTimestampTest, EpochTimestamp) {
     ASSERT_NE(resultVec, nullptr);
     EXPECT_FALSE(result->IsNull(0));
     EXPECT_EQ(resultVec->GetValue(0), 0) << "1970-01-01 00:00:00 should be 0 micros";
+
+    delete result;
+}
+
+TEST(MakeTimestampTest, ConstTimeArguments) {
+    std::vector<int32_t> years = {2021, 1};
+    std::vector<int32_t> months = {7, 13};
+    std::vector<int32_t> days = {11, 1};
+
+    BaseVector* y = MakeTimestampTestHelper::CreateInt32Vector(years);
+    BaseVector* mo = MakeTimestampTestHelper::CreateInt32Vector(months);
+    BaseVector* d = MakeTimestampTestHelper::CreateInt32Vector(days);
+    BaseVector* h = MakeTimestampTestHelper::CreateConstInt32Vector(17, 1);
+    BaseVector* mi = MakeTimestampTestHelper::CreateConstInt32Vector(56, 1);
+    BaseVector* s = MakeTimestampTestHelper::CreateConstDecimal64Vector(20LL * 1000000LL, 1);
+
+    BaseVector* result = nullptr;
+    MakeTimestampTestHelper::ExecuteMakeTimestamp(y, mo, d, h, mi, s, result);
+    ASSERT_NE(result, nullptr);
+
+    auto* resultVec = dynamic_cast<Vector<int64_t>*>(result);
+    ASSERT_NE(resultVec, nullptr);
+    int64_t exp = MakeTimestampTestHelper::ExpectedMicros(2021, 7, 11, 17, 56, 20.0);
+    EXPECT_FALSE(result->IsNull(0));
+    EXPECT_EQ(resultVec->GetValue(0), exp);
+    EXPECT_TRUE(result->IsNull(1));
 
     delete result;
 }

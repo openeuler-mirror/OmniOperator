@@ -357,6 +357,36 @@ TEST(FromUnixTimeTest, LargeTimestampValues) {
     delete resultVec;
 }
 
+// Test: Spark-compatible signed long overflow when seconds are converted to microseconds.
+TEST(FromUnixTimeTest, HugeUnixSecondsMatchesSparkOverflow) {
+    std::vector<int64_t> unixSeconds = {
+        -3229830308112475844LL,
+        2849223427288149722LL,
+        3313326846908992582LL,
+        -6310053917026126810LL,
+        7654871665388838779LL
+    };
+    std::vector<std::string> expected = {
+        "-262156-08-29",
+        "-166681-03-20",
+        "-110102-07-08",
+        "+172503-09-12",
+        "+250104-10-14"
+    };
+    std::vector<bool> expectNull = {false, false, false, false, false};
+
+    BaseVector* inputVec = FromUnixTimeTestHelper::CreateLongVector(unixSeconds);
+    BaseVector* formatVec = FromUnixTimeTestHelper::CreateConstStringVector(
+        "yyyy-MM-dd", unixSeconds.size());
+    BaseVector* tzVec = new ConstVector<std::string_view>(
+        std::string_view("Asia/Shanghai"), OMNI_VARCHAR, unixSeconds.size());
+    BaseVector* resultVec = nullptr;
+    FromUnixTimeTestHelper::ExecuteFromUnixTimeWithTz(inputVec, formatVec, tzVec, OMNI_LONG, resultVec);
+    FromUnixTimeTestHelper::ValidateResult(resultVec, expected, expectNull, unixSeconds.size());
+
+    delete resultVec;
+}
+
 // Test: OMNI_TIMESTAMP input type (equivalent to OMNI_LONG)
 TEST(FromUnixTimeTest, TimestampInputType) {
     std::vector<int64_t> unixSeconds = {0, 100};
