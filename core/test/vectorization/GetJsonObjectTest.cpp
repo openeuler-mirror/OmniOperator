@@ -313,4 +313,29 @@
      GetJsonObjectTestHelper::ValidateStringResult(result, 2, "5");
      delete result;
  }
+
+ // Bracket key whose name contains a space must preserve the space, matching native
+ // Spark get_json_object('{"misc":{"zip code":"10001"}}', "$.misc['zip code']") = "10001".
+ TEST(GetJsonObjectTest, BracketKeyWithSpace) {
+     std::vector<std::string> jsonInputs = {R"({"misc":{"zip code":"10001"}})"};
+     std::vector<std::string> pathInputs = {"$.misc['zip code']"};
+     BaseVector* jsonVec = GetJsonObjectTestHelper::CreateStringVector(jsonInputs);
+     BaseVector* pathVec = GetJsonObjectTestHelper::CreateStringVector(pathInputs);
+     BaseVector* result = nullptr;
+     GetJsonObjectTestHelper::ExecuteGetJsonObject(jsonVec, pathVec, result);
+     GetJsonObjectTestHelper::ValidateStringResult(result, 0, "10001");
+     delete result;
+ }
+
+ // Bracket key whose name contains a dot must be treated as a single key, not a path.
+ TEST(GetJsonObjectTest, BracketKeyWithDot) {
+     std::vector<std::string> jsonInputs = {R"({"misc":{"with.dot":"dotval"}})"};
+     std::vector<std::string> pathInputs = {"$.misc['with.dot']"};
+     BaseVector* jsonVec = GetJsonObjectTestHelper::CreateStringVector(jsonInputs);
+     BaseVector* pathVec = GetJsonObjectTestHelper::CreateStringVector(pathInputs);
+     BaseVector* result = nullptr;
+     GetJsonObjectTestHelper::ExecuteGetJsonObject(jsonVec, pathVec, result);
+     GetJsonObjectTestHelper::ValidateStringResult(result, 0, "dotval");
+     delete result;
+ }
  
