@@ -268,7 +268,7 @@ public:
         BaseVector* vector;
         int32_t typeId;
         int32_t offset;
-        uint8_t nullByte;
+        uint32_t nullByte;
         uint8_t nullMask;
         uint8_t isDictVarchar;
         uint8_t isConstVarchar;
@@ -334,7 +334,7 @@ public:
     /// TypeId and HasNull are compile-time constants → zero runtime branches in the hot loop.
     template <DataTypeId Kind, bool HasNull>
     int32_t GetUnequalsNumTyped(int32_t colIdx, int32_t count, int32_t offset,
-                                uint8_t nullByte, uint8_t nullMask,
+                                uint32_t nullByte, uint8_t nullMask,
                                 int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
         using T = typename NativeType<Kind>::type;
@@ -352,7 +352,7 @@ public:
     /// Varchar specialization for GetUnequalsNumTyped.
     template <bool HasNull>
     int32_t GetUnequalsNumVarcharTyped(int32_t colIdx, int32_t count, int32_t offset,
-                                       uint8_t nullByte, uint8_t nullMask,
+                                       uint32_t nullByte, uint8_t nullMask,
                                        int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
         return BatchCompareVarcharDecoded<HasNull>(decodedCols[colIdx], count, offset, nullByte, nullMask, indices, idxFrom, groups);
@@ -360,7 +360,7 @@ public:
 
     /// Templated dispatch for BatchStoreKeyColumn using DecodedVector.
     template <DataTypeId Kind, bool HasNull>
-    void BatchStoreKeyColumnTyped(int32_t colIdx, int32_t offset, uint8_t nullByte, uint8_t nullMask,
+    void BatchStoreKeyColumnTyped(int32_t colIdx, int32_t offset, uint32_t nullByte, uint8_t nullMask,
                                   uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
     {
         using T = typename NativeType<Kind>::type;
@@ -378,7 +378,7 @@ public:
 
     /// Varchar specialization for BatchStoreKeyColumnTyped.
     template <bool HasNull>
-    void BatchStoreKeyColumnVarcharTyped(int32_t colIdx, int32_t offset, uint8_t nullByte, uint8_t nullMask,
+    void BatchStoreKeyColumnVarcharTyped(int32_t colIdx, int32_t offset, uint32_t nullByte, uint8_t nullMask,
                                          uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
     {
         BatchStoreVarcharDecoded<HasNull>(decodedCols[colIdx], colIdx, offset, nullByte, nullMask, rows, rowIndices, rowCount);
@@ -773,7 +773,7 @@ public:
     /// Uses ARM SVE instructions for vectorized comparison on aarch64.
     template <typename T, bool HasNull>
     int32_t SveBatchCompareDecoded(const DecodedVector& decoded, int32_t count, int32_t offset,
-                                    uint8_t nullByte, uint8_t nullMask,
+                                    uint32_t nullByte, uint8_t nullMask,
                                     int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
         const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
@@ -953,7 +953,7 @@ public:
     /// Batch compare using DecodedVector — flat values accessed directly, no encoding switch.
     template <typename T, bool HasNull, bool isDic = false>
     int32_t BatchCompareDecoded(const DecodedVector& decoded, int32_t count, int32_t offset,
-                                uint8_t nullByte, uint8_t nullMask,
+                                uint32_t nullByte, uint8_t nullMask,
                                 int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
 #ifdef __ARM_FEATURE_SVE
@@ -1017,7 +1017,7 @@ public:
     /// Specialization for Constant layout — compare against single broadcast value.
     template <typename T, bool HasNull>
     int32_t BatchCompareDecodedConst(const DecodedVector& decoded, int32_t count, int32_t offset,
-                                     uint8_t nullByte, uint8_t nullMask,
+                                     uint32_t nullByte, uint8_t nullMask,
                                      int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
         T constVal = decoded.GetConstValue<T>();
@@ -1196,7 +1196,7 @@ public:
     /// Batch compare for VARCHAR using DecodedVector — encoding resolved at decode time.
     template <bool HasNull>
     int32_t BatchCompareVarcharDecoded(const DecodedVector& decoded, int32_t count, int32_t offset,
-                                       uint8_t nullByte, uint8_t nullMask,
+                                       uint32_t nullByte, uint8_t nullMask,
                                        int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
         auto layout = decoded.GetLayout();
@@ -1295,7 +1295,7 @@ public:
 
     /// Batch store using DecodedVector — flat values accessed directly, no encoding switch.
     template <typename T, bool HasNull, bool isDic = false>
-    void BatchStoreDecoded(const DecodedVector& decoded, int32_t offset, uint8_t nullByte, uint8_t nullMask,
+    void BatchStoreDecoded(const DecodedVector& decoded, int32_t offset, uint32_t nullByte, uint8_t nullMask,
                            uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
     {
         const uint64_t* rawNulls = reinterpret_cast<const uint64_t*>(decoded.Nulls());
@@ -1330,7 +1330,7 @@ public:
 
     /// Specialization for Constant layout — store single broadcast value.
     template <typename T, bool HasNull>
-    void BatchStoreDecodedConst(const DecodedVector& decoded, int32_t offset, uint8_t nullByte, uint8_t nullMask,
+    void BatchStoreDecodedConst(const DecodedVector& decoded, int32_t offset, uint32_t nullByte, uint8_t nullMask,
                                 uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
     {
         T constVal = decoded.GetConstValue<T>();
@@ -1359,7 +1359,7 @@ public:
     /// Batch store for VARCHAR using DecodedVector.
     template <bool HasNull>
     void BatchStoreVarcharDecoded(const DecodedVector& decoded, int32_t colIdx, int32_t offset,
-                                  uint8_t nullByte, uint8_t nullMask,
+                                  uint32_t nullByte, uint8_t nullMask,
                                   uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
     {
         auto& curFunc = serializers[colIdx];
