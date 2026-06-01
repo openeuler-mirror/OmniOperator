@@ -1623,7 +1623,7 @@ public:
         tblVisitor.SavePos([&](auto ptr, auto tagPos) {
             outputState.rowBegin = reinterpret_cast<char*>(ptr);
             outputState.rowOffset = tagPos;
-            outputState.hasBeenOutputNum += rowsNum;
+            outputState.hasBeenOutputNum += idx;
         });
     }
 
