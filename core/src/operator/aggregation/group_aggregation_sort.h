@@ -124,11 +124,9 @@ private:
 
     static ALWAYS_INLINE bool HashKeyCompare(const omniruntime::op::KeyValue &a, omniruntime::op::KeyValue &b)
     {
-        if (a.keyLen == b.keyLen) {
-            return memcmp(a.keyAddr, b.keyAddr, std::min(a.keyLen, b.keyLen)) < 0;
-        } else {
-            return a.keyLen < b.keyLen;
-        }
+        int cmp = memcmp(a.keyAddr, b.keyAddr, std::min(a.keyLen, b.keyLen));
+        if (cmp != 0) return cmp < 0;
+        return a.keyLen < b.keyLen;
     }
 };
 }
