@@ -159,6 +159,39 @@ TEST(ToJsonTest, RowStructWithFieldNames) {
     delete result;
 }
 
+// Spark to_json (ignoreNullFields=true default) omits struct fields whose value is null.
+TEST(ToJsonTest, RowStructOmitsNullFields) {
+    std::vector<std::vector<int32_t>> intVals = {{1}, {99}};
+    BaseVector* rowVec = ToJsonTestHelper::CreateRowVector(1, {OMNI_INT, OMNI_INT}, intVals);
+    dynamic_cast<RowVector*>(rowVec)->ChildAt(0)->SetNull(0);  // field "a" is null
+    std::vector<std::shared_ptr<DataType>> fieldTypes = {
+        std::make_shared<DataType>(OMNI_INT), std::make_shared<DataType>(OMNI_INT)};
+    std::vector<std::string> fieldNames = {"a", "b"};
+    auto rowType = std::make_shared<RowType>(fieldTypes, fieldNames);
+    BaseVector* result = nullptr;
+    ToJsonTestHelper::ExecuteToJsonWithType(rowVec, OMNI_ROW, rowType.get(), result);
+    ToJsonTestHelper::ValidateStringResult(result, 0, R"({"b":99})");
+    delete rowVec;
+    delete result;
+}
+
+// All struct fields null -> empty JSON object.
+TEST(ToJsonTest, RowStructAllNullFields) {
+    std::vector<std::vector<int32_t>> intVals = {{1}, {2}};
+    BaseVector* rowVec = ToJsonTestHelper::CreateRowVector(1, {OMNI_INT, OMNI_INT}, intVals);
+    dynamic_cast<RowVector*>(rowVec)->ChildAt(0)->SetNull(0);
+    dynamic_cast<RowVector*>(rowVec)->ChildAt(1)->SetNull(0);
+    std::vector<std::shared_ptr<DataType>> fieldTypes = {
+        std::make_shared<DataType>(OMNI_INT), std::make_shared<DataType>(OMNI_INT)};
+    std::vector<std::string> fieldNames = {"a", "b"};
+    auto rowType = std::make_shared<RowType>(fieldTypes, fieldNames);
+    BaseVector* result = nullptr;
+    ToJsonTestHelper::ExecuteToJsonWithType(rowVec, OMNI_ROW, rowType.get(), result);
+    ToJsonTestHelper::ValidateStringResult(result, 0, "{}");
+    delete rowVec;
+    delete result;
+}
+
 TEST(ToJsonTest, Array) {
     std::vector<std::vector<int64_t>> arrayData = {{1, 2, 3}, {10, 20}};
     BaseVector* arrVec = ToJsonTestHelper::CreateArrayVector(2, arrayData);

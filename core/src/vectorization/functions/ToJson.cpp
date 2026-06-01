@@ -180,19 +180,23 @@ void ToJsonFunction::appendRowToJson(RowVector *rowVec, int32_t row, const RowTy
     int32_t childCount = rowVec->ChildSize();
     // Use real struct field names when the RowType carries them; otherwise fall back to field{i}.
     bool hasNames = (rowType != nullptr) && (rowType->names().size() >= static_cast<size_t>(childCount));
+    bool firstEmitted = false;
     for (int32_t i = 0; i < childCount; ++i) {
-        if (i > 0) out.push_back(',');
+        BaseVector *childVec = rowVec->ChildAt(i).get();
+        // Spark to_json defaults to ignoreNullFields=true: a struct field whose value is null
+        // is omitted from the output (recursively for nested structs). Note this applies only
+        // to struct fields; null map values and null array elements are still emitted as null.
+        if (childVec->IsNull(row)) {
+            continue;
+        }
+        if (firstEmitted) out.push_back(',');
+        firstEmitted = true;
         std::string fieldName = hasNames ? rowType->nameOf(i) : ("field" + std::to_string(i));
         out.push_back('"');
         escapeJsonString(std::string_view(fieldName), out);
         out.append("\":");
-        BaseVector *childVec = rowVec->ChildAt(i).get();
         const DataType *childType = (rowType != nullptr) ? rowType->childAt(i).get() : nullptr;
-        if (childVec->IsNull(row)) {
-            out.append("null");
-        } else {
-            appendToJson(childVec, row, childType, out);
-        }
+        appendToJson(childVec, row, childType, out);
     }
     out.push_back('}');
 }
