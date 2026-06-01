@@ -87,6 +87,31 @@ static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(omniruntime::vec::Ba
     }
 }
 
+static ALWAYS_INLINE bool FloatValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector,
+    uint32_t leftIndex, omniruntime::vec::BaseVector *rightVector, uint32_t rightIndex)
+{
+    using DictionaryVector = Vector<DictionaryContainer<float>>;
+    using FlatVector = Vector<float>;
+    float leftValue;
+    float rightValue;
+    if (leftVector->GetEncoding() == OMNI_DICTIONARY) {
+        leftValue = static_cast<DictionaryVector *>(leftVector)->GetValue(leftIndex);
+    } else {
+        leftValue = static_cast<FlatVector *>(leftVector)->GetValue(leftIndex);
+    }
+    if (rightVector->GetEncoding() == OMNI_DICTIONARY) {
+        rightValue = static_cast<DictionaryVector *>(rightVector)->GetValue(rightIndex);
+    } else {
+        rightValue = static_cast<FlatVector *>(rightVector)->GetValue(rightIndex);
+    }
+
+    if (std::abs(leftValue - rightValue) < __FLT_EPSILON__) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector,
     uint32_t leftIndex, omniruntime::vec::BaseVector *rightVector, uint32_t rightIndex)
 {
@@ -131,12 +156,15 @@ bool ValueEqualsValueIgnoreNulls(int32_t dataType, BaseVector *leftVector, uint3
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             return ValueEqualsValueIgnoreNulls<int64_t>(leftVector, leftRowIndex, rightVector, rightRowIndex);
+        case OMNI_FLOAT:
+            return FloatValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_DOUBLE:
             return DoubleValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_BOOLEAN:
             return ValueEqualsValueIgnoreNulls<bool>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_VARCHAR:
         case OMNI_CHAR:
+        case OMNI_VARBINARY:
             return VarcharValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_DECIMAL128:
             return ValueEqualsValueIgnoreNulls<Decimal128>(leftVector, leftRowIndex, rightVector, rightRowIndex);
