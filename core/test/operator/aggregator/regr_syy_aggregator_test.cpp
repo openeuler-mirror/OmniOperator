@@ -95,6 +95,18 @@ TEST(RegrSyyAggregatorTest, MergePartialEqualsRaw)
     EXPECT_DOUBLE_EQ(raw, merged);
 }
 
+TEST(RegrSyyAggregatorTest, IdenticalLargeInputMatchesRegrSxyAfterMerge)
+{
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
+    auto *left = MakeRegrYxIdenticalLargeSlice(0, 3);
+    auto *right = MakeRegrYxIdenticalLargeSlice(3, 3);
+    double syy = RegrUtMergeTwoPartialRows(OMNI_AGGREGATION_TYPE_REGR_SYY, left, right, 3);
+    double sxy = RegrUtMergeTwoPartialRows(OMNI_AGGREGATION_TYPE_REGR_SXY, left, right, 4);
+    EXPECT_DOUBLE_EQ(syy, sxy);
+    VectorHelper::FreeVecBatch(left);
+    VectorHelper::FreeVecBatch(right);
+}
+
 TEST(RegrSyyAggregatorTest, AlignAggSchemaEmpty)
 {
     DataTypes inD({DoubleType(), DoubleType()});

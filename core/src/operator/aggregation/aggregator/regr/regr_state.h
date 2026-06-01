@@ -77,10 +77,9 @@ inline void RegrReplacementMerge(int64_t &n, double &avg, double &m2,
     }
     int64_t newN = n + nOther;
     double delta = avgOther - avg;
-    double avgOld = avg;
-    avg += delta * static_cast<double>(nOther) / static_cast<double>(newN);
-    double k = static_cast<double>(n) * static_cast<double>(nOther) / static_cast<double>(newN);
-    m2 += m2Other + k * std::pow(avgOld - avgOther, 2);
+    double deltaN = delta / static_cast<double>(newN);
+    avg += deltaN * static_cast<double>(nOther);
+    m2 = m2 + m2Other + delta * deltaN * static_cast<double>(n) * static_cast<double>(nOther);
     n = newN;
 }
 
@@ -167,10 +166,9 @@ inline void RegrVarPopMerge(double &n1, double &avg1, double &m2_1, double n2, d
     }
     double newN = n1 + n2;
     double delta = avg2 - avg1;
-    double avgOld = avg1;
-    avg1 += delta * n2 / newN;
-    double k = n1 * n2 / newN;
-    m2_1 += m2_2 + k * std::pow(avgOld - avg2, 2);
+    double deltaN = newN == 0.0 ? 0.0 : delta / newN;
+    avg1 += deltaN * n2;
+    m2_1 = m2_1 + m2_2 + delta * deltaN * n1 * n2;
     n1 = newN;
 }
 
@@ -184,13 +182,58 @@ inline void RegrVarPopUpdate(double &n, double &avg, double &m2, double x)
     avg = newAvg;
 }
 
+inline void RegrSlopeInterceptUpdate(RegrSlopeInterceptState *acc, double x, double y)
+{
+    double newN = acc->covN + 1.0;
+    double dx = x - acc->covXAvg;
+    double dy = y - acc->covYAvg;
+    double dxN = dx / newN;
+    double dyN = dy / newN;
+    double newXAvg = acc->covXAvg + dxN;
+    double newYAvg = acc->covYAvg + dyN;
+
+    acc->covCk += dx * (y - newYAvg);
+    acc->varM2X += dx * (x - newXAvg);
+    acc->covN = newN;
+    acc->covXAvg = newXAvg;
+    acc->covYAvg = newYAvg;
+    acc->varN = newN;
+    acc->varAvgX = newXAvg;
+}
+
 inline void RegrSlopeInterceptMergePartial(RegrSlopeInterceptState *acc, double inCovN, double inCovX, double inCovY,
     double inCk, double inVarN, double inVarAvgX, double inVarM2)
 {
     if (inCovN == 0.0)
         return;
-    SparkCovarianceMerge(acc->covN, acc->covXAvg, acc->covYAvg, acc->covCk, inCovN, inCovX, inCovY, inCk);
-    RegrVarPopMerge(acc->varN, acc->varAvgX, acc->varM2X, inVarN, inVarAvgX, inVarM2);
+    if (acc->covN == 0.0) {
+        acc->covN = inCovN;
+        acc->covXAvg = inCovX;
+        acc->covYAvg = inCovY;
+        acc->covCk = inCk;
+        acc->varN = inVarN;
+        acc->varAvgX = inVarAvgX;
+        acc->varM2X = inVarM2;
+        return;
+    }
+
+    double n1 = acc->covN;
+    double n2 = inCovN;
+    double newN = n1 + n2;
+    double dx = inCovX - acc->covXAvg;
+    double dy = inCovY - acc->covYAvg;
+    double dxN = newN == 0.0 ? 0.0 : dx / newN;
+    double dyN = newN == 0.0 ? 0.0 : dy / newN;
+    double newXAvg = acc->covXAvg + dxN * n2;
+    double newYAvg = acc->covYAvg + dyN * n2;
+
+    acc->covCk = acc->covCk + inCk + dx * dyN * n1 * n2;
+    acc->varM2X = acc->varM2X + inVarM2 + dx * dxN * n1 * n2;
+    acc->covN = newN;
+    acc->covXAvg = newXAvg;
+    acc->covYAvg = newYAvg;
+    acc->varN = newN;
+    acc->varAvgX = newXAvg;
 }
 
 } // namespace omniruntime::op

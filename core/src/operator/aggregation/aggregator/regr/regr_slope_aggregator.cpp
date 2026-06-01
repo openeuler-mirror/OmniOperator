@@ -17,8 +17,7 @@ using omniruntime::op::AggregateState;
 using omniruntime::op::RegrGetDoubleAt;
 using omniruntime::op::RegrSlopeInterceptMergePartial;
 using omniruntime::op::RegrSlopeInterceptState;
-using omniruntime::op::SparkCovarianceUpdate;
-using omniruntime::op::RegrVarPopUpdate;
+using omniruntime::op::RegrSlopeInterceptUpdate;
 using omniruntime::vec::BaseVector;
 using omniruntime::vec::Vector;
 using omniruntime::vec::VectorBatch;
@@ -51,8 +50,7 @@ static void AccumulateRawFullPair(RegrSlopeInterceptState *acc, BaseVector *yVec
             continue;
         double y = RegrGetDoubleAt(yVec, i + rowOffset);
         double x = RegrGetDoubleAt(xVec, i + rowOffset);
-        SparkCovarianceUpdate(acc->covN, acc->covXAvg, acc->covYAvg, acc->covCk, x, y);
-        RegrVarPopUpdate(acc->varN, acc->varAvgX, acc->varM2X, x);
+        RegrSlopeInterceptUpdate(acc, x, y);
     }
 }
 
@@ -86,8 +84,7 @@ static void AccumulateGroupRawFullPair(std::vector<AggregateState *> &rowStates,
         RegrSlopeInterceptState *acc = reinterpret_cast<RegrSlopeInterceptState *>(rowStates[i] + aggStateOffset);
         double y = RegrGetDoubleAt(yVec, row);
         double x = RegrGetDoubleAt(xVec, row);
-        SparkCovarianceUpdate(acc->covN, acc->covXAvg, acc->covYAvg, acc->covCk, x, y);
-        RegrVarPopUpdate(acc->varN, acc->varAvgX, acc->varM2X, x);
+        RegrSlopeInterceptUpdate(acc, x, y);
     }
 }
 
