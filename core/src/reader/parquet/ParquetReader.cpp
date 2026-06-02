@@ -106,6 +106,66 @@ bool ContainField(const SchemaField &field, std::shared_ptr<std::unordered_set<i
         return false;
     }
 }
+
+void CollectLeafColumnIndices(const SchemaField& field, std::vector<int>& out)
+{
+    if (field.column_index != -1) {
+        out.push_back(field.column_index);
+        return;
+    }
+    for (const auto& child : field.children) {
+        CollectLeafColumnIndices(child, out);
+    }
+}
+
+bool TryCollectColumnIndicesByFieldPath(
+    const SchemaField& field,
+    const std::vector<std::string>& path,
+    size_t pathIndex,
+    std::vector<int>& out)
+{
+    if (field.field == nullptr || pathIndex >= path.size() || field.field->name() != path[pathIndex]) {
+        return false;
+    }
+    if (pathIndex + 1 == path.size()) {
+        CollectLeafColumnIndices(field, out);
+        return !out.empty();
+    }
+    for (const auto& child : field.children) {
+        if (TryCollectColumnIndicesByFieldPath(child, path, pathIndex + 1, out)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TryCollectColumnIndicesFromComplexField(
+    const std::vector<SchemaField>& schemaFields,
+    const std::string& fieldName,
+    std::vector<int>& out)
+{
+    std::vector<std::string> path;
+    size_t start = 0;
+    while (start <= fieldName.size()) {
+        size_t dot = fieldName.find('.', start);
+        path.push_back(fieldName.substr(start, dot == std::string::npos ? dot : dot - start));
+        if (dot == std::string::npos) {
+            break;
+        }
+        start = dot + 1;
+    }
+
+    if (path.empty()) {
+        return false;
+    }
+
+    for (const auto& field : schemaFields) {
+        if (TryCollectColumnIndicesByFieldPath(field, path, 0, out)) {
+            return true;
+        }
+    }
+    return false;
+}
 }
 
 ParquetRowReader::ParquetRowReader(ParquetReader &parquetReader) : parquetReader_(parquetReader) {
@@ -273,19 +333,32 @@ Status ParquetReader::GetRowGroupIndices(dataset::FileSource filesource, int64_t
 Status ParquetReader::GetColumnIndices(const std::vector<std::string>& fieldNames, std::vector<int> &out)
 {
     auto schema = arrow_reader->parquet_reader()->metadata()->schema();
+    const auto& schemaFields = arrow_reader->manifest().schema_fields;
+    auto appendColumnIndex = [&out](int index) {
+        if (std::find(out.begin(), out.end(), index) == out.end()) {
+            out.push_back(index);
+        }
+    };
 
     int index = 0;
     for (const auto& fieldName : fieldNames) {
         if ((index = schema->ColumnIndex(fieldName)) != -1) {
-            out.push_back(index);
+            appendColumnIndex(index);
         } else if ((index = schema->ColumnIndex(fieldName + SPARK_LIST_FIELD_SUFFIX)) != -1 ||
             (index = schema->ColumnIndex(fieldName + HIVE_LIST_FIELD_SUFFIX)) != -1) {
-            out.push_back(index);
+            appendColumnIndex(index);
         } else if ((index = schema->ColumnIndex(fieldName + SPARK_MAP_FIELD_SUFFIX)) != -1 ||
             (index = schema->ColumnIndex(fieldName + HIVE_MAP_FIELD_SUFFIX)) != -1) {
-            out.push_back(index);
-            out.push_back(index + 1);
+            appendColumnIndex(index);
+            appendColumnIndex(index + 1);
         } else {
+            std::vector<int> nestedIndices;
+            if (TryCollectColumnIndicesFromComplexField(schemaFields, fieldName, nestedIndices)) {
+                for (int nestedIndex : nestedIndices) {
+                    appendColumnIndex(nestedIndex);
+                }
+                continue;
+            }
             return Status::Invalid("Field not found in schema: " + fieldName);
         }
     }
