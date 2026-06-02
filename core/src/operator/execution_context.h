@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2026. All rights reserved.
  */
 #ifndef EXECUTION_CONTEXT_H
 #define EXECUTION_CONTEXT_H
@@ -16,6 +16,9 @@
 namespace omniruntime {
 namespace expressions {
 class LambdaExpr;
+}
+namespace type {
+class DataType;
 }
 
 namespace op {
@@ -317,6 +320,12 @@ public:
         ExecutionContext::inputParamsNUms = inputParamsNUms;
     }
 
+    // Input argument DataType (with struct field names) for to_json. The vectorized
+    // function interface only receives the output type, so the caller stashes the
+    // input type here so ToJson can emit real struct field names instead of field{i}.
+    void SetToJsonInputType(const type::DataType *type) { toJsonInputType_ = type; }
+    const type::DataType *GetToJsonInputType() const { return toJsonInputType_; }
+
 private:
     bool *isSelectRow;
     int32_t resultRowSize;
@@ -326,6 +335,7 @@ private:
     const omniruntime::expressions::LambdaExpr *currentLambda_ = nullptr;
     config::QueryConfig queryConfig_;
     int32_t inputParamsNUms = 0;
+    const type::DataType *toJsonInputType_ = nullptr;
 
     // True if nulls in the input vectors were pruned (removed from the current
     // selectivity vector). Only possible is all expressions have default null

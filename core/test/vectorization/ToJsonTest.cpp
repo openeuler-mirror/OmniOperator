@@ -107,6 +107,21 @@ public:
         ASSERT_NO_THROW(fn->Apply(args, outputType, result, &ctx));
     }
 
+    static void ExecuteToJsonWithType(BaseVector* inputVec, DataTypeId inputType,
+        const DataType* inputDataType, BaseVector*& result) {
+        std::vector<DataTypeId> inputTypeIds = {inputType};
+        auto sig = std::make_shared<FunctionSignature>("to_json", inputTypeIds, OMNI_VARCHAR);
+        auto fn = VectorFunction::Find(sig);
+        ASSERT_NE(fn, nullptr);
+        auto outputType = std::make_shared<DataType>(OMNI_VARCHAR);
+        ExecutionContext ctx;
+        ctx.SetResultRowSize(inputVec->GetSize());
+        ctx.SetToJsonInputType(inputDataType);
+        std::stack<BaseVector*> args;
+        args.push(inputVec);
+        ASSERT_NO_THROW(fn->Apply(args, outputType, result, &ctx));
+    }
+
     static void ValidateStringResult(BaseVector* result, int row, const std::string& expected) {
         auto* strVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(result);
         ASSERT_NE(strVec, nullptr);
@@ -123,6 +138,56 @@ TEST(ToJsonTest, RowStruct) {
     ToJsonTestHelper::ExecuteToJson(rowVec, OMNI_ROW, result);
     ToJsonTestHelper::ValidateStringResult(result, 0, R"({"field0":1,"field1":10})");
     ToJsonTestHelper::ValidateStringResult(result, 1, R"({"field0":2,"field1":20})");
+    delete rowVec;
+    delete result;
+}
+
+// When the input RowType carries field names, to_json must emit them (not field0/field1),
+// matching native Spark: to_json(struct<name,age>) -> {"name":..,"age":..}.
+TEST(ToJsonTest, RowStructWithFieldNames) {
+    std::vector<std::vector<int32_t>> intVals = {{1, 2}, {10, 20}};
+    BaseVector* rowVec = ToJsonTestHelper::CreateRowVector(2, {OMNI_INT, OMNI_INT}, intVals);
+    std::vector<std::shared_ptr<DataType>> fieldTypes = {
+        std::make_shared<DataType>(OMNI_INT), std::make_shared<DataType>(OMNI_INT)};
+    std::vector<std::string> fieldNames = {"name", "age"};
+    auto rowType = std::make_shared<RowType>(fieldTypes, fieldNames);
+    BaseVector* result = nullptr;
+    ToJsonTestHelper::ExecuteToJsonWithType(rowVec, OMNI_ROW, rowType.get(), result);
+    ToJsonTestHelper::ValidateStringResult(result, 0, R"({"name":1,"age":10})");
+    ToJsonTestHelper::ValidateStringResult(result, 1, R"({"name":2,"age":20})");
+    delete rowVec;
+    delete result;
+}
+
+// Spark to_json (ignoreNullFields=true default) omits struct fields whose value is null.
+TEST(ToJsonTest, RowStructOmitsNullFields) {
+    std::vector<std::vector<int32_t>> intVals = {{1}, {99}};
+    BaseVector* rowVec = ToJsonTestHelper::CreateRowVector(1, {OMNI_INT, OMNI_INT}, intVals);
+    dynamic_cast<RowVector*>(rowVec)->ChildAt(0)->SetNull(0);  // field "a" is null
+    std::vector<std::shared_ptr<DataType>> fieldTypes = {
+        std::make_shared<DataType>(OMNI_INT), std::make_shared<DataType>(OMNI_INT)};
+    std::vector<std::string> fieldNames = {"a", "b"};
+    auto rowType = std::make_shared<RowType>(fieldTypes, fieldNames);
+    BaseVector* result = nullptr;
+    ToJsonTestHelper::ExecuteToJsonWithType(rowVec, OMNI_ROW, rowType.get(), result);
+    ToJsonTestHelper::ValidateStringResult(result, 0, R"({"b":99})");
+    delete rowVec;
+    delete result;
+}
+
+// All struct fields null -> empty JSON object.
+TEST(ToJsonTest, RowStructAllNullFields) {
+    std::vector<std::vector<int32_t>> intVals = {{1}, {2}};
+    BaseVector* rowVec = ToJsonTestHelper::CreateRowVector(1, {OMNI_INT, OMNI_INT}, intVals);
+    dynamic_cast<RowVector*>(rowVec)->ChildAt(0)->SetNull(0);
+    dynamic_cast<RowVector*>(rowVec)->ChildAt(1)->SetNull(0);
+    std::vector<std::shared_ptr<DataType>> fieldTypes = {
+        std::make_shared<DataType>(OMNI_INT), std::make_shared<DataType>(OMNI_INT)};
+    std::vector<std::string> fieldNames = {"a", "b"};
+    auto rowType = std::make_shared<RowType>(fieldTypes, fieldNames);
+    BaseVector* result = nullptr;
+    ToJsonTestHelper::ExecuteToJsonWithType(rowVec, OMNI_ROW, rowType.get(), result);
+    ToJsonTestHelper::ValidateStringResult(result, 0, "{}");
     delete rowVec;
     delete result;
 }

@@ -97,9 +97,21 @@ void FromJsonFunction::ParseJsonToRow(const std::string_view &jsonStr, const Row
     rapidjson::Document doc;
     doc.Parse<rapidjson::kParseNoFlags>(jsonStr.data(), jsonStr.size());
 
+    // Empty or whitespace-only input contains no JSON token. Spark's from_json returns a
+    // NULL row (whole struct null) for such input, not a row of null fields. rapidjson
+    // reports kParseErrorDocumentEmpty for "" and whitespace-only strings.
+    if (doc.HasParseError() && doc.GetParseError() == rapidjson::kParseErrorDocumentEmpty) {
+        resultVec->SetNull(row);
+        for (size_t i = 0; i < rowType.Size(); ++i) {
+            BaseVector *childVec = resultVec->ChildAt(i).get();
+            childVec->SetNull(row);
+        }
+        return;
+    }
+
     if (doc.HasParseError() || !doc.IsObject()) {
-        // Invalid JSON or not an object, set all fields to null but keep row not null
-        // This matches Spark SQL behavior: returns a row with null fields instead of NULL
+        // Non-empty but malformed JSON or not an object: set all fields to null but keep the
+        // row not null. This matches Spark SQL PERMISSIVE behavior (row with null fields).
         resultVec->SetNotNull(row);
         for (size_t i = 0; i < rowType.Size(); ++i) {
             BaseVector *childVec = resultVec->ChildAt(i).get();

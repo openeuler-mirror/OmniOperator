@@ -192,6 +192,29 @@ TEST(FromJsonTest, InvalidJsonString) {
     delete result;
 }
 
+TEST(FromJsonTest, EmptyStringInputReturnsNullRow) {
+    // Empty input string contains no JSON token; Spark's from_json returns a NULL row
+    // (whole struct null), not a row of null fields.
+    std::vector<std::string> inputs = {""};
+    BaseVector* inputVec = FromJsonTestHelper::CreateStringVector(inputs);
+    DataTypePtr outputType = FromJsonTestHelper::CreateRowTypeWithStringField("a");
+    BaseVector* result = nullptr;
+    FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
+    FromJsonTestHelper::ValidateNullResult(result, 0);
+    delete result;
+}
+
+TEST(FromJsonTest, WhitespaceOnlyInputReturnsNullRow) {
+    // Whitespace-only input also has no JSON token -> NULL row, matching Spark.
+    std::vector<std::string> inputs = {"   "};
+    BaseVector* inputVec = FromJsonTestHelper::CreateStringVector(inputs);
+    DataTypePtr outputType = FromJsonTestHelper::CreateRowTypeWithStringField("a");
+    BaseVector* result = nullptr;
+    FromJsonTestHelper::ExecuteFromJson(inputVec, outputType, result);
+    FromJsonTestHelper::ValidateNullResult(result, 0);
+    delete result;
+}
+
 TEST(FromJsonTest, NullInput) {
     std::vector<std::string> inputs = {R"({"a": "hello"})"};
     BaseVector* inputVec = FromJsonTestHelper::CreateStringVector(inputs);
