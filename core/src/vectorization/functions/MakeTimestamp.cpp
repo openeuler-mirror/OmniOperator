@@ -71,6 +71,60 @@ inline bool fromTime(int32_t hour, int32_t minute, double second, int64_t &micro
     microsOut = total;
     return true;
 }
+
+template <typename T>
+T getPrimitiveValue(BaseVector *vec, vector_size_t row)
+{
+    switch (vec->GetEncoding()) {
+        case OMNI_ENCODING_CONST:
+            return static_cast<ConstVector<T> *>(vec)->GetConstValue();
+        case OMNI_DICTIONARY:
+            return static_cast<Vector<DictionaryContainer<T>> *>(vec)->GetValue(row);
+        case OMNI_FLAT:
+            return static_cast<Vector<T> *>(vec)->GetValue(row);
+        default:
+            OMNI_THROW("MakeTimestampFunction Error", "Unsupported argument vector encoding");
+    }
+}
+
+bool isNullAt(BaseVector *vec, vector_size_t row)
+{
+    return vec->IsNull(vec->GetEncoding() == OMNI_ENCODING_CONST ? 0 : row);
+}
+
+int32_t getIntValue(BaseVector *vec, vector_size_t row)
+{
+    switch (vec->GetTypeId()) {
+        case OMNI_INT:
+            return getPrimitiveValue<int32_t>(vec, row);
+        case OMNI_SHORT:
+            return static_cast<int32_t>(getPrimitiveValue<int16_t>(vec, row));
+        case OMNI_BYTE:
+            return static_cast<int32_t>(getPrimitiveValue<int8_t>(vec, row));
+        default:
+            OMNI_THROW("MakeTimestampFunction Error", "Expected integer argument");
+    }
+}
+
+double getSecondValue(BaseVector *vec, vector_size_t row)
+{
+    switch (vec->GetTypeId()) {
+        case OMNI_DECIMAL64:
+            return static_cast<double>(getPrimitiveValue<int64_t>(vec, row)) / static_cast<double>(kMicrosPerSec);
+        case OMNI_DOUBLE:
+            return getPrimitiveValue<double>(vec, row);
+        case OMNI_FLOAT:
+            return static_cast<double>(getPrimitiveValue<float>(vec, row));
+        case OMNI_INT:
+            return static_cast<double>(getPrimitiveValue<int32_t>(vec, row));
+        case OMNI_SHORT:
+            return static_cast<double>(getPrimitiveValue<int16_t>(vec, row));
+        case OMNI_BYTE:
+            return static_cast<double>(getPrimitiveValue<int8_t>(vec, row));
+        default:
+            OMNI_THROW("MakeTimestampFunction Error", "Expected numeric seconds argument");
+    }
+}
 } // namespace
 
 namespace {
@@ -83,8 +137,7 @@ public:
             OMNI_THROW("MakeTimestampFunction Error",
                 "make_timestamp requires 6 arguments: year, month, day, hour, min, sec");
         }
-        // Create result first (using size from stack top) so result does not reuse an arg's memory
-        const auto size = args.top()->GetSize();
+        const auto size = context->GetResultRowSize();
         if (result == nullptr) {
             result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
         }
@@ -103,50 +156,26 @@ public:
         BaseVector *yearVec = args.top();
         args.pop();
 
-        const DataTypeId secTypeId = secVec->GetTypeId();
-        const bool secIsDecimal = (secTypeId == OMNI_DECIMAL64);
-
         auto *resultRaw = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(result));
-        auto *yearRaw = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int32_t> *>(yearVec));
-        auto *monthRaw = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int32_t> *>(monthVec));
-        auto *dayRaw = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int32_t> *>(dayVec));
-        auto *hourRaw = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int32_t> *>(hourVec));
-        auto *minRaw = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int32_t> *>(minVec));
-        const int64_t *secRawDecimal = secIsDecimal
-            ? unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(secVec))
-            : nullptr;
-        const double *secRawDouble = secIsDecimal
-            ? nullptr
-            : unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<double> *>(secVec));
-
-        const auto *yearNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(yearVec));
         auto *resultNulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
         auto nullsSize = BitUtil::Nbytes(size);
-        memcpy(resultNulls, yearNulls, nullsSize);
+        memset(resultNulls, 0x00, nullsSize);
 
         // Session timezone: treat (year,month,day,hour,min,sec) as local time and convert to UTC.
         auto sessionTz = getTimeZoneFromConfig(context->queryConfig());
 
         for (vector_size_t i = 0; i < size; ++i) {
-            if (result->IsNull(i)) {
-                continue;
-            }
-            if (monthVec->IsNull(i) || dayVec->IsNull(i) || hourVec->IsNull(i) || minVec->IsNull(i) || secVec->IsNull(i)) {
+            if (isNullAt(yearVec, i) || isNullAt(monthVec, i) || isNullAt(dayVec, i) ||
+                isNullAt(hourVec, i) || isNullAt(minVec, i) || isNullAt(secVec, i)) {
                 result->SetNull(i);
                 continue;
             }
-            int32_t year = yearRaw[i];
-            int32_t month = monthRaw[i];
-            int32_t day = dayRaw[i];
-            int32_t hour = hourRaw[i];
-            int32_t minute = minRaw[i];
-            double second;
-            if (secIsDecimal) {
-                // Spark sends seconds as Decimal(scale=6), raw value = seconds * 1e6
-                second = static_cast<double>(secRawDecimal[i]) / static_cast<double>(kMicrosPerSec);
-            } else {
-                second = secRawDouble[i];
-            }
+            int32_t year = getIntValue(yearVec, i);
+            int32_t month = getIntValue(monthVec, i);
+            int32_t day = getIntValue(dayVec, i);
+            int32_t hour = getIntValue(hourVec, i);
+            int32_t minute = getIntValue(minVec, i);
+            double second = getSecondValue(secVec, i);
 
             int64_t daysSinceEpoch = 0;
             if (!Date32::DaysSinceEpochFromDate(year, month, day, daysSinceEpoch)) {
