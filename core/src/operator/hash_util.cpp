@@ -67,6 +67,7 @@ std::unique_ptr<omniruntime::vec::Vector<int32_t>> HashUtil::ComputePartitionIds
                 break;
             case type::OMNI_CHAR:
             case type::OMNI_VARCHAR:
+            case type::OMNI_VARBINARY:
                 Mm3String(vecs[col], rowCount, partitionIds);
                 break;
             case type::OMNI_DECIMAL128:

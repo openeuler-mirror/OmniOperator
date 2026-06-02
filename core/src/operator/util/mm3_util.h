@@ -974,7 +974,8 @@ static uint32_t HashSingleElement(vec::BaseVector* vec, type::DataTypeId typeId,
             return HashLong(static_cast<uint64_t>(value), seed);
         }
         case type::OMNI_CHAR:
-        case type::OMNI_VARCHAR: {
+        case type::OMNI_VARCHAR:
+        case type::OMNI_VARBINARY: {
             std::string_view value = GetPrimitiveValueByEncoding<std::string_view>(vec, index);
             return HashUnsafeBytes(const_cast<char *>(value.data()), value.size(), seed);
         }
