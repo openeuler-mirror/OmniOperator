@@ -98,52 +98,30 @@ setup_dependencies() {
   fi
 
   echo "Start build fmt.so"
-  local fmt_so_core="${OMNI_HOME}/lib/libfmt.so.10"
   local fmt_tag="10.1.1"
   local fmt_repo="https://gitee.com/mirrors/fmt.git"
   local fmt_source_dir="${workspace}/${open_source_dir}/fmt"
-  local fmt_build_dir="${fmt_source_dir}/build"
   local fmt_default_home="/usr/local"
 
-  # Check if FMT_HOME exists, skip build if true
   if [ -n "$FMT_HOME" ] && [ -d "$FMT_HOME" ]; then
-    echo "FMT_HOME=$FMT_HOME exists, skip fmt build process and copy libfmt.so* to OMNI_HOME."
-    if [ -d "${FMT_HOME}/lib64" ]; then
-      sudo cp -f ${FMT_HOME}/lib64/libfmt.so* ${OMNI_HOME}/lib/ 2>/dev/null
-      echo "Copied libfmt.so* from ${FMT_HOME}/lib64"
-    elif [ -d "${FMT_HOME}/lib" ]; then
-      sudo cp -f ${FMT_HOME}/lib/libfmt.so* ${OMNI_HOME}/lib/ 2>/dev/null
-      echo "Copied libfmt.so* from ${FMT_HOME}/lib"
-    else
-      echo "Warning: No lib64 or lib directory found in ${FMT_HOME}"
-    fi
+    echo "FMT_HOME=$FMT_HOME exists, skip fmt build process."
   else
-    # Check if the core fmt so file exists
-    if [ ! -f "${fmt_so_core}" ]; then
-      echo "libfmt.so.10 not found in ${OMNI_HOME}/lib, start to clone fmt-${fmt_tag} source code and build..."
-      rm -rf ${fmt_source_dir} && mkdir -p ${fmt_source_dir}
-      git clone --branch ${fmt_tag} --depth=1 ${fmt_repo} ${fmt_source_dir}
-      cd ${fmt_source_dir}
-      mkdir -p build && cd build
-      # Cmake build with your specified params
-      cmake .. \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DFMT_TEST=OFF \
-      -DFMT_DOC=OFF \
-      -DFMT_INSTALL=ON \
-      -DBUILD_SHARED_LIBS=ON
-      make -j$(nproc)
-      sudo make install
-      # Copy all generated fmt so files to OMNI_HOME/lib directly
-      sudo cp -f libfmt.so* ${OMNI_HOME}/lib/
-      echo "All fmt shared libraries copied to ${OMNI_HOME}/lib successfully."
-      export FMT_HOME=${fmt_default_home}
-      echo "Set FMT_HOME=$FMT_HOME automatically after fmt install."
-      # Back to workspace
-      cd ${workspace}
-    else
-      echo "libfmt.so.10 already exists in ${OMNI_HOME}/lib, skip fmt build process."
-    fi
+    echo "FMT_HOME not set, start to clone fmt-${fmt_tag} source code and build..."
+    rm -rf ${fmt_source_dir} && mkdir -p ${fmt_source_dir}
+    git clone --branch ${fmt_tag} --depth=1 ${fmt_repo} ${fmt_source_dir}
+    cd ${fmt_source_dir}
+    mkdir -p build && cd build
+    cmake .. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DFMT_TEST=OFF \
+    -DFMT_DOC=OFF \
+    -DFMT_INSTALL=ON \
+    -DBUILD_SHARED_LIBS=ON
+    make -j$(nproc)
+    sudo make install
+    export FMT_HOME=${fmt_default_home}
+    echo "Set FMT_HOME=$FMT_HOME automatically after fmt install."
+    cd ${workspace}
   fi
 
   echo "Start build folly"
@@ -152,18 +130,21 @@ setup_dependencies() {
   local folly_source_dir="${workspace}/${open_source_dir}/folly"
   local folly_default_home="/usr/local"
 
-  echo "Start to clone folly-${folly_tag} source code and build..."
-  rm -rf ${folly_source_dir} && mkdir -p ${folly_source_dir}
-  git clone --branch ${folly_tag} --depth=1 ${folly_repo} ${folly_source_dir}
-  cd ${folly_source_dir}
-  mkdir -p build && cd build
-  cmake .. -DFOLLY_HAVE_INT128_T=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-  make -j$(nproc)
-  sudo make install
-  echo "folly-${folly_tag} build and install completed successfully."
-  export FOLLY_HOME=${folly_default_home}
-  echo "Set FOLLY_HOME=$FOLLY_HOME automatically after folly install."
-  cd ${workspace}
+  if [ -n "$FOLLY_HOME" ] && [ -d "$FOLLY_HOME" ]; then
+    echo "FOLLY_HOME=$FOLLY_HOME exists, skip folly build process."
+  else
+    echo "FOLLY_HOME not set, start to clone folly-${folly_tag} source code and build..."
+    rm -rf ${folly_source_dir} && mkdir -p ${folly_source_dir}
+    git clone --branch ${folly_tag} --depth=1 ${folly_repo} ${folly_source_dir}
+    cd ${folly_source_dir}
+    mkdir -p build && cd build
+    cmake .. -DFOLLY_HAVE_INT128_T=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    make -j$(nproc)
+    sudo make install
+    export FOLLY_HOME=${folly_default_home}
+    echo "Set FOLLY_HOME=$FOLLY_HOME automatically after folly install."
+    cd ${workspace}
+  fi
 
   install_rapidjson
 
