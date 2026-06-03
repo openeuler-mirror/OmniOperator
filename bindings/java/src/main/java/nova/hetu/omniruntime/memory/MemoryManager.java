@@ -6,7 +6,7 @@ package nova.hetu.omniruntime.memory;
 
 import nova.hetu.omniruntime.OmniLibs;
 import nova.hetu.omniruntime.utils.ParseUtil;
-import sun.misc.VM;
+import nova.hetu.omniruntime.vector.JvmUtils;
 
 /**
  * memory manager.
@@ -30,7 +30,7 @@ public class MemoryManager implements AutoCloseable {
     public static void setGlobalMemoryLimit() {
         // parse environment variable OMNI_OFFHEAP_MEMORY_SIZE
         String memorySize = System.getenv("OMNI_OFFHEAP_MEMORY_SIZE");
-        long rootLimit = memorySize == null ? VM.maxDirectMemory() : ParseUtil.parserMemoryParameters(memorySize);
+        long rootLimit = memorySize == null ? JvmUtils.estimateMaxDirectMemory() : ParseUtil.parserMemoryParameters(memorySize);
         // the off heap memory from director or environment variable, set global memory limit
         setGlobalMemoryLimit(rootLimit);
     }
