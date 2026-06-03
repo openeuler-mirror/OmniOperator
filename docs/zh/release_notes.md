@@ -12,16 +12,17 @@
 </tr>
 <tr id="row237mcpsimp"><th class="firstcol" valign="top" width="30%" id="mcps1.1.3.2.1"><p id="p239mcpsimp"><a name="p239mcpsimp"></a><a name="p239mcpsimp"></a>产品版本</p>
 </th>
-<td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.2.1 "><p id="p241mcpsimp"><a name="p241mcpsimp"></a><a name="p241mcpsimp"></a>26.0.RC1</p>
+<td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.2.1 "><p id="p241mcpsimp"><a name="p241mcpsimp"></a><a name="p241mcpsimp"></a>26.0.RC2</p>
 </td>
 </tr>
 <tr id="row242mcpsimp"><th class="firstcol" valign="top" width="30%" id="mcps1.1.3.3.1"><p id="p244mcpsimp"><a name="p244mcpsimp"></a><a name="p244mcpsimp"></a>软件名称和版本</p>
 </th>
-<td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.3.1 "><p id="p14490142642819"><a name="p14490142642819"></a><a name="p14490142642819"></a>OmniOperator 2.1.0</p>
+<td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.3.1 "><p id="p14490142642819"><a name="p14490142642819"></a><a name="p14490142642819"></a>OmniOperator 2.2.0</p>
 </td>
 </tr>
 </tbody>
 </table>
+
 
 
 ### 软件版本配套说明<a name="ZH-CN_TOPIC_0000002515610832"></a>
@@ -146,6 +147,38 @@
 </tr>
 </tbody>
 </table>
+
+
+## V2.2.0<a name="ZH-CN_TOPIC_0000002517208390"></a>
+
+### 更新说明<a name="ZH-CN_TOPIC_0000002548808279"></a>
+
+鲲鹏BoostKit大数据OmniRuntime OmniOperator算子加速特性通过使用一个基础架构支撑不同引擎（例如Spark），减少重复优化工作，从而释放通用、异构算力，有效推动鲲鹏生态。
+
+**新增特性<a name="section9559165534817"></a>**
+
+- 新增ObjectHashAggregateExec、InsertIntoHiveTable、GenerateExec、HiveTableScanExec支持。
+- 新增数据湖格式支持：Delta Lake 3.2.0、Hudi 0.15.0、Iceberg 1.5.0。
+- 新增LocalLimitExec、ExpandExec、BroadcastExchangeExec、ShuffleExchangeExec、DataWritingCommandExec、TakeOrderedAndProjectExec、BroadcastNestedLoopJoinExec、Union、Filter、SortExec、SortMergeJoinExec、WindowExec对Array/Map/Struct数据类型支持。
+
+**修改特性<a name="section299616132492"></a>**
+
+无
+
+**删除特性<a name="section65399205498"></a>**
+
+无
+
+
+### 已解决的问题<a name="ZH-CN_TOPIC_0000002548688267"></a>
+
+无
+
+
+### 遗留问题<a name="ZH-CN_TOPIC_0000002517048478"></a>
+
+无
+
 
 
 

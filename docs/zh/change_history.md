@@ -8,6 +8,10 @@
   </thead>
   <tbody>
   <tr>
+    <td>2026-06-30</td>
+    <td>第十三次正式发布。</br>发布OmniOperator 2.2.0：</br><li>新增ObjHashAggregateExec、InsertIntoHiveTable、GenerateExec、HiveTableScanExec支持。</li><li>新增数据湖格式支持：Delta Lake 3.2.0、Hudi 0.15.0、Iceberg 1.5.0。</li><li>新增LocalLimitExec、ExpandExec、BroadcastExchangeExec、ShuffleExchangeExec、DataWritingCommandExec、TakeOrderedAndProjectExec、BroadcastNestedLoopJoinExec、Union、Filter、SortExec、SortMergeJoinExec、WindowExec对Array/Map/Struct数据类型支持。</li></td>
+  </tr>
+  <tr>
     <td>2026-03-30</td>
     <td>第十二次正式发布。</br>发布OmniOperator 2.1.0：</br><li>新增InsertIntoHadoopFsRelationCommand支持插入HDFS、WriteFile支持ORC写入、Window支持Array数据分段、FileSourceScanExec支持Array数据读取、LocalLimitExec支持Array数据截取。</li><li>新增支持datediff、pmod、charTypeWriteSideCheck、least、concat_ws、get_json_object表达式。</li></td>
   </tr>
