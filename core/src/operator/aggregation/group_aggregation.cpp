@@ -1247,21 +1247,14 @@ ErrorCode HashAggregationOperator::SpillToDisk()
                 [&](const auto &key, uint8_t *value, int32_t idx) mutable {
                 aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, idx);
                 }, [&](const auto &key, uint8_t *value, int32_t idx) mutable {
-                aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, idx);
+                aggregationSortPtr->ParseNullHashMapToVector(key, value, idx);
             });
         } else if (packedInt64 != nullptr) {
             packedInt64->Extract(totalSpillCount, spillOutputState,
                 [&](const auto &key, uint8_t *value, int32_t idx) mutable {
                 aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, idx);
                 }, [&](const auto &key, uint8_t *value, int32_t idx) mutable {
-                aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, idx);
-            });
-        } else if (packedInt128 != nullptr) {
-            packedInt128->Extract(totalSpillCount, spillOutputState,
-                [&](const auto &key, uint8_t *value, int32_t idx) mutable {
-                aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, idx);
-                }, [&](const auto &key, uint8_t *value, int32_t idx) mutable {
-                aggregationSortPtr->ParseHashMapToVectorAsBytes(key, value, idx);
+                aggregationSortPtr->ParseNullHashMapToVector(key, value, idx);
             });
         }
     }
@@ -1586,7 +1579,7 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
                 }
             } else if (fixedInt64 != nullptr) {
                 if (keyRef.size > 0) {
-                    auto key = static_cast<int64_t>(std::stoi(keyRef.ToString()));
+                    auto key = static_cast<int64_t>(std::stoll(keyRef.ToString()));
                     fixedInt64->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
                 } else {
                     fixedInt64->ParseNull(0, groupOutputVectors, groupColNum, rowIdx);
