@@ -1833,7 +1833,15 @@ public:
         for (int32_t i = 0; i < childCount; i++) {
             auto &childVec = rowVector->ChildAt(i);
             auto childTypeId = childVec->GetTypeId();
-            DYNAMIC_TYPE_DISPATCH(Hash, childTypeId, childVec.get(), rowsNum, workingHashVals, i > 0);
+            if (childTypeId == type::OMNI_ARRAY) {
+                DecodedVector decoded;
+                decoded.Decode(childVec.get(), rowsNum);
+                DoArrayHashWithDecode(decoded, rowsNum, i > 0);
+            } else if (childTypeId == type::OMNI_ROW) {
+                DoRowHash(childVec.get(), rowsNum, workingHashVals);
+            } else {
+                DYNAMIC_TYPE_DISPATCH(Hash, childTypeId, childVec.get(), rowsNum, workingHashVals, i > 0);
+            }
         }
     }
 
@@ -1888,10 +1896,181 @@ public:
         }
     }
 
+    /// Hash a single value from a decoded vector (basic types only).
+    template <DataTypeId id>
+    static int64_t HashOneDecodedValue(const DecodedVector& decoded, int32_t rowIdx)
+    {
+        using T = typename NativeType<id>::type;
+        if (decoded.IsNull(rowIdx)) return kNullHash;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            if (decoded.GetLayout() == DVecLayout::Flat) {
+                using FlatVec = Vector<LargeStringContainer<T>>;
+                return GroupbyHashCalculator<T>{}(static_cast<FlatVec*>(decoded.Base())->GetValue(rowIdx));
+            }
+            if (decoded.GetLayout() == DVecLayout::Dictionary) {
+                using DicVec = Vector<DictionaryContainer<T>>;
+                return GroupbyHashCalculator<T>{}(static_cast<DicVec*>(decoded.Base())->GetValue(rowIdx));
+            }
+            return GroupbyHashCalculator<T>{}(static_cast<ConstVector<T>*>(decoded.Base())->GetConstValue());
+        }
+        return GroupbyHashCalculator<T>{}(decoded.GetValue<T>(rowIdx));
+    }
+
+    /// Hash a single struct element (OMNI_ROW) from a decoded row vector.
+    int64_t HashNestedRow(const DecodedVector& decoded, int32_t rowIdx)
+    {
+        auto* rowVec = static_cast<RowVector*>(decoded.Base());
+        int64_t hash = 0;
+        bool first = true;
+        for (int32_t c = 0; c < rowVec->ChildSize(); c++) {
+            DecodedVector childDecoded;
+            childDecoded.Decode(rowVec->ChildAt(c).get(), decoded.RowCount());
+            int64_t fieldHash = HashNestedField(childDecoded, rowIdx);
+            if (first) { hash = fieldHash; first = false; }
+            else { hash = FastHashMix(hash, fieldHash); }
+        }
+        return hash;
+    }
+
+    /// Hash a single array element (OMNI_ARRAY) from a decoded array vector.
+    int64_t HashNestedArray(const DecodedVector& decoded, int32_t rowIdx)
+    {
+        auto* arrayVec = static_cast<ArrayVector*>(decoded.Base());
+        int64_t start = arrayVec->GetOffset(rowIdx);
+        int64_t end = arrayVec->GetOffset(rowIdx + 1);
+        int64_t hash = 0;
+        bool first = true;
+        for (int64_t r = start; r < end; r++) {
+            int64_t elemHash = HashArrayElementAt(arrayVec, r);
+            if (first) { hash = elemHash; first = false; }
+            else { hash = FastHashMix(hash, elemHash); }
+        }
+        return hash;
+    }
+
+    /// Hash a single element at position 'rowIdx' within an ArrayVector.
+    /// Dispatches on the element type of the array.
+    int64_t HashArrayElementAt(ArrayVector* arrayVec, int64_t rowIdx)
+    {
+        auto* elementVec = arrayVec->GetElementVector().get();
+        auto elementTypeId = elementVec->GetTypeId();
+        if (elementTypeId == type::OMNI_ROW) {
+            DecodedVector elemDecoded;
+            elemDecoded.Decode(elementVec, arrayVec->GetSize());
+            return HashNestedRow(elemDecoded, static_cast<int32_t>(rowIdx));
+        }
+        if (elementTypeId == type::OMNI_ARRAY) {
+            DecodedVector elemDecoded;
+            elemDecoded.Decode(elementVec, arrayVec->GetSize());
+            return HashNestedArray(elemDecoded, static_cast<int32_t>(rowIdx));
+        }
+        DecodedVector elemDecoded;
+        elemDecoded.Decode(elementVec, arrayVec->GetSize());
+        return DYNAMIC_TYPE_DISPATCH(HashOneDecodedValue, elementTypeId, elemDecoded, static_cast<int32_t>(rowIdx));
+    }
+
+    /// Hash a single field from a decoded vector, handling complex types.
+    int64_t HashNestedField(const DecodedVector& decoded, int32_t rowIdx)
+    {
+        auto typeId = decoded.GetTypeId();
+        if (typeId == type::OMNI_ROW) {
+            return HashNestedRow(decoded, rowIdx);
+        }
+        if (typeId == type::OMNI_ARRAY) {
+            return HashNestedArray(decoded, rowIdx);
+        }
+        return DYNAMIC_TYPE_DISPATCH(HashOneDecodedValue, typeId, decoded, rowIdx);
+    }
+
+    /// Hash arrays whose element type is OMNI_ROW (array of structs).
+    void DoArrayHashElementRow(ArrayVector* arrayVector, int32_t rowsNum, bool isMix)
+    {
+        auto* elementRowVec = static_cast<RowVector*>(arrayVector->GetElementVector().get());
+        int32_t childCount = elementRowVec->ChildSize();
+        int32_t totalElements = static_cast<int32_t>(arrayVector->GetOffset(rowsNum));
+
+        std::vector<DecodedVector> decodedChildren(childCount);
+        for (int32_t c = 0; c < childCount; c++) {
+            decodedChildren[c].Decode(elementRowVec->ChildAt(c).get(), totalElements);
+        }
+
+        bool hasNull = elementRowVec->HasNull();
+
+        for (int32_t i = 0; i < rowsNum; i++) {
+            int64_t start = arrayVector->GetOffset(i);
+            int64_t end = arrayVector->GetOffset(i + 1);
+            int64_t finalHash = 0;
+            bool first = true;
+            for (int64_t row = start; row < end; row++) {
+                if (hasNull && elementRowVec->IsNull(static_cast<int32_t>(row))) {
+                    if (first) { finalHash = kNullHash; first = false; }
+                    else { finalHash = FastHashMix(finalHash, kNullHash); }
+                    continue;
+                }
+                int64_t elementHash = 0;
+                for (int32_t c = 0; c < childCount; c++) {
+                    int64_t fieldHash = HashNestedField(decodedChildren[c], static_cast<int32_t>(row));
+                    if (c == 0) elementHash = fieldHash;
+                    else elementHash = FastHashMix(elementHash, fieldHash);
+                }
+                if (first) { finalHash = elementHash; first = false; }
+                else { finalHash = FastHashMix(finalHash, elementHash); }
+            }
+            if (isMix) {
+                workingHashVals[i] = FastHashMix(workingHashVals[i], finalHash);
+            } else {
+                workingHashVals[i] = finalHash;
+            }
+        }
+    }
+
+    /// Hash arrays whose element type is OMNI_ARRAY (nested arrays).
+    void DoArrayHashElementNestedArray(ArrayVector* arrayVector, int32_t rowsNum, bool isMix)
+    {
+        auto* innerArray = static_cast<ArrayVector*>(arrayVector->GetElementVector().get());
+        int32_t innerSize = innerArray->GetSize();
+
+        DecodedVector innerDecoded;
+        innerDecoded.Decode(innerArray->GetElementVector().get(), innerSize);
+
+        for (int32_t i = 0; i < rowsNum; i++) {
+            int64_t outerStart = arrayVector->GetOffset(i);
+            int64_t outerEnd = arrayVector->GetOffset(i + 1);
+            int64_t finalHash = 0;
+            bool first = true;
+            for (int64_t outerRow = outerStart; outerRow < outerEnd; outerRow++) {
+                int64_t innerStart = innerArray->GetOffset(static_cast<int64_t>(outerRow));
+                int64_t innerEnd = innerArray->GetOffset(static_cast<int64_t>(outerRow) + 1);
+                int64_t subArrayHash = 0;
+                bool subFirst = true;
+                for (int64_t innerRow = innerStart; innerRow < innerEnd; innerRow++) {
+                    int64_t elemHash = HashNestedField(innerDecoded, static_cast<int32_t>(innerRow));
+                    if (subFirst) { subArrayHash = elemHash; subFirst = false; }
+                    else { subArrayHash = FastHashMix(subArrayHash, elemHash); }
+                }
+                if (first) { finalHash = subArrayHash; first = false; }
+                else { finalHash = FastHashMix(finalHash, subArrayHash); }
+            }
+            if (isMix) {
+                workingHashVals[i] = FastHashMix(workingHashVals[i], finalHash);
+            } else {
+                workingHashVals[i] = finalHash;
+            }
+        }
+    }
+
     void DoArrayHashElementDispatch(ArrayVector* arrayVector, int32_t rowsNum, bool isMix)
     {
         auto elementVec = arrayVector->GetElementVector().get();
         auto elementTypeId = elementVec->GetTypeId();
+        if (elementTypeId == type::OMNI_ROW) {
+            DoArrayHashElementRow(arrayVector, rowsNum, isMix);
+            return;
+        }
+        if (elementTypeId == type::OMNI_ARRAY) {
+            DoArrayHashElementNestedArray(arrayVector, rowsNum, isMix);
+            return;
+        }
         #define ARRAY_HASH_DISPATCH(TID) \
             case TID: \
                 DoArrayHashElementFlat<TID>(arrayVector, rowsNum, isMix); \
