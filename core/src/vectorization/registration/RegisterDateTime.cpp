@@ -37,6 +37,7 @@
 #include "../functions/DateDiff.h"
 #include "../functions/DateFormat.h"
 #include "../functions/FromUnixTime.h"
+#include "../functions/DateTrunc.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -58,6 +59,8 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     // Register as "trunc_date" to match Gluten mapping (Substrait "trunc" -> "trunc_date")
     // and codegen layer registration
     RegisterTruncFunction(prefix + "trunc_date");
+
+    RegisterDateTruncFunction(prefix + "date_trunc");
     RegisterAddMonthsFunction(prefix + "add_months");
     RegisterDateAddFunction(prefix + "date_add");
     RegisterDateSubFunction(prefix + "date_sub");
