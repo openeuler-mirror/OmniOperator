@@ -95,12 +95,16 @@ public final class JvmUtils {
                 }
             }
 
-            Class<?> bitsClass =
-                    Class.forName("java.nio.Bits");
-            int javaVersion = majorVersion(System.getProperty("java.specification.version"));
-            String fieldName = javaVersion >= 11 ? "MAX_MEMORY" : "maxMemory";
-            Field maxMemoryField = bitsClass.getDeclaredField(fieldName);
-            if (maxMemoryField.getType() == long.class) {
+            Class<?> bitsClass = Class.forName("java.nio.Bits");
+            Field maxMemoryField = null;
+            for (Field curField : bitsClass.getDeclaredFields()) {
+                String fieldName = curField.getName();
+                if ("maxMemory".equals(fieldName) || "MAX_MEMORY".equals(fieldName)) {
+                    maxMemoryField = curField;
+                    break;
+                }
+            }
+            if (maxMemoryField != null && maxMemoryField.getType() == long.class) {
                 long offset = UNSAFE.staticFieldOffset(maxMemoryField);
                 Object object = UNSAFE.staticFieldBase(maxMemoryField);
                 BITS_MAX_DIRECT_MEMORY = UNSAFE.getLong(object, offset);
