@@ -282,9 +282,24 @@ public:
         return *reinterpret_cast<uint8_t**>(data);
     }
 
+    /// Store pointer as 6 bytes (48-bit) in the hash table value buffer.
+    static ALWAYS_INLINE void SetRowPtr(char* buf, uint8_t* ptr)
+    {
+        uint64_t val = reinterpret_cast<uint64_t>(ptr);
+        memcpy(buf, &val, 6);
+    }
+
+    /// Read pointer from 6-byte value buffer (zero-extend lower 48 bits).
+    static ALWAYS_INLINE uint8_t* GetRowPtr(const char* buf)
+    {
+        uint64_t val = 0;
+        memcpy(&val, buf, 6);
+        return reinterpret_cast<uint8_t*>(val);
+    }
+
     TaperColumnSerializeHandler(mem::SimpleArenaAllocator &pool, int32_t size)
     {
-        table = std::make_unique<HashTable>(pool, sizeof(uint64_t), sizeof(char*));
+        table = std::make_unique<HashTable>(pool, sizeof(uint64_t), 6);
         totalAggStatesSize = size;
         totalAggValueSize = size + sizeof(size_t);
     }
@@ -399,8 +414,8 @@ public:
         size_t newGroupsStartIdx = newGroups.size();
         auto initRow = [&](uint32_t rowIdx, char* data) -> char* {
             auto* row = aggRows->NewRow();
-            RowFromData(data) = reinterpret_cast<uint8_t*>(row);
-            newGroups.push_back(RowFromData(data));
+            SetRowPtr(data, reinterpret_cast<uint8_t*>(row));
+            newGroups.push_back(GetRowPtr(data));
             newGroupRowIndices[newGroupCount++] = rowIdx;
             return row;
         };
@@ -451,7 +466,7 @@ public:
             [&](uint32_t) { return false; },
             [&](uint32_t rowIdx, char* data) { initRow(rowIdx, data); },
             [&](uint32_t rowIdx, char* data, bool initFlag) {
-                groups[rowIdx] = RowFromData(data);
+                groups[rowIdx] = GetRowPtr(data);
                 if (!initFlag) {
                     workingUpdateIndices[workingUpdateCount++] = rowIdx;
                 }
@@ -539,7 +554,7 @@ public:
             table->Emplace(
                 workingHashVals[rowIdx],
                 [&](auto, TaperHashTableChunk& chunk, uint8_t slot) {
-                    auto* row = RowFromData(table->GetChunkValue(chunk, slot).buf);
+                    auto* row = GetRowPtr(table->GetChunkValue(chunk, slot).buf);
                     return CompareKeysWithDecode(row, groupColNum, rowIdx);
                 },
                 [&](char* data) {
@@ -548,7 +563,7 @@ public:
                         StoreKeyOneRowFromDecode(colIdx, row, rowIdx);
                     }
                 },
-                [&](char* data, bool) { groups[rowIdx] = RowFromData(data); });
+                [&](char* data, bool) { groups[rowIdx] = GetRowPtr(data); });
         }
         workingUpdateCount = 0;
     }
@@ -1577,7 +1592,7 @@ public:
         }();
         uint32_t idx = 0;
         while (idx < rowsNum && !tblVisitor.Finished()) {
-            auto* row = RowFromData(tblVisitor.CurVal().buf);
+            auto* row = GetRowPtr(tblVisitor.CurVal().buf);
             // Reconstruct serialized key data from RowContainer row
             // For fixed-width types, re-serialize each column into a contiguous buffer
             // For complex types, the serialized data pointer is stored in the row

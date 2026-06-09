@@ -438,9 +438,9 @@ class TaperHashTableBase : public TaperContainer {
     lastChunkIdx_ = lastChunkIdx;
     size_ = 0;
 
-    // 7*capacity/8
+    // 9*capacity/10 = 0.9 load factor
     auto capacity = chunkCapacity * elemNumInChunk_;
-    expandThreshold_ = capacity - (capacity >> 3);
+    expandThreshold_ = capacity - capacity / 10;
     LogInfo("lastChunkIdx %d, bytesNum: %d", lastChunkIdx, bytesNum);
   }
 
