@@ -256,6 +256,7 @@ public:
     std::vector<int32_t> workingUpdateIndices;
     int32_t workingUpdateCount = 0;
     std::vector<int32_t> keyTypeSizes;
+    std::vector<int32_t> keyTypeIds;
     std::vector<bool> isVariableLenType;
     RowContainerIterator rowContainerIter;
     std::vector<char*> rowPtrs;
@@ -292,13 +293,16 @@ public:
     /// Called after InitSize to set up the row layout with fixed-width key columns.
     /// @param keySizes Fixed row sizes for each key column (sizeof(char*) for VARCHAR, sizeof(char*)+sizeof(size_t) for complex types)
     /// @param isVariableLen True for each column that stores variable-length data (VARCHAR, ARRAY, etc.)
+    /// @param typeIds DataTypeId for each key column (used by SpillExtract to distinguish VARCHAR from complex types)
     /// @param pool Memory pool for row allocation
     void InitRowContainer(const std::vector<int32_t>& keySizes,
                           const std::vector<bool>& isVariableLen,
+                          const std::vector<int32_t>& typeIds,
                           mem::SimpleArenaAllocator& pool)
     {
         keyTypeSizes = keySizes;
         isVariableLenType = isVariableLen;
+        keyTypeIds = typeIds;
         aggRows = std::make_unique<RowContainer>(
             keySizes, static_cast<int32_t>(keySizes.size()),
             totalAggStatesSize, pool);
@@ -1597,7 +1601,7 @@ public:
                 if (isVariableLenType[colIdx]) {
                     char* dataPtr = *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset);
                     size_t dataSize = 0;
-                    auto colTypeId = decodedCols[colIdx].GetTypeId();
+                    auto colTypeId = keyTypeIds[colIdx];
                     if (colTypeId == type::OMNI_VARCHAR || colTypeId == type::OMNI_CHAR ||
                         colTypeId == type::OMNI_VARBINARY) {
                         // VARCHAR: only char* stored in row; derive size from serialized format
