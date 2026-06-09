@@ -246,13 +246,16 @@ OmniStatus HashAggregationOperator::Init()
         for (const auto &c : groupByCols) {
             keySizes.push_back(OperatorUtil::GetTypeSize(c.input));
         }
-        // For complex types (VARCHAR, ARRAY, ROW), we need extra space for StringRef (char* + size_t)
+        // For variable-length types, store a pointer to the serialized data in the row.
+        // VARCHAR/CHAR/VARBINARY: only sizeof(char*) needed (length derivable from serialized format).
+        // Complex types (ARRAY, MAP, ROW): sizeof(char*) + sizeof(size_t) for StringRef storage.
         std::vector<bool> isVariableLen(groupByCols.size(), false);
         for (size_t i = 0; i < groupByCols.size(); ++i) {
             auto typeId = groupByCols[i].input->GetId();
-            if (typeId == type::OMNI_CHAR || typeId == type::OMNI_VARCHAR || typeId == type::OMNI_VARBINARY ||
-                typeId == type::OMNI_ARRAY || typeId == type::OMNI_MAP || typeId == type::OMNI_ROW) {
-                // Override the key size to sizeof(char*) + sizeof(size_t) for StringRef storage
+            if (typeId == type::OMNI_CHAR || typeId == type::OMNI_VARCHAR || typeId == type::OMNI_VARBINARY) {
+                keySizes[i] = sizeof(char*);
+                isVariableLen[i] = true;
+            } else if (typeId == type::OMNI_ARRAY || typeId == type::OMNI_MAP || typeId == type::OMNI_ROW) {
                 keySizes[i] = sizeof(char*) + sizeof(size_t);
                 isVariableLen[i] = true;
             }

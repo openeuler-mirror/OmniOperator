@@ -290,7 +290,7 @@ public:
 
     /// Initialize the RowContainer with key type information.
     /// Called after InitSize to set up the row layout with fixed-width key columns.
-    /// @param keySizes Fixed row sizes for each key column (or sizeof(char*)+sizeof(size_t) for variable-length)
+    /// @param keySizes Fixed row sizes for each key column (sizeof(char*) for VARCHAR, sizeof(char*)+sizeof(size_t) for complex types)
     /// @param isVariableLen True for each column that stores variable-length data (VARCHAR, ARRAY, etc.)
     /// @param pool Memory pool for row allocation
     void InitRowContainer(const std::vector<int32_t>& keySizes,
@@ -716,7 +716,6 @@ public:
             auto& curFunc = serializers[colIdx];
             curFunc(decoded.Base(), rowIdx, table->Pool(), key);
             *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-            *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
         } else {
             switch (typeId) {
                 STORE_ONE_DISPATCH(type::OMNI_BYTE, int8_t)
@@ -764,6 +763,23 @@ public:
 
         const char* rowDataPtr = reinterpret_cast<const char*>(rowData + 1 + rowLenSize);
         return memcmp(rowDataPtr, sv.data(), stringLen) == 0;
+    }
+
+    /// Compute the total serialized byte size of a VARCHAR/CHAR/VARBINARY value
+    /// from its serialized data pointer.
+    /// Format: [uint8_t rowLenSize][rowLenSize bytes: length][length bytes: data]
+    /// Null: [uint8_t: 0] → 1 byte.
+    static ALWAYS_INLINE size_t ComputeVarCharSerializedSize(const char* data) {
+        uint8_t rowLenSize = *reinterpret_cast<const uint8_t*>(data);
+        if (rowLenSize == 0) return sizeof(uint8_t);
+        size_t stringLen;
+        switch (rowLenSize) {
+            case 1: stringLen = *reinterpret_cast<const uint8_t*>(data + sizeof(uint8_t)); break;
+            case 2: stringLen = *reinterpret_cast<const uint16_t*>(data + sizeof(uint8_t)); break;
+            case 4: stringLen = *reinterpret_cast<const uint32_t*>(data + sizeof(uint8_t)); break;
+            default: return sizeof(uint8_t);
+        }
+        return sizeof(uint8_t) + rowLenSize + stringLen;
     }
 
     // ========== DecodedVector-based templated helpers (zero runtime encoding branches) ==========
@@ -1378,7 +1394,6 @@ public:
                         type::StringRef key; key.data = nullptr; key.size = 0;
                         curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                         *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                        *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                     }
                 }
             } else {
@@ -1389,7 +1404,6 @@ public:
                     type::StringRef key; key.data = nullptr; key.size = 0;
                     curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                     *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                    *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                 }
             }
         } else if (layout == DVecLayout::Dictionary) {
@@ -1405,7 +1419,6 @@ public:
                         type::StringRef key; key.data = nullptr; key.size = 0;
                         curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                         *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                        *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                     }
                 }
             } else {
@@ -1416,7 +1429,6 @@ public:
                     type::StringRef key; key.data = nullptr; key.size = 0;
                     curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                     *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                    *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                 }
             }
         } else {
@@ -1432,7 +1444,6 @@ public:
                         type::StringRef key; key.data = nullptr; key.size = 0;
                         curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                         *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                        *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                     }
                 }
             } else {
@@ -1443,7 +1454,6 @@ public:
                     type::StringRef key; key.data = nullptr; key.size = 0;
                     curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                     *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                    *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                 }
             }
         }
@@ -1530,7 +1540,6 @@ public:
                     break;
                 default: {
                     char* dataPtr = *reinterpret_cast<char**>(row + offset);
-                    size_t dataSize = *reinterpret_cast<size_t*>(row + offset + sizeof(char*));
                     auto deserializeFunc = deserializers[i];
                     const char* pos = dataPtr;
                     deserializeFunc(outVector, rowIdx, pos);
@@ -1584,11 +1593,21 @@ public:
                     continue;
                 }
 
-                // For complex types stored as StringRef in the row, copy the serialized data
+                // For variable-length types stored as pointer in the row, copy the serialized data
                 if (isVariableLenType[colIdx]) {
-                    // This is a complex type column - copy the serialized data from the StringRef
                     char* dataPtr = *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset);
-                    size_t dataSize = *reinterpret_cast<size_t*>(reinterpret_cast<char*>(row) + offset + sizeof(char*));
+                    size_t dataSize = 0;
+                    auto colTypeId = decodedCols[colIdx].GetTypeId();
+                    if (colTypeId == type::OMNI_VARCHAR || colTypeId == type::OMNI_CHAR ||
+                        colTypeId == type::OMNI_VARBINARY) {
+                        // VARCHAR: only char* stored in row; derive size from serialized format
+                        if (dataPtr != nullptr) {
+                            dataSize = ComputeVarCharSerializedSize(dataPtr);
+                        }
+                    } else {
+                        // Complex types (ARRAY/ROW): char* + size_t stored in row
+                        dataSize = *reinterpret_cast<size_t*>(reinterpret_cast<char*>(row) + offset + sizeof(char*));
+                    }
                     if (dataPtr != nullptr && dataSize > 0) {
                         auto* dest = table->Pool().AllocateContinue(dataSize, reinterpret_cast<const uint8_t*&>(key.data));
                         memcpy(dest, dataPtr, dataSize);
