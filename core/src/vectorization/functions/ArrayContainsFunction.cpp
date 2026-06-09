@@ -70,9 +70,12 @@ void ArrayContainsFunction::Apply(std::stack<BaseVector *> &args, const DataType
             ProcessArrayContains<int16_t>(arrayVec, searchArg, resultVec, rowSize);
             break;
         case OMNI_INT:
+        case OMNI_DATE32:
             ProcessArrayContains<int32_t>(arrayVec, searchArg, resultVec, rowSize);
             break;
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
+        case OMNI_DECIMAL64:
             ProcessArrayContains<int64_t>(arrayVec, searchArg, resultVec, rowSize);
             break;
         case OMNI_FLOAT:
@@ -83,6 +86,13 @@ void ArrayContainsFunction::Apply(std::stack<BaseVector *> &args, const DataType
             break;
         case OMNI_BOOLEAN:
             ProcessArrayContains<bool>(arrayVec, searchArg, resultVec, rowSize);
+            break;
+        case OMNI_DECIMAL128:
+            ProcessArrayContains<Decimal128>(arrayVec, searchArg, resultVec, rowSize);
+            break;
+        case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
+            ProcessArrayContainsVarchar(arrayVec, searchArg, resultVec, rowSize);
             break;
         default:
             delete arrayArg;
@@ -207,6 +217,90 @@ void ArrayContainsFunction::ProcessArrayContains(ArrayVector *arrayVec, BaseVect
     }
 }
 
+void ArrayContainsFunction::ProcessArrayContainsVarchar(ArrayVector *arrayVec, BaseVector *searchVec,
+    Vector<bool> *resultVec, int32_t rowSize) const
+{
+    auto elementVec = arrayVec->GetElementVector();
+
+    if (elementVec == nullptr) {
+        for (int32_t row = 0; row < rowSize; ++row) {
+            if (arrayVec->IsNull(row)) {
+                resultVec->SetNull(row);
+            } else {
+                resultVec->SetValue(row, false);
+            }
+        }
+        return;
+    }
+
+    using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+    auto *typedElementVec = dynamic_cast<VarcharVector *>(elementVec.get());
+    if (typedElementVec == nullptr) {
+        OMNI_THROW("ArrayContainsFunction Error:", "Element vector type mismatch for varchar");
+    }
+
+    int64_t *offsets = arrayVec->GetOffsets();
+    bool isConstSearch = (searchVec->GetEncoding() == OMNI_ENCODING_CONST);
+
+    std::string_view constSearchValue;
+    bool constSearchIsNull = false;
+    if (isConstSearch) {
+        constSearchIsNull = searchVec->IsNull(0);
+        if (!constSearchIsNull) {
+            constSearchValue = VectorHelper::GetStringValueFromVector(searchVec, 0);
+        }
+    }
+
+    for (int32_t row = 0; row < rowSize; ++row) {
+        if (arrayVec->IsNull(row)) {
+            resultVec->SetNull(row);
+            continue;
+        }
+
+        bool searchIsNull = isConstSearch ? constSearchIsNull : searchVec->IsNull(row);
+        if (searchIsNull) {
+            resultVec->SetNull(row);
+            continue;
+        }
+
+        std::string_view searchValue = isConstSearch ? constSearchValue
+            : VectorHelper::GetStringValueFromVector(searchVec, row);
+
+        int64_t startOffset = offsets[row];
+        int64_t endOffset = offsets[row + 1];
+        int64_t arrayLength = endOffset - startOffset;
+
+        if (arrayLength == 0) {
+            resultVec->SetValue(row, false);
+            continue;
+        }
+
+        bool found = false;
+        bool hasNull = false;
+
+        for (int64_t i = startOffset; i < endOffset; ++i) {
+            if (typedElementVec->IsNull(static_cast<int32_t>(i))) {
+                hasNull = true;
+                continue;
+            }
+
+            std::string_view elementValue = typedElementVec->GetValue(static_cast<int32_t>(i));
+            if (elementValue == searchValue) {
+                found = true;
+                break;
+            }
+        }
+
+        if (found) {
+            resultVec->SetValue(row, true);
+        } else if (hasNull) {
+            resultVec->SetNull(row);
+        } else {
+            resultVec->SetValue(row, false);
+        }
+    }
+}
+
 // Explicit template instantiations
 template void ArrayContainsFunction::ProcessArrayContains<int8_t>(ArrayVector *, BaseVector *,
     Vector<bool> *, int32_t) const;
@@ -221,6 +315,8 @@ template void ArrayContainsFunction::ProcessArrayContains<float>(ArrayVector *, 
 template void ArrayContainsFunction::ProcessArrayContains<double>(ArrayVector *, BaseVector *,
     Vector<bool> *, int32_t) const;
 template void ArrayContainsFunction::ProcessArrayContains<bool>(ArrayVector *, BaseVector *,
+    Vector<bool> *, int32_t) const;
+template void ArrayContainsFunction::ProcessArrayContains<Decimal128>(ArrayVector *, BaseVector *,
     Vector<bool> *, int32_t) const;
 
 } // namespace omniruntime::vectorization
