@@ -250,8 +250,10 @@ OmniStatus HashAggregationOperator::Init()
         // VARCHAR/CHAR/VARBINARY: only sizeof(char*) needed (length derivable from serialized format).
         // Complex types (ARRAY, MAP, ROW): sizeof(char*) + sizeof(size_t) for StringRef storage.
         std::vector<bool> isVariableLen(groupByCols.size(), false);
+        std::vector<int32_t> typeIds(groupByCols.size());
         for (size_t i = 0; i < groupByCols.size(); ++i) {
             auto typeId = groupByCols[i].input->GetId();
+            typeIds[i] = typeId;
             if (typeId == type::OMNI_CHAR || typeId == type::OMNI_VARCHAR || typeId == type::OMNI_VARBINARY) {
                 keySizes[i] = sizeof(char*);
                 isVariableLen[i] = true;
@@ -260,7 +262,7 @@ OmniStatus HashAggregationOperator::Init()
                 isVariableLen[i] = true;
             }
         }
-        serialize->InitRowContainer(keySizes, isVariableLen, *executionContext->GetArena());
+        serialize->InitRowContainer(keySizes, isVariableLen, typeIds, *executionContext->GetArena());
     } else if (groupByColumnsHandleType == HandleType::fixedInt32) {
         fixedInt32 = std::make_unique<TaperGroupbySingleFixHandler<int32_t>>(*executionContext->GetArena(), totalAggStatesSize);
     } else if (groupByColumnsHandleType == HandleType::fixedInt64) {
