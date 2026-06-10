@@ -4,6 +4,7 @@
  */
 
 #include "maxby_complex_varchar_aggregator.h"
+#include "minmax_by_align_schema_helper.h"
 #include <algorithm>
 #include <cstring>
 
@@ -268,6 +269,32 @@ void MaxByComplexVarcharAggregator<COL2_ID>::ProcessGroupInternal(std::vector<Ag
     }
     for (size_t i = 0; i < rowCount; i++) {
         State::CastState(rowStates[i] + aggStateOffset)->SaveSortKey();
+    }
+}
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexVarcharAggregator<COL2_ID>::AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch)
+{
+    MinMaxByComplexAlignAggSchema<COL2_ID>(result, inputVecBatch, channels, inputRaw, targetColTypeId_,
+        targetColDataType_);
+}
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexVarcharAggregator<COL2_ID>::AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch,
+    const int32_t filterIndex)
+{
+    MinMaxByComplexAlignAggSchemaWithFilter<COL2_ID>(result, inputVecBatch, channels, inputRaw, filterIndex,
+        targetColTypeId_, targetColDataType_);
+}
+
+template <type::DataTypeId COL2_ID>
+void MaxByComplexVarcharAggregator<COL2_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+    const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
+{
+    (void)nullMap;
+    (void)aggFilter;
+    if (originVector == nullptr) {
+        MinMaxByComplexAlignAppendEmptyPartial2(result, COL2_ID, targetColDataType_);
     }
 }
 
