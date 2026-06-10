@@ -66,12 +66,7 @@ int64_t HdfsReadableFile::ReadAt(void *buffer, int32_t length, int64_t offset) {
         return -1;
     }
 
-    // Use hdfsSeek + hdfsRead instead of hdfsPread for libhdfs3 compatibility
-    int st = hdfsSeek(fileSystem_->getFileSystem(), file_, offset);
-    if (st == -1) {
-        return -1;
-    }
-    return hdfsRead(fileSystem_->getFileSystem(), file_, buffer, length);
+    return hdfsPread(fileSystem_->getFileSystem(), file_, offset, buffer, length);
 }
 
 int64_t HdfsReadableFile::GetFileSize() {
