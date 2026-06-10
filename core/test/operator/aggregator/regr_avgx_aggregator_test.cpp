@@ -115,7 +115,7 @@ TEST(RegrAvgXAggregatorTest, AlignAggSchemaRawOneRow)
 {
     DataTypes inD({DoubleType(), DoubleType()});
     DataTypes outPartial(
-        {LongType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()});
+        {DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()});
     std::vector<int32_t> ch = {0, 1};
     auto agg = CreateRegrAggregatorForUt(OMNI_AGGREGATION_TYPE_REGR_AVGX, inD, outPartial, ch, true, true);
     auto *batchIn = new VectorBatch(1);
@@ -127,7 +127,7 @@ TEST(RegrAvgXAggregatorTest, AlignAggSchemaRawOneRow)
     batchIn->Append(xv);
     auto *batchOut = new VectorBatch(0);
     agg->AlignAggSchema(batchOut, batchIn);
-    EXPECT_EQ(static_cast<Vector<int64_t> *>(batchOut->Get(0))->GetValue(0), 1);
+    EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(0))->GetValue(0), 1.0);
     EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(1))->GetValue(0), 2.0);
     EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(2))->GetValue(0), 5.0);
     VectorHelper::FreeVecBatch(batchIn);

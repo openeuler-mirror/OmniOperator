@@ -148,7 +148,7 @@ TEST(RegrR2AggregatorTest, AlignAggSchemaRawOneRowR2PartialLayout)
 {
     DataTypes inD({DoubleType(), DoubleType()});
     DataTypes outPartial(
-        {LongType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()});
+        {DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()});
     std::vector<int32_t> ch = {0, 1};
     auto agg = CreateRegrAggregatorForUt(OMNI_AGGREGATION_TYPE_REGR_R2, inD, outPartial, ch, true, true);
     auto *batchIn = new VectorBatch(1);
@@ -160,9 +160,35 @@ TEST(RegrR2AggregatorTest, AlignAggSchemaRawOneRowR2PartialLayout)
     batchIn->Append(xv);
     auto *batchOut = new VectorBatch(0);
     agg->AlignAggSchema(batchOut, batchIn);
-    EXPECT_EQ(static_cast<Vector<int64_t> *>(batchOut->Get(0))->GetValue(0), 1);
+    EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(0))->GetValue(0), 1.0);
     EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(1))->GetValue(0), 5.0);
     EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(2))->GetValue(0), 2.0);
+    EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(4))->GetValue(0), 0.0);
+    EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(5))->GetValue(0), 0.0);
+    VectorHelper::FreeVecBatch(batchIn);
+    VectorHelper::FreeVecBatch(batchOut);
+}
+
+TEST(RegrR2AggregatorTest, AlignAggSchemaRawByteLongOneRow)
+{
+    DataTypes inD({ByteType(), LongType()});
+    DataTypes outPartial(
+        {DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()});
+    std::vector<int32_t> ch = {0, 1};
+    auto agg = CreateRegrAggregatorForUt(OMNI_AGGREGATION_TYPE_REGR_R2, inD, outPartial, ch, true, true);
+    auto *batchIn = new VectorBatch(1);
+    auto *yv = new Vector<int8_t>(1);
+    auto *xv = new Vector<int64_t>(1);
+    yv->SetValue(0, 3);
+    xv->SetValue(0, 5467812995199766057LL);
+    batchIn->Append(yv);
+    batchIn->Append(xv);
+    auto *batchOut = new VectorBatch(0);
+    agg->AlignAggSchema(batchOut, batchIn);
+    EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(0))->GetValue(0), 1.0);
+    EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(1))->GetValue(0), 3.0);
+    EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(2))->GetValue(0),
+        static_cast<double>(5467812995199766057LL));
     EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(4))->GetValue(0), 0.0);
     EXPECT_DOUBLE_EQ(static_cast<Vector<double> *>(batchOut->Get(5))->GetValue(0), 0.0);
     VectorHelper::FreeVecBatch(batchIn);

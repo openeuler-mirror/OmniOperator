@@ -422,7 +422,7 @@ void RegrAvgXAggregator::AlignAggSchemaWithFilter(VectorBatch *result, VectorBat
     GetVector(inputVecBatch, 0, rc, &yxNull);
     std::shared_ptr<NullsHelper> rowSkip = RegrAlignMergeYxNullsWithFilter(yxNull, filterVec, needFilter, rc);
     if (!inputRaw) {
-        RegrAlignAppendPartialColumnsWithSkip(result, inputVecBatch, channels, 6, rc, rowSkip, true);
+        RegrAlignAppendPartialColumnsWithSkip(result, inputVecBatch, channels, 6, rc, rowSkip, false);
         return;
     }
     BaseVector *yVec = inputVecBatch->Get(channels[0]);
