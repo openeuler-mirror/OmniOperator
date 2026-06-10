@@ -92,10 +92,17 @@ namespace omniSpark {
       if (buf) {
         T* buf_old = buf;
         buf = reinterpret_cast<T*>(memoryPool.malloc(sizeof(T) * newCapacity));
+        if (buf == nullptr) {
+          buf = buf_old;
+          throw std::bad_alloc();
+        }
         memcpy(buf, buf_old, sizeof(T) * currentSize);
         memoryPool.free(reinterpret_cast<char*>(buf_old));
       } else {
         buf = reinterpret_cast<T*>(memoryPool.malloc(sizeof(T) * newCapacity));
+        if (buf == nullptr) {
+          throw std::bad_alloc();
+        }
       }
       currentCapacity = newCapacity;
     }

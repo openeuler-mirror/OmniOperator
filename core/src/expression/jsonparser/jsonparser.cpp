@@ -5,7 +5,6 @@
 #include "jsonparser.h"
 #include <vector>
 #include <fstream> // for testing
-#include <cassert>
 #include <limits>
 
 using namespace std;
@@ -533,7 +532,10 @@ Expr *JSONParser::ParseJsonMultiAndOr(const Json &jsonExpr)
         }
     }
     constexpr int minConditionSize = 2;
-    assert(conditions.size() >= minConditionSize);
+    if (conditions.size() < minConditionSize) {
+        Expr::DeleteExprs(conditions);
+        return nullptr;
+    }
     binaryExpression = new BinaryExpr(op, conditions[0], conditions[1], returnType);
     for (size_t i = 2; i < conditions.size(); i++) { // chain them together
         BinaryExpr* oldExpr = binaryExpression;

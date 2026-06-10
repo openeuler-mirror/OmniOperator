@@ -24,6 +24,7 @@
 #include "string_ref.h"
 #include "util/bit_util.h"
 #include "util/format.h"
+#include "util/omni_exception.h"
 
 namespace omniruntime::stringImpl {
 inline int32_t utf8proc_codepoint(const char *u_input, const char *end, int &sz)
@@ -214,7 +215,7 @@ static inline int64_t FindNthInstanceByteIndexFromStart(const std::string_view &
 inline int64_t FindNthInstanceByteIndexFromEnd(const std::string_view string, const std::string_view subString,
     const size_t instance = 1)
 {
-    assert(instance > 0);
+    OMNI_CHECK(instance > 0, "instance must be greater than 0");
 
     if (subString.empty()) {
         return 0;
