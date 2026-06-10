@@ -201,6 +201,11 @@ public:
 
     void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
 
+    void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) override;
+
+    void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch,
+        const int32_t filterIndex) override;
+
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
         const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override;
 
@@ -213,10 +218,6 @@ protected:
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
                               const std::shared_ptr<NullsHelper> nullMap) override;
-
-    template <typename T>
-    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
-        const std::shared_ptr<NullsHelper> nullMap);
 };
 } // namespace op
 } // namespace omniruntime

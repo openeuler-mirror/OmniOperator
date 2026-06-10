@@ -4,6 +4,7 @@
  */
 
 #include "minby_complex_aggregator.h"
+#include "minmax_by_align_schema_helper.h"
 #include "type/data_type.h"
 
 namespace omniruntime {
@@ -238,6 +239,32 @@ void MinByComplexAggregator<COL2_ID>::ProcessGroupUnspill(std::vector<UnspillRow
                     targetColDataType_.get());
             }
         }
+    }
+}
+
+template <type::DataTypeId COL2_ID>
+void MinByComplexAggregator<COL2_ID>::AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch)
+{
+    MinMaxByComplexAlignAggSchema<COL2_ID>(result, inputVecBatch, channels, inputRaw, targetColTypeId_,
+        targetColDataType_);
+}
+
+template <type::DataTypeId COL2_ID>
+void MinByComplexAggregator<COL2_ID>::AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch,
+    const int32_t filterIndex)
+{
+    MinMaxByComplexAlignAggSchemaWithFilter<COL2_ID>(result, inputVecBatch, channels, inputRaw, filterIndex,
+        targetColTypeId_, targetColDataType_);
+}
+
+template <type::DataTypeId COL2_ID>
+void MinByComplexAggregator<COL2_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+    const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
+{
+    (void)nullMap;
+    (void)aggFilter;
+    if (originVector == nullptr) {
+        MinMaxByComplexAlignAppendEmptyPartial2(result, COL2_ID, targetColDataType_);
     }
 }
 

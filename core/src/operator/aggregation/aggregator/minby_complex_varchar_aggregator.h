@@ -106,16 +106,13 @@ public:
             outputTypes.GetType(0)));
     }
 
+    void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) override;
+
+    void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch,
+        const int32_t filterIndex) override;
+
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
-        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override
-    {
-        (void)result;
-        (void)originVector;
-        (void)nullMap;
-        (void)aggFilter;
-        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
-            "MinByComplexVarcharAggregator: ProcessAlignAggSchema not supported");
-    }
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override;
 
 protected:
     MinByComplexVarcharAggregator(FunctionType aggType, const DataTypes &inputTypes, const DataTypes &outputTypes,
