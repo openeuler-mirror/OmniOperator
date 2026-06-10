@@ -44,7 +44,7 @@ void RegrAlignAppendCov4Raw(vec::VectorBatch *result, vec::BaseVector *yVec, vec
 void RegrAlignAppendPearson6RawStd(vec::VectorBatch *result, vec::BaseVector *yVec, vec::BaseVector *xVec,
     const std::shared_ptr<vec::NullsHelper> &rowSkip, int32_t rowCount);
 
-/** Same intermediate as regr_r2 ExtractPartialRow (swapped mean / m2 columns for Spark merge). */
+/** Spark Pearson buffer: 6 DOUBLE columns (n, xAvg, yAvg, ck, xMk, yMk). R2 layout swaps mean/m2 for merge. */
 void RegrAlignAppendPearson6RawR2Layout(vec::VectorBatch *result, vec::BaseVector *yVec, vec::BaseVector *xVec,
     const std::shared_ptr<vec::NullsHelper> &rowSkip, int32_t rowCount);
 

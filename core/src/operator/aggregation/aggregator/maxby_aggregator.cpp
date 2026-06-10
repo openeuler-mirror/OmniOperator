@@ -4,6 +4,7 @@
  */
 
 #include "maxby_aggregator.h"
+#include "minmax_by_align_schema_helper.h"
 #include "simd/func/reduce.h"
 
 namespace omniruntime {
@@ -278,20 +279,27 @@ void MaxByAggregator<COL1_ID, COL2_ID>::ProcessGroupUnspill(std::vector<UnspillR
 
 
 template <DataTypeId COL1_ID, DataTypeId COL2_ID>
-void MaxByAggregator<COL1_ID, COL2_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
-    const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
+void MaxByAggregator<COL1_ID, COL2_ID>::AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch)
 {
-    std::string omniExceptionInfo = "currently not support skipping partial agg";
-    throw omniruntime::exception::OmniException("Error in MaxByAggregator::ProcessAlignAggSchema:", omniExceptionInfo);
+    MinMaxByAlignAggSchema<COL1_ID, COL2_ID>(result, inputVecBatch, channels, inputRaw);
 }
 
 template <DataTypeId COL1_ID, DataTypeId COL2_ID>
-template<typename T>
-void MaxByAggregator<COL1_ID, COL2_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
-    const std::shared_ptr<NullsHelper> nullMap)
+void MaxByAggregator<COL1_ID, COL2_ID>::AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch,
+    const int32_t filterIndex)
 {
-    std::string omniExceptionInfo = "currently not support skipping partial agg";
-    throw omniruntime::exception::OmniException("Error in MaxByAggregator::ProcessAlignAggSchemaInternal:", omniExceptionInfo);
+    MinMaxByAlignAggSchemaWithFilter<COL1_ID, COL2_ID>(result, inputVecBatch, channels, inputRaw, filterIndex);
+}
+
+template <DataTypeId COL1_ID, DataTypeId COL2_ID>
+void MaxByAggregator<COL1_ID, COL2_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+    const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
+{
+    (void)nullMap;
+    (void)aggFilter;
+    if (originVector == nullptr) {
+        MinMaxByAlignAppendEmptyPartial2<COL1_ID, COL2_ID>(result);
+    }
 }
 
 template <DataTypeId COL1_ID, DataTypeId COL2_ID>

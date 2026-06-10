@@ -4,6 +4,7 @@
  */
 
 #include "covar_pop_aggregator.h"
+#include "operator/aggregation/aggregator/regr/regr_align_schema_helper.h"
 #include "operator/aggregation/vector_getter.h"
 
 namespace omniruntime {
@@ -339,8 +340,60 @@ void CovarPopAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillR
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CovarPopAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *, BaseVector *,
-    const std::shared_ptr<NullsHelper>, const bool) {}
+void CovarPopAggregator<IN_ID, OUT_ID>::AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch)
+{
+    int32_t rc = inputVecBatch->GetRowCount();
+    if (rc == 0) {
+        RegrAlignAppendEmptyCov4(result);
+        return;
+    }
+    if (!inputRaw) {
+        RegrAlignAppendPartialSlices(result, inputVecBatch, channels, kCovarPartialColumnCount, rc);
+        return;
+    }
+    std::shared_ptr<NullsHelper> xyNull;
+    GetVector(inputVecBatch, 0, rc, &xyNull);
+    BaseVector *leftVec = inputVecBatch->Get(channels[0]);
+    BaseVector *rightVec = inputVecBatch->Get(channels[1]);
+    RegrAlignAppendCov4Raw(result, leftVec, rightVec, xyNull, rc);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CovarPopAggregator<IN_ID, OUT_ID>::AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch,
+    const int32_t filterIndex)
+{
+    int32_t rc = inputVecBatch->GetRowCount();
+    if (rc == 0) {
+        RegrAlignAppendEmptyCov4(result);
+        return;
+    }
+    auto *filterVec = static_cast<Vector<bool> *>(inputVecBatch->Get(filterIndex));
+    bool needFilter = DoNeedHandleAggFilter(filterVec, 0, rc);
+    std::shared_ptr<NullsHelper> xyNull;
+    GetVector(inputVecBatch, 0, rc, &xyNull);
+    std::shared_ptr<NullsHelper> rowSkip = RegrAlignMergeYxNullsWithFilter(xyNull, filterVec, needFilter, rc);
+    if (!inputRaw) {
+        RegrAlignAppendPartialColumnsWithSkip(result, inputVecBatch, channels, kCovarPartialColumnCount, rc, rowSkip,
+            false);
+        return;
+    }
+    BaseVector *leftVec = inputVecBatch->Get(channels[0]);
+    BaseVector *rightVec = inputVecBatch->Get(channels[1]);
+    RegrAlignAppendCov4Raw(result, leftVec, rightVec, rowSkip, rc);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CovarPopAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+    const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
+{
+    (void)nullMap;
+    (void)aggFilter;
+    if (originVector == nullptr) {
+        RegrAlignAppendEmptyCov4(result);
+        return;
+    }
+    RegrAlignAppendCov4AllNullRows(result, originVector->GetSize());
+}
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 CovarPopAggregator<IN_ID, OUT_ID>::CovarPopAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,

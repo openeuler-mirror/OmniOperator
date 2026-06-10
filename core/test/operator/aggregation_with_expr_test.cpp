@@ -3592,7 +3592,7 @@ TEST(HashAggregationWithExprOperatorTest, kurtosis)
     std::vector<std::vector<omniruntime::expressions::Expr *>> finalAggAllKeys = {finalAggKeys};
 
     DataTypes finalSourceTypes(std::vector<DataTypePtr>({
-        IntType(), LongType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()
+        IntType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()
     }));
 
     auto inputRawFinalWrap = std::vector<bool>(aggFuncTypes.size(), false);
