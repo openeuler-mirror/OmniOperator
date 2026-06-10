@@ -106,6 +106,9 @@ public:
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull);
 
     void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
+    void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) override;
+    void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch,
+        const int32_t filterIndex) override;
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
         const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override;
 
