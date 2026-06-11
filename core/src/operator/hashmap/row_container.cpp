@@ -10,6 +10,7 @@
 #include "type/data_type.h"
 #include "type/decimal128.h"
 #include "util/bit_util.h"
+#include "util/debug.h"
 
 #ifdef __ARM_FEATURE_SVE
 #include <arm_sve.h>
@@ -26,7 +27,6 @@ RowContainer::RowContainer(const std::vector<int32_t>& keyTypeSizes,
       pool(pool)
 {
     // Calculate row layout: [key columns] [null bits] [AggState] [padding]
-    // Following bolt's RowContainer pattern with absolute bit offsets.
     int32_t offset = 0;
 
     // Step 1: Key column offsets
@@ -36,77 +36,42 @@ RowContainer::RowContainer(const std::vector<int32_t>& keyTypeSizes,
     for (int32_t i = 0; i < numKeys; ++i) {
         offsets[i] = offset;
         offset += keyTypeSizes[i];
-        // Update alignment to at least the key column size
-        alignment = std::max(alignment, keyTypeSizes[i]);
     }
 
     // Ensure minimum sizeof(void*) for the free-list next pointer at offset 0
     offset = std::max<int32_t>(offset, static_cast<int32_t>(sizeof(void*)));
-    alignment = std::max(alignment, static_cast<int32_t>(sizeof(void*)));
 
     // Step 2: Null bits block
     // Null bits use absolute bit positions from the start of the null block.
     // The null block starts right after key data at the current offset.
-    // Each null bit is at a position counted from bit 0 within this block.
-    // RowColumn stores null byte offset = (null_bit_position / 8) relative to
-    // the null block start, and null mask = (1 << (null_bit_position % 8)).
-    //
-    // Following bolt: we convert null positions to absolute byte positions
-    // within the row by adding the null block start offset.
+    // Only key column null bits are stored (no agg null bit, no free flag).
 
-    int32_t nullBitPos = 0; // bit position within the null block (0-based)
-
-    // Key column null bits
+    int32_t nullBitPos = 0;
     for (int32_t i = 0; i < numKeys; ++i) {
         nullOffsets[i] = nullBitPos;
         nullBitPos++;
     }
 
-    // Pad key null bits to fill 8-bit boundary (like bolt's TINYINT padding)
-    if (numKeys % 8 != 0) {
-        nullBitPos += (8 - numKeys % 8);
-    }
-
-    // Accumulator null bits
-    firstAggregateNullBit = nullBitPos;
-    if (aggStateSize > 0) {
-        nullBitPos++; // one null bit for the aggregate state
-    }
-
-    // Free flag bit
-    freeFlagOffset = nullBitPos;
-    nullBitPos++;
-
-    // Calculate null bytes size and add to offset
-    nullBytes = BitUtil::Nbytes(nullBitPos); // = RoundUp(nullBitPos, 8) / 8
-    nullBlockStart = offset; // byte offset where null block starts in row
+    // Calculate null bytes (no padding to 8-bit boundary)
+    nullBytes = BitUtil::Nbytes(nullBitPos);
+    nullBlockStart = offset;
     offset += nullBytes;
 
-    // Align offset for AggState
-    alignment = std::max(alignment, static_cast<int32_t>(alignof(uint64_t)));
-    offset = BitUtil::RoundUp(offset, alignment);
-
-    // Step 3: AggState offset
+    // Step 3: AggState offset (no alignment padding)
     aggStateOffset = offset;
     offset += aggStateSize;
 
-    // Final alignment
-    alignment = std::max(alignment, static_cast<int32_t>(sizeof(void*)));
-    fixedRowSize = BitUtil::RoundUp(offset, alignment);
+    fixedRowSize = offset;
+
+    LogInfo("RowContainer result: fixedRowSize=%d aggStateSize=%d numKeys=%d nullBlockStart=%d nullBytes=%d aggStateOffset=%d",
+            fixedRowSize, aggStateSize, numKeys, nullBlockStart, nullBytes, aggStateOffset);
 
     // Build RowColumn descriptors
-    // nullByte = nullBlockStart + (nullBitPos / 8)
-    // nullMask = (1 << (nullBitPos % 8))
     rowColumns.reserve(numKeys);
     for (int32_t i = 0; i < numKeys; ++i) {
         int32_t absNullBitPos = nullBlockStart * 8 + nullOffsets[i];
         rowColumns.emplace_back(offsets[i], absNullBitPos);
     }
-
-    // Also compute the absolute byte offset for the free flag
-    // freeFlagOffset is a relative bit position, we need absolute
-    freeFlagByteOffset = nullBlockStart + freeFlagOffset / 8;
-    freeFlagBitInByte = freeFlagOffset % 8;
 }
 
 char* RowContainer::NewRow()
@@ -116,12 +81,15 @@ char* RowContainer::NewRow()
 
     if (firstFreeRow != nullptr) {
         row = firstFreeRow;
-        // Read the next free pointer stored at offset 0 (where key data starts)
         firstFreeRow = *reinterpret_cast<char**>(row);
         --numFreeRows;
     } else {
-        // Allocate a new fixed-size row from the arena
-        row = reinterpret_cast<char*>(pool.Allocate(fixedRowSize));
+        if (batchRemaining == 0) {
+            batchPtr = reinterpret_cast<char*>(pool.Allocate(kBatchSize * fixedRowSize));
+            batchRemaining = kBatchSize;
+        }
+        row = batchPtr + (kBatchSize - batchRemaining) * fixedRowSize;
+        --batchRemaining;
         allocations.push_back(row);
     }
 
@@ -131,12 +99,6 @@ char* RowContainer::NewRow()
 char* RowContainer::InitializeRow(char* row)
 {
     memset(row, 0, fixedRowSize);
-
-    // Set accumulator null bits to 1 (aggregates start as null)
-    for (int32_t bit = firstAggregateNullBit; bit < freeFlagOffset; ++bit) {
-        row[nullBlockStart + bit / 8] |= (1 << (bit & 7));
-    }
-
     return row;
 }
 
@@ -146,16 +108,10 @@ int32_t RowContainer::ListRows(RowContainerIterator* iter, int32_t maxRows, char
     int32_t numAllocations = static_cast<int32_t>(allocations.size());
 
     while (count < maxRows && iter->allocationIndex < numAllocations) {
-        char* row = allocations[iter->allocationIndex];
+        rows[count++] = allocations[iter->allocationIndex];
         iter->allocationIndex++;
-
-        // Skip freed rows
-        if ((row[freeFlagByteOffset] & (1 << freeFlagBitInByte)) == 0) {
-            rows[count++] = row;
-        }
     }
 
-    // Signal completion if we've exhausted all allocations
     if (iter->allocationIndex >= numAllocations) {
         iter->allocationIndex = std::numeric_limits<int32_t>::max();
     }
