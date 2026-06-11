@@ -958,9 +958,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
     while (!InitChunkOffsets(elemNum)) {
       elemNum--;
     }
-    if(elemNum > 8){
-      elemNum = 8;
-    }
+    elemNum = std::min(elemNum, 8u);
     Base::SetElemNumInChunk(elemNum);
     emptyTags_ = taper::BroadcastByte(Base::kEmptyTag, elemNum);
     Base::Init(0);
