@@ -603,6 +603,25 @@ public:
                 } else {
                     GetUnequalsNumVarcharTyped<false>(groupColIdx, count, offset, nullByte, nullMask, workingUpdateIndices.data(), idxFrom, groups);
                 }
+            } else if (typeId == type::OMNI_ARRAY || typeId == type::OMNI_ROW) {
+                auto &curFunc = comparators[groupColIdx];
+                auto &decoded = decodedCols[groupColIdx];
+                for (int32_t i = idxFrom; i < count; ++i) {
+                    int32_t idx = workingUpdateIndices[i];
+                    uint8_t *row = groups[idx];
+                    bool rowIsNull = RowContainer::IsNullAt(reinterpret_cast<char *>(row), nullByte, nullMask);
+                    if (rowIsNull != decoded.IsNull(idx)) {
+                        std::swap(workingUpdateIndices[i], workingUpdateIndices[idxFrom]); idxFrom++;
+                        continue;
+                    }
+                    if (rowIsNull)
+                        continue;
+                    uint8_t *addr = reinterpret_cast<uint8_t *>(
+                        *reinterpret_cast<char **>(reinterpret_cast<char *>(row) + offset));
+                    if (!curFunc(*decoded.Base(), idx, addr)) {
+                        std::swap(workingUpdateIndices[i], workingUpdateIndices[idxFrom]); idxFrom++;
+                    }
+                }
             } else {
                 switch (typeId) {
                     COMPARE_DISPATCH(type::OMNI_BYTE)
