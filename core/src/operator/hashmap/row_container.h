@@ -135,6 +135,16 @@ public:
     /// Get the number of rows in the container.
     int64_t NumRows() const { return numRows; }
 
+    void Reset()
+    {
+        allocations.clear();
+        firstFreeRow = nullptr;
+        numRows = 0;
+        numFreeRows = 0;
+        batchPtr = nullptr;
+        batchRemaining = 0;
+    }
+
 private:
     /// Initialize a newly allocated or reused row.
     char* InitializeRow(char* row);
@@ -144,10 +154,6 @@ private:
     int32_t aggStateSize;
     int32_t fixedRowSize = 0;
     int32_t aggStateOffset = 0;
-    int32_t alignment = sizeof(void*); // minimum alignment = pointer size
-    int32_t freeFlagOffset = 0; // relative bit offset for the free flag (within null block)
-    int32_t freeFlagByteOffset = 0; // absolute byte offset for free flag in row
-    int32_t freeFlagBitInByte = 0; // bit position within the byte for free flag
     int32_t nullBlockStart = 0; // absolute byte offset where null block starts in row
 
     // Column descriptors
@@ -156,14 +162,16 @@ private:
     std::vector<RowColumn> rowColumns;
 
     int32_t nullBytes = 0;
-    int32_t firstAggregateNullBit = 0; // first null bit position for AggState
 
     // Row storage
     mem::SimpleArenaAllocator& pool;
-    std::vector<char*> allocations; // all allocated memory ranges
+    std::vector<char*> allocations; // all allocated row pointers
     char* firstFreeRow = nullptr;
     int64_t numRows = 0;
     int64_t numFreeRows = 0;
+    static constexpr int32_t kBatchSize = 1024;
+    char* batchPtr = nullptr;
+    int32_t batchRemaining = 0;
 };
 
 /// Iterator for RowContainer::listRows, tracking position across calls.
