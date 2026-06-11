@@ -305,6 +305,7 @@ ErrorCode SpillWriter::CreateTempFile()
         char errorBuf[ERROR_BUFFER_SIZE];
         GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
         LogError("Fchmod %s failed since %s.", filePathChars, errorBuf);
+        close(tempFd);
         return ErrorCode::WRITE_FAILED;
     }
     filePath = filePathChars;
