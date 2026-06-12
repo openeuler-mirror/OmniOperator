@@ -256,7 +256,13 @@ public:
     std::vector<int32_t> workingUpdateIndices;
     int32_t workingUpdateCount = 0;
     std::vector<int32_t> keyTypeSizes;
+    std::vector<int32_t> keyTypeIds;
     std::vector<bool> isVariableLenType;
+    std::vector<int32_t> varcharColIndices;
+    int32_t varcharSlotColIdx = -1;
+    std::vector<const char*> mergedVarcharCache_;
+    int32_t mergedVarcharCacheCount_ = 0;
+    std::vector<int32_t> colToVarcharPos_;
     RowContainerIterator rowContainerIter;
     std::vector<char*> rowPtrs;
     std::vector<uint8_t*> groups;
@@ -281,24 +287,50 @@ public:
         return *reinterpret_cast<uint8_t**>(data);
     }
 
+    static constexpr uint32_t ROW_PTR_SIZE = 6;
+
+    /// Store pointer as ROW_PTR_SIZE bytes (48-bit) in the hash table value buffer.
+    static ALWAYS_INLINE void SetRowPtr(char* buf, uint8_t* ptr)
+    {
+        uint64_t val = reinterpret_cast<uint64_t>(ptr);
+        memcpy(buf, &val, ROW_PTR_SIZE);
+    }
+
+    /// Read pointer from ROW_PTR_SIZE-byte value buffer (zero-extend lower 48 bits).
+    static ALWAYS_INLINE uint8_t* GetRowPtr(const char* buf)
+    {
+        uint64_t val = 0;
+        memcpy(&val, buf, ROW_PTR_SIZE);
+        return reinterpret_cast<uint8_t*>(val);
+    }
+
     TaperColumnSerializeHandler(mem::SimpleArenaAllocator &pool, int32_t size)
     {
-        table = std::make_unique<HashTable>(pool, sizeof(uint64_t), sizeof(char*));
+        table = std::make_unique<HashTable>(pool, sizeof(uint64_t), ROW_PTR_SIZE);
         totalAggStatesSize = size;
         totalAggValueSize = size + sizeof(size_t);
     }
 
     /// Initialize the RowContainer with key type information.
     /// Called after InitSize to set up the row layout with fixed-width key columns.
-    /// @param keySizes Fixed row sizes for each key column (or sizeof(char*)+sizeof(size_t) for variable-length)
+    /// @param keySizes Fixed row sizes for each key column (sizeof(char*) for VARCHAR, sizeof(char*)+sizeof(size_t) for complex types)
     /// @param isVariableLen True for each column that stores variable-length data (VARCHAR, ARRAY, etc.)
+    /// @param typeIds DataTypeId for each key column (used by SpillExtract to distinguish VARCHAR from complex types)
+    /// @param varcharCols Indices of VARCHAR/CHAR/VARBINARY columns to merge into a single slot
     /// @param pool Memory pool for row allocation
     void InitRowContainer(const std::vector<int32_t>& keySizes,
                           const std::vector<bool>& isVariableLen,
+                          const std::vector<int32_t>& typeIds,
+                          const std::vector<int32_t>& varcharCols,
                           mem::SimpleArenaAllocator& pool)
     {
         keyTypeSizes = keySizes;
         isVariableLenType = isVariableLen;
+        keyTypeIds = typeIds;
+        varcharColIndices = varcharCols;
+        if (varcharCols.size() > 1) {
+            varcharSlotColIdx = varcharCols[0];
+        }
         aggRows = std::make_unique<RowContainer>(
             keySizes, static_cast<int32_t>(keySizes.size()),
             totalAggStatesSize, pool);
@@ -355,7 +387,7 @@ public:
                                        uint32_t nullByte, uint8_t nullMask,
                                        int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
-        return BatchCompareVarcharDecoded<HasNull>(decodedCols[colIdx], count, offset, nullByte, nullMask, indices, idxFrom, groups);
+        return BatchCompareVarcharDecoded<HasNull>(decodedCols[colIdx], colIdx, count, offset, nullByte, nullMask, indices, idxFrom, groups);
     }
 
     /// Templated dispatch for BatchStoreKeyColumn using DecodedVector.
@@ -395,8 +427,8 @@ public:
         size_t newGroupsStartIdx = newGroups.size();
         auto initRow = [&](uint32_t rowIdx, char* data) -> char* {
             auto* row = aggRows->NewRow();
-            RowFromData(data) = reinterpret_cast<uint8_t*>(row);
-            newGroups.push_back(RowFromData(data));
+            SetRowPtr(data, reinterpret_cast<uint8_t*>(row));
+            newGroups.push_back(GetRowPtr(data));
             newGroupRowIndices[newGroupCount++] = rowIdx;
             return row;
         };
@@ -447,7 +479,7 @@ public:
             [&](uint32_t) { return false; },
             [&](uint32_t rowIdx, char* data) { initRow(rowIdx, data); },
             [&](uint32_t rowIdx, char* data, bool initFlag) {
-                groups[rowIdx] = RowFromData(data);
+                groups[rowIdx] = GetRowPtr(data);
                 if (!initFlag) {
                     workingUpdateIndices[workingUpdateCount++] = rowIdx;
                 }
@@ -455,6 +487,11 @@ public:
 
         if (newGroupCount > 0) {
             // Store keys for new groups using decoded vectors
+            // Store merged VARCHAR columns first (all in one contiguous block)
+            if (varcharColIndices.size() > 1) {
+                BatchStoreMergedVarcharColumns(groupColNum,
+                    newGroups.data() + newGroupsStartIdx, newGroupRowIndices.data(), newGroupCount);
+            }
             for (int32_t colIdx = 0; colIdx < groupColNum; ++colIdx) {
                 auto col = aggRows->ColumnAt(colIdx);
                 auto offset = col.Offset();
@@ -463,13 +500,22 @@ public:
                 bool hasNull = decodedCols[colIdx].HasNull();
                 auto typeId = decodedCols[colIdx].GetTypeId();
 
+                // Skip merged VARCHAR columns (already handled by BatchStoreMergedVarcharColumns)
+                if (keyTypeSizes[colIdx] == 0 && colIdx != varcharSlotColIdx) {
+                    continue;
+                }
+
                 if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR || typeId == type::OMNI_VARBINARY) {
-                    if (hasNull) {
-                        BatchStoreKeyColumnVarcharTyped<true>(colIdx, offset, nullByte, nullMask,
-                            newGroups.data() + newGroupsStartIdx, newGroupRowIndices.data(), newGroupCount);
+                    if (varcharColIndices.size() > 1 && colIdx == varcharSlotColIdx) {
+                        continue; // merged block pointer already stored
                     } else {
-                        BatchStoreKeyColumnVarcharTyped<false>(colIdx, offset, nullByte, nullMask,
-                            newGroups.data() + newGroupsStartIdx, newGroupRowIndices.data(), newGroupCount);
+                        if (hasNull) {
+                            BatchStoreKeyColumnVarcharTyped<true>(colIdx, offset, nullByte, nullMask,
+                                newGroups.data() + newGroupsStartIdx, newGroupRowIndices.data(), newGroupCount);
+                        } else {
+                            BatchStoreKeyColumnVarcharTyped<false>(colIdx, offset, nullByte, nullMask,
+                                newGroups.data() + newGroupsStartIdx, newGroupRowIndices.data(), newGroupCount);
+                        }
                     }
                 } else if (typeId == type::OMNI_ARRAY || typeId == type::OMNI_ROW) {
                     // Complex types: fall back to original BatchStoreComplex
@@ -535,7 +581,7 @@ public:
             table->Emplace(
                 workingHashVals[rowIdx],
                 [&](auto, TaperHashTableChunk& chunk, uint8_t slot) {
-                    auto* row = RowFromData(table->GetChunkValue(chunk, slot).buf);
+                    auto* row = GetRowPtr(table->GetChunkValue(chunk, slot).buf);
                     return CompareKeysWithDecode(row, groupColNum, rowIdx);
                 },
                 [&](char* data) {
@@ -544,7 +590,7 @@ public:
                         StoreKeyOneRowFromDecode(colIdx, row, rowIdx);
                     }
                 },
-                [&](char* data, bool) { groups[rowIdx] = RowFromData(data); });
+                [&](char* data, bool) { groups[rowIdx] = GetRowPtr(data); });
         }
         workingUpdateCount = 0;
     }
@@ -578,6 +624,28 @@ public:
     /// GetUnequalsNum using DecodedVector — dispatch once per column, then zero branches in hot loop.
     int32_t GetUnequalsNumWithDecode(int32_t count, int32_t groupColNum, uint8_t* const* groups)
     {
+        // Pre-compute merged VARCHAR pointers for all rows to avoid re-walking in each column's compare
+        mergedVarcharCache_.clear();
+        colToVarcharPos_.assign(groupColNum, -1);
+        mergedVarcharCacheCount_ = 0;
+        if (varcharColIndices.size() > 1) {
+            mergedVarcharCacheCount_ = varcharColIndices.size();
+            // Index cache by absolute row position (idx) to survive workingUpdateIndices swaps
+            int32_t maxIdx = 0;
+            for (int32_t wi = 0; wi < count; ++wi) {
+                maxIdx = std::max(maxIdx, workingUpdateIndices[wi]);
+            }
+            mergedVarcharCache_.resize((maxIdx + 1) * mergedVarcharCacheCount_);
+            for (int32_t i = 0; i < mergedVarcharCacheCount_; ++i) {
+                colToVarcharPos_[varcharColIndices[i]] = i;
+            }
+            for (int32_t wi = 0; wi < count; ++wi) {
+                int32_t idx = workingUpdateIndices[wi];
+                GetAllMergedVarcharPtrs(reinterpret_cast<const char*>(groups[idx]),
+                    &mergedVarcharCache_[idx * mergedVarcharCacheCount_], mergedVarcharCacheCount_);
+            }
+        }
+
         int32_t idxFrom = 0;
         for (int32_t groupColIdx = 0; groupColIdx < groupColNum; ++groupColIdx) {
             if (idxFrom >= count) break;
@@ -649,6 +717,12 @@ public:
     /// CompareKeys using DecodedVector — zero encoding branches per row.
     bool CompareKeysWithDecode(uint8_t* row, int32_t groupColNum, int32_t rowIdx)
     {
+        std::vector<const char*> varcharPtrsCache(groupColNum, nullptr);
+        bool hasMergedVarchar = (varcharColIndices.size() > 1);
+        if (hasMergedVarchar) {
+            GetAllMergedVarcharPtrs(reinterpret_cast<const char*>(row), varcharPtrsCache.data(), groupColNum);
+        }
+
         for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
             auto& ci = colInfos[groupColIdx];
             auto offset = ci.offset;
@@ -666,9 +740,15 @@ public:
                     break;
 
             if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR || typeId == type::OMNI_VARBINARY) {
-                uint8_t* rowData = reinterpret_cast<uint8_t*>(
-                    *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
-                if (rowData[0] == 0) return false;
+                const char* varcharData;
+                if (hasMergedVarchar) {
+                    varcharData = varcharPtrsCache[colToVarcharPos_[groupColIdx]];
+                } else {
+                    auto col = aggRows->ColumnAt(groupColIdx);
+                    varcharData = *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + col.Offset());
+                }
+                if (varcharData == nullptr || varcharData[0] == 0) return false;
+                auto* rowData = reinterpret_cast<const uint8_t*>(varcharData);
                 std::string_view val;
                 auto layout = decodedCols[groupColIdx].GetLayout();
                 if (layout == DVecLayout::Constant) {
@@ -709,6 +789,38 @@ public:
         return true;
     }
 
+    /// Get VARCHAR value string_view from decoded vector, handling all encodings.
+    static std::string_view GetVarcharFromDecoded(const DecodedVector& decoded, int32_t rowIdx) {
+        auto layout = decoded.GetLayout();
+        if (layout == DVecLayout::Constant) {
+            return static_cast<ConstVector<std::string_view>*>(decoded.Base())->GetConstValue();
+        } else if (layout == DVecLayout::Dictionary) {
+            return static_cast<Vector<DictionaryContainer<std::string_view>>*>(decoded.Base())->GetValue(rowIdx);
+        } else {
+            return static_cast<Vector<LargeStringContainer<std::string_view>>*>(decoded.Base())->GetValue(rowIdx);
+        }
+    }
+
+    /// Compute the serialized size of a non-null VARCHAR value (matches VariableTypeSerializer format).
+    static int32_t ComputeVarcharSerializedSize(const DecodedVector& decoded, int32_t rowIdx) {
+        auto value = GetVarcharFromDecoded(decoded, rowIdx);
+        auto stringLen = static_cast<int32_t>(value.size());
+        uint8_t rowLenSize = (stringLen <= 0xFF) ? 1 : (stringLen <= 0xFFFF) ? 2 : 4;
+        return sizeof(uint8_t) + rowLenSize + stringLen;
+    }
+
+    /// Serialize a non-null VARCHAR value directly into a buffer.
+    /// Returns the number of bytes written.
+    static int32_t SerializeVarcharToBuffer(char* writePos, const DecodedVector& decoded, int32_t rowIdx) {
+        auto value = GetVarcharFromDecoded(decoded, rowIdx);
+        auto stringLen = static_cast<int32_t>(value.size());
+        uint8_t rowLenSize = (stringLen <= 0xFF) ? 1 : (stringLen <= 0xFFFF) ? 2 : 4;
+        *reinterpret_cast<uint8_t*>(writePos) = rowLenSize;
+        memcpy(writePos + sizeof(uint8_t), &stringLen, rowLenSize);
+        memcpy(writePos + sizeof(uint8_t) + rowLenSize, value.data(), stringLen);
+        return sizeof(uint8_t) + rowLenSize + stringLen;
+    }
+
     /// Store one key column value from decoded vector for a single row.
     void StoreKeyOneRowFromDecode(int32_t colIdx, char* row, int32_t rowIdx)
     {
@@ -717,6 +829,47 @@ public:
         auto nullByte = col.NullByte();
         auto nullMask = col.NullMask();
         auto& decoded = decodedCols[colIdx];
+        auto typeId = decoded.GetTypeId();
+
+        // Skip merged VARCHAR columns (handled by the first/slot column)
+        if (varcharColIndices.size() > 1 &&
+            (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR || typeId == type::OMNI_VARBINARY) &&
+            colIdx != varcharSlotColIdx) {
+            return;
+        }
+
+        // For the merged VARCHAR slot column, store all VARCHAR columns in one block
+        if (varcharColIndices.size() > 1 && colIdx == varcharSlotColIdx) {
+            int32_t totalSize = 0;
+            for (int32_t vcIdx : varcharColIndices) {
+                if (decodedCols[vcIdx].IsNull(rowIdx)) {
+                    totalSize += 1;
+                } else {
+                    totalSize += ComputeVarcharSerializedSize(decodedCols[vcIdx], rowIdx);
+                }
+            }
+            char* blockStart = nullptr;
+            if (totalSize > 0) {
+                const uint8_t* tmp = nullptr;
+                table->Pool().AllocateContinue(totalSize, tmp);
+                blockStart = const_cast<char*>(reinterpret_cast<const char*>(tmp));
+            }
+            char* writePos = blockStart;
+            for (int32_t vcIdx : varcharColIndices) {
+                auto vcCol = aggRows->ColumnAt(vcIdx);
+                auto vcNullByte = vcCol.NullByte();
+                auto vcNullMask = vcCol.NullMask();
+                if (decodedCols[vcIdx].IsNull(rowIdx)) {
+                    RowContainer::SetNullAt(row, vcNullByte, vcNullMask);
+                    if (writePos) { *writePos = 0; writePos += 1; }
+                } else {
+                    RowContainer::ClearNullAt(row, vcNullByte, vcNullMask);
+                    writePos += SerializeVarcharToBuffer(writePos, decodedCols[vcIdx], rowIdx);
+                }
+            }
+            *reinterpret_cast<char**>(row + offset) = blockStart;
+            return;
+        }
 
         if (decoded.IsNull(rowIdx)) {
             RowContainer::SetNullAt(row, nullByte, nullMask);
@@ -724,7 +877,6 @@ public:
         }
         RowContainer::ClearNullAt(row, nullByte, nullMask);
 
-        auto typeId = decoded.GetTypeId();
         #define STORE_ONE_DISPATCH(TID, CPP_TYPE) \
             case TID: \
                 RowContainer::StoreValue(row, offset, decoded.GetValue<CPP_TYPE>(rowIdx)); \
@@ -735,7 +887,6 @@ public:
             auto& curFunc = serializers[colIdx];
             curFunc(decoded.Base(), rowIdx, table->Pool(), key);
             *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-            *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
         } else {
             switch (typeId) {
                 STORE_ONE_DISPATCH(type::OMNI_BYTE, int8_t)
@@ -783,6 +934,72 @@ public:
 
         const char* rowDataPtr = reinterpret_cast<const char*>(rowData + 1 + rowLenSize);
         return memcmp(rowDataPtr, sv.data(), stringLen) == 0;
+    }
+
+    /// Fill all merged VARCHAR data pointers for a row in one pass.
+    /// Returns the number of varchar columns filled (0 for single/non-merged).
+    int32_t GetAllMergedVarcharPtrs(const char* row, const char** outPtrs, int32_t maxCount) const {
+        if (varcharColIndices.size() <= 1) return 0;
+        auto varcharSlotCol = aggRows->ColumnAt(varcharSlotColIdx);
+        const char* pos = *reinterpret_cast<char**>(const_cast<char*>(row) + varcharSlotCol.Offset());
+        int32_t count = 0;
+        for (int32_t vcIdx : varcharColIndices) {
+            if (count >= maxCount) break;
+            auto col = aggRows->ColumnAt(vcIdx);
+            auto nullByte = col.NullByte();
+            auto nullMask = col.NullMask();
+            if (RowContainer::IsNullAt(row, nullByte, nullMask)) {
+                outPtrs[count++] = nullptr;
+                if (pos != nullptr) pos += 1;
+            } else {
+                outPtrs[count++] = (pos != nullptr) ? pos : nullptr;
+                if (pos != nullptr) pos += ComputeVarCharSerializedSize(pos);
+            }
+        }
+        return count;
+    }
+
+    /// Get the serialized data pointer for a specific VARCHAR column in a row.
+    /// For single VARCHAR, reads the pointer directly from the row slot.
+    /// Prefer GetAllMergedVarcharPtrs for hot paths with multiple VARCHAR columns.
+    const char* GetMergedVarcharData(const char* row, int32_t targetVarcharColIdx) const {
+        if (varcharColIndices.size() <= 1) {
+            auto col = aggRows->ColumnAt(targetVarcharColIdx);
+            return *reinterpret_cast<char**>(const_cast<char*>(row) + col.Offset());
+        }
+        auto varcharSlotCol = aggRows->ColumnAt(varcharSlotColIdx);
+        const char* pos = *reinterpret_cast<char**>(const_cast<char*>(row) + varcharSlotCol.Offset());
+        if (pos == nullptr) return nullptr;
+        for (int32_t vcIdx : varcharColIndices) {
+            auto col = aggRows->ColumnAt(vcIdx);
+            auto nullByte = col.NullByte();
+            auto nullMask = col.NullMask();
+            if (RowContainer::IsNullAt(row, nullByte, nullMask)) {
+                if (vcIdx == targetVarcharColIdx) return nullptr;
+                pos += 1;
+            } else {
+                if (vcIdx == targetVarcharColIdx) return pos;
+                pos += ComputeVarCharSerializedSize(pos);
+            }
+        }
+        return nullptr;
+    }
+
+    /// Compute the total serialized byte size of a VARCHAR/CHAR/VARBINARY value
+    /// from its serialized data pointer.
+    /// Format: [uint8_t rowLenSize][rowLenSize bytes: length][length bytes: data]
+    /// Null: [uint8_t: 0] → 1 byte.
+    static ALWAYS_INLINE size_t ComputeVarCharSerializedSize(const char* data) {
+        uint8_t rowLenSize = *reinterpret_cast<const uint8_t*>(data);
+        if (rowLenSize == 0) return sizeof(uint8_t);
+        size_t stringLen;
+        switch (rowLenSize) {
+            case 1: stringLen = *reinterpret_cast<const uint8_t*>(data + sizeof(uint8_t)); break;
+            case 2: stringLen = *reinterpret_cast<const uint16_t*>(data + sizeof(uint8_t)); break;
+            case 4: stringLen = *reinterpret_cast<const uint32_t*>(data + sizeof(uint8_t)); break;
+            default: return sizeof(uint8_t);
+        }
+        return sizeof(uint8_t) + rowLenSize + stringLen;
     }
 
     // ========== DecodedVector-based templated helpers (zero runtime encoding branches) ==========
@@ -1214,11 +1431,21 @@ public:
 
     /// Batch compare for VARCHAR using DecodedVector — encoding resolved at decode time.
     template <bool HasNull>
-    int32_t BatchCompareVarcharDecoded(const DecodedVector& decoded, int32_t count, int32_t offset,
+    int32_t BatchCompareVarcharDecoded(const DecodedVector& decoded, int32_t colIdx, int32_t count, int32_t offset,
                                        uint32_t nullByte, uint8_t nullMask,
                                        int32_t* indices, int32_t& idxFrom, uint8_t* const* groups)
     {
         auto layout = decoded.GetLayout();
+
+        auto getVarcharData = [&](uint8_t* row, int32_t groupIdx) -> const uint8_t* {
+            if (!mergedVarcharCache_.empty()) {
+                int32_t vcPos = colToVarcharPos_[colIdx];
+                return reinterpret_cast<const uint8_t*>(
+                    mergedVarcharCache_[groupIdx * mergedVarcharCacheCount_ + vcPos]);
+            }
+            return reinterpret_cast<const uint8_t*>(
+                *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
+        };
 
         if (layout == DVecLayout::Constant) {
             std::string_view constVal = static_cast<ConstVector<std::string_view>*>(decoded.Base())->GetConstValue();
@@ -1231,8 +1458,8 @@ public:
                     bool vecIsNull = BitUtil::IsBitSet(rawNulls, idx);
                     if (rowIsNull != vecIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
                     if (rowIsNull) continue;
-                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
-                    if (rowData[0] == 0 || !CompareVarcharFromRow(rowData, constVal)) {
+                    const uint8_t* rowData = getVarcharData(row, idx);
+                    if (rowData == nullptr || rowData[0] == 0 || !CompareVarcharFromRow(rowData, constVal)) {
                         std::swap(indices[i], indices[idxFrom]); idxFrom++;
                     }
                 }
@@ -1242,8 +1469,8 @@ public:
                     uint8_t* row = groups[idx];
                     bool rowIsNull = RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask);
                     if (rowIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
-                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
-                    if (rowData[0] == 0 || !CompareVarcharFromRow(rowData, constVal)) {
+                    const uint8_t* rowData = getVarcharData(row, idx);
+                    if (rowData == nullptr || rowData[0] == 0 || !CompareVarcharFromRow(rowData, constVal)) {
                         std::swap(indices[i], indices[idxFrom]); idxFrom++;
                     }
                 }
@@ -1259,8 +1486,8 @@ public:
                     bool vecIsNull = BitUtil::IsBitSet(rawNulls, idx);
                     if (rowIsNull != vecIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
                     if (rowIsNull) continue;
-                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
-                    if (rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    const uint8_t* rowData = getVarcharData(row, idx);
+                    if (rowData == nullptr || rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
                     std::string_view val = dicVec->GetValue(idx);
                     if (!CompareVarcharFromRow(rowData, val)) { std::swap(indices[i], indices[idxFrom]); idxFrom++; }
                 }
@@ -1270,8 +1497,8 @@ public:
                     uint8_t* row = groups[idx];
                     bool rowIsNull = RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask);
                     if (rowIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
-                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
-                    if (rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    const uint8_t* rowData = getVarcharData(row, idx);
+                    if (rowData == nullptr || rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
                     std::string_view val = dicVec->GetValue(idx);
                     if (!CompareVarcharFromRow(rowData, val)) { std::swap(indices[i], indices[idxFrom]); idxFrom++; }
                 }
@@ -1289,8 +1516,8 @@ public:
                     bool vecIsNull = BitUtil::IsBitSet(rawNulls, idx);
                     if (rowIsNull != vecIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
                     if (rowIsNull) continue;
-                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
-                    if (rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    const uint8_t* rowData = getVarcharData(row, idx);
+                    if (rowData == nullptr || rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
                     auto len = strOffsets[idx + 1] - strOffsets[idx];
                     std::string_view val(strData + strOffsets[idx], len);
                     if (!CompareVarcharFromRow(rowData, val)) { std::swap(indices[i], indices[idxFrom]); idxFrom++; }
@@ -1301,8 +1528,8 @@ public:
                     uint8_t* row = groups[idx];
                     bool rowIsNull = RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask);
                     if (rowIsNull) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
-                    uint8_t* rowData = reinterpret_cast<uint8_t*>(*reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset));
-                    if (rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
+                    const uint8_t* rowData = getVarcharData(row, idx);
+                    if (rowData == nullptr || rowData[0] == 0) { std::swap(indices[i], indices[idxFrom]); idxFrom++; continue; }
                     auto len = strOffsets[idx + 1] - strOffsets[idx];
                     std::string_view val(strData + strOffsets[idx], len);
                     if (!CompareVarcharFromRow(rowData, val)) { std::swap(indices[i], indices[idxFrom]); idxFrom++; }
@@ -1397,7 +1624,6 @@ public:
                         type::StringRef key; key.data = nullptr; key.size = 0;
                         curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                         *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                        *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                     }
                 }
             } else {
@@ -1408,7 +1634,6 @@ public:
                     type::StringRef key; key.data = nullptr; key.size = 0;
                     curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                     *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                    *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                 }
             }
         } else if (layout == DVecLayout::Dictionary) {
@@ -1424,7 +1649,6 @@ public:
                         type::StringRef key; key.data = nullptr; key.size = 0;
                         curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                         *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                        *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                     }
                 }
             } else {
@@ -1435,7 +1659,6 @@ public:
                     type::StringRef key; key.data = nullptr; key.size = 0;
                     curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                     *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                    *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                 }
             }
         } else {
@@ -1451,7 +1674,6 @@ public:
                         type::StringRef key; key.data = nullptr; key.size = 0;
                         curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                         *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                        *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                     }
                 }
             } else {
@@ -1462,9 +1684,68 @@ public:
                     type::StringRef key; key.data = nullptr; key.size = 0;
                     curFunc(decoded.Base(), rowIdx, table->Pool(), key);
                     *reinterpret_cast<char**>(row + offset) = const_cast<char*>(key.data);
-                    *reinterpret_cast<size_t*>(row + offset + sizeof(char*)) = key.size;
                 }
             }
+        }
+    }
+
+    /// Batch store for merged VARCHAR columns - stores all VARCHAR data in one contiguous block.
+    /// Memory layout: [col0_data][col1_data]...[colN_data]
+    /// Called once per batch before per-column stores, handles all VARCHAR columns together.
+    void BatchStoreMergedVarcharColumns(int32_t groupColNum,
+                                        uint8_t** rows, uint32_t* rowIndices, int32_t rowCount)
+    {
+        auto varcharSlotCol = aggRows->ColumnAt(varcharSlotColIdx);
+        auto varcharSlotOffset = varcharSlotCol.Offset();
+        auto varcharSlotNullByte = varcharSlotCol.NullByte();
+        auto varcharSlotNullMask = varcharSlotCol.NullMask();
+
+        for (int32_t i = 0; i < rowCount; ++i) {
+            char* row = reinterpret_cast<char*>(rows[i]);
+            auto rowIdx = rowIndices[i];
+
+            // First pass: calculate total size needed for all VARCHAR columns
+            int32_t totalSize = 0;
+            for (int32_t vcIdx : varcharColIndices) {
+                auto col = aggRows->ColumnAt(vcIdx);
+                auto nullByte = col.NullByte();
+                auto nullMask = col.NullMask();
+                if (decodedCols[vcIdx].HasNull() && decodedCols[vcIdx].IsNull(rowIdx)) {
+                    totalSize += 1; // null marker: 1 byte
+                } else {
+                    totalSize += ComputeVarcharSerializedSize(decodedCols[vcIdx], rowIdx);
+                }
+            }
+
+            // Allocate contiguous block
+            char* blockStart = nullptr;
+            if (totalSize > 0) {
+                const uint8_t* tmp = nullptr;
+                table->Pool().AllocateContinue(totalSize, tmp);
+                blockStart = const_cast<char*>(reinterpret_cast<const char*>(tmp));
+            }
+
+            // Second pass: serialize each VARCHAR column directly into the block
+            char* writePos = blockStart;
+            for (int32_t vcIdx : varcharColIndices) {
+                auto col = aggRows->ColumnAt(vcIdx);
+                auto nullByte = col.NullByte();
+                auto nullMask = col.NullMask();
+
+                if (decodedCols[vcIdx].HasNull() && decodedCols[vcIdx].IsNull(rowIdx)) {
+                    RowContainer::SetNullAt(row, nullByte, nullMask);
+                    if (writePos) {
+                        *writePos = 0; // null marker
+                        writePos += 1;
+                    }
+                } else {
+                    RowContainer::ClearNullAt(row, nullByte, nullMask);
+                    writePos += SerializeVarcharToBuffer(writePos, decodedCols[vcIdx], rowIdx);
+                }
+            }
+
+            // Store the block pointer in the first VARCHAR slot
+            *reinterpret_cast<char**>(row + varcharSlotOffset) = blockStart;
         }
     }
 
@@ -1492,10 +1773,18 @@ public:
     /// Parse key columns from a RowContainer row into output vectors.
     /// For fixed-width types, read directly from row offsets.
     /// For complex types, read from the serialized StringRef stored in the row.
+    /// For merged VARCHAR columns, read from the contiguous block.
     void ParseKeyToCols(uint8_t* rowPtr, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
         const int32_t rowIdx)
     {
         auto* row = reinterpret_cast<char*>(rowPtr);
+        // For merged VARCHAR: get the block pointer and parse all VARCHAR columns from it
+        const char* mergedVarcharPos = nullptr;
+        if (varcharColIndices.size() > 1) {
+            auto varcharSlotCol = aggRows->ColumnAt(varcharSlotColIdx);
+            auto varcharSlotOffset = varcharSlotCol.Offset();
+            mergedVarcharPos = *reinterpret_cast<char**>(row + varcharSlotOffset);
+        }
         for (int32_t i = 0; i < groupColNum; ++i) {
             auto col = aggRows->ColumnAt(i);
             auto offset = col.Offset();
@@ -1505,6 +1794,12 @@ public:
             auto nullMask = col.NullMask();
             if (RowContainer::IsNullAt(row, nullByte, nullMask)) {
                 vec::VectorHelper::SetNull(outVector, rowIdx);
+                if (varcharColIndices.size() > 1 && mergedVarcharPos != nullptr) {
+                    if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR ||
+                        typeId == type::OMNI_VARBINARY) {
+                        mergedVarcharPos += 1;
+                    }
+                }
                 continue;
             }
 
@@ -1547,9 +1842,24 @@ public:
                     static_cast<Vector<Decimal128>*>(outVector)->SetValue(rowIdx,
                         RowContainer::ReadValue<Decimal128>(row, offset));
                     break;
+                case type::OMNI_VARCHAR:
+                case type::OMNI_CHAR:
+                case type::OMNI_VARBINARY: {
+                    if (varcharColIndices.size() > 1 && mergedVarcharPos != nullptr) {
+                        // Read from merged block
+                        const char* pos = mergedVarcharPos;
+                        pos = deserializers[i](outVector, rowIdx, pos);
+                        mergedVarcharPos = pos; // Advance cursor for next VARCHAR
+                    } else {
+                        // Single VARCHAR: read pointer directly from row
+                        char* dataPtr = *reinterpret_cast<char**>(row + offset);
+                        const char* pos = dataPtr;
+                        deserializers[i](outVector, rowIdx, pos);
+                    }
+                    break;
+                }
                 default: {
                     char* dataPtr = *reinterpret_cast<char**>(row + offset);
-                    size_t dataSize = *reinterpret_cast<size_t*>(row + offset + sizeof(char*));
                     auto deserializeFunc = deserializers[i];
                     const char* pos = dataPtr;
                     deserializeFunc(outVector, rowIdx, pos);
@@ -1583,40 +1893,77 @@ public:
         }();
         uint32_t idx = 0;
         while (idx < rowsNum && !tblVisitor.Finished()) {
-            auto* row = RowFromData(tblVisitor.CurVal().buf);
+            auto* row = GetRowPtr(tblVisitor.CurVal().buf);
             // Reconstruct serialized key data from RowContainer row
             // For fixed-width types, re-serialize each column into a contiguous buffer
             // For complex types, the serialized data pointer is stored in the row
+            // For merged VARCHAR columns, read from the contiguous block
             type::StringRef key;
+
+            // For merged VARCHAR: get the block pointer
+            const char* mergedVarcharPos = nullptr;
+            if (varcharColIndices.size() > 1) {
+                auto varcharSlotCol = aggRows->ColumnAt(varcharSlotColIdx);
+                auto varcharSlotOffset = varcharSlotCol.Offset();
+                mergedVarcharPos = *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + varcharSlotOffset);
+            }
+
             for (int32_t colIdx = 0; colIdx < static_cast<int32_t>(serializers.size()); ++colIdx) {
                 auto col = aggRows->ColumnAt(colIdx);
                 auto offset = col.Offset();
                 auto nullByte = col.NullByte();
                 auto nullMask = col.NullMask();
+                auto colTypeId = keyTypeIds[colIdx];
+                bool isMergedVarcharNonSlot = (varcharColIndices.size() > 1 &&
+                    (colTypeId == type::OMNI_VARCHAR || colTypeId == type::OMNI_CHAR ||
+                     colTypeId == type::OMNI_VARBINARY) &&
+                    colIdx != varcharSlotColIdx);
 
-                // Check if this column is null in the row
-                if (RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask)) {
-                    // Serialize null marker: [uint8_t: 0]
-                    auto* pos = table->Pool().AllocateContinue(sizeof(uint8_t), reinterpret_cast<const uint8_t*&>(key.data));
-                    *pos = 0;
-                    key.size += sizeof(uint8_t);
+                if (keyTypeSizes[colIdx] == 0 && !isMergedVarcharNonSlot) {
                     continue;
                 }
 
-                // For complex types stored as StringRef in the row, copy the serialized data
+                if (RowContainer::IsNullAt(reinterpret_cast<char*>(row), nullByte, nullMask)) {
+                    auto* pos = table->Pool().AllocateContinue(sizeof(uint8_t), reinterpret_cast<const uint8_t*&>(key.data));
+                    *pos = 0;
+                    key.size += sizeof(uint8_t);
+                    if (isMergedVarcharNonSlot && mergedVarcharPos != nullptr) {
+                        mergedVarcharPos += 1;
+                    }
+                    continue;
+                }
+
                 if (isVariableLenType[colIdx]) {
-                    // This is a complex type column - copy the serialized data from the StringRef
-                    char* dataPtr = *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset);
-                    size_t dataSize = *reinterpret_cast<size_t*>(reinterpret_cast<char*>(row) + offset + sizeof(char*));
-                    if (dataPtr != nullptr && dataSize > 0) {
-                        auto* dest = table->Pool().AllocateContinue(dataSize, reinterpret_cast<const uint8_t*&>(key.data));
-                        memcpy(dest, dataPtr, dataSize);
-                        key.size += dataSize;
+                    if (colTypeId == type::OMNI_VARCHAR || colTypeId == type::OMNI_CHAR ||
+                        colTypeId == type::OMNI_VARBINARY) {
+                        const char* dataPtr = nullptr;
+                        size_t dataSize = 0;
+
+                        if (varcharColIndices.size() > 1 && mergedVarcharPos != nullptr) {
+                            dataPtr = mergedVarcharPos;
+                            dataSize = ComputeVarCharSerializedSize(dataPtr);
+                            mergedVarcharPos += dataSize;
+                        } else {
+                            dataPtr = *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset);
+                            if (dataPtr != nullptr) {
+                                dataSize = ComputeVarCharSerializedSize(dataPtr);
+                            }
+                        }
+                        if (dataPtr != nullptr && dataSize > 0) {
+                            auto* dest = table->Pool().AllocateContinue(dataSize, reinterpret_cast<const uint8_t*&>(key.data));
+                            memcpy(dest, dataPtr, dataSize);
+                            key.size += dataSize;
+                        }
+                    } else {
+                        char* dataPtr = *reinterpret_cast<char**>(reinterpret_cast<char*>(row) + offset);
+                        size_t dataSize = *reinterpret_cast<size_t*>(reinterpret_cast<char*>(row) + offset + sizeof(char*));
+                        if (dataPtr != nullptr && dataSize > 0) {
+                            auto* dest = table->Pool().AllocateContinue(dataSize, reinterpret_cast<const uint8_t*&>(key.data));
+                            memcpy(dest, dataPtr, dataSize);
+                            key.size += dataSize;
+                        }
                     }
                 } else {
-                    // For fixed-width types, directly copy from RowContainer row
-                    // using the same format as FixedLenTypeSerializer:
-                    // [uint8_t rowDataSize][rowDataSize bytes of value]
                     int32_t colSize = keyTypeSizes[colIdx];
                     auto resSize = sizeof(uint8_t) + colSize;
                     auto* pos = table->Pool().AllocateContinue(resSize, reinterpret_cast<const uint8_t*&>(key.data));
@@ -2222,6 +2569,12 @@ public:
     void ResetHashmap()
     {
         table->Clear();
+        if (aggRows) {
+            aggRows->Reset();
+        }
+        rowContainerIter = RowContainerIterator{};
+        workingUpdateCount = 0;
+        mergedVarcharCacheCount_ = 0;
     };
 
 private:

@@ -14,6 +14,7 @@
 #include "util/compiler_util.h"
 #include "util/bit_util.h"
 #include "memory/simple_arena_allocator.h"
+#include "memory/allocator.h"
 
 
 // #define TAPER_HASH_STAT
@@ -161,6 +162,7 @@ class TaperHashTableBase : public TaperContainer {
       uint32_t keySize,
       uint32_t valueSize)
       : pool(memPool),
+        systemAlloc_(mem::Allocator::GetAllocator()),
         keySize_(keySize),
         valueSize_(valueSize),
         rowSize_(keySize + valueSize) {}
@@ -169,11 +171,9 @@ class TaperHashTableBase : public TaperContainer {
   TaperHashTableBase(TaperHashTableBase&&) noexcept = delete;
   TaperHashTableBase& operator=(const TaperHashTableBase&) = delete;
   TaperHashTableBase& operator=(TaperHashTableBase&&) noexcept = delete;
-#ifdef DEBUG_STAT_ENABLED
   virtual ~TaperHashTableBase() {
-    debugStat_.print();
-  };
-#endif
+    FreeChunks();
+  }
 
   size_t Size() const override {
     return size_;
@@ -188,6 +188,7 @@ class TaperHashTableBase : public TaperContainer {
   }
 
   void Clear() override {
+    FreeChunks();
     Init(0);
   }
 
@@ -372,6 +373,7 @@ class TaperHashTableBase : public TaperContainer {
 
  private:
   mem::SimpleArenaAllocator &pool;
+  mem::Allocator* systemAlloc_ = nullptr;
   GroupbyHashCalculator<Key> hashCalculator {};
 
   ChunkPtr chunks_ = nullptr;
@@ -411,20 +413,33 @@ class TaperHashTableBase : public TaperContainer {
     size_ += delta;
   }
 
+  void FreeChunks() {
+    FreeChunkMemory(chunks_, lastChunkIdx_);
+    chunks_ = nullptr;
+  }
+
+  static void FreeChunkMemory(ChunkPtr chunks, uint32_t lastChunkIdx) {
+    if (chunks != nullptr) {
+      auto bytesNum = (lastChunkIdx + 1) * sizeof(TaperHashTableChunk);
+      mem::Allocator::GetAllocator()->Free(chunks, bytesNum);
+    }
+  }
+
   void Init(uint32_t lastChunkIdx) {
     auto chunkCapacity = lastChunkIdx + 1;
     OMNI_CHECK_D(IsValidCapacity(chunkCapacity));
 
     auto bytesNum = chunkCapacity * sizeof(TaperHashTableChunk);
-    chunks_ = reinterpret_cast<ChunkPtr>(pool.Allocate(bytesNum));
+    chunks_ = reinterpret_cast<ChunkPtr>(systemAlloc_->Alloc(bytesNum, false));
     memset(chunks_, kEmptyTag, bytesNum);
     lastChunkIdx_ = lastChunkIdx;
     size_ = 0;
 
-    // 7*capacity/8
+    // 9*capacity/10 = 0.9 load factor
     auto capacity = chunkCapacity * elemNumInChunk_;
-    expandThreshold_ = capacity - (capacity >> 3);
-    LogInfo("lastChunkIdx %d, bytesNum: %d", lastChunkIdx, bytesNum);
+    expandThreshold_ = capacity - capacity / 10;
+    LogInfo("Init hashTable chunkCapacity=%u bytesNum=%lu chunkSize=%u",
+            chunkCapacity, static_cast<unsigned long>(bytesNum), static_cast<unsigned>(sizeof(TaperHashTableChunk)));
   }
 
   template <
@@ -485,6 +500,8 @@ class TaperHashTableBase : public TaperContainer {
   template <typename Derived>
   void ExpandCapacityDirectly(Derived& derived) {
     auto vOld = derived.GetResultVisitor();
+    auto oldChunks = chunks_;
+    auto oldLastChunkIdx = lastChunkIdx_;
     Init(ExpandLastChunkIdx());
     OMNI_CHECK_D(!rehashing_);
     rehashing_ = true;
@@ -493,6 +510,7 @@ class TaperHashTableBase : public TaperContainer {
       vOld.Next();
     }
     rehashing_ = false;
+    FreeChunkMemory(oldChunks, oldLastChunkIdx);
   }
 
   template <
@@ -661,10 +679,12 @@ class TaperHashTableBase : public TaperContainer {
   void ExpandCapacityIteratively(Derived& derived) {
     auto oldChunksNum = GetChunksCapacity();
     auto* oldChunks = Chunks();
+    auto oldLastChunkIdx = lastChunkIdx_;
     HwpPrefetchTerminate();
     Init(ExpandLastChunkIdx());
 
     derived.RehashChunksIteratively(oldChunks, oldChunksNum);
+    FreeChunkMemory(oldChunks, oldLastChunkIdx);
   }
 
   template <typename Derived, typename Visitor>

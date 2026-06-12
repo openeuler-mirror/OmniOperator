@@ -246,18 +246,33 @@ OmniStatus HashAggregationOperator::Init()
         for (const auto &c : groupByCols) {
             keySizes.push_back(OperatorUtil::GetTypeSize(c.input));
         }
-        // For complex types (VARCHAR, ARRAY, ROW), we need extra space for StringRef (char* + size_t)
+        // For variable-length types, store a pointer to the serialized data in the row.
+        // VARCHAR/CHAR/VARBINARY: only sizeof(char*) needed (length derivable from serialized format).
+        // Complex types (ARRAY, MAP, ROW): sizeof(char*) + sizeof(size_t) for StringRef storage.
         std::vector<bool> isVariableLen(groupByCols.size(), false);
+        std::vector<int32_t> typeIds(groupByCols.size());
+        std::vector<int32_t> varcharColIndices;
         for (size_t i = 0; i < groupByCols.size(); ++i) {
             auto typeId = groupByCols[i].input->GetId();
-            if (typeId == type::OMNI_CHAR || typeId == type::OMNI_VARCHAR || typeId == type::OMNI_VARBINARY ||
-                typeId == type::OMNI_ARRAY || typeId == type::OMNI_MAP || typeId == type::OMNI_ROW) {
-                // Override the key size to sizeof(char*) + sizeof(size_t) for StringRef storage
+            typeIds[i] = typeId;
+            if (typeId == type::OMNI_CHAR || typeId == type::OMNI_VARCHAR || typeId == type::OMNI_VARBINARY) {
+                varcharColIndices.push_back(i);
+                isVariableLen[i] = true;
+                keySizes[i] = sizeof(char*);
+            } else if (typeId == type::OMNI_ARRAY || typeId == type::OMNI_MAP || typeId == type::OMNI_ROW) {
                 keySizes[i] = sizeof(char*) + sizeof(size_t);
                 isVariableLen[i] = true;
             }
         }
-        serialize->InitRowContainer(keySizes, isVariableLen, *executionContext->GetArena());
+        // Merge multiple VARCHAR columns into a single slot to reduce fixed row size
+        if (varcharColIndices.size() > 1) {
+            int32_t firstVarcharIdx = varcharColIndices[0];
+            keySizes[firstVarcharIdx] = sizeof(char*);
+            for (size_t i = 1; i < varcharColIndices.size(); ++i) {
+                keySizes[varcharColIndices[i]] = 0;
+            }
+        }
+        serialize->InitRowContainer(keySizes, isVariableLen, typeIds, varcharColIndices, *executionContext->GetArena());
     } else if (groupByColumnsHandleType == HandleType::fixedInt32) {
         fixedInt32 = std::make_unique<TaperGroupbySingleFixHandler<int32_t>>(*executionContext->GetArena(), totalAggStatesSize);
     } else if (groupByColumnsHandleType == HandleType::fixedInt64) {
@@ -435,15 +450,17 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 
         if (serialize != nullptr) {
             if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
-                serialize->PushBackSerializer(dicVectorSerializerCenter[omniId]);
-                serialize->PushBackComparator(dicVectorComparatorCenter[omniId]);
-                if (serialize == nullptr) {
+                if (dicVectorSerializerCenter[omniId] != nullptr) {
+                    serialize->PushBackSerializer(dicVectorSerializerCenter[omniId]);
+                    serialize->PushBackComparator(dicVectorComparatorCenter[omniId]);
+                } else {
                     serialize->PushBackSerializer(complexVectorSerializerCenter[omniId]);
                 }
             } else if (curVector->GetEncoding() == Encoding::OMNI_ENCODING_CONST) {
-                serialize->PushBackSerializer(constVectorSerializerCenter[omniId]);
-                serialize->PushBackComparator(constVectorComparatorCenter[omniId]);
-                if (serialize == nullptr) {
+                if (constVectorSerializerCenter[omniId] != nullptr) {
+                    serialize->PushBackSerializer(constVectorSerializerCenter[omniId]);
+                    serialize->PushBackComparator(constVectorComparatorCenter[omniId]);
+                } else {
                     serialize->PushBackSerializer(complexVectorSerializerCenter[omniId]);
                 }
             } else if (omniId == type::OMNI_ARRAY || omniId == type::OMNI_ROW) {
