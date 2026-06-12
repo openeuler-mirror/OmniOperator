@@ -287,24 +287,26 @@ public:
         return *reinterpret_cast<uint8_t**>(data);
     }
 
-    /// Store pointer as 6 bytes (48-bit) in the hash table value buffer.
+    static constexpr uint32_t ROW_PTR_SIZE = 6;
+
+    /// Store pointer as ROW_PTR_SIZE bytes (48-bit) in the hash table value buffer.
     static ALWAYS_INLINE void SetRowPtr(char* buf, uint8_t* ptr)
     {
         uint64_t val = reinterpret_cast<uint64_t>(ptr);
-        memcpy(buf, &val, 6);
+        memcpy(buf, &val, ROW_PTR_SIZE);
     }
 
-    /// Read pointer from 6-byte value buffer (zero-extend lower 48 bits).
+    /// Read pointer from ROW_PTR_SIZE-byte value buffer (zero-extend lower 48 bits).
     static ALWAYS_INLINE uint8_t* GetRowPtr(const char* buf)
     {
         uint64_t val = 0;
-        memcpy(&val, buf, 6);
+        memcpy(&val, buf, ROW_PTR_SIZE);
         return reinterpret_cast<uint8_t*>(val);
     }
 
     TaperColumnSerializeHandler(mem::SimpleArenaAllocator &pool, int32_t size)
     {
-        table = std::make_unique<HashTable>(pool, sizeof(uint64_t), 6);
+        table = std::make_unique<HashTable>(pool, sizeof(uint64_t), ROW_PTR_SIZE);
         totalAggStatesSize = size;
         totalAggValueSize = size + sizeof(size_t);
     }

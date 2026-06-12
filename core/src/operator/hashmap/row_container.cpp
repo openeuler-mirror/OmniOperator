@@ -63,9 +63,6 @@ RowContainer::RowContainer(const std::vector<int32_t>& keyTypeSizes,
 
     fixedRowSize = offset;
 
-    LogInfo("RowContainer result: fixedRowSize=%d aggStateSize=%d numKeys=%d nullBlockStart=%d nullBytes=%d aggStateOffset=%d",
-            fixedRowSize, aggStateSize, numKeys, nullBlockStart, nullBytes, aggStateOffset);
-
     // Build RowColumn descriptors
     rowColumns.reserve(numKeys);
     for (int32_t i = 0; i < numKeys; ++i) {
