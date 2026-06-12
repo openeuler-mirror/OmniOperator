@@ -172,9 +172,6 @@ class TaperHashTableBase : public TaperContainer {
   TaperHashTableBase& operator=(const TaperHashTableBase&) = delete;
   TaperHashTableBase& operator=(TaperHashTableBase&&) noexcept = delete;
   virtual ~TaperHashTableBase() {
-#ifdef DEBUG_STAT_ENABLED
-    debugStat_.print();
-#endif
     FreeChunks();
   }
 
