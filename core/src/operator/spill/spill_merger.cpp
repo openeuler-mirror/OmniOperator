@@ -368,7 +368,15 @@ ErrorCode SpillReader::ReadWithCompress(void *buf, size_t bufSize)
             prevBuffer_ = nullptr;
         }
         char* header_data = new char[3];
-        if (fread(header_data, 1, 3, file) != 3) {
+        size_t nread = fread(header_data, 1, 3, file);
+        if (nread != 3) {
+            int savedErrno = ferror(file) ? errno : 0;
+            if (savedErrno == 0 && feof(file)) {
+                savedErrno = EIO;
+            }
+            char errorBuf[ERROR_BUFFER_SIZE];
+            GetErrorMsg(savedErrno, errorBuf, ERROR_BUFFER_SIZE);
+            LogError("Read header from %s failed: %s (errno=%d)", filePath.c_str(), errorBuf, savedErrno);
             delete[] header_data;
             return ErrorCode::READ_FAILED;
         }
@@ -378,7 +386,15 @@ ErrorCode SpillReader::ReadWithCompress(void *buf, size_t bufSize)
         bool is_original_data = header_info.second;
         int32_t actual_decompress_len = 0;
         char* compressed_data = new char[compressed_block_size];
-        if (fread(compressed_data, 1, compressed_block_size, file) != compressed_block_size) {
+        nread = fread(compressed_data, 1, compressed_block_size, file);
+        if (nread != compressed_block_size) {
+            int savedErrno = ferror(file) ? errno : 0;
+            if (savedErrno == 0 && feof(file)) {
+                savedErrno = EIO;
+            }
+            char errorBuf[ERROR_BUFFER_SIZE];
+            GetErrorMsg(savedErrno, errorBuf, ERROR_BUFFER_SIZE);
+            LogError("Read compressed data from %s failed: %s (errno=%d)", filePath.c_str(), errorBuf, savedErrno);
             delete[] compressed_data;
             return ErrorCode::READ_FAILED;
         }
