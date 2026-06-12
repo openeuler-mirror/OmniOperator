@@ -47,6 +47,7 @@ std::vector<BaseVector*> *recordBatch, uint64_t &batchRowSize, int *omniTypeId, 
         batchRowSize = FilterData(bitMark, recordBatch, vectorSize, predicateCondition->getIsAllNullColumns(),
             predicateCondition->getIsAllNotNullColumns());
     } catch (const std::exception &e) {
+        ClearRecordBatch(*recordBatch);
         LogError("filterData fail: %s", e.what());
     }
     return false;
