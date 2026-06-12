@@ -715,10 +715,10 @@ public:
     /// CompareKeys using DecodedVector — zero encoding branches per row.
     bool CompareKeysWithDecode(uint8_t* row, int32_t groupColNum, int32_t rowIdx)
     {
-        const char* varcharPtrsCache[8] = {};
+        std::vector<const char*> varcharPtrsCache(groupColNum, nullptr);
         bool hasMergedVarchar = (varcharColIndices.size() > 1);
         if (hasMergedVarchar) {
-            GetAllMergedVarcharPtrs(reinterpret_cast<const char*>(row), varcharPtrsCache, 8);
+            GetAllMergedVarcharPtrs(reinterpret_cast<const char*>(row), varcharPtrsCache.data(), groupColNum);
         }
 
         for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
