@@ -143,8 +143,23 @@ static int64_t TruncateTimestamp(int64_t timestampMicros, DateTruncMode level,
         case DateTruncMode::TRUNC_TO_SECOND: {
             return FloorDiv(timestampMicros, 1000000LL) * 1000000LL;
         }
-        case DateTruncMode::TRUNC_TO_MINUTE:
-        case DateTruncMode::TRUNC_TO_HOUR:
+        case DateTruncMode::TRUNC_TO_MINUTE: {
+            // Timezone offsets are multiples of ≥30 min, so direct arithmetic
+            // is always correct (matching Velox's adjustEpoch(seconds, 60)).
+            return FloorDiv(timestampMicros, 60000000LL) * 60000000LL;
+        }
+        case DateTruncMode::TRUNC_TO_HOUR: {
+            if (timeZone != nullptr) {
+                // For timezones with fractional-hour offsets (e.g. +05:30),
+                // truncate in local time via UTC delta to avoid to_sys DST risk.
+                auto localSec = timeZone->to_local(
+                    std::chrono::seconds(FloorDiv(timestampMicros, 1000000LL)));
+                int64_t delta = localSec.count() -
+                    FloorDiv(localSec.count(), 3600) * 3600;
+                return timestampMicros - delta * 1000000LL;
+            }
+            return FloorDiv(timestampMicros, 3600000000LL) * 3600000000LL;
+        }
         case DateTruncMode::TRUNC_TO_DAY:
         case DateTruncMode::TRUNC_TO_WEEK:
         case DateTruncMode::TRUNC_TO_MONTH:
@@ -153,9 +168,9 @@ static int64_t TruncateTimestamp(int64_t timestampMicros, DateTruncMode level,
             int64_t utcSeconds = FloorDiv(timestampMicros, 1000000LL);
 
             if (timeZone != nullptr) {
-                // Timezone-aware path for MINUTE and above (Spark applies
-                // timezone to all levels ≥ MINUTE; non-whole-hour offsets
-                // like +05:30 would otherwise cause discrepancies).
+                // Convert to local calendar, truncate, convert back to UTC.
+                // Falls back to correct_nonexistent_time for DST gaps
+                // (historical transitions where e.g. midnight does not exist).
                 auto localSeconds = timeZone->to_local(
                     std::chrono::seconds(utcSeconds));
                 int64_t localEpoch = localSeconds.count();
@@ -169,22 +184,19 @@ static int64_t TruncateTimestamp(int64_t timestampMicros, DateTruncMode level,
                 int64_t truncatedLocalEpoch =
                     Timestamp::calendarUtcToEpoch(tmValue);
 
-                auto utcResult = timeZone->to_sys(
-                    std::chrono::seconds(truncatedLocalEpoch));
-                return static_cast<int64_t>(utcResult.count()) * 1000000LL;
+                try {
+                    auto utcResult = timeZone->to_sys(
+                        std::chrono::seconds(truncatedLocalEpoch));
+                    return static_cast<int64_t>(utcResult.count()) * 1000000LL;
+                } catch (const std::runtime_error&) {
+                    auto corrected = timeZone->correct_nonexistent_time(
+                        std::chrono::seconds(truncatedLocalEpoch));
+                    auto utcResult = timeZone->to_sys(corrected);
+                    return static_cast<int64_t>(utcResult.count()) * 1000000LL;
+                }
             }
 
-            // Direct arithmetic path (UTC / no timezone).
-            // For MINUTE and HOUR this is trivially correct for whole-hour
-            // timezones; for DAY+ we fall through to calendar conversion.
-            if (level == DateTruncMode::TRUNC_TO_MINUTE) {
-                return FloorDiv(timestampMicros, 60000000LL) * 60000000LL;
-            }
-            if (level == DateTruncMode::TRUNC_TO_HOUR) {
-                return FloorDiv(timestampMicros, 3600000000LL) * 3600000000LL;
-            }
-
-            // DAY and above: calendar-based UTC truncation.
+            // UTC-based calendar truncation (no session timezone).
             std::tm tmValue;
             if (!Timestamp::epochToCalendarUtc(utcSeconds, tmValue)) {
                 return timestampMicros;
