@@ -72,7 +72,7 @@ void RadixSortLSD(const DataPtr_type &dataPtr, const DataPtr_type &tempPtr, cons
         swap = !swap;
     }
     if (swap) {
-        memcpy(dataPtr, tempPtr, len * rowWidth);
+        memcpy(dataPtr, tempPtr, static_cast<size_t>(len) * rowWidth);
     }
 }
 

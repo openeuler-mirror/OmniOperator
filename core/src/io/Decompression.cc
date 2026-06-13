@@ -17,6 +17,7 @@
  */
 
 #include "Decompression.hh"
+#include "util/omni_exception.h"
 
 namespace omniSpark {
 
@@ -36,7 +37,7 @@ namespace omniSpark {
             return decompressZstd(input, inputLength, shuffleCompressBlockSize);
         }
         else {
-            // throw std::runtime_error(&"Unknown compression code: " [ compressCode]);
+            OMNI_FAIL("Unknown compression code: " + std::to_string(compressCode));
         }
     }
 
@@ -46,7 +47,7 @@ namespace omniSpark {
         int actualLength = LZ4_decompress_safe(input, output, inputLength, shuffleCompressBlockSize);
         if (actualLength < 0) {
             delete[] output;
-            // throw std::runtime_error("LZ4 decompression failed");
+            OMNI_FAIL("LZ4 decompression failed");
         }
         return std::make_pair(output, actualLength);
     }
@@ -64,7 +65,7 @@ namespace omniSpark {
         int err = inflateInit2(&stream, -15);
         if (err != Z_OK) {
             delete[] output;
-            // throw std::runtime_error("Failed to initialize zlib decompression stream: " + std::string(zError(err)));
+            OMNI_FAIL("Failed to initialize zlib decompression stream: " + std::string(zError(err)));
         }
 
         stream.next_in = (Bytef*)input;
@@ -76,14 +77,14 @@ namespace omniSpark {
         if (err != Z_STREAM_END && err != Z_OK) {
             delete[] output;
             inflateEnd(&stream);
-            // throw std::runtime_error("Failed to decompress data: " + std::string(stream.msg));
+            OMNI_FAIL("Failed to decompress data: " + std::string(stream.msg));
         }
 
         // Clean up the decompression stream
         err = inflateEnd(&stream);
         if (err != Z_OK) {
             delete[] output;
-            // throw std::runtime_error("Failed to clean up zlib decompression stream: " + std::string(zError(err)));
+            OMNI_FAIL("Failed to clean up zlib decompression stream: " + std::string(zError(err)));
         }
         return std::make_pair(output, stream.total_out);
     }
@@ -92,13 +93,13 @@ namespace omniSpark {
     {
         size_t unCompressedSize;
         if (!snappy::GetUncompressedLength(input, inputLength, &unCompressedSize)) {
-            // throw std::runtime_error("Failed to get uncompressed length.");
+            OMNI_FAIL("Failed to get uncompressed length.");
         }
 
         char* output = new char[unCompressedSize];
         if (!snappy::RawUncompress(input, inputLength, output)) {
             delete[] output;
-            // throw std::runtime_error("Failed to decompress data.");
+            OMNI_FAIL("Failed to decompress data.");
         }
         return std::make_pair(output, unCompressedSize);
     }
@@ -107,14 +108,14 @@ namespace omniSpark {
     {
         auto actualLength = ZSTD_getDecompressedSize(input, inputLength);
         if (actualLength == 0) {
-            // throw std::runtime_error("ZSTD decompression size failed");
+            OMNI_FAIL("ZSTD decompression size failed");
         }
 
         char* output = new char[actualLength];
         auto retCode = ZSTD_decompress(output, actualLength, input, inputLength);
         if (ZSTD_isError(retCode)) {
             delete[] output;
-            // throw std::runtime_error("ZSTD decompression failed:" + std::string(ZSTD_getErrorName(retCode)));
+            OMNI_FAIL("ZSTD decompression failed:" + std::string(ZSTD_getErrorName(retCode)));
         }
         return std::make_pair(output, actualLength);
     }
