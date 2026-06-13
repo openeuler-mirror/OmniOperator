@@ -34,7 +34,7 @@
   </tr>
   <tr>
     <td>2024-09-30</td>
-    <td>第七次正式发布。<br><li>新增支持greatest/contains表达式，支持含标量子查询表达式的filter算子不回退。 </li><li>优化TableScan、HashJoin、Shuffle、RollUp算子性能。</li><li> 优化OmniOperator算子加速部署形态，支持Yarn模式下自动部署。</li></td>
+    <td>第七次正式发布。<br><li>新增支持greatest/contains表达式，支持含标量子查询表达式的filter算子不回退。 </li><li>优化TableScan、HashJoin、Shuffle、RollUp算子性能。</li><li> 优化OmniOperator算子加速部署形态，支持YARN模式下自动部署。</li></td>
   </tr>
   <tr>
     <td>2024-06-30</td>
@@ -50,7 +50,7 @@
   </tr>
   <tr>
     <td>2023-06-30</td>
-    <td>第三次正式发布。<br>Spark 3.1.1版本支持成功运行TPC-DS数据集，性能提升20%。</td>
+    <td>第三次正式发布。<br>支持Spark 3.1.1版本成功运行TPC-DS数据集，性能提升20%。</td>
   </tr>
   <tr>
     <td>2022-12-30</td>

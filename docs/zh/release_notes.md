@@ -297,7 +297,7 @@
 - Spark算子加速新增按Stage级别算子回退，部分场景能减少行列转换带来的性能损耗。
 - Spark算子加速新增支持TIMESTAMP数据类型。
 - Spark算子加速新增支持`unix_timestamp`、`from_unixtime`表达式。
-- Hive算子加速新增支持S`IMPLE_EDGE`的Shuffle，新增支持Filter和Select算子的融合。
+- Hive算子加速新增支持`SIMPLE_EDGE`的Shuffle，新增支持Filter和Select算子的融合。
 - Hive算子加速新增支持POWER表达式。
 
 **修改特性<a name="section299616132492"></a>**
