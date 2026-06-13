@@ -139,7 +139,7 @@ When some SQL statements contain the  **GroupBy**  operator, Hive OmniOperator r
 
 **Key Process and Cause Analysis<a name="en-us_topic_0000002070738706_en-us_topic_0000001921984084_en-us_topic_0000001454201442_section145813300553"></a>**
 
-This problem may also occur when open source SQL statements are executed in Hive. A related issue is  [Kryo ISSUE](https://issues.apache.org/jira/browse/HIVE-14092?attachmentOrder=asc). This problem is caused by a Kryo bug and can be solved by using a later version of Kryo. This problem has been eliminated in Hive 4.0.
+This problem may also occur when open source SQL statements are executed in Hive. A related issue is  [Kryo Issue](https://issues.apache.org/jira/browse/HIVE-14092?attachmentOrder=asc). This problem is caused by a Kryo bug and can be solved by using a later version of Kryo. This problem has been eliminated in Hive 4.0.
 
 **Conclusion and Solution<a name="en-us_topic_0000002070738706_section19775722175318"></a>**
 
@@ -175,7 +175,7 @@ One step in the Gluten community code is to traverse all files in the deployment
 
 **Conclusion and Solution<a name="en-us_topic_0000002484820694_section55021731112312"></a>**
 
-1. Run the  **ll**  command in the  **/usr/local**  directory to view the TEZ soft link.
+1. Run the  **ll**  command in the  **/usr/local**  directory to view the Tez soft link.
 
     ```
     ll

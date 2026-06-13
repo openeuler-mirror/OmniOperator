@@ -12,7 +12,7 @@
 
 如果使用的是Spark 3.3.1、Spark 3.4.3、Spark 3.5.2，建议优先选择通过Gluten框架启用OmniOperator；如果使用的是Spark其他版本，则可以选择通过用SparkExtension框架启用OmniOperator。
 
-如果选择通过用SparkExtension框架启用OmniOperator，需要用户安装对应的Spark以及与之匹配的SparkExtension，Spark的安装要求见《[安装指南](installation_guide.md)》。本小节将介绍SparkExtension的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Spark引擎中。
+如果选择通过SparkExtension框架启用OmniOperator，需要用户安装对应的Spark以及与之匹配的SparkExtension，Spark的安装要求见《[安装指南](installation_guide.md)》。本小节将介绍SparkExtension的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Spark引擎中。
 
 ##### 算子和表达式支持情况<a name="ZH-CN_TOPIC_0000002515902958"></a>
 
@@ -989,7 +989,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
 
 在Spark引擎中应用OmniOperator算子加速特性时，可以选择在SparkExtension或Gluten中使能该特性。根据具体场景和需求，选择合适的使能方式，可最大化加速效果。
 
-如果使用的是Spark 3.3.1、Spark 3.4.3、Spark3.5.2，建议优先选择通过Gluten框架启用OmniOperator；如果使用的是Spark其他版本，则可以选择通过用SparkExtension框架启用OmniOperator。
+如果使用的是Spark 3.3.1、Spark 3.4.3、Spark 3.5.2，建议优先选择通过Gluten框架启用OmniOperator；如果使用的是Spark其他版本，则可以选择通过用SparkExtension框架启用OmniOperator。
 
 如果选择通过Gluten框架启用OmniOperator，需要用户安装Spark和配套的Gluten依赖包，Spark的安装要求请参见《[安装指南](installation_guide.md)》的“操作系统和软件要求”。小节将介绍Gluten的安装步骤、安装后的配置方法，以及如何将OmniOperator算子加速特性应用到Spark引擎中。
 
@@ -1007,6 +1007,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
 >- OmniOperator使用re2正则引擎来支持正则类函数，re2不支持Perl类正则的环式断言。为提前识别此类情况，故而仅支持常量正则表达式。
 >- 当前支持的数据湖格式：Delta Lake、Iceberg、Hudi，版本分别为3.2.0、1.5.0、0.15.0。若需使用，请自行到对应社区下载数据湖与Spark集成的二进制包并加到spark classpath。
 >- 使用Hudi场景下，由于omni采用Spark格式化输出与Hudi格式化输出存在差异，针对binary类型分区列查询、timestamp类型列查询结果与Hudi查询结果可能不一致，但与Spark查询结果一致。
+>- Spark 3.5.2 适配包支持在JDK8、JDK17上运行，JDK8适配包配套的系统是openEuler 22.03，JDK17适配包配套的系统是openEuler 24.03。
 
 **表 1** 算子和表达式支持表格中符号的含义<a id="算子和表达式支持表格中符号的含义_1"></a>
 
@@ -1463,17 +1464,17 @@ OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计
     >![](public_sys-resources/icon-notice.gif) **须知：** 
     >当前Gluten只支持Spark 3.3.1、Spark 3.4.3、Spark3.5.2。可以通过**spark-shell --version**命令确认当前Spark版本。
     >
-    >Spark 3.3.1 需获取依赖包有Boostkit-omniruntime-gluten-1.0.0.zip、Dependency_library_Gluten.zip。
+    >Spark 3.3.1 需获取依赖包有BoostKit-omniruntime-gluten-1.0.0.zip、Dependency_library_Gluten.zip。
     >
-    >Spark 3.4.3 需获取依赖包有Boostkit-omniruntime-gluten-2.0.0.zip、Dependency_library_Gluten.zip。
+    >Spark 3.4.3 需获取依赖包有BoostKit-omniruntime-gluten-2.0.0.zip、Dependency_library_Gluten.zip。
     >
-    >Spark 3.5.2 需获取依赖包有Boostkit-omniruntime-gluten-3.0.0.zip、Dependency_library_Gluten.zip。
+    >Spark 3.5.2 需获取依赖包有BoostKit-omniruntime-gluten-3.0.0.zip、Dependency_library_Gluten.zip。
     >
     >以下安装步骤以Spark3.5.2为例。
 
 2. 下载Gluten插件包并解压。
 
-    从《[安装指南](installation_guide.md)》的“软件安装包获取”获取`Boostkit-omniruntime-gluten-3.0.0.zip`和`Dependency_library_Gluten.zip`，并上传至管理节点的`/opt/omni-operator/`目录下。
+    从《[安装指南](installation_guide.md)》的“软件安装包获取”获取`BoostKit-omniruntime-gluten-2.2.0.zip`和`Dependency_library_Gluten.zip`，并上传至管理节点的`/opt/omni-operator/`目录下。
 
 3. 安装openEuler操作系统的Gluten依赖。
     1. 配置本地Yum源。以openEuler 22.03 LTS SP1为例：
@@ -1489,20 +1490,74 @@ OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计
         ```
 
 4. 配置Gluten。
-    1. 将`Boostkit-omniruntime-gluten-3.0.0.zip`和`Dependency_library_Gluten.zip`解压到`/opt/omni-operator/lib`。
+    1. 将`BoostKit-omniruntime-gluten-2.2.0.zip`和`Dependency_library_Gluten.zip`放置在`/opt`下，然后执行如下脚本。
 
         ```shell
-        cd /opt/omni-operator
-        unzip BoostKit-omniruntime-gluten-3.0.0.zip
-        unzip Dependency_library_Gluten.zip
-        unzip BoostKit-omniruntime-omnioperator-2.2.0.zip
-        tar -zxvf boostkit-omniop-operator-2.2.0-aarch64-openeuler-sve.tar.gz
-        mkdir lib
-        mv libboundscheck.so libspark_columnar_plugin.so gluten-omni-bundle-spark3.5_2.12-openEuler_22.03_aarch_64-1.3.0.jar lib/
-        mv Dependency_library_Gluten/lib* lib/
-        mv boostkit-omniop-operator-2.2.0-aarch64/libboostkit-omniop-* lib/
+        #!/bin/bash
+        set -e
+        set -u
+        set -o pipefail
+        
+        SRC_DIR=/opt
+        cd "$SRC_DIR"
+        
+        OMNI_HOME=/opt/omni-operator
+        OE_VERSION_ID=$(. /etc/os-release && echo "$VERSION_ID")
+        
+        gluten_zips=(BoostKit-omniruntime-gluten-*.zip)
+        if [ ! -f "${gluten_zips[0]}" ]; then
+            echo "not found omni pkg in $SRC_DIR"
+            exit 1
+        fi
+        OMNI_VERSION=$(basename "${gluten_zips[0]}" .zip | sed 's/BoostKit-omniruntime-gluten-//')
+        
+        TMP_DIR="$SRC_DIR/tmp"
+        rm -rf "$TMP_DIR"
+        mkdir -p "$TMP_DIR"
+        
+        mkdir -p "$OMNI_HOME/lib"
+        mkdir -p "$OMNI_HOME/lib/conf"
+        touch "$OMNI_HOME/lib/conf/omni.conf"
+        
+        unzip -o "BoostKit-omniruntime-gluten-${OMNI_VERSION}.zip" -d "$TMP_DIR"
+        unzip -o Dependency_library_Gluten.zip -d "$TMP_DIR"
+        
+        if [ "$OMNI_VERSION" = "2.2.0" ]; then
+            case "$OE_VERSION_ID" in
+                22.03)
+                    TARGET_SUBDIR="openEuler22.03_JDK8"
+                    ;;
+                24.03)
+                    TARGET_SUBDIR="openEuler24.03_JDK17"
+                    ;;
+                *)
+                    echo "unsupported os version: openEuler${OE_VERSION_ID}"
+                    exit 1
+                    ;;
+            esac
+            cd "$TMP_DIR/$TARGET_SUBDIR" || { echo "Failed to cd to $TMP_DIR/$TARGET_SUBDIR"; exit 1; }
+        else
+            cd "$TMP_DIR" || exit 1
+            rm openEuler24.03_JDK17 -rf
+        fi
+        
+        if ls BoostKit-omniruntime-omnioperator-*.zip 1>/dev/null 2>&1; then
+            unzip -o BoostKit-omniruntime-omnioperator-*.zip
+        else
+            echo "Warning: No BoostKit-omniruntime-omnioperator-*.zip found in $TMP_DIR"
+        fi
+        
+        if ls boostkit-omniop-operator-*.tar.gz 1>/dev/null 2>&1; then
+            tar -zxvf boostkit-omniop-operator-*.tar.gz
+        else
+            echo "Warning: No boostkit-omniop-operator-*.tar.gz found in $TMP_DIR"
+        fi
+        
+        find .  \( -name "lib*" -o -name "*.jar" \) -type f -exec /bin/mv -n {} "$OMNI_HOME/lib/" \;
+        
+        echo "All operations completed successfully."
         ```
-
+    
     2. 修改软件安装包中的程序文件权限为550，配置文件目录权限为750，配置文件权限为640。
 
         ```shell
@@ -1510,7 +1565,7 @@ OmniOperator算子加速特性支持Spark引擎，需在管理节点和所有计
         chmod 750 /opt/omni-operator/conf
         chmod 640 /opt/omni-operator/conf/omni.conf
         ```
-
+    
 5. 在管理节点的`~/.bashrc`文件中添加如下环境变量。
 
     ```shell
@@ -1636,8 +1691,8 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
             spark.memory.offHeap.enabled true
             spark.memory.offHeap.size 35g
             spark.gluten.sql.columnar.backend.lib omni
-            spark.executor.extraClassPath ${PWD}/omni/omni-operator/lib/gluten-omni-bundle-spark3.5_2.12-openEuler_22.03_aarch_64-1.3.0.jar
-            spark.driver.extraClassPath /opt/omni-operator/lib/gluten-omni-bundle-spark3.5_2.12-openEuler_22.03_aarch_64-1.3.0.jar
+            spark.executor.extraClassPath ${PWD}/omni/omni-operator/lib/gluten-omni-bundle-spark3.5_2.12-openEuler_22.03_aarch_64-1.3.0-2.2.0.jar
+            spark.driver.extraClassPath /opt/omni-operator/lib/gluten-omni-bundle-spark3.5_2.12-openEuler_22.03_aarch_64-1.3.0-2.2.0.jar
             spark.executorEnv.LD_LIBRARY_PATH ${PWD}/omni/omni-operator/lib
             spark.executorEnv.OMNI_HOME ${PWD}/omni/omni-operator
             spark.driverEnv.LD_LIBRARY_PATH /opt/omni-operator/lib
@@ -1693,8 +1748,9 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
 
             >![](public_sys-resources/icon-note.gif) **说明：** 
             >- hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni：依据用户Hadoop的core-site.xml中配置的fs.defaultFS实际值设置`hdfs://server1:9000`。`/user/root/omni-operator.tar.gz`用户可自行定义，与[2](#config-spark)的操作关联。`#omni`表示实际运行时omni-operator.tar.gz解压的目录，用户可自行定义。
-            >- 上述启动命令为Yarn模式使用，若使用local模式启动SparkExtension插件，需将--master yarn改为--master local，同时在启动前需在所有节点的`~/.bashrc`文件中添加`export LD_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2`并更新环境变量。启动命令中`${PWD}/omni`全部替换为`/opt`。
-
+            >- 上述启动命令为Yarn模式使用，若使用local模式启动Gluten插件，需将--master yarn改为--master local，同时在启动前需在所有节点的`~/.bashrc`文件中添加`export LD_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2`并更新环境变量。启动命令中`${PWD}/omni`全部替换为`/opt`。
+            >- 其他Spark版本需要修改的配置项：spark.driver.extraClassPath、spark.executor.extraClassPath。配置项需要修改为具体版本的gluten适配包名。
+            >- 若在JDK17上运行，需要添加的配置参数：--conf "spark.executor.extraJavaOptions=--add-opens java.base/java.nio=ALL-UNNAMED --add-opens jdk.unsupported/sun.misc=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true" --conf "spark.driver.extraJavaOptions=--add-opens java.base/java.nio=ALL-UNNAMED --add-opens jdk.unsupported/sun.misc=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true"
             Gluten相关的启动参数信息如[**表 2** Gluten相关启动参数信息](#Gluten相关启动参数信息)所示。
 
             **表 2** Gluten相关启动参数信息<a id="Gluten相关启动参数信息"></a>
@@ -1753,7 +1809,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
     |spark.sql.orc.filterPushdown|true|控制ORC文件格式的数据查询时是否启用谓词下推功能。|
     |spark.gluten.sql.columnar.backend.omni.catalog.cache.size|128|设置缓存Catelog元数据的缓存空间大小。小于或等于0时为关闭缓存功能。|
     |spark.gluten.sql.columnar.backend.omni.catalog.cache.expire.time|600|设置缓存Catelog元数据的缓存过期时间，默认为600秒。|
-    |spark.gluten.sql.columnar.backend.omni.vec.predicate.enabled|false|是否开启向量化谓词下推功能，true表示开启，false表示关闭。|
+    |spark.gluten.sql.columnar.backend.omni.vec.predicate.enabled|false|是否开启向量化谓词下推功能，true表示开启，false表示关闭。此配置在使用Iceberg场景不生效。|
     |spark.gluten.sql.native.writer.enabled|true|是否开启列式写算子，true表示开启，false表示关闭。|
     |spark.gluten.sql.columnar.backend.omni.preferVectorizationExpression| false                          |是否优选表达式向量化版本，true表示优选向量化版本，false表示使用codegen版本。|
 
@@ -1987,7 +2043,7 @@ OmniOperator算子加速特性支持Hive引擎，需在管理节点安装Hive引
         cp /opt/omni-operator/Dependency_library_openeuler22.03/* /opt/omni-operator/lib
         ```
 
-    3. 将boostkit-omniop-hive-3.1.0-2.0.0-aarch64.jar拷贝到`/opt/omni-operator/lib`目录下，并修改目录下文件权限为550。
+    3. 将boostkit-omniop-hive-3.1.0-2.0.0-aarch64.jar拷贝到`/opt/omni-operator/lib`目录下，并将该目录下文件的权限设置为550。
 
         ```shell
         chmod -R 550 /opt/omni-operator/*
@@ -2225,7 +2281,7 @@ OmniOperator的升级操作仅需在管理节点进行，并需确保OmniOperato
     rm -rf include libboostkit-omniop* boostkit-omniop* libsecurec.so
     ```
 
-2. 下载并上传预安装版本依赖包以及OmniOperator算子加速特性压缩包（获取方式请参见《[安装指南](installation_guide.md)》的“操作系统和软件要求”和“软件安装包获取”到管理节点和计算节点，分别按《[安装指南](installation_guide.md)》的“安装依赖”和`安装OmniOperator`完成安装。
+2. 下载并上传预安装版本依赖包以及OmniOperator算子加速特性压缩包（获取方式请参见《[安装指南](installation_guide.md)》）的“操作系统和软件要求”和“软件安装包获取”到管理节点和计算节点，分别按《[安装指南](installation_guide.md)》的`安装依赖`和`安装OmniOperator`完成安装。
 3. 在Spark引擎上应用时，需按[2](#config-spark)重新打包与上传OmniOperator算子加速特性安装包。
 
 ### 卸载OmniOperator<a name="ZH-CN_TOPIC_0000002547382867"></a>
