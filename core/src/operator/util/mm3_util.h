@@ -195,8 +195,7 @@ static void NeonInt8(omniruntime::vec::Vector<int8_t>* currentCol, std::vector<u
     uint32x4_t vMM3_SIZE_INT = vdupq_n_u32(MM3_SIZE_INT);
 
     uint32_t row = 0;
-    uint32_t limit = rowCount - 15;
-    for (; row < limit; row += STEP_FOUR) {
+    for (; row + 15 < rowCount; row += STEP_FOUR) {
         // load 16 int8_ts，but only process the first 4
         int8x16_t v8 = vld1q_s8(value_ptr + row);
 
@@ -228,8 +227,7 @@ static void NeonInt16(omniruntime::vec::Vector<int16_t>* currentCol, std::vector
     uint32x4_t vMM3_SIZE_INT = vdupq_n_u32(MM3_SIZE_INT);
 
     uint32_t row = 0;
-    uint32_t limit = rowCount - 7;
-    for (; row < limit; row += STEP_FOUR) {
+    for (; row + 7 < rowCount; row += STEP_FOUR) {
         // load 8 int16_ts，but only process the first 4
         int16x8_t v16 = vld1q_s16(value_ptr + row);
 
