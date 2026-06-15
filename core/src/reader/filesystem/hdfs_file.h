@@ -22,6 +22,7 @@
 
 #include "file_interface.h"
 #include "hdfs_filesystem.h"
+#include "reader/common/ReadMode.h"
 
 namespace fs {
 
@@ -29,7 +30,7 @@ class HdfsReadableFile : public ReadableFile {
 
 public:
     HdfsReadableFile(std::shared_ptr<HadoopFileSystem> fileSystemPtr, const std::string &path,
-                     int64_t bufferSize = 0);
+        int64_t bufferSize = 0);
 
     ~HdfsReadableFile();
 
@@ -37,27 +38,52 @@ public:
 
     Status OpenFile() override;
 
-    int64_t ReadAt(void *buffer, int32_t length, int64_t offset) override;
-
     int64_t GetFileSize() override;
 
     Status Seek(int64_t position) override;
 
     int64_t Read(void *buffer, int32_t length) override;
 
+protected:
+    std::shared_ptr<HadoopFileSystem> fileSystem_;
+
+    hdfsFile file_;
+
 private:
     Status TryClose();
-
-    std::shared_ptr<HadoopFileSystem> fileSystem_;
 
     const std::string &path_;
 
     int64_t bufferSize_;
 
     bool isOpen_ = false;
-
-    hdfsFile file_;
 };
+
+class HdfsSeekReadFile : public HdfsReadableFile {
+
+public:
+    HdfsSeekReadFile(std::shared_ptr<HadoopFileSystem> &fileSystemPtr, const std::string &path,
+        int64_t bufferSize = 0) : HdfsReadableFile(fileSystemPtr, path, bufferSize) {}
+
+    ~HdfsSeekReadFile() = default;
+
+    int64_t ReadAt(void *buffer, int32_t length, int64_t offset) override;
+};
+
+class HdfsPReadFile : public HdfsReadableFile {
+
+public:
+    HdfsPReadFile(std::shared_ptr<HadoopFileSystem> &fileSystemPtr, const std::string &path,
+        int64_t bufferSize = 0) : HdfsReadableFile(fileSystemPtr, path, bufferSize) {}
+
+    ~HdfsPReadFile() = default;
+
+    int64_t ReadAt(void *buffer, int32_t length, int64_t offset) override;
+};
+
+std::unique_ptr<HdfsReadableFile> CreateHdfsReadableFile(std::shared_ptr<HadoopFileSystem> fileSystemPtr,
+    const std::string &path, int64_t bufferSize, common::ReadMode readMode);
+
 
 class HdfsWriteableFile : public WriteableFile {
 

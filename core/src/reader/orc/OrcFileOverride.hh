@@ -23,6 +23,7 @@
 
 #include "orc/OrcFile.hh"
 #include "reader/common/UriInfo.h"
+#include "reader/common/ReadMode.h"
 
 /** /file orc/OrcFile.hh
     @brief The top level interface to ORC.
@@ -34,7 +35,7 @@ namespace omniruntime::reader {
      * Create a input stream to a local file or HDFS file if path begins with "hdfs://"
      * @param uri the UriInfo of HDFS
      */
-  std::unique_ptr<::orc::InputStream> readFileOverride(const UriInfo &uri);
+  std::unique_ptr<::orc::InputStream> readFileOverride(const UriInfo &uri, common::ReadMode readMode);
 
   /**
    * Create a output stream to a local file or HDFS file if path begins with "hdfs://"
@@ -46,7 +47,7 @@ namespace omniruntime::reader {
    * Create a input stream to an HDFS file.
    * @param uri the UriInfo of HDFS
    */
-  std::unique_ptr<::orc::InputStream> createHdfsFileInputStream(const UriInfo &uri);
+  std::unique_ptr<::orc::InputStream> createHdfsFileInputStream(const UriInfo &uri, common::ReadMode readMode);
 
   /**
    * Create a output stream to an HDFS file.

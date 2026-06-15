@@ -23,6 +23,7 @@
 #include <cstring>
 #include <utility>
 #include "util/config/ConfigBase.h"
+#include "reader/common/ReadMode.h"
 #include <type/data_type.h>
 #include <unordered_map>
 #include "codegen/expr_evaluator.h"
@@ -158,7 +159,7 @@ public:
     // A split must be fully processed by next before another split can be
     // added. Next returns nullptr to indicate that current split is fully
     // processed.
-    virtual void addSplit(std::shared_ptr<ConnectorSplit> split, uint64_t size) = 0;
+    virtual void addSplit(std::shared_ptr<ConnectorSplit> split, uint64_t size, common::ReadMode readMode) = 0;
 
     // Process a split added via addSplit. Returns nullptr if split has been
     // fully processed. Returns std::nullopt and sets the 'future' if started

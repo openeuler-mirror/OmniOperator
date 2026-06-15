@@ -326,9 +326,10 @@ std::unique_ptr <SplitReader> SplitReader::create(
         scanSpec);
 }
 
-void SplitReader::prepareSplit(omniruntime::type::RowTypePtr &rowType, uint64_t batchLen)
+void SplitReader::prepareSplit(omniruntime::type::RowTypePtr &rowType, uint64_t batchLen, common::ReadMode readMode)
 {
     baseReaderOpts_->SetBatchLen(batchLen);
+    baseReaderOpts_->SetreadMode(readMode);
     createReader();
     createRowReader(rowType, batchLen);
     initIcebergPositionDeleteReaders(batchLen);

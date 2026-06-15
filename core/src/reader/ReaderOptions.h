@@ -8,6 +8,7 @@
 #include <vector>
 #include <orc/Reader.hh>
 #include <orc/sargs/SearchArgument.hh>
+#include "reader/common/ReadMode.h"
 #include "reader/common/UriInfo.h"
 #include "reader/common/JulianGregorianRebase.h"
 #include "reader/common/PredicateCondition.h"
@@ -77,6 +78,7 @@ private:
     omniruntime::type::RowTypePtr rowType_;
     omniruntime::type::RowTypePtr fileRowType_;
     int32_t batchLen_ = 0;
+    common::ReadMode readMode_ = common::ReadMode::POSITION_READ;
     std::shared_ptr<nlohmann::json> enhancementJson_;
     std::shared_ptr<common::JulianGregorianRebase> julianPtr_;
     std::shared_ptr<common::PredicateCondition> predicatePtr_;
@@ -153,6 +155,16 @@ public:
     void SetBatchLen(int32_t batchLen)
     {
         batchLen_ = batchLen;
+    }
+
+    common::ReadMode GetReadMode()
+    {
+        return readMode_;
+    }
+
+    void SetreadMode(common::ReadMode readMode)
+    {
+        readMode_ = readMode;
     }
 
     const std::string& GetUgiString() const

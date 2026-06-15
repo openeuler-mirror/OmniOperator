@@ -74,7 +74,7 @@ std::unique_ptr<SplitReader> HiveDataSource::createSplitReader() {
             scanSpec_);
 }
 
-void HiveDataSource::addSplit(std::shared_ptr<ConnectorSplit> split, uint64_t size) {
+void HiveDataSource::addSplit(std::shared_ptr<ConnectorSplit> split, uint64_t size, common::ReadMode readMode) {
     split_ = std::dynamic_pointer_cast<HiveConnectorSplit>(split);
 
     if (splitReader_) {
@@ -82,7 +82,7 @@ void HiveDataSource::addSplit(std::shared_ptr<ConnectorSplit> split, uint64_t si
     }
 
     splitReader_ = createSplitReader();
-    splitReader_->prepareSplit(readerOutputType_, size);
+    splitReader_->prepareSplit(readerOutputType_, size, readMode);
 }
 
 std::optional<vec::VectorBatch *> HiveDataSource::next(uint64_t size) {
