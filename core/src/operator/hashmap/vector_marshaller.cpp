@@ -313,6 +313,9 @@ const char *ArrayVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, cons
 
 bool ArrayVectorComparator(BaseVector &baseVector, int32_t rowIdx, uint8_t *&begin) {
     auto arrayVector = dynamic_cast<ArrayVector *>(&baseVector);
+    if (UNLIKELY(arrayVector == nullptr)) {
+        throw OmniException("ArrayVectorComparator failed: baseVector is not ArrayVector");
+    }
     uint8_t sizeLenSize = *reinterpret_cast<const uint8_t *>(begin);
     begin += sizeof(uint8_t);
     int64_t leftOffset = arrayVector->GetOffset(rowIdx);
@@ -422,6 +425,9 @@ const char *RowVectorDeserializer(BaseVector *baseVector, int32_t rowIdx, const 
 
 bool RowVectorComparator(BaseVector &baseVector, int32_t rowIdx, uint8_t *&begin) {
     auto rowVector = dynamic_cast<RowVector *>(&baseVector);
+    if (UNLIKELY(rowVector == nullptr)) {
+        throw OmniException("RowVectorComparator failed: baseVector is not RowVector");
+    }
     rowVector->Expand(rowIdx + 1);
 
     uint8_t countLenSize = *begin;
