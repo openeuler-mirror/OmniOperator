@@ -63,7 +63,7 @@ public:
 
     uint64_t next(vec::VectorBatch **output_, int *omniTypeId, uint64_t batchLen);
 
-    void prepareSplit(omniruntime::type::RowTypePtr &rowType, uint64_t batchLen);
+    void prepareSplit(omniruntime::type::RowTypePtr &rowType, uint64_t batchLen, common::ReadMode readMode);
 
     std::string toString() const;
 

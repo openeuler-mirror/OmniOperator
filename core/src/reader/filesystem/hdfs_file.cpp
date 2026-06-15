@@ -61,14 +61,6 @@ Status HdfsReadableFile::OpenFile() {
     return Status::OK();
 }
 
-int64_t HdfsReadableFile::ReadAt(void *buffer, int32_t length, int64_t offset) {
-    if (!OpenFile().IsOk()) {
-        return -1;
-    }
-
-    return hdfsPread(fileSystem_->getFileSystem(), file_, offset, buffer, length);
-}
-
 int64_t HdfsReadableFile::GetFileSize() {
     if (!OpenFile().IsOk()) {
         return -1;
@@ -95,6 +87,38 @@ int64_t HdfsReadableFile::Read(void *buffer, int32_t length) {
     }
 
     return hdfsRead(fileSystem_->getFileSystem(), file_, buffer, length);
+}
+
+int64_t HdfsSeekReadFile::ReadAt(void *buffer, int32_t length, int64_t offset) {
+    if (!OpenFile().IsOk()) {
+        return -1;
+    }
+
+    int st = hdfsSeek(fileSystem_->getFileSystem(), file_, offset);
+    if (st == -1) {
+        return -1;
+    }
+    return hdfsRead(fileSystem_->getFileSystem(), file_, buffer, length);
+}
+
+int64_t HdfsPReadFile::ReadAt(void *buffer, int32_t length, int64_t offset) {
+    if (!OpenFile().IsOk()) {
+        return -1;
+    }
+
+    return hdfsPread(fileSystem_->getFileSystem(), file_, offset, buffer, length);
+}
+
+std::unique_ptr<HdfsReadableFile> CreateHdfsReadableFile(std::shared_ptr<HadoopFileSystem> fileSystemPtr,
+    const std::string &path, int64_t bufferSize, common::ReadMode readMode) {
+    switch (readMode) {
+        case common::ReadMode::POSITION_READ:
+            return std::make_unique<HdfsPReadFile>(fileSystemPtr, path, bufferSize);
+        case common::ReadMode::SEEK_AND_READ:
+            return std::make_unique<HdfsSeekReadFile>(fileSystemPtr, path, bufferSize);
+        default:
+            OMNI_FAIL("unsupported hdfs read mode: " + static_cast<int32_t>(readMode));
+    }
 }
 
 HdfsWriteableFile::HdfsWriteableFile(std::shared_ptr<HadoopFileSystem> fileSystemPtr, const std::string &path,

@@ -26,7 +26,8 @@ public:
     std::unique_ptr<Reader> CreateReader(std::shared_ptr<ReaderOptions>& options) override
     {
         auto uri = options->GetUri();
-        std::unique_ptr<::orc::InputStream> inputStream = readFileOverride(*uri);
+        common::ReadMode readMode = options->GetReadMode();
+        std::unique_ptr<::orc::InputStream> inputStream = readFileOverride(*uri, readMode);
         std::unique_ptr<ORCBufferInput> stream = std::make_unique<ORCBufferInput>(std::move(inputStream));
         auto* orcStream = dynamic_cast<ORCBufferInput*>(stream.get());
         if (!orcStream) {

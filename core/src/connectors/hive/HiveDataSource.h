@@ -44,7 +44,7 @@ public:
                     std::shared_ptr<connector::ColumnHandle>>& columnHandles,
             const std::shared_ptr<HiveConfig>& hiveConfig);
 
-    void addSplit(std::shared_ptr<ConnectorSplit> split, uint64_t size) override;
+    void addSplit(std::shared_ptr<ConnectorSplit> split, uint64_t size, common::ReadMode readMode) override;
 
     std::optional<vec::VectorBatch *> next(uint64_t size) override;
 

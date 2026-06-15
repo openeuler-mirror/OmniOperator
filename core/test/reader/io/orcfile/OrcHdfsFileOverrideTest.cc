@@ -35,6 +35,6 @@ TEST(OrcReader, createLocalFileReader) {
     cols.push_back(1);
     rowReaderOpts.include(cols);
     UriInfo uriInfo("file", filename, "", "");
-    reader = ::orc::createReader(omniruntime::reader::readFileOverride(uriInfo), readerOpts);
+    reader = ::orc::createReader(omniruntime::reader::readFileOverride(uriInfo, common::ReadMode::POSITION_READ), readerOpts);
     EXPECT_NE(nullptr, reader);
 }

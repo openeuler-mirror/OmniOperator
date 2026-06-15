@@ -21,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include "ConfigBase.h"
+#include "reader/common/ReadMode.h"
 
 namespace omniruntime::config {
 /// A simple wrapper around velox::ConfigBase. Defines constants for query
@@ -182,6 +183,8 @@ public:
 
     /// Spark partition id for deterministic per-partition behavior (e.g. rand(seed)). Aligned with Velox "spark.partition_id".
     static constexpr const char *kSparkPartitionId = "spark.partition_id";
+
+    static constexpr const char *kHdfsReadMode = "hdfs_read_mode";
 
     uint64_t maxRowCount() const
     {
@@ -427,6 +430,11 @@ public:
     {
         constexpr int32_t kDefault = 0;
         return get<int32_t>(kSparkPartitionId, kDefault);
+    }
+
+    common::ReadMode HdfsReadMode() const
+    {
+        return common::ToReadMode(get<int32_t>(kHdfsReadMode, 0));
     }
 
     /// Test-only method to override the current query config properties.

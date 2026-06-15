@@ -53,7 +53,7 @@ public:
 class MockDataSource : public connector::DataSource {
 public:
     MockDataSource() : connector::DataSource() {}
-    MOCK_METHOD2(addSplit, void(std::shared_ptr<ConnectorSplit>, uint64_t));
+    MOCK_METHOD3(addSplit, void(std::shared_ptr<ConnectorSplit>, uint64_t, common::ReadMode));
     MOCK_METHOD1(next, std::optional<omniruntime::vec::VectorBatch*>(uint64_t));
     MOCK_METHOD0(cancel, void());
 };
@@ -65,7 +65,7 @@ std::shared_ptr<const TableScanNode> sharedMockNode(mockNode);
 std::shared_ptr<Connector> connector1 = std::make_shared<omniruntime::connector::hive::HiveConnector>("test", nullptr);
 registerConnector(connector1);
 
-TableScanOperator op(sharedMockNode, 1000, nullptr);
+TableScanOperator op(sharedMockNode, 1000, common::ReadMode::POSITION_READ, nullptr);
 
 // Test
 EXPECT_EQ(op.AddInput(nullptr), 0);
@@ -92,7 +92,7 @@ EXPECT_CALL(*rawMockDataSourcePtr, next(_)).WillOnce(Return(std::make_optional<o
 std::shared_ptr<Connector> sharedConnector(connector1);
 registerConnector(sharedConnector);
 
-TableScanOperator op(sharedMockNode, 1000, mockSplitsStore);
+TableScanOperator op(sharedMockNode, 1000, common::ReadMode::POSITION_READ, mockSplitsStore);
 VectorBatch* output = nullptr;
 
 // Test
@@ -109,7 +109,7 @@ std::shared_ptr<const TableScanNode> sharedMockNode(mockNode);
 std::shared_ptr<Connector> connector1 = std::make_shared<omniruntime::connector::hive::HiveConnector>("test", nullptr);
 registerConnector(connector1);
 
-TableScanOperator op(sharedMockNode, 1000, nullptr);
+TableScanOperator op(sharedMockNode, 1000, common::ReadMode::POSITION_READ, nullptr);
 
 // Test
 EXPECT_EQ(op.Close(), OMNI_STATUS_NORMAL);
@@ -122,7 +122,7 @@ std::shared_ptr<const TableScanNode> sharedMockNode(mockNode);
 std::shared_ptr<Connector> connector1 = std::make_shared<omniruntime::connector::hive::HiveConnector>("test", nullptr);
 registerConnector(connector1);
 
-TableScanOperator op(sharedMockNode, 1000, nullptr);
+TableScanOperator op(sharedMockNode, 1000, common::ReadMode::POSITION_READ, nullptr);
 
 EXPECT_FALSE(op.isFinished());
 unregisterConnector(connector1->connectorId());

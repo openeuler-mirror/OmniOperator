@@ -24,7 +24,7 @@ namespace op {
 class TableScanOperatorFactory : public OperatorFactory {
 public:
     TableScanOperatorFactory(const std::shared_ptr<const TableScanNode> tableScanNode,
-        const uint64_t maxRowCount, std::shared_ptr <SplitsStore> splitsStore);
+        const uint64_t maxRowCount, const common::ReadMode readMode, std::shared_ptr <SplitsStore> splitsStore);
 
     ~TableScanOperatorFactory() override;
 
@@ -38,12 +38,13 @@ private:
     const std::shared_ptr<const TableScanNode> planNode_;
     uint64_t maxRowCount_;
     std::shared_ptr <SplitsStore> splitsStore_;
+    const common::ReadMode readMode_;
 };
 
 class TableScanOperator : public Operator {
 public:
     TableScanOperator(const std::shared_ptr<const TableScanNode> tableScanNode, const uint64_t maxRowCount,
-        std::shared_ptr <SplitsStore> splitsStore);
+        const common::ReadMode readMode, std::shared_ptr <SplitsStore> splitsStore);
 
     ~TableScanOperator() override;
 
@@ -73,6 +74,7 @@ private:
     const std::shared_ptr <connector::ConnectorTableHandle> tableHandle_;
     const std::unordered_map <std::string, std::shared_ptr<connector::ColumnHandle>> columnHandles_;
     const int32_t maxReadBatchSize_;
+    const common::ReadMode readMode_;
     const std::shared_ptr <connector::Connector> connector_;
     const size_t getOutputTimeLimitMs_{0};
 

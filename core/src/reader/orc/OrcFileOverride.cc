@@ -24,9 +24,9 @@
 
 namespace omniruntime::reader
 {
-    std::unique_ptr<::orc::InputStream> readFileOverride(const UriInfo &uri) {
+    std::unique_ptr<::orc::InputStream> readFileOverride(const UriInfo &uri, common::ReadMode readMode) {
         if (uri.Scheme() == "hdfs" || uri.Scheme() == "viewfs") {
-            return omniruntime::reader::createHdfsFileInputStream(uri);
+            return omniruntime::reader::createHdfsFileInputStream(uri, readMode);
         }
         else {
             return ::orc::readLocalFile(std::string(uri.Path()));

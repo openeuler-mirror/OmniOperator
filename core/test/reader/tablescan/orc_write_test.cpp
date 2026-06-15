@@ -33,7 +33,7 @@ protected:
     void ScanFile(int numRows, int typeId, std::vector<BaseVector*>& outBatch) {
         orc::ReaderOptions readerOpts;
         std::unique_ptr<orc::Reader> reader = omniruntime::reader::omniCreateReader(
-                readFileOverride(UriInfo("file", filename, "", "-1")), readerOpts);
+                readFileOverride(UriInfo("file", filename, "", "-1"), common::ReadMode::POSITION_READ), readerOpts);
 
         orc::RowReaderOptions rowOpts;
         std::unique_ptr<common::JulianGregorianRebase> julian;

@@ -35,10 +35,10 @@ class HdfsFileInputStreamOverride : public ::orc::InputStream {
         const uint64_t READ_SIZE_ = 1024 * 1024; //1 MB
 
     public:
-        HdfsFileInputStreamOverride(const UriInfo& uri) {
+        HdfsFileInputStreamOverride(const UriInfo& uri, common::ReadMode readMode) {
             this->filename_ = uri.Path();
             std::shared_ptr<HadoopFileSystem> fileSystemPtr = getHdfsFileSystem(uri);
-            this->hdfs_file_ = std::make_unique<HdfsReadableFile>(fileSystemPtr, this->filename_, 0);
+            this->hdfs_file_ = CreateHdfsReadableFile(fileSystemPtr, this->filename_, 0, readMode);
 
             Status openFileSt = hdfs_file_->OpenFile();
             if (!openFileSt.IsOk()) {
@@ -102,8 +102,8 @@ class HdfsFileInputStreamOverride : public ::orc::InputStream {
         }
     };
 
-    std::unique_ptr<::orc::InputStream> createHdfsFileInputStream(const UriInfo &uri) {
-        return std::unique_ptr<::orc::InputStream>(new HdfsFileInputStreamOverride(uri));
+    std::unique_ptr<::orc::InputStream> createHdfsFileInputStream(const UriInfo &uri, common::ReadMode readMode) {
+        return std::unique_ptr<::orc::InputStream>(new HdfsFileInputStreamOverride(uri, readMode));
     }
 
     class HdfsFileOutputStreamOverride : public ::orc::OutputStream {

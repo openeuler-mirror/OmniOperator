@@ -27,9 +27,10 @@ using namespace omniruntime::connector;
 using namespace std;
 
 TableScanOperatorFactory::TableScanOperatorFactory(const std::shared_ptr<const TableScanNode> planNode,
-    const uint64_t maxRowCount, std::shared_ptr <SplitsStore> splitsStore)
+    const uint64_t maxRowCount, const common::ReadMode readMode, std::shared_ptr <SplitsStore> splitsStore)
     : planNode_(planNode),
     maxRowCount_(maxRowCount),
+    readMode_(readMode),
     splitsStore_(splitsStore) {}
 
 TableScanOperatorFactory::~TableScanOperatorFactory() = default;
@@ -40,24 +41,26 @@ TableScanOperatorFactory *TableScanOperatorFactory::CreateTableScanOperatorFacto
     std::shared_ptr <SplitsStore> tableScanSplitsStore)
 {
     uint64_t maxRowCount = queryConfig.MaxBatchSize();
-    auto pOperatorFactory = new TableScanOperatorFactory(planNode, maxRowCount, tableScanSplitsStore);
+    common::ReadMode readMode = queryConfig.HdfsReadMode();
+    auto pOperatorFactory = new TableScanOperatorFactory(planNode, maxRowCount, readMode, tableScanSplitsStore);
     return pOperatorFactory;
 }
 
 Operator *TableScanOperatorFactory::CreateOperator()
 {
-    auto pTableScanOperator = new TableScanOperator(planNode_, maxRowCount_, splitsStore_);
+    auto pTableScanOperator = new TableScanOperator(planNode_, maxRowCount_, readMode_, splitsStore_);
     return pTableScanOperator;
 }
 
 TableScanOperator::TableScanOperator(
-    const std::shared_ptr<const TableScanNode> tableScanNode, const uint64_t maxRowCount,
+    const std::shared_ptr<const TableScanNode> tableScanNode, const uint64_t maxRowCount, const common::ReadMode readMode,
     std::shared_ptr <SplitsStore> splitsStore)
     : tableHandle_(tableScanNode->tableHandle()),
     columnHandles_(tableScanNode->assignments()),
     outputType_(tableScanNode->getRowTypePtr()),
     splitsStore_(splitsStore),
     maxReadBatchSize_(maxRowCount),
+    readMode_(readMode),
     connector_(connector::getConnector(tableHandle_->connectorId())) {}
 
 TableScanOperator::~TableScanOperator() {}
@@ -157,7 +160,7 @@ bool TableScanOperator::getSplit()
         dataSource_ = connector_->createDataSource(outputType_, tableHandle_, columnHandles_);
     }
 
-    dataSource_->addSplit(connectorSplit, maxReadBatchSize_);
+    dataSource_->addSplit(connectorSplit, maxReadBatchSize_, readMode_);
 
     return true;
 }
