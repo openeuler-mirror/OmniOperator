@@ -2354,11 +2354,14 @@ public:
     {
         auto* elementRowVec = static_cast<RowVector*>(arrayVector->GetElementVector().get());
         int32_t childCount = elementRowVec->ChildSize();
-        int32_t totalElements = static_cast<int32_t>(arrayVector->GetOffset(rowsNum));
+        int64_t totalElements = arrayVector->GetOffset(rowsNum);
+        if (UNLIKELY(totalElements > INT32_MAX)) {
+            throw OmniException("DoArrayHashElementRow failed: total elements exceeds int32_t range");
+        }
 
         std::vector<DecodedVector> decodedChildren(childCount);
         for (int32_t c = 0; c < childCount; c++) {
-            decodedChildren[c].Decode(elementRowVec->ChildAt(c).get(), totalElements);
+            decodedChildren[c].Decode(elementRowVec->ChildAt(c).get(), static_cast<int32_t>(totalElements));
         }
 
         bool hasNull = elementRowVec->HasNull();
@@ -2368,6 +2371,9 @@ public:
             int64_t end = arrayVector->GetOffset(i + 1);
             int64_t finalHash = 0;
             bool first = true;
+            if (UNLIKELY(end > INT32_MAX)) {
+                throw OmniException("DoArrayHashElementRow failed: end exceeds int32_t range");
+            }
             for (int64_t row = start; row < end; row++) {
                 if (hasNull && elementRowVec->IsNull(static_cast<int32_t>(row))) {
                     if (first) { finalHash = kNullHash; first = false; }
