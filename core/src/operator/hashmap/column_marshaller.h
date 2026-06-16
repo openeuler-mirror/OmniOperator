@@ -1927,7 +1927,8 @@ public:
                     auto* pos = table->Pool().AllocateContinue(sizeof(uint8_t), reinterpret_cast<const uint8_t*&>(key.data));
                     *pos = 0;
                     key.size += sizeof(uint8_t);
-                    if (isMergedVarcharNonSlot && mergedVarcharPos != nullptr) {
+                    if (varcharColIndices.size() > 1 && mergedVarcharPos != nullptr &&
+                        (colTypeId == type::OMNI_VARCHAR || colTypeId == type::OMNI_CHAR || colTypeId == type::OMNI_VARBINARY)) {
                         mergedVarcharPos += 1;
                     }
                     continue;
