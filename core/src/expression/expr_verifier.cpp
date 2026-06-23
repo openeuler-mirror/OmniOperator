@@ -329,7 +329,6 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
                 std::string fmtStr = *(literalArg->stringVal);
                 if (fmtStr != "yyyy-MM-dd") {
                     this->isSupportCodegen_ = false;
-                    LogWarn("date_format fallback, due to unsupported formatStr, only support yyyy-MM-dd.");
                     return;
                 }
             }
