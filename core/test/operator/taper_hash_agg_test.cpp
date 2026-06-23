@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstring>
 #include "gtest/gtest.h"
+#include "operator/hashmap/group_hasher.h"
 #include "operator/hashmap/taper_hashtable.h"
 #include "operator/hashmap/column_marshaller.h"
 #include "operator/hashmap/vector_marshaller.h"
@@ -22,6 +23,19 @@ using namespace op;
 using namespace vec;
 using namespace type;
 using namespace mem;
+
+/// Visitor-based lookup helper (replaces TaperFlatHashTable::Find which was added later).
+template <typename Table, typename Key>
+uint8_t* Lookup(Table& table, const Key& key) {
+    auto visitor = table.GetResultVisitor();
+    while (!visitor.Finished()) {
+        if (visitor.CurKey() == key) {
+            return reinterpret_cast<uint8_t*>(const_cast<char*>(visitor.CurVal().buf));
+        }
+        visitor.Next();
+    }
+    return nullptr;
+}
 
 // ======================================================================
 //  TaperFlatHashTable — core data structure tests
@@ -48,13 +62,13 @@ TEST_F(TaperFlatHashTableTest, BasicEmplaceAndFind)
     EXPECT_EQ(table.Size(), 5);
 
     for (auto k : keys) {
-        auto* val = table.Find(k);
+        auto* val = Lookup(table, k);
         ASSERT_NE(val, nullptr);
         int32_t found;
-        memcpy(&found, val->buf, sizeof(found));
+        memcpy(&found, val, sizeof(found));
         EXPECT_EQ(found, k);
     }
-    EXPECT_EQ(table.Find(999), nullptr);
+    EXPECT_EQ(Lookup(table, 999), nullptr);
 }
 
 /// Emplace and Find with int64 keys (used by TaperColumnSerializeHandler).
@@ -72,10 +86,10 @@ TEST_F(TaperFlatHashTableTest, Int64Key)
     EXPECT_EQ(table.Size(), 3);
 
     for (int i = 0; i < 3; i++) {
-        auto* val = table.Find(keys[i]);
+        auto* val = Lookup(table, keys[i]);
         ASSERT_NE(val, nullptr);
         char* found;
-        memcpy(&found, val->buf, sizeof(found));
+        memcpy(&found, val, sizeof(found));
         EXPECT_EQ(found, vals[i]);
     }
 }
@@ -101,10 +115,10 @@ TEST_F(TaperFlatHashTableTest, EmplaceBatch)
     EXPECT_EQ(table.Size(), rows);
 
     for (int32_t i = 0; i < rows; i++) {
-        auto* val = table.Find(keys[i]);
+        auto* val = Lookup(table, keys[i]);
         ASSERT_NE(val, nullptr);
         int32_t found;
-        memcpy(&found, val->buf, sizeof(found));
+        memcpy(&found, val, sizeof(found));
         EXPECT_EQ(found, vals[i]);
     }
 }
@@ -138,10 +152,10 @@ TEST_F(TaperFlatHashTableTest, EmplaceBatchDuplicateKeys)
     // So insertCount = 3 (all rows trigger a callback)
     EXPECT_EQ(insertCount, 3);
 
-    auto* val = table.Find(100);
+    auto* val = Lookup(table, 100);
     ASSERT_NE(val, nullptr);
     int32_t found;
-    memcpy(&found, val->buf, sizeof(found));
+    memcpy(&found, val, sizeof(found));
     // Should have the first value (key=100 hadn't been inserted yet when init was called)
     EXPECT_EQ(found, 2);
 }
@@ -161,11 +175,11 @@ TEST_F(TaperFlatHashTableTest, EmplaceBatchWithFilter)
         [](uint32_t, char*, bool) {});
 
     EXPECT_EQ(table.Size(), 2);
-    EXPECT_NE(table.Find(2), nullptr);
-    EXPECT_NE(table.Find(4), nullptr);
-    EXPECT_EQ(table.Find(1), nullptr);
-    EXPECT_EQ(table.Find(3), nullptr);
-    EXPECT_EQ(table.Find(5), nullptr);
+    EXPECT_NE(Lookup(table, 2), nullptr);
+    EXPECT_NE(Lookup(table, 4), nullptr);
+    EXPECT_EQ(Lookup(table, 1), nullptr);
+    EXPECT_EQ(Lookup(table, 3), nullptr);
+    EXPECT_EQ(Lookup(table, 5), nullptr);
 }
 
 /// GetResultVisitor — iterate all entries in the hash table.
@@ -214,10 +228,10 @@ TEST_F(TaperFlatHashTableTest, GrowthAndRehash)
     EXPECT_EQ(table.Size(), n);
 
     for (int32_t i = 0; i < n; i++) {
-        auto* val = table.Find(i);
+        auto* val = Lookup(table, i);
         ASSERT_NE(val, nullptr);
         int32_t found;
-        memcpy(&found, val->buf, sizeof(found));
+        memcpy(&found, val, sizeof(found));
         EXPECT_EQ(found, i);
     }
 }
@@ -245,10 +259,10 @@ TEST_F(TaperFlatHashTableTest, ClearAndReuse)
     EXPECT_EQ(table.Size(), 100);
 
     for (int32_t i = 200; i < 300; i++) {
-        auto* val = table.Find(i);
+        auto* val = Lookup(table, i);
         ASSERT_NE(val, nullptr);
         int32_t found;
-        memcpy(&found, val->buf, sizeof(found));
+        memcpy(&found, val, sizeof(found));
         EXPECT_EQ(found, i);
     }
 }
@@ -319,10 +333,10 @@ TEST_F(TaperFlatHashTableTest, EmplaceWithCustomCompare)
     EXPECT_TRUE(updateCalled);
 
     // Verify value was updated
-    auto* val = table.Find(int64_t(1));
+    auto* val = Lookup(table, int64_t(1));
     ASSERT_NE(val, nullptr);
     int32_t found;
-    memcpy(&found, val->buf, sizeof(found));
+    memcpy(&found, val, sizeof(found));
     EXPECT_EQ(found, val2);
 }
 
@@ -346,10 +360,10 @@ TEST_F(TaperFlatHashTableTest, EmplaceBatchLarge)
 
     EXPECT_EQ(table.Size(), n);
     for (int32_t i = 0; i < n; i += 100) {
-        auto* val = table.Find(i);
+        auto* val = Lookup(table, i);
         ASSERT_NE(val, nullptr);
         int32_t found;
-        memcpy(&found, val->buf, sizeof(found));
+        memcpy(&found, val, sizeof(found));
         EXPECT_EQ(found, i * 2);
     }
 }
