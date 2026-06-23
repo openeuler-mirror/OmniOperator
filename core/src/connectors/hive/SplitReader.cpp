@@ -51,6 +51,9 @@ std::unique_ptr <SplitReader> SplitReader::create(
 void SplitReader::prepareSplit(omniruntime::type::RowTypePtr &rowType, uint64_t batchLen)
 {
     baseReaderOpts_->SetBatchLen(batchLen);
+    baseReaderOpts_->SetCoalesceMaxBytes(hiveConfig_->maxCoalescedBytes());
+    baseReaderOpts_->SetCoalesceMaxDistance(hiveConfig_->maxCoalescedDistance());
+    baseReaderOpts_->SetFilePreloadThreshold(static_cast<int64_t>(hiveConfig_->filePreloadThreshold()));
     createReader();
     createRowReader(rowType, batchLen);
 }

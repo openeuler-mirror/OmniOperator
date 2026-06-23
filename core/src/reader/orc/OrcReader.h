@@ -45,6 +45,9 @@ public:
     void StartNextStripe();
 
 private:
+    // Prefetch the current stripe's selected streams as coalesced reads before loadStripeIndex().
+    void PrefetchSelectedStreams();
+
     std::shared_ptr <FileContents> contents_;
     std::vector<BaseVector *> *batch;
     int *omniTypeId;
