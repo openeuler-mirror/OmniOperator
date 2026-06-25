@@ -40,14 +40,14 @@ template <> struct GroupbyHashCalculator<std::string> {
 template <> struct GroupbyHashCalculator<int32_t> {
     size_t operator () (const int32_t data) const
     {
-        return omniruntime::simdutil::CRC32HasherForInt(data);
+        return omniruntime::simdutil::CRC32X4HasherForInt(data);
     }
 };
 
 template <> struct GroupbyHashCalculator<int64_t> {
     size_t operator() (const int64_t data) const
     {
-        return omniruntime::simdutil::CRC32HasherForInt(data);
+        return omniruntime::simdutil::CRC32X4HasherForInt(data);
     }
 };
 
@@ -69,7 +69,7 @@ template<>
 struct GroupbyHashCalculator<int16_t> {
     size_t operator()(const int16_t data) const
     {
-        return omniruntime::simdutil::CRC32HasherForInt(data);
+        return omniruntime::simdutil::CRC32X4HasherForInt(data);
     }
 };
 

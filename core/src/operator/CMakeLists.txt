@@ -13,6 +13,9 @@ endif()
 
 add_library(${OP_TARGET} SHARED ${OPERATOR_LIST})
 
+enable_language(ASM)
+target_sources(${OP_TARGET} PRIVATE hashmap/crc32_X4.S)
+
 #dependent library
 target_link_libraries(${OP_TARGET} PUBLIC expression vectorization io_core ${OMNI_CODEGEN_SO} ${OMNI_VECTOR_SO} ${OMNI_READER_SO})
 target_link_libraries(${OP_TARGET} PRIVATE Folly::folly)

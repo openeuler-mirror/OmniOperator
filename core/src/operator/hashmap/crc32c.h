@@ -35,7 +35,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <atomic>
+#include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <arm_neon.h>
 
 #include "util/omni_exception.h"
@@ -135,8 +138,31 @@ static uint32_t ExtendImpl(uint32_t crc, const char *buf, size_t size)
     return static_cast<uint32_t>(l ^ 0xffffffffu);
 }
 
+extern "C" uint32_t crc32_x4(const uint8_t* buf, size_t len, uint32_t crc);
+
+static inline bool EnableCrc32X4()
+{
+    static const bool enabled = []
+    {
+        const char* value = std::getenv("OMNI_ENABLE_CRC32_X4");
+        return value != nullptr && std::strcmp(value, "1") == 0;
+    }();
+    return enabled;
+}
+
 static inline uint32_t Extend(uint32_t crc, const char *buf, size_t size)
 {
+#if defined(__aarch64__)
+    if (EnableCrc32X4()) {
+        static std::atomic<uint64_t> callCount {0};
+        uint64_t count = callCount.fetch_add(1, std::memory_order_relaxed) + 1;
+        if ((count & (count - 1)) == 0) {
+            std::cerr << "[OmniRuntime][CRC32_X4] crc32_x4 called, count="
+                      << count << ", size=" << size << std::endl;
+        }
+        return crc32_x4(reinterpret_cast<const uint8_t *>(buf), size, crc ^ 0xffffffffu) ^ 0xffffffffu;
+    }
+#endif
     return ExtendImpl<Fast_CRC32>(crc, buf, size);
 }
 }
