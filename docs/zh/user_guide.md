@@ -1880,7 +1880,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
 
 如果在启动参数中已经配置了堆外内存，请跳过本章节。如果因为特殊情况无法在启动参数中配置堆外内存，可以按照如下步骤操作。
 
-1. 复制[`parse_para.sh`](https://gitee.com/kunpengcompute/boostkit-bigdata/blob/main/tools/parse_parameter/parse_para.sh)脚本到`${SPARK_HOME}/bin/`目录下。
+1. 复制[`parse_para.sh`](https://gitcode.com/boostkit/boostkit-bigdata/blob/main/tools/parse_parameter/parse_para.sh)脚本到`${SPARK_HOME}/bin/`目录下。
 2. 修改`parse_para.sh`权限。
 
     ```shell
