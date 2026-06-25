@@ -31,7 +31,7 @@
 |状态| 说明                                                               |
 |--|------------------------------------------------------------------|
 |S| 表示支持该算子或表达式。                                                     |
-|PS| 表示部分支持该算子或表达式，但存在一些限定条件。具体的限定条件请参见[项目介绍](../../README.md)中的约束与限制。 |
+|PS| 表示部分支持该算子或表达式，但存在一些限定条件。具体的限定条件请参见项目介绍中的[约束与限制](../../README.md#约束与限制)。 |
 |NS| 表示不支持该算子或表达式。                                                    |
 |NA| 表示不涉及该算子或表达式。开源版本Spark也没有此输入场景。                                  |
 |NA-2| 表示基于开源版本Spark实现的上下文函数，不涉及OmniOperator算子加速。                       |
@@ -834,7 +834,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
             ```
 
         >![](public_sys-resources/icon-note.gif) **说明：** 
-        >- hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni：依据用户Hadoop的core-site.xml中配置的fs.defaultFS实际值设置`hdfs://server1:9000`。`/user/root/omni-operator.tar.gz`用户可自行定义，与[2](#config-spark)的操作关联。`\#omni`表示实际运行时omni-operator.tar.gz解压的目录，用户可自行定义。
+        >- hdfs://server1:9000/user/root/omni-operator.tar.gz\#omni：依据用户Hadoop的core-site.xml中配置的fs.defaultFS实际值设置`hdfs://server1:9000`。`/user/root/omni-operator.tar.gz`用户可自行定义，与[2](#config-spark)的操作关联。`#omni`表示实际运行时omni-operator.tar.gz解压的目录，用户可自行定义。
         >- 上述启动命令为Yarn模式使用，若使用local模式启动SparkExtension插件，需将`--master yarn`改为`--master local`，同时在启动前需在所有节点的`~/.bashrc`文件中添加`export LD_PRELOAD=/opt/omni-operator/lib/libjemalloc.so.2`并更新环境变量。启动命令中`$\{PWD\}/omni`全部替换为`/opt`。
 
     SparkExtension相关的启动参数信息如[**表 2** SparkExtension相关启动参数信息](#SparkExtension相关启动参数信息)所示。
@@ -906,7 +906,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
     |spark.omni.sql.columnar.catalog.cache.expire.time|600|设置缓存Catelog元数据的缓存过期时间，默认为600秒。|
     |spark.omni.sql.columnar.vec.predicate.enabled|false|是否开启向量化谓词下推功能，true表示开启，false表示关闭。|
     |spark.omni.sql.columnar.numaBinding|false|是否开启NUMA绑定，仅NUMA架构支持，true表示开启，false表示关闭。如果开启NUMA绑定，Spark启动参数需要指定--conf spark.plugins=com.huawei.boostkit.spark.OmniSparkPlugin，同时也需要指定spark.omni.sql.columnar.coreRange参数。|
-    |spark.omni.sql.columnar.coreRange|空|开启NUMA绑定时需要指定，表示运行机器的各NUMA核ID范围，不同NUMA间用'|'分割。如4NUMA架构96核机器参数：0-23|24-47|48-71|72-95。|
+    |spark.omni.sql.columnar.coreRange|空|开启NUMA绑定时需要指定，表示运行机器的各NUMA核ID范围，不同NUMA间用 \| 分割。如4NUMA架构96核机器参数：0-23 \| 24-47 \| 48-71 \| 72-95 。
 
 2. 验证SparkExtension是否生效。
 
@@ -1014,7 +1014,7 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
 |状态|说明|
 |--|--|
 |S|表示支持该算子或表达式。|
-|PS|表示部分支持该算子或表达式，但存在一些限定条件。具体的限定条件请参见。|
+|PS|表示部分支持该算子或表达式，但存在一些限定条件。具体的限定条件请参见项目介绍中的[约束与限制](../../README.md#约束与限制)。|
 |NS|表示不支持该算子或表达式。|
 |NA|表示不涉及该算子或表达式。开源版本Spark也没有此输入场景。|
 |NA-2|表示基于开源版本Spark实现的上下文函数，不涉及OmniOperator算子加速特性。|
@@ -1154,7 +1154,7 @@ Spark引擎使用OmniOperator算子加速特性支持的算子情况如[**表 2*
 | abs                    | S                                | Scalar Functions    | -                                                            | NA          | S        | S         | S       | S        | S         | S          | CS         | NA       | NA            | S           | NA         | NA        | NA      | NA         |
 | concat                 | S                                | Scalar Functions    | -                                                            | CS          | CS       | CS        | CS      | CS       | CS        | CS         | S          | CS       | CS            | CS          | S          | NS        | NA      | NA         |
 | contains               | S                                | Scalar Functions    | -                                                            | CS          | CS       | CS        | CS      | CS       | CS        | CS         | S          | CS       | CS            | CS          | NS         | NA        | NA      | NA         |
-| decode                 | S                                | Scalar Functions    | 仅支持入参大于2的形式，会转换为case...when形式 上面是expr的支持性，下面是result的支持性 | S           | S        | S         | S       | S        | S         | S          | S          | S        | S             | S           | S          | S         | S       | S          |
+| decode                 | S                                | Scalar Functions    | - | S           | S        | S         | S       | S        | S         | S          | S          | S        | S             | S           | S          | S         | S       | S          |
 | endswith               | S                                | Scalar Functions    | -                                                            | CS          | CS       | CS        | CS      | CS       | CS        | CS         | S          | CS       | CS            | CS          | NS         | NA        | NA      | NA         |
 | hash                   | S                                | Scalar Functions    | -                                                            | S           | S        | S         | S       | S        | S         | S          | S          | S        | S             | S           | S          | S         | NA      | S          |
 | ifnull                 | S                                | Scalar Functions    | -                                                            | S           | S        | S         | S       | S        | S         | S          | S          | S        | S             | S           | S          | S         | S       | S          |
