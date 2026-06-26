@@ -3,6 +3,8 @@
  * @Description: lookup join operator test implementations
  */
 #include <climits>
+#include <string>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "operator/hash_util.h"
@@ -276,4 +278,40 @@ TEST(HashUtilTest, TestCRCHashVarchar)
         EXPECT_EQ(hash, expectedStringHashes[i]);
     }
 }
+
+#if defined(__aarch64__)
+static uint32_t SoftwareCRC32(const std::string &value)
+{
+    uint32_t crc = 0xffffffffu;
+    for (unsigned char byte : value) {
+        crc ^= byte;
+        for (int bit = 0; bit < 8; ++bit) {
+            crc = (crc >> 1) ^ (0xedb88320u & (0u - (crc & 1u)));
+        }
+    }
+    return crc ^ 0xffffffffu;
+}
+
+TEST(HashUtilTest, TestCRC32X4MatchesCRC32)
+{
+    const std::vector<size_t> lengths = {
+        0, 1, 2, 4, 7, 8, 15, 16, 31, 32, 63, 64, 127, 128, 129,
+        255, 256, 257, 511, 512, 513, 1023, 1024, 1025, 16383, 16384, 16385};
+
+    for (size_t length : lengths) {
+        std::string value(length, '\0');
+        for (size_t i = 0; i < length; ++i) {
+            value[i] = static_cast<char>((i * 131 + length) & 0xff);
+        }
+
+        const auto expected = SoftwareCRC32(value);
+        const auto actual = crc32_x4(reinterpret_cast<const uint8_t *>(value.data()), value.size(), 0xffffffffu) ^
+            0xffffffffu;
+        const auto actualAgain = crc32_x4(reinterpret_cast<const uint8_t *>(value.data()), value.size(), 0xffffffffu) ^
+            0xffffffffu;
+        EXPECT_EQ(actual, expected) << "length=" << length;
+        EXPECT_EQ(actualAgain, actual) << "length=" << length;
+    }
+}
+#endif
 }
