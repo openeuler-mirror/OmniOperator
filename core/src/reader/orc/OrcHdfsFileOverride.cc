@@ -18,7 +18,9 @@
 
 #include "OrcFileOverride.hh"
 #include <sys/types.h>
+#include <cstring>
 #include <memory>
+#include <new>
 
 #include "reader/filesystem/hdfs_file.h"
 #include "reader/filesystem/io_exception.h"
@@ -33,6 +35,11 @@ class HdfsFileInputStreamOverride : public ::orc::InputStream {
         std::unique_ptr<fs::ReadableFile> hdfs_file_;
         uint64_t total_length_;
         const uint64_t READ_SIZE_ = 1024 * 1024; //1 MB
+        // Cache whole small files in memory to avoid many tiny per-stream HDFS reads.
+        static constexpr uint64_t kMaxCacheFileSize_ = 8 * 1024 * 1024; // 8 MB
+        std::unique_ptr<char[]> fileCache_;
+        uint64_t cacheLen_ = 0;
+        bool wholeFileCached_ = false;
 
     public:
         HdfsFileInputStreamOverride(const UriInfo& uri, common::ReadMode readMode) {
@@ -46,9 +53,37 @@ class HdfsFileInputStreamOverride : public ::orc::InputStream {
             }
 
             this->total_length_= hdfs_file_->GetFileSize();
+
+            prefetchWholeFile();
         }
 
-        ~HdfsFileInputStreamOverride() override {
+        // Read the whole file into fileCache_; on any failure keep per-read fallback.
+        void prefetchWholeFile() {
+            if (total_length_ == 0 || total_length_ > kMaxCacheFileSize_) {
+                return;
+            }
+            std::unique_ptr<char[]> buffer(new (std::nothrow) char[total_length_]);
+            if (!buffer) {
+                return;
+            }
+            uint64_t done = 0;
+            while (done < total_length_) {
+                int64_t n = hdfs_file_->ReadAt(buffer.get() + done,
+                                               total_length_ - done, done);
+                if (n < 0) {
+                    return;
+                }
+                if (n == 0) {
+                    break;
+                }
+                done += n;
+            }
+            if (done != total_length_) {
+                return;
+            }
+            fileCache_ = std::move(buffer);
+            cacheLen_ = total_length_;
+            wholeFileCached_ = true;
         }
 
         /**
@@ -78,6 +113,12 @@ class HdfsFileInputStreamOverride : public ::orc::InputStream {
 
             if (!buf) {
                 throw IOException(Status::IOError("Fail to read hdfs file, because read buffer is null").ToString());
+            }
+
+            // Fast path: serve from in-memory cache.
+            if (wholeFileCached_ && offset + length <= cacheLen_) {
+                memcpy(buf, fileCache_.get() + offset, length);
+                return;
             }
 
             char *buf_ptr = reinterpret_cast<char *>(buf);
