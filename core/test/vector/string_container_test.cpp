@@ -4,6 +4,7 @@
  */
 
 #include "gtest/gtest.h"
+#include "memory/thread_memory_manager.h"
 #include "vector/vector.h"
 #include "vector/dictionary_container.h"
 #include "vector/vector_helper.h"
@@ -338,5 +339,20 @@ TEST(vector2, string_vector_get_large_size)
 TEST(vector2, string_vector_zero_capacity_init)
 {
     string_vector_zero_capacity_init<LargeStringContainer<std::string_view>>();
+}
+
+TEST(vector2, string_container_expand_balances_untracked_memory)
+{
+    auto *threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
+    threadMemoryManager->Clear();
+
+    {
+        auto *baseVector = VectorHelper::CreateStringVector(1);
+        auto *vector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(baseVector);
+        vector->Expand(3);
+        delete baseVector;
+    }
+
+    EXPECT_EQ(0, threadMemoryManager->GetUntrackedMemory());
 }
 }
