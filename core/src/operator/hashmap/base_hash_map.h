@@ -511,7 +511,7 @@ public:
      * Note: We use the second element of InsertResult to indicate whether to find the matched position or not.
      */
     template <typename T,
-        std::enable_if_t<std::is_same_v<std::remove_cv_t<std::remove_reference_t<T>>, KeyType>>* = nullptr>
+        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>>* = nullptr>
     ALWAYS_INLINE InsertResult<ValueType> FindMatchPosition(T &&key)
     {
         auto hashValue = CalculateHash(key);
@@ -532,7 +532,7 @@ public:
      * value reference.
      */
     template <typename T,
-        std::enable_if_t<std::is_same_v<std::remove_cv_t<std::remove_reference_t<T>>, KeyType>>* = nullptr>
+        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>>* = nullptr>
     InsertResult<ValueType> Emplace(T &&key)
     {
         if (NeedRehash()) {

@@ -66,13 +66,6 @@ template <> struct GroupbyHashCalculator<omniruntime::type::int128_t> {
     }
 };
 
-template <> struct GroupbyHashCalculator<uint64_t> {
-    size_t operator() (const uint64_t data) const
-    {
-        return omniruntime::simdutil::CRC32HasherForInt(data);
-    }
-};
-
 template<>
 struct GroupbyHashCalculator<int16_t> {
     size_t operator()(const int16_t data) const

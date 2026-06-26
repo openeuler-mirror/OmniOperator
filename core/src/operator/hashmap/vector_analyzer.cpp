@@ -83,10 +83,7 @@ bool VectorAnalyzer::CheckArrayMap(Vector<T> *vector, size_t length)
 
 bool VectorAnalyzer::DecideHashMode(omniruntime::vec::VectorBatch *&vectorBatch)
 {
-    // Once fallen back to NORMAL, the decision is final for this operator
-    // instance.  Re-evaluating would let a later batch re-enter ARRAY mode
-    // while earlier data already lives in the fixedInt hashmap, splitting
-    // data across two structures and losing rows on output.
+    // skip analyze value
     if (hashMode == HashTableType::NORMAL_HASH_TABLE) {
         return false;
     }
@@ -141,9 +138,9 @@ bool VectorAnalyzer::HandleInputValues(omniruntime::vec::VectorBatch *&vectorBat
             hashMode = HashTableType::NORMAL_HASH_TABLE;
             return false;
         }
-        hashMode = HashTableType::ARRAY_HASH_TABLE;
         return true;
     } else {
+        // Dictionary and ConstVector encodings fall back to normal hash table
         hashMode = HashTableType::NORMAL_HASH_TABLE;
         return false;
     }
