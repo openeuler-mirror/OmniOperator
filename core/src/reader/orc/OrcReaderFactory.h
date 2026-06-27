@@ -27,7 +27,8 @@ public:
     {
         auto uri = options->GetUri();
         common::ReadMode readMode = options->GetReadMode();
-        std::unique_ptr<::orc::InputStream> inputStream = readFileOverride(*uri, readMode);
+        std::unique_ptr<::orc::InputStream> inputStream =
+            readFileOverride(*uri, readMode, static_cast<uint64_t>(options->GetFilePreloadThreshold()));
         std::unique_ptr<ORCBufferInput> stream = std::make_unique<ORCBufferInput>(std::move(inputStream));
         auto* orcStream = dynamic_cast<ORCBufferInput*>(stream.get());
         if (!orcStream) {
