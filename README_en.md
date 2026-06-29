@@ -42,7 +42,8 @@ OmniOperator performs the following functions:
 
 OmniOperator is invoked by user code only in a single task and does not interact with other subtasks. The following figure shows the software architecture of OmniOperator.
 
-**Figure 1** Software architecture of OmniOperator<a name="zh-cn_topic_0000002515301928_fig11886120161918"></a><a id="omnioperator-software-architecture"></a>
+**Figure 1** Software architecture of OmniOperator<a name="zh-cn_topic_0000002515301928_fig11886120161918"></a><a id="omnioperator-software-architecture"></a> 
+ 
 ![](docs/en/figures/software-architecture-of-omnioperator.png)
 
 OmniOperator provides unified interfaces for distributed tasks. You can submit an SQL task to a Spark cluster. The cluster management node schedules the task, that is, distributes subtasks to multiple compute nodes for execution.
