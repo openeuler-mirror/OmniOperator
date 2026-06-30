@@ -2,13 +2,6 @@ file(GLOB_RECURSE OPERATOR_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp ../simd/*.cpp ut
 
 set(OP_TARGET ${OMNI_OPERATOR_SO})
 find_package(nlohmann_json 3.7.3 REQUIRED)
-find_package(folly REQUIRED)
-find_package(gflags REQUIRED)
-if(NOT TARGET gflags::gflags)
-    add_library(gflags_gflags INTERFACE)
-    target_link_libraries(gflags_gflags INTERFACE gflags)
-    add_library(gflags::gflags ALIAS gflags_gflags)
-endif()
 # compile .a file
 
 add_library(${OP_TARGET} SHARED ${OPERATOR_LIST})
@@ -18,7 +11,6 @@ target_sources(${OP_TARGET} PRIVATE hashmap/crc32_X4.S)
 
 #dependent library
 target_link_libraries(${OP_TARGET} PUBLIC expression vectorization io_core ${OMNI_CODEGEN_SO} ${OMNI_VECTOR_SO} ${OMNI_READER_SO})
-target_link_libraries(${OP_TARGET} PRIVATE Folly::folly)
 target_include_directories(${OP_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/simd)
 install(TARGETS ${OP_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
 install(FILES ${SOURCE_ROOT}/src/operator/operator.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/operator)

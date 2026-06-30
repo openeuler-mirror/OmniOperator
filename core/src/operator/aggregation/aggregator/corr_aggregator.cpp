@@ -4,6 +4,7 @@
  */
 
 #include "corr_aggregator.h"
+#include "operator/aggregation/aggregator/regr/regr_align_schema_helper.h"
 #include "operator/aggregation/vector_getter.h"
 
 namespace omniruntime {
@@ -456,8 +457,61 @@ void CorrAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowIn
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CorrAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *, BaseVector *,
-    const std::shared_ptr<NullsHelper>, const bool) {}
+void CorrAggregator<IN_ID, OUT_ID>::AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch)
+{
+    int32_t rc = inputVecBatch->GetRowCount();
+    if (rc == 0) {
+        RegrAlignAppendEmptyPearson6(result);
+        return;
+    }
+    if (!inputRaw) {
+        RegrAlignAppendPartialSlices(result, inputVecBatch, channels, kCorrPartialColumnCount, rc);
+        return;
+    }
+    std::shared_ptr<NullsHelper> xyNull;
+    GetVector(inputVecBatch, 0, rc, &xyNull);
+    BaseVector *xVec = inputVecBatch->Get(channels[0]);
+    BaseVector *yVec = inputVecBatch->Get(channels[1]);
+    // Pearson(x,y): helper args are (sparkY, sparkX) -> (channels[1], channels[0]).
+    RegrAlignAppendPearson6RawStd(result, yVec, xVec, xyNull, rc);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CorrAggregator<IN_ID, OUT_ID>::AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch,
+    const int32_t filterIndex)
+{
+    int32_t rc = inputVecBatch->GetRowCount();
+    if (rc == 0) {
+        RegrAlignAppendEmptyPearson6(result);
+        return;
+    }
+    auto *filterVec = static_cast<Vector<bool> *>(inputVecBatch->Get(filterIndex));
+    bool needFilter = DoNeedHandleAggFilter(filterVec, 0, rc);
+    std::shared_ptr<NullsHelper> xyNull;
+    GetVector(inputVecBatch, 0, rc, &xyNull);
+    std::shared_ptr<NullsHelper> rowSkip = RegrAlignMergeYxNullsWithFilter(xyNull, filterVec, needFilter, rc);
+    if (!inputRaw) {
+        RegrAlignAppendPartialColumnsWithSkip(result, inputVecBatch, channels, kCorrPartialColumnCount, rc, rowSkip,
+            false);
+        return;
+    }
+    BaseVector *xVec = inputVecBatch->Get(channels[0]);
+    BaseVector *yVec = inputVecBatch->Get(channels[1]);
+    RegrAlignAppendPearson6RawStd(result, yVec, xVec, rowSkip, rc);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CorrAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+    const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
+{
+    (void)nullMap;
+    (void)aggFilter;
+    if (originVector == nullptr) {
+        RegrAlignAppendEmptyPearson6(result);
+        return;
+    }
+    RegrAlignAppendPearson6AllNullRows(result, originVector->GetSize());
+}
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 CorrAggregator<IN_ID, OUT_ID>::CorrAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,

@@ -97,8 +97,7 @@ void RegrAlignAppendEmptyCov4(VectorBatch *result)
 
 void RegrAlignAppendEmptyPearson6(VectorBatch *result)
 {
-    result->Append(new Vector<int64_t>(0));
-    for (int c = 0; c < 5; ++c) {
+    for (int c = 0; c < 6; ++c) {
         result->Append(new Vector<double>(0));
     }
 }
@@ -138,12 +137,7 @@ void RegrAlignAppendCov4AllNullRows(VectorBatch *result, int32_t rowCount)
 
 void RegrAlignAppendPearson6AllNullRows(VectorBatch *result, int32_t rowCount)
 {
-    auto *cntVec = new Vector<int64_t>(rowCount);
-    for (int32_t i = 0; i < rowCount; ++i) {
-        cntVec->SetNull(i);
-    }
-    result->Append(cntVec);
-    for (int c = 0; c < 5; ++c) {
+    for (int c = 0; c < 6; ++c) {
         auto *v = new Vector<double>(rowCount);
         for (int32_t i = 0; i < rowCount; ++i) {
             v->SetNull(i);
@@ -241,7 +235,7 @@ void RegrAlignAppendCov4Raw(VectorBatch *result, BaseVector *yVec, BaseVector *x
 void RegrAlignAppendPearson6RawStd(VectorBatch *result, BaseVector *yVec, BaseVector *xVec,
     const std::shared_ptr<NullsHelper> &rowSkip, int32_t rowCount)
 {
-    auto *cntVec = new Vector<int64_t>(rowCount);
+    auto *cntVec = new Vector<double>(rowCount);
     auto *meanXVec = new Vector<double>(rowCount);
     auto *meanYVec = new Vector<double>(rowCount);
     auto *c2Vec = new Vector<double>(rowCount);
@@ -270,7 +264,7 @@ void RegrAlignAppendPearson6RawStd(VectorBatch *result, BaseVector *yVec, BaseVe
         s.c2 += deltaX * (y - s.meanY);
         s.m2X += (x - oldMeanX) * (x - s.meanX);
         s.m2Y += (y - oldMeanY) * (y - s.meanY);
-        cntVec->SetValue(i, s.count);
+        cntVec->SetValue(i, static_cast<double>(s.count));
         meanXVec->SetValue(i, s.meanX);
         meanYVec->SetValue(i, s.meanY);
         c2Vec->SetValue(i, s.c2);
@@ -288,7 +282,7 @@ void RegrAlignAppendPearson6RawStd(VectorBatch *result, BaseVector *yVec, BaseVe
 void RegrAlignAppendPearson6RawR2Layout(VectorBatch *result, BaseVector *yVec, BaseVector *xVec,
     const std::shared_ptr<NullsHelper> &rowSkip, int32_t rowCount)
 {
-    auto *cntVec = new Vector<int64_t>(rowCount);
+    auto *cntVec = new Vector<double>(rowCount);
     auto *meanXVec = new Vector<double>(rowCount);
     auto *meanYVec = new Vector<double>(rowCount);
     auto *c2Vec = new Vector<double>(rowCount);
@@ -317,7 +311,7 @@ void RegrAlignAppendPearson6RawR2Layout(VectorBatch *result, BaseVector *yVec, B
         s.c2 += deltaX * (y - s.meanY);
         s.m2X += (x - oldMeanX) * (x - s.meanX);
         s.m2Y += (y - oldMeanY) * (y - s.meanY);
-        cntVec->SetValue(i, s.count);
+        cntVec->SetValue(i, static_cast<double>(s.count));
         meanXVec->SetValue(i, s.meanY);
         meanYVec->SetValue(i, s.meanX);
         c2Vec->SetValue(i, s.c2);
@@ -430,14 +424,14 @@ void RegrAlignAppendPartialColumnsWithSkip(VectorBatch *result, VectorBatch *inp
 
 void RegrAlignAppendEmptyReplacementPartial3(VectorBatch *result)
 {
-    result->Append(new Vector<int64_t>(0));
+    result->Append(new Vector<double>(0));
     result->Append(new Vector<double>(0));
     result->Append(new Vector<double>(0));
 }
 
 void RegrAlignAppendReplacementPartial3AllNullRows(VectorBatch *result, int32_t rowCount)
 {
-    auto *nVec = new Vector<int64_t>(rowCount);
+    auto *nVec = new Vector<double>(rowCount);
     auto *avgVec = new Vector<double>(rowCount);
     auto *m2Vec = new Vector<double>(rowCount);
     for (int32_t i = 0; i < rowCount; ++i) {
@@ -453,7 +447,7 @@ void RegrAlignAppendReplacementPartial3AllNullRows(VectorBatch *result, int32_t 
 void RegrAlignAppendReplacementPartial3RawDouble(VectorBatch *result, BaseVector *valVec,
     const std::shared_ptr<NullsHelper> &rowSkip, int32_t rowCount)
 {
-    auto *nVec = new Vector<int64_t>(rowCount);
+    auto *nVec = new Vector<double>(rowCount);
     auto *avgVec = new Vector<double>(rowCount);
     auto *m2Vec = new Vector<double>(rowCount);
     for (int32_t i = 0; i < rowCount; ++i) {
@@ -463,7 +457,7 @@ void RegrAlignAppendReplacementPartial3RawDouble(VectorBatch *result, BaseVector
             m2Vec->SetNull(i);
             continue;
         }
-        nVec->SetValue(i, static_cast<int64_t>(1));
+        nVec->SetValue(i, 1.0);
         avgVec->SetValue(i, RegrGetDoubleAt(valVec, i));
         m2Vec->SetValue(i, 0.0);
     }

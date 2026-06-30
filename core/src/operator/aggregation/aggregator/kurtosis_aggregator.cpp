@@ -17,20 +17,20 @@ namespace omniruntime {
             auto *pKurtosisState = KurtosisState::ConstCastState(state + aggStateOffset);
             auto &centralMomentState = pKurtosisState->centralMomentState;
             if (this->outputPartial) {
-                auto kurtosisCountVector = static_cast<Vector<int64_t> *>(vectors[0]);
+                auto kurtosisCountVector = static_cast<Vector<double> *>(vectors[0]);
                 auto kurtosisCentralMoment1Vector = static_cast<Vector<double> *>(vectors[1]);
                 auto kurtosisCentralMoment2Vector = static_cast<Vector<double> *>(vectors[2]);
                 auto kurtosisCentralMoment3Vector = static_cast<Vector<double> *>(vectors[3]);
                 auto kurtosisCentralMoment4Vector = static_cast<Vector<double> *>(vectors[4]);
                 if (centralMomentState.count <= 0) {
-                    kurtosisCountVector->SetValue(rowIndex, 0);
+                    kurtosisCountVector->SetValue(rowIndex, 0.0);
                     kurtosisCentralMoment1Vector->SetValue(rowIndex, 0.0);
                     kurtosisCentralMoment2Vector->SetValue(rowIndex, 0.0);
                     kurtosisCentralMoment3Vector->SetValue(rowIndex, 0.0);
                     kurtosisCentralMoment4Vector->SetValue(rowIndex, 0.0);
                     return;
                 }
-                kurtosisCountVector->SetValue(rowIndex, static_cast<int64_t>(centralMomentState.count));
+                kurtosisCountVector->SetValue(rowIndex, static_cast<double>(centralMomentState.count));
                 kurtosisCentralMoment1Vector->SetValue(rowIndex, centralMomentState.centralMoment1);
                 kurtosisCentralMoment2Vector->SetValue(rowIndex, centralMomentState.centralMoment2);
                 kurtosisCentralMoment3Vector->SetValue(rowIndex, centralMomentState.centralMoment3);
@@ -58,20 +58,20 @@ namespace omniruntime {
                 auto *pKurtosisState = KurtosisState::CastState(groupStates[rowIndex] + aggStateOffset);
                 auto &centralMomentState = pKurtosisState->centralMomentState;
                 if (this->outputPartial) {
-                    auto kurtosisCountVector = static_cast<Vector<int64_t> *>(vectors[0]);
+                    auto kurtosisCountVector = static_cast<Vector<double> *>(vectors[0]);
                     auto kurtosisCentralMoment1Vector = static_cast<Vector<double> *>(vectors[1]);
                     auto kurtosisCentralMoment2Vector = static_cast<Vector<double> *>(vectors[2]);
                     auto kurtosisCentralMoment3Vector = static_cast<Vector<double> *>(vectors[3]);
                     auto kurtosisCentralMoment4Vector = static_cast<Vector<double> *>(vectors[4]);
                     if (centralMomentState.count <= 0) {
-                        kurtosisCountVector->SetValue(rowIndex, 0);
+                        kurtosisCountVector->SetValue(rowIndex, 0.0);
                         kurtosisCentralMoment1Vector->SetValue(rowIndex, 0.0);
                         kurtosisCentralMoment2Vector->SetValue(rowIndex, 0.0);
                         kurtosisCentralMoment3Vector->SetValue(rowIndex, 0.0);
                         kurtosisCentralMoment4Vector->SetValue(rowIndex, 0.0);
                         continue;
                     }
-                    kurtosisCountVector->SetValue(rowIndex, static_cast<int64_t>(centralMomentState.count));
+                    kurtosisCountVector->SetValue(rowIndex, static_cast<double>(centralMomentState.count));
                     kurtosisCentralMoment1Vector->SetValue(rowIndex, centralMomentState.centralMoment1);
                     kurtosisCentralMoment2Vector->SetValue(rowIndex, centralMomentState.centralMoment2);
                     kurtosisCentralMoment3Vector->SetValue(rowIndex, centralMomentState.centralMoment3);
@@ -95,7 +95,7 @@ namespace omniruntime {
         std::vector<DataTypePtr>
         KurtosisAggregator<IN, OUT>::GetSpillType() {
             std::vector<DataTypePtr> spillTypes;
-            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_LONG));
+            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));
             spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));
             spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));
             spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));
@@ -108,7 +108,7 @@ namespace omniruntime {
         KurtosisAggregator<IN, OUT>::ExtractValuesForSpill(
             std::vector<AggregateState *> &groupStates,
             std::vector<BaseVector *> &vectors) {
-            auto kurtosisCountVector = static_cast<Vector<int64_t> *>(vectors[0]);
+            auto kurtosisCountVector = static_cast<Vector<double> *>(vectors[0]);
             auto kurtosisCentralMoment1Vector = static_cast<Vector<double> *>(vectors[1]);
             auto kurtosisCentralMoment2Vector = static_cast<Vector<double> *>(vectors[2]);
             auto kurtosisCentralMoment3Vector = static_cast<Vector<double> *>(vectors[3]);
@@ -118,14 +118,14 @@ namespace omniruntime {
             for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
                 auto *pKurtosisState = KurtosisState::CastState(groupStates[rowIndex] + aggStateOffset);
                 auto &centralMomentState = pKurtosisState->centralMomentState;
-                if (centralMomentState.count == 0) {
+                if (centralMomentState.count <= 0) {
                     kurtosisCountVector->SetNull(rowIndex);
                     kurtosisCentralMoment1Vector->SetNull(rowIndex);
                     kurtosisCentralMoment2Vector->SetNull(rowIndex);
                     kurtosisCentralMoment3Vector->SetNull(rowIndex);
                     kurtosisCentralMoment4Vector->SetNull(rowIndex);
                 } else {
-                    kurtosisCountVector->SetValue(rowIndex, static_cast<int64_t>(centralMomentState.count));
+                    kurtosisCountVector->SetValue(rowIndex, static_cast<double>(centralMomentState.count));
                     kurtosisCentralMoment1Vector->SetValue(rowIndex, centralMomentState.centralMoment1);
                     kurtosisCentralMoment2Vector->SetValue(rowIndex, centralMomentState.centralMoment2);
                     kurtosisCentralMoment3Vector->SetValue(rowIndex, centralMomentState.centralMoment3);
@@ -193,14 +193,12 @@ namespace omniruntime {
                 auto *m3Vector = this->curVectorBatch->Get(this->channels[3]);
                 auto *m4Vector = this->curVectorBatch->Get(this->channels[4]);
 
-                auto *countPtr = reinterpret_cast<int64_t *>(VectorHelper::GetFlatValuePtr<OMNI_LONG>(countVector));
+                auto *countPtr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(countVector));
                 auto *m1Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m1Vector));
                 auto *m2Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m2Vector));
                 auto *m3Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m3Vector));
                 auto *m4Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m4Vector));
-
                 countPtr += rowOffset;
-                double countValue = *countPtr;
                 m1Ptr += rowOffset;
                 m2Ptr += rowOffset;
                 m3Ptr += rowOffset;
@@ -214,7 +212,7 @@ namespace omniruntime {
                         &centralMomentState.centralMoment4,
                         &centralMomentState.momentOrder,
                         pKurtosisState->valueState,
-                        &countValue,
+                        countPtr,
                         m1Ptr, m2Ptr, m3Ptr, m4Ptr,
                         rowCount);
                 } else {
@@ -227,7 +225,7 @@ namespace omniruntime {
                         &centralMomentState.centralMoment4,
                         &centralMomentState.momentOrder,
                         pKurtosisState->valueState,
-                        &countValue,
+                        countPtr,
                         m1Ptr, m2Ptr, m3Ptr, m4Ptr,
                         rowCount, *nullMap);
                 }
@@ -258,12 +256,11 @@ namespace omniruntime {
                 auto *m3Vector = this->curVectorBatch->Get(this->channels[3]);
                 auto *m4Vector = this->curVectorBatch->Get(this->channels[4]);
 
-                auto *countPtr = reinterpret_cast<int64_t *>(VectorHelper::GetFlatValuePtr<OMNI_LONG>(countVector));
+                auto *countPtr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(countVector));
                 auto *m1Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m1Vector));
                 auto *m2Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m2Vector));
                 auto *m3Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m3Vector));
                 auto *m4Ptr = reinterpret_cast<MomentValue *>(VectorHelper::GetFlatValuePtr<OMNI_DOUBLE>(m4Vector));
-
                 countPtr += rowOffset;
                 m1Ptr += rowOffset;
                 m2Ptr += rowOffset;
@@ -271,11 +268,11 @@ namespace omniruntime {
                 m4Ptr += rowOffset;
 
                 if (nullMap == nullptr) {
-                    MergeCentralMomentWithCountLongUseRowIndex<MomentValue, KurtosisState, AggValueState,
+                    MergeCentralMomentUseRowIndex<MomentValue, KurtosisState, AggValueState,
                         MergeCentralMomentOp<MomentValue> >(
                         rowStates, aggStateOffset, countPtr, m1Ptr, m2Ptr, m3Ptr, m4Ptr);
                 } else {
-                    MergeCentralMomentConditionalWithCountLongUseRowIndex<MomentValue, KurtosisState, AggValueState,
+                    MergeCentralMomentConditionalUseRowIndex<MomentValue, KurtosisState, AggValueState,
                         MergeCentralMomentConditionalOp<MomentValue, false> >(
                         rowStates, aggStateOffset, countPtr, m1Ptr, m2Ptr, m3Ptr, m4Ptr, *nullMap);
                 }
@@ -296,10 +293,9 @@ namespace omniruntime {
                 auto &row = unspillRows[rowIdx];
                 auto batch = row.batch;
                 auto index = row.rowIdx;
-                auto kurtosisCountVector = static_cast<Vector<int64_t> *>(batch->Get(countVecIdx));
+                auto kurtosisCountVector = static_cast<Vector<double> *>(batch->Get(countVecIdx));
                 if (!kurtosisCountVector->IsNull(index)) {
-                    auto count = kurtosisCountVector->GetValue(index);
-                    MomentValue countValue = count;
+                    MomentValue countValue = kurtosisCountVector->GetValue(index);
                     auto centralMoment1Vector = static_cast<Vector<double> *>(batch->Get(centralMoment1VecIdx));
                     auto centralMoment1 = centralMoment1Vector->GetValue(index);
                     auto centralMoment2Vector = static_cast<Vector<double> *>(batch->Get(centralMoment2VecIdx));
