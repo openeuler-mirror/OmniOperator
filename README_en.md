@@ -284,8 +284,8 @@ If you do not want your model or dataset to be mentioned in OmniOperator, or if 
 ## Public Network Address Statement<a name="ZH-CN_TOPIC_0000002547298197"></a>
 
 Note: The following dependencies are sourced from Gitee mirrors.<br>
-fmt image: https://gitee.com/mirrors/fmt.git  
-folly image: https://gitee.com/mirrors/folly.git
+fmt image: <https://gitee.com/mirrors/fmt.git>    
+folly image: <https://gitee.com/mirrors/folly.git>
 
 ## License<a name="ZH-CN_TOPIC_0000002547298197"></a>
 

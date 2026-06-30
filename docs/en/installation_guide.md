@@ -142,7 +142,7 @@ Before installing OmniOperator, prepare the hardware and software environments t
       <td>Boostkit-omniruntime-gluten-2.0.0.zip</td>
       <td>Open source</td>
       <td>OmniOperator software installation package (adapted to Gluten and Spark 3.4.3)</td>
-      <td><a href="https://atomgit.com/openeuler/OmniOperator/releases/download/26.0.0-OmniOperator-2.1.0-release/BoostKit-omniruntime-gluten-2.0.0.zip">Link</a></td>
+      <td><a href="https://gitcode.com/openeuler/OmniOperator/releases/download/26.1.0-OmniOperator-2.2.0-release/Dependency_library_Gluten.zip">Link</a></td>
     </tr>
     <tr>      
       <td>Boostkit-omniruntime-gluten-1.0.0.zip</td>
@@ -154,7 +154,7 @@ Before installing OmniOperator, prepare the hardware and software environments t
       <td>Dependency_library_Gluten.zip</td>
       <td>Open source</td>
       <td>Library file on which Gluten depends.</td>
-      <td><a href="https://gitcode.com/openeuler/OmniOperator/releases/download/26.1.0-OmniOperator-2.1.0-release/Dependency_library_Gluten.zip">Link</a></td>
+      <td><a href="https://gitcode.com/openeuler/OmniOperator/releases/download/26.1.0-OmniOperator-2.2.0-release/Dependency_library_Gluten.zip">Link</a></td>
     </tr>
     <tr>
       <td rowspan="1">5</td>
