@@ -2375,3 +2375,4 @@ Spark Extension配置的目录以`/opt/omni-operator/conf`和`/opt/omni-operator
         ```shell
         source ~/.bashrc
         ```
+        

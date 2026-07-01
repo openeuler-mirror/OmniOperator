@@ -1,8 +1,8 @@
-# Release Notes<a name="EN-US_TOPIC_0000002516070058"></a>
+# Release Notes<a name="ZH-CN_TOPIC_0000002516070058"></a>
 
-## Version Mapping<a name="EN-US_TOPIC_0000002547210787"></a>
+## Version Mapping<a name="ZH-CN_TOPIC_0000002547210787"></a>
 
-### Product Version Information<a name="EN-US_TOPIC_0000002515610876"></a>
+### Product Version<a name="ZH-CN_TOPIC_0000002515610876"></a>
 
 <a name="table227mcpsimp"></a>
 <table><tbody><tr id="row232mcpsimp"><th class="firstcol" valign="top" width="30%" id="mcps1.1.3.1.1"><p id="p234mcpsimp"><a name="p234mcpsimp"></a><a name="p234mcpsimp"></a>Product Name</p>
@@ -10,25 +10,24 @@
 <td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.1.1 "><p id="p236mcpsimp"><a name="p236mcpsimp"></a><a name="p236mcpsimp"></a>Kunpeng BoostKit</p>
 </td>
 </tr>
-<tr id="row237mcpsimp"><th class="firstcol" valign="top" width="30%" id="mcps1.1.3.2.1"><p id="p239mcpsimp"><a name="p239mcpsimp"></a><a name="p239mcpsimp"></a>Product Name</p>
+<tr id="row237mcpsimp"><th class="firstcol" valign="top" width="30%" id="mcps1.1.3.2.1"><p id="p239mcpsimp"><a name="p239mcpsimp"></a><a name="p239mcpsimp"></a>Product Version</p>
 </th>
-<td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.2.1 "><p id="p241mcpsimp"><a name="p241mcpsimp"></a><a name="p241mcpsimp"></a>26.0.RC1</p>
+<td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.2.1 "><p id="p241mcpsimp"><a name="p241mcpsimp"></a><a name="p241mcpsimp"></a>26.0.RC2</p>
 </td>
 </tr>
 <tr id="row242mcpsimp"><th class="firstcol" valign="top" width="30%" id="mcps1.1.3.3.1"><p id="p244mcpsimp"><a name="p244mcpsimp"></a><a name="p244mcpsimp"></a>Software Name and Version</p>
 </th>
-<td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.3.1 "><p id="p14490142642819"><a name="p14490142642819"></a><a name="p14490142642819"></a>OmniOperator 2.1.0</p>
+<td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.3.1 "><p id="p14490142642819"><a name="p14490142642819"></a><a name="p14490142642819"></a>OmniOperator 2.2.0</p>
 </td>
 </tr>
 </tbody>
 </table>
 
-
-### Software Version Mapping<a name="EN-US_TOPIC_0000002547210787"></a>
+### Software Versions<a name="ZH-CN_TOPIC_0000002515610832"></a>
 
 |Item| Version                                                                                           |
 |--|-----------------------------------------------------------------------------------------------|
-|OS| CentOS 7.9, openEuler 20.03 LTS SP1, openEuler 22.03 LTS SP1                                  |
+|OS| CentOS 7.9, openEuler 20.03 LTS SP1, openEuler 22.03 LTS SP1                                     |
 |JDK| BiSheng JDK 1.8 (BiSheng JDK 1.8.0_342 preferred). openEuler 22.03 LTS SP1 is incompatible with BiSheng JDK 1.8.0_262 and must be replaced with BiSheng JDK 1.8.0_342.|
 |Hadoop| 3.2.0                                                                                         |
 |Spark| 3.1.1, 3.3.1, 3.4.3, 3.5.2                                                                       |
@@ -37,9 +36,7 @@
 |File system| HDFS                                                                                          |
 |Data format| ORC, PARQUET                                                                                  |
 
-
-
-### Hardware Version Mapping<a name="EN-US_TOPIC_0000002547210819"></a>
+### Hardware Version<a name="ZH-CN_TOPIC_0000002547210819"></a>
 
 <a name="table305mcpsimp"></a>
 <table><tbody><tr id="row315mcpsimp"><th class="firstcol" valign="top" width="30%" id="mcps1.1.3.1.1"><p id="p317mcpsimp"><a name="p317mcpsimp"></a><a name="p317mcpsimp"></a>Processor</p>
@@ -55,8 +52,7 @@
 </tbody>
 </table>
 
-
-### Virus Scan Result<a name="EN-US_TOPIC_0000002515450916"></a>
+### Virus Scan Result<a name="ZH-CN_TOPIC_0000002515450916"></a>
 
 The software packages, release documents, and product documents have been scanned by multiple antivirus software, and no virus is found.  
 
@@ -147,42 +143,64 @@ The software packages, release documents, and product documents have been scanne
 </tbody>
 </table>
 
+## V2.2.0<a name="ZH-CN_TOPIC_0000002517208390"></a>
 
-
-## V2.1.0<a name="EN-US_TOPIC_0000002517208390"></a>
-
-### Change Description<a name="EN-US_TOPIC_0000002548808279"></a>
+### Change Description<a name="ZH-CN_TOPIC_0000002548808279"></a>
 
 The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
 
 **New Features<a name="section9559165534817"></a>**
 
-- Added `InsertIntoHadoopFsRelationCommand` to support HDFS insertion, `WriteFile` to support ORC write, `Window` to support array data segmentation, `FileSourceScanExec` to support array data read, and `LocalLimitExec` to support array data truncation.
+- Added support for ObjectHashAggregateExec, InsertIntoHiveTable, GenerateExec, and HiveTableScanExec.
+- Added support for the lake formats: Delta Lake 3.2.0, Hudi 0.15.0, and Iceberg 1.5.0.
+- Added support for the Array, Map, and Struct data types by LocalLimitExec, ExpandExec, BroadcastExchangeExec, ShuffleExchangeExec, DataWritingCommandExec, TakeOrderedAndProjectExec, BroadcastNestedLoopJoinExec, Union, Filter, SortExec, SortMergeJoinExec, and WindowExec.
+
+**Modified Features<a name="section299616132492"></a>**
+
+None
+
+**Removed Features<a name="section65399205498"></a>**
+
+None
+
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002548688267"></a>
+
+None
+
+### Known Issues<a name="ZH-CN_TOPIC_0000002517048478"></a>
+
+None
+
+## V2.1.0<a name="ZH-CN_TOPIC_0000002517208390"></a>
+
+### Change Description<a name="ZH-CN_TOPIC_0000002548808279"></a>
+
+The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
+
+**New Features<a name="section9559165534817"></a>**
+
+- Added InsertIntoHadoopFsRelationCommand to support insertion into HDFS, WriteFile to support ORC write, Window to support array data segmentation, FileSourceScanExec to support array data read, and LocalLimitExec to support array data truncation.
 - Added the expressions: `datediff`, `pmod`, `charTypeWriteSideCheck`, `least`, `concat_ws`, and `get_json_object`.
 
 **Modified Features<a name="section299616132492"></a>**
 
 None
 
-**Deleted Features<a name="section65399205498"></a>**
+**Removed Features<a name="section65399205498"></a>**
 
 None
 
-
-### Resolved Issues<a name="EN-US_TOPIC_0000002548688267"></a>
-
-None
-
-
-### Known Issues<a name="EN-US_TOPIC_0000002517048478"></a>
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002548688267"></a>
 
 None
 
+### Known Issues<a name="ZH-CN_TOPIC_0000002517048478"></a>
 
+None
 
-## V2.0.0<a name="EN-US_TOPIC_0000002517048478"></a>
+## V2.0.0<a name="ZH-CN_TOPIC_0000002547210805"></a>
 
-### Change Description<a name="EN-US_TOPIC_0000002515610846"></a>
+### Change Description<a name="ZH-CN_TOPIC_0000002515610846"></a>
 
 The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
 
@@ -195,25 +213,21 @@ The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a uni
 
 None
 
-**Deleted Features<a name="section65399205498"></a>**
+**Removed Features<a name="section65399205498"></a>**
 
 None
 
-
-### Resolved Issues<a name="EN-US_TOPIC_0000002515610898"></a>
-
-None
-
-
-### Known Issues<a name="EN-US_TOPIC_0000002515610880"></a>
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002515610898"></a>
 
 None
 
+### Known Issues<a name="ZH-CN_TOPIC_0000002515610880"></a>
 
+None
 
-## V1.9.0<a name="EN-US_TOPIC_0000002547130825"></a>
+## V1.9.0<a name="ZH-CN_TOPIC_0000002547130825"></a>
 
-### Change Description<a name="EN-US_TOPIC_0000002547210739"></a>
+### Change Description<a name="ZH-CN_TOPIC_0000002547210739"></a>
 
 The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
 
@@ -226,25 +240,21 @@ The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a uni
 
 None
 
-**Deleted Features<a name="section65399205498"></a>**
+**Removed Features<a name="section65399205498"></a>**
 
 None
 
-
-### Resolved Issues<a name="EN-US_TOPIC_0000002515450930"></a>
-
-None
-
-
-### Known Issues<a name="EN-US_TOPIC_0000002547210785"></a>
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002515450930"></a>
 
 None
 
+### Known Issues<a name="ZH-CN_TOPIC_0000002547210785"></a>
 
+None
 
-## V1.8.0<a name="EN-US_TOPIC_0000002547210809"></a>
+## V1.8.0<a name="ZH-CN_TOPIC_0000002547210809"></a>
 
-### Change Description<a name="EN-US_TOPIC_0000002547130793"></a>
+### Change Description<a name="ZH-CN_TOPIC_0000002547130793"></a>
 
 The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
 
@@ -254,31 +264,27 @@ The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a uni
 - Added the `LIMIT...OFFSET...` syntax support to Spark 3.4.3 and 3.5.2.
 - Added the expressions: `try_add`, `try_divide`, `try_multiply`, `try_subtract`, `try_avg`, and `try_sum`.
 - Added support for the join type and build side co-directional logic of the open-source ShuffledHashJoin operator to Spark 3.5.2.
-- Added the WindowGroupLimit operator for Spark 3.5.2 to optimize the `ROW_NUMBER` and RANK function performance for Top-K calculation.
+- Added the WindowGroupLimit operator for Spark 3.5.2 to optimize the `ROW_NUMBER` and `RANK` function performance for Top-K calculation.
 
 **Modified Features<a name="section299616132492"></a>**
 
 None
 
-**Deleted Features<a name="section65399205498"></a>**
+**Removed Features<a name="section65399205498"></a>**
 
 This version does not adapt to CentOS 7.9.
 
-
-### Resolved Issues<a name="EN-US_TOPIC_0000002547130777"></a>
-
-None
-
-
-### Known Issues<a name="EN-US_TOPIC_0000002547210795"></a>
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002547130777"></a>
 
 None
 
+### Known Issues<a name="ZH-CN_TOPIC_0000002547210795"></a>
 
+None
 
-## V1.7.0<a name="EN-US_TOPIC_0000002515450928"></a>
+## V1.7.0<a name="ZH-CN_TOPIC_0000002515450928"></a>
 
-### Change Description<a name="EN-US_TOPIC_0000002515610864"></a>
+### Change Description<a name="ZH-CN_TOPIC_0000002515610864"></a>
 
 The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
 
@@ -292,38 +298,34 @@ The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a uni
 - Added the timestamp data type for Spark operator acceleration.
 - Added the `unix_timestamp` and `from_unixtime` expressions for Spark operator acceleration.
 - Added `SIMPLE_EDGE` shuffle support for Hive operator acceleration and added fusion of the Filter and Select operators.
-- Added the POWER expression for Hive operator acceleration.
+- Added the `POWER` expression for Hive operator acceleration.
 
 **Modified Features<a name="section299616132492"></a>**
 
 None
 
-**Deleted Features<a name="section65399205498"></a>**
+**Removed Features<a name="section65399205498"></a>**
 
 None
 
-
-### Resolved Issues<a name="EN-US_TOPIC_0000002515450942"></a>
-
-None
-
-
-### Known Issues<a name="EN-US_TOPIC_0000002515450960"></a>
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002515450942"></a>
 
 None
 
+### Known Issues<a name="ZH-CN_TOPIC_0000002515450960"></a>
 
+None
 
-## V1.6.0<a name="EN-US_TOPIC_0000002515610908"></a>
+## V1.6.0<a name="ZH-CN_TOPIC_0000002515610908"></a>
 
-### Change Description<a name="EN-US_TOPIC_0000002515610886"></a>
+### Change Description<a name="ZH-CN_TOPIC_0000002515610886"></a>
 
 The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
 
 **New Features<a name="section9559165534817"></a>**
 
-- Optimized the prerequisites of bloomFilter and subquery broadcast to improve the reuse of subqueries.
-- Added support for the greatest/contains expression, and skips the rollback of the filter operators that contain a scalar subquery expression.
+- Optimized the prerequisites of `bloomFilter` and `subquery broadcast` to improve the reuse of subqueries.
+- Added support for the `greatest/contains` expression, and skips the rollback of the filter operators that contain a scalar subquery expression.
 - Optimized the TableScan, HashJoin, Shuffle, and RollUp operators.
 - Optimized the OmniOperator deployment method, in which the Yarn resource management model enables the OmniOperator binary software package on which the Spark Executor process depends to be automatically deployed.
 
@@ -331,49 +333,45 @@ The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a uni
 
 None
 
-**Deleted Features<a name="section65399205498"></a>**
+**Removed Features<a name="section65399205498"></a>**
 
 None
 
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002547210769"></a>
 
-### Resolved Issues<a name="EN-US_TOPIC_0000002547210769"></a>
-
-<a name="EN-US_topic_0000001498002964_table1077520124617"></a>
-<table><tbody><tr id="EN-US_topic_0000001498002964_row07751817464"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.1.1"><p id="EN-US_topic_0000001498002964_p177751174618"><a name="EN-US_topic_0000001498002964_p177751174618"></a><a name="EN-US_topic_0000001498002964_p177751174618"></a>Trouble Ticket No.</p>
+<a name="zh-cn_topic_0000001498002964_table1077520124617"></a>
+<table><tbody><tr id="zh-cn_topic_0000001498002964_row07751817464"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.1.1"><p id="zh-cn_topic_0000001498002964_p177751174618"><a name="zh-cn_topic_0000001498002964_p177751174618"></a><a name="zh-cn_topic_0000001498002964_p177751174618"></a>Trouble Ticket No.</p>
 </th>
-<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.1.1 "><p id="EN-US_topic_0000001498002964_p377511134615"><a name="EN-US_topic_0000001498002964_p377511134615"></a><a name="EN-US_topic_0000001498002964_p377511134615"></a>DTS2024060329127</p>
+<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.1.1 "><p id="zh-cn_topic_0000001498002964_p377511134615"><a name="zh-cn_topic_0000001498002964_p377511134615"></a><a name="zh-cn_topic_0000001498002964_p377511134615"></a>DTS2024060329127</p>
 </td>
 </tr>
-<tr id="EN-US_topic_0000001498002964_row157751511464"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.2.1"><p id="EN-US_topic_0000001498002964_p167751810462"><a name="EN-US_topic_0000001498002964_p167751810462"></a><a name="EN-US_topic_0000001498002964_p167751810462"></a>Severity</p>
+<tr id="zh-cn_topic_0000001498002964_row157751511464"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.2.1"><p id="zh-cn_topic_0000001498002964_p167751810462"><a name="zh-cn_topic_0000001498002964_p167751810462"></a><a name="zh-cn_topic_0000001498002964_p167751810462"></a>Severity</p>
 </th>
-<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.2.1 "><p id="EN-US_topic_0000001498002964_p87750114611"><a name="EN-US_topic_0000001498002964_p87750114611"></a><a name="EN-US_topic_0000001498002964_p87750114611"></a>Minor</p>
+<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.2.1 "><p id="zh-cn_topic_0000001498002964_p87750114611"><a name="zh-cn_topic_0000001498002964_p87750114611"></a><a name="zh-cn_topic_0000001498002964_p87750114611"></a>Minor</p>
 </td>
 </tr>
-<tr id="EN-US_topic_0000001498002964_row11775191144616"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.3.1"><p id="EN-US_topic_0000001498002964_p20775919467"><a name="EN-US_topic_0000001498002964_p20775919467"></a><a name="EN-US_topic_0000001498002964_p20775919467"></a>Symptom</p>
+<tr id="zh-cn_topic_0000001498002964_row11775191144616"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.3.1"><p id="zh-cn_topic_0000001498002964_p20775919467"><a name="zh-cn_topic_0000001498002964_p20775919467"></a><a name="zh-cn_topic_0000001498002964_p20775919467"></a>Symptom</p>
 </th>
-<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.3.1 "><p id="EN-US_topic_0000001498002964_p1987484454610"><a name="EN-US_topic_0000001498002964_p1987484454610"></a><a name="EN-US_topic_0000001498002964_p1987484454610"></a>In a scenario where a Spark INSERT statement is executed with only one data partition, if 50 tables undergo consecutive Sort Merge Join (SMJ) operations, it may cause the SMJ operator to allocate vector memory using the new statement when off-heap memory is exhausted, thereby triggering a core dump issue.</p>
+<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.3.1 "><p id="zh-cn_topic_0000001498002964_p1987484454610"><a name="zh-cn_topic_0000001498002964_p1987484454610"></a><a name="zh-cn_topic_0000001498002964_p1987484454610"></a>In a scenario where a Spark INSERT statement is executed with only one data partition, if 50 tables undergo consecutive Sort Merge Join (SMJ) operations, it may cause the SMJ operator to allocate vector memory using the new statement when off-heap memory is exhausted, thereby triggering a core dump issue.</p>
 </td>
 </tr>
 </tbody>
 </table>
 
-
-### Known Issues<a name="EN-US_TOPIC_0000002547210813"></a>
+### Known Issues<a name="ZH-CN_TOPIC_0000002547210813"></a>
 
 None
 
+## V1.5.0<a name="ZH-CN_TOPIC_0000002547130781"></a>
 
-
-## V1.5.0<a name="EN-US_TOPIC_0000002547130781"></a>
-
-### Change Description<a name="EN-US_TOPIC_0000002547130757"></a>
+### Change Description<a name="ZH-CN_TOPIC_0000002547130757"></a>
 
 The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
 
 **New Features<a name="section9559165534817"></a>**
 
 - Optimized memory for OmniOperator to support big wide table queries. The optimizations cover aggregate state memory usage, HashAggregator serialization memory usage, unified aggregator and operator memory allocation, and HashAggregator Spill sorting.
-- Added the Not expression and the AnsiCast expression in the Spark insert scenario.
+- Added the `Not` expression and the `AnsiCast` expression in the Spark insert scenario.
 - Added support for the Hive engine. No exception occurs when Hive Extension executes 99 TPC-DS SQL statements. When vectorization is enabled, the performance for the ORC format is improved by 20% compared with that of the open-source Hive engine.
 - Added support for more operators in Hive Extension, including Filter, Select, GroupBy, MapJoin, MergeJoin, PTF, Sort and TableScan.
 - Added secure cluster support for ORC files in Hive Extension.
@@ -382,68 +380,64 @@ The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a uni
 
 None
 
-**Deleted Features<a name="section65399205498"></a>**
+**Removed Features<a name="section65399205498"></a>**
 
 None
 
-
-### Resolved Issues<a name="EN-US_TOPIC_0000002547130817"></a>
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002547130817"></a>
 
 None
 
+### Known Issues<a name="ZH-CN_TOPIC_0000002547130753"></a>
 
-### Known Issues<a name="EN-US_TOPIC_0000002547130753"></a>
-
-<a name="EN-US_topic_0000001498002964_table1077520124617"></a>
-<table><tbody><tr id="EN-US_topic_0000001498002964_row07751817464"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.1.1"><p id="EN-US_topic_0000001498002964_p177751174618"><a name="EN-US_topic_0000001498002964_p177751174618"></a><a name="EN-US_topic_0000001498002964_p177751174618"></a>Trouble Ticket No.</p>
+<a name="zh-cn_topic_0000001498002964_table1077520124617"></a>
+<table><tbody><tr id="zh-cn_topic_0000001498002964_row07751817464"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.1.1"><p id="zh-cn_topic_0000001498002964_p177751174618"><a name="zh-cn_topic_0000001498002964_p177751174618"></a><a name="zh-cn_topic_0000001498002964_p177751174618"></a>Trouble Ticket No.</p>
 </th>
-<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.1.1 "><p id="EN-US_topic_0000001498002964_p377511134615"><a name="EN-US_topic_0000001498002964_p377511134615"></a><a name="EN-US_topic_0000001498002964_p377511134615"></a>DTS2024060329127</p>
+<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.1.1 "><p id="zh-cn_topic_0000001498002964_p377511134615"><a name="zh-cn_topic_0000001498002964_p377511134615"></a><a name="zh-cn_topic_0000001498002964_p377511134615"></a>DTS2024060329127</p>
 </td>
 </tr>
-<tr id="EN-US_topic_0000001498002964_row157751511464"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.2.1"><p id="EN-US_topic_0000001498002964_p167751810462"><a name="EN-US_topic_0000001498002964_p167751810462"></a><a name="EN-US_topic_0000001498002964_p167751810462"></a>Severity</p>
+<tr id="zh-cn_topic_0000001498002964_row157751511464"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.2.1"><p id="zh-cn_topic_0000001498002964_p167751810462"><a name="zh-cn_topic_0000001498002964_p167751810462"></a><a name="zh-cn_topic_0000001498002964_p167751810462"></a>Severity</p>
 </th>
-<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.2.1 "><p id="EN-US_topic_0000001498002964_p87750114611"><a name="EN-US_topic_0000001498002964_p87750114611"></a><a name="EN-US_topic_0000001498002964_p87750114611"></a>Minor</p>
+<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.2.1 "><p id="zh-cn_topic_0000001498002964_p87750114611"><a name="zh-cn_topic_0000001498002964_p87750114611"></a><a name="zh-cn_topic_0000001498002964_p87750114611"></a>Minor</p>
 </td>
 </tr>
-<tr id="EN-US_topic_0000001498002964_row11775191144616"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.3.1"><p id="EN-US_topic_0000001498002964_p20775919467"><a name="EN-US_topic_0000001498002964_p20775919467"></a><a name="EN-US_topic_0000001498002964_p20775919467"></a>Symptom</p>
+<tr id="zh-cn_topic_0000001498002964_row11775191144616"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.3.1"><p id="zh-cn_topic_0000001498002964_p20775919467"><a name="zh-cn_topic_0000001498002964_p20775919467"></a><a name="zh-cn_topic_0000001498002964_p20775919467"></a>Symptom</p>
 </th>
-<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.3.1 "><p id="EN-US_topic_0000001498002964_p1987484454610"><a name="EN-US_topic_0000001498002964_p1987484454610"></a><a name="EN-US_topic_0000001498002964_p1987484454610"></a>In a scenario where a Spark INSERT statement is executed with only one data partition, if 50 tables undergo consecutive Sort Merge Join (SMJ) operations, it may cause the SMJ operator to allocate vector memory using the new statement when off-heap memory is exhausted, thereby triggering a core dump issue.</p>
+<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.3.1 "><p id="zh-cn_topic_0000001498002964_p1987484454610"><a name="zh-cn_topic_0000001498002964_p1987484454610"></a><a name="zh-cn_topic_0000001498002964_p1987484454610"></a>In a scenario where a Spark INSERT statement is executed with only one data partition, if 50 tables undergo consecutive Sort Merge Join (SMJ) operations, it may cause the SMJ operator to allocate vector memory using the new statement when off-heap memory is exhausted, thereby triggering a core dump issue.</p>
 </td>
 </tr>
-<tr id="EN-US_topic_0000001498002964_row12775151134619"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.4.1"><p id="EN-US_topic_0000001498002964_p197756111466"><a name="EN-US_topic_0000001498002964_p197756111466"></a><a name="EN-US_topic_0000001498002964_p197756111466"></a>Cause Analysis</p>
+<tr id="zh-cn_topic_0000001498002964_row12775151134619"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.4.1"><p id="zh-cn_topic_0000001498002964_p197756111466"><a name="zh-cn_topic_0000001498002964_p197756111466"></a><a name="zh-cn_topic_0000001498002964_p197756111466"></a>Cause Analysis</p>
 </th>
 <td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.4.1 "><a name="ol1498472654417"></a><a name="ol1498472654417"></a><ol id="ol1498472654417"><li>Since OmniOperator currently uses columnar processing, compared to the row-based processing in the open-source Spark version, it consumes more memory. Additionally, the resources allocated during the SMJ operator's computation can only be released after the task completes. </li><li>The problem occurs when INSERT statements are executed and there is only one data partition. Spark generates only one task. As a result, Sort Merge Join on 50 tables is executed in one task. In this case, the configured 38 GB off-heap memory is used up by the 50 consecutive SMJ operators during the calculation. When the new statement is used to apply for memory, a core dump occurs.</li></ol>
 </td>
 </tr>
-<tr id="EN-US_topic_0000001498002964_row1677518118466"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.5.1"><p id="EN-US_topic_0000001498002964_p97756164616"><a name="EN-US_topic_0000001498002964_p97756164616"></a><a name="EN-US_topic_0000001498002964_p97756164616"></a>Impact Assessment</p>
+<tr id="zh-cn_topic_0000001498002964_row1677518118466"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.5.1"><p id="zh-cn_topic_0000001498002964_p97756164616"><a name="zh-cn_topic_0000001498002964_p97756164616"></a><a name="zh-cn_topic_0000001498002964_p97756164616"></a>Impact Assessment</p>
 </th>
-<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.5.1 "><p id="EN-US_topic_0000001498002964_p19775813469"><a name="EN-US_topic_0000001498002964_p19775813469"></a><a name="EN-US_topic_0000001498002964_p19775813469"></a>This test case falls under a high-load scenario. Spark jobs are designed to leverage the parallelism advantages of large-scale clusters, and under normal circumstances there is no service scenario where a single task (single thread) performs join operations across a large number of tables. This problem has not occurred in actual service scenarios and has little impact on customers.</p>
+<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.5.1 "><p id="zh-cn_topic_0000001498002964_p19775813469"><a name="zh-cn_topic_0000001498002964_p19775813469"></a><a name="zh-cn_topic_0000001498002964_p19775813469"></a>This test case falls under a high-load scenario. Spark jobs are designed to leverage the parallelism advantages of large-scale clusters, and under normal circumstances there is no service scenario where a single task (single thread) performs join operations across a large number of tables. This problem has not occurred in actual service scenarios and has little impact on customers.</p>
 </td>
 </tr>
-<tr id="EN-US_topic_0000001498002964_row1177581134617"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.6.1"><p id="EN-US_topic_0000001498002964_p677517114617"><a name="EN-US_topic_0000001498002964_p677517114617"></a><a name="EN-US_topic_0000001498002964_p677517114617"></a>Workaround</p>
+<tr id="zh-cn_topic_0000001498002964_row1177581134617"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.6.1"><p id="zh-cn_topic_0000001498002964_p677517114617"><a name="zh-cn_topic_0000001498002964_p677517114617"></a><a name="zh-cn_topic_0000001498002964_p677517114617"></a>Workaround</p>
 </th>
-<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.6.1 "><a name="EN-US_topic_0000001498002964_ol88617589303"></a><a name="EN-US_topic_0000001498002964_ol88617589303"></a><ol id="EN-US_topic_0000001498002964_ol88617589303"><li>Adjust the **spark.memory.offHeap.size** parameter to increase the off-heap memory and run the service process again. </li><li>Roll back to the open-source Spark version to trigger the service.</li></ol>
+<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.6.1 "><a name="zh-cn_topic_0000001498002964_ol88617589303"></a><a name="zh-cn_topic_0000001498002964_ol88617589303"></a><ol id="zh-cn_topic_0000001498002964_ol88617589303"><li>Adjust the spark.memory.offHeap.size parameter to increase the off-heap memory and run the service process again. </li><li>Roll back to the open-source Spark version to trigger the service.</li></ol>
 </td>
 </tr>
-<tr id="EN-US_topic_0000001498002964_row1777511154617"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.7.1"><p id="EN-US_topic_0000001498002964_p87762154616"><a name="EN-US_topic_0000001498002964_p87762154616"></a><a name="EN-US_topic_0000001498002964_p87762154616"></a>Progress</p>
+<tr id="zh-cn_topic_0000001498002964_row1777511154617"><th class="firstcol" valign="top" width="20.830000000000002%" id="mcps1.1.3.7.1"><p id="zh-cn_topic_0000001498002964_p87762154616"><a name="zh-cn_topic_0000001498002964_p87762154616"></a><a name="zh-cn_topic_0000001498002964_p87762154616"></a>Progress</p>
 </th>
-<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.7.1 "><a name="EN-US_topic_0000001498002964_ol7508324455"></a><a name="EN-US_topic_0000001498002964_ol7508324455"></a><ol id="EN-US_topic_0000001498002964_ol7508324455"><li>A troubleshooting case has been added to the *Feature Guide*. It helps quickly locate and rectify the fault. </li><li>Resolve this problem in the next commercial release of Kunpeng BoostKit 24.0.0.</li></ol>
+<td class="cellrowborder" valign="top" width="79.17%" headers="mcps1.1.3.7.1 "><a name="zh-cn_topic_0000001498002964_ol7508324455"></a><a name="zh-cn_topic_0000001498002964_ol7508324455"></a><ol id="zh-cn_topic_0000001498002964_ol7508324455"><li>A troubleshooting case has been added to the *Feature Guide*. It helps quickly locate and rectify the fault. </li><li>Resolve this problem in the next commercial release of Kunpeng BoostKit 24.0.0.</li></ol>
 </td>
 </tr>
 </tbody>
 </table>
 
+## V1.4.0<a name="ZH-CN_TOPIC_0000002515450946"></a>
 
-
-## V1.4.0<a name="EN-US_TOPIC_0000002515450946"></a>
-
-### Change Description<a name="EN-US_TOPIC_0000002515610850"></a>
+### Change Description<a name="ZH-CN_TOPIC_0000002515610850"></a>
 
 The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
 
 **New Features<a name="section9559165534817"></a>**
 
-- Optimized the execution plan and added three new rules: DeduplicateRightSideOfLeftSemiJoin, RewriteSelfJoinInInPredicate, and MergeSubqueryFilters.
+- Optimized the execution plan and added three new rules: `DeduplicateRightSideOfLeftSemiJoin`, `RewriteSelfJoinInInPredicate`, and `MergeSubqueryFilters`.
 - Added support for the NullType data type.
 - Added the SubqueryBroadcastExec, CoalesceExecTransformer, and Limit Omni operators.
 - Optimized operator functions: HashAggregator RollUp optimization, TableScan operator Parquet data read optimization, and Radix Sort for Sort operator.
@@ -456,25 +450,21 @@ The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a uni
 
 None
 
-**Deleted Features<a name="section65399205498"></a>**
+**Removed Features<a name="section65399205498"></a>**
 
 None
 
-
-### Resolved Issues<a name="EN-US_TOPIC_0000002547130743"></a>
-
-None
-
-
-### Known Issues<a name="EN-US_TOPIC_0000002515610890"></a>
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002547130743"></a>
 
 None
 
+### Known Issues<a name="ZH-CN_TOPIC_0000002515610890"></a>
 
+None
 
-## V1.3.0<a name="EN-US_TOPIC_0000002547130771"></a>
+## V1.3.0<a name="ZH-CN_TOPIC_0000002547130771"></a>
 
-### Change Description<a name="EN-US_TOPIC_0000002515450990"></a>
+### Change Description<a name="ZH-CN_TOPIC_0000002515450990"></a>
 
 The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
 
@@ -488,25 +478,21 @@ The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a uni
 
 None
 
-**Deleted Features<a name="section65399205498"></a>**
+**Removed Features<a name="section65399205498"></a>**
 
 None
 
-
-### Resolved Issues<a name="EN-US_TOPIC_0000002547210777"></a>
-
-None
-
-
-### Known Issues<a name="EN-US_TOPIC_0000002515610852"></a>
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002547210777"></a>
 
 None
 
+### Known Issues<a name="ZH-CN_TOPIC_0000002515610852"></a>
 
+None
 
-## V1.2.0<a name="EN-US_TOPIC_0000002515610910"></a>
+## V1.2.0<a name="ZH-CN_TOPIC_0000002515610910"></a>
 
-### Change Description<a name="EN-US_TOPIC_0000002547130791"></a>
+### Change Description<a name="ZH-CN_TOPIC_0000002547130791"></a>
 
 The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a unified infrastructure to support different engines (such as Spark), reducing repeated optimization work, fully exploring common and heterogeneous computing power, and promoting the Kunpeng ecosystem.
 
@@ -523,35 +509,29 @@ The OmniRuntime OmniOperator feature of Kunpeng BoostKit for Big Data uses a uni
 
 None
 
-**Deleted Features<a name="section65399205498"></a>**
+**Removed Features<a name="section65399205498"></a>**
 
 None
 
-
-### Resolved Issues<a name="EN-US_TOPIC_0000002515450958"></a>
-
-None
-
-
-### Known Issues<a name="EN-US_TOPIC_0000002547210745"></a>
+### Resolved Issues<a name="ZH-CN_TOPIC_0000002515450958"></a>
 
 None
 
+### Known Issues<a name="ZH-CN_TOPIC_0000002547210745"></a>
 
+None
 
-## Related Documentation<a name="EN-US_TOPIC_0000002547130797"></a>
+## Related Documentation<a name="ZH-CN_TOPIC_0000002547130797"></a>
 
-### Related Documentation<a name="EN-US_TOPIC_0000002547210821"></a>
+### Documentation<a name="ZH-CN_TOPIC_0000002547210821"></a>
 
 |Document|Description|Delivery Method|
 |--|--|--|
-|2.1.0 Release Notes|Provides OmniStateStore version update and release information.|Open-source repository|
-|Quick Start|Provides quick start tutorials to help users quickly understand and use OmniStateStore.|Open-source repository|
-|Installation Guide|Provides guidance on how to install and deploy OmniStateStore.|Open-source repository|
-|User Guide|Provides guidance on how to use OmniStateStore.|Open-source repository|
-|FAQs|Records the issues that may occur during the installation, deployment, and use and their solutions.|Open-source repository|
+|2.1.0 Release Notes|Provides the OmniOperator version release information.|Open-source repository|
+|Installation Guide|Describes how to install and deploy OmniOperator.|Open-source repository|
+|User Guide|Provides guidance on how to use OmniOperator.|Open-source repository|
+|FAQs|Records the issues that may occur during the installation, deployment, and use of OmniOperator and their solutions.|Open-source repository|
 
+### Obtaining Documentation<a name="ZH-CN_TOPIC_0000002547210757"></a>
 
-### Obtaining Documentation<a name="EN-US_TOPIC_0000002547210757"></a>
-
-Visit the [Open-source repository](https://gitcode.com/openeuler/OmniOperator) to view or download related documents.
+Visit the [open-source repository](https://gitcode.com/openeuler/OmniOperator) to view or download related documents.
