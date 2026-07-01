@@ -253,6 +253,14 @@ string GetIsNullTestJson(const string &expr)
     return ss.str();
 }
 
+string GetIsNotNullTestJson(const string &expr)
+{
+    ss.str("");
+    ss << R"({ "exprType": "IS_NOT_NULL", "returnType": 4, "arguments": [)" << expr;
+    ss << R"(]})";
+    return ss.str();
+}
+
 class TestExpr {
 public:
     omniruntime::type::DataTypePtr dataType = nullptr;
@@ -851,6 +859,24 @@ TEST(JSONParserTest, UnaryExpr_NOT)
     TestUnaryExpr expectedExpr(Operator::NOT, new TestIsNullExpr(new TestFieldExpr(OMNI_DECIMAL64, COL_NUM)));
     expectedExpr.isEqual(unaryExpr);
     delete unaryExpr;
+}
+
+TEST(JSONParserTest, IsNotNullExpr)
+{
+    string unparsedIsNotNullJson = GetIsNotNullTestJson(GetFieldRefTestJson(OMNI_LONG, COL_NUM));
+    Expr *isNotNullExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedIsNotNullJson));
+    TestUnaryExpr expectedExpr(Operator::NOT, new TestIsNullExpr(new TestFieldExpr(OMNI_LONG, COL_NUM)));
+    expectedExpr.isEqual(isNotNullExpr);
+    delete isNotNullExpr;
+}
+
+TEST(JSONParserTest, IsNullExpr)
+{
+    string unparsedIsNullJson = GetIsNullTestJson(GetFieldRefTestJson(OMNI_LONG, COL_NUM));
+    Expr *isNullExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedIsNullJson));
+    TestIsNullExpr expectedExpr(new TestFieldExpr(OMNI_LONG, COL_NUM));
+    expectedExpr.isEqual(isNullExpr);
+    delete isNullExpr;
 }
 
 TEST(JSONParserTest, BetweenExpr)

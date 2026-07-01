@@ -105,6 +105,18 @@ const std::string CharLengthFnStr()
     return charLengthFnStr;
 }
 
+const std::string IsNullFnStr()
+{
+    const std::string isNullFnStr = "isnull";
+    return isNullFnStr;
+}
+
+const std::string IsNotNullFnStr()
+{
+    const std::string isNotNullFnStr = "isnotnull";
+    return isNotNullFnStr;
+}
+
 const std::string CastNullFnStr()
 {
     const std::string castNullFnStr = "CAST_null";
@@ -281,6 +293,16 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(CharLengthStr), CharLengthFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(CharLengthChar), CharLengthFnStr(), {}, { OMNI_CHAR }, OMNI_INT, INPUT_DATA),
+
+        // is null functions
+        Function(reinterpret_cast<void *>(IsNullStr), IsNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_BOOLEAN,
+            INPUT_DATA_AND_NULL),
+        Function(reinterpret_cast<void *>(IsNullChar), IsNullFnStr(), {}, { OMNI_CHAR }, OMNI_BOOLEAN,
+            INPUT_DATA_AND_NULL),
+        Function(reinterpret_cast<void *>(IsNotNullStr), IsNotNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_BOOLEAN,
+            INPUT_DATA_AND_NULL),
+        Function(reinterpret_cast<void *>(IsNotNullChar), IsNotNullFnStr(), {}, { OMNI_CHAR }, OMNI_BOOLEAN,
+            INPUT_DATA_AND_NULL),
 
         // replace functions
         Function(reinterpret_cast<void *>(LengthCharReturnInt32), LengthFnStr(), {}, { OMNI_CHAR }, OMNI_INT,

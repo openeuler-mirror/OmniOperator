@@ -1336,6 +1336,16 @@ public class TestUtils {
     }
 
     /**
+     * generating "is null" json expression.
+     *
+     * @param arguments arguments
+     * @return the formatted "is null" json expression
+     */
+    public static String omniJsonIsNullExpr(String arguments) {
+        return String.format(Locale.ROOT, "{\"exprType\":\"IS_NULL\",\"returnType\":4,\"arguments\":[%s]}", arguments);
+    }
+
+    /**
      * generating "less than or equal" json expression.
      *
      * @param left the left argument
