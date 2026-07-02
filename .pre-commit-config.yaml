@@ -1,0 +1,47 @@
+minimum_pre_commit_version: 4.0.0
+exclude: ^LICENSES/|^docs/|\.(html|csv|svg)$
+
+default_stages: [pre-commit]
+ci:
+  autofix_prs: false
+  autoupdate_schedule: monthly
+
+repos:
+  - repo: https://gitcode.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+      - id: check-json
+      - id: check-xml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
+  - repo: https://gitcode.com/gh_mirrors/de/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+  - repo: https://gitcode.com/gh_mirrors/co/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        args: ["-L", "ErrorProne,errorprone,testng"]
+#--------------- C++ 核心检查 ---------------------------------------------
+  # clang-format：C/C++ 代码格式化
+  - repo: https://gitcode.com/pre-commit-clang/mirrors-clang-format
+    rev: v18.1.8
+    hooks:
+      - id: clang-format
+        files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx)$
+        types_or: [c, c++]
+        exclude: ^build/|^tests/third_party/|^third_party/|^test/|^3rdparty/
+  # markdownlint：Markdown 格式检查（仅CI手动执行）
+  - repo: https://gitcode.com/gh_mirrors/ma/markdownlint-cli
+    rev: v0.46.0
+    hooks:
+      - id: markdownlint
+        exclude: '.*\.inc\.md$|.*report_template\.md$|.*contributors\.md$|.*PULL_REQUEST_TEMPLATE\.md$|^docs/|\.md$'
+        stages: [manual]
+        description: "Markdown format check (run in CI: pre-commit run markdownlint --all-files)"
