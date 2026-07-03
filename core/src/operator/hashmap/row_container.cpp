@@ -156,14 +156,15 @@ static void SveExtractColumnImpl(char** rows, int32_t totalRows, int32_t offset,
             svfloat64_t vZeroF = svdup_n_f64(0.0);
             svst1_f64(pg, outValues + i, svsel_f64(vRowIsNull, vZeroF, vRowValues));
         } else {
-            svint64_t vRowValues;
-            if constexpr (std::is_same_v<T, int32_t>) {
-                vRowValues = svld1sw_gather_s64(pg, vValueAddr);
-            } else if constexpr (std::is_same_v<T, int16_t>) {
-                vRowValues = svld1sh_gather_s64(pg, vValueAddr);
-            } else if constexpr (std::is_same_v<T, int8_t>) {
-                vRowValues = svld1sb_gather_s64(pg, vValueAddr);
-            } else {
+            // int32类型测试有问题，先注释掉sve实现，统一回退到普通实现
+            // svint64_t vRowValues;
+            // if constexpr (std::is_same_v<T, int32_t>) {
+            //     vRowValues = svld1sw_gather_s64(pg, vValueAddr);
+            // } else if constexpr (std::is_same_v<T, int16_t>) {
+            //     vRowValues = svld1sh_gather_s64(pg, vValueAddr);
+            // } else if constexpr (std::is_same_v<T, int8_t>) {
+            //     vRowValues = svld1sb_gather_s64(pg, vValueAddr);
+            // } else {
                 for (int32_t j = 0; j < activeCount; j++) {
                     if (RowContainer::IsNullAt(rows[i + j], nullByte, nullMask)) {
                         outValues[i + j] = T{};
@@ -173,13 +174,13 @@ static void SveExtractColumnImpl(char** rows, int32_t totalRows, int32_t offset,
                 }
                 i += activeCount;
                 continue;
-            }
+            // }
 
-            svint64_t vSelected = svsel_s64(vRowIsNull, vZero, vRowValues);
-            svst1_s64(pg, tmpBuf, vSelected);
-            for (int32_t j = 0; j < activeCount; j++) {
-                outValues[i + j] = static_cast<T>(tmpBuf[j]);
-            }
+            // svint64_t vSelected = svsel_s64(vRowIsNull, vZero, vRowValues);
+            // svst1_s64(pg, tmpBuf, vSelected);
+            // for (int32_t j = 0; j < activeCount; j++) {
+            //     outValues[i + j] = static_cast<T>(tmpBuf[j]);
+            // }
         }
 
         if (hasNull) {

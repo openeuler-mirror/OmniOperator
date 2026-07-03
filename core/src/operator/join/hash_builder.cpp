@@ -18,9 +18,17 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, const 
         throw OmniException("OPERATOR_RUNTIME_ERROR", "operatorCount is not in the acceptable range [1, 10000].");
     }
     if (joinType != OMNI_JOIN_TYPE_FULL) {
+#ifdef OMNI_USE_TAPER_JOIN
+        hashTablesVariants = InitTaperVariant<false>(buildHashColsCount, operatorCount, joinType);
+#else
         hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType);
+#endif
     } else {
+#ifdef OMNI_USE_TAPER_JOIN
+        hashTablesVariants = InitTaperVariant<true>(buildHashColsCount, operatorCount, joinType);
+#else
         hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType);
+#endif
     }
 }
 
@@ -35,9 +43,17 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, BuildS
     }
     if (joinType == OMNI_JOIN_TYPE_FULL || (joinType == OMNI_JOIN_TYPE_LEFT && buildSide == OMNI_BUILD_LEFT)
         || (joinType == OMNI_JOIN_TYPE_RIGHT && buildSide == OMNI_BUILD_RIGHT)) {
+#ifdef OMNI_USE_TAPER_JOIN
+        hashTablesVariants = InitTaperVariant<true>(buildHashColsCount, operatorCount, joinType, buildSide);
+#else
         hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType, buildSide);
+#endif
     } else {
+#ifdef OMNI_USE_TAPER_JOIN
+        hashTablesVariants = InitTaperVariant<false>(buildHashColsCount, operatorCount, joinType, buildSide);
+#else
         hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType, buildSide);
+#endif
     }
 }
 
@@ -200,12 +216,12 @@ int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVec
         *hashTablesVariants);
     if (UNLIKELY(IsDebugEnable())) {
         int32_t hashTableSize = 0;
-        auto hasgTableType =
+        auto hashTableType =
             std::visit([&](auto &&arg) { return arg.GetHashTableTypes(partitionIndex); }, *hashTablesVariants);
-        if (hasgTableType == HashTableImplementationType::NORMAL_HASH_TABLE) {
+        if (hashTableType == HashTableImplementationType::NORMAL_HASH_TABLE) {
             hashTableSize = std::visit([&](auto &&arg) { return arg.GetHashTable(partitionIndex)->GetElementsSize(); },
                 *hashTablesVariants);
-        } else {
+        } else if (hashTableType == HashTableImplementationType::ARRAY_HASH_TABLE) {
             hashTableSize = std::visit([&](auto &&arg) { return arg.GetArrayTable(partitionIndex)->GetElementsSize(); },
                 *hashTablesVariants);
         }

@@ -94,6 +94,21 @@ public:
     /// Get the offset where AggState data begins within a row.
     int32_t AggStateOffset() const { return aggStateOffset; }
 
+    // --- TAPER join payload area -------------------------------------------
+
+    /// For TAPER join, the payload region reuses the AggState area.
+    int32_t PayloadOffset() const { return aggStateOffset; }
+
+    /// Return a pointer to the "next" chain pointer stored at the given payload offset.
+    static char** NextPtr(char* row, int32_t payloadOffset) {
+        return reinterpret_cast<char**>(row + payloadOffset);
+    }
+
+    /// Return a pointer to the "visited" byte stored after the next pointer in the payload.
+    static uint8_t* VisitedPtr(char* row, int32_t payloadOffset) {
+        return reinterpret_cast<uint8_t*>(row + payloadOffset + sizeof(char*));
+    }
+
     /// Get the fixed row size.
     int32_t FixedRowSize() const { return fixedRowSize; }
 

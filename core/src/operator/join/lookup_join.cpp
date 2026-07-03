@@ -2,11 +2,13 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: lookup join implementations
  */
+#include <algorithm>
 #include <vector>
 #include <memory>
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
 #include "simd/simd.h"
+#include "type/string_ref.h"
 #include "hash_builder.h"
 #include "lookup_join.h"
 
@@ -340,6 +342,16 @@ void LookupJoinOperator::PrepareSerializers()
 
 void LookupJoinOperator::ProcessProbe()
 {
+#ifdef OMNI_USE_TAPER_JOIN
+    // 目前只实现了INNER连接，完全实现后不需要开关
+    bool hasFilter = simpleFilter != nullptr;
+    if (hasFilter) {
+        ProbeBatchForInnerJoin<true, true>(); // hasFilter : true isSingleHT : true
+    } else {
+        ProbeBatchForInnerJoin<false, true>(); // hasFilter : false isSingleHT : true
+    }
+#else
+
     bool hasFilter = simpleFilter != nullptr;
     switch (joinType) {
         case OMNI_JOIN_TYPE_INNER:
@@ -426,6 +438,7 @@ void LookupJoinOperator::ProcessProbe()
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
+#endif
 }
 
 int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
@@ -935,6 +948,71 @@ void LookupJoinOperator::ArrayJoinProbeSIMDNeon(BaseVector ***buildColumns, size
 
 template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForInnerJoin()
 {
+#ifdef OMNI_USE_TAPER_JOIN
+    // 这里需要修改原来的实现
+    {
+        auto inputRowCount = curInputBatch->GetRowCount();
+        bool isTaper = std::visit([&](auto&& varg) -> bool {
+            return varg.GetTaperRowContainer(partitionMask) != nullptr;
+        }, *hashTables);
+        if (isTaper) {
+            std::visit([&](auto&& varg) {
+                auto contextPtr = executionContext.get();
+                auto rc = varg.GetTaperRowContainer(partitionMask);
+                if (rc) outputBuilder->SetTaperOutput(rc, varg.GetTaperStoredColIndices());
+                auto probeHashColsCount = probeHashCols.size();
+                uint32_t partition = partitionMask;
+                InitForProbe<hasJoinFilter>(partition);
+                for (int32_t pos = curProbePosition; pos < inputRowCount; ++pos) {
+                    if (curProbeNulls[pos]) continue;
+                    uint32_t partition = singleHT ? partitionMask :
+                        HashUtil::GetRawHashPartition(curProbeHashes[pos], partitionMask);
+                    auto* chainHead = varg.Find(probeHashColumns, probeHashColsCount, pos, partition);
+                    if (!chainHead) continue;
+                    if constexpr (hasJoinFilter) {
+                        ProbeJoinPosition<hasJoinFilter>(pos);
+                    }
+                    auto buildColumns = varg.GetColumns(partition);
+                    auto payloadOff = rc->PayloadOffset();
+                    char* cur = chainHead;
+                    while (cur) {
+                        if constexpr (!hasJoinFilter) {
+                            outputBuilder->AppendRowTaper(pos, buildColumns, 0, cur);
+                        } else {
+                            bool filterOk = true;
+                            for (size_t j = 0; j < buildFilterColsSize; ++j) {
+                                uint32_t colIdx = buildFilterCols[j];
+                                int32_t buildColIdx = colIdx - originalProbeColsCount;
+                                auto col = rc->ColumnAt(buildColIdx);
+                                nulls[colIdx] =
+                                    RowContainer::IsNullAt(cur, col.NullByte(), col.NullMask());
+                                auto typeId = buildFilterTypeIds[j];
+                                if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_VARBINARY ||
+                                    typeId == type::OMNI_CHAR) {
+                                    auto* sr = reinterpret_cast<const type::StringRef*>(
+                                        cur + col.Offset());
+                                    values[colIdx] = reinterpret_cast<int64_t>(sr->data);
+                                    lengths[colIdx] = static_cast<int32_t>(sr->size);
+                                } else {
+                                    values[colIdx] = reinterpret_cast<int64_t>(cur + col.Offset());
+                                }
+                            }
+                            filterOk = simpleFilter->Evaluate(
+                                values, nulls, lengths,
+                                reinterpret_cast<int64_t>(contextPtr));
+                            if (filterOk) {
+                                outputBuilder->AppendRowTaper(pos, buildColumns, 0, cur);
+                            }
+                        }
+                        cur = *RowContainer::NextPtr(cur, payloadOff);
+                    }
+                }
+            }, *hashTables);
+            curProbePosition = inputRowCount;
+            return;
+        }
+    }
+#else
     std::visit(
         [&](auto &&arg) {
             auto inputRowCount = curInputBatch->GetRowCount();
@@ -1044,6 +1122,7 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
             curProbePosition = inputRowCount;
         },
         *hashTables);
+#endif
 }
 
 template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForOppositeSideOuterJoin()
@@ -1805,6 +1884,22 @@ void NO_INLINE LookupJoinOutputBuilder::AppendRow(int32_t probePosition, BaseVec
     }
 }
 
+void LookupJoinOutputBuilder::AppendRowTaper(int32_t probePosition, BaseVector*** array, uint64_t address, char* rowPtr)
+{
+    probeRowCount++;
+    // rowIdx/vecBatchIdx not needed in TAPER mode (ConstructBuildColumns reads
+    // from RowContainer via ExtractColumn), but probePosition is used by
+    // ConstructProbeColumns for sequential-index optimization.
+    probeBuildIndex.emplace_back(probePosition, array, 0, 0);
+    taperRowPtrs.push_back(rowPtr);
+}
+
+void LookupJoinOutputBuilder::SetTaperOutput(const RowContainer* rc, const std::vector<int32_t>& storedCols)
+{
+    taperRC_ = rc;
+    taperStoredColIndices_ = storedCols;
+}
+
 template <typename T, bool isShuffleExchangeBuildPlan>
 static ALWAYS_INLINE T GetBuildValue(BaseVector *vec, T rowIdx)
 {
@@ -2159,6 +2254,30 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructProbeColumns(VectorBatch *vecto
 template <bool isInnerJoin, bool isShuffleExchangeBuildPlan>
 void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vectorBatch, int32_t rowCount)
 {
+#ifdef OMNI_USE_TAPER_JOIN
+    // 从RowContainer中导出build侧的列
+    if (taperRC_ != nullptr && !taperRowPtrs.empty() && !taperStoredColIndices_.empty()) {
+        // Check all output columns are stored
+        bool allColsStored = true;
+        if (allColsStored) {
+            for (size_t j = 0; j < buildOutputCols.size(); j++) {
+                uint32_t outputCol = buildOutputCols[j];
+                // Map logical output column to RowContainer column index
+                int32_t rcColIdx = 0;
+                for (size_t k = 0; k < taperStoredColIndices_.size(); ++k) {
+                    if (taperStoredColIndices_[k] == static_cast<int32_t>(outputCol))
+                        { rcColIdx = static_cast<int32_t>(k); break; }
+                }
+                auto* outVec = vec::VectorHelper::CreateFlatVector(
+                    buildOutputTypes.GetIds()[j], rowCount);
+                const_cast<RowContainer*>(taperRC_)->ExtractColumn(
+                    const_cast<char**>(taperRowPtrs.data()), rowCount, rcColIdx, outVec);
+                vectorBatch->Append(outVec);
+            }
+            return;
+        }
+    }
+#endif
     // preprocess the pointer to build table vectors -- doing a few levels of
     // pointer chasing first
     const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp = probeBuildIndex.data() + probeRowOffset;
@@ -2238,6 +2357,17 @@ void LookupJoinOutputBuilder::BuildOutput(
     auto output = std::make_unique<VectorBatch>(rowCount);
     auto outputPtr = output.get();
 
+#ifdef OMNI_USE_TAPER_JOIN
+    // 其他连接类型的逻辑没有实现，暂时只保留inner的逻辑，实现完成后不需要开关
+    if (!probeOutputCols.empty()) {
+        // only probe side will produce dic vector
+        ConstructProbeColumns(outputPtr, probeOutputColumns, rowCount);
+    }
+    if (!buildOutputCols.empty()) {
+        ConstructBuildColumns<true, false>(outputPtr, rowCount);
+    }
+
+#else
     if (joinType == OMNI_JOIN_TYPE_EXISTENCE) {
         if (!probeOutputCols.empty()) {
             // only probe side will produce dic vector
@@ -2262,6 +2392,8 @@ void LookupJoinOutputBuilder::BuildOutput(
             }
         }
     }
+#endif
+
     if (buildSide == OMNI_BUILD_LEFT) {
     	BaseVector **pVector = output->GetVectors();
     	std::rotate(pVector, pVector + probeOutputCols.size(), pVector + output->GetVectorCount());
@@ -2322,4 +2454,4 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructExistenceColumn(VectorBatch *ve
               values);
     vectorBatch->Append(ret);
 }
-} // end of omniruntime
+} // end of omniruntime::op

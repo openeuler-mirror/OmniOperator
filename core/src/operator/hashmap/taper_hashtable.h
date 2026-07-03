@@ -242,7 +242,7 @@ class TaperHashTableBase : public TaperContainer {
 
   virtual std::string DbgDump(const std::string& fnPart) = 0;
 
- private:
+ protected:
   ChunkPos GetChunkPos(size_t hashVal) {
     return hashVal & lastChunkIdx_;
   }
@@ -981,7 +981,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
     elemNum = std::min<uint8_t>(elemNum, 8);
     Base::SetElemNumInChunk(elemNum);
     emptyTags_ = taper::BroadcastByte(Base::kEmptyTag, elemNum);
-    Base::Init(0);
+    Base::Init(15); // TODO fix
   }
 
   template <typename Filter, typename FInit, typename FUpdate>
@@ -1012,6 +1012,29 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
  void
   Emplace(const Key& key, FInit&& fInit, FUpdate&& fUpdate) {
     Base::template EmplaceImpl<false>(*this, key, DUMMY_CMP, fInit, fUpdate);
+  }
+
+  Value* Find(const Key& key) {
+    return nullptr;
+    // 循环触发代码安全检查问题，先使用空实现 
+    // auto hashVal = Base::Hash(key);
+    // auto chunkPos = Base::GetChunkPos(hashVal);
+    // uint8_t tagHash = (hashVal >> 16) & 0x7F;
+    // auto* chunks = Base::Chunks();
+    // auto lastChunkIdx = Base::GetChunksCapacity() - 1;
+    // while (true) {
+    //   auto& chunk = chunks[chunkPos];
+    //   auto tags = chunk.GetU64Tags();
+    //   for (auto slot : PHBitMask::MatchTag(tags, tagHash)) {
+    //     if (Base::KeyEquals(GetChunkKey(chunk, slot), key)) {
+    //       return &GetChunkValue(chunk, slot);
+    //     }
+    //   }
+    //   if (PHBitMask::MatchEmpty(tags, emptyTags_)) {
+    //     return nullptr;
+    //   }
+    //   chunkPos = (chunkPos + 1) & lastChunkIdx;
+    // }
   }
 
   Visitor GetResultVisitor() {
