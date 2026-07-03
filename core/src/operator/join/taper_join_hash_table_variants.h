@@ -18,6 +18,7 @@
 #include "operator/execution_context.h"
 #include "operator/join/taper_join_handler.h"
 #include "vector/decoded_vector.h"
+#include "operator/hashmap/vector_analyzer.h"
 
 namespace omniruntime {
 namespace vec {
@@ -92,20 +93,21 @@ public:
 
     // Combined stub that satisfies both array-table and hash-table interfaces.
     struct TaperArrayHashStub {
+        //TODO
         uint32_t GetElementsSize() const { return 0; }
         template <typename F> void ForEachValue(F&&) {}
         struct HashmapStub { template <typename F> void ForEachValue(F&&) {} };
         HashmapStub hashmap;
     };
-    TaperArrayHashStub* GetHashTable(int32_t /*partitionIndex*/) { static TaperArrayHashStub st; return &st; }
+    TaperArrayHashStub* GetHashTable(int32_t /*partitionIndex*/) { static TaperArrayHashStub st; return &st; }//TODO
 
     DataTypes* GetBuildDataTypes() { return buildTypes_; }
-    void SetProbeTypes(DataTypes* /*probeDataTypes*/) {}
+    void SetProbeTypes(DataTypes* /*probeDataTypes*/) {}//TODO
 
     HashTableImplementationType GetHashTableTypes(int /*partitionIndex*/) const {
         return HashTableImplementationType::NORMAL_HASH_TABLE;
-    }
-    bool GetIsMultiCols() const { return false; }
+    }//TODO
+    bool GetIsMultiCols() const { return false; }//TODO
     JoinType GetJoinType() const { return joinType_; }
     BuildSide GetBuildSide() const { return buildSide_; }
     OmniStatus GetStatus() const { return status_; }
