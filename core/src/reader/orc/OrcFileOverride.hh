@@ -20,10 +20,12 @@
 #define ORC_FILE_REWRITE_HH
 
 #include <string>
+#include <vector>
 
 #include "orc/OrcFile.hh"
 #include "reader/common/UriInfo.h"
 #include "reader/common/ReadMode.h"
+#include "RegionCoalescer.h"
 
 /** /file orc/OrcFile.hh
     @brief The top level interface to ORC.
@@ -31,11 +33,19 @@
 
 namespace omniruntime::reader {
 
+    // InputStream that prefetches coalesced regions into an in-memory cache.
+    class PrefetchableInputStream : public ::orc::InputStream {
+    public:
+        // Best-effort: regions that fail to load are skipped.
+        virtual void prefetchRegions(const std::vector<IoRegion> &regions) = 0;
+    };
+
     /**
      * Create a input stream to a local file or HDFS file if path begins with "hdfs://"
      * @param uri the UriInfo of HDFS
      */
-  std::unique_ptr<::orc::InputStream> readFileOverride(const UriInfo &uri, common::ReadMode readMode);
+  std::unique_ptr<::orc::InputStream> readFileOverride(const UriInfo &uri, common::ReadMode readMode,
+                                                       uint64_t filePreloadThreshold = 0);
 
   /**
    * Create a output stream to a local file or HDFS file if path begins with "hdfs://"
@@ -47,7 +57,8 @@ namespace omniruntime::reader {
    * Create a input stream to an HDFS file.
    * @param uri the UriInfo of HDFS
    */
-  std::unique_ptr<::orc::InputStream> createHdfsFileInputStream(const UriInfo &uri, common::ReadMode readMode);
+  std::unique_ptr<::orc::InputStream> createHdfsFileInputStream(const UriInfo &uri, common::ReadMode readMode,
+                                                                uint64_t filePreloadThreshold = 0);
 
   /**
    * Create a output stream to an HDFS file.

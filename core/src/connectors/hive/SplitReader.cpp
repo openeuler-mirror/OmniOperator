@@ -330,6 +330,9 @@ void SplitReader::prepareSplit(omniruntime::type::RowTypePtr &rowType, uint64_t 
 {
     baseReaderOpts_->SetBatchLen(batchLen);
     baseReaderOpts_->SetreadMode(readMode);
+    baseReaderOpts_->SetCoalesceMaxBytes(hiveConfig_->maxCoalescedBytes());
+    baseReaderOpts_->SetCoalesceMaxDistance(hiveConfig_->maxCoalescedDistance());
+    baseReaderOpts_->SetFilePreloadThreshold(static_cast<int64_t>(hiveConfig_->filePreloadThreshold()));
     createReader();
     createRowReader(rowType, batchLen);
     initIcebergPositionDeleteReaders(batchLen);

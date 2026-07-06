@@ -79,6 +79,9 @@ private:
     omniruntime::type::RowTypePtr fileRowType_;
     int32_t batchLen_ = 0;
     common::ReadMode readMode_ = common::ReadMode::POSITION_READ;
+    int64_t coalesceMaxBytes_ = 128 << 20;    // <=0 disables IO coalescing
+    int64_t coalesceMaxDistance_ = 512 << 10;
+    int64_t filePreloadThreshold_ = 8 << 20;
     std::shared_ptr<nlohmann::json> enhancementJson_;
     std::shared_ptr<common::JulianGregorianRebase> julianPtr_;
     std::shared_ptr<common::PredicateCondition> predicatePtr_;
@@ -165,6 +168,36 @@ public:
     void SetreadMode(common::ReadMode readMode)
     {
         readMode_ = readMode;
+    }
+
+    int64_t GetCoalesceMaxBytes() const
+    {
+        return coalesceMaxBytes_;
+    }
+
+    void SetCoalesceMaxBytes(int64_t coalesceMaxBytes)
+    {
+        coalesceMaxBytes_ = coalesceMaxBytes;
+    }
+
+    int64_t GetCoalesceMaxDistance() const
+    {
+        return coalesceMaxDistance_;
+    }
+
+    void SetCoalesceMaxDistance(int64_t coalesceMaxDistance)
+    {
+        coalesceMaxDistance_ = coalesceMaxDistance;
+    }
+
+    int64_t GetFilePreloadThreshold() const
+    {
+        return filePreloadThreshold_;
+    }
+
+    void SetFilePreloadThreshold(int64_t filePreloadThreshold)
+    {
+        filePreloadThreshold_ = filePreloadThreshold;
     }
 
     const std::string& GetUgiString() const
