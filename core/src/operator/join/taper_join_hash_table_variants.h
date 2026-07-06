@@ -28,6 +28,11 @@ class BaseVector;
 
 namespace op {
 
+enum class HashTableImplementationType {
+    NORMAL_HASH_TABLE,
+    ARRAY_HASH_TABLE
+};
+
 // TAPER hash table variant that mirrors JoinHashTableVariants in the
 // non-TAPER path. Provides the same operator-visible interface but all
 // implementations are empty stubs.
