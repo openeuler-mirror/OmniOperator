@@ -3,33 +3,34 @@
  * Description: registry  function  implementation
  */
 
-#include <re2/re2.h>
 #include "stringfunctions.h"
-#include "md5.h"
 #include "dtoa.h"
+#include "md5.h"
 #include "type/string_Impl.h"
 #include <algorithm>
+#include <cctype>
+#include <chrono>
+#include <ctime>
+#include <functional>
 #include <nlohmann/json.hpp>
 #include <rapidjson/document.h>
-#include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
-#include <cctype>
-#include <functional>
+#include <rapidjson/writer.h>
+#include <re2/re2.h>
 #include <unordered_map>
+#include <utility>
 #include <vector>
-#include <ctime>
-#include <chrono>
 
 namespace omniruntime::codegen::function {
 using JsonDocument = nlohmann::ordered_json;
 
-
 // Valid epoch time range constants (same as Flink's DateTimeUtils)
-static constexpr int64_t MIN_EPOCH_MILLS = -62167219200000LL;     // '0000-01-01 00:00:00.000 UTC+0'
-static constexpr int64_t MAX_EPOCH_MILLS = 253402300799999LL;     // '9999-12-31 23:59:59.999 UTC+0'
+static constexpr int64_t MIN_EPOCH_MILLS = -62167219200000LL; // '0000-01-01 00:00:00.000 UTC+0'
+static constexpr int64_t MAX_EPOCH_MILLS = 253402300799999LL; // '9999-12-31 23:59:59.999 UTC+0'
 static constexpr int64_t MILLIS_PER_SECOND = 1000LL;
 
-extern "C" DLLEXPORT int64_t CountChar(const char *str, int32_t strLen, const char *target, int32_t targetWidth, int32_t targetLen, bool isNull)
+extern "C" DLLEXPORT int64_t CountChar(const char *str, int32_t strLen, const char *target, int32_t targetWidth,
+                                       int32_t targetLen, bool isNull)
 {
     if (isNull) {
         return 0;
@@ -39,9 +40,9 @@ extern "C" DLLEXPORT int64_t CountChar(const char *str, int32_t strLen, const ch
     return count;
 }
 
-extern "C" DLLEXPORT const char* SplitIndexRetNull(const char *str, int32_t strLen, bool strIsNull, const char *target,
-                                                   int32_t targetWidth, int32_t targetLen, bool targetIsNull, int32_t index,
-                                                   bool indexIsNull, bool *outIsNull, int32_t *outLen)
+extern "C" DLLEXPORT const char *SplitIndexRetNull(const char *str, int32_t strLen, bool strIsNull, const char *target,
+                                                   int32_t targetWidth, int32_t targetLen, bool targetIsNull,
+                                                   int32_t index, bool indexIsNull, bool *outIsNull, int32_t *outLen)
 {
     if (strIsNull || targetIsNull || indexIsNull) {
         *outIsNull = true;
@@ -68,8 +69,9 @@ extern "C" DLLEXPORT const char* SplitIndexRetNull(const char *str, int32_t strL
 }
 
 /**
- * This function is only called when apLen is equal to bpLen. When apLen and bpLen are different,
- * it will directly return false instead of calling StrEquals.
+ * This function is only called when apLen is equal to bpLen. When apLen and
+ * bpLen are different, it will directly return false instead of calling
+ * StrEquals.
  */
 extern "C" DLLEXPORT bool StrEquals(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
 {
@@ -97,7 +99,7 @@ extern "C" DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const cha
 }
 
 extern "C" DLLEXPORT bool LikeStr(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen,
-    bool isNull)
+                                  bool isNull)
 {
     if (isNull) {
         return false;
@@ -110,7 +112,7 @@ extern "C" DLLEXPORT bool LikeStr(const char *str, int32_t strLen, const char *r
 }
 
 extern "C" DLLEXPORT bool LikeChar(const char *str, int32_t strWidth, int32_t strLen, const char *regexToMatch,
-    int32_t regexLen, bool isNull)
+                                   int32_t regexLen, bool isNull)
 {
     int32_t paddingCount = strWidth - omniruntime::Utf8Util::CountCodePoints(str, strLen);
     std::string originalStr;
@@ -125,7 +127,7 @@ extern "C" DLLEXPORT bool LikeChar(const char *str, int32_t strWidth, int32_t st
 }
 
 extern "C" DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
-    int32_t bpLen, bool isNull, int32_t *outLen)
+                                              int32_t bpLen, bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -141,7 +143,8 @@ extern "C" DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap
 }
 
 extern "C" DLLEXPORT const char *ConcatCharChar(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
-    const char *bp, int32_t bWidth, int32_t bpLen, bool isNull, int32_t *outLen)
+                                                const char *bp, int32_t bWidth, int32_t bpLen, bool isNull,
+                                                int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -155,9 +158,10 @@ extern "C" DLLEXPORT const char *ConcatCharChar(int64_t contextPtr, const char *
     return ret;
 }
 
-extern "C" DLLEXPORT const char* RegexpExtractRetNull(int64_t contextPtr, const char *str, int32_t strLen, bool strIsNull,
-                                                      const char *regexToMatch, int32_t regexWidth, int32_t regexLen,
-                                                      bool regexIsNull, int32_t group, bool groupIsNull, bool *outIsNull, int32_t *outLen)
+extern "C" DLLEXPORT const char *RegexpExtractRetNull(int64_t contextPtr, const char *str, int32_t strLen,
+                                                      bool strIsNull, const char *regexToMatch, int32_t regexWidth,
+                                                      int32_t regexLen, bool regexIsNull, int32_t group,
+                                                      bool groupIsNull, bool *outIsNull, int32_t *outLen)
 {
     if (strIsNull || regexIsNull || groupIsNull) {
         *outIsNull = true;
@@ -190,186 +194,265 @@ extern "C" DLLEXPORT const char* RegexpExtractRetNull(int64_t contextPtr, const 
 // JSON parse cache to improve performance for repeated JSON queries
 // Uses thread-local storage to avoid synchronization overhead
 namespace {
-    // Simple hash function for JSON content
-    inline uint64_t HashJsonContent(const std::string& content)
+// Simple hash function for JSON content
+inline uint64_t HashJsonContent(const std::string &content)
+{
+    // FNV-1a hash algorithm
+    uint64_t hash = 14695981039346656037ULL;
+    for (char c : content) {
+        hash ^= static_cast<unsigned char>(c);
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
+struct JsonCache {
+    uint64_t hash = 0;
+    JsonDocument parsedJson;
+    std::string lastJsonContent;
+
+    bool IsCacheValid(const std::string &jsonContent) const
     {
-        // FNV-1a hash algorithm
-        uint64_t hash = 14695981039346656037ULL;
-        for (char c : content) {
-            hash ^= static_cast<unsigned char>(c);
-            hash *= 1099511628211ULL;
-        }
-        return hash;
+        return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
     }
 
-    struct JsonCache {
-        uint64_t hash = 0;
-        JsonDocument parsedJson;
-        std::string lastJsonContent;
-
-        bool IsCacheValid(const std::string& jsonContent) const
-        {
-            return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
-        }
-
-        void SetCache(const std::string& jsonContent, const JsonDocument& json)
-        {
-            hash = HashJsonContent(jsonContent);
-            lastJsonContent = jsonContent;
-            parsedJson = json;
-        }
-    };
-
-    // Thread-local cache for JSON parsing
-    // This avoids re-parsing the same JSON in the same thread
-    thread_local JsonCache THREAD_LOCAL_JSON_CACHE;
-
-    // RapidJSON cache for target functions
-    struct RapidJsonCache {
-        uint64_t hash = 0;
-        rapidjson::Document parsedJson;
-        std::string lastJsonContent;
-
-        bool IsCacheValid(const std::string& jsonContent) const
-        {
-            return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
-        }
-
-        void SetCache(const std::string& jsonContent, rapidjson::Document& json)
-        {
-            hash = HashJsonContent(jsonContent);
-            std::string(jsonContent).swap(lastJsonContent);
-            parsedJson.Swap(json);
-        }
-    };
-
-    thread_local RapidJsonCache RAPIDJSON_CACHE;
-
-    rapidjson::Document* GetParsedJsonWithCacheRapidJson(std::string& jsonContent)
+    void SetCache(const std::string &jsonContent, const JsonDocument &json)
     {
-        if (RAPIDJSON_CACHE.IsCacheValid(jsonContent)) {
-            return &RAPIDJSON_CACHE.parsedJson;
+        hash = HashJsonContent(jsonContent);
+        lastJsonContent = jsonContent;
+        parsedJson = json;
+    }
+};
+
+// Thread-local cache for JSON parsing
+// This avoids re-parsing the same JSON in the same thread
+thread_local JsonCache THREAD_LOCAL_JSON_CACHE;
+
+// RapidJSON cache for target functions
+struct RapidJsonCache {
+    uint64_t hash = 0;
+    rapidjson::Document parsedJson;
+    std::string lastJsonContent;
+
+    bool IsCacheValid(const std::string &jsonContent) const
+    {
+        return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
+    }
+
+    void SetCache(const std::string &jsonContent, rapidjson::Document &json)
+    {
+        hash = HashJsonContent(jsonContent);
+        std::string(jsonContent).swap(lastJsonContent);
+        parsedJson.Swap(json);
+    }
+};
+
+thread_local RapidJsonCache RAPIDJSON_CACHE;
+
+std::string SerializeRapidJsonValue(const rapidjson::Value &value);
+
+struct JsonQueryResultCacheKey {
+    std::string jsonContent;
+    std::string rawPath;
+    int32_t wrapperBehavior = 0;
+    int32_t emptyBehavior = 0;
+    int32_t errorBehavior = 0;
+
+    bool operator==(const JsonQueryResultCacheKey &other) const
+    {
+        return wrapperBehavior == other.wrapperBehavior && emptyBehavior == other.emptyBehavior &&
+               errorBehavior == other.errorBehavior && jsonContent == other.jsonContent && rawPath == other.rawPath;
+    }
+};
+
+struct JsonQueryResultCacheEntry {
+    JsonQueryResultCacheKey key;
+    std::string value;
+};
+
+struct JsonQueryResultCache {
+    static constexpr size_t CACHE_SIZE = 16;
+    std::vector<JsonQueryResultCacheEntry> entries;
+
+    bool Get(const JsonQueryResultCacheKey &key, std::string *value)
+    {
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (!(entries[i].key == key)) {
+                continue;
+            }
+            *value = entries[i].value;
+            if (i != 0) {
+                JsonQueryResultCacheEntry hit = entries[i];
+                entries.erase(entries.begin() + i);
+                entries.insert(entries.begin(), std::move(hit));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void Put(const JsonQueryResultCacheKey &key, const std::string &value)
+    {
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (!(entries[i].key == key)) {
+                continue;
+            }
+            entries[i].value = value;
+            if (i != 0) {
+                JsonQueryResultCacheEntry hit = entries[i];
+                entries.erase(entries.begin() + i);
+                entries.insert(entries.begin(), std::move(hit));
+            }
+            return;
         }
 
-        rapidjson::Document parsedJson;
-        parsedJson.Parse(jsonContent.c_str());
-        if (parsedJson.HasParseError()) {
-            std::string fixedJsonContent;
-            fixedJsonContent.reserve(jsonContent.size());
-            for (size_t j = 0; j < jsonContent.size(); j++) {
-                if (jsonContent[j] == '\\') {
-                    if (j + 1 < jsonContent.size()) {
-                        char next = jsonContent[j + 1];
-                        if (next == '\\' || next == '"') {
-                            fixedJsonContent += jsonContent[j];
-                        } else {
-                            fixedJsonContent += '"';
-                        }
+        entries.insert(entries.begin(), JsonQueryResultCacheEntry{key, value});
+        if (entries.size() > CACHE_SIZE) {
+            entries.pop_back();
+        }
+    }
+};
+
+thread_local JsonQueryResultCache JSON_QUERY_RESULT_CACHE;
+
+std::string SerializeRapidJsonValueWithCache(const rapidjson::Value &value, const JsonQueryResultCacheKey &cacheKey)
+{
+    std::string result;
+    if (JSON_QUERY_RESULT_CACHE.Get(cacheKey, &result)) {
+        return result;
+    }
+
+    result = SerializeRapidJsonValue(value);
+    JSON_QUERY_RESULT_CACHE.Put(cacheKey, result);
+    return result;
+}
+
+rapidjson::Document *GetParsedJsonWithCacheRapidJson(std::string &jsonContent)
+{
+    if (RAPIDJSON_CACHE.IsCacheValid(jsonContent)) {
+        return &RAPIDJSON_CACHE.parsedJson;
+    }
+
+    rapidjson::Document parsedJson;
+    parsedJson.Parse(jsonContent.c_str());
+    if (parsedJson.HasParseError()) {
+        std::string fixedJsonContent;
+        fixedJsonContent.reserve(jsonContent.size());
+        for (size_t j = 0; j < jsonContent.size(); j++) {
+            if (jsonContent[j] == '\\') {
+                if (j + 1 < jsonContent.size()) {
+                    char next = jsonContent[j + 1];
+                    if (next == '\\' || next == '"') {
+                        fixedJsonContent += jsonContent[j];
                     } else {
                         fixedJsonContent += '"';
                     }
                 } else {
-                    fixedJsonContent += jsonContent[j];
+                    fixedJsonContent += '"';
                 }
+            } else {
+                fixedJsonContent += jsonContent[j];
             }
-            parsedJson.Parse(fixedJsonContent.c_str());
-            if (parsedJson.HasParseError()) {
-                return nullptr;
-            }
-            jsonContent = fixedJsonContent;
         }
-
-        RAPIDJSON_CACHE.SetCache(jsonContent, parsedJson);
-        return &RAPIDJSON_CACHE.parsedJson;
-    }
-
-    rapidjson::Value* ResolveJsonPathTargetRapidJson(rapidjson::Value* jsonData, const std::vector<std::string>& keys)
-    {
-        rapidjson::Value* current = jsonData;
-        for (const auto& key : keys) {
-            if (current->IsObject()) {
-                rapidjson::Value::MemberIterator it = current->FindMember(rapidjson::StringRef(key.c_str(), key.size()));
-                if (it == current->MemberEnd()) {
-                    return nullptr;
-                }
-                current = &it->value;
-                continue;
-            }
-
-            if (current->IsArray()) {
-                try {
-                    size_t index = std::stoul(key);
-                    if (index >= current->Size()) {
-                        return nullptr;
-                    }
-                    current = &current->GetArray()[index];
-                    continue;
-                } catch (...) {
-                    return nullptr;
-                }
-            }
-
+        parsedJson.Parse(fixedJsonContent.c_str());
+        if (parsedJson.HasParseError()) {
             return nullptr;
         }
-
-        return current;
+        jsonContent = fixedJsonContent;
     }
 
-    bool TryFormatJsonValueScalarRapidJson(const rapidjson::Value& value, std::string* result)
-    {
-        if (result == nullptr) {
-            return false;
+    RAPIDJSON_CACHE.SetCache(jsonContent, parsedJson);
+    return &RAPIDJSON_CACHE.parsedJson;
+}
+
+rapidjson::Value *ResolveJsonPathTargetRapidJson(rapidjson::Value *jsonData, const std::vector<std::string> &keys)
+{
+    rapidjson::Value *current = jsonData;
+    for (const auto &key : keys) {
+        if (current->IsObject()) {
+            rapidjson::Value::MemberIterator it = current->FindMember(rapidjson::StringRef(key.c_str(), key.size()));
+            if (it == current->MemberEnd()) {
+                return nullptr;
+            }
+            current = &it->value;
+            continue;
         }
 
-        if (value.IsString()) {
-            *result = std::string(value.GetString(), value.GetStringLength());
-            return true;
+        if (current->IsArray()) {
+            try {
+                size_t index = std::stoul(key);
+                if (index >= current->Size()) {
+                    return nullptr;
+                }
+                current = &current->GetArray()[index];
+                continue;
+            } catch (...) {
+                return nullptr;
+            }
         }
 
-        if (value.IsBool()) {
-            *result = value.GetBool() ? "true" : "false";
-            return true;
-        }
+        return nullptr;
+    }
 
-        if (value.IsInt()) {
-            *result = std::to_string(value.GetInt());
-            return true;
-        }
+    return current;
+}
 
-        if (value.IsUint()) {
-            *result = std::to_string(value.GetUint());
-            return true;
-        }
-
-        if (value.IsInt64()) {
-            *result = std::to_string(value.GetInt64());
-            return true;
-        }
-
-        if (value.IsUint64()) {
-            *result = std::to_string(value.GetUint64());
-            return true;
-        }
-
-        if (value.IsDouble()) {
-            *result = DoubleToString::DoubleToStringConverter(value.GetDouble());
-            return true;
-        }
-
+bool TryFormatJsonValueScalarRapidJson(const rapidjson::Value &value, std::string *result)
+{
+    if (result == nullptr) {
         return false;
     }
 
-    std::string SerializeRapidJsonValue(const rapidjson::Value& value)
-    {
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        value.Accept(writer);
-        return buffer.GetString();
+    if (value.IsString()) {
+        *result = std::string(value.GetString(), value.GetStringLength());
+        return true;
     }
+
+    if (value.IsBool()) {
+        *result = value.GetBool() ? "true" : "false";
+        return true;
+    }
+
+    if (value.IsInt()) {
+        *result = std::to_string(value.GetInt());
+        return true;
+    }
+
+    if (value.IsUint()) {
+        *result = std::to_string(value.GetUint());
+        return true;
+    }
+
+    if (value.IsInt64()) {
+        *result = std::to_string(value.GetInt64());
+        return true;
+    }
+
+    if (value.IsUint64()) {
+        *result = std::to_string(value.GetUint64());
+        return true;
+    }
+
+    if (value.IsDouble()) {
+        *result = DoubleToString::DoubleToStringConverter(value.GetDouble());
+        return true;
+    }
+
+    return false;
 }
 
-// Legacy function for backward compatibility - converts advanced segments to simple keys
-static std::vector<std::string> ParseJsonPath(const std::string& path)
+std::string SerializeRapidJsonValue(const rapidjson::Value &value)
+{
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    value.Accept(writer);
+    return buffer.GetString();
+}
+} // namespace
+
+// Legacy function for backward compatibility - converts advanced segments to
+// simple keys
+static std::vector<std::string> ParseJsonPath(const std::string &path)
 {
     std::vector<std::string> keys;
     if (path.empty() || path[0] != '$') {
@@ -377,10 +460,10 @@ static std::vector<std::string> ParseJsonPath(const std::string& path)
     }
 
     enum State {
-        EXPECT_DOT_OR_BRACKET,  // After key, expect . or [
-        IN_DOT_NOTATION,         // After ., reading key until . or [
-        IN_BRACKET,              // After [, reading content until ]
-        IN_QUOTED_KEY            // Inside quotes within bracket
+        EXPECT_DOT_OR_BRACKET, // After key, expect . or [
+        IN_DOT_NOTATION,       // After ., reading key until . or [
+        IN_BRACKET,            // After [, reading content until ]
+        IN_QUOTED_KEY          // Inside quotes within bracket
     };
 
     State state = EXPECT_DOT_OR_BRACKET;
@@ -449,7 +532,7 @@ static std::vector<std::string> ParseJsonPath(const std::string& path)
                     char nextChar = path[i + 1];
                     if (nextChar == quoteChar || nextChar == '\\') {
                         currentKey += nextChar;
-                        ++i;  // Skip next character
+                        ++i; // Skip next character
                     } else {
                         currentKey += c;
                     }
@@ -472,7 +555,7 @@ static std::vector<std::string> ParseJsonPath(const std::string& path)
     return keys;
 }
 
-static JsonDocument* GetParsedJsonWithCache(std::string& jsonContent)
+static JsonDocument *GetParsedJsonWithCache(std::string &jsonContent)
 {
     if (THREAD_LOCAL_JSON_CACHE.IsCacheValid(jsonContent)) {
         return &THREAD_LOCAL_JSON_CACHE.parsedJson;
@@ -508,15 +591,15 @@ static JsonDocument* GetParsedJsonWithCache(std::string& jsonContent)
     return &THREAD_LOCAL_JSON_CACHE.parsedJson;
 }
 
-static JsonDocument* ResolveJsonPathTarget(JsonDocument* jsonData, const std::string& pathContent)
+static JsonDocument *ResolveJsonPathTarget(JsonDocument *jsonData, const std::string &pathContent)
 {
     std::vector<std::string> keys = ParseJsonPath(pathContent);
     if (keys.empty()) {
         return nullptr;
     }
 
-    JsonDocument* current = jsonData;
-    for (const auto& key : keys) {
+    JsonDocument *current = jsonData;
+    for (const auto &key : keys) {
         if (current->is_object()) {
             if (!current->contains(key)) {
                 return nullptr;
@@ -544,7 +627,7 @@ static JsonDocument* ResolveJsonPathTarget(JsonDocument* jsonData, const std::st
     return current;
 }
 
-static bool TryFormatJsonValueScalar(const JsonDocument& value, std::string *result)
+static bool TryFormatJsonValueScalar(const JsonDocument &value, std::string *result)
 {
     if (result == nullptr) {
         return false;
@@ -578,9 +661,9 @@ static bool TryFormatJsonValueScalar(const JsonDocument& value, std::string *res
     return false;
 }
 
-static const char *HandleJsonValueEmptyBehavior(int64_t contextPtr, int32_t emptyBehavior,
-    const char *defaultOnEmpty, int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull, bool *outIsNull,
-    int32_t *outLen)
+static const char *HandleJsonValueEmptyBehavior(int64_t contextPtr, int32_t emptyBehavior, const char *defaultOnEmpty,
+                                                int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull, bool *outIsNull,
+                                                int32_t *outLen)
 {
     if (emptyBehavior == 2 && !defaultOnEmptyIsNull) {
         *outIsNull = false;
@@ -598,33 +681,34 @@ static const char *HandleJsonValueEmptyBehavior(int64_t contextPtr, int32_t empt
     return nullptr;
 }
 
-extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
-                                                   const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
-                                                   bool *outIsNull, int32_t *outLen)
+extern "C" DLLEXPORT const char *JsonValueRetNull(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen,
+                                                  bool jsonStrIsNull, const char *pathStr, int32_t pathStrWidth,
+                                                  int32_t pathStrLen, bool pathStrIsNull, bool *outIsNull,
+                                                  int32_t *outLen)
 {
     static_cast<void>(pathStrWidth);
     if (outIsNull == nullptr || outLen == nullptr) {
         return nullptr;
     }
-    
+
     if (jsonStrIsNull || pathStrIsNull) {
         *outIsNull = true;
         *outLen = 0;
         return nullptr;
     }
-    
+
     std::string jsonContent(jsonStr, jsonStrLen);
     std::string pathContent(pathStr, pathStrLen);
-    
+
     try {
-        rapidjson::Document* jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
+        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
         if (jsonData == nullptr) {
             *outIsNull = true;
             *outLen = 0;
             return nullptr;
         }
         std::vector<std::string> keys = ParseJsonPath(pathContent);
-        rapidjson::Value* current = ResolveJsonPathTargetRapidJson(jsonData, keys);
+        rapidjson::Value *current = ResolveJsonPathTargetRapidJson(jsonData, keys);
         if (current == nullptr || current->IsNull()) {
             *outIsNull = true;
             *outLen = 0;
@@ -637,14 +721,14 @@ extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char
             *outLen = 0;
             return nullptr;
         }
-        
+
         *outIsNull = false;
         *outLen = static_cast<int32_t>(result.size());
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
         return ret;
-        
-    } catch (const std::exception&) {
+
+    } catch (const std::exception &) {
         *outIsNull = true;
         *outLen = 0;
         return nullptr;
@@ -660,10 +744,7 @@ constexpr int32_t JSON_QUERY_EMPTY_ARRAY_BEHAVIOR = 1;
 constexpr int32_t JSON_QUERY_EMPTY_OBJECT_BEHAVIOR = 2;
 constexpr int32_t JSON_QUERY_ERROR_BEHAVIOR = 3;
 
-enum class JsonPathMode {
-    LAX,
-    STRICT
-};
+enum class JsonPathMode { LAX, STRICT };
 
 std::string TrimAsciiWhitespace(const std::string &value)
 {
@@ -685,8 +766,8 @@ bool StartsWithIgnoreCase(const std::string &value, const std::string &prefix)
         return false;
     }
     for (size_t index = 0; index < prefix.size(); ++index) {
-        if (std::tolower(static_cast<unsigned char>(value[index]))
-                != std::tolower(static_cast<unsigned char>(prefix[index]))) {
+        if (std::tolower(static_cast<unsigned char>(value[index])) !=
+            std::tolower(static_cast<unsigned char>(prefix[index]))) {
             return false;
         }
     }
@@ -716,13 +797,13 @@ bool IsJsonQueryScalar(const JsonDocument &value)
     return !value.is_null() && !value.is_object() && !value.is_array();
 }
 
-bool IsJsonQueryScalarRapidJson(const rapidjson::Value& value)
+bool IsJsonQueryScalarRapidJson(const rapidjson::Value &value)
 {
     return !value.IsNull() && !value.IsObject() && !value.IsArray();
 }
 
-bool ApplyJsonQueryWrapperRapidJson(const rapidjson::Value& current, int32_t wrapperBehavior,
-    rapidjson::Document* allocatorDoc, rapidjson::Value* wrappedValue)
+bool ApplyJsonQueryWrapperRapidJson(const rapidjson::Value &current, int32_t wrapperBehavior,
+                                    rapidjson::Document *allocatorDoc, rapidjson::Value *wrappedValue)
 {
     switch (wrapperBehavior) {
         case JSON_QUERY_WITHOUT_ARRAY_WRAPPER:
@@ -738,20 +819,18 @@ bool ApplyJsonQueryWrapperRapidJson(const rapidjson::Value& current, int32_t wra
                 wrappedValue->PushBack(copiedValue, allocatorDoc->GetAllocator());
             }
             return true;
-        case JSON_QUERY_WITH_UNCONDITIONAL_ARRAY_WRAPPER:
-            {
-                wrappedValue->SetArray();
-                rapidjson::Value copiedValue2;
-                copiedValue2.CopyFrom(current, allocatorDoc->GetAllocator());
-                wrappedValue->PushBack(copiedValue2, allocatorDoc->GetAllocator());
-            }
+        case JSON_QUERY_WITH_UNCONDITIONAL_ARRAY_WRAPPER: {
+            wrappedValue->SetArray();
+            rapidjson::Value copiedValue2;
+            copiedValue2.CopyFrom(current, allocatorDoc->GetAllocator());
+            wrappedValue->PushBack(copiedValue2, allocatorDoc->GetAllocator());
+        }
             return true;
-        default:
-            return false;
+        default: return false;
     }
 }
 
-rapidjson::Value* ResolveJsonQueryTargetRapidJson(rapidjson::Document* jsonData, const std::string& pathContent)
+rapidjson::Value *ResolveJsonQueryTargetRapidJson(rapidjson::Document *jsonData, const std::string &pathContent)
 {
     if (pathContent == "$") {
         return jsonData;
@@ -779,10 +858,8 @@ const char *HandleJsonQueryEmptyBehavior(int64_t contextPtr, int32_t emptyBehavi
             *outIsNull = true;
             *outLen = 0;
             return nullptr;
-        case JSON_QUERY_EMPTY_ARRAY_BEHAVIOR:
-            return CreateJsonQueryResult(contextPtr, "[]", outIsNull, outLen);
-        case JSON_QUERY_EMPTY_OBJECT_BEHAVIOR:
-            return CreateJsonQueryResult(contextPtr, "{}", outIsNull, outLen);
+        case JSON_QUERY_EMPTY_ARRAY_BEHAVIOR: return CreateJsonQueryResult(contextPtr, "[]", outIsNull, outLen);
+        case JSON_QUERY_EMPTY_OBJECT_BEHAVIOR: return CreateJsonQueryResult(contextPtr, "{}", outIsNull, outLen);
         case JSON_QUERY_ERROR_BEHAVIOR:
             SetError(contextPtr, "Empty result of JSON_QUERY function is not allowed");
             *outIsNull = true;
@@ -797,17 +874,15 @@ const char *HandleJsonQueryEmptyBehavior(int64_t contextPtr, int32_t emptyBehavi
 }
 
 const char *HandleJsonQueryErrorBehavior(int64_t contextPtr, int32_t errorBehavior, const char *message,
-    bool *outIsNull, int32_t *outLen)
+                                         bool *outIsNull, int32_t *outLen)
 {
     switch (errorBehavior) {
         case JSON_QUERY_NULL_BEHAVIOR:
             *outIsNull = true;
             *outLen = 0;
             return nullptr;
-        case JSON_QUERY_EMPTY_ARRAY_BEHAVIOR:
-            return CreateJsonQueryResult(contextPtr, "[]", outIsNull, outLen);
-        case JSON_QUERY_EMPTY_OBJECT_BEHAVIOR:
-            return CreateJsonQueryResult(contextPtr, "{}", outIsNull, outLen);
+        case JSON_QUERY_EMPTY_ARRAY_BEHAVIOR: return CreateJsonQueryResult(contextPtr, "[]", outIsNull, outLen);
+        case JSON_QUERY_EMPTY_OBJECT_BEHAVIOR: return CreateJsonQueryResult(contextPtr, "{}", outIsNull, outLen);
         case JSON_QUERY_ERROR_BEHAVIOR:
             SetError(contextPtr, message);
             *outIsNull = true;
@@ -824,9 +899,7 @@ const char *HandleJsonQueryErrorBehavior(int64_t contextPtr, int32_t errorBehavi
 bool ApplyJsonQueryWrapper(const JsonDocument &current, int32_t wrapperBehavior, JsonDocument *wrappedValue)
 {
     switch (wrapperBehavior) {
-        case JSON_QUERY_WITHOUT_ARRAY_WRAPPER:
-            *wrappedValue = current;
-            return true;
+        case JSON_QUERY_WITHOUT_ARRAY_WRAPPER: *wrappedValue = current; return true;
         case JSON_QUERY_WITH_CONDITIONAL_ARRAY_WRAPPER:
             if (current.is_array()) {
                 *wrappedValue = current;
@@ -839,8 +912,7 @@ bool ApplyJsonQueryWrapper(const JsonDocument &current, int32_t wrapperBehavior,
             *wrappedValue = JsonDocument::array();
             wrappedValue->push_back(current);
             return true;
-        default:
-            return false;
+        default: return false;
     }
 }
 
@@ -851,16 +923,14 @@ JsonDocument *ResolveJsonQueryTarget(JsonDocument *jsonData, const std::string &
     }
     return ResolveJsonPathTarget(jsonData, pathContent);
 }
-}
+} // namespace
 
-extern "C" DLLEXPORT const char* JsonQueryWithWrapperAndBehavior(
-    int64_t contextPtr,
-    const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
-    const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
-    int32_t wrapperBehavior, bool wrapperBehaviorIsNull,
-    int32_t emptyBehavior, bool emptyBehaviorIsNull,
-    int32_t errorBehavior, bool errorBehaviorIsNull,
-    bool *outIsNull, int32_t *outLen)
+extern "C" DLLEXPORT const char *
+JsonQueryWithWrapperAndBehavior(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
+                                const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
+                                int32_t wrapperBehavior, bool wrapperBehaviorIsNull, int32_t emptyBehavior,
+                                bool emptyBehaviorIsNull, int32_t errorBehavior, bool errorBehaviorIsNull,
+                                bool *outIsNull, int32_t *outLen)
 {
     static_cast<void>(pathStrWidth);
     if (outIsNull == nullptr || outLen == nullptr) {
@@ -881,21 +951,20 @@ extern "C" DLLEXPORT const char* JsonQueryWithWrapperAndBehavior(
     JsonPathMode pathMode = JsonPathMode::LAX;
     std::string pathContent;
     if (!ParseJsonQueryPathSpec(rawPath, &pathMode, &pathContent)) {
-        return HandleJsonQueryErrorBehavior(contextPtr, normalizedError,
-            "Illegal JSON path in JSON_QUERY function", outIsNull, outLen);
+        return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, "Illegal JSON path in JSON_QUERY function",
+                                            outIsNull, outLen);
     }
 
     try {
-        rapidjson::Document* jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
+        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
         if (jsonData == nullptr) {
-            return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, "Invalid JSON",
-                outIsNull, outLen);
+            return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, "Invalid JSON", outIsNull, outLen);
         }
-        rapidjson::Value* current = ResolveJsonQueryTargetRapidJson(jsonData, pathContent);
+        rapidjson::Value *current = ResolveJsonQueryTargetRapidJson(jsonData, pathContent);
         if (current == nullptr) {
             if (pathMode == JsonPathMode::STRICT) {
-                return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, "No results for path",
-                    outIsNull, outLen);
+                return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, "No results for path", outIsNull,
+                                                    outLen);
             }
             return HandleJsonQueryEmptyBehavior(contextPtr, normalizedEmpty, outIsNull, outLen);
         }
@@ -904,7 +973,7 @@ extern "C" DLLEXPORT const char* JsonQueryWithWrapperAndBehavior(
         rapidjson::Value wrappedValue;
         if (!ApplyJsonQueryWrapperRapidJson(*current, normalizedWrapper, &allocatorDoc, &wrappedValue)) {
             return HandleJsonQueryErrorBehavior(contextPtr, normalizedError,
-                "Illegal wrapper behavior in JSON_QUERY function", outIsNull, outLen);
+                                                "Illegal wrapper behavior in JSON_QUERY function", outIsNull, outLen);
         }
 
         if (wrappedValue.IsNull() || (pathMode == JsonPathMode::LAX && IsJsonQueryScalarRapidJson(wrappedValue))) {
@@ -912,39 +981,45 @@ extern "C" DLLEXPORT const char* JsonQueryWithWrapperAndBehavior(
         }
         if (pathMode == JsonPathMode::STRICT && IsJsonQueryScalarRapidJson(wrappedValue)) {
             return HandleJsonQueryErrorBehavior(contextPtr, normalizedError,
-                "Array or object value required in strict mode of JSON_QUERY function", outIsNull, outLen);
+                                                "Array or object value required in "
+                                                "strict mode of JSON_QUERY function",
+                                                outIsNull, outLen);
         }
 
-        return CreateJsonQueryResult(contextPtr, SerializeRapidJsonValue(wrappedValue), outIsNull, outLen);
+        JsonQueryResultCacheKey cacheKey{jsonContent, rawPath, normalizedWrapper, normalizedEmpty, normalizedError};
+        return CreateJsonQueryResult(contextPtr, SerializeRapidJsonValueWithCache(wrappedValue, cacheKey), outIsNull,
+                                     outLen);
     } catch (const std::exception &e) {
         return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, e.what(), outIsNull, outLen);
     }
 }
 
-extern "C" DLLEXPORT const char* JsonQueryRetNull(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
-                                                   const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
-                                                   bool *outIsNull, int32_t *outLen)
+extern "C" DLLEXPORT const char *JsonQueryRetNull(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen,
+                                                  bool jsonStrIsNull, const char *pathStr, int32_t pathStrWidth,
+                                                  int32_t pathStrLen, bool pathStrIsNull, bool *outIsNull,
+                                                  int32_t *outLen)
 {
     return JsonQueryWithWrapperAndBehavior(contextPtr, jsonStr, jsonStrLen, jsonStrIsNull, pathStr, pathStrWidth,
-        pathStrLen, pathStrIsNull, JSON_QUERY_WITHOUT_ARRAY_WRAPPER, false, JSON_QUERY_NULL_BEHAVIOR, false,
-        JSON_QUERY_NULL_BEHAVIOR, false, outIsNull, outLen);
+                                           pathStrLen, pathStrIsNull, JSON_QUERY_WITHOUT_ARRAY_WRAPPER, false,
+                                           JSON_QUERY_NULL_BEHAVIOR, false, JSON_QUERY_NULL_BEHAVIOR, false, outIsNull,
+                                           outLen);
 }
 
 // Extended JSON_VALUE function with ON EMPTY/ERROR behaviors
 // emptyBehavior: 0=NULL, 1=ERROR, 2=DEFAULT
 // errorBehavior: 0=NULL, 1=ERROR, 2=DEFAULT
-extern "C" DLLEXPORT const char* JsonValueExtended(
-    int64_t contextPtr,
-    const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
-    const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
-    int32_t emptyBehavior, const char *defaultOnEmpty, int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull,
-    int32_t errorBehavior, const char *defaultOnError, int32_t defaultOnErrorLen, bool defaultOnErrorIsNull,
-    bool *outIsNull, int32_t *outLen)
+extern "C" DLLEXPORT const char *JsonValueExtended(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen,
+                                                   bool jsonStrIsNull, const char *pathStr, int32_t pathStrWidth,
+                                                   int32_t pathStrLen, bool pathStrIsNull, int32_t emptyBehavior,
+                                                   const char *defaultOnEmpty, int32_t defaultOnEmptyLen,
+                                                   bool defaultOnEmptyIsNull, int32_t errorBehavior,
+                                                   const char *defaultOnError, int32_t defaultOnErrorLen,
+                                                   bool defaultOnErrorIsNull, bool *outIsNull, int32_t *outLen)
 {
     if (outIsNull == nullptr || outLen == nullptr) {
         return nullptr;
     }
-    
+
     if (jsonStrIsNull || pathStrIsNull) {
         // Handle NULL input based on error behavior
         if (errorBehavior == 2 && !defaultOnErrorIsNull) { // DEFAULT
@@ -964,12 +1039,12 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
             return nullptr;
         }
     }
-    
+
     std::string jsonContent(jsonStr, jsonStrLen);
     std::string pathContent(pathStr, pathStrLen);
-    
+
     try {
-        rapidjson::Document* jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
+        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
         if (jsonData == nullptr) {
             if (errorBehavior == 2 && !defaultOnErrorIsNull) {
                 *outIsNull = false;
@@ -1010,16 +1085,16 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
             }
         }
 
-        rapidjson::Value* current = ResolveJsonPathTargetRapidJson(jsonData, keys);
+        rapidjson::Value *current = ResolveJsonPathTargetRapidJson(jsonData, keys);
         if (current == nullptr || current->IsNull()) {
             return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
-                defaultOnEmptyIsNull, outIsNull, outLen);
+                                                defaultOnEmptyIsNull, outIsNull, outLen);
         }
 
         std::string result;
         if (!TryFormatJsonValueScalarRapidJson(*current, &result)) {
             return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
-                defaultOnEmptyIsNull, outIsNull, outLen);
+                                                defaultOnEmptyIsNull, outIsNull, outLen);
         }
 
         *outIsNull = false;
@@ -1028,7 +1103,7 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
         memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
         return ret;
 
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         if (errorBehavior == 2 && !defaultOnErrorIsNull) {
             *outIsNull = false;
             *outLen = defaultOnErrorLen;
@@ -1049,22 +1124,22 @@ extern "C" DLLEXPORT const char* JsonValueExtended(
     }
 }
 
-extern "C" DLLEXPORT const char* JsonValueWithBehaviors(
-    int64_t contextPtr,
-    const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
-    const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
-    int32_t emptyBehavior, bool emptyBehaviorIsNull,
-    const char *defaultOnEmpty, int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull,
-    int32_t errorBehavior, bool errorBehaviorIsNull,
-    const char *defaultOnError, int32_t defaultOnErrorLen, bool defaultOnErrorIsNull,
-    bool *outIsNull, int32_t *outLen)
+extern "C" DLLEXPORT const char *JsonValueWithBehaviors(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen,
+                                                        bool jsonStrIsNull, const char *pathStr, int32_t pathStrWidth,
+                                                        int32_t pathStrLen, bool pathStrIsNull, int32_t emptyBehavior,
+                                                        bool emptyBehaviorIsNull, const char *defaultOnEmpty,
+                                                        int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull,
+                                                        int32_t errorBehavior, bool errorBehaviorIsNull,
+                                                        const char *defaultOnError, int32_t defaultOnErrorLen,
+                                                        bool defaultOnErrorIsNull, bool *outIsNull, int32_t *outLen)
 {
     static_cast<void>(pathStrWidth);
     int32_t normalizedEmptyBehavior = emptyBehaviorIsNull ? 0 : emptyBehavior;
     int32_t normalizedErrorBehavior = errorBehaviorIsNull ? 0 : errorBehavior;
     return JsonValueExtended(contextPtr, jsonStr, jsonStrLen, jsonStrIsNull, pathStr, pathStrWidth, pathStrLen,
-        pathStrIsNull, normalizedEmptyBehavior, defaultOnEmpty, defaultOnEmptyLen, defaultOnEmptyIsNull,
-        normalizedErrorBehavior, defaultOnError, defaultOnErrorLen, defaultOnErrorIsNull, outIsNull, outLen);
+                             pathStrIsNull, normalizedEmptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
+                             defaultOnEmptyIsNull, normalizedErrorBehavior, defaultOnError, defaultOnErrorLen,
+                             defaultOnErrorIsNull, outIsNull, outLen);
 }
 
 namespace {
@@ -1073,7 +1148,7 @@ bool TryParseJson(const std::string &jsonContent, JsonDocument *jsonData)
     try {
         *jsonData = JsonDocument::parse(jsonContent);
         return true;
-    } catch (const std::exception&) {
+    } catch (const std::exception &) {
         return false;
     }
 }
@@ -1113,7 +1188,7 @@ std::string NormalizeSingleQuotedJsonLike(const std::string &jsonContent)
             if (current == '\\') {
                 if (index + 1 < jsonContent.size()) {
                     char next = jsonContent[index + 1];
-                    if (next == '\'' ) {
+                    if (next == '\'') {
                         normalized += '\'';
                         index++;
                         continue;
@@ -1178,24 +1253,24 @@ uint32_t DecodeUtf8CodePoint(const std::string &value, size_t *index)
 
     if ((firstByte & 0xE0) == 0xC0 && *index + 1 < value.size()) {
         uint32_t codePoint = (static_cast<uint32_t>(firstByte & 0x1F) << 6) |
-            static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 1]) & 0x3F);
+                             static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 1]) & 0x3F);
         *index += 2;
         return codePoint;
     }
 
     if ((firstByte & 0xF0) == 0xE0 && *index + 2 < value.size()) {
         uint32_t codePoint = (static_cast<uint32_t>(firstByte & 0x0F) << 12) |
-            (static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 1]) & 0x3F) << 6) |
-            static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 2]) & 0x3F);
+                             (static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 1]) & 0x3F) << 6) |
+                             static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 2]) & 0x3F);
         *index += 3;
         return codePoint;
     }
 
     if ((firstByte & 0xF8) == 0xF0 && *index + 3 < value.size()) {
         uint32_t codePoint = (static_cast<uint32_t>(firstByte & 0x07) << 18) |
-            (static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 1]) & 0x3F) << 12) |
-            (static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 2]) & 0x3F) << 6) |
-            static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 3]) & 0x3F);
+                             (static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 1]) & 0x3F) << 12) |
+                             (static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 2]) & 0x3F) << 6) |
+                             static_cast<uint32_t>(static_cast<unsigned char>(value[*index + 3]) & 0x3F);
         *index += 4;
         return codePoint;
     }
@@ -1239,31 +1314,32 @@ size_t JavaHashMapBucket(const std::string &key, size_t capacity)
     return static_cast<size_t>(hash & static_cast<uint32_t>(capacity - 1));
 }
 
-std::string SerializeJsonSplitValueRapidJson(const rapidjson::Value& value);
+std::string SerializeJsonSplitValueRapidJson(const rapidjson::Value &value);
 
 struct JsonSplitObjectEntryRapidJson {
     std::string key;
-    const rapidjson::Value* value;
+    const rapidjson::Value *value;
     size_t insertionIndex;
     size_t bucket;
 };
 
-std::string SerializeJsonSplitObjectRapidJson(const rapidjson::Value& value)
+std::string SerializeJsonSplitObjectRapidJson(const rapidjson::Value &value)
 {
     std::vector<JsonSplitObjectEntryRapidJson> entries;
     size_t capacity = JavaHashMapCapacity(value.MemberCount());
     size_t insertionIndex = 0;
     for (auto it = value.MemberBegin(); it != value.MemberEnd(); ++it, ++insertionIndex) {
-        entries.push_back({ std::string(it->name.GetString(), it->name.GetStringLength()),
-            &it->value, insertionIndex, JavaHashMapBucket(std::string(it->name.GetString(), it->name.GetStringLength()), capacity) });
+        entries.push_back({std::string(it->name.GetString(), it->name.GetStringLength()), &it->value, insertionIndex,
+                           JavaHashMapBucket(std::string(it->name.GetString(), it->name.GetStringLength()), capacity)});
     }
 
-    std::stable_sort(entries.begin(), entries.end(), [](const JsonSplitObjectEntryRapidJson& left, const JsonSplitObjectEntryRapidJson& right) {
-        if (left.bucket != right.bucket) {
-            return left.bucket < right.bucket;
-        }
-        return left.insertionIndex < right.insertionIndex;
-    });
+    std::stable_sort(entries.begin(), entries.end(),
+                     [](const JsonSplitObjectEntryRapidJson &left, const JsonSplitObjectEntryRapidJson &right) {
+                         if (left.bucket != right.bucket) {
+                             return left.bucket < right.bucket;
+                         }
+                         return left.insertionIndex < right.insertionIndex;
+                     });
 
     std::string result = "{";
     for (size_t index = 0; index < entries.size(); ++index) {
@@ -1280,7 +1356,7 @@ std::string SerializeJsonSplitObjectRapidJson(const rapidjson::Value& value)
     return result;
 }
 
-std::string SerializeJsonSplitArrayRapidJson(const rapidjson::Value& value)
+std::string SerializeJsonSplitArrayRapidJson(const rapidjson::Value &value)
 {
     std::string result = "[";
     for (size_t index = 0; index < value.Size(); ++index) {
@@ -1293,14 +1369,14 @@ std::string SerializeJsonSplitArrayRapidJson(const rapidjson::Value& value)
     return result;
 }
 
-std::string SerializeJsonSplitNumberRapidJson(const rapidjson::Value& value)
+std::string SerializeJsonSplitNumberRapidJson(const rapidjson::Value &value)
 {
     std::string result = SerializeRapidJsonValue(value);
     std::replace(result.begin(), result.end(), 'e', 'E');
     return result;
 }
 
-std::string SerializeJsonSplitValueRapidJson(const rapidjson::Value& value)
+std::string SerializeJsonSplitValueRapidJson(const rapidjson::Value &value)
 {
     if (value.IsObject()) {
         return SerializeJsonSplitObjectRapidJson(value);
@@ -1330,15 +1406,16 @@ std::string SerializeJsonSplitObject(const JsonDocument &value)
     size_t capacity = JavaHashMapCapacity(value.size());
     size_t insertionIndex = 0;
     for (auto it = value.begin(); it != value.end(); ++it, ++insertionIndex) {
-        entries.push_back({ it.key(), &it.value(), insertionIndex, JavaHashMapBucket(it.key(), capacity) });
+        entries.push_back({it.key(), &it.value(), insertionIndex, JavaHashMapBucket(it.key(), capacity)});
     }
 
-    std::stable_sort(entries.begin(), entries.end(), [](const JsonSplitObjectEntry &left, const JsonSplitObjectEntry &right) {
-        if (left.bucket != right.bucket) {
-            return left.bucket < right.bucket;
-        }
-        return left.insertionIndex < right.insertionIndex;
-    });
+    std::stable_sort(entries.begin(), entries.end(),
+                     [](const JsonSplitObjectEntry &left, const JsonSplitObjectEntry &right) {
+                         if (left.bucket != right.bucket) {
+                             return left.bucket < right.bucket;
+                         }
+                         return left.insertionIndex < right.insertionIndex;
+                     });
 
     std::string result = "{";
     for (size_t index = 0; index < entries.size(); ++index) {
@@ -1469,8 +1546,8 @@ std::string SerializeJsonSplitValue(const JsonDocument &value)
     return value.dump();
 }
 
-bool TryParseJsonSplitContentRapidJson(const std::string& jsonContent, rapidjson::Document* jsonData,
-    std::string* parsedJsonContent)
+bool TryParseJsonSplitContentRapidJson(const std::string &jsonContent, rapidjson::Document *jsonData,
+                                       std::string *parsedJsonContent)
 {
     jsonData->Parse(jsonContent.c_str());
     if (!jsonData->HasParseError()) {
@@ -1517,7 +1594,7 @@ bool TryParseJsonSplitContentRapidJson(const std::string& jsonContent, rapidjson
 }
 
 bool TryParseJsonSplitContent(const std::string &jsonContent, JsonDocument *jsonData,
-    std::string *parsedJsonContent = nullptr)
+                              std::string *parsedJsonContent = nullptr)
 {
     if (TryParseJson(jsonContent, jsonData)) {
         if (parsedJsonContent != nullptr) {
@@ -1550,12 +1627,11 @@ bool TryParseJsonSplitContent(const std::string &jsonContent, JsonDocument *json
 }
 } // namespace
 
-// JSON_SPLIT_SCALAR function: splits JSON array and joins all elements with CRLF
-// Matches the semantics of the jsontest UDF (1 STRING argument -> STRING result)
-extern "C" DLLEXPORT const char* JsonSplitScalar(
-    int64_t contextPtr,
-    const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
-    bool *outIsNull, int32_t *outLen)
+// JSON_SPLIT_SCALAR function: splits JSON array and joins all elements with
+// CRLF Matches the semantics of the jsontest UDF (1 STRING argument -> STRING
+// result)
+extern "C" DLLEXPORT const char *JsonSplitScalar(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen,
+                                                 bool jsonStrIsNull, bool *outIsNull, int32_t *outLen)
 {
     if (outIsNull == nullptr || outLen == nullptr) {
         return nullptr;
@@ -1586,15 +1662,15 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
         }
 
         std::vector<std::string> rawElements;
-        bool hasRawElements = ExtractJsonSplitTopLevelElements(parsedJsonContent, &rawElements)
-            && rawElements.size() == jsonData.Size();
+        bool hasRawElements =
+            ExtractJsonSplitTopLevelElements(parsedJsonContent, &rawElements) && rawElements.size() == jsonData.Size();
 
         std::string result;
         for (size_t i = 0; i < jsonData.Size(); i++) {
             if (i > 0) {
                 result += "\r\n";
             }
-            const rapidjson::Value& element = jsonData[i];
+            const rapidjson::Value &element = jsonData[i];
             if (element.IsString()) {
                 result += std::string(element.GetString(), element.GetStringLength());
             } else if (hasRawElements && element.IsNumber()) {
@@ -1610,24 +1686,23 @@ extern "C" DLLEXPORT const char* JsonSplitScalar(
         memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
         return ret;
 
-    } catch (const std::exception&) {
+    } catch (const std::exception &) {
         *outIsNull = true;
         *outLen = 0;
         return nullptr;
     }
 }
 
-extern "C" DLLEXPORT const char* JsonSplitScalarChar(
-    int64_t contextPtr,
-    const char *jsonStr, int32_t jsonStrWidth, int32_t jsonStrLen, bool jsonStrIsNull,
-    bool *outIsNull, int32_t *outLen)
+extern "C" DLLEXPORT const char *JsonSplitScalarChar(int64_t contextPtr, const char *jsonStr, int32_t jsonStrWidth,
+                                                     int32_t jsonStrLen, bool jsonStrIsNull, bool *outIsNull,
+                                                     int32_t *outLen)
 {
     static_cast<void>(jsonStrWidth);
     return JsonSplitScalar(contextPtr, jsonStr, jsonStrLen, jsonStrIsNull, outIsNull, outLen);
 }
 
 extern "C" DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
-    const char *bp, int32_t bpLen, bool isNull, int32_t *outLen)
+                                               const char *bp, int32_t bpLen, bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -1642,7 +1717,7 @@ extern "C" DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *a
 }
 
 extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
-    int32_t bWidth, int32_t bpLen, bool isNull, int32_t *outLen)
+                                               int32_t bWidth, int32_t bpLen, bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -1658,7 +1733,7 @@ extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *a
 }
 
 extern "C" DLLEXPORT const char *ConcatWsWithoutStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, bool *retIsNull, int32_t *outLen)
+                                                    bool separatorIsNull, bool *retIsNull, int32_t *outLen)
 {
     if (separatorIsNull) {
         *retIsNull = true;
@@ -1671,7 +1746,8 @@ extern "C" DLLEXPORT const char *ConcatWsWithoutStr(int64_t contextPtr, const ch
 }
 
 extern "C" DLLEXPORT const char *ConcatWsWith1Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull, bool *retIsNull, int32_t *outLen)
+                                                  bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull,
+                                                  bool *retIsNull, int32_t *outLen)
 {
     if (separatorIsNull) {
         *retIsNull = true;
@@ -1688,8 +1764,9 @@ extern "C" DLLEXPORT const char *ConcatWsWith1Str(int64_t contextPtr, const char
 }
 
 extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull, const char *s2, int32_t s2Len, bool s2IsNull,
-    bool *retIsNull, int32_t *outLen)
+                                             bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull,
+                                             const char *s2, int32_t s2Len, bool s2IsNull, bool *retIsNull,
+                                             int32_t *outLen)
 {
     if (separatorIsNull) {
         *retIsNull = true;
@@ -1712,8 +1789,8 @@ extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *sep
     }
 
     bool hasErr = false;
-    const char *ret = StringUtil::ConcatWsStrDiffWidths(
-        contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len, &hasErr, outLen);
+    const char *ret =
+        StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len, &hasErr, outLen);
     if (hasErr) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
@@ -1724,8 +1801,9 @@ extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *sep
 }
 
 extern "C" DLLEXPORT const char *ConcatWs3Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull, const char *s2, int32_t s2Len, bool s2IsNull,
-    const char *s3, int32_t s3Len, bool s3IsNull, bool *retIsNull, int32_t *outLen)
+                                              bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull,
+                                              const char *s2, int32_t s2Len, bool s2IsNull, const char *s3,
+                                              int32_t s3Len, bool s3IsNull, bool *retIsNull, int32_t *outLen)
 {
     if (separatorIsNull) {
         *retIsNull = true;
@@ -1744,22 +1822,22 @@ extern "C" DLLEXPORT const char *ConcatWs3Str(int64_t contextPtr, const char *se
     int32_t tmpLen = 0;
     bool tmpSet = false;
 
-    if (!s1IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s1, s1Len, &hasErr, outLen)) {
+    if (!s1IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s1, s1Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
         return nullptr;
     }
-    if (!s2IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s2, s2Len, &hasErr, outLen)) {
+    if (!s2IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s2, s2Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
         return nullptr;
     }
-    if (!s3IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s3, s3Len, &hasErr, outLen)) {
+    if (!s3IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s3, s3Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
@@ -1770,9 +1848,10 @@ extern "C" DLLEXPORT const char *ConcatWs3Str(int64_t contextPtr, const char *se
 }
 
 extern "C" DLLEXPORT const char *ConcatWs4Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull, const char *s2, int32_t s2Len, bool s2IsNull,
-    const char *s3, int32_t s3Len, bool s3IsNull, const char *s4, int32_t s4Len, bool s4IsNull, bool *retIsNull,
-    int32_t *outLen)
+                                              bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull,
+                                              const char *s2, int32_t s2Len, bool s2IsNull, const char *s3,
+                                              int32_t s3Len, bool s3IsNull, const char *s4, int32_t s4Len,
+                                              bool s4IsNull, bool *retIsNull, int32_t *outLen)
 {
     if (separatorIsNull) {
         *retIsNull = true;
@@ -1791,29 +1870,29 @@ extern "C" DLLEXPORT const char *ConcatWs4Str(int64_t contextPtr, const char *se
     int32_t tmpLen = 0;
     bool tmpSet = false;
 
-    if (!s1IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s1, s1Len, &hasErr, outLen)) {
+    if (!s1IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s1, s1Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
         return nullptr;
     }
-    if (!s2IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s2, s2Len, &hasErr, outLen)) {
+    if (!s2IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s2, s2Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
         return nullptr;
     }
-    if (!s3IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s3, s3Len, &hasErr, outLen)) {
+    if (!s3IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s3, s3Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
         return nullptr;
     }
-    if (!s4IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s4, s4Len, &hasErr, outLen)) {
+    if (!s4IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s4, s4Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
@@ -1824,9 +1903,11 @@ extern "C" DLLEXPORT const char *ConcatWs4Str(int64_t contextPtr, const char *se
 }
 
 extern "C" DLLEXPORT const char *ConcatWs5Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull, const char *s2, int32_t s2Len, bool s2IsNull,
-    const char *s3, int32_t s3Len, bool s3IsNull, const char *s4, int32_t s4Len, bool s4IsNull, const char *s5,
-    int32_t s5Len, bool s5IsNull, bool *retIsNull, int32_t *outLen)
+                                              bool separatorIsNull, const char *s1, int32_t s1Len, bool s1IsNull,
+                                              const char *s2, int32_t s2Len, bool s2IsNull, const char *s3,
+                                              int32_t s3Len, bool s3IsNull, const char *s4, int32_t s4Len,
+                                              bool s4IsNull, const char *s5, int32_t s5Len, bool s5IsNull,
+                                              bool *retIsNull, int32_t *outLen)
 {
     if (separatorIsNull) {
         *retIsNull = true;
@@ -1845,36 +1926,36 @@ extern "C" DLLEXPORT const char *ConcatWs5Str(int64_t contextPtr, const char *se
     int32_t tmpLen = 0;
     bool tmpSet = false;
 
-    if (!s1IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s1, s1Len, &hasErr, outLen)) {
+    if (!s1IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s1, s1Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
         return nullptr;
     }
-    if (!s2IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s2, s2Len, &hasErr, outLen)) {
+    if (!s2IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s2, s2Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
         return nullptr;
     }
-    if (!s3IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s3, s3Len, &hasErr, outLen)) {
+    if (!s3IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s3, s3Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
         return nullptr;
     }
-    if (!s4IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s4, s4Len, &hasErr, outLen)) {
+    if (!s4IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s4, s4Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
         return nullptr;
     }
-    if (!s5IsNull &&
-        !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s5, s5Len, &hasErr, outLen)) {
+    if (!s5IsNull && !StringUtil::ConcatWsAppend(contextPtr, separator, separatorLen, tmp, tmpLen, tmpSet, s5, s5Len,
+                                                 &hasErr, outLen)) {
         SetError(contextPtr, CONCAT_WS_ERR_MSG);
         *retIsNull = true;
         *outLen = 0;
@@ -1885,7 +1966,7 @@ extern "C" DLLEXPORT const char *ConcatWs5Str(int64_t contextPtr, const char *se
 }
 
 extern "C" DLLEXPORT int32_t CastStringToDateNotAllowReducePrecison(int64_t contextPtr, const char *str, int32_t strLen,
-    bool isNull)
+                                                                    bool isNull)
 {
     if (isNull) {
         return 0;
@@ -1904,11 +1985,11 @@ extern "C" DLLEXPORT int32_t CastStringToDateNotAllowReducePrecison(int64_t cont
         SetError(contextPtr, "Value cannot be cast to date: " + std::string(str, strLen));
         return -1;
     }
-    return static_cast<int32_t >(result);
+    return static_cast<int32_t>(result);
 }
 
 extern "C" DLLEXPORT int32_t CastStringToDateAllowReducePrecison(int64_t contextPtr, const char *str, int32_t strLen,
-    bool isNull)
+                                                                 bool isNull)
 {
     if (isNull) {
         return 0;
@@ -1921,11 +2002,11 @@ extern "C" DLLEXPORT int32_t CastStringToDateAllowReducePrecison(int64_t context
         SetError(contextPtr, "Value cannot be cast to date: " + std::string(str, strLen));
         return -1;
     }
-    return static_cast<int32_t >(result);
+    return static_cast<int32_t>(result);
 }
 
 extern "C" DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
-    int32_t *outLen)
+                                            int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -1944,7 +2025,7 @@ extern "C" DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str,
 }
 
 extern "C" DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
-    bool isNull, int32_t *outLen)
+                                             bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -1953,7 +2034,7 @@ extern "C" DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str
 }
 
 extern "C" DLLEXPORT const char *ToLowerStr(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
-    int32_t *outLen)
+                                            int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -1972,7 +2053,7 @@ extern "C" DLLEXPORT const char *ToLowerStr(int64_t contextPtr, const char *str,
 }
 
 extern "C" DLLEXPORT const char *ToLowerChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
-    bool isNull, int32_t *outLen)
+                                             bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -2011,7 +2092,9 @@ extern "C" DLLEXPORT int32_t CharLengthChar(const char *str, int32_t strWidth, i
 }
 
 extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRepNotReplace(int64_t contextPtr, const char *str, int32_t strLen,
-    const char *searchStr, int32_t searchLen, const char *replaceStr, int32_t replaceLen, bool isNull, int32_t *outLen)
+                                                                   const char *searchStr, int32_t searchLen,
+                                                                   const char *replaceStr, int32_t replaceLen,
+                                                                   bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -2024,7 +2107,7 @@ extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRepNotReplace(int64_t conte
         ret = const_cast<char *>(str);
     } else {
         auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr,
-            replaceLen, &hasErr, outLen);
+                                                            replaceLen, &hasErr, outLen);
         ret = const_cast<char *>(result);
     }
 
@@ -2035,7 +2118,9 @@ extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRepNotReplace(int64_t conte
 }
 
 extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRepReplace(int64_t contextPtr, const char *str, int32_t strLen,
-    const char *searchStr, int32_t searchLen, const char *replaceStr, int32_t replaceLen, bool isNull, int32_t *outLen)
+                                                                const char *searchStr, int32_t searchLen,
+                                                                const char *replaceStr, int32_t replaceLen, bool isNull,
+                                                                int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -2049,7 +2134,7 @@ extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRepReplace(int64_t contextP
         ret = (const_cast<char *>(result));
     } else {
         auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr,
-            replaceLen, &hasErr, outLen);
+                                                            replaceLen, &hasErr, outLen);
         ret = const_cast<char *>(result);
     }
 
@@ -2060,7 +2145,8 @@ extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRepReplace(int64_t contextP
 }
 
 extern "C" DLLEXPORT const char *ReplaceStrStrWithoutRepNotReplace(int64_t contextPtr, const char *str, int32_t strLen,
-    const char *searchStr, int32_t searchLen, bool isNull, int32_t *outLen)
+                                                                   const char *searchStr, int32_t searchLen,
+                                                                   bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -2069,7 +2155,8 @@ extern "C" DLLEXPORT const char *ReplaceStrStrWithoutRepNotReplace(int64_t conte
 }
 
 extern "C" DLLEXPORT const char *ReplaceStrStrWithoutRepReplace(int64_t contextPtr, const char *str, int32_t strLen,
-    const char *searchStr, int32_t searchLen, bool isNull, int32_t *outLen)
+                                                                const char *searchStr, int32_t searchLen, bool isNull,
+                                                                int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -2128,12 +2215,12 @@ extern "C" DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double v
         return nullptr;
     }
     auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DATA_LENGTH);
-    *outLen = static_cast<int32_t >(DoubleToString::DoubleToStringConverter(value, ret));
+    *outLen = static_cast<int32_t>(DoubleToString::DoubleToStringConverter(value, ret));
     return ret;
 }
 
 extern "C" DLLEXPORT const char *CastDecimal64ToString(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,
-    bool isNull, int32_t *outLen)
+                                                       bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -2151,7 +2238,7 @@ extern "C" DLLEXPORT const char *CastDecimal64ToString(int64_t contextPtr, int64
 }
 
 extern "C" DLLEXPORT const char *CastDecimal128ToString(int64_t contextPtr, int64_t high, uint64_t low,
-    int32_t precision, int32_t scale, bool isNull, int32_t *outLen)
+                                                        int32_t precision, int32_t scale, bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -2169,7 +2256,7 @@ extern "C" DLLEXPORT const char *CastDecimal128ToString(int64_t contextPtr, int6
 }
 
 extern "C" DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const char *srcStr, int32_t srcLen,
-    int32_t srcWidth, bool isNull, int32_t dstWidth, int32_t *outLen)
+                                                       int32_t srcWidth, bool isNull, int32_t dstWidth, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -2325,7 +2412,7 @@ extern "C" DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *s
 }
 
 extern "C" DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
-    int32_t outPrecision, int32_t outScale)
+                                                   int32_t outPrecision, int32_t outScale)
 {
     if (isNull) {
         return 0;
@@ -2334,8 +2421,8 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const cha
     StringUtil::TrimString(s);
     if (!regex_match(s, g_decimalRegex)) {
         std::ostringstream errorMessage;
-        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
-            "). Value is not a number.";
+        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale
+                     << "). Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
@@ -2343,8 +2430,8 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const cha
     result.ReScale(outScale);
     if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
         std::ostringstream errorMessage;
-        errorMessage << "Cannot cast VARCHAR '" << std::string(str, strLen) << "' to DECIMAL(" << outPrecision <<
-            ", " << outScale << "). Value too large.";
+        errorMessage << "Cannot cast VARCHAR '" << std::string(str, strLen) << "' to DECIMAL(" << outPrecision << ", "
+                     << outScale << "). Value too large.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
@@ -2352,7 +2439,7 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const cha
 }
 
 extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUp(int64_t contextPtr, const char *str, int32_t strLen,
-    bool isNull, int32_t outPrecision, int32_t outScale)
+                                                          bool isNull, int32_t outPrecision, int32_t outScale)
 {
     if (isNull) {
         return 0;
@@ -2362,15 +2449,15 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUp(int64_t contextPtr, co
     result.ReScale(outScale);
     if (result.IsOverflow(outPrecision) == OpStatus::OP_OVERFLOW) {
         std::ostringstream errorMessage;
-        errorMessage << "Cannot cast VARCHAR '" << std::string(str, strLen) << "' to DECIMAL(" << outPrecision <<
-            ", " << outScale << "). Value too large.";
+        errorMessage << "Cannot cast VARCHAR '" << std::string(str, strLen) << "' to DECIMAL(" << outPrecision << ", "
+                     << outScale << "). Value too large.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
     if (result.IsOverflow(outPrecision) == OpStatus::FAIL) {
         std::ostringstream errorMessage;
-        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
-            "). Value is not a number.";
+        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale
+                     << "). Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
@@ -2378,7 +2465,8 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUp(int64_t contextPtr, co
 }
 
 extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
-    int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+                                                 int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+                                                 uint64_t *outLowPtr)
 {
     if (isNull) {
         return;
@@ -2387,8 +2475,8 @@ extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char 
     StringUtil::TrimString(s);
     if (!regex_match(s, g_decimalRegex)) {
         std::ostringstream errorMessage;
-        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
-            "). Value is not a number.";
+        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale
+                     << "). Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return;
     }
@@ -2397,7 +2485,7 @@ extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char 
     OpStatus status = result.IsOverflow(outPrecision);
     if (status != OpStatus::SUCCESS) {
         SetError(contextPtr, CastErrorMessage(OMNI_VARCHAR, OMNI_DECIMAL128, std::string(str, strLen).c_str(), status,
-            outPrecision, outScale));
+                                              outPrecision, outScale));
         return;
     }
     *outHighPtr = result.HighBits();
@@ -2405,7 +2493,8 @@ extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char 
 }
 
 extern "C" DLLEXPORT void CastStringToDecimal128RoundUp(int64_t contextPtr, const char *str, int32_t strLen,
-    bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+                                                        bool isNull, int32_t outPrecision, int32_t outScale,
+                                                        int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     if (isNull) {
         return;
@@ -2414,8 +2503,8 @@ extern "C" DLLEXPORT void CastStringToDecimal128RoundUp(int64_t contextPtr, cons
     StringUtil::TrimString(s);
     if (!regex_match(s, g_decimalRegex)) {
         std::ostringstream errorMessage;
-        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
-            "). Value is not a number.";
+        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale
+                     << "). Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return;
     }
@@ -2424,7 +2513,7 @@ extern "C" DLLEXPORT void CastStringToDecimal128RoundUp(int64_t contextPtr, cons
     OpStatus status = result.IsOverflow(outPrecision);
     if (status != OpStatus::SUCCESS) {
         SetError(contextPtr, CastErrorMessage(OMNI_VARCHAR, OMNI_DECIMAL128, std::string(str, strLen).c_str(), status,
-            outPrecision, outScale));
+                                              outPrecision, outScale));
         return;
     }
     *outHighPtr = result.HighBits();
@@ -2432,31 +2521,32 @@ extern "C" DLLEXPORT void CastStringToDecimal128RoundUp(int64_t contextPtr, cons
 }
 
 extern "C" DLLEXPORT const char *ConcatStrStrRetNull(int64_t contextPtr, bool *isNull, const char *ap, int32_t apLen,
-    const char *bp, int32_t bpLen, int32_t *outLen)
+                                                     const char *bp, int32_t bpLen, int32_t *outLen)
 {
     return StringUtil::ConcatStrDiffWidths(contextPtr, ap, apLen, bp, bpLen, isNull, outLen);
 }
 
 extern "C" DLLEXPORT const char *ConcatCharCharRetNull(int64_t contextPtr, bool *isNull, const char *ap, int32_t aWidth,
-    int32_t apLen, const char *bp, int32_t bWidth, int32_t bpLen, int32_t *outLen)
+                                                       int32_t apLen, const char *bp, int32_t bWidth, int32_t bpLen,
+                                                       int32_t *outLen)
 {
     return StringUtil::ConcatCharDiffWidths(contextPtr, ap, aWidth, apLen, bp, bpLen, isNull, outLen);
 }
 
 extern "C" DLLEXPORT const char *ConcatCharStrRetNull(int64_t contextPtr, bool *isNull, const char *ap, int32_t aWidth,
-    int32_t apLen, const char *bp, int32_t bpLen, int32_t *outLen)
+                                                      int32_t apLen, const char *bp, int32_t bpLen, int32_t *outLen)
 {
     return StringUtil::ConcatCharDiffWidths(contextPtr, ap, aWidth, apLen, bp, bpLen, isNull, outLen);
 }
 
 extern "C" DLLEXPORT const char *ConcatStrCharRetNull(int64_t contextPtr, bool *isNull, const char *ap, int32_t apLen,
-    const char *bp, int32_t bWidth, int32_t bpLen, int32_t *outLen)
+                                                      const char *bp, int32_t bWidth, int32_t bpLen, int32_t *outLen)
 {
     return StringUtil::ConcatStrDiffWidths(contextPtr, ap, apLen, bp, bpLen, isNull, outLen);
 }
 
 extern "C" DLLEXPORT int32_t CastStringToDateRetNullNotAllowReducePrecison(bool *isNull, const char *str,
-    int32_t strLen)
+                                                                           int32_t strLen)
 {
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
@@ -2472,7 +2562,7 @@ extern "C" DLLEXPORT int32_t CastStringToDateRetNullNotAllowReducePrecison(bool 
         *isNull = true;
         return -1;
     }
-    return static_cast<int32_t >(result);
+    return static_cast<int32_t>(result);
 }
 
 extern "C" DLLEXPORT int32_t CastStringToDateRetNullAllowReducePrecison(bool *isNull, const char *str, int32_t strLen)
@@ -2485,11 +2575,11 @@ extern "C" DLLEXPORT int32_t CastStringToDateRetNullAllowReducePrecison(bool *is
         *isNull = true;
         return -1;
     }
-    return static_cast<int32_t >(result);
+    return static_cast<int32_t>(result);
 }
 
 extern "C" DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value,
-    int32_t *outLen)
+                                                        int32_t *outLen)
 {
     std::string str = std::to_string(value);
     *outLen = static_cast<int32_t>(str.size());
@@ -2504,19 +2594,19 @@ extern "C" DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, bool
 }
 
 extern "C" DLLEXPORT const char *CastInt16ToStringRetNull(int64_t contextPtr, bool *isNull, int16_t value,
-    int32_t *outLen)
+                                                          int32_t *outLen)
 {
     return CastIntToStringRetNull(contextPtr, isNull, static_cast<int32_t>(value), outLen);
 }
 
 extern "C" DLLEXPORT const char *CastInt8ToStringRetNull(int64_t contextPtr, bool *isNull, int8_t value,
-    int32_t *outLen)
+                                                         int32_t *outLen)
 {
     return CastIntToStringRetNull(contextPtr, isNull, static_cast<int32_t>(value), outLen);
 }
 
 extern "C" DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, bool *isNull, int64_t value,
-    int32_t *outLen)
+                                                         int32_t *outLen)
 {
     std::string str = std::to_string(value);
     *outLen = static_cast<int32_t>(strlen(str.c_str()));
@@ -2531,15 +2621,15 @@ extern "C" DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, boo
 }
 
 extern "C" DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, bool *isNull, double value,
-    int32_t *outLen)
+                                                           int32_t *outLen)
 {
     auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DATA_LENGTH);
-    *outLen = static_cast<int32_t >(DoubleToString::DoubleToStringConverter(value, ret));
+    *outLen = static_cast<int32_t>(DoubleToString::DoubleToStringConverter(value, ret));
     return ret;
 }
 
 extern "C" DLLEXPORT const char *CastDecimal64ToStringRetNull(int64_t contextPtr, bool *isNull, int64_t x,
-    int32_t precision, int32_t scale, int32_t *outLen)
+                                                              int32_t precision, int32_t scale, int32_t *outLen)
 {
     std::string str = Decimal64(x).SetScale(scale).ToString();
     *outLen = static_cast<int32_t>(str.size());
@@ -2554,7 +2644,8 @@ extern "C" DLLEXPORT const char *CastDecimal64ToStringRetNull(int64_t contextPtr
 }
 
 extern "C" DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPtr, bool *isNull, int64_t high,
-    uint64_t low, int32_t precision, int32_t scale, int32_t *outLen)
+                                                               uint64_t low, int32_t precision, int32_t scale,
+                                                               int32_t *outLen)
 {
     Decimal128Wrapper inputDecimal(high, low);
     std::string stringDecimal = inputDecimal.SetScale(scale).ToString();
@@ -2613,7 +2704,7 @@ extern "C" DLLEXPORT double CastStringToDoubleRetNull(bool *isNull, const char *
 }
 
 extern "C" DLLEXPORT int64_t CastStringToDecimal64RetNull(bool *isNull, const char *str, int32_t strLen,
-    int32_t outPrecision, int32_t outScale)
+                                                          int32_t outPrecision, int32_t outScale)
 {
     std::string s = std::string(str, strLen);
     StringUtil::TrimString(s);
@@ -2631,7 +2722,7 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64RetNull(bool *isNull, const ch
 }
 
 extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUpRetNull(bool *isNull, const char *str, int32_t strLen,
-    int32_t outPrecision, int32_t outScale)
+                                                                 int32_t outPrecision, int32_t outScale)
 {
     std::string s = std::string(str, strLen);
     Decimal64<true> result(std::string(str, strLen));
@@ -2644,7 +2735,8 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUpRetNull(bool *isNull, c
 }
 
 extern "C" DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char *str, int32_t strLen,
-    int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+                                                        int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+                                                        uint64_t *outLowPtr)
 {
     std::string s = std::string(str, strLen);
     StringUtil::TrimString(s);
@@ -2663,7 +2755,8 @@ extern "C" DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char
 }
 
 extern "C" DLLEXPORT void CastStringToDecimal128RoundUpRetNull(bool *isNull, const char *str, int32_t strLen,
-    int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+                                                               int32_t outPrecision, int32_t outScale,
+                                                               int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     std::string s = std::string(str, strLen);
     StringUtil::TrimString(s);
@@ -2682,7 +2775,8 @@ extern "C" DLLEXPORT void CastStringToDecimal128RoundUpRetNull(bool *isNull, con
 }
 
 extern "C" DLLEXPORT const char *CastStrWithDiffWidthsRetNull(int64_t contextPtr, bool *isNull, const char *srcStr,
-    int32_t srcLen, int32_t srcWidth, int32_t dstWidth, int32_t *outLen)
+                                                              int32_t srcLen, int32_t srcWidth, int32_t dstWidth,
+                                                              int32_t *outLen)
 {
     return StringUtil::CastStrStr(isNull, srcStr, srcWidth, srcLen, outLen, dstWidth);
 }
@@ -2709,7 +2803,7 @@ extern "C" DLLEXPORT int32_t InStr(const char *srcStr, int32_t srcLen, const cha
 }
 
 extern "C" DLLEXPORT bool StartsWithStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
-    bool isNull)
+                                        bool isNull)
 {
     if (isNull || matchLen > srcLen) {
         return false;
@@ -2721,7 +2815,7 @@ extern "C" DLLEXPORT bool StartsWithStr(const char *srcStr, int32_t srcLen, cons
 }
 
 extern "C" DLLEXPORT bool EndsWithStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
-    bool isNull)
+                                      bool isNull)
 {
     if (isNull || matchLen > srcLen) {
         return false;
@@ -2733,7 +2827,7 @@ extern "C" DLLEXPORT bool EndsWithStr(const char *srcStr, int32_t srcLen, const 
 }
 
 extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
-    bool isNull)
+                                     bool isNull)
 {
     if (isNull) {
         return false;
@@ -2755,7 +2849,7 @@ extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const c
 }
 
 extern "C" DLLEXPORT const char *CastDateToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value,
-    int32_t *outLen)
+                                                         int32_t *outLen)
 {
     Date32 date(value);
     auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DAY_ONLY_LENGTH);
@@ -2787,7 +2881,7 @@ extern "C" DLLEXPORT char *Md5Str(int64_t contextPtr, const char *str, int32_t l
 }
 
 extern "C" DLLEXPORT bool ContainsStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
-    bool isNull)
+                                      bool isNull)
 {
     if (isNull || matchLen > srcLen) {
         return false;
@@ -2798,8 +2892,8 @@ extern "C" DLLEXPORT bool ContainsStr(const char *srcStr, int32_t srcLen, const 
     return StringUtil::StrContainsStr(srcStr, srcLen, matchStr, matchLen);
 }
 
-inline const char *ExtremeStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
-    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen, bool pickGreater)
+inline const char *ExtremeStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue, int32_t rLen,
+                              bool rIsNull, bool *retIsNull, int32_t *outLen, bool pickGreater)
 {
     if (lIsNull && rIsNull) {
         *retIsNull = true;
@@ -2815,20 +2909,19 @@ inline const char *ExtremeStr(const char *lValue, int32_t lLen, bool lIsNull, co
         return lValue;
     }
     int32_t cmpRet = memcmp(lValue, rValue, std::min(lLen, rLen));
-    bool pickRight = cmpRet == 0 ? (pickGreater ? rLen > lLen : rLen < lLen)
-                                 : (pickGreater ? cmpRet < 0 : cmpRet > 0);
-    *outLen  = pickRight ? rLen : lLen;
+    bool pickRight = cmpRet == 0 ? (pickGreater ? rLen > lLen : rLen < lLen) : (pickGreater ? cmpRet < 0 : cmpRet > 0);
+    *outLen = pickRight ? rLen : lLen;
     return pickRight ? rValue : lValue;
 }
 
 extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
-    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
+                                             int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
 {
     return ExtremeStr(lValue, lLen, lIsNull, rValue, rLen, rIsNull, retIsNull, outLen, true);
 }
 
 extern "C" DLLEXPORT const char *LeastStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
-    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
+                                          int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
 {
     return ExtremeStr(lValue, lLen, lIsNull, rValue, rLen, rIsNull, retIsNull, outLen, false);
 }
@@ -2845,7 +2938,7 @@ extern "C" DLLEXPORT const char *EmptyToNull(const char *str, int32_t len, bool 
 }
 
 extern "C" DLLEXPORT const char *StaticInvokeVarcharTypeWriteSideCheck(int64_t contextPtr, const char *str, int32_t len,
-    int32_t limit, bool isNull, int32_t *outLen)
+                                                                       int32_t limit, bool isNull, int32_t *outLen)
 {
     if (isNull) {
         *outLen = 0;
@@ -2885,7 +2978,7 @@ extern "C" DLLEXPORT const char *StaticInvokeVarcharTypeWriteSideCheck(int64_t c
 }
 
 extern "C" DLLEXPORT const char *StaticInvokeCharTypeWriteSideCheck(int64_t contextPtr, const char *str, int32_t len,
-    int32_t limit, bool isNull, int32_t *outLen)
+                                                                    int32_t limit, bool isNull, int32_t *outLen)
 {
     if (isNull) {
         *outLen = 0;
@@ -2939,7 +3032,7 @@ extern "C" DLLEXPORT const char *StaticInvokeCharTypeWriteSideCheck(int64_t cont
 }
 
 extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr, const char *str, int32_t len,
-    int32_t limit, bool isNull, int32_t *outLen)
+                                                             int32_t limit, bool isNull, int32_t *outLen)
 {
     if (isNull) {
         *outLen = 0;
@@ -2973,7 +3066,7 @@ extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr,
 }
 
 extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *str, int32_t strLen, const char *delim,
-    int32_t delimLen, int32_t count, bool isNull, int32_t *outLen)
+                                                int32_t delimLen, int32_t count, bool isNull, int32_t *outLen)
 {
     if (count == 0 || isNull) {
         *outLen = 0;
@@ -2983,10 +3076,10 @@ extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *
     int64_t index;
     if (count > 0) {
         index = stringImpl::StringPosition<true, true>(std::string_view(str, strLen), std::string_view(delim, delimLen),
-            count);
+                                                       count);
     } else {
         index = stringImpl::StringPosition<true, false>(std::string_view(str, strLen),
-            std::string_view(delim, delimLen), -count);
+                                                        std::string_view(delim, delimLen), -count);
     }
 
     // If 'delim' is not found or found fewer than 'count' times,
@@ -3023,4 +3116,4 @@ extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *
     *outLen = length;
     return result;
 }
-}
+} // namespace omniruntime::codegen::function
