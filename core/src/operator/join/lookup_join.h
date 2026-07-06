@@ -10,6 +10,8 @@
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "operator/filter/filter_and_project.h"
+#include "operator/join/taper_join_hash_table_variants.h"
+#include "operator/hashmap/row_container.h"
 #include "type/data_types.h"
 #include "type/data_type.h"
 #include "hash_builder.h"
@@ -56,6 +58,9 @@ public:
         probeBuildIndex.clear();
         existJoinBuildIndex.clear();
     }
+
+    void AppendRowTaper(int32_t probePosition, omniruntime::vec::BaseVector*** array, uint64_t address, char* rowPtr);
+    void SetTaperOutput(const omniruntime::op::RowContainer* rc, const std::vector<int32_t>& storedCols);
 
     static const uint32_t SHIFT_SIZE_32 = 32;
     static ALWAYS_INLINE uint64_t EncodeAddress(uint32_t rowId, uint32_t vectorBatchId)
@@ -137,6 +142,9 @@ private:
     int32_t probeRowOffset = 0;
     std::vector<std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t>> probeBuildIndex;
     std::vector<bool> existJoinBuildIndex;
+    std::vector<char*> taperRowPtrs;
+    const RowContainer* taperRC_ = nullptr;
+    std::vector<int32_t> taperStoredColIndices_;
 };
 
 class LookupJoinOperatorFactory : public OperatorFactory {
@@ -305,6 +313,9 @@ private:
     std::vector<BaseVector **> *buildFilterColPtrs = nullptr;
     size_t probeFilterColsSize = 0;
     size_t buildFilterColsSize = 0;
+    std::vector<omniruntime::vec::BaseVector**> taperRowPtrs;
+    omniruntime::op::RowContainer* taperRC_ = nullptr;
+    std::vector<int32_t> taperStoredColIndices_;
 };
 } // end of op
 } // end of omniruntime
