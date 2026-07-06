@@ -13,7 +13,6 @@
 #include "type/data_type.h"
 #include "util/config/QueryConfig.h"
 
-using namespace omniruntime;
 
 namespace omniruntime::vectorization {
 using FunctionSignaturePtr = std::shared_ptr<codegen::FunctionSignature>;

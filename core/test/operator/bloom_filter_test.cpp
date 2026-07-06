@@ -111,7 +111,7 @@ TEST(BloomFilterTest, TestBloomFilterAggregator)
     std::vector<uint32_t> partialAggMask = {static_cast<uint32_t>(-1)};
     auto partialFactory1 = CreateFactory(partialAggFuncVector, partialInputTypeVector, partialOutputTypeVector, partialAggColIdxVector, partialAggMask, true, true);
 
-    op::Operator *aggPartial1 = partialFactory1->CreateOperator();
+    omniruntime::op::Operator *aggPartial1 = partialFactory1->CreateOperator();
 
     // Partial 2
     std::vector<uint32_t> partialAggFuncVector2 = {static_cast<uint32_t>(OMNI_AGGREGATION_TYPE_BLOOM_FILTER)};
@@ -121,7 +121,7 @@ TEST(BloomFilterTest, TestBloomFilterAggregator)
     std::vector<uint32_t> partialAggMask2 = {static_cast<uint32_t>(-1)};
     auto partialFactory2 = CreateFactory(partialAggFuncVector2, partialInputTypeVector2, partialOutputTypeVector2, partialAggColIdxVector2, partialAggMask2, true, true);
 
-    op::Operator *aggPartial2 = partialFactory2->CreateOperator();
+    omniruntime::op::Operator *aggPartial2 = partialFactory2->CreateOperator();
 
     // Final
     std::vector<uint32_t> finalAggFuncVector = {static_cast<uint32_t>(OMNI_AGGREGATION_TYPE_BLOOM_FILTER)};
@@ -131,7 +131,7 @@ TEST(BloomFilterTest, TestBloomFilterAggregator)
     std::vector<uint32_t> finalAggMask = {static_cast<uint32_t>(-1)};
     auto finalFactory = CreateFactory(finalAggFuncVector, finalInputTypeVector, finalOutputTypeVector, finalAggColIdxVector, finalAggMask, false, false);
 
-    op::Operator *aggFinal = finalFactory->CreateOperator();
+    omniruntime::op::Operator *aggFinal = finalFactory->CreateOperator();
 
     // partial 1 phase
     aggPartial1->Init();
