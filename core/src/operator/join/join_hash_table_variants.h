@@ -37,11 +37,6 @@ using JoinHashMap =
 template <typename KeyType, typename RowRefListType>
 using JoinHashTableVariant = ColumnSerializeHandler<JoinHashMap<KeyType, RowRefListType *>>;
 
-enum class HashTableImplementationType {
-    NORMAL_HASH_TABLE,
-    ARRAY_HASH_TABLE
-};
-
 template <typename KeyType, typename RowRefListType> class JoinHashTableVariants {
 public:
     using Key = KeyType;
