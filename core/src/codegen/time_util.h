@@ -6,6 +6,7 @@
 #ifndef OMNI_RUNTIME_TIMEZONE_UTIL_H
 #define OMNI_RUNTIME_TIMEZONE_UTIL_H
 
+#include <cstring>
 #include <set>
 #include <string>
 #include <functional>
