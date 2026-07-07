@@ -28,14 +28,14 @@ const int32_t VARCHAR_WIDTH = INT_MAX;
 
 std::stringstream ss;
 
-map<Operator, string> ArithOps = { { Operator::ADD, "ADD" },
-                                   { Operator::SUB, "SUBTRACT" },
-                                   { Operator::MUL, "MULTIPLY" },
-                                   { Operator::DIV, "DIVIDE" },
-                                   { Operator::MOD, "MODULUS" } };
-map<Operator, string> CmpOps = { { Operator::GT, "GREATER_THAN" }, { Operator::GTE, "GREATER_THAN_OR_EQUAL" },
-                                 { Operator::LT, "LESS_THAN" },    { Operator::LTE, "LESS_THAN_OR_EQUAL" },
-                                 { Operator::EQ, "EQUAL" },        { Operator::NEQ, "NOT_EQUAL" } };
+map<Operator, string> ArithOps = {{Operator::ADD, "ADD"},
+                                  {Operator::SUB, "SUBTRACT"},
+                                  {Operator::MUL, "MULTIPLY"},
+                                  {Operator::DIV, "DIVIDE"},
+                                  {Operator::MOD, "MODULUS"}};
+map<Operator, string> CmpOps = {{Operator::GT, "GREATER_THAN"}, {Operator::GTE, "GREATER_THAN_OR_EQUAL"},
+                                {Operator::LT, "LESS_THAN"},    {Operator::LTE, "LESS_THAN_OR_EQUAL"},
+                                {Operator::EQ, "EQUAL"},        {Operator::NEQ, "NOT_EQUAL"}};
 
 string GetInt32TestJSON(int32_t val)
 {
@@ -54,8 +54,8 @@ string GetDate32TestJson(int32_t val)
 string GetVarcharTestJson(const string &val, int32_t width)
 {
     ss.str("");
-    ss << R"({ "exprType": "LITERAL", "dataType": 15, "isNull": false, "value": ")" << val << R"(", "width": )" <<
-        width << R"(})";
+    ss << R"({ "exprType": "LITERAL", "dataType": 15, "isNull": false, "value": ")" << val << R"(", "width": )" << width
+       << R"(})";
     return ss.str();
 }
 
@@ -76,16 +76,16 @@ string GetTimestampTestJson(int64_t val)
 string GetDec64TestJson(int64_t val, int32_t precision, int32_t scale)
 {
     ss.str("");
-    ss << R"({ "exprType": "LITERAL", "dataType": 6, "isNull": false, "value": )" << val << R"(, "precision": )" <<
-        precision << R"(, "scale": )" << scale << R"(})";
+    ss << R"({ "exprType": "LITERAL", "dataType": 6, "isNull": false, "value": )" << val << R"(, "precision": )"
+       << precision << R"(, "scale": )" << scale << R"(})";
     return ss.str();
 }
 
 string GetDec128TestJson(const string &val, int32_t precision, int32_t scale)
 {
     ss.str("");
-    ss << R"({ "exprType": "LITERAL", "dataType": 7, "isNull": false, "value": ")" << val << R"(", "precision": )" <<
-        precision << R"(, "scale": )" << scale << R"(})";
+    ss << R"({ "exprType": "LITERAL", "dataType": 7, "isNull": false, "value": ")" << val << R"(", "precision": )"
+       << precision << R"(, "scale": )" << scale << R"(})";
     return ss.str();
 }
 
@@ -127,73 +127,72 @@ string GetFieldRefTestJson(int32_t dt, int32_t colval)
 string GetStringFieldRefTestJson(int32_t dt, int32_t colval, int32_t width)
 {
     ss.str("");
-    ss << R"({ "exprType": "FIELD_REFERENCE", "dataType": )" << dt << R"(, "colVal": )" << colval <<
-        R"(, "width": )" << width << R"(})";
+    ss << R"({ "exprType": "FIELD_REFERENCE", "dataType": )" << dt << R"(, "colVal": )" << colval << R"(, "width": )"
+       << width << R"(})";
     return ss.str();
 }
 
 string GetDecimalFieldRefTestJson(int32_t dt, int32_t colval, int32_t precision, int32_t scale)
 {
     ss.str("");
-    ss << R"({ "exprType": "FIELD_REFERENCE", "dataType": )" << dt << R"(, "colVal": )" << colval <<
-        R"(, "precision": )" << precision << R"(, "scale": )" << scale << R"(})";
+    ss << R"({ "exprType": "FIELD_REFERENCE", "dataType": )" << dt << R"(, "colVal": )" << colval
+       << R"(, "precision": )" << precision << R"(, "scale": )" << scale << R"(})";
     return ss.str();
 }
-
 
 string GetAndTestJson(const string &left, const string &right)
 {
     ss.str("");
-    ss << R"({"exprType": "BINARY", "returnType": 4, "operator": "AND", "left":)" << left << R"(, "right":)" << right <<
-        R"(})";
+    ss << R"({"exprType": "BINARY", "returnType": 4, "operator": "AND", "left":)" << left << R"(, "right":)" << right
+       << R"(})";
     return ss.str();
 }
 
 string GetOrTestJson(const string &left, const string &right)
 {
     ss.str("");
-    ss << R"({"exprType": "BINARY", "returnType": 4, "operator": "OR", "left":)" << left << R"(, "right":)" << right <<
-        R"(})";
+    ss << R"({"exprType": "BINARY", "returnType": 4, "operator": "OR", "left":)" << left << R"(, "right":)" << right
+       << R"(})";
     return ss.str();
 }
 
 string GetCoalesceTestJson(int32_t rt, const string &left, const string &right)
 {
     ss.str("");
-    ss << R"({"exprType": "COALESCE", "returnType": )" << rt << R"(, "value1": )" << left << R"(, "value2": )" <<
-        right << R"(})";
+    ss << R"({"exprType": "COALESCE", "returnType": )" << rt << R"(, "value1": )" << left << R"(, "value2": )" << right
+       << R"(})";
     return ss.str();
 }
 
 string GetBetweenTestJson(const string &val, const string &val1, const string &val2)
 {
     ss.str("");
-    ss << R"({"exprType": "BETWEEN", "returnType": 4, "value": )" << val << R"(, "lower_bound": )" << val1 <<
-        R"(, "upper_bound": )" << val2 << R"(})";
+    ss << R"({"exprType": "BETWEEN", "returnType": 4, "value": )" << val << R"(, "lower_bound": )" << val1
+       << R"(, "upper_bound": )" << val2 << R"(})";
     return ss.str();
 }
 
 string GetIfTestJson(int32_t rt, const string &val, const string &val1, const string &val2)
 {
     ss.str("");
-    ss << R"({"exprType": "IF", "returnType": )" << rt << R"(, "condition": )" << val << R"(, "if_true": )" << val1 <<
-        R"(, "if_false": )" << val2 << R"(})";
+    ss << R"({"exprType": "IF", "returnType": )" << rt << R"(, "condition": )" << val << R"(, "if_true": )" << val1
+       << R"(, "if_false": )" << val2 << R"(})";
     return ss.str();
 }
 
 string GetSwitchTestJson(int32_t rt, const string &val, const string &val1, const string &val2)
 {
     ss.str("");
-    ss << R"({"exprType": "SWITCH", "returnType": )" << rt << R"(, "numOfCases": 1, "input": )" << val <<
-        R"(, "Case1": )" << val1 << R"(, "else": )" << val2 << R"(})";
+    ss << R"({"exprType": "SWITCH", "returnType": )" << rt << R"(, "numOfCases": 1, "input": )" << val
+       << R"(, "Case1": )" << val1 << R"(, "else": )" << val2 << R"(})";
     return ss.str();
 }
 
 string GetWhenTestJson(int32_t rt, const string &val, const string &val1)
 {
     ss.str("");
-    ss << R"({"exprType": "WHEN", "returnType": )" << rt << R"(, "when": )" << val << R"(, "result": )" << val1 <<
-        R"(})";
+    ss << R"({"exprType": "WHEN", "returnType": )" << rt << R"(, "when": )" << val << R"(, "result": )" << val1
+       << R"(})";
     return ss.str();
 }
 
@@ -211,18 +210,18 @@ string GetInTestJson(const vector<string> &args)
 string GetBinaryTestJson(int32_t rt, const string &op, const string &left, const string &right)
 {
     ss.str("");
-    ss << R"({ "exprType": "BINARY", "returnType": )" << rt << R"(, "operator": ")" << op << R"(", "left": )" << left <<
-        R"(, "right": )" << right << R"(})";
+    ss << R"({ "exprType": "BINARY", "returnType": )" << rt << R"(, "operator": ")" << op << R"(", "left": )" << left
+       << R"(, "right": )" << right << R"(})";
     return ss.str();
 }
 
 string GetDecimalBinaryTestJson(int32_t rt, const string &op, const string &left, const string &right,
-    int32_t returnPrecision, int32_t returnScale)
+                                int32_t returnPrecision, int32_t returnScale)
 {
     ss.str("");
-    ss << R"({ "exprType": "BINARY", "returnType": )" << rt << R"(, "precision": )" << returnPrecision <<
-        R"(, "scale": )" << returnScale << R"(, "operator": ")" << op << R"(", "left": )" << left << R"(, "right": )" <<
-        right << R"(})";
+    ss << R"({ "exprType": "BINARY", "returnType": )" << rt << R"(, "precision": )" << returnPrecision
+       << R"(, "scale": )" << returnScale << R"(, "operator": ")" << op << R"(", "left": )" << left << R"(, "right": )"
+       << right << R"(})";
     return ss.str();
 }
 
@@ -236,8 +235,8 @@ string GetUnaryTestJson(const string &op, const string &expr)
 string GetFuncTestJson(int32_t rt, const string &func, const vector<string> &args)
 {
     ss.str("");
-    ss << R"({"exprType": "FUNCTION", "returnType": )" << rt << R"(, "function_name": ")" << func <<
-        R"(", "arguments": [)" << args.at(0);
+    ss << R"({"exprType": "FUNCTION", "returnType": )" << rt << R"(, "function_name": ")" << func
+       << R"(", "arguments": [)" << args.at(0);
     for (uint32_t i = 1; i < args.size(); i++) {
         ss << R"(, )" << args.at(i);
     }
@@ -265,10 +264,7 @@ class TestExpr {
 public:
     omniruntime::type::DataTypePtr dataType = nullptr;
 
-    virtual bool isEqual(Expr *that) const
-    {
-        return false;
-    };
+    virtual bool isEqual(Expr *that) const { return false; };
 
     virtual ~TestExpr() = default;
 };
@@ -294,20 +290,17 @@ public:
         expr->isNull = true;
     }
 
-    ~TestLiteralExpr() override
-    {
-        delete expr;
-    }
+    ~TestLiteralExpr() override { delete expr; }
 
-    bool operator == (const LiteralExpr &rhs) const
+    bool operator==(const LiteralExpr &rhs) const
     {
         bool stringIsNull = false;
         if (expr->stringVal == nullptr && rhs.stringVal == nullptr)
             stringIsNull = true;
 
         return *(expr->GetReturnType()) == *(rhs.GetReturnType()) && expr->isNull == rhs.isNull &&
-            expr->boolVal == rhs.boolVal && expr->intVal == rhs.intVal && expr->longVal == rhs.longVal &&
-            expr->doubleVal == rhs.doubleVal && (stringIsNull || *(expr->stringVal) == *(rhs.stringVal));
+               expr->boolVal == rhs.boolVal && expr->intVal == rhs.intVal && expr->longVal == rhs.longVal &&
+               expr->doubleVal == rhs.doubleVal && (stringIsNull || *(expr->stringVal) == *(rhs.stringVal));
     }
 
     bool isEqual(Expr *that) const override
@@ -330,15 +323,12 @@ public:
         dataType = expr->GetReturnType();
     }
 
-    ~TestFieldExpr() override
-    {
-        delete expr;
-    }
+    ~TestFieldExpr() override { delete expr; }
 
-    bool operator == (const FieldExpr &rhs) const
+    bool operator==(const FieldExpr &rhs) const
     {
         return *(expr->GetReturnType()) == *(rhs.GetReturnType()) && expr->isNull == rhs.isNull &&
-            expr->colVal == rhs.colVal;
+               expr->colVal == rhs.colVal;
     }
 
     bool isEqual(Expr *that) const override
@@ -369,10 +359,10 @@ public:
         delete right;
     }
 
-    bool operator == (const BinaryExpr &rhs) const
+    bool operator==(const BinaryExpr &rhs) const
     {
         return (op == rhs.op && *dataType == *rhs.GetReturnType() && left->isEqual(rhs.left) &&
-            right->isEqual(rhs.right));
+                right->isEqual(rhs.right));
     }
 
     bool isEqual(Expr *that) const override
@@ -391,17 +381,11 @@ class TestUnaryExpr : public TestExpr {
     TestExpr *expr = nullptr;
 
 public:
-    TestUnaryExpr(Operator op, TestExpr *expr) : op(op), expr(expr)
-    {
-        dataType = BooleanType();
-    }
+    TestUnaryExpr(Operator op, TestExpr *expr) : op(op), expr(expr) { dataType = BooleanType(); }
 
-    ~TestUnaryExpr() override
-    {
-        delete expr;
-    }
+    ~TestUnaryExpr() override { delete expr; }
 
-    bool operator == (const UnaryExpr &rhs) const
+    bool operator==(const UnaryExpr &rhs) const
     {
         return (op == rhs.op && *dataType == *rhs.GetReturnType() && expr->isEqual(rhs.exp));
     }
@@ -436,10 +420,10 @@ public:
         delete value;
     }
 
-    bool operator == (const BetweenExpr &rhs) const
+    bool operator==(const BetweenExpr &rhs) const
     {
         return (*dataType == *rhs.GetReturnType() && value->isEqual(rhs.value) && lowerBound->isEqual(rhs.lowerBound) &&
-            upperBound->isEqual(rhs.upperBound));
+                upperBound->isEqual(rhs.upperBound));
     }
 
     bool isEqual(Expr *that) const override
@@ -469,7 +453,7 @@ public:
         delete value2;
     }
 
-    bool operator == (const CoalesceExpr &rhs) const
+    bool operator==(const CoalesceExpr &rhs) const
     {
         return (*dataType == *rhs.GetReturnType() && value1->isEqual(rhs.value1) && value2->isEqual(rhs.value2));
     }
@@ -503,11 +487,11 @@ public:
         }
     }
 
-    bool operator == (const FuncExpr &rhs) const
+    bool operator==(const FuncExpr &rhs) const
     {
         return (*dataType == *rhs.GetReturnType() && funcName == rhs.funcName &&
-            std::equal(args.begin(), args.end(), rhs.arguments.begin(),
-            [](TestExpr *left, Expr *right) { return left->isEqual(right); }));
+                std::equal(args.begin(), args.end(), rhs.arguments.begin(),
+                           [](TestExpr *left, Expr *right) { return left->isEqual(right); }));
     }
 
     bool isEqual(Expr *that) const override
@@ -541,13 +525,13 @@ public:
         delete elseExpr;
     }
 
-    bool operator == (const SwitchExpr &rhs) const
+    bool operator==(const SwitchExpr &rhs) const
     {
         return (*dataType == *rhs.GetReturnType() && elseExpr->isEqual(rhs.falseExpr) &&
-            std::equal(whenClause.begin(), whenClause.end(), rhs.whenClause.begin(),
-            [](pair<TestExpr *, TestExpr *> left, std::pair<Expr *, Expr *> right) {
-                return left.first->isEqual(right.first) && left.second->isEqual(right.second);
-            }));
+                std::equal(whenClause.begin(), whenClause.end(), rhs.whenClause.begin(),
+                           [](pair<TestExpr *, TestExpr *> left, std::pair<Expr *, Expr *> right) {
+                               return left.first->isEqual(right.first) && left.second->isEqual(right.second);
+                           }));
     }
 
     bool isEqual(Expr *that) const override
@@ -579,10 +563,10 @@ public:
         delete fExpr;
     }
 
-    bool operator == (const IfExpr &rhs) const
+    bool operator==(const IfExpr &rhs) const
     {
         return (*dataType == *rhs.GetReturnType() && condition->isEqual(rhs.condition) &&
-            tExpr->isEqual(rhs.trueExpr) && fExpr->isEqual(rhs.falseExpr));
+                tExpr->isEqual(rhs.trueExpr) && fExpr->isEqual(rhs.falseExpr));
     }
 
     bool isEqual(Expr *that) const override
@@ -600,10 +584,7 @@ class TestInExpr : public TestExpr {
     vector<TestExpr *> args;
 
 public:
-    explicit TestInExpr(vector<TestExpr *> args) : args(std::move(args))
-    {
-        dataType = BooleanType();
-    }
+    explicit TestInExpr(vector<TestExpr *> args) : args(std::move(args)) { dataType = BooleanType(); }
 
     ~TestInExpr() override
     {
@@ -612,10 +593,11 @@ public:
         }
     }
 
-    bool operator == (const InExpr &rhs) const
+    bool operator==(const InExpr &rhs) const
     {
-        return (*dataType == *rhs.GetReturnType() && std::equal(args.begin(), args.end(), rhs.arguments.begin(),
-            [](TestExpr *left, Expr *right) { return left->isEqual(right); }));
+        return (*dataType == *rhs.GetReturnType() &&
+                std::equal(args.begin(), args.end(), rhs.arguments.begin(),
+                           [](TestExpr *left, Expr *right) { return left->isEqual(right); }));
     }
 
     bool isEqual(Expr *that) const override
@@ -633,17 +615,11 @@ class TestIsNullExpr : public TestExpr {
 public:
     TestExpr *value = nullptr;
 
-    explicit TestIsNullExpr(TestExpr *value) : value(value)
-    {
-        dataType = BooleanType();
-    }
+    explicit TestIsNullExpr(TestExpr *value) : value(value) { dataType = BooleanType(); }
 
-    ~TestIsNullExpr() override
-    {
-        delete value;
-    }
+    ~TestIsNullExpr() override { delete value; }
 
-    bool operator == (const IsNullExpr &rhs) const
+    bool operator==(const IsNullExpr &rhs) const
     {
         return (*dataType == *rhs.GetReturnType() && value->isEqual(rhs.value));
     }
@@ -779,7 +755,6 @@ TEST(JSONParserTest, FieldReference)
     delete fieldRefExpr;
 }
 
-
 TEST(JSONParserTest, Decimal128FieldReference)
 {
     string unparsedFieldRefJson = GetDecimalFieldRefTestJson(OMNI_DECIMAL128, COL_NUM, 0, 0);
@@ -801,11 +776,11 @@ TEST(JSONParserTest, Decimal64FieldReference)
 TEST(JSONParserTest, BinaryExpr_EQ)
 {
     string unparsedBinaryJson = GetBinaryTestJson(OMNI_BOOLEAN, CmpOps.at(Operator::EQ), GetInt32TestJSON(INT32_VAL),
-        GetInt64TestJson(INT64_VAL));
+                                                  GetInt64TestJson(INT64_VAL));
     Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
     // When binary operator has different types from left op and right op, a cast will be inserted
     vector<TestExpr *> args = {new TestLiteralExpr(INT32_VAL, IntType())};
-    TestFuncExpr* castFuncExpr = new TestFuncExpr(LongType(), "CAST", args);
+    TestFuncExpr *castFuncExpr = new TestFuncExpr(LongType(), "CAST", args);
     TestBinaryExpr expectedExpr(Operator::EQ, castFuncExpr, new TestLiteralExpr(INT64_VAL, LongType()), BooleanType());
     expectedExpr.isEqual(addExpr);
     delete addExpr;
@@ -814,11 +789,11 @@ TEST(JSONParserTest, BinaryExpr_EQ)
 TEST(JSONParserTest, BinaryExpr_ADD)
 {
     string unparsedBinaryJson = GetBinaryTestJson(OMNI_LONG, ArithOps.at(Operator::ADD), GetInt32TestJSON(INT32_VAL),
-        GetInt64TestJson(INT64_VAL));
+                                                  GetInt64TestJson(INT64_VAL));
     Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
     // When binary operator has different types from left op and right op, a cast will be inserted
     vector<TestExpr *> args = {new TestLiteralExpr(INT32_VAL, IntType())};
-    TestFuncExpr* castFuncExpr = new TestFuncExpr(LongType(), "CAST", args);
+    TestFuncExpr *castFuncExpr = new TestFuncExpr(LongType(), "CAST", args);
     TestBinaryExpr expectedExpr(Operator::ADD, castFuncExpr, new TestLiteralExpr(INT64_VAL, LongType()), LongType());
     expectedExpr.isEqual(addExpr);
     delete addExpr;
@@ -826,25 +801,26 @@ TEST(JSONParserTest, BinaryExpr_ADD)
 
 TEST(JSONParserTest, BinaryExpr_ADD_DECIMAL64)
 {
-    string unparsedBinaryJson = GetDecimalBinaryTestJson(OMNI_DECIMAL64, ArithOps.at(Operator::ADD),
-        GetDec64TestJson((int64_t)65, 6, 2), GetInt64TestJson(INT64_VAL), 10, 3);
+    string unparsedBinaryJson =
+        GetDecimalBinaryTestJson(OMNI_DECIMAL64, ArithOps.at(Operator::ADD), GetDec64TestJson((int64_t)65, 6, 2),
+                                 GetInt64TestJson(INT64_VAL), 10, 3);
     Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
     vector<TestExpr *> argsRight = {new TestLiteralExpr(INT64_VAL, LongType())};
-    TestFuncExpr* castFuncExprRight =  new TestFuncExpr(Decimal64Type(10, 3), "CAST", argsRight);
-    TestBinaryExpr expectedExpr(Operator::ADD, new TestLiteralExpr((int64_t)65, Decimal64Type(6, 2)),
-                                castFuncExprRight, Decimal64Type(10, 3));
+    TestFuncExpr *castFuncExprRight = new TestFuncExpr(Decimal64Type(10, 3), "CAST", argsRight);
+    TestBinaryExpr expectedExpr(Operator::ADD, new TestLiteralExpr((int64_t)65, Decimal64Type(6, 2)), castFuncExprRight,
+                                Decimal64Type(10, 3));
     expectedExpr.isEqual(addExpr);
     delete addExpr;
 }
 
-
 TEST(JSONParserTest, BinaryExpr_ADD_DECIMAL128)
 {
-    string unparsedBinaryJson = GetDecimalBinaryTestJson(OMNI_DECIMAL128, ArithOps.at(Operator::DIV),
-        GetDec128TestJson("123456", 32, 2), GetInt32TestJSON(INT32_VAL), 35, 4);
+    string unparsedBinaryJson =
+        GetDecimalBinaryTestJson(OMNI_DECIMAL128, ArithOps.at(Operator::DIV), GetDec128TestJson("123456", 32, 2),
+                                 GetInt32TestJSON(INT32_VAL), 35, 4);
     auto divExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
     vector<TestExpr *> argsRight = {new TestLiteralExpr(INT32_VAL, IntType())};
-    TestFuncExpr* castFuncExprRight =  new TestFuncExpr(Decimal128Type(35, 4), "CAST", argsRight);
+    TestFuncExpr *castFuncExprRight = new TestFuncExpr(Decimal128Type(35, 4), "CAST", argsRight);
     TestBinaryExpr expectedExpr(Operator::DIV, new TestLiteralExpr(new std::string("123456"), Decimal128Type(32, 2)),
                                 castFuncExprRight, Decimal128Type(35, 4));
     expectedExpr.isEqual(divExpr);
@@ -885,7 +861,7 @@ TEST(JSONParserTest, BetweenExpr)
         GetBetweenTestJson(GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(INT32_VAL));
     Expr *betweenExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBetweenJson));
     TestBetweenExpr expectedExpr(new TestLiteralExpr(INT32_VAL, IntType()), new TestLiteralExpr(INT32_VAL, IntType()),
-        new TestLiteralExpr(INT32_VAL, IntType()));
+                                 new TestLiteralExpr(INT32_VAL, IntType()));
     expectedExpr.isEqual(betweenExpr);
     delete betweenExpr;
 }
@@ -896,7 +872,7 @@ TEST(JSONParserTest, CoalesceExpr)
         GetCoalesceTestJson(OMNI_VARCHAR, GetVarcharTestJson(VARCHAR_VAL, VARCHAR_WIDTH), GetVarcharTestJson("", 0));
     Expr *coalesceExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedCoalesceJson));
     TestCoalesceExpr expectedExpr(new TestLiteralExpr(new string(VARCHAR_VAL), VarcharType()),
-        new TestLiteralExpr(new string(""), VarcharType(0)));
+                                  new TestLiteralExpr(new string(""), VarcharType(0)));
     expectedExpr.isEqual(coalesceExpr);
     delete coalesceExpr;
 }
@@ -904,11 +880,11 @@ TEST(JSONParserTest, CoalesceExpr)
 TEST(JSONParserTest, FuncExpr_substr)
 {
     // substr(string, int)
-    vector<string> argsJson = { GetVarcharTestJson(VARCHAR_VAL, VARCHAR_WIDTH), GetInt32TestJSON(INT32_VAL) };
+    vector<string> argsJson = {GetVarcharTestJson(VARCHAR_VAL, VARCHAR_WIDTH), GetInt32TestJSON(INT32_VAL)};
     string unparsedFuncJson = GetFuncTestJson(OMNI_VARCHAR, "substr", argsJson);
     Expr *funcExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFuncJson));
-    vector<TestExpr *> args = { new TestLiteralExpr(new string(VARCHAR_VAL), VarcharType()),
-        new TestLiteralExpr(INT32_VAL, IntType()) };
+    vector<TestExpr *> args = {new TestLiteralExpr(new string(VARCHAR_VAL), VarcharType()),
+                               new TestLiteralExpr(INT32_VAL, IntType())};
     TestFuncExpr expectedExpr(VarcharType(), "substr", args);
     expectedExpr.isEqual(funcExpr);
     delete funcExpr;
@@ -916,7 +892,7 @@ TEST(JSONParserTest, FuncExpr_substr)
 
 TEST(JSONParserTest, FuncExpr_jsonSplitCharInput)
 {
-    vector<string> argsJson = { GetStringFieldRefTestJson(OMNI_CHAR, COL_NUM, 8) };
+    vector<string> argsJson = {GetStringFieldRefTestJson(OMNI_CHAR, COL_NUM, 8)};
     string unparsedFuncJson = GetFuncTestJson(OMNI_VARCHAR, "json_split", argsJson);
     Expr *funcExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFuncJson));
 
@@ -986,11 +962,11 @@ TEST(JSONParserTest, FuncExpr_jsonValueWithBehaviors)
 
 TEST(JSONParserTest, InExpr)
 {
-    vector<string> argsJson = { GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(0), GetInt32TestJSON(2) };
+    vector<string> argsJson = {GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(0), GetInt32TestJSON(2)};
     string unparsedInJson = GetInTestJson(argsJson);
     Expr *inExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedInJson));
-    vector<TestExpr *> args = { new TestLiteralExpr(INT32_VAL, IntType()), new TestLiteralExpr(0, IntType()),
-        new TestLiteralExpr(2, IntType()) };
+    vector<TestExpr *> args = {new TestLiteralExpr(INT32_VAL, IntType()), new TestLiteralExpr(0, IntType()),
+                               new TestLiteralExpr(2, IntType())};
     TestInExpr expectedExpr(args);
     expectedExpr.isEqual(inExpr);
     delete inExpr;
@@ -1002,8 +978,8 @@ TEST(JSONParserTest, SwitchExpr)
     string unparsedSwitchJson = GetSwitchTestJson(OMNI_INT, GetInt32TestJSON(INT32_VAL), whenJson, GetInt32TestJSON(4));
     Expr *switchExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedSwitchJson));
     auto condition = new TestBinaryExpr(Operator::EQ, new TestLiteralExpr(INT32_VAL, IntType()),
-        new TestLiteralExpr(INT64_VAL, LongType()), BooleanType());
-    vector<pair<TestExpr *, TestExpr *>> whenClause = { { condition, new TestLiteralExpr(INT32_VAL, IntType()) } };
+                                        new TestLiteralExpr(INT64_VAL, LongType()), BooleanType());
+    vector<pair<TestExpr *, TestExpr *>> whenClause = {{condition, new TestLiteralExpr(INT32_VAL, IntType())}};
     TestSwitchExpr expectedExpr(whenClause, new TestLiteralExpr(4, IntType()));
     expectedExpr.isEqual(switchExpr);
     delete switchExpr;
@@ -1012,13 +988,13 @@ TEST(JSONParserTest, SwitchExpr)
 TEST(JSONParserTest, IfExpr)
 {
     string conditionJson = GetBinaryTestJson(OMNI_BOOLEAN, CmpOps.at(Operator::EQ), GetInt32TestJSON(INT32_VAL),
-        GetInt64TestJson(INT64_VAL));
+                                             GetInt64TestJson(INT64_VAL));
     string unparsedIfJson = GetIfTestJson(OMNI_INT, conditionJson, GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(4));
     Expr *ifExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedIfJson));
     vector<TestExpr *> args = {new TestLiteralExpr(INT32_VAL, IntType())};
-    TestFuncExpr* castFuncExpr =  new TestFuncExpr(LongType(), "CAST", args);
-    TestBinaryExpr* condition = new TestBinaryExpr(Operator::EQ, castFuncExpr,
-        new TestLiteralExpr(INT64_VAL, LongType()), BooleanType());
+    TestFuncExpr *castFuncExpr = new TestFuncExpr(LongType(), "CAST", args);
+    TestBinaryExpr *condition =
+        new TestBinaryExpr(Operator::EQ, castFuncExpr, new TestLiteralExpr(INT64_VAL, LongType()), BooleanType());
     TestIfExpr expectedExpr(condition, new TestLiteralExpr(INT32_VAL, IntType()), new TestLiteralExpr(4, IntType()));
     expectedExpr.isEqual(ifExpr);
     delete ifExpr;
@@ -1027,10 +1003,10 @@ TEST(JSONParserTest, IfExpr)
 // This ut mimics tpcds-q87
 TEST(JSONParserTest, UnsupportedFunctionExpr)
 {
-    vector<string> argsJson1 = { GetNullTestJson(OMNI_INT) };
+    vector<string> argsJson1 = {GetNullTestJson(OMNI_INT)};
     string conditionJson = GetFuncTestJson(OMNI_BOOLEAN, "not", argsJson1);
     string unparsedIfJson = GetIfTestJson(OMNI_INT, conditionJson, GetInt32TestJSON(1), GetInt32TestJSON(0));
-    vector<string> argsJson2 = { unparsedIfJson };
+    vector<string> argsJson2 = {unparsedIfJson};
     string unparsedCastJson = GetFuncTestJson(OMNI_LONG, "CAST", argsJson2);
 
     Expr *castExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedCastJson));
@@ -1039,7 +1015,7 @@ TEST(JSONParserTest, UnsupportedFunctionExpr)
 
 TEST(JSONParserTest, UnsupportedFunctionExprs)
 {
-    vector<string> argsJson = { GetNullTestJson(OMNI_INT), GetNullTestJson(OMNI_LONG) };
+    vector<string> argsJson = {GetNullTestJson(OMNI_INT), GetNullTestJson(OMNI_LONG)};
     string castJson = GetFuncTestJson(OMNI_LONG, "CAST", argsJson);
     nlohmann::json expr = nlohmann::json::parse(castJson);
     nlohmann::json exprs[] = {expr, expr};
@@ -1047,4 +1023,4 @@ TEST(JSONParserTest, UnsupportedFunctionExprs)
     vector<Expr *> res = JSONParser::ParseJSON(exprs, 2);
     EXPECT_EQ(res.size(), 0);
 }
-}
+} // namespace JsonParserTest

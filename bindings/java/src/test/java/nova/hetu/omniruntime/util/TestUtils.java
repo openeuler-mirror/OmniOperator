@@ -67,13 +67,13 @@ public class TestUtils {
      * Create vec batch data
      *
      * @param types dataType
-     * @param datas data
+     * @param data data
      * @return VecBatch
      */
-    public static VecBatch createVecBatch(DataType[] types, Object[][] datas) {
+    public static VecBatch createVecBatch(DataType[] types, Object[][] data) {
         Vec[] vecs = new Vec[types.length];
         for (int i = 0; i < types.length; i++) {
-            vecs[i] = createVec(types[i], datas[i]);
+            vecs[i] = createVec(types[i], data[i]);
         }
         return new VecBatch(vecs);
     }
