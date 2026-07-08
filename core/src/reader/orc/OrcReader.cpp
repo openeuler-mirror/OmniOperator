@@ -1,5 +1,7 @@
 #include "OrcReader.h"
 #include "OmniColReader.hh"
+#include "OrcFileOverride.hh"
+#include "RegionCoalescer.h"
 
 namespace omniruntime::reader {
 
@@ -88,6 +90,9 @@ void OrcRowReader::StartNextStripe()
         currentStripeFooter = getStripeFooter(currentStripeInfo, *contents_.get());
         rowsInCurrentStripe = currentStripeInfo.numberofrows();
 
+        // Prefetch selected streams (index + data) before loadStripeIndex() so reads hit cache.
+        PrefetchSelectedStreams();
+
         if (sargsApplier) {
             // read row group statistics and bloom filters of current stripe
             loadStripeIndex();
@@ -127,6 +132,39 @@ void OrcRowReader::StartNextStripe()
             }
         }
     }
+}
+
+void OrcRowReader::PrefetchSelectedStreams()
+{
+    auto *prefetchable = dynamic_cast<PrefetchableInputStream *>(contents_->stream.get());
+    if (prefetchable == nullptr) {
+        return; // non-HDFS / non-prefetchable stream: keep direct reads
+    }
+    const int64_t maxBytes = options_->GetCoalesceMaxBytes();
+    if (maxBytes <= 0) {
+        return; // coalescing disabled by config
+    }
+
+    // A column's index streams share its column id, so they are included too.
+    const std::vector<bool> &selected = this->getSelectedColumns();
+    std::vector<IoRegion> regions;
+    regions.reserve(static_cast<size_t>(currentStripeFooter.streams_size()));
+    uint64_t offset = currentStripeInfo.offset();
+    for (int i = 0; i < currentStripeFooter.streams_size(); ++i) {
+        const auto &stream = currentStripeFooter.streams(i);
+        uint64_t length = stream.length();
+        uint64_t column = stream.column();
+        if (column < selected.size() && selected[column]) {
+            regions.push_back(IoRegion{offset, length});
+        }
+        offset += length;
+    }
+
+    const int64_t maxDistance = options_->GetCoalesceMaxDistance();
+    auto merged = coalesceRegions(std::move(regions), static_cast<uint64_t>(maxDistance < 0 ? 0 : maxDistance),
+                                  static_cast<uint64_t>(maxBytes));
+
+    prefetchable->prefetchRegions(merged);
 }
 
 uint64_t OrcRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omniTypeID, uint64_t batchLen)

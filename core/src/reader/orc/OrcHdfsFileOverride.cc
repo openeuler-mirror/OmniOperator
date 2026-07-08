@@ -18,7 +18,10 @@
 
 #include "OrcFileOverride.hh"
 #include <sys/types.h>
+#include <cstring>
 #include <memory>
+#include <new>
+#include <vector>
 
 #include "reader/filesystem/hdfs_file.h"
 #include "reader/filesystem/io_exception.h"
@@ -27,15 +30,39 @@ namespace omniruntime::reader {
 
     using namespace fs;
 
-class HdfsFileInputStreamOverride : public ::orc::InputStream {
+class HdfsFileInputStreamOverride : public PrefetchableInputStream {
     private:
         std::string filename_;
         std::unique_ptr<fs::ReadableFile> hdfs_file_;
         uint64_t total_length_;
         const uint64_t READ_SIZE_ = 1024 * 1024; //1 MB
 
+        struct CacheSeg {
+            uint64_t offset;
+            uint64_t length;
+            std::unique_ptr<char[]> data;
+        };
+        std::vector<CacheSeg> cache_;
+        bool wholeFileCached_ = false;
+
+        // Returns true only if the full range was read.
+        bool ReadRange(char *buffer, uint64_t length, uint64_t offset) {
+            uint64_t done = 0;
+            while (done < length) {
+                int64_t n = hdfs_file_->ReadAt(buffer + done, length - done, offset + done);
+                if (n < 0) {
+                    return false;
+                }
+                if (n == 0) {
+                    break;
+                }
+                done += n;
+            }
+            return done == length;
+        }
+
     public:
-        HdfsFileInputStreamOverride(const UriInfo& uri) {
+        HdfsFileInputStreamOverride(const UriInfo& uri, uint64_t filePreloadThreshold) {
             this->filename_ = uri.Path();
             std::shared_ptr<HadoopFileSystem> fileSystemPtr = getHdfsFileSystem(uri);
             this->hdfs_file_ = std::make_unique<HdfsReadableFile>(fileSystemPtr, this->filename_, 0);
@@ -46,9 +73,35 @@ class HdfsFileInputStreamOverride : public ::orc::InputStream {
             }
 
             this->total_length_= hdfs_file_->GetFileSize();
+
+            // Small file: preload the whole file in one IO.
+            if (filePreloadThreshold > 0 && total_length_ > 0 && total_length_ <= filePreloadThreshold) {
+                std::unique_ptr<char[]> buffer(new (std::nothrow) char[total_length_]);
+                if (buffer && ReadRange(buffer.get(), total_length_, 0)) {
+                    cache_.push_back(CacheSeg{0, total_length_, std::move(buffer)});
+                    wholeFileCached_ = true;
+                }
+            }
         }
 
-        ~HdfsFileInputStreamOverride() override {
+        void prefetchRegions(const std::vector<IoRegion> &regions) override {
+            if (wholeFileCached_) {
+                return;
+            }
+            cache_.clear();
+            for (const auto &r : regions) {
+                if (r.length == 0 || r.length > total_length_ || r.offset > total_length_ - r.length) {
+                    continue;
+                }
+                std::unique_ptr<char[]> buffer(new (std::nothrow) char[r.length]);
+                if (!buffer) {
+                    continue;
+                }
+                if (!ReadRange(buffer.get(), r.length, r.offset)) {
+                    continue;
+                }
+                cache_.push_back(CacheSeg{r.offset, r.length, std::move(buffer)});
+            }
         }
 
         /**
@@ -80,6 +133,14 @@ class HdfsFileInputStreamOverride : public ::orc::InputStream {
                 throw IOException(Status::IOError("Fail to read hdfs file, because read buffer is null").ToString());
             }
 
+            // Serve from a cache segment fully covering the range (overflow-safe check).
+            for (const auto &seg : cache_) {
+                if (length <= seg.length && offset >= seg.offset && (offset - seg.offset) <= (seg.length - length)) {
+                    memcpy(buf, seg.data.get() + (offset - seg.offset), length);
+                    return;
+                }
+            }
+
             char *buf_ptr = reinterpret_cast<char *>(buf);
             uint64_t total_bytes_read = 0;
             int64_t last_bytes_read = 0;
@@ -102,8 +163,9 @@ class HdfsFileInputStreamOverride : public ::orc::InputStream {
         }
     };
 
-    std::unique_ptr<::orc::InputStream> createHdfsFileInputStream(const UriInfo &uri) {
-        return std::unique_ptr<::orc::InputStream>(new HdfsFileInputStreamOverride(uri));
+    std::unique_ptr<::orc::InputStream> createHdfsFileInputStream(const UriInfo &uri, uint64_t filePreloadThreshold) {
+        return std::unique_ptr<::orc::InputStream>(
+            new HdfsFileInputStreamOverride(uri, filePreloadThreshold));
     }
 
     class HdfsFileOutputStreamOverride : public ::orc::OutputStream {

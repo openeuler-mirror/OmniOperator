@@ -202,6 +202,16 @@ public:
 
     int64_t maxCoalescedBytes(const config::ConfigBase* session) const;
 
+    static constexpr const char* kOmniMaxCoalescedBytes =
+        "spark.gluten.sql.columnar.backend.omni.maxCoalescedBytes";
+    static constexpr const char* kOmniMaxCoalescedDistance =
+        "spark.gluten.sql.columnar.backend.omni.maxCoalescedDistance";
+    static constexpr const char* kOmniFilePreloadThreshold =
+        "spark.gluten.sql.columnar.backend.omni.filePreloadThreshold";
+
+    int64_t maxCoalescedBytes() const;
+    int64_t maxCoalescedDistance() const;
+
     int32_t prefetchRowGroups() const;
 
     int32_t loadQuantum(const config::ConfigBase* session) const;

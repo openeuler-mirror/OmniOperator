@@ -124,6 +124,16 @@ int64_t HiveConfig::maxCoalescedBytes(const config::ConfigBase* session) const
         config_->Get<int64_t>(kMaxCoalescedBytes, 128 << 20)); // 128MB
 }
 
+int64_t HiveConfig::maxCoalescedBytes() const
+{
+    return config_->Get<int64_t>(kOmniMaxCoalescedBytes, 128 << 20); // 128MB
+}
+
+int64_t HiveConfig::maxCoalescedDistance() const
+{
+    return config_->Get<int64_t>(kOmniMaxCoalescedDistance, 512 << 10); // 512KB
+}
+
 
 int32_t HiveConfig::prefetchRowGroups() const
 {
@@ -180,7 +190,7 @@ uint64_t HiveConfig::footerEstimatedSize() const
 
 uint64_t HiveConfig::filePreloadThreshold() const
 {
-    return config_->Get<uint64_t>(kFilePreloadThreshold, 8UL << 20);
+    return config_->Get<uint64_t>(kOmniFilePreloadThreshold, 8UL << 20); // 8MB
 }
 
 uint8_t HiveConfig::readTimestampUnit(const config::ConfigBase* session) const
