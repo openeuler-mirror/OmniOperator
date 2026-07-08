@@ -359,9 +359,7 @@ extern "C" DLLEXPORT bool IsNullStr(const char *str, int32_t strLen, bool isNull
 
 extern "C" DLLEXPORT bool IsNullChar(const char *str, int32_t strWidth, int32_t strLen, bool isNull, bool retIsNull);
 
-extern "C" DLLEXPORT bool IsNotNullStr(const char *str, int32_t strLen, bool isNull, bool retIsNull);
 
-extern "C" DLLEXPORT bool IsNotNullChar(const char *str, int32_t strWidth, int32_t strLen, bool isNull, bool retIsNull);
 
 extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRepNotReplace(int64_t contextPtr, const char *str, int32_t strLen,
                                                                    const char *searchStr, int32_t searchLen,

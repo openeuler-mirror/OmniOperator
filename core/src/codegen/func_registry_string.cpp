@@ -111,11 +111,7 @@ const std::string IsNullFnStr()
     return isNullFnStr;
 }
 
-const std::string IsNotNullFnStr()
-{
-    const std::string isNotNullFnStr = "isnotnull";
-    return isNotNullFnStr;
-}
+
 
 const std::string CastNullFnStr()
 {
@@ -302,10 +298,7 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
                  INPUT_DATA_AND_NULL),
         Function(reinterpret_cast<void *>(IsNullChar), IsNullFnStr(), {}, {OMNI_CHAR}, OMNI_BOOLEAN,
                  INPUT_DATA_AND_NULL),
-        Function(reinterpret_cast<void *>(IsNotNullStr), IsNotNullFnStr(), {}, {OMNI_VARCHAR}, OMNI_BOOLEAN,
-                 INPUT_DATA_AND_NULL),
-        Function(reinterpret_cast<void *>(IsNotNullChar), IsNotNullFnStr(), {}, {OMNI_CHAR}, OMNI_BOOLEAN,
-                 INPUT_DATA_AND_NULL),
+        
 
         // replace functions
         Function(reinterpret_cast<void *>(LengthCharReturnInt32), LengthFnStr(), {}, {OMNI_CHAR}, OMNI_INT, INPUT_DATA),
