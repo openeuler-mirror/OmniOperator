@@ -6,6 +6,7 @@
 #pragma once
 #include "util/compiler_util.h"
 #include <iostream>
+#include "codegen/bloom_filter.h"
 #include "codegen/functions/murmur3_hash.h"
 #include "type/decimal128.h"
 #include "../registration/SimpleFunctionRegistry.h"
@@ -191,5 +192,98 @@ void RegisterXxHash64Function(const std::string &name)
     VectorFunction::RegisterVectorFunction(name, {OMNI_DECIMAL64, OMNI_LONG}, OMNI_LONG, std::make_shared<XxHash64Function>());
     VectorFunction::RegisterVectorFunction(name, {OMNI_DECIMAL128, OMNI_LONG}, OMNI_LONG, std::make_shared<XxHash64Function>());
     VectorFunction::RegisterVectorFunction(name, {OMNI_VARBINARY, OMNI_LONG}, OMNI_LONG, std::make_shared<XxHash64Function>());
+}
+
+class MightContainFunction : public VectorFunction {
+public:
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
+        op::ExecutionContext *context) const override
+    {
+
+        auto hashVec = args.top();
+        args.pop();
+        auto bloomFilterAddrVec = args.top();
+        args.pop();
+
+        const auto size = context->GetResultRowSize();
+        if (result == nullptr) {
+            result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
+        }
+        auto resultVector = reinterpret_cast<Vector<bool> *>(result);
+
+        // SIMD
+        if (TryMightContainBatch(bloomFilterAddrVec, hashVec, resultVector, size)) {
+            delete hashVec;
+            delete bloomFilterAddrVec;
+            return;
+        }
+
+        // Scalar
+        for (size_t i = 0; i < size; ++i) {
+            resultVector->SetNotNull(i);
+            if (bloomFilterAddrVec->IsNull(i) || hashVec->IsNull(i)) {
+                resultVector->SetValue(i, false);
+                continue;
+            }
+
+            auto bloomFilterAddr = VectorHelper::GetValueFromVector<int64_t>(bloomFilterAddrVec, i);
+            if (bloomFilterAddr == 0) {
+                resultVector->SetValue(i, false);
+                continue;
+            }
+
+            auto bloomFilter = reinterpret_cast<op::BloomFilter *>(bloomFilterAddr);
+            auto hashValue = VectorHelper::GetValueFromVector<int64_t>(hashVec, i);
+            resultVector->SetValue(i, bloomFilter->MightContainLong(hashValue));
+        }
+
+        delete hashVec;
+        delete bloomFilterAddrVec;
+    }
+
+private:
+    bool TryMightContainBatch(BaseVector *bloomFilterAddrVec, BaseVector *hashVec, Vector<bool> *resultVector,
+        size_t size) const
+    {
+        if (size == 0 || bloomFilterAddrVec->HasNull() || hashVec->HasNull() ||
+            hashVec->GetEncoding() != OMNI_FLAT || resultVector->GetEncoding() != OMNI_FLAT) {
+            return false;
+        }
+
+        auto *hashValues = reinterpret_cast<int64_t *>(VectorHelper::UnsafeGetValues(hashVec));
+        auto *resultValues = reinterpret_cast<bool *>(VectorHelper::UnsafeGetValues(resultVector));
+        if (hashValues == nullptr || resultValues == nullptr) {
+            return false;
+        }
+
+        int64_t bloomFilterAddr = VectorHelper::GetValueFromVector<int64_t>(bloomFilterAddrVec, 0);
+        if (bloomFilterAddr == 0) {
+            return false;
+        }
+
+        if (bloomFilterAddrVec->GetEncoding() != OMNI_ENCODING_CONST) {
+            for (size_t i = 1; i < size; i++) {
+                if (VectorHelper::GetValueFromVector<int64_t>(bloomFilterAddrVec, i) != bloomFilterAddr) {
+                    return false;
+                }
+            }
+        }
+
+        auto bloomFilter = reinterpret_cast<op::BloomFilter *>(bloomFilterAddr);
+        if (bloomFilter->GetVersion() != op::BloomFilter::VERSION) {
+            return false;
+        }
+
+        resultVector->SetNulls(0, false, static_cast<int32_t>(size));
+        resultVector->SetNullFlag(false);
+        bloomFilter->MightContainLongBatch(hashValues, resultValues, static_cast<int32_t>(size));
+        return true;
+    }
+};
+
+void RegisterMightContainFunction(const std::string &name)
+{
+    VectorFunction::RegisterVectorFunction(name, {OMNI_LONG, OMNI_LONG}, OMNI_BOOLEAN,
+        std::make_shared<MightContainFunction>());
 }
 }

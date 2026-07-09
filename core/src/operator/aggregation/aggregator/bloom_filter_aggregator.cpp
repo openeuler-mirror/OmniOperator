@@ -5,8 +5,31 @@
 
 #include "bloom_filter_aggregator.h"
 
+#include <algorithm>
+
 namespace omniruntime {
 namespace op {
+namespace {
+constexpr int32_t DEFAULT_BLOOM_FILTER_CAPACITY = 100000;
+
+int32_t NextPowerOfTwo(int32_t value)
+{
+    int32_t result = 1;
+    while (result < value) {
+        result <<= 1;
+    }
+    return result;
+}
+
+int32_t GetDefaultBloomFilterWordsNum(int32_t version)
+{
+    if (version == BloomFilter::VERSION) {
+        return std::max<int32_t>(4, NextPowerOfTwo(DEFAULT_BLOOM_FILTER_CAPACITY) / 4);
+    }
+    return DEFAULT_BLOOM_FILTER_CAPACITY;
+}
+}
+
 /**
  * Invoked by GetOutput, it extracts the serialized data of BloomFilter from AggregateState and stores it into the specified BaseVector.
  *
@@ -61,9 +84,8 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> void BloomFilterAggregator<IN_ID,
 {
     auto *bloomFilterAggState = BloomFilterAggState::CastState(state + aggStateOffset);
 
-    // todo: The length is tentatively set at 100000, pending performance optimization
-    int32_t size = 100000;
-    int32_t version = 1;
+    int32_t size = GetDefaultBloomFilterWordsNum(bloomFilterVersion);
+    int32_t version = bloomFilterVersion;
     auto bloomFilter = std::make_shared<omniruntime::op::BloomFilter>(size, version);
     // Get the serialized length
     size_t serializedSize = bloomFilter->GetSerializedSize();
@@ -178,10 +200,14 @@ void BloomFilterAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternal(VectorB
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 BloomFilterAggregator<IN_ID, OUT_ID>::BloomFilterAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
-    std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
-    : TypedAggregator(OMNI_AGGREGATION_TYPE_BLOOM_FILTER, inputTypes, outputTypes, channels, inputRaw, outputPartial,
-    isOverflowAsNull)
-{}
+    std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull,
+    int32_t bloomFilterVersion, FunctionType aggregationType)
+    : TypedAggregator(aggregationType, inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull),
+    bloomFilterVersion(bloomFilterVersion)
+{
+    LogWarn("BloomFilterAggregator uses BloomFilter version %d, aggregation type %d.", bloomFilterVersion,
+        static_cast<int32_t>(aggregationType));
+}
 
 // Explicit template instantiation
 // Defining templated aggregators in header file consume a lot of memory during compilation
