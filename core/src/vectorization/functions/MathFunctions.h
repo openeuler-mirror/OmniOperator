@@ -125,6 +125,26 @@ namespace omniruntime::vectorization {
     };
 
     template <typename T>
+    struct SinFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = std::sin(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct TanFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = std::tan(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
     struct CbrtFunction {
         ALWAYS_INLINE void call(double &result, double a) {
             result = std::cbrt(a);
@@ -228,6 +248,16 @@ namespace omniruntime::vectorization {
     };
 
     template <typename T>
+    struct TanhFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            result = std::tanh(a);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
     struct HypotFunction {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput &result, const TInput &a, const TInput &b)
@@ -253,6 +283,17 @@ namespace omniruntime::vectorization {
         ALWAYS_INLINE Status call(TInput &result, const TInput &a)
         {
             result = a * (180.0 / M_PI);
+            return Status::OK();
+        }
+    };
+
+    template <typename T>
+    struct RadiansFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            // radians = degrees * π / 180  (inverse of DegreesFunction)
+            result = a * (M_PI / 180.0);
             return Status::OK();
         }
     };
