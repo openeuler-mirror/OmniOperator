@@ -12,8 +12,13 @@
 #include "dtoa.h"
 #include "type/string_Impl.h"
 #include "type/TimestampConversion.h"
+#include <nlohmann/json.hpp>
+#include <cctype>
+#include <functional>
+#include <unordered_map>
 
 namespace omniruntime::codegen::function {
+using JsonDocument = nlohmann::ordered_json;
 
 const char *INT64_MIN_STR = "-9223372036854775808";
 
@@ -171,6 +176,489 @@ extern "C" DLLEXPORT const char* RegexpExtractRetNull(int64_t contextPtr, const 
         *outIsNull = true;
         *outLen = 0;
         return nullptr;
+    }
+}
+
+// JSON parse cache to improve performance for repeated JSON queries
+// Uses thread-local storage to avoid synchronization overhead
+namespace {
+    // Simple hash function for JSON content
+    inline uint64_t HashJsonContent(const std::string& content)
+    {
+        // FNV-1a hash algorithm
+        uint64_t hash = 14695981039346656037ULL;
+        for (char c : content) {
+            hash ^= static_cast<unsigned char>(c);
+            hash *= 1099511628211ULL;
+        }
+        return hash;
+    }
+
+    struct JsonCache {
+        uint64_t hash = 0;
+        JsonDocument parsedJson;
+        std::string lastJsonContent;
+        
+        bool IsCacheValid(const std::string& jsonContent) const
+        {
+            return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
+        }
+        
+        void SetCache(const std::string& jsonContent, const JsonDocument& json)
+        {
+            hash = HashJsonContent(jsonContent);
+            lastJsonContent = jsonContent;
+            parsedJson = json;
+        }
+    };
+    
+    // Thread-local cache for JSON parsing
+    // This avoids re-parsing the same JSON in the same thread
+    thread_local JsonCache THREAD_LOCAL_JSON_CACHE;
+}
+
+// Enhanced JSON path parser supporting $.a.b, $[0], $['key'], $["key"], and nested combinations
+// Also handles keys with special characters when quoted
+static std::vector<std::string> ParseJsonPath(const std::string& path)
+{
+    std::vector<std::string> keys;
+    if (path.empty() || path[0] != '$') {
+        return keys;
+    }
+    
+    enum State {
+        EXPECT_DOT_OR_BRACKET,  // After key, expect . or [
+        IN_DOT_NOTATION,         // After ., reading key until . or [
+        IN_BRACKET,              // After [, reading content until ]
+        IN_QUOTED_KEY            // Inside quotes within bracket
+    };
+    
+    State state = EXPECT_DOT_OR_BRACKET;
+    std::string currentKey;
+    char quoteChar = '\0';
+    
+    for (size_t i = 1; i < path.size(); ++i) {
+        char c = path[i];
+        
+        switch (state) {
+            case EXPECT_DOT_OR_BRACKET:
+                if (c == '.') {
+                    state = IN_DOT_NOTATION;
+                } else if (c == '[') {
+                    state = IN_BRACKET;
+                } else if (!isspace(c)) {
+                    // Invalid format, should start with . or [
+                    return keys;
+                }
+                break;
+                
+            case IN_DOT_NOTATION:
+                if (c == '.') {
+                    // Save current key when encountering next dot
+                    if (!currentKey.empty()) {
+                        keys.push_back(currentKey);
+                        currentKey.clear();
+                    }
+                    // Stay in IN_DOT_NOTATION state to read next key
+                } else if (c == '[') {
+                    if (!currentKey.empty()) {
+                        keys.push_back(currentKey);
+                        currentKey.clear();
+                    }
+                    state = IN_BRACKET;
+                } else if (isspace(c)) {
+                    // Stop at whitespace
+                    if (!currentKey.empty()) {
+                        keys.push_back(currentKey);
+                        currentKey.clear();
+                    }
+                    state = EXPECT_DOT_OR_BRACKET;
+                } else {
+                    currentKey += c;
+                }
+                break;
+                
+            case IN_BRACKET:
+                if (c == '\'' || c == '"') {
+                    quoteChar = c;
+                    state = IN_QUOTED_KEY;
+                } else if (c == ']') {
+                    if (!currentKey.empty()) {
+                        keys.push_back(currentKey);
+                        currentKey.clear();
+                    }
+                    state = EXPECT_DOT_OR_BRACKET;
+                } else if (!isspace(c)) {
+                    currentKey += c;
+                }
+                break;
+                
+            case IN_QUOTED_KEY:
+                if (c == '\\' && i + 1 < path.size()) {
+                    // Handle escape sequences
+                    char nextChar = path[i + 1];
+                    if (nextChar == quoteChar || nextChar == '\\') {
+                        currentKey += nextChar;
+                        ++i;  // Skip next character
+                    } else {
+                        currentKey += c;
+                    }
+                } else if (c == quoteChar) {
+                    // End of quoted key, expect ] next
+                    state = IN_BRACKET;
+                    quoteChar = '\0';
+                } else {
+                    currentKey += c;
+                }
+                break;
+        }
+    }
+    
+    // Handle remaining key
+    if (!currentKey.empty()) {
+        keys.push_back(currentKey);
+    }
+    
+    return keys;
+}
+
+static bool TryFormatJsonValueScalar(const JsonDocument &value, std::string *result)
+{
+    if (result == nullptr) {
+        return false;
+    }
+
+    if (value.is_string()) {
+        *result = value.get<std::string>();
+        return true;
+    }
+
+    if (value.is_boolean()) {
+        *result = value.get<bool>() ? "true" : "false";
+        return true;
+    }
+
+    if (value.is_number_integer()) {
+        *result = std::to_string(value.get<JsonDocument::number_integer_t>());
+        return true;
+    }
+
+    if (value.is_number_unsigned()) {
+        *result = std::to_string(value.get<JsonDocument::number_unsigned_t>());
+        return true;
+    }
+
+    if (value.is_number_float()) {
+        *result = DoubleToString::DoubleToStringConverter(value.get<double>());
+        return true;
+    }
+
+    return false;
+}
+
+static const char *HandleJsonValueEmptyBehavior(int64_t contextPtr, int32_t emptyBehavior, const char *defaultOnEmpty,
+                                                int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull, bool *outIsNull,
+                                                int32_t *outLen)
+{
+    if (emptyBehavior == 2 && !defaultOnEmptyIsNull) {
+        *outIsNull = false;
+        *outLen = defaultOnEmptyLen;
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy_s(ret, *outLen + 1, defaultOnEmpty, *outLen + 1);
+        return ret;
+    }
+
+    if (emptyBehavior == 1) {
+        SetError(contextPtr, "JSON_VALUE error: Empty result");
+    }
+    *outIsNull = true;
+    *outLen = 0;
+    return nullptr;
+}
+
+extern "C" DLLEXPORT const char* JsonValueRetNull(int64_t contextPtr, const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
+                                                   const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
+                                                   bool *outIsNull, int32_t *outLen)
+{
+    if (outIsNull == nullptr || outLen == nullptr) {
+        return nullptr;
+    }
+    
+    if (jsonStrIsNull || pathStrIsNull) {
+        *outIsNull = true;
+        *outLen = 0;
+        return nullptr;
+    }
+    
+    std::string jsonContent(jsonStr, jsonStrLen);
+    std::string pathContent(pathStr, pathStrLen);
+    
+    try {
+        // Use cached JSON if available, otherwise parse and cache
+        JsonDocument* jsonData;
+        if (THREAD_LOCAL_JSON_CACHE.IsCacheValid(jsonContent)) {
+            jsonData = &THREAD_LOCAL_JSON_CACHE.parsedJson;
+        } else {
+            JsonDocument newJson;
+            // Try parsing the original JSON first
+            try {
+                newJson = JsonDocument::parse(jsonContent);
+            } catch (...) {
+                // If parsing fails, try to fix escaped quotes
+                // This handles cases where input has \ instead of " for JSON string delimiters
+                std::string fixedJsonContent;
+                fixedJsonContent.reserve(jsonContent.size());
+                for (size_t j = 0; j < jsonContent.size(); j++) {
+                    if (jsonContent[j] == '\\') {
+                        if (j + 1 < jsonContent.size()) {
+                            char next = jsonContent[j + 1];
+                            if (next == '\\' || next == '"') {
+                                fixedJsonContent += jsonContent[j];
+                            } else {
+                                fixedJsonContent += '"';
+                            }
+                        } else {
+                            fixedJsonContent += '"';
+                        }
+                    } else {
+                        fixedJsonContent += jsonContent[j];
+                    }
+                }
+                newJson = JsonDocument::parse(fixedJsonContent);
+                jsonContent = fixedJsonContent; // Update for cache validation
+            }
+            THREAD_LOCAL_JSON_CACHE.SetCache(jsonContent, newJson);
+            jsonData = &THREAD_LOCAL_JSON_CACHE.parsedJson;
+        }
+        
+        std::vector<std::string> keys = ParseJsonPath(pathContent);
+        
+        // If path parsing failed (empty keys), return null
+        if (keys.empty()) {
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        
+        JsonDocument* current = jsonData;
+        for (const auto& key : keys) {
+            if (current->is_object()) {
+                if (current->contains(key)) {
+                    current = &(*current)[key];
+                } else {
+                    *outIsNull = true;
+                    *outLen = 0;
+                    return nullptr;
+                }
+            } else if (current->is_array()) {
+                try {
+                    size_t index = std::stoul(key);
+                    if (index < current->size()) {
+                        current = &(*current)[index];
+                    } else {
+                        *outIsNull = true;
+                        *outLen = 0;
+                        return nullptr;
+                    }
+                } catch (...) {
+                    *outIsNull = true;
+                    *outLen = 0;
+                    return nullptr;
+                }
+            } else {
+                *outIsNull = true;
+                *outLen = 0;
+                return nullptr;
+            }
+        }
+        
+        if (current->is_null()) {
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        
+        std::string result;
+        if (!TryFormatJsonValueScalar(*current, &result)) {
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        
+        *outIsNull = false;
+        *outLen = static_cast<int32_t>(result.size());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
+        return ret;
+        
+    } catch (const std::exception&) {
+        *outIsNull = true;
+        *outLen = 0;
+        return nullptr;
+    }
+}
+
+// Extended JSON_VALUE function with ON EMPTY/ERROR behaviors
+// emptyBehavior: 0=NULL, 1=ERROR, 2=DEFAULT
+// errorBehavior: 0=NULL, 1=ERROR, 2=DEFAULT
+extern "C" DLLEXPORT const char* JsonValueExtended(
+    int64_t contextPtr,
+    const char *jsonStr, int32_t jsonStrLen, bool jsonStrIsNull,
+    const char *pathStr, int32_t pathStrWidth, int32_t pathStrLen, bool pathStrIsNull,
+    int32_t emptyBehavior, const char *defaultOnEmpty, int32_t defaultOnEmptyLen, bool defaultOnEmptyIsNull,
+    int32_t errorBehavior, const char *defaultOnError, int32_t defaultOnErrorLen, bool defaultOnErrorIsNull,
+    bool *outIsNull, int32_t *outLen)
+{
+    if (outIsNull == nullptr || outLen == nullptr) {
+        return nullptr;
+    }
+    
+    if (jsonStrIsNull || pathStrIsNull) {
+        // Handle NULL input based on error behavior
+        if (errorBehavior == 2 && !defaultOnErrorIsNull) { // DEFAULT
+            *outIsNull = false;
+            *outLen = defaultOnErrorLen;
+            auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+            memcpy_s(ret, *outLen + 1, defaultOnError, *outLen + 1);
+            return ret;
+        } else if (errorBehavior == 1) { // ERROR
+            SetError(contextPtr, "JSON_VALUE error: NULL input");
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        } else { // NULL
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+    }
+    
+    std::string jsonContent(jsonStr, jsonStrLen);
+    std::string pathContent(pathStr, pathStrLen);
+    
+    try {
+        // Use cached JSON if available, otherwise parse and cache
+        JsonDocument* jsonData;
+        if (THREAD_LOCAL_JSON_CACHE.IsCacheValid(jsonContent)) {
+            jsonData = &THREAD_LOCAL_JSON_CACHE.parsedJson;
+        } else {
+            JsonDocument newJson;
+            try {
+                newJson = JsonDocument::parse(jsonContent);
+            } catch (...) {
+                std::string fixedJsonContent;
+                fixedJsonContent.reserve(jsonContent.size());
+                for (size_t j = 0; j < jsonContent.size(); j++) {
+                    if (jsonContent[j] == '\\') {
+                        if (j + 1 < jsonContent.size()) {
+                            char next = jsonContent[j + 1];
+                            if (next == '\\' || next == '"') {
+                                fixedJsonContent += jsonContent[j];
+                            } else {
+                                fixedJsonContent += '"';
+                            }
+                        } else {
+                            fixedJsonContent += '"';
+                        }
+                    } else {
+                        fixedJsonContent += jsonContent[j];
+                    }
+                }
+                newJson = JsonDocument::parse(fixedJsonContent);
+                jsonContent = fixedJsonContent;
+            }
+            THREAD_LOCAL_JSON_CACHE.SetCache(jsonContent, newJson);
+            jsonData = &THREAD_LOCAL_JSON_CACHE.parsedJson;
+        }
+        
+        std::vector<std::string> keys = ParseJsonPath(pathContent);
+        
+        if (keys.empty()) {
+            // Invalid path - treat as error
+            if (errorBehavior == 2 && !defaultOnErrorIsNull) { // DEFAULT
+                *outIsNull = false;
+                *outLen = defaultOnErrorLen;
+                auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+                memcpy_s(ret, *outLen + 1, defaultOnError, *outLen + 1);
+                return ret;
+            } else if (errorBehavior == 1) { // ERROR
+                SetError(contextPtr, "JSON_VALUE error: Invalid JSON path");
+                *outIsNull = true;
+                *outLen = 0;
+                return nullptr;
+            } else { // NULL
+                *outIsNull = true;
+                *outLen = 0;
+                return nullptr;
+            }
+        }
+        
+        JsonDocument* current = jsonData;
+        bool found = true;
+        
+        for (const auto& key : keys) {
+            if (current->is_object()) {
+                if (current->contains(key)) {
+                    current = &(*current)[key];
+                } else {
+                    found = false;
+                    break;
+                }
+            } else if (current->is_array()) {
+                try {
+                    size_t index = std::stoul(key);
+                    if (index < current->size()) {
+                        current = &(*current)[index];
+                    } else {
+                        found = false;
+                        break;
+                    }
+                } catch (...) {
+                    found = false;
+                    break;
+                }
+            } else {
+                found = false;
+                break;
+            }
+        }
+        
+        if (!found || current->is_null()) {
+            return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
+                defaultOnEmptyIsNull, outIsNull, outLen);
+        }
+
+        std::string result;
+        if (!TryFormatJsonValueScalar(*current, &result)) {
+            return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
+                defaultOnEmptyIsNull, outIsNull, outLen);
+        }
+        
+        *outIsNull = false;
+        *outLen = static_cast<int32_t>(result.size());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
+        return ret;
+        
+    } catch (const std::exception& e) {
+        // Error during processing - apply error behavior
+        if (errorBehavior == 2 && !defaultOnErrorIsNull) { // DEFAULT
+            *outIsNull = false;
+            *outLen = defaultOnErrorLen;
+            auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+            memcpy_s(ret, *outLen + 1, defaultOnError, *outLen + 1);
+            return ret;
+        } else if (errorBehavior == 1) { // ERROR
+            std::string errMsg = std::string("JSON_VALUE error: ") + e.what();
+            SetError(contextPtr, errMsg.c_str());
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        } else { // NULL
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
     }
 }
 
@@ -1790,4 +2278,3 @@ extern "C" DLLEXPORT int64_t CastStringToTimestampReturnNull(bool *isNull, const
     return omniruntime::type::util::fromParsedTimestampWithTimeZone(conversionResult.value(), sessionTimezone).toMicros();
 }
 }
-
