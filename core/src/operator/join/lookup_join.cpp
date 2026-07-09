@@ -1009,7 +1009,7 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                                     if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_VARBINARY ||
                                         typeId == type::OMNI_CHAR) {
                                         auto* dataPtr = RowContainer::ReadValue<char*>(cur, col.Offset());
-                                        if (!dataPtr) {
+                                        if (dataPtr) {
                                             uint8_t lenSize = static_cast<uint8_t>(dataPtr[0]);
                                             uint32_t strLen = 0;
                                             memcpy(&strLen, dataPtr + 1, lenSize);
