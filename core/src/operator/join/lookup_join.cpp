@@ -963,50 +963,76 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                 auto probeHashColsCount = probeHashCols.size();
                 uint32_t partition = partitionMask;
                 InitForProbe<hasJoinFilter>(partition);
-                for (int32_t pos = curProbePosition; pos < inputRowCount; ++pos) {
-                    if (curProbeNulls[pos]) continue;
-                    uint32_t partition = singleHT ? partitionMask :
-                        HashUtil::GetRawHashPartition(curProbeHashes[pos], partitionMask);
-                    auto* chainHead = varg.Find(probeHashColumns, probeHashColsCount, pos, partition);
-                    if (!chainHead) continue;
-                    if constexpr (hasJoinFilter) {
-                        ProbeJoinPosition<hasJoinFilter>(pos);
-                    }
-                    auto buildColumns = varg.GetColumns(partition);
-                    auto payloadOff = rc->PayloadOffset();
-                    char* cur = chainHead;
-                    while (cur) {
-                        if constexpr (!hasJoinFilter) {
-                            outputBuilder->AppendRowTaper(pos, buildColumns, 0, cur);
-                        } else {
-                            bool filterOk = true;
-                            for (size_t j = 0; j < buildFilterColsSize; ++j) {
-                                uint32_t colIdx = buildFilterCols[j];
-                                int32_t buildColIdx = colIdx - originalProbeColsCount;
-                                auto col = rc->ColumnAt(buildColIdx);
-                                nulls[colIdx] =
-                                    RowContainer::IsNullAt(cur, col.NullByte(), col.NullMask());
-                                auto typeId = buildFilterTypeIds[j];
-                                if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_VARBINARY ||
-                                    typeId == type::OMNI_CHAR) {
-                                    auto* sr = reinterpret_cast<const type::StringRef*>(
-                                        cur + col.Offset());
-                                    values[colIdx] = reinterpret_cast<int64_t>(sr->data);
-                                    lengths[colIdx] = static_cast<int32_t>(sr->size);
-                                } else {
-                                    values[colIdx] = reinterpret_cast<int64_t>(cur + col.Offset());
-                                }
-                            }
-                            filterOk = simpleFilter->Evaluate(
-                                values, nulls, lengths,
-                                reinterpret_cast<int64_t>(contextPtr));
-                            if (filterOk) {
-                                outputBuilder->AppendRowTaper(pos, buildColumns, 0, cur);
-                            }
-                        }
-                        cur = *RowContainer::NextPtr(cur, payloadOff);
+                // 第 1 轮：批量探测所有 probe 行，收集 chainHead
+                int32_t numProbeRows = inputRowCount - curProbePosition;
+                std::vector<char*> chainHeads(numProbeRows, nullptr);
+                varg.FindBatch(
+                    curProbePosition, inputRowCount,
+                    curProbeNulls,
+                    probeHashColumns, probeHashColsCount,
+                    singleHT, partitionMask, curProbeHashes,
+                    chainHeads);
+
+                // 对命中行调用 ProbeJoinPosition（per-row setup）
+                for (int32_t i = 0; i < numProbeRows; ++i) {
+                    if (chainHeads[i]) {
+                        ProbeJoinPosition<hasJoinFilter>(curProbePosition + i);
                     }
                 }
+
+                // 第 2 轮：批量展开冲突链 + filter 评估 + 输出（lambda，捕获局部变量避免传参）
+                auto listResult = [&](int32_t probeStart, int32_t probeEnd, std::vector<char*>& heads) {
+                    auto payloadOff = rc->PayloadOffset();
+                    for (int32_t pos = probeStart; pos < probeEnd; ++pos) {
+                        if (curProbeNulls[pos]) continue;
+                        int32_t idx = pos - probeStart;
+                        char* chainHead = heads[idx];
+                        if (!chainHead) continue;
+
+                        uint32_t part = singleHT ? partitionMask :
+                            HashUtil::GetRawHashPartition(curProbeHashes[pos], partitionMask);
+                        auto buildColumns = varg.GetColumns(part);
+
+                        char* cur = chainHead;
+                        while (cur) {
+                            if constexpr (!hasJoinFilter) {
+                                outputBuilder->AppendRowTaper(pos, buildColumns, 0, cur);
+                            } else {
+                                bool filterOk = true;
+                                for (size_t j = 0; j < buildFilterColsSize; ++j) {
+                                    uint32_t colIdx = buildFilterCols[j];
+                                    int32_t buildColIdx = colIdx - originalProbeColsCount;
+                                    auto col = rc->ColumnAt(buildColIdx);
+                                    nulls[colIdx] =
+                                        RowContainer::IsNullAt(cur, col.NullByte(), col.NullMask());
+                                    auto typeId = buildFilterTypeIds[j];
+                                    if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_VARBINARY ||
+                                        typeId == type::OMNI_CHAR) {
+                                        auto* dataPtr = RowContainer::ReadValue<char*>(cur, col.Offset());
+                                        if (!dataPtr) {
+                                            uint8_t lenSize = static_cast<uint8_t>(dataPtr[0]);
+                                            uint32_t strLen = 0;
+                                            memcpy(&strLen, dataPtr + 1, lenSize);
+                                            values[colIdx] =
+                                                reinterpret_cast<int64_t>(dataPtr + 1 + lenSize);
+                                            lengths[colIdx] = static_cast<int32_t>(strLen);
+                                        }
+                                    } else {
+                                        values[colIdx] = reinterpret_cast<int64_t>(cur + col.Offset());
+                                    }
+                                }
+                                filterOk = simpleFilter->Evaluate(
+                                    values, nulls, lengths,
+                                    reinterpret_cast<int64_t>(contextPtr));
+                                if (filterOk) {
+                                    outputBuilder->AppendRowTaper(pos, buildColumns, 0, cur);
+                                }
+                            }
+                            cur = *RowContainer::NextPtr(cur, payloadOff);
+                        }
+                    }
+                };
+                listResult(curProbePosition, inputRowCount, chainHeads);
             }, *hashTables);
             curProbePosition = inputRowCount;
             return;

@@ -190,6 +190,11 @@ public:
     ALWAYS_INLINE RowContainer* GetTaperRowContainer(int32_t) const { return nullptr; }
     ALWAYS_INLINE const std::vector<int32_t>& GetTaperStoredColIndices() const { return buildHashCols; }
     ALWAYS_INLINE char* Find(BaseVector**, int32_t, int32_t, uint32_t) { return nullptr; }
+    ALWAYS_INLINE void FindBatch(int32_t, int32_t, const std::vector<int8_t>&,
+        omniruntime::vec::BaseVector**, int32_t, bool, uint32_t,
+        const std::vector<int64_t>&, std::vector<char*>&) const {}
+    ALWAYS_INLINE bool IsSerMode() const { return false; }
+    ALWAYS_INLINE void SetSerMode() {}
 
     void InitBuildFilterCols(std::vector<int32_t> &buildFilterCols, int32_t originalProbeColsCount,
         std::vector<std::vector<BaseVector **>> &tableBuildFilterColPtrs);

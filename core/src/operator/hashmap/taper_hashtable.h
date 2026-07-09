@@ -187,6 +187,16 @@ class TaperHashTableBase : public TaperContainer {
     return GetChunksCapacity() * elemNumInChunk_;
   }
 
+
+  /// Reserve capacity for at least numElements. Called before any insert.
+  void Reserve(size_t numElements) {
+    auto needed = BitUtil::divRoundUp(numElements, static_cast<size_t>(elemNumInChunk_));
+    auto cap = BitUtil::nextPowerOfTwo(needed);
+    auto total = cap * elemNumInChunk_;
+    if (numElements * 10 > total * 9) cap <<= 1;  // exceeds 90% → double
+    if (cap <= GetChunksCapacity()) return;
+    Init(static_cast<uint32_t>(cap - 1));
+  }
   void Clear() override {
     FreeChunks();
     Init(0);
@@ -380,6 +390,28 @@ class TaperHashTableBase : public TaperContainer {
 
   BatchContext emplaceContext_;
   BatchContext rehashContext_;
+
+  struct ProbeContext {
+    std::vector<size_t> hashVals;
+    std::vector<ChunkPos> chunkPositions;
+    std::vector<uint32_t> pendingIndices;
+    size_t capacity = 0;
+  };
+  ProbeContext probeContext_;
+
+  void ResetProbeContext(const Key* keys, uint32_t numKeys) {
+    if (probeContext_.capacity < numKeys) {
+      probeContext_.hashVals.resize(numKeys);
+      probeContext_.chunkPositions.resize(numKeys);
+      probeContext_.pendingIndices.resize(numKeys);
+      probeContext_.capacity = numKeys;
+    }
+    for (uint32_t i = 0; i < numKeys; ++i) {
+      probeContext_.hashVals[i] = Hash(keys[i]);
+      probeContext_.chunkPositions[i] = GetChunkPos(probeContext_.hashVals[i]);
+    }
+  }
+
   static constexpr int32_t kStringPrefetchDist = 16;
 
   uint32_t size_ = 0;
@@ -639,6 +671,84 @@ class TaperHashTableBase : public TaperContainer {
         tryEmplaceIdx(emplaceContext_.collisionIndices[idx].pos, idx, [&] {
           resizeProc(idx + 1, curCount);
         });
+      }
+    }
+  }
+
+  // --- Probe counterpart of EmplaceImpl (read-only) ------------------------
+  template <
+      typename Derived,
+      typename FKCmp,
+      typename FInit,
+      typename FUpdate>
+  void ProbeImpl(
+      Derived& derived,
+      const Key& key,
+      FKCmp&& fKeyCmp,
+      FInit&& fInit,
+      FUpdate&& fUpdate) {
+    auto hashVal = Hash(key);
+    auto chunkPos = GetChunkPos(hashVal);
+    uint32_t collisionBatch = 1;
+    while (!derived.template TryProbeAtPos<false>(
+        key, hashVal, chunkPos,
+        std::forward<FKCmp>(fKeyCmp),
+        std::forward<FInit>(fInit),
+        std::forward<FUpdate>(fUpdate))) {
+      chunkPos = GetRehashPos(collisionBatch, chunkPos);
+      collisionBatch++;
+    }
+  }
+
+  // --- Probe counterpart of EmplaceBatchImpl (read-only, no expansion) -----
+  template <
+      typename Derived,
+      typename FKCmp,
+      typename FInit,
+      typename FUpdate>
+  void ProbeBatchImpl(
+      Derived& derived,
+      const Key* keys,
+      uint32_t numKeys,
+      FKCmp&& fKeyCmp,
+      FInit&& fInit,
+      FUpdate&& fUpdate) {
+    ResetProbeContext(keys, numKeys);
+    uint32_t collisionBatch = 1;
+    uint32_t pendingCount = 0;
+
+    auto tryProbeIdx = [&](uint32_t keyIdx, int32_t hashIdx) {
+      auto succeed = derived.template TryProbeAtPos<false>(
+          KeyAt(keys, keyIdx),
+          probeContext_.hashVals[hashIdx],
+          probeContext_.chunkPositions[hashIdx],
+          [&](const Key& key, Chunk& chunk, uint8_t slot) {
+            return fKeyCmp(keyIdx, key, chunk, slot);
+          },
+          [&](char* data) { fInit(keyIdx, data); },
+          [&](char* data, bool initFlag) { fUpdate(keyIdx, data, initFlag); });
+      if (!succeed) {
+        probeContext_.pendingIndices[pendingCount] = keyIdx;
+        probeContext_.chunkPositions[pendingCount] =
+            GetRehashPos(collisionBatch, probeContext_.chunkPositions[hashIdx]);
+        pendingCount++;
+      }
+    };
+
+    HwpPrefetch(probeContext_.chunkPositions);
+    for (uint32_t i = 0; i < numKeys; ++i) {
+      prefetchIdx(probeContext_.chunkPositions, i, numKeys);
+      tryProbeIdx(i, i);
+    }
+
+    while (pendingCount > 0) {
+      collisionBatch++;
+      uint32_t curCount = pendingCount;
+      pendingCount = 0;
+      HwpPrefetch(probeContext_.chunkPositions, curCount);
+      for (uint32_t j = 0; j < curCount; j++) {
+        prefetchIdx(probeContext_.chunkPositions, j, curCount); 
+        tryProbeIdx(probeContext_.pendingIndices[j], j);
       }
     }
   }
@@ -981,7 +1091,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
     elemNum = std::min<uint8_t>(elemNum, 8);
     Base::SetElemNumInChunk(elemNum);
     emptyTags_ = taper::BroadcastByte(Base::kEmptyTag, elemNum);
-    Base::Init(15); // TODO fix
+    Base::Init(0);
   }
 
   template <typename Filter, typename FInit, typename FUpdate>
@@ -1002,6 +1112,20 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
         std::forward<FInit>(fInit),
         std::forward<FUpdate>(fUpdate));
   }
+  // --- Probe counterpart of EmplaceBatch (read-only) -----------------------
+  template <typename FKCmp, typename FInit, typename FUpdate>
+  void ProbeBatch(
+      const Key* keys,
+      uint32_t numKeys,
+      FKCmp&& fKeyCmp,
+      FInit&& fInit,
+      FUpdate&& fUpdate) {
+    Base::ProbeBatchImpl(*this, keys, numKeys,
+        std::forward<FKCmp>(fKeyCmp),
+        std::forward<FInit>(fInit),
+        std::forward<FUpdate>(fUpdate));
+  }
+
   template <typename FKCmp, typename FInit, typename FUpdate>
   void
   Emplace(const Key& key, FKCmp&& fKeyCmp, FInit&& fInit, FUpdate&& fUpdate) {
@@ -1035,6 +1159,15 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
     //   }
     //   chunkPos = (chunkPos + 1) & lastChunkIdx;
     // }
+  }
+
+  // --- Probe counterpart of Emplace (same callbacks, read-only) -----------
+  template <typename FKCmp, typename FInit, typename FUpdate>
+  void Probe(const Key& key, FKCmp&& fKeyCmp, FInit&& fInit, FUpdate&& fUpdate) {
+    Base::ProbeImpl(*this, key,
+        std::forward<FKCmp>(fKeyCmp),
+        std::forward<FInit>(fInit),
+        std::forward<FUpdate>(fUpdate));
   }
 
   Visitor GetResultVisitor() {
@@ -1098,6 +1231,34 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
 
   void CopyValue(char* dst, const Value& src) {
     memcpy(dst, &src, Base::ValueSize());
+  }
+
+  // --- Probe counterpart of TryEmplaceAtPos (read-only) ------------------
+  template <bool IsExpansion, typename FKCmp, typename FInit, typename FUpdate>
+  bool TryProbeAtPos(
+      const Key& key,
+      size_t hashVal,
+      ChunkPos chunkPos,
+      FKCmp&& fKeyCmp,
+      FInit&& fInit,
+      FUpdate&& fUpdate) {
+    auto curChunk = Base::Chunks() + chunkPos;
+    uint8_t tagHash = (hashVal >> 16) & 0x7F;
+    auto tags = curChunk->GetU64Tags();
+    if constexpr (!IsExpansion) {
+      for (auto i : PHBitMask::MatchTag(tags, tagHash)) {
+        if (fKeyCmp(key, *curChunk, i)) {
+          fUpdate(GetChunkValue(*curChunk, i).buf, false);
+          return true;
+        }
+      }
+    }
+    for (auto i : PHBitMask::MatchEmpty(tags, emptyTags_)) {
+      fInit(GetChunkValue(*curChunk, i).buf);
+      fUpdate(GetChunkValue(*curChunk, i).buf, true);
+      return true;
+    }
+    return false;
   }
 
   template <bool IsExpansion, typename FKCmp, typename FInit, typename FUpdate>

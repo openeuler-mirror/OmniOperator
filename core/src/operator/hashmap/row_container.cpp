@@ -334,6 +334,23 @@ void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
             }
             break;
         }
+        case type::OMNI_VARCHAR:
+        case type::OMNI_CHAR:
+        case type::OMNI_VARBINARY: {
+            auto* vec = static_cast<Vector<LargeStringContainer<std::string_view>>*>(outputVector);
+            for (int32_t i = 0; i < totalRows; ++i) {
+                if (IsNullAt(rows[i], nullByte, nullMask)) {
+                    vec->SetNull(i);
+                } else {
+                    auto* dataPtr = ReadValue<char*>(rows[i], offset);
+                    uint8_t lenSize = static_cast<uint8_t>(dataPtr[0]);
+                    uint32_t strLen = 0;
+                    memcpy(&strLen, dataPtr + 1, lenSize);
+                    vec->SetValue(i, std::string_view(dataPtr + 1 + lenSize, strLen));
+                }
+            }
+            break;
+        }
         default:
             break;
     }
