@@ -11,6 +11,7 @@ import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonAndExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonGreaterThanOrEqualExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonInExpr;
+import static nova.hetu.omniruntime.util.TestUtils.omniJsonIsNullExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonIsNotNullExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonLessThanOrEqualExpr;
 
@@ -78,6 +79,8 @@ public class Sql1ForOmniFilterOperatorTest {
 
     private static final String MUST_TEST_EXP4_JSON = omniJsonIsNotNullExpr(getOmniJsonFieldReference(2, 8));
 
+    private static final String MUST_TEST_EXP5_JSON = omniJsonIsNullExpr(getOmniJsonFieldReference(2, 2));
+
     /*
      * 涉及表：item,date_dim,inventory,store_sales
      */
@@ -137,6 +140,10 @@ public class Sql1ForOmniFilterOperatorTest {
         int[] resultKeepRowIdxForEXP4 = {0, 3, 4};
         filterOperatorMatchWithJson(dataSourceWithNull, dataSourceTypes, dataSourceProjectionJson,
                 resultKeepRowIdxForEXP4, MUST_TEST_EXP4_JSON, 1);
+
+        int[] resultKeepRowIdxForEXP5 = {1, 3};
+        filterOperatorMatchWithJson(dataSourceWithNull, dataSourceTypes, dataSourceProjectionJson,
+                resultKeepRowIdxForEXP5, MUST_TEST_EXP5_JSON, 1);
     }
 
     @Test

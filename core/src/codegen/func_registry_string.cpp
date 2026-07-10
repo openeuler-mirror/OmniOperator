@@ -105,6 +105,12 @@ const std::string CharLengthFnStr()
     return charLengthFnStr;
 }
 
+const std::string IsNullFnStr()
+{
+    const std::string isNullFnStr = "isnull";
+    return isNullFnStr;
+}
+
 const std::string CastNullFnStr()
 {
     const std::string castNullFnStr = "CAST_null";
@@ -203,178 +209,183 @@ const std::string StaticInvokeCharReadPaddingFnStr()
 
 std::vector<Function> StringFunctionRegistry::GetFunctions()
 {
-    std::vector<Function> stringFnRegistry = { // concat functions
-        Function(reinterpret_cast<void *>(SplitIndexRetNull), SplitIndexFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR, OMNI_INT },
-                 OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
-        Function(reinterpret_cast<void *>(ConcatStrStr), ConcatFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(ConcatCharChar), ConcatFnStr(), {}, { OMNI_CHAR, OMNI_CHAR }, OMNI_CHAR,
-            INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(ConcatCharStr), ConcatFnStr(), {}, { OMNI_CHAR, OMNI_VARCHAR }, OMNI_CHAR,
-            INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(ConcatStrChar), ConcatFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR }, OMNI_CHAR,
-            INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(ConcatWsWithoutStr), ConcatWsFnStr(), {}, { OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
-        Function(reinterpret_cast<void *>(ConcatWsWith1Str), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
-        Function(reinterpret_cast<void *>(ConcatWsStr), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
-        Function(reinterpret_cast<void *>(ConcatWs3Str), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
-        Function(reinterpret_cast<void *>(ConcatWs4Str), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
-        Function(reinterpret_cast<void *>(ConcatWs5Str), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+    std::vector<Function> stringFnRegistry = {
+        // concat functions
+        Function(reinterpret_cast<void *>(SplitIndexRetNull), SplitIndexFnStr(), {},
+                 {OMNI_VARCHAR, OMNI_CHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(ConcatStrStr), ConcatFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR,
+                 INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatCharChar), ConcatFnStr(), {}, {OMNI_CHAR, OMNI_CHAR}, OMNI_CHAR,
+                 INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatCharStr), ConcatFnStr(), {}, {OMNI_CHAR, OMNI_VARCHAR}, OMNI_CHAR,
+                 INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatStrChar), ConcatFnStr(), {}, {OMNI_VARCHAR, OMNI_CHAR}, OMNI_CHAR,
+                 INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatWsWithoutStr), ConcatWsFnStr(), {}, {OMNI_VARCHAR}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(ConcatWsWith1Str), ConcatWsFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
+                 OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(ConcatWsStr), ConcatWsFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR},
+                 OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(ConcatWs3Str), ConcatWsFnStr(), {},
+                 {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(ConcatWs4Str), ConcatWsFnStr(), {},
+                 {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(ConcatWs5Str), ConcatWsFnStr(), {},
+                 {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
 
-        Function(reinterpret_cast<void *>(LikeStr), LikeFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_BOOLEAN,
-            INPUT_DATA),
-        Function(reinterpret_cast<void *>(LikeChar), LikeFnStr(), {}, { OMNI_CHAR, OMNI_VARCHAR }, OMNI_BOOLEAN,
-            INPUT_DATA),
+        Function(reinterpret_cast<void *>(LikeStr), LikeFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+                 INPUT_DATA),
+        Function(reinterpret_cast<void *>(LikeChar), LikeFnStr(), {}, {OMNI_CHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+                 INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(ToUpperStr), UpperFnStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(ToUpperChar), UpperFnStr(), {}, { OMNI_CHAR }, OMNI_CHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(ToLowerStr), LowerFnStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(ToLowerChar), LowerFnStr(), {}, { OMNI_CHAR }, OMNI_CHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ToUpperStr), UpperFnStr(), {}, {OMNI_VARCHAR}, OMNI_VARCHAR, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(ToUpperChar), UpperFnStr(), {}, {OMNI_CHAR}, OMNI_CHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ToLowerStr), LowerFnStr(), {}, {OMNI_VARCHAR}, OMNI_VARCHAR, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(ToLowerChar), LowerFnStr(), {}, {OMNI_CHAR}, OMNI_CHAR, INPUT_DATA, true),
 
-        Function(reinterpret_cast<void *>(StrCompare), CompareFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT),
+        Function(reinterpret_cast<void *>(StrCompare), CompareFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_INT),
 
-        Function(reinterpret_cast<void *>(StrEquals), StrEqualFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_BOOLEAN),
+        Function(reinterpret_cast<void *>(StrEquals), StrEqualFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN),
         // cast functions
-        Function(reinterpret_cast<void *>(CastIntToString), CastFnStr(), {}, { OMNI_INT }, OMNI_VARCHAR, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(CastInt16ToString), CastFnStr(), {}, { OMNI_SHORT }, OMNI_VARCHAR, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(CastInt8ToString), CastFnStr(), {}, { OMNI_BYTE }, OMNI_VARCHAR, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(CastLongToString), CastFnStr(), {}, { OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(CastDoubleToString), CastFnStr(), {}, { OMNI_DOUBLE }, OMNI_VARCHAR,
-            INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(CastDecimal64ToString), CastFnStr(), {}, { OMNI_DECIMAL64 }, OMNI_VARCHAR,
-            INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(CastDecimal128ToString), CastFnStr(), {}, { OMNI_DECIMAL128 }, OMNI_VARCHAR,
-            INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(CastDateToString), CastFnStr(), {}, { OMNI_DATE32 }, OMNI_VARCHAR, INPUT_DATA,
-            true),
+        Function(reinterpret_cast<void *>(CastIntToString), CastFnStr(), {}, {OMNI_INT}, OMNI_VARCHAR, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(CastInt16ToString), CastFnStr(), {}, {OMNI_SHORT}, OMNI_VARCHAR, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(CastInt8ToString), CastFnStr(), {}, {OMNI_BYTE}, OMNI_VARCHAR, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(CastLongToString), CastFnStr(), {}, {OMNI_LONG}, OMNI_VARCHAR, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(CastDoubleToString), CastFnStr(), {}, {OMNI_DOUBLE}, OMNI_VARCHAR, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(CastDecimal64ToString), CastFnStr(), {}, {OMNI_DECIMAL64}, OMNI_VARCHAR,
+                 INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(CastDecimal128ToString), CastFnStr(), {}, {OMNI_DECIMAL128}, OMNI_VARCHAR,
+                 INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(CastDateToString), CastFnStr(), {}, {OMNI_DATE32}, OMNI_VARCHAR, INPUT_DATA,
+                 true),
 
-        Function(reinterpret_cast<void *>(CastStringToByte), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_BYTE, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(CastStringToShort), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_SHORT, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(CastStringToInt), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(CastStringToLong), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_LONG, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(CastStringToDouble), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_DOUBLE,
-            INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(CastStrWithDiffWidths), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
-            INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(CastStringToByte), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_BYTE, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(CastStringToShort), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_SHORT, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(CastStringToInt), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_INT, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(CastStringToLong), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_LONG, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(CastStringToDouble), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_DOUBLE, INPUT_DATA,
+                 true),
+        Function(reinterpret_cast<void *>(CastStrWithDiffWidths), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_VARCHAR,
+                 INPUT_DATA, true),
 
         // length functions
-        Function(reinterpret_cast<void *>(CountChar), CountCharFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR }, OMNI_LONG),
-        Function(reinterpret_cast<void *>(LengthChar), LengthFnStr(), {}, { OMNI_CHAR }, OMNI_LONG, INPUT_DATA),
-        Function(reinterpret_cast<void *>(LengthStr), LengthFnStr(), {}, { OMNI_VARCHAR }, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CountChar), CountCharFnStr(), {}, {OMNI_VARCHAR, OMNI_CHAR}, OMNI_LONG),
+        Function(reinterpret_cast<void *>(LengthChar), LengthFnStr(), {}, {OMNI_CHAR}, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(LengthStr), LengthFnStr(), {}, {OMNI_VARCHAR}, OMNI_LONG, INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(CharLengthStr), CharLengthFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(CharLengthChar), CharLengthFnStr(), {}, { OMNI_CHAR }, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CharLengthStr), CharLengthFnStr(), {}, {OMNI_VARCHAR}, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CharLengthChar), CharLengthFnStr(), {}, {OMNI_CHAR}, OMNI_INT, INPUT_DATA),
+
+        // is null functions
+        Function(reinterpret_cast<void *>(IsNullStr), IsNullFnStr(), {}, {OMNI_VARCHAR}, OMNI_BOOLEAN,
+                 INPUT_DATA_AND_NULL),
+        Function(reinterpret_cast<void *>(IsNullChar), IsNullFnStr(), {}, {OMNI_CHAR}, OMNI_BOOLEAN,
+                 INPUT_DATA_AND_NULL),
 
         // replace functions
-        Function(reinterpret_cast<void *>(LengthCharReturnInt32), LengthFnStr(), {}, { OMNI_CHAR }, OMNI_INT,
-            INPUT_DATA),
-        Function(reinterpret_cast<void *>(LengthStrReturnInt32), LengthFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT,
-            INPUT_DATA),
+        Function(reinterpret_cast<void *>(LengthCharReturnInt32), LengthFnStr(), {}, {OMNI_CHAR}, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(LengthStrReturnInt32), LengthFnStr(), {}, {OMNI_VARCHAR}, OMNI_INT,
+                 INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(ConcatStrStrRetNull), ConcatNullFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(RegexpExtractRetNull), RegexpExtractFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR, OMNI_INT },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
-        Function(reinterpret_cast<void *>(JsonValueRetNull), JsonValueFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(ConcatStrStrRetNull), ConcatNullFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
+                 OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(RegexpExtractRetNull), RegexpExtractFnStr(), {},
+                 {OMNI_VARCHAR, OMNI_CHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(JsonValueRetNull), JsonValueFnStr(), {}, {OMNI_VARCHAR, OMNI_CHAR},
+                 OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
         Function(reinterpret_cast<void *>(JsonValueWithBehaviors), JsonValueFnStr(), {},
-            { OMNI_VARCHAR, OMNI_CHAR, OMNI_INT, OMNI_VARCHAR, OMNI_INT, OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
-        Function(reinterpret_cast<void *>(JsonQueryRetNull), JsonQueryFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+                 {OMNI_VARCHAR, OMNI_CHAR, OMNI_INT, OMNI_VARCHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(JsonQueryRetNull), JsonQueryFnStr(), {}, {OMNI_VARCHAR, OMNI_CHAR},
+                 OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
         Function(reinterpret_cast<void *>(JsonQueryWithWrapperAndBehavior), JsonQueryFnStr(), {},
-            { OMNI_VARCHAR, OMNI_CHAR, OMNI_INT, OMNI_INT, OMNI_INT },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
-        Function(reinterpret_cast<void *>(JsonSplitScalarChar), JsonSplitScalarFnStr(), {}, { OMNI_CHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
-        Function(reinterpret_cast<void *>(JsonSplitScalar), JsonSplitScalarFnStr(), {}, { OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
-        Function(reinterpret_cast<void *>(ConcatCharCharRetNull), ConcatNullFnStr(), {}, { OMNI_CHAR, OMNI_CHAR },
-            OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(ConcatCharStrRetNull), ConcatNullFnStr(), {}, { OMNI_CHAR, OMNI_VARCHAR },
-            OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(ConcatStrCharRetNull), ConcatNullFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR },
-            OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+                 {OMNI_VARCHAR, OMNI_CHAR, OMNI_INT, OMNI_INT, OMNI_INT}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(JsonSplitScalarChar), JsonSplitScalarFnStr(), {}, {OMNI_CHAR}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(JsonSplitScalar), JsonSplitScalarFnStr(), {}, {OMNI_VARCHAR}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(ConcatCharCharRetNull), ConcatNullFnStr(), {}, {OMNI_CHAR, OMNI_CHAR},
+                 OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(ConcatCharStrRetNull), ConcatNullFnStr(), {}, {OMNI_CHAR, OMNI_VARCHAR},
+                 OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(ConcatStrCharRetNull), ConcatNullFnStr(), {}, {OMNI_VARCHAR, OMNI_CHAR},
+                 OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
 
-        Function(reinterpret_cast<void *>(CastIntToStringRetNull), CastNullFnStr(), {}, { OMNI_INT }, OMNI_VARCHAR,
-            INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(CastInt16ToStringRetNull), CastNullFnStr(), {}, { OMNI_SHORT }, OMNI_VARCHAR,
-            INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(CastInt8ToStringRetNull), CastNullFnStr(), {}, { OMNI_BYTE }, OMNI_VARCHAR,
-            INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(CastLongToStringRetNull), CastNullFnStr(), {}, { OMNI_LONG }, OMNI_VARCHAR,
-            INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(CastDoubleToStringRetNull), CastNullFnStr(), {}, { OMNI_DOUBLE },
-            OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(CastDecimal64ToStringRetNull), CastNullFnStr(), {}, { OMNI_DECIMAL64 },
-            OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(CastDecimal128ToStringRetNull), CastNullFnStr(), {}, { OMNI_DECIMAL128 },
-            OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(CastDateToStringRetNull), CastNullFnStr(), {}, { OMNI_DATE32 }, OMNI_VARCHAR,
-            INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastIntToStringRetNull), CastNullFnStr(), {}, {OMNI_INT}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastInt16ToStringRetNull), CastNullFnStr(), {}, {OMNI_SHORT}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastInt8ToStringRetNull), CastNullFnStr(), {}, {OMNI_BYTE}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastLongToStringRetNull), CastNullFnStr(), {}, {OMNI_LONG}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastDoubleToStringRetNull), CastNullFnStr(), {}, {OMNI_DOUBLE}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastDecimal64ToStringRetNull), CastNullFnStr(), {}, {OMNI_DECIMAL64},
+                 OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastDecimal128ToStringRetNull), CastNullFnStr(), {}, {OMNI_DECIMAL128},
+                 OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastDateToStringRetNull), CastNullFnStr(), {}, {OMNI_DATE32}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_OVERFLOW_NULL, true),
 
-        Function(reinterpret_cast<void *>(CastStringToByteRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_BYTE,
-            INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(CastStringToShortRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_SHORT,
-            INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(CastStringToIntRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT,
-            INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(CastStringToLongRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_LONG,
-            INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(CastStringToDoubleRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR },
-            OMNI_DOUBLE, INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(CastStrWithDiffWidthsRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastStringToByteRetNull), CastNullFnStr(), {}, {OMNI_VARCHAR}, OMNI_BYTE,
+                 INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStringToShortRetNull), CastNullFnStr(), {}, {OMNI_VARCHAR}, OMNI_SHORT,
+                 INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStringToIntRetNull), CastNullFnStr(), {}, {OMNI_VARCHAR}, OMNI_INT,
+                 INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStringToLongRetNull), CastNullFnStr(), {}, {OMNI_VARCHAR}, OMNI_LONG,
+                 INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStringToDoubleRetNull), CastNullFnStr(), {}, {OMNI_VARCHAR}, OMNI_DOUBLE,
+                 INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStrWithDiffWidthsRetNull), CastNullFnStr(), {}, {OMNI_VARCHAR},
+                 OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
 
-        Function(reinterpret_cast<void *>(InStr), InStrFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT,
-            INPUT_DATA),
+        Function(reinterpret_cast<void *>(InStr), InStrFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_INT, INPUT_DATA),
 
         // like functions
-        Function(reinterpret_cast<void *>(StartsWithStr), StartsWithFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(EndsWithStr), EndsWithFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(RegexMatch), RLikeFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
-            OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(StartsWithStr), StartsWithFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
+                 OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(EndsWithStr), EndsWithFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+                 INPUT_DATA),
+        Function(reinterpret_cast<void *>(RegexMatch), RLikeFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+                 INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(Md5Str), Md5FnStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
-            INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(ContainsStr), ContainsFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
-            OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Md5Str), Md5FnStr(), {}, {OMNI_VARCHAR}, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ContainsStr), ContainsFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+                 INPUT_DATA),
         Function(reinterpret_cast<void *>(GreatestStr), GreatestStrFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
-        Function(reinterpret_cast<void *>(LeastStr), LeastStrFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
-        Function(reinterpret_cast<void *>(EmptyToNull), EmptyToNullStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
-            INPUT_DATA, false),
+                 OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(LeastStr), LeastStrFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR,
+                 INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(EmptyToNull), EmptyToNullStr(), {}, {OMNI_VARCHAR}, OMNI_VARCHAR, INPUT_DATA,
+                 false),
         Function(reinterpret_cast<void *>(StaticInvokeVarcharTypeWriteSideCheck),
-            StaticInvokeVarcharTypeWriteSideCheckFnStr(), {}, { OMNI_VARCHAR, OMNI_INT },
-            OMNI_VARCHAR, INPUT_DATA, true),
+                 StaticInvokeVarcharTypeWriteSideCheckFnStr(), {}, {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA,
+                 true),
         Function(reinterpret_cast<void *>(StaticInvokeCharTypeWriteSideCheck),
-            StaticInvokeCharTypeWriteSideCheckFnStr(), {}, { OMNI_VARCHAR, OMNI_INT },
-            OMNI_VARCHAR, INPUT_DATA, true),
+                 StaticInvokeCharTypeWriteSideCheckFnStr(), {}, {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA,
+                 true),
         Function(reinterpret_cast<void *>(StaticInvokeCharReadPadding), StaticInvokeCharReadPaddingFnStr(), {},
-            {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstringIndex), "substring_index", {},
-            {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true)
-    };
+                 {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true)};
 
     return stringFnRegistry;
 }
@@ -382,10 +393,10 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
 std::vector<Function> StringFunctionRegistryNotAllowReducePrecison::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = {
-        Function(reinterpret_cast<void *>(CastStringToDateNotAllowReducePrecison), CastFnStr(), {}, { OMNI_VARCHAR },
-            OMNI_DATE32, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(CastStringToDateNotAllowReducePrecison), CastFnStr(), {}, {OMNI_VARCHAR},
+                 OMNI_DATE32, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStringToDateRetNullNotAllowReducePrecison), CastNullFnStr(), {},
-            { OMNI_VARCHAR }, OMNI_DATE32, INPUT_DATA_AND_OVERFLOW_NULL),
+                 {OMNI_VARCHAR}, OMNI_DATE32, INPUT_DATA_AND_OVERFLOW_NULL),
     };
 
     return stringFnRegistry;
@@ -394,10 +405,10 @@ std::vector<Function> StringFunctionRegistryNotAllowReducePrecison::GetFunctions
 std::vector<Function> StringFunctionRegistryAllowReducePrecison::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = {
-        Function(reinterpret_cast<void *>(CastStringToDateAllowReducePrecison), CastFnStr(), {}, { OMNI_VARCHAR },
-            OMNI_DATE32, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(CastStringToDateAllowReducePrecison), CastFnStr(), {}, {OMNI_VARCHAR},
+                 OMNI_DATE32, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStringToDateRetNullAllowReducePrecison), CastNullFnStr(), {},
-            { OMNI_VARCHAR }, OMNI_DATE32, INPUT_DATA_AND_OVERFLOW_NULL),
+                 {OMNI_VARCHAR}, OMNI_DATE32, INPUT_DATA_AND_OVERFLOW_NULL),
     };
 
     return stringFnRegistry;
@@ -407,9 +418,9 @@ std::vector<Function> StringFunctionRegistryNotReplace::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = {
         Function(reinterpret_cast<void *>(ReplaceStrStrStrWithRepNotReplace), ReplaceFnStr(), {},
-            { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(ReplaceStrStrWithoutRepNotReplace), ReplaceFnStr(), {},
-            { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, INPUT_DATA, true),
     };
 
     return stringFnRegistry;
@@ -419,9 +430,9 @@ std::vector<Function> StringFunctionRegistryReplace::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = {
         Function(reinterpret_cast<void *>(ReplaceStrStrStrWithRepReplace), ReplaceFnStr(), {},
-            { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(ReplaceStrStrWithoutRepReplace), ReplaceFnStr(), {},
-            { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, INPUT_DATA, true),
     };
 
     return stringFnRegistry;
@@ -432,23 +443,23 @@ std::vector<Function> StringFunctionRegistrySupportNegativeAndZeroIndex::GetFunc
     std::vector<Function> stringFnRegistry = {
         // substr functions
         Function(reinterpret_cast<void *>(SubstrVarchar<int32_t, true, true>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_INT, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrChar<int32_t, true, true>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_INT, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_INT, OMNI_INT}, OMNI_CHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrVarchar<int64_t, true, true>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_LONG, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_LONG, OMNI_LONG}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrChar<int64_t, true, true>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_LONG, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_LONG, OMNI_LONG}, OMNI_CHAR, INPUT_DATA, true),
 
         // substr with start index functions
         Function(reinterpret_cast<void *>(SubstrVarcharWithStart<int32_t, true, true>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrCharWithStart<int32_t, true, true>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_INT}, OMNI_CHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrVarcharWithStart<int64_t, true, true>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_LONG}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrCharWithStart<int64_t, true, true>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_LONG}, OMNI_CHAR, INPUT_DATA, true),
     };
 
     return stringFnRegistry;
@@ -459,23 +470,23 @@ std::vector<Function> StringFunctionRegistrySupportNotNegativeAndZeroIndex::GetF
     std::vector<Function> stringFnRegistry = {
         // substr functions
         Function(reinterpret_cast<void *>(SubstrVarchar<int32_t, false, true>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_INT, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrChar<int32_t, false, true>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_INT, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_INT, OMNI_INT}, OMNI_CHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrVarchar<int64_t, false, true>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_LONG, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_LONG, OMNI_LONG}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrChar<int64_t, false, true>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_LONG, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_LONG, OMNI_LONG}, OMNI_CHAR, INPUT_DATA, true),
 
         // substr with start index functions
         Function(reinterpret_cast<void *>(SubstrVarcharWithStart<int32_t, false, true>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrCharWithStart<int32_t, false, true>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_INT}, OMNI_CHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrVarcharWithStart<int64_t, false, true>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_LONG}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrCharWithStart<int64_t, false, true>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_LONG}, OMNI_CHAR, INPUT_DATA, true),
     };
 
     return stringFnRegistry;
@@ -486,23 +497,23 @@ std::vector<Function> StringFunctionRegistrySupportNegativeAndNotZeroIndex::GetF
     std::vector<Function> stringFnRegistry = {
         // substr functions
         Function(reinterpret_cast<void *>(SubstrVarchar<int32_t, true, false>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_INT, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrChar<int32_t, true, false>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_INT, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_INT, OMNI_INT}, OMNI_CHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrVarchar<int64_t, true, false>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_LONG, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_LONG, OMNI_LONG}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrChar<int64_t, true, false>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_LONG, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_LONG, OMNI_LONG}, OMNI_CHAR, INPUT_DATA, true),
 
         // substr with start index functions
         Function(reinterpret_cast<void *>(SubstrVarcharWithStart<int32_t, true, false>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrCharWithStart<int32_t, true, false>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_INT}, OMNI_CHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrVarcharWithStart<int64_t, true, false>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_LONG}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrCharWithStart<int64_t, true, false>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_LONG}, OMNI_CHAR, INPUT_DATA, true),
     };
 
     return stringFnRegistry;
@@ -513,23 +524,23 @@ std::vector<Function> StringFunctionRegistrySupportNotNegativeAndNotZeroIndex::G
     std::vector<Function> stringFnRegistry = {
         // substr functions
         Function(reinterpret_cast<void *>(SubstrVarchar<int32_t, false, false>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_INT, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrChar<int32_t, false, false>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_INT, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_INT, OMNI_INT}, OMNI_CHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrVarchar<int64_t, false, false>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_LONG, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_LONG, OMNI_LONG}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrChar<int64_t, false, false>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_LONG, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_LONG, OMNI_LONG}, OMNI_CHAR, INPUT_DATA, true),
 
         // substr with start index functions
         Function(reinterpret_cast<void *>(SubstrVarcharWithStart<int32_t, false, false>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrCharWithStart<int32_t, false, false>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_INT}, OMNI_CHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrVarcharWithStart<int64_t, false, false>), SubstrFnStr(), {},
-            { OMNI_VARCHAR, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+                 {OMNI_VARCHAR, OMNI_LONG}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(SubstrCharWithStart<int64_t, false, false>), SubstrFnStr(), {},
-            { OMNI_CHAR, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+                 {OMNI_CHAR, OMNI_LONG}, OMNI_CHAR, INPUT_DATA, true),
     };
 
     return stringFnRegistry;
@@ -539,16 +550,13 @@ std::vector<Function> StringToDecimalFunctionRegistryAllowRoundUp::GetFunctions(
 {
     std::vector<Function> stringFnRegistry = {
         Function(reinterpret_cast<void *>(CastStringToDecimal64RoundUpRetNull), CastNullFnStr(), {}, {OMNI_VARCHAR},
-            OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+                 OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToDecimal128RoundUpRetNull), CastNullFnStr(), {}, {OMNI_VARCHAR},
-            OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
+                 OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToDecimal64RoundUp), CastFnStr(), {}, {OMNI_VARCHAR},
-            OMNI_DECIMAL64,
-            INPUT_DATA, true),
+                 OMNI_DECIMAL64, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStringToDecimal128RoundUp), CastFnStr(), {}, {OMNI_VARCHAR},
-            OMNI_DECIMAL128,
-            INPUT_DATA, true)
-    };
+                 OMNI_DECIMAL128, INPUT_DATA, true)};
     return stringFnRegistry;
 }
 
@@ -556,14 +564,13 @@ std::vector<Function> StringToDecimalFunctionRegistry::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = {
         Function(reinterpret_cast<void *>(CastStringToDecimal64RetNull), CastNullFnStr(), {}, {OMNI_VARCHAR},
-            OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+                 OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToDecimal128RetNull), CastNullFnStr(), {}, {OMNI_VARCHAR},
-            OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
+                 OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToDecimal64), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_DECIMAL64,
-            INPUT_DATA, true),
+                 INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStringToDecimal128), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_DECIMAL128,
-            INPUT_DATA, true)
-    };
+                 INPUT_DATA, true)};
     return stringFnRegistry;
 }
-}
+} // namespace omniruntime::codegen

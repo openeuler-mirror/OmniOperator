@@ -67,13 +67,13 @@ public class TestUtils {
      * Create vec batch data
      *
      * @param types dataType
-     * @param datas data
+     * @param data data
      * @return VecBatch
      */
-    public static VecBatch createVecBatch(DataType[] types, Object[][] datas) {
+    public static VecBatch createVecBatch(DataType[] types, Object[][] data) {
         Vec[] vecs = new Vec[types.length];
         for (int i = 0; i < types.length; i++) {
-            vecs[i] = createVec(types[i], datas[i]);
+            vecs[i] = createVec(types[i], data[i]);
         }
         return new VecBatch(vecs);
     }
@@ -1333,6 +1333,16 @@ public class TestUtils {
     public static String omniJsonIsNotNullExpr(String arguments) {
         return String.format(Locale.ROOT, "{\"exprType\":\"UNARY\",\"returnType\":4,\"operator\":\"not\","
                 + "\"expr\":{\"exprType\":\"IS_NULL\",\"returnType\":4," + "\"arguments\":[%s]}}", arguments);
+    }
+
+    /**
+     * generating "is null" json expression.
+     *
+     * @param arguments arguments
+     * @return the formatted "is null" json expression
+     */
+    public static String omniJsonIsNullExpr(String arguments) {
+        return String.format(Locale.ROOT, "{\"exprType\":\"IS_NULL\",\"returnType\":4,\"arguments\":[%s]}", arguments);
     }
 
     /**
