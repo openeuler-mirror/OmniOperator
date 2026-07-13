@@ -182,7 +182,8 @@ public:
 
 protected:
     BloomFilterAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
-        const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
+        const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull,
+        int32_t bloomFilterVersion = BloomFilter::VERSION, FunctionType aggregationType = OMNI_AGGREGATION_TYPE_BLOOM_FILTER);
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap) override;
@@ -197,6 +198,7 @@ protected:
 private:
     // store all ptr of char* from BloomFilterAggState when initState / initStates
     std::vector<int64_t> stateSerializeStringPtrs;
+    int32_t bloomFilterVersion;
 };
 }
 }

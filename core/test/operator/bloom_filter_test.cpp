@@ -22,7 +22,7 @@ TEST(BloomFilterTest, TestBloomFilterInit)
     DataTypes inputTypes(vecOfTypes);
     // construct data
     const int32_t rowNum = 12;
-    int32_t intVecData[rowNum] = {1, 6, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int32_t intVecData[rowNum] = {1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     VectorBatch *inputVectorBatch = CreateVectorBatch(inputTypes, rowNum, intVecData);
 
     auto *factory = BloomFilterOperatorFactory::CreateBloomFilterOperatorFactory(1);
@@ -33,7 +33,6 @@ TEST(BloomFilterTest, TestBloomFilterInit)
     op->GetOutput(&result);
     long longValue = (static_cast<Vector<int64_t> *>(result->Get(0)))->GetValue(0);
     BloomFilter *bfResult = (BloomFilter *)longValue;
-    EXPECT_EQ(bfResult->GetNumHashFunctions(), 6);
     EXPECT_EQ(bfResult->GetBits()->GetWordsNum(), 4);
     VectorHelper::FreeVecBatch(result);
     omniruntime::op::Operator::DeleteOperator(op);
@@ -71,136 +70,15 @@ BloomFilter* CreateBloomFilterFromVectorBatch(VectorBatch *vecBatch)
     return bf;
 }
 
-TEST(BloomFilterTest, TestBloomFilterAggregator)
-{
-    // data
-    std::vector<DataTypePtr> vecOfTypes = { LongType() };
-    DataTypes inputTypes(vecOfTypes);
-    // construct data
-    const int32_t rowNum = 10;
-    // Even numbers from 0 to 19
-    int64_t inputDataVector1[rowNum];
-    // Even numbers from 20 to 39
-    int64_t inputDataVector2[rowNum];
-    for (int i = 0; i < rowNum; i++) {
-        inputDataVector1[i] = 2 * i;
-        inputDataVector2[i] = 2 * (i + rowNum);
-    }
-
-    // Input of Partial1
-    VectorBatch *inputVectorBatch1 = new VectorBatch(rowNum);
-    Vector<int64_t> *vector1 = new Vector<int64_t>(rowNum);
-    for (int i = 0; i < rowNum; i++) {
-        vector1->SetValue(i, static_cast<int64_t>(inputDataVector1[i]));
-    }
-    inputVectorBatch1->Append(vector1);
-
-    // Input of Partial2
-    VectorBatch *inputVectorBatch2 = new VectorBatch(rowNum);
-    Vector<int64_t> *vector2 = new Vector<int64_t>(rowNum);
-    for (int i = 0; i < rowNum; i++) {
-        vector2->SetValue(i, static_cast<int64_t>(inputDataVector2[i]));
-    }
-    inputVectorBatch2->Append(vector2);
-
-    // Partial 1
-    std::vector<uint32_t> partialAggFuncVector = {static_cast<uint32_t>(OMNI_AGGREGATION_TYPE_BLOOM_FILTER)};
-    std::vector<DataTypePtr> partialInputTypeVector = {LongType()};
-    std::vector<DataTypePtr> partialOutputTypeVector = {std::make_shared<VarBinaryDataType>(128)};
-    std::vector<uint32_t> partialAggColIdxVector = {0};
-    std::vector<uint32_t> partialAggMask = {static_cast<uint32_t>(-1)};
-    auto partialFactory1 = CreateFactory(partialAggFuncVector, partialInputTypeVector, partialOutputTypeVector, partialAggColIdxVector, partialAggMask, true, true);
-
-    omniruntime::op::Operator *aggPartial1 = partialFactory1->CreateOperator();
-
-    // Partial 2
-    std::vector<uint32_t> partialAggFuncVector2 = {static_cast<uint32_t>(OMNI_AGGREGATION_TYPE_BLOOM_FILTER)};
-    std::vector<DataTypePtr> partialInputTypeVector2 = {LongType()};
-    std::vector<DataTypePtr> partialOutputTypeVector2 = {std::make_shared<VarBinaryDataType>(128)};
-    std::vector<uint32_t> partialAggColIdxVector2 = {0};
-    std::vector<uint32_t> partialAggMask2 = {static_cast<uint32_t>(-1)};
-    auto partialFactory2 = CreateFactory(partialAggFuncVector2, partialInputTypeVector2, partialOutputTypeVector2, partialAggColIdxVector2, partialAggMask2, true, true);
-
-    omniruntime::op::Operator *aggPartial2 = partialFactory2->CreateOperator();
-
-    // Final
-    std::vector<uint32_t> finalAggFuncVector = {static_cast<uint32_t>(OMNI_AGGREGATION_TYPE_BLOOM_FILTER)};
-    std::vector<DataTypePtr> finalInputTypeVector = {std::make_shared<VarBinaryDataType>(128)};
-    std::vector<DataTypePtr> finalOutputTypeVector = {std::make_shared<VarBinaryDataType>(128)};
-    std::vector<uint32_t> finalAggColIdxVector = {0};
-    std::vector<uint32_t> finalAggMask = {static_cast<uint32_t>(-1)};
-    auto finalFactory = CreateFactory(finalAggFuncVector, finalInputTypeVector, finalOutputTypeVector, finalAggColIdxVector, finalAggMask, false, false);
-
-    omniruntime::op::Operator *aggFinal = finalFactory->CreateOperator();
-
-    // partial 1 phase
-    aggPartial1->Init();
-    aggPartial1->AddInput(inputVectorBatch1);
-
-    VectorBatch *partialOutputVecBatch1 = nullptr;
-    aggPartial1->GetOutput(&partialOutputVecBatch1);
-
-    // DeterMine whether the output of partial 1 is correct.
-    auto partialBf1 = CreateBloomFilterFromVectorBatch(partialOutputVecBatch1);
-    for (int i = 0; i < rowNum; i++) {
-        EXPECT_TRUE(partialBf1->MightContainLong(inputDataVector1[i]));
-        EXPECT_FALSE(partialBf1->MightContainLong(inputDataVector1[i] + 1));
-    }
-
-    // partial 2 phase
-    aggPartial2->Init();
-    aggPartial2->AddInput(inputVectorBatch2);
-
-    VectorBatch *partialOutputVecBatch2 = nullptr;
-    aggPartial2->GetOutput(&partialOutputVecBatch2);
-
-    // DeterMine whether the output of partial 2 is correct.
-    auto partialBf2 = CreateBloomFilterFromVectorBatch(partialOutputVecBatch2);
-    for (int i = 0; i < rowNum; i++) {
-        EXPECT_TRUE(partialBf2->MightContainLong(inputDataVector2[i]));
-        EXPECT_FALSE(partialBf2->MightContainLong(inputDataVector2[i] + 1));
-    }
-
-    // final phase
-    aggFinal->Init();
-    aggFinal->AddInput(partialOutputVecBatch1);
-    aggFinal->AddInput(partialOutputVecBatch2);
-
-    VectorBatch *finalOutputVecBatch = nullptr;
-    aggFinal->GetOutput(&finalOutputVecBatch);
-
-    // DeterMine whether the output of final state output result is correct.
-    auto finalBf = CreateBloomFilterFromVectorBatch(finalOutputVecBatch);
-    for (int i = 0; i < rowNum; i++) {
-        // DeterMine the input of inputDataVector1
-        EXPECT_TRUE(finalBf->MightContainLong(inputDataVector1[i]));
-        EXPECT_FALSE(finalBf->MightContainLong(inputDataVector1[i] + 1));
-        // DeterMine the input of inputDataVector2
-        EXPECT_TRUE(finalBf->MightContainLong(inputDataVector2[i]));
-        EXPECT_FALSE(finalBf->MightContainLong(inputDataVector2[i] + 1));
-    }
-
-    VectorHelper::FreeVecBatch(finalOutputVecBatch);
-    delete aggPartial1;
-    delete aggPartial2;
-    delete aggFinal;
-
-    delete partialBf1;
-    delete partialBf2;
-    delete finalBf;
-}
-
 TEST(BloomFilterTest, TestBloomFilterPutLong)
 {
     int32_t versionJava = 1;
-    int32_t hashFuncNum = 6;
     int32_t numWords = 1048576; // 1MBytes
 
-    int32_t byteLength = numWords * sizeof(uint64_t) + sizeof(versionJava) + sizeof(hashFuncNum) + sizeof(numWords);
+    int32_t byteLength = numWords * sizeof(uint64_t) + sizeof(versionJava) + sizeof(numWords);
     byte *in = new byte[byteLength]{ (byte)0 };
     (reinterpret_cast<int32_t *>(in))[0] = 1;
-    (reinterpret_cast<int32_t *>(in))[1] = hashFuncNum;
-    (reinterpret_cast<int32_t *>(in))[2] = numWords;
+    (reinterpret_cast<int32_t *>(in))[1] = numWords;
     BloomFilter *bf = new BloomFilter(reinterpret_cast<int8_t *>(in), versionJava);
     EXPECT_TRUE(bf->PutLong(LONG_MIN));
     EXPECT_TRUE(bf->PutLong(LONG_MAX));
@@ -211,24 +89,148 @@ TEST(BloomFilterTest, TestBloomFilterPutLong)
 TEST(BloomFilterTest, TestBloomFilterMightContain)
 {
     int32_t versionJava = 1;
-    int32_t hashFuncNum = 6;
     int32_t numWords = 1048576; // 1MBytes
 
-    int32_t byteLength = numWords * sizeof(uint64_t) + sizeof(versionJava) + sizeof(hashFuncNum) + sizeof(numWords);
+    int32_t byteLength = numWords * sizeof(uint64_t) + sizeof(versionJava) + sizeof(numWords);
     byte *in = new byte[byteLength]{ (byte)0 };
     (reinterpret_cast<int32_t *>(in))[0] = 1;
-    (reinterpret_cast<int32_t *>(in))[1] = hashFuncNum;
-    (reinterpret_cast<int32_t *>(in))[2] = numWords;
+    (reinterpret_cast<int32_t *>(in))[1] = numWords;
     BloomFilter *bf = new BloomFilter(reinterpret_cast<int8_t *>(in), versionJava);
     for (uint64_t i = 1; i < 100; i += 2) {
-        EXPECT_TRUE(bf->PutLong(i));
+        bf->PutLong(i);
     }
 
+    const int64_t emptyWordBase = 1LL << 24;
     for (int j = 1; j < 100; j += 2) {
         EXPECT_TRUE(bf->MightContainLong(j));
-        EXPECT_FALSE(bf->MightContainLong(j - 1));
+        EXPECT_FALSE(bf->MightContainLong(emptyWordBase + j));
     }
     delete bf;
     delete[] in;
+}
+
+TEST(BloomFilterTest, TestBloomFilterPutLongAndSerialize)
+{
+    BloomFilter bf(4, BloomFilter::VERSION);
+    EXPECT_TRUE(bf.PutLong(LONG_MIN));
+    EXPECT_TRUE(bf.PutLong(LONG_MAX));
+    EXPECT_TRUE(bf.MightContainLong(LONG_MIN));
+    EXPECT_TRUE(bf.MightContainLong(LONG_MAX));
+
+    auto serializedSize = bf.GetSerializedSize();
+    char *serialized = new char[serializedSize];
+    bf.Serialize(serialized);
+
+    BloomFilter deserialized(serialized);
+    EXPECT_TRUE(deserialized.MightContainLong(LONG_MIN));
+    EXPECT_TRUE(deserialized.MightContainLong(LONG_MAX));
+    delete[] serialized;
+}
+
+TEST(BloomFilterTest, TestBloomFilterMerge)
+{
+    BloomFilter bf1(4, BloomFilter::VERSION);
+    BloomFilter bf2(4, BloomFilter::VERSION);
+    bf1.PutLong(10);
+    bf2.PutLong(20);
+
+    auto serializedSize = bf2.GetSerializedSize();
+    char *serialized = new char[serializedSize];
+    bf2.Serialize(serialized);
+    bf1.Merge(serialized);
+
+    EXPECT_TRUE(bf1.MightContainLong(10));
+    EXPECT_TRUE(bf1.MightContainLong(20));
+    delete[] serialized;
+}
+
+TEST(BloomFilterTest, TestBloomFilterAggregator)
+{
+    const int32_t rowNum = 10;
+    int64_t inputDataVector1[rowNum];
+    int64_t inputDataVector2[rowNum];
+    for (int i = 0; i < rowNum; i++) {
+        inputDataVector1[i] = 2 * i;
+        inputDataVector2[i] = 2 * (i + rowNum);
+    }
+
+    VectorBatch *inputVectorBatch1 = new VectorBatch(rowNum);
+    Vector<int64_t> *vector1 = new Vector<int64_t>(rowNum);
+    for (int i = 0; i < rowNum; i++) {
+        vector1->SetValue(i, static_cast<int64_t>(inputDataVector1[i]));
+    }
+    inputVectorBatch1->Append(vector1);
+
+    VectorBatch *inputVectorBatch2 = new VectorBatch(rowNum);
+    Vector<int64_t> *vector2 = new Vector<int64_t>(rowNum);
+    for (int i = 0; i < rowNum; i++) {
+        vector2->SetValue(i, static_cast<int64_t>(inputDataVector2[i]));
+    }
+    inputVectorBatch2->Append(vector2);
+
+    std::vector<uint32_t> partialAggFuncVector = {static_cast<uint32_t>(OMNI_AGGREGATION_TYPE_BLOOM_FILTER)};
+    std::vector<DataTypePtr> partialInputTypeVector = {LongType()};
+    std::vector<DataTypePtr> partialOutputTypeVector = {std::make_shared<VarBinaryDataType>(128)};
+    std::vector<uint32_t> partialAggColIdxVector = {0};
+    std::vector<uint32_t> partialAggMask = {static_cast<uint32_t>(-1)};
+    auto partialFactory1 = CreateFactory(partialAggFuncVector, partialInputTypeVector, partialOutputTypeVector,
+        partialAggColIdxVector, partialAggMask, true, true);
+
+    std::vector<uint32_t> partialAggFuncVector2 = {static_cast<uint32_t>(OMNI_AGGREGATION_TYPE_BLOOM_FILTER)};
+    std::vector<DataTypePtr> partialInputTypeVector2 = {LongType()};
+    std::vector<DataTypePtr> partialOutputTypeVector2 = {std::make_shared<VarBinaryDataType>(128)};
+    std::vector<uint32_t> partialAggColIdxVector2 = {0};
+    std::vector<uint32_t> partialAggMask2 = {static_cast<uint32_t>(-1)};
+    auto partialFactory2 = CreateFactory(partialAggFuncVector2, partialInputTypeVector2, partialOutputTypeVector2,
+        partialAggColIdxVector2, partialAggMask2, true, true);
+
+    std::vector<uint32_t> finalAggFuncVector = {static_cast<uint32_t>(OMNI_AGGREGATION_TYPE_BLOOM_FILTER)};
+    std::vector<DataTypePtr> finalInputTypeVector = {std::make_shared<VarBinaryDataType>(128)};
+    std::vector<DataTypePtr> finalOutputTypeVector = {std::make_shared<VarBinaryDataType>(128)};
+    std::vector<uint32_t> finalAggColIdxVector = {0};
+    std::vector<uint32_t> finalAggMask = {static_cast<uint32_t>(-1)};
+    auto finalFactory = CreateFactory(finalAggFuncVector, finalInputTypeVector, finalOutputTypeVector,
+        finalAggColIdxVector, finalAggMask, false, false);
+
+    omniruntime::op::Operator *aggPartial1 = partialFactory1->CreateOperator();
+    omniruntime::op::Operator *aggPartial2 = partialFactory2->CreateOperator();
+    omniruntime::op::Operator *aggFinal = finalFactory->CreateOperator();
+
+    aggPartial1->Init();
+    aggPartial1->AddInput(inputVectorBatch1);
+    VectorBatch *partialOutputVecBatch1 = nullptr;
+    aggPartial1->GetOutput(&partialOutputVecBatch1);
+
+    aggPartial2->Init();
+    aggPartial2->AddInput(inputVectorBatch2);
+    VectorBatch *partialOutputVecBatch2 = nullptr;
+    aggPartial2->GetOutput(&partialOutputVecBatch2);
+
+    auto partialBf1 = CreateBloomFilterFromVectorBatch(partialOutputVecBatch1);
+    auto partialBf2 = CreateBloomFilterFromVectorBatch(partialOutputVecBatch2);
+    for (int i = 0; i < rowNum; i++) {
+        EXPECT_TRUE(partialBf1->MightContainLong(inputDataVector1[i]));
+        EXPECT_TRUE(partialBf2->MightContainLong(inputDataVector2[i]));
+    }
+
+    aggFinal->Init();
+    aggFinal->AddInput(partialOutputVecBatch1);
+    aggFinal->AddInput(partialOutputVecBatch2);
+    VectorBatch *finalOutputVecBatch = nullptr;
+    aggFinal->GetOutput(&finalOutputVecBatch);
+
+    auto finalBf = CreateBloomFilterFromVectorBatch(finalOutputVecBatch);
+    for (int i = 0; i < rowNum; i++) {
+        EXPECT_TRUE(finalBf->MightContainLong(inputDataVector1[i]));
+        EXPECT_TRUE(finalBf->MightContainLong(inputDataVector2[i]));
+    }
+
+    VectorHelper::FreeVecBatch(finalOutputVecBatch);
+    delete aggPartial1;
+    delete aggPartial2;
+    delete aggFinal;
+    delete partialBf1;
+    delete partialBf2;
+    delete finalBf;
 }
 }

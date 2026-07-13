@@ -8,6 +8,7 @@
 #include <mutex>
 #include "expr_evaluator.h"
 #include "vectorization/ExprEval.h"
+#include "vectorization/registration/Register.h"
 #include "expression/expr_verifier.h"
 #include "vector/array_vector.h"
 
@@ -698,6 +699,7 @@ ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vect
     const DataTypes &inputDataTypes, const config::QueryConfig &queryConfig)
     : inputTypes(const_cast<DataTypes &>(inputDataTypes)), queryConfig_(queryConfig)
 {
+    vectorization::link_register_functions();
     auto ofConfig = queryConfig.IsOverFlowASNull() == true
                     ? std::make_unique<OverflowConfig>(OVERFLOW_CONFIG_NULL)
                     : std::make_unique<OverflowConfig>(OVERFLOW_CONFIG_EXCEPTION);
@@ -730,6 +732,7 @@ ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionEx
     const config::QueryConfig &queryConfig)
     : inputTypes(const_cast<DataTypes &>(inputDataTypes)), queryConfig_(queryConfig)
 {
+    vectorization::link_register_functions();
     overflowConfig = queryConfig.IsOverFlowASNull() == true
                     ? std::make_unique<OverflowConfig>(OVERFLOW_CONFIG_NULL)
                     : std::make_unique<OverflowConfig>(OVERFLOW_CONFIG_EXCEPTION);
@@ -759,6 +762,7 @@ ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vect
     const DataTypes &inputDataTypes, OverflowConfig *ofConfig, bool preferVectorization)
     : inputTypes(const_cast<DataTypes &>(inputDataTypes)), preferVectorization(preferVectorization)
 {
+    vectorization::link_register_functions();
     hasFilter = true;
     filterExpr = filterExpression;
     for (auto &projectionExpr : projectionExprs) {
@@ -787,6 +791,7 @@ ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionEx
     OverflowConfig *ofConfig, bool preferVectorization)
     : inputTypes(const_cast<DataTypes &>(inputDataTypes)), preferVectorization(preferVectorization)
 {
+    vectorization::link_register_functions();
     hasFilter = false;
     for (auto &projectionExpr : projectionExprs) {
         projectionExpr->isRoot = true;
