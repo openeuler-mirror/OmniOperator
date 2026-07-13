@@ -282,6 +282,17 @@ namespace omniruntime::vectorization {
     };
 
     template <typename T>
+    struct LnFunction {
+        ALWAYS_INLINE bool call(double &result, double a) {
+            if (a <= 0.0) {
+                return false;
+            }
+            result = std::log(a);
+            return true;
+        }
+    };
+  
+    template <typename T>
     struct Log10Function {
         ALWAYS_INLINE bool call(double &result, double a) {
             if (a <= 0.0) {

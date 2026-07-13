@@ -218,10 +218,10 @@ string GetDecimalBinaryTestJson(int32_t rt, const string &op, const string &left
     return ss.str();
 }
 
-string GetUnaryTestJson(const string &op, const string &expr)
+string GetUnaryTestJson(const string &op, const string &expr, int32_t returnType = 4)
 {
     ss.str("");
-    ss << R"({ "exprType": "UNARY", "returnType": 4, "operator": ")" << op << R"(", "expr": )" << expr << R"(})";
+    ss << R"({ "exprType": "UNARY", "returnType": )" << returnType << R"(, "operator": ")" << op << R"(", "expr": )" << expr << R"(})";
     return ss.str();
 }
 
@@ -375,9 +375,9 @@ class TestUnaryExpr : public TestExpr {
     TestExpr *expr = nullptr;
 
 public:
-    TestUnaryExpr(Operator op, TestExpr *expr) : op(op), expr(expr)
+    TestUnaryExpr(Operator op, TestExpr *expr, DataTypePtr dt = BooleanType()) : op(op), expr(expr)
     {
-        dataType = BooleanType();
+        dataType = dt;
     }
 
     ~TestUnaryExpr() override
@@ -850,6 +850,24 @@ TEST(JSONParserTest, UnaryExpr_NOT)
         GetUnaryTestJson("NOT", GetIsNullTestJson(GetDecimalFieldRefTestJson(OMNI_DECIMAL64, COL_NUM, 0, 0)));
     Expr *unaryExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedUnaryJson));
     TestUnaryExpr expectedExpr(Operator::NOT, new TestIsNullExpr(new TestFieldExpr(OMNI_DECIMAL64, COL_NUM)));
+    expectedExpr.isEqual(unaryExpr);
+    delete unaryExpr;
+}
+
+TEST(JSONParserTest, UnaryExpr_NEGATIVE_INT)
+{
+    string unparsedUnaryJson = GetUnaryTestJson("NEGATION", GetInt32TestJSON(INT32_VAL), 1);
+    Expr *unaryExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedUnaryJson));
+    TestUnaryExpr expectedExpr(Operator::NEG, new TestLiteralExpr(INT32_VAL, IntType()), IntType());
+    expectedExpr.isEqual(unaryExpr);
+    delete unaryExpr;
+}
+
+TEST(JSONParserTest, UnaryExpr_POSITIVE_INT)
+{
+    string unparsedUnaryJson = GetUnaryTestJson("POSITIVE", GetInt32TestJSON(INT32_VAL), 1);
+    Expr *unaryExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedUnaryJson));
+    TestUnaryExpr expectedExpr(Operator::POS, new TestLiteralExpr(INT32_VAL, IntType()), IntType());
     expectedExpr.isEqual(unaryExpr);
     delete unaryExpr;
 }

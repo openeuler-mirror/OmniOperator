@@ -842,6 +842,17 @@ TEST(MathFunctionsTest, Log2Double) {
 }
 
 
+// Test ln function
+TEST(MathFunctionsTest, LnDouble) {
+    std::vector<double> inputData = {1.0, 2.718281828459045, 7.38905609893, 0.5, 0.1, 2.0, 10.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::log(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("ln", inputData, expectedResults);
+}
+
+
 // Test log1p function
 TEST(MathFunctionsTest, Log1pDouble) {
     std::vector<double> inputData = {0.0, 1.0, 9.0, -0.5, -0.9, 0.001, 100.0};

@@ -457,6 +457,10 @@ std::string GetStringOp(Operator op)
             return "modulus";
         case Operator::NOT:
             return "not";
+        case Operator::NEG:
+            return "negative";
+        case Operator::POS:
+            return "positive";
         default:
             return "Invalid";
     }
