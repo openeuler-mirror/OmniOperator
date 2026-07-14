@@ -225,6 +225,24 @@ TEST_F(CastVarcharToTimestampTest, FractionalSecondsUseMicrosecondPrecision)
     ExpectTimestamp(result.get(), timestamps, 2, 123456LL);
 }
 
+TEST_F(CastVarcharToTimestampTest, AncientDatesUseProlepticGregorianCalendar)
+{
+    const std::vector<std::optional<std::string>> values = {
+        "0500-01-01 00:00:00",
+        "1500-01-01 12:34:56.123456"
+    };
+
+    BaseVector* rawResult = nullptr;
+    ExecuteCast(CreateFlatStringVector(values), VarcharType(), values.size(), "UTC", rawResult);
+    std::unique_ptr<BaseVector> result(rawResult);
+    auto* timestamps = AsTimestampVector(result.get());
+    ASSERT_NE(timestamps, nullptr);
+
+    // Spark TimestampType uses the proleptic Gregorian calendar and stores epoch microseconds.
+    ExpectTimestamp(result.get(), timestamps, 0, -46388678400000000LL);
+    ExpectTimestamp(result.get(), timestamps, 1, -14831724303876544LL);
+}
+
 TEST_F(CastVarcharToTimestampTest, ExplicitTimezoneAndOffsetsAreApplied)
 {
     const std::vector<std::optional<std::string>> values = {
@@ -270,6 +288,40 @@ TEST_F(CastVarcharToTimestampTest, SessionTimezoneAppliesOnlyWithoutExplicitTime
     ExpectTimestamp(shanghaiResult.get(), shanghaiTimestamps, 0, -28800000000LL);
     ExpectTimestamp(utcResult.get(), utcTimestamps, 1, 0LL);
     ExpectTimestamp(shanghaiResult.get(), shanghaiTimestamps, 1, 0LL);
+}
+
+TEST_F(CastVarcharToTimestampTest, NamedTimezoneObservesDaylightSavingTime)
+{
+    const std::vector<std::optional<std::string>> explicitTimezoneValues = {
+        "2015-07-24 00:00:00 America/Los_Angeles",
+        "2015-01-24 00:00:00 America/Los_Angeles"
+    };
+
+    BaseVector* rawExplicitResult = nullptr;
+    ExecuteCast(CreateFlatStringVector(explicitTimezoneValues), VarcharType(),
+        explicitTimezoneValues.size(), "UTC", rawExplicitResult);
+    std::unique_ptr<BaseVector> explicitResult(rawExplicitResult);
+    auto* explicitTimestamps = AsTimestampVector(explicitResult.get());
+    ASSERT_NE(explicitTimestamps, nullptr);
+
+    // July uses PDT (UTC-7), while January uses PST (UTC-8).
+    ExpectTimestamp(explicitResult.get(), explicitTimestamps, 0, 1437721200000000LL);
+    ExpectTimestamp(explicitResult.get(), explicitTimestamps, 1, 1422086400000000LL);
+
+    const std::vector<std::optional<std::string>> sessionTimezoneValues = {
+        "2015-07-24 00:00:00",
+        "2015-01-24 00:00:00"
+    };
+
+    BaseVector* rawSessionResult = nullptr;
+    ExecuteCast(CreateFlatStringVector(sessionTimezoneValues), VarcharType(),
+        sessionTimezoneValues.size(), "America/Los_Angeles", rawSessionResult);
+    std::unique_ptr<BaseVector> sessionResult(rawSessionResult);
+    auto* sessionTimestamps = AsTimestampVector(sessionResult.get());
+    ASSERT_NE(sessionTimestamps, nullptr);
+
+    ExpectTimestamp(sessionResult.get(), sessionTimestamps, 0, 1437721200000000LL);
+    ExpectTimestamp(sessionResult.get(), sessionTimestamps, 1, 1422086400000000LL);
 }
 
 TEST_F(CastVarcharToTimestampTest, Date32CastRemainsUnchanged)
