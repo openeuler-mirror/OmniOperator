@@ -30,6 +30,7 @@
 #include "../functions/UnixDate.h"
 #include "../functions/DateFromUnixDate.h"
 #include "../functions/ToTimestamp.h"
+#include "../functions/ToDate.h"
 #include "../functions/ToUtcTimestamp.h"
 #include "../functions/LastDay.h"
 #include "../functions/MonthsBetween.h"
@@ -77,6 +78,7 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterDateFromUnixDateFunction(prefix + "date_from_unix_date");
 
     RegisterToTimestampFunction(prefix + "get_timestamp");
+    RegisterToDateFunction(prefix + "to_date");
     RegisterToUnixTimestampFunction(prefix + "to_unix_timestamp");
     RegisterToUnixTimestampFunction(prefix + "unix_timestamp");
 
