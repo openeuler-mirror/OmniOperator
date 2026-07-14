@@ -1,9 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: Ceil function implementation
- * Truncates a date/timestamp value to the beginning of the specified unit.
- * Supports: DATE32, INT (days since epoch), TIMESTAMP, LONG (microseconds since epoch).
- * OMNI_TIME_WITHOUT_TIME_ZONE is physically OMNI_LONG at runtime and is covered by the LONG registration.
  */
 
 #include "Ceil.h"
@@ -73,7 +70,7 @@ public:
             formatVector = dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(formatArg);
         }
 
-        if (valueTypeId == OMNI_DATE32 || valueTypeId == OMNI_INT) {
+        if (valueTypeId == OMNI_INT) {
             auto *valueVector = reinterpret_cast<Vector<int32_t> *>(valueArg);
             const auto *valueRaw = unsafe::UnsafeVector::GetRawValues(valueVector);
             auto *resultVector = reinterpret_cast<Vector<int32_t> *>(result);
@@ -117,7 +114,7 @@ public:
                     result->SetNull(i);
                 }
             });
-        } else if (valueTypeId == OMNI_TIMESTAMP || valueTypeId == OMNI_LONG) {
+        } else if (valueTypeId == OMNI_LONG) {
             auto *valueVector = reinterpret_cast<Vector<int64_t> *>(valueArg);
             const auto *valueRaw = unsafe::UnsafeVector::GetRawValues(valueVector);
             auto *resultVector = reinterpret_cast<Vector<int64_t> *>(result);
@@ -145,11 +142,11 @@ public:
                     return;
                 }
 
-                int64_t millis = valueRaw[i];
-                Timestamp ts = Timestamp::fromMillis(millis);
+                int64_t micros = valueRaw[i];
+                Timestamp ts = Timestamp::fromMicros(micros);
                 Timestamp truncated;
                 if (Timestamp::CeilTime(ts, level, truncated) == CONVERT_SUCCESS) {
-                    resultRaw[i] = truncated.toMillis();
+                    resultRaw[i] = truncated.toMicros();
 
                     result->SetNotNull(i);
                 } else {
