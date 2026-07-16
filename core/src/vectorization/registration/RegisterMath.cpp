@@ -9,6 +9,7 @@
 #include "../functions/IsNull.h"
 #include "../functions/MathFunctions.h"
 #include "../functions/HexFunctions.h"
+#include "../functions/BinFunction.h"
 #include "../functions/ConvFunction.h"
 #include "RegistrationHelpers.h"
 
@@ -69,10 +70,27 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<RandFunction, double>(prefix + "random", {}, OMNI_DOUBLE);
     RegisterFunction<RandSeedFunctionInt32, double, int32_t>(prefix + "random", {OMNI_INT}, OMNI_DOUBLE);
     RegisterFunction<RandSeedFunctionInt64, double, int64_t>(prefix + "random", {OMNI_LONG}, OMNI_DOUBLE);
+    // pi()/e() — 0-arg constant functions returning Math.PI / Math.E (DOUBLE).
+    // Matches Flink PI()/E() (NILADIC, DOUBLE, deterministic constant).
+    RegisterFunction<PiFunction, double>(prefix + "pi", {}, OMNI_DOUBLE);
+    RegisterFunction<EFunction, double>(prefix + "e", {}, OMNI_DOUBLE);
+
     // Register round: round(expr) default scale=0, round(expr, scale)
     RegisterUnaryIntegralNumeric<RoundFunction>(prefix + "round");
     RegisterUnaryFloatingPoint<RoundFunction>(prefix + "round");
     RegisterRoundNumericWithScale<RoundFunction>(prefix + "round");
+
+    // Register truncate: truncate(expr) default scale=0, truncate(expr, scale).
+    // Mirrors Flink TRUNCATE(numeric, integer): truncates toward zero (DOWN) to `scale` decimals.
+    // Same overload set as round (byte/short/int/long/float/double); DECIMAL not yet supported.
+    RegisterUnaryIntegralNumeric<TruncateFunction>(prefix + "truncate");
+    RegisterUnaryFloatingPoint<TruncateFunction>(prefix + "truncate");
+    RegisterRoundNumericWithScale<TruncateFunction>(prefix + "truncate");
+
+    // bin function: converts integer to its binary string (Flink BIN, Long.toBinaryString).
+    // INT is sign-extended to 64 bits to match Flink's int->long widening.
+    RegisterFunction<BinBigintFunction, std::string, int64_t>(prefix + "bin", {OMNI_LONG}, OMNI_VARCHAR);
+    RegisterFunction<BinIntFunction, std::string, int32_t>(prefix + "bin", {OMNI_INT}, OMNI_VARCHAR);
 
     // hex function: converts integer/string/binary to hexadecimal string
     RegisterFunction<HexBigintFunction, std::string, int64_t>(prefix + "hex", {OMNI_LONG}, OMNI_VARCHAR);
