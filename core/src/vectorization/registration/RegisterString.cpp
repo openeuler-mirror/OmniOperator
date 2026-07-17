@@ -67,6 +67,26 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterFunction<SubstrFunction, std::string, std::string_view, int32_t, int32_t>(
         prefix + "substr", {OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
 
+    // left(string, length) / right(string, length) -> varchar
+    // Leftmost / rightmost `length` characters; length <= 0 -> empty; Unicode-aware.
+    // Support VARCHAR/CHAR string with INT/LONG length (same type matrix as repeat).
+    RegisterFunction<LeftFunction, std::string, std::string_view, int32_t>(
+        prefix + "left", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<LeftFunction, std::string, std::string_view, int64_t>(
+        prefix + "left", {OMNI_VARCHAR, OMNI_LONG}, OMNI_VARCHAR);
+    RegisterFunction<LeftFunction, std::string, std::string_view, int32_t>(
+        prefix + "left", {OMNI_CHAR, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<LeftFunction, std::string, std::string_view, int64_t>(
+        prefix + "left", {OMNI_CHAR, OMNI_LONG}, OMNI_VARCHAR);
+    RegisterFunction<RightFunction, std::string, std::string_view, int32_t>(
+        prefix + "right", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<RightFunction, std::string, std::string_view, int64_t>(
+        prefix + "right", {OMNI_VARCHAR, OMNI_LONG}, OMNI_VARCHAR);
+    RegisterFunction<RightFunction, std::string, std::string_view, int32_t>(
+        prefix + "right", {OMNI_CHAR, OMNI_INT}, OMNI_VARCHAR);
+    RegisterFunction<RightFunction, std::string, std::string_view, int64_t>(
+        prefix + "right", {OMNI_CHAR, OMNI_LONG}, OMNI_VARCHAR);
+
     // Register concat function with variable arity support
     // Register multiple signatures for different argument counts (2 to 10 arguments)
     auto concatFunction = std::make_shared<ConcatFunction>();

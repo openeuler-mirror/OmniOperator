@@ -623,6 +623,75 @@ private:
     }
 };
 
+/// left(string, length) -> varchar
+/// Returns the leftmost `length` characters of `string`. Unicode-aware (counts
+/// characters, not bytes). length <= 0 -> empty string; length >= character
+/// count -> the whole string. NULL arguments propagate to NULL via the
+/// SimpleFunction framework (uses call, not callNullable). Semantically
+/// equivalent to substr(string, 1, length).
+template <typename T>
+struct LeftFunction {
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input, int32_t length)
+    {
+        return doCall(result, input, static_cast<int64_t>(length));
+    }
+
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input, int64_t length)
+    {
+        return doCall(result, input, length);
+    }
+
+private:
+    ALWAYS_INLINE bool doCall(std::string &result, const std::string_view &input, int64_t length)
+    {
+        if (length <= 0) {
+            result.clear();
+            return true;
+        }
+        // cappedByteLengthUnicode walks up to `length` chars (or until end of input),
+        // returning the byte offset; clamps length > charCount to the whole string.
+        int64_t byteLen = stringImpl::cappedByteLengthUnicode(
+            input.data(), static_cast<int64_t>(input.size()), length);
+        result.assign(input.data(), static_cast<size_t>(byteLen));
+        return true;
+    }
+};
+
+/// right(string, length) -> varchar
+/// Returns the rightmost `length` characters of `string`. Unicode-aware.
+/// length <= 0 -> empty string; length >= character count -> the whole string.
+/// NULL arguments propagate to NULL via the SimpleFunction framework.
+/// Semantically equivalent to substr(string, -length, length).
+template <typename T>
+struct RightFunction {
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input, int32_t length)
+    {
+        return doCall(result, input, static_cast<int64_t>(length));
+    }
+
+    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input, int64_t length)
+    {
+        return doCall(result, input, length);
+    }
+
+private:
+    ALWAYS_INLINE bool doCall(std::string &result, const std::string_view &input, int64_t length)
+    {
+        if (length <= 0) {
+            result.clear();
+            return true;
+        }
+        int64_t numCharacters = stringImpl::length<false>(input);
+        int64_t take = (length >= numCharacters) ? numCharacters : length;
+        int64_t skipChars = numCharacters - take;
+        int64_t startByte = stringImpl::cappedByteLengthUnicode(
+            input.data(), static_cast<int64_t>(input.size()), skipChars);
+        size_t startByteOff = static_cast<size_t>(startByte);
+        result.assign(input.data() + startByteOff, input.size() - startByteOff);
+        return true;
+    }
+};
+
 /// position function
 /// position(substring, string) -> integer
 /// Returns the 1-based position of the first occurrence of substring in string.
