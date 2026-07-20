@@ -163,13 +163,6 @@ public:
 
     void EmplaceBatch(const Key* keys, char** rows, int32_t numRows) {
         auto payloadOff = rows_->PayloadOffset();
-
-        // Fixed / packed mode: keys[] already contains the actual hash-table key
-        // (single-column value or packed multi-column value). TaperFlatHashTable's
-        // default KeyEquals compares these KeyType values, so a fUpdate(false) call
-        // always means the same join key. We can therefore insert and chain in one
-        // pass, unlike agg's serialize handler which uses a hash as the table key
-        // and needs a second pass to resolve hash collisions.
         table_->EmplaceBatch(
             keys,
             static_cast<uint32_t>(numRows),

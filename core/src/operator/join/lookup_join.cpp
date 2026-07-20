@@ -963,7 +963,6 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                 auto probeHashColsCount = probeHashCols.size();
                 uint32_t partition = partitionMask;
                 InitForProbe<hasJoinFilter>(partition);
-                // 第 1 轮：批量探测所有 probe 行，收集 chainHead
                 int32_t numProbeRows = inputRowCount - curProbePosition;
                 std::vector<char*> chainHeads(numProbeRows, nullptr);
                 varg.FindBatch(
@@ -973,14 +972,12 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     singleHT, partitionMask, curProbeHashes,
                     chainHeads);
 
-                // 对命中行调用 ProbeJoinPosition（per-row setup）
                 for (int32_t i = 0; i < numProbeRows; ++i) {
                     if (chainHeads[i]) {
                         ProbeJoinPosition<hasJoinFilter>(curProbePosition + i);
                     }
                 }
 
-                // 第 2 轮：批量展开冲突链 + filter 评估 + 输出（lambda，捕获局部变量避免传参）
                 auto listResult = [&](int32_t probeStart, int32_t probeEnd, std::vector<char*>& heads) {
                     auto payloadOff = rc->PayloadOffset();
                     for (int32_t pos = probeStart; pos < probeEnd; ++pos) {

@@ -190,8 +190,6 @@ class TaperHashTableBase : public TaperContainer {
     return GetChunksCapacity() * elemNumInChunk_;
   }
 
-
-  /// Reserve capacity for at least numElements. Called before any insert.
   void Reserve(size_t numElements) {
     auto needed = BitUtil::divRoundUp(numElements, static_cast<size_t>(elemNumInChunk_));
     auto cap = BitUtil::nextPowerOfTwo(needed);
@@ -510,7 +508,6 @@ class TaperHashTableBase : public TaperContainer {
         p1RehashCollisionCount_++;
       }
 #endif
-      assert(collisionBatch <= getChunksCapacity());
       if constexpr (Op == Operation::kSearch) {
         chunkPos = getRehashPos(collisionBatch, chunkPos);
         ++collisionBatch;
@@ -1079,7 +1076,6 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
     Base::template Operate<Operation::kInsert>(*this, key, DUMMY_CMP, fInit, fUpdate);
   }
 
-  // --- Probe counterpart of Emplace (same callbacks, read-only) -----------
   template <typename FKCmp, typename FInit, typename FUpdate>
   void Probe(const Key& key, FKCmp&& fKeyCmp, FInit&& fInit, FUpdate&& fUpdate) {
     Base::template Operate<Operation::kSearch>(*this, key,
@@ -1172,7 +1168,6 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
       }
     }
     for (auto i : PHBitMask::matchEmpty(tags, emptyTags_)) {
-      // In probe mode, we only invoke fUpdate to send "not found" result
       if constexpr (Op == Operation::kSearch) {
         fUpdate(chunkVal(*curChunk, i), true);
         return true;
@@ -1180,9 +1175,6 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
       Base::incSize();
       curChunk->tagsBuf()[i] = tagHash;
       auto* value = chunkVal(*curChunk, i);
-
-      // set key after fInit, as in some cases, fInit may inits whole row
-      // semantically.
       fInit(value);
       chunkKey(*curChunk, i) = key;
       fUpdate(value, true);
