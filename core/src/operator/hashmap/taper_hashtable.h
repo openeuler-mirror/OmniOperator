@@ -198,6 +198,7 @@ class TaperHashTableBase : public TaperContainer {
     if (cap <= GetChunksCapacity()) return;
     Init(static_cast<uint32_t>(cap - 1));
   }
+
   void Clear() override {
     FreeChunks();
     Init(0);
@@ -390,27 +391,6 @@ class TaperHashTableBase : public TaperContainer {
   ChunkPtr chunks_ = nullptr;
   BatchContext operateContext_;
   BatchContext rehashContext_;
-
-  struct ProbeContext {
-    std::vector<size_t> hashVals;
-    std::vector<ChunkPos> chunkPositions;
-    std::vector<uint32_t> pendingIndices;
-    size_t capacity = 0;
-  };
-  ProbeContext probeContext_;
-
-  void ResetProbeContext(const Key* keys, uint32_t numKeys) {
-    if (probeContext_.capacity < numKeys) {
-      probeContext_.hashVals.resize(numKeys);
-      probeContext_.chunkPositions.resize(numKeys);
-      probeContext_.pendingIndices.resize(numKeys);
-      probeContext_.capacity = numKeys;
-    }
-    for (uint32_t i = 0; i < numKeys; ++i) {
-      probeContext_.hashVals[i] = Hash(keys[i]);
-      probeContext_.chunkPositions[i] = GetChunkPos(probeContext_.hashVals[i]);
-    }
-  }
 
   static constexpr int32_t kStringPrefetchDist = 16;
 
@@ -1036,7 +1016,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
       Filter&& filter,
       FInit&& fInit,
       FUpdate&& fUpdate) {
-    Base::template operateBatch<Operation::kInsert>(
+    Base::template OperateBatch<Operation::kInsert>(
         *this,
         keys,
         numRows,
@@ -1055,7 +1035,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
       FKCmp&& filter,
       FInit&& fInit,
       FUpdate&& fUpdate) {
-    Base::template operateBatch<Operation::kSearch>(*this, keys, numKeys,
+    Base::template OperateBatch<Operation::kSearch>(*this, keys, numKeys,
         std::forward<Filter>(filter),
         [&](uint32_t, const Key& key, Chunk& chunk, uint8_t slot) {
           return Base::KeyEquals(key, GetChunkKey(chunk, slot));
