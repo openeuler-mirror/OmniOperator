@@ -152,7 +152,7 @@ public:
         if (UNLIKELY(!table_)) return;
 
         table_->ProbeBatch(keys, static_cast<uint32_t>(numKeys),
-            [](uint32_t, const int64_t&, TaperHashTableChunk&, uint8_t) { return true; }, //TODO: 比较函数待实现
+            [](uint32_t) { return false; },
             [](uint32_t, char*) { /* empty slot → miss */ },
             [&](uint32_t ki, char* data, bool initFlag) {
                 if(!initFlag){
