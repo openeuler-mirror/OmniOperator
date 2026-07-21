@@ -326,4 +326,207 @@ int64_t Timestamp::calendarUtcToEpoch(const std::tm &tm)
     auto daysSinceEpoch = daysBetweenYears(1970, year) + dayOfYear;
     return kSecondsPerDay * daysSinceEpoch + kSecondsPerHour * tm.tm_hour + 60LL * tm.tm_min + tm.tm_sec;
 }
+
+namespace {
+constexpr int64_t kSecondsPerMinute = 60;
+}
+
+// static
+type::Status Timestamp::FloorTime(const Timestamp &ts, type::DateTruncMode level, Timestamp &result)
+{
+    int64_t seconds = ts.getSeconds();
+    uint64_t nanos = ts.getNanos();
+
+    int64_t days = seconds / kSecondsInDay;
+    int64_t secsOfDay = seconds % kSecondsInDay;
+    if (secsOfDay < 0) {
+        secsOfDay += kSecondsInDay;
+        --days;
+    }
+
+    switch (level) {
+        case type::DateTruncMode::TRUNC_TO_SECOND:
+            nanos = 0;
+            break;
+        case type::DateTruncMode::TRUNC_TO_MINUTE:
+            secsOfDay = secsOfDay / kSecondsPerMinute * kSecondsPerMinute;
+            nanos = 0;
+            break;
+        case type::DateTruncMode::TRUNC_TO_HOUR:
+            secsOfDay = secsOfDay / kSecondsPerHour * kSecondsPerHour;
+            nanos = 0;
+            break;
+        case type::DateTruncMode::TRUNC_TO_DAY:
+            secsOfDay = 0;
+            nanos = 0;
+            break;
+        case type::DateTruncMode::TRUNC_TO_WEEK: {
+            constexpr int64_t kSunday = 3;
+            days -= ((days - kSunday) % 7 + 7) % 7;
+            secsOfDay = 0;
+            nanos = 0;
+            break;
+        }
+        case type::DateTruncMode::TRUNC_TO_MONTH: {
+            LocalDate ld(static_cast<int32_t>(days));
+            days = days - ld.GetDay() + 1;
+            secsOfDay = 0;
+            nanos = 0;
+            break;
+        }
+        case type::DateTruncMode::TRUNC_TO_QUARTER: {
+            LocalDate ld(static_cast<int32_t>(days));
+            ld.SetQuarter();
+            days = ld.ToDays();
+            secsOfDay = 0;
+            nanos = 0;
+            break;
+        }
+        case type::DateTruncMode::TRUNC_TO_YEAR: {
+            LocalDate ld(static_cast<int32_t>(days));
+            days = days - ld.getDayOfYear() + 1;
+            secsOfDay = 0;
+            nanos = 0;
+            break;
+        }
+        default:
+            return type::Status::CONVERT_OVERFLOW;
+    }
+
+    result = Timestamp(days * kSecondsInDay + secsOfDay, nanos);
+    return type::Status::CONVERT_SUCCESS;
+}
+
+// static
+type::Status Timestamp::CeilTime(const Timestamp &ts, type::DateTruncMode level, Timestamp &result)
+{
+    int64_t seconds = ts.getSeconds();
+    uint64_t nanos = ts.getNanos();
+
+    int64_t days = seconds / kSecondsInDay;
+    int64_t secsOfDay = seconds % kSecondsInDay;
+    if (secsOfDay < 0) {
+        secsOfDay += kSecondsInDay;
+        --days;
+    }
+
+    switch (level) {
+        case type::DateTruncMode::TRUNC_TO_SECOND: {
+            if (nanos > 0) {
+                nanos = 0;
+                ++secsOfDay;
+                if (secsOfDay >= kSecondsInDay) {
+                    secsOfDay -= kSecondsInDay;
+                    ++days;
+                }
+            } else {
+                nanos = 0;
+            }
+            break;
+        }
+        case type::DateTruncMode::TRUNC_TO_MINUTE: {
+            int64_t floorSecs = secsOfDay / kSecondsPerMinute * kSecondsPerMinute;
+            if (floorSecs != secsOfDay || nanos > 0) {
+                floorSecs += kSecondsPerMinute;
+                if (floorSecs >= kSecondsInDay) {
+                    floorSecs -= kSecondsInDay;
+                    ++days;
+                }
+            }
+            secsOfDay = floorSecs;
+            nanos = 0;
+            break;
+        }
+        case type::DateTruncMode::TRUNC_TO_HOUR: {
+            int64_t floorSecs = secsOfDay / kSecondsPerHour * kSecondsPerHour;
+            if (floorSecs != secsOfDay || nanos > 0) {
+                floorSecs += kSecondsPerHour;
+                if (floorSecs >= kSecondsInDay) {
+                    floorSecs -= kSecondsInDay;
+                    ++days;
+                }
+            }
+            secsOfDay = floorSecs;
+            nanos = 0;
+            break;
+        }
+        case type::DateTruncMode::TRUNC_TO_DAY: {
+            if (secsOfDay != 0 || nanos != 0) {
+                ++days;
+            }
+            secsOfDay = 0;
+            nanos = 0;
+            break;
+        }
+        case type::DateTruncMode::TRUNC_TO_WEEK: {
+            constexpr int64_t kSunday = 3; // 目前定位在周天，等查看flink原生是否一致
+            int64_t offset = ((days - kSunday) % 7 + 7) % 7;
+            days -= offset;
+            if (offset != 0 || secsOfDay != 0 || nanos != 0) {
+                days += 7;
+            }
+            secsOfDay = 0;
+            nanos = 0;
+            break;
+        }
+        case type::DateTruncMode::TRUNC_TO_MONTH: {
+            LocalDate ld(static_cast<int32_t>(days));
+            int16_t day = ld.GetDay();
+            int64_t floorDays = days - day + 1;
+            if (day == 1 && secsOfDay == 0 && nanos == 0) {
+                days = floorDays;
+            } else {
+                int32_t base = static_cast<int32_t>(floorDays);
+                int32_t d = 28;
+                while (LocalDate(base + d).GetDay() != 1) {
+                    ++d;
+                }
+                days = base + d;
+            }
+            secsOfDay = 0;
+            nanos = 0;
+            break;
+        }
+        case type::DateTruncMode::TRUNC_TO_QUARTER: {
+            LocalDate ld(static_cast<int32_t>(days));
+            ld.SetQuarter();
+            int32_t floorDays = ld.ToDays();
+            if (static_cast<int32_t>(days) == floorDays && secsOfDay == 0 && nanos == 0) {
+                days = floorDays;
+            } else {
+                int32_t base = floorDays;
+                for (int i = 0; i < 3; ++i) {
+                    int32_t d = 28;
+                    while (LocalDate(base + d).GetDay() != 1) {
+                        ++d;
+                    }
+                    base += d;
+                }
+                days = base;
+            }
+            secsOfDay = 0;
+            nanos = 0;
+            break;
+        }
+        case type::DateTruncMode::TRUNC_TO_YEAR: {
+            LocalDate ld(static_cast<int32_t>(days));
+            int32_t dayOfYear = ld.getDayOfYear();
+            int32_t floorDays = static_cast<int32_t>(days) - dayOfYear + 1;
+            if (dayOfYear == 1 && secsOfDay == 0 && nanos == 0) {
+                days = floorDays;
+            } else {
+                bool leap = LocalDate(floorDays).IsLeapYear();
+                days = floorDays + 365 + (leap ? 1 : 0);
+            }
+            secsOfDay = 0;
+            nanos = 0;
+            break;
+        }
+        default:
+            return type::Status::CONVERT_OVERFLOW;
+    }
+
+    result = Timestamp(days * kSecondsInDay + secsOfDay, nanos);
+    return type::Status::CONVERT_SUCCESS;
+}
 }

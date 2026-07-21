@@ -57,6 +57,7 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<ExpFunction, double, double>(prefix + "exp", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SecFunction, double, double>(prefix + "sec", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<CscFunction, double, double>(prefix + "csc", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<LnFunction, double, double>(prefix + "ln", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Log1pFunction, double, double>(prefix + "log1p", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Log10Function, double, double>(prefix + "log10", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<Log2Function, double, double>(prefix + "log2", {OMNI_DOUBLE}, OMNI_DOUBLE);

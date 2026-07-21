@@ -39,6 +39,8 @@
 #include "../functions/DateFormat.h"
 #include "../functions/FromUnixTime.h"
 #include "../functions/DateTrunc.h"
+#include "../functions/Floor.h"
+#include "../functions/Ceil.h"
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
@@ -98,5 +100,9 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterDateFormatFunction(prefix + "DateFormat");
 
     RegisterFromUnixTimeFunction(prefix + "from_unixtime");
+
+    RegisterFloorFunction(prefix + "floor_time");
+
+    RegisterCeilFunction(prefix + "ceil_time");
 }
 }

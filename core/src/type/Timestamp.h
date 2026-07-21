@@ -10,6 +10,7 @@
 #include "util/omni_exception.h"
 #include "type/tz/TimeZoneMap.h"
 #include "type/string_ref.h"
+#include "type/date32.h"
 
 namespace omniruntime {
 namespace tz {
@@ -310,6 +311,10 @@ struct Timestamp {
             default: OMNI_FAIL("Unsupport");
         }
     }
+
+    static type::Status FloorTime(const Timestamp &ts, type::DateTruncMode level, Timestamp &result);
+
+    static type::Status CeilTime(const Timestamp &ts, type::DateTruncMode level, Timestamp &result);
 
     // Assuming the timestamp represents a time at zone, converts it to the GMT
     // time at the same moment. For example:

@@ -46,6 +46,8 @@ enum class Operator {
     AND,
     OR,
     NOT,
+    NEG,
+    POS,
     // Arithmetic
     ADD,
     SUB,
@@ -81,9 +83,10 @@ enum class ExprType {
 const std::map<std::string, Operator> OPERATOR_FROM_STRING = {{"EQUAL", Operator::EQ}, {"LESS_THAN", Operator::LT},
     {"LESS_THAN_OR_EQUAL", Operator::LTE}, {"GREATER_THAN_OR_EQUAL", Operator::GTE}, {"GREATER_THAN", Operator::GT},
     {"NOT_EQUAL", Operator::NEQ}, {"AND", Operator::AND}, {"OR", Operator::OR}, {"NOT", Operator::NOT},
-    {"not", Operator::NOT}, {"ADD", Operator::ADD}, {"SUBTRACT", Operator::SUB}, {"MULTIPLY", Operator::MUL},
-    {"DIVIDE", Operator::DIV}, {"MODULUS", Operator::MOD}, {"TRY_ADD", Operator::TRY_ADD},
-    {"TRY_SUBTRACT", Operator::TRY_SUB}, {"TRY_MULTIPLY", Operator::TRY_MUL}, {"TRY_DIVIDE", Operator::TRY_DIV}};
+    {"not", Operator::NOT}, {"POSITIVE", Operator::POS}, {"NEGATION", Operator::NEG}, {"ADD", Operator::ADD},
+    {"SUBTRACT", Operator::SUB}, {"MULTIPLY", Operator::MUL}, {"DIVIDE", Operator::DIV}, {"MODULUS", Operator::MOD},
+    {"TRY_ADD", Operator::TRY_ADD}, {"TRY_SUBTRACT", Operator::TRY_SUB}, {"TRY_MULTIPLY", Operator::TRY_MUL},
+    {"TRY_DIVIDE", Operator::TRY_DIV}};
 
 bool IsNullLiteral(const std::string &value);
 bool IsComparisonOperator(Operator op);
@@ -263,6 +266,12 @@ public:
             case Operator::NOT:
                 output += "Unary:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(NOT ";
                 break;
+            case Operator::NEG:
+                output += "Unary:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(NEGATIVE ";
+                break;
+            case Operator::POS:
+                output += "Unary:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(POSITIVE ";
+                break;   
             default:
                 output += "InvalidUnaryOperator:" + std::to_string(static_cast<int32_t>(this->op)) + "(";
                 break;

@@ -218,7 +218,13 @@ Expr *JSONParser::ParseJSONUnary(const Json &jsonExpr)
     if (expr == nullptr) {
         return nullptr;
     }
-    return new UnaryExpr(op, expr, std::make_shared<BooleanDataType>());
+
+    DataTypePtr dataType = ParserHelper::GetReturnDataType(jsonExpr);
+    if (dataType == nullptr) {
+        delete expr;
+        return nullptr;
+    }
+    return new UnaryExpr(op, expr, dataType);
 }
 
 Expr *JSONParser::ParseJSONIn(const Json &jsonExpr)

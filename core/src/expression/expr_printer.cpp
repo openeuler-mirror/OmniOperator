@@ -118,6 +118,12 @@ void ExprPrinter::Visit(const UnaryExpr &e)
         case Operator::NOT:
             output += "Unary:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(NOT ";
             break;
+        case Operator::NEG:
+            output += "Unary:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(NEGATIVE ";
+            break;
+        case Operator::POS:
+            output += "Unary:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(POSITIVE ";
+            break;
         default:
             output += "InvalidUnaryOperator:" + to_string(static_cast<int32_t>(e.op)) + "(";
             break;
