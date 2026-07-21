@@ -5,8 +5,10 @@
 
 #include "Cast.h"
 #include "vector/vector.h"
+#include <exception>
 #include <limits>
 #include <cstring>
+#include <optional>
 #include <type/Conversions.h>
 #include "codegen/functions/dtoa.h"
 
@@ -1355,9 +1357,39 @@ void CastFunction::CastToTimestamp(BaseVector* input, BaseVector*& result, Execu
     const auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(OMNI_TIMESTAMP, size);
     auto* resultVec = static_cast<Vector<int64_t>*>(result);
+    const auto parseString = [this](const std::string_view inputValue) -> std::optional<int64_t> {
+        try {
+            const auto trimmedValue = hooks_->removeWhiteSpaces(inputValue);
+            if (trimmedValue.empty()) {
+                return std::nullopt;
+            }
+            const auto parsedValue = hooks_->castStringToTimestamp(trimmedValue);
+            if (parsedValue.hasError()) {
+                return std::nullopt;
+            }
+            return parsedValue.value();
+        } catch (const std::exception&) {
+            return std::nullopt;
+        }
+    };
     if (input->GetEncoding() == OMNI_ENCODING_CONST) {
         int64_t timestampValue;
         switch (fromType_->GetId()) {
+            case OMNI_VARCHAR:
+            {
+                if (input->IsNull(0)) {
+                    result->SetNulls(0, true, size);
+                    return;
+                }
+                const auto parsedValue = parseString(
+                    static_cast<ConstVector<std::string_view> *>(input)->GetConstValue());
+                if (!parsedValue.has_value()) {
+                    result->SetNulls(0, true, size);
+                    return;
+                }
+                timestampValue = parsedValue.value();
+                break;
+            }
             case OMNI_DATE32:
             {
                 static constexpr int64_t kMillisPerDay{86'400'000};
@@ -1385,6 +1417,18 @@ void CastFunction::CastToTimestamp(BaseVector* input, BaseVector*& result, Execu
         }
     } else {
         switch (fromType_->GetId()) {
+            case OMNI_VARCHAR: {
+                for (int32_t row = 0; row < size; ++row) {
+                    if (input->IsNull(row)) { result->SetNull(row); continue; }
+                    const auto parsedValue = parseString(VectorHelper::GetStringValueFromVector(input, row));
+                    if (!parsedValue.has_value()) {
+                        result->SetNull(row);
+                        continue;
+                    }
+                    resultVec->SetValue(row, parsedValue.value());
+                }
+                break;
+            }
             case OMNI_DATE32: {
                 static constexpr int64_t kMillisPerDay{86'400'000};
                 auto config = context->queryConfig();
