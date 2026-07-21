@@ -50,7 +50,7 @@ public:
     }
 
     static BaseVector *CreateStringDictionary(const int32_t *values, int32_t valueSize,
-        Vector<LargeStringContainer<std::string_view>> *vector)
+        Vector<LargeStringContainer<std::string_view>> *vector, DataTypeId dataTypeId = OMNI_CHAR)
     {
         auto nullsBuffer = std::make_unique<NullsBuffer>(valueSize);
         for (int i = 0; i < valueSize; i++) {
@@ -64,7 +64,7 @@ public:
             unsafe::UnsafeStringVector::GetContainer(
             reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)),
             vector->GetSize(), vector->GetOffset());
-        return new Vector<DictionaryContainer<std::string_view>>(valueSize, dictionary, nullsBuffer.get(), OMNI_CHAR);
+        return new Vector<DictionaryContainer<std::string_view>>(valueSize, dictionary, nullsBuffer.get(), dataTypeId);
     }
 
     template <typename T> static BaseVector *CreateDictionary(int32_t *values, int32_t valueSize, Vector<T> *vector)
@@ -407,7 +407,7 @@ public:
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
                 return CreateStringDictionary(values, valueSize,
-                    reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector));
+                    reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector), dataTypeId);
             }
             default: {
                 std::string omniExceptionInfo =
