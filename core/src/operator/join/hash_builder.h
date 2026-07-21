@@ -113,6 +113,7 @@ HashTableVariants* HashBuilderOperatorFactory::InitTaperVariant(int32_t buildHas
                     operatorCount, &buildTypes, buildHashCols, joinType, buildSide};
             case OMNI_INT:
             case OMNI_DATE32:
+            case OMNI_TIME32:
             case OMNI_FLOAT:
                 return new HashTableVariants{std::in_place_type<TaperJoinHashTableVariants<int32_t, NeedVisited>>,
                     operatorCount, &buildTypes, buildHashCols, joinType, buildSide};
@@ -120,28 +121,41 @@ HashTableVariants* HashBuilderOperatorFactory::InitTaperVariant(int32_t buildHas
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
             case OMNI_DOUBLE:
+            case OMNI_TIME64:
             case OMNI_DATE64:
                 return new HashTableVariants{std::in_place_type<TaperJoinHashTableVariants<int64_t, NeedVisited>>,
                     operatorCount, &buildTypes, buildHashCols, joinType, buildSide};
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+            case OMNI_VARBINARY: {
+                auto* var = new HashTableVariants{std::in_place_type<TaperJoinHashTableVariants<int64_t, NeedVisited>>,
+                    operatorCount, &buildTypes, buildHashCols, joinType, buildSide};
+                std::visit([&](auto&& v) { v.SetSerMode(); }, *var);
+                return var;
+            }
+            case OMNI_DECIMAL128:
+            case OMNI_ARRAY:
+            case OMNI_MAP:
+            case OMNI_ROW:
             default:
-                throw omniruntime::exception::OmniException("TAPER_NOT_SUPPORTED",
-                    "TAPER join does not support single-column key type "
+                throw omniruntime::exception::OmniException("TAPER_NOT_SUPPORTED",	 
+                    "TAPER join does not support single-column key type "	 
                     + std::to_string(static_cast<int>(type)));
         }
     }
     // Multi-column: bit-pack key columns (consistent with agg packed mode).
-    // Like agg, only keys ≤ 64 total bits go to fixed; wider keys are unsupported
-    // because join has no serialize fallback for TAPER.
+    // Fixed path for keys ≤ 64 total bits; wider keys fall back to serialized mode.
     if (buildHashColsCount > 1) {
         int32_t totalBits = 0;
         for (int32_t i = 0; i < buildHashColsCount; ++i) {
             auto typeId = buildTypes.GetIds()[buildHashCols[i]];
             uint8_t bits = TaperJoinHashTableVariants<int32_t, NeedVisited>::PackedBitWidth(typeId);
             if (bits == 0) {
-                throw omniruntime::exception::OmniException("TAPER_NOT_SUPPORTED",
-                    "TAPER join does not support key type "
-                    + std::to_string(static_cast<int>(typeId))
-                    + " in multi-column key");
+                // VARCHAR/unsupported type in multi-col → ser mode
+                auto* var = new HashTableVariants{std::in_place_type<TaperJoinHashTableVariants<int64_t, NeedVisited>>,
+                    operatorCount, &buildTypes, buildHashCols, joinType, buildSide};
+                std::visit([&](auto&& v) { v.SetSerMode(); }, *var);
+                return var;
             }
             totalBits += bits;
         }
@@ -153,9 +167,11 @@ HashTableVariants* HashBuilderOperatorFactory::InitTaperVariant(int32_t buildHas
             return new HashTableVariants{std::in_place_type<TaperJoinHashTableVariants<int64_t, NeedVisited>>,
                 operatorCount, &buildTypes, buildHashCols, joinType, buildSide};
         }
-        throw omniruntime::exception::OmniException("TAPER_NOT_SUPPORTED",
-            "TAPER join does not support packed key > 64 bits (total="
-            + std::to_string(totalBits) + ")");
+        // Packed > 64 bits → ser mode
+        auto* var = new HashTableVariants{std::in_place_type<TaperJoinHashTableVariants<int64_t, NeedVisited>>,
+            operatorCount, &buildTypes, buildHashCols, joinType, buildSide};
+        std::visit([&](auto&& v) { v.SetSerMode(); }, *var);
+        return var;
     }
     return nullptr;
 }

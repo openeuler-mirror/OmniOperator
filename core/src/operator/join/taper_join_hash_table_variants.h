@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -16,6 +17,7 @@
 #include "operator/hashmap/column_marshaller.h"
 #include "operator/hashmap/array_map.h"
 #include "operator/execution_context.h"
+#include "operator/hash_util.h"
 #include "operator/join/taper_join_handler.h"
 #include "vector/decoded_vector.h"
 #include "operator/hashmap/vector_analyzer.h"
@@ -33,9 +35,6 @@ enum class HashTableImplementationType {
     ARRAY_HASH_TABLE
 };
 
-// TAPER hash table variant that mirrors JoinHashTableVariants in the
-// non-TAPER path. Provides the same operator-visible interface but all
-// implementations are empty stubs.
 template <typename KeyType, bool NeedVisited>
 class TaperJoinHashTableVariants {
 public:
@@ -62,7 +61,7 @@ public:
         }
         // Multi-column key: compute pack plan (bit-widths + masks per key column)
         if (buildHashCols_.size() > 1) {
-            isPacked_ = true;
+            isMultiColumn_ = true;
             bitWidths_.reserve(buildHashCols_.size());
             masks_.reserve(buildHashCols_.size());
             for (size_t i = 0; i < buildHashCols_.size(); ++i) {
@@ -84,8 +83,8 @@ public:
         switch (typeId) {
             case OMNI_BYTE:   case OMNI_BOOLEAN: return 8;
             case OMNI_SHORT:  return 16;
-            case OMNI_INT:    case OMNI_DATE32: case OMNI_TIME32: return 32;
-            case OMNI_LONG:   case OMNI_TIMESTAMP: case OMNI_DECIMAL64:
+            case OMNI_INT:    case OMNI_DATE32: case OMNI_TIME32:  case OMNI_FLOAT: return 32;
+            case OMNI_LONG:   case OMNI_TIMESTAMP: case OMNI_DECIMAL64:  case OMNI_DOUBLE:
             case OMNI_DATE64: case OMNI_TIME64: return 64;
             default: return 0;
         }
@@ -118,15 +117,12 @@ public:
     OmniStatus GetStatus() const { return status_; }
     void SetStatus(OmniStatus s) { status_ = s; }
 
-    // --- Column data ----------------------------------------------------------
 
     omniruntime::vec::BaseVector*** GetColumns(int /*partitionIndex*/) const { return nullptr; }  //TODO
 
     void SetTaperStoredColumns(const std::vector<int32_t>& indices) {
         taperStoredColIndices_ = indices;
     }
-
-    // --- Build pipeline -------------------------------------------------------
 
     void AddVecBatch(int partitionIndex, omniruntime::vec::VectorBatch* vecBatch) {
         inputVecBatches_[partitionIndex].push_back(vecBatch);
@@ -139,53 +135,138 @@ public:
         }
     }
     void BuildHashTable(int partitionIndex) {
-        BuildTaperHashTable(partitionIndex);
+        if(isSer_){
+            BuildTaperHashTableSerialized(partitionIndex);
+        } else {
+            BuildTaperHashTableFixed(partitionIndex);
+        }   
     }
-
-    // --- TAPER-specific build pipeline -----------------------------------------
 
     void CollectTaperRows(int32_t partitionIndex, vec::VectorBatch* vecBatch, uint32_t batchIdx);
-    void BuildTaperHashTable(int32_t partitionIndex);
+    void BuildTaperHashTableSerialized(int32_t partitionIndex);
+    void BuildTaperHashTableFixed(int32_t partitionIndex);
 
-    // --- Find / probe ---------------------------------------------------------
-
-    // 4-param Find: TAPER probe — decode key column(s) and call handler.
-    char* Find(omniruntime::vec::BaseVector** probeHashColumns, int32_t probeHashColCount,
-               int32_t probePosition, uint32_t partition) {
-        auto& handler = handlers_[partition];
-        if (!handler) return nullptr;
-        if (isPacked_) {
-            // Multi-column: decode each probe key column and bit-pack
-            KeyType packed = 0;
-            for (int32_t k = 0; k < probeHashColCount; ++k) {
-                vec::DecodedVector dv;
-                dv.Decode(probeHashColumns[k], probeHashColumns[k]->GetSize());
-                bool isNull = dv.IsNull(probePosition);
-                packed = (packed << 1) | static_cast<KeyType>(isNull ? 1 : 0);
-                KeyType val = 0;
-                if (!isNull) {
-                    switch (bitWidths_[k]) {
-                        case 8:  val = static_cast<KeyType>(dv.GetValue<int8_t>(probePosition)); break;
-                        case 16: val = static_cast<KeyType>(dv.GetValue<int16_t>(probePosition)); break;
-                        case 32: val = static_cast<KeyType>(dv.GetValue<int32_t>(probePosition)); break;
-                        case 64: val = static_cast<KeyType>(dv.GetValue<int64_t>(probePosition)); break;
-                        default: return nullptr;
+    void FindBatch(
+        int32_t probeStart,
+        int32_t probeEnd,
+        const std::vector<int8_t>& probeNulls,
+        omniruntime::vec::BaseVector** probeHashColumns,
+        int32_t probeHashColCount,
+        bool singleHT,
+        uint32_t partitionMask,
+        const std::vector<int64_t>& probeHashes,
+        std::vector<char*>& chainHeads) const {
+        int32_t numRows = probeEnd - probeStart;
+        if (isSer_) {
+            std::vector<int64_t> rowHashes(numRows);
+            std::vector<int32_t> positions(numRows);
+            for (int32_t pos = probeStart; pos < probeEnd; ++pos) {
+                int32_t idx = pos - probeStart;
+                chainHeads[idx] = nullptr;
+                if (probeNulls[pos]) continue;
+                int64_t hash = 0;
+                for (int32_t k = 0; k < probeHashColCount; ++k) {
+                    vec::DecodedVector dv;
+                    dv.Decode(probeHashColumns[k], probeHashColumns[k]->GetSize());
+                    bool isNull = dv.IsNull(pos);
+                    int64_t colHash;
+                    if (isNull) {
+                        colHash = kNullHash;
+                    } else {
+                        auto typeId = probeHashColumns[k]->GetTypeId();
+                        auto w = PackedBitWidth(static_cast<int32_t>(typeId));
+                        if (w == 0) {
+                            auto* vec = dv.Base();
+                            auto enc = vec->GetEncoding();
+                            std::string_view sv;
+                            if (enc == OMNI_ENCODING_CONST) {
+                                sv = static_cast<ConstVector<std::string_view>*>(vec)->GetConstValue();
+                            } else if (enc == OMNI_DICTIONARY) {
+                                sv = dv.GetValue<std::string_view>(pos);
+                            } else {
+                                sv = static_cast<Vector<LargeStringContainer<std::string_view>>*>(vec)->GetValue(pos);
+                            }
+                            colHash = HashUtil::HashValue(
+                                reinterpret_cast<int8_t*>(const_cast<char*>(sv.data())),
+                                static_cast<int32_t>(sv.size()));
+                        } else {
+                            switch (w) {
+                                case 8:
+                                    colHash = HashUtil::HashValue(dv.GetValue<int8_t>(pos)); break;
+                                case 16:
+                                    colHash = HashUtil::HashValue(dv.GetValue<int16_t>(pos)); break;
+                                case 32:
+                                    colHash = HashUtil::HashValue(dv.GetValue<int32_t>(pos)); break;
+                                case 64:
+                                    colHash = HashUtil::HashValue(dv.GetValue<int64_t>(pos)); break;
+                                default: continue;
+                            }
+                        }
                     }
-                    val &= masks_[k];
+                    hash = SerFastHashMix(hash, colHash);
                 }
-                packed = (packed << bitWidths_[k]) | val;
+                rowHashes[idx] = hash;
+                positions[idx] = pos;
             }
-            return handler->Find(packed);
+            if (numRows > 0 && serHandlers_[partitionMask]) {
+                serHandlers_[partitionMask]->ProbeBatch(
+                    rowHashes.data(), numRows,
+                    probeHashColumns, probeHashColCount,
+                    positions.data(), chainHeads.data());
+            }
+        } else {
+            std::vector<Key> rowHashes(numRows);
+            std::vector<int32_t> positions(numRows);
+            if (isMultiColumn_) {
+                std::vector<vec::DecodedVector> dv(probeHashColCount);
+                for (int32_t k = 0; k < probeHashColCount; ++k) {
+                    dv[k].Decode(probeHashColumns[k], probeHashColumns[k]->GetSize());
+                }
+                for (int32_t pos = probeStart; pos < probeEnd; ++pos) {
+                    int32_t idx = pos - probeStart;
+                    chainHeads[idx] = nullptr;
+                    if (probeNulls[pos]) continue;
+                    KeyType packed = 0;
+                    for (int32_t k = 0; k < probeHashColCount; ++k) {
+                        bool isNull = dv[k].IsNull(pos);
+                        packed = (packed << 1) | isNull;
+                        KeyType val = 0;
+                        if (!isNull) {
+                            switch (bitWidths_[k]) {
+                                case 8:  val = static_cast<KeyType>(dv[k].GetValue<int8_t>(pos)); break;
+                                case 16: val = static_cast<KeyType>(dv[k].GetValue<int16_t>(pos)); break;
+                                case 32: val = static_cast<KeyType>(dv[k].GetValue<int32_t>(pos)); break;
+                                case 64: val = static_cast<KeyType>(dv[k].GetValue<int64_t>(pos)); break;
+                                default: continue;
+                            }
+                            val &= masks_[k];
+                        }
+                        packed = (packed << bitWidths_[k]) | val;
+                    }
+                    rowHashes[idx] = packed;
+                    positions[idx] = pos;
+                }
+            }else {
+                auto* vec = probeHashColumns[0];
+                vec::DecodedVector dv;
+                dv.Decode(vec, vec->GetSize());
+                for (int32_t pos = probeStart; pos < probeEnd; ++pos) {
+                    int32_t idx = pos - probeStart;
+                    chainHeads[idx] = nullptr;
+                    if (probeNulls[pos] || dv.IsNull(pos)) continue;
+                    Key key = dv.GetValue<Key>(pos);
+                    rowHashes[idx] = key;
+                    positions[idx] = pos;
+                }
+            }
+            if (numRows > 0 && handlers_[partitionMask]) {
+                handlers_[partitionMask]->ProbeBatch(
+                    rowHashes.data(), numRows,
+                    probeHashColumns, probeHashColCount,
+                    positions.data(), chainHeads.data());
+            }
         }
-        // Single column: original logic
-        auto* vec = probeHashColumns[0];
-        vec::DecodedVector dv;
-        dv.Decode(vec, vec->GetSize());
-        if (dv.IsNull(probePosition)) return nullptr;
-        KeyType key = dv.GetValue<KeyType>(probePosition);
-        return handler->Find(key);
     }
-
 
     // --- SIMD helpers ---------------------------------------------------------
 
@@ -222,12 +303,17 @@ public:
 
     // --- TAPER-specific accessors ---------------------------------------------
 
-    RowContainer* GetTaperRowContainer(int idx) { 
+    RowContainer* GetTaperRowContainer(int idx) {
+        if (isSer_ && idx >= 0 && static_cast<size_t>(idx) < serHandlers_.size() && serHandlers_[idx])
+            return serHandlers_[idx]->Rows();
         return idx >= 0 && static_cast<size_t>(idx) < handlers_.size() && handlers_[idx] 
             ? handlers_[idx]->Rows() : nullptr; 
     }
     const std::vector<int32_t>& GetTaperStoredColIndices() const { return taperStoredColIndices_; }
     const std::vector<int32_t>& GetBuildHashCols() const { return buildHashCols_; }
+
+    void SetSerMode() { isSer_ = true; serHandlers_.resize(tableCount_); }
+    bool IsSerMode() const { return isSer_; }
 
     // --- Key type for template dispatch ---------------------------------------
     KeyType keyType{};
@@ -244,17 +330,24 @@ private:
     BuildSide buildSide_ = OMNI_BUILD_UNKNOWN;
     OmniStatus status_ = OmniStatus::OMNI_STATUS_NORMAL;
     std::vector<std::unique_ptr<TaperJoinFixedHandler<KeyType, NeedVisited>>> handlers_;
+    std::vector<std::unique_ptr<TaperJoinSerializedHandler>> serHandlers_;
     std::vector<std::unique_ptr<ExecutionContext>> executionContexts_;
     std::vector<std::vector<omniruntime::vec::VectorBatch*>> inputVecBatches_;
     std::vector<size_t> totalRowCount_;
 
     // Multi-column key bit-packing support (same as agg packed mode)
-    bool isPacked_ = false;
+    bool isMultiColumn_ = false;
+    bool isSer_ = false;
     std::vector<uint8_t> bitWidths_;
     std::vector<KeyType> masks_;
 };
 
 // --- Out-of-line implementations ----------------------------------------------
+
+inline uint64_t SerFastHashMix(uint64_t a, uint64_t b)
+{
+    return a ^ (b + 0x9e3779b97f4a7c15ULL + (a << 6) + (a >> 2));
+}
 
 template <typename KeyType, bool NeedVisited>
 void TaperJoinHashTableVariants<KeyType, NeedVisited>::CollectTaperRows(
@@ -266,7 +359,7 @@ void TaperJoinHashTableVariants<KeyType, NeedVisited>::CollectTaperRows(
     int storedColNum = static_cast<int>(storedCols.size());
 
     // Lazy-init handler
-    if (!handlers_[partitionIndex]) {
+    if ((isSer_ && !serHandlers_[partitionIndex]) || (!isSer_ && !handlers_[partitionIndex])) {
         std::vector<bool> isVar(storedColNum, false);
         std::vector<int32_t> typeIds(storedColNum);
         std::vector<int32_t> varcharCols;
@@ -283,16 +376,32 @@ void TaperJoinHashTableVariants<KeyType, NeedVisited>::CollectTaperRows(
                 case type::OMNI_LONG: case type::OMNI_TIMESTAMP: case type::OMNI_DECIMAL64:
                 case type::OMNI_DOUBLE: case type::OMNI_DATE64: case type::OMNI_TIME64:
                     keySizes[c] = 8; break;
+                case type::OMNI_VARCHAR: case type::OMNI_CHAR: case type::OMNI_VARBINARY:
+                    keySizes[c] = sizeof(char*); break;
                 default: keySizes[c] = sizeof(KeyType); break;
             }
         }
+        std::vector<int32_t> keyColIndices;
+        keyColIndices.reserve(buildHashCols_.size());
+        for (int32_t buildCol : buildHashCols_) {
+            auto it = std::find(storedCols.begin(), storedCols.end(), buildCol);
+            if (it == storedCols.end()) {
+                throw omniruntime::exception::OmniException("TAPER_NOT_SUPPORTED",
+                    "Join key column not found in stored columns");
+            }
+            keyColIndices.push_back(static_cast<int32_t>(std::distance(storedCols.begin(), it)));
+        }
         auto* ctx = executionContexts_[partitionIndex].get();
-        handlers_[partitionIndex] = std::make_unique<TaperJoinFixedHandler<KeyType, NeedVisited>>(
-            *ctx->GetArena(), 0);
-        handlers_[partitionIndex]->InitRowContainer(keySizes, isVar, typeIds, varcharCols);
+        if (isSer_) {
+            serHandlers_[partitionIndex] = std::make_unique<TaperJoinSerializedHandler>(*ctx->GetArena());
+            serHandlers_[partitionIndex]->InitRowContainer(keySizes, isVar, typeIds, varcharCols, keyColIndices);
+        } else {
+            handlers_[partitionIndex] = std::make_unique<TaperJoinFixedHandler<KeyType, NeedVisited>>(
+                *ctx->GetArena(), 0);
+            handlers_[partitionIndex]->InitRowContainer(keySizes, isVar, typeIds, varcharCols);
+        }
     }
 
-    auto* handler = handlers_[partitionIndex].get();
     // Decode and append each row
     std::vector<vec::DecodedVector> decoded(storedColNum);
     for (int c = 0; c < storedColNum; ++c) {
@@ -301,31 +410,108 @@ void TaperJoinHashTableVariants<KeyType, NeedVisited>::CollectTaperRows(
         decoded[c].Decode(colVec, rowCount);
     }
     for (int32_t r = 0; r < rowCount; ++r) {
-        handler->AppendRow(decoded.data(), r, batchIdx);
+        if (isSer_) {
+            serHandlers_[partitionIndex]->AppendRow(decoded.data(), r, batchIdx);
+        } else {
+            handlers_[partitionIndex]->AppendRow(decoded.data(), r, batchIdx);
+        }
     }
 }
 
 template <typename KeyType, bool NeedVisited>
-void TaperJoinHashTableVariants<KeyType, NeedVisited>::BuildTaperHashTable(int32_t partitionIndex) {
-    auto* handler = handlers_[partitionIndex].get();
-    if (!handler) return;
-    auto* rc = handler->Rows();
-    if (!rc) return;
+void TaperJoinHashTableVariants<KeyType, NeedVisited>::BuildTaperHashTableSerialized(int32_t partitionIndex) {
+    auto* serHandler = isSer_ ? serHandlers_[partitionIndex].get() : nullptr;
+    if (!serHandler) {
+            throw omniruntime::exception::OmniException("RUNTIME_ERROR", "TaperJoinSerializedHandler is null!");
+        }
+    auto* rc = serHandler->Rows();
+    if (!rc) {
+            throw omniruntime::exception::OmniException("RUNTIME_ERROR", "TaperJoinSerializedHandler RowContainer is null!");
+    }   
 
+    serHandler->ReserveTable(static_cast<size_t>(rc->NumRows()));
     constexpr uint32_t BLOCK_SIZE = 1024;
     KeyType keys[BLOCK_SIZE];
     char* rows[BLOCK_SIZE];
     RowContainerIterator it;
     int32_t n;
     while ((n = rc->ListRows(&it, BLOCK_SIZE, rows)) > 0) {
-        if (isPacked_) {
+        for (int32_t i = 0; i < n; ++i) {
+            int64_t hash = 0;
+            for (size_t k = 0; k < buildHashCols_.size(); ++k) {
+                int32_t colIdx = buildHashCols_[k];
+                auto col = rc->ColumnAt(colIdx);
+                bool isNull = RowContainer::IsNullAt(rows[i], col.NullByte(), col.NullMask());
+                int64_t colHash;
+                if (isNull) {
+                    colHash = kNullHash;
+                } else {
+                    auto typeId = buildTypes_->GetIds()[colIdx];
+                    int32_t colOff = col.Offset();
+                    auto w = PackedBitWidth(typeId);
+                    if (w == 0) {
+                            auto* dataPtr = RowContainer::ReadValue<char*>(rows[i], colOff);
+                        if (dataPtr != nullptr) {
+                            uint8_t lenSize = static_cast<uint8_t>(dataPtr[0]);
+                            uint32_t strLen = 0;
+                            memcpy(&strLen, dataPtr + 1, lenSize);
+                            colHash = HashUtil::HashValue(
+                                reinterpret_cast<int8_t*>(const_cast<char*>(dataPtr + 1 + lenSize)),
+                                static_cast<int32_t>(strLen));
+                        } else {
+                            colHash = kNullHash;
+                        }
+                    } else {
+                        switch (w) {
+                            case 8:
+                                colHash = HashUtil::HashValue(
+                                    RowContainer::ReadValue<int8_t>(rows[i], colOff)); break;
+                            case 16:
+                                colHash = HashUtil::HashValue(
+                                    RowContainer::ReadValue<int16_t>(rows[i], colOff)); break;
+                            case 32:
+                                colHash = HashUtil::HashValue(
+                                    RowContainer::ReadValue<int32_t>(rows[i], colOff)); break;
+                            case 64:
+                                colHash = HashUtil::HashValue(
+                                    RowContainer::ReadValue<int64_t>(rows[i], colOff)); break;
+                        }
+                    }
+                }
+                hash = SerFastHashMix(hash, colHash);
+            }
+            keys[i] = static_cast<KeyType>(hash);
+        }
+        serHandler->EmplaceBatch(reinterpret_cast<const int64_t*>(keys), rows, n);
+    }
+}
+
+template <typename KeyType, bool NeedVisited>
+void TaperJoinHashTableVariants<KeyType, NeedVisited>::BuildTaperHashTableFixed(int32_t partitionIndex) {
+    auto* handler = handlers_[partitionIndex].get();
+    if (!handler) {
+            throw omniruntime::exception::OmniException("RUNTIME_ERROR", "TaperJoinFixedHandler is null!");
+        }
+    auto* rc = handler->Rows();
+    if (!rc) {
+            throw omniruntime::exception::OmniException("RUNTIME_ERROR", "TaperJoinFixedHandler RowContainer is null!");
+    }
+
+    handler->ReserveTable(static_cast<size_t>(rc->NumRows()));
+    constexpr uint32_t BLOCK_SIZE = 1024;
+    KeyType keys[BLOCK_SIZE];
+    char* rows[BLOCK_SIZE];
+    RowContainerIterator it;
+    int32_t n;
+    while ((n = rc->ListRows(&it, BLOCK_SIZE, rows)) > 0) {
+        if (isMultiColumn_) {
             for (int32_t i = 0; i < n; ++i) {
                 KeyType packed = 0;
                 for (size_t k = 0; k < buildHashCols_.size(); ++k) {
                     int32_t colIdx = buildHashCols_[k];
                     auto col = rc->ColumnAt(colIdx);
                     bool isNull = RowContainer::IsNullAt(rows[i], col.NullByte(), col.NullMask());
-                    packed = (packed << 1) | static_cast<KeyType>(isNull ? 1 : 0);
+                    packed = (packed << 1) | isNull;
                     KeyType val = 0;
                     if (!isNull) {
                         switch (bitWidths_[k]) {
@@ -353,7 +539,7 @@ void TaperJoinHashTableVariants<KeyType, NeedVisited>::BuildTaperHashTable(int32
                 keys[i] = RowContainer::ReadValue<KeyType>(rows[i], rc->ColumnAt(0).Offset());
             }
         }
-        handler->template EmplaceTable<true>(keys, rows, n);
+        handler->EmplaceBatch(keys, rows, n);
     }
 }
 

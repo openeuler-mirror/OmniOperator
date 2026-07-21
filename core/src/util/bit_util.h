@@ -40,6 +40,21 @@ public:
         return (value + (factor - 1)) / factor * factor;
     }
 
+    template <typename T, typename U>
+    constexpr static inline T divRoundUp(T value, U factor)
+    {
+        if (UNLIKELY(factor == 0)) return 0;
+        return (value + (factor - 1)) / factor;
+    }
+
+    static inline uint64_t nextPowerOfTwo(uint64_t size)
+    {
+        if (size == 0) return 0;
+        int32_t bits = 63 - __builtin_clzll(size);
+        uint64_t lower = 1ULL << bits;
+        return (lower == size) ? size : 2 * lower;
+    }
+
     constexpr static inline int32_t Nbytes(int32_t bits)
     {
         return RoundUp(bits, 8) / 8;
