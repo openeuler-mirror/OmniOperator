@@ -49,6 +49,10 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterFunction<ChrFunction, std::string, int64_t>(prefix + "char", {OMNI_LONG}, OMNI_VARCHAR);
     RegisterFunction<Base64Function, std::string, std::string_view>(prefix + "base64", {OMNI_VARBINARY}, OMNI_VARCHAR);
     RegisterFunction<UnBase64Function, std::string, std::string_view>(prefix + "unbase64", {OMNI_VARCHAR}, OMNI_VARBINARY);
+    // Flink FROM_BASE64(string) -> STRING: decoded bytes are interpreted as a UTF-8 string.
+    // Register a VARCHAR-returning overload so the result is marshallable to RowData and the
+    // signature matches what RexNodeUtil emits (returnType=VARCHAR). Same UnBase64Function body.
+    RegisterFunction<UnBase64Function, std::string, std::string_view>(prefix + "unbase64", {OMNI_VARCHAR}, OMNI_VARCHAR);
     // unhex(string) -> varbinary: converts hex string to binary data
     RegisterFunction<UnhexFunction, std::string, std::string_view>(prefix + "unhex", {OMNI_VARCHAR}, OMNI_VARBINARY);
 
