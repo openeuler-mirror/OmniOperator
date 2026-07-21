@@ -15,6 +15,19 @@
 
 namespace omniruntime::writer {
 
+    /**
+     * Per-writer ORC serialization settings supplied by Spark/Gluten through JNI.
+     *
+     * Defaults deliberately select the legacy serial path, so existing native
+     * callers using the three-argument factory retain their original behavior.
+     */
+    struct OmniWriterRuntimeOptions {
+        // Enables top-level column serialization in parallel.
+        bool parallelSerializeEnabled = false;
+        // Maximum number of serialization workers; values below one are normalized to one.
+        uint32_t parallelSerializeMaxThreads = 1;
+    };
+
     class OmniWriter {
     public:
         virtual ~OmniWriter();
@@ -39,9 +52,26 @@ namespace omniruntime::writer {
     std::unique_ptr <OmniWriter>
     createOmniWriter(const ::orc::Type &type, ::orc::OutputStream *stream, const ::orc::WriterOptions &options);
 
+    // Runtime-configurable overload used by JNI; the legacy overload above delegates here with defaults.
+    std::unique_ptr <OmniWriter>
+    createOmniWriter(
+            const ::orc::Type &type,
+            ::orc::OutputStream *stream,
+            const ::orc::WriterOptions &options,
+            const OmniWriterRuntimeOptions &runtimeOptions);
+
     std::unique_ptr <OmniWriter>
     createOmniWriterWithTimestampRebase(const ::orc::Type &type, ::orc::OutputStream *stream,
                                         const ::orc::WriterOptions &options,
                                         std::unique_ptr<common::JulianGregorianRebase> timestampRebase);
+
+    // Combines timestamp rebasing with per-writer parallel serialization settings.
+    std::unique_ptr <OmniWriter>
+    createOmniWriterWithTimestampRebase(
+            const ::orc::Type &type,
+            ::orc::OutputStream *stream,
+            const ::orc::WriterOptions &options,
+            std::unique_ptr<common::JulianGregorianRebase> timestampRebase,
+            const OmniWriterRuntimeOptions &runtimeOptions);
 }
 #endif

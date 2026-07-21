@@ -3,6 +3,7 @@
 #include "orc/Timezone.hh"
 #include "OmniWriter.hh"
 
+#include <algorithm>
 #include <memory>
 
 namespace omniruntime::writer {
@@ -19,6 +20,8 @@ namespace omniruntime::writer {
         std::unique_ptr <orc::StreamsFactory> streamsFactory;
         orc::OutputStream *outStream;
         orc::WriterOptions options;
+        // Owned here and shared by the full column tree for this writer only.
+        OmniOrcWriteContext writeContext_;
         std::unique_ptr<common::JulianGregorianRebase> timestampRebase;
         const orc::Type &type;
         uint64_t stripeRows, totalRows, indexRows;
@@ -36,7 +39,8 @@ namespace omniruntime::writer {
                 const orc::Type &type,
                 orc::OutputStream *stream,
                 const orc::WriterOptions &options,
-                std::unique_ptr<common::JulianGregorianRebase> timestampRebase);
+                std::unique_ptr<common::JulianGregorianRebase> timestampRebase,
+                const OmniWriterRuntimeOptions &runtimeOpts);
 
 
         void add(omniruntime::vec::BaseVector *rowsToAdd, uint64_t startPos, uint64_t endPos) override;
@@ -72,13 +76,21 @@ namespace omniruntime::writer {
             const orc::Type &t,
             orc::OutputStream *stream,
             const orc::WriterOptions &opts,
-            std::unique_ptr<common::JulianGregorianRebase> rebase) :
+            std::unique_ptr<common::JulianGregorianRebase> rebase,
+            const OmniWriterRuntimeOptions &runtimeOpts) :
             outStream(stream),
             options(opts),
             timestampRebase(std::move(rebase)),
             type(t) {
+        // Snapshot runtime settings at construction so later external configuration
+        // changes cannot affect a writer that is already producing a file.
+        writeContext_.columnOpts.parallelSerializeEnabled = runtimeOpts.parallelSerializeEnabled;
+        // A zero value from JNI/config is treated as serial capacity, never as no workers.
+        writeContext_.columnOpts.parallelSerializeThreads =
+                std::max(1u, runtimeOpts.parallelSerializeMaxThreads);
+
         streamsFactory = createStreamsFactory(options, outStream);
-        columnWriter = buildOmniWriter(type, *streamsFactory, options, timestampRebase.get());
+        columnWriter = buildOmniWriter(type, *streamsFactory, options, writeContext_, timestampRebase.get());
         stripeRows = totalRows = indexRows = 0;
         currentOffset = 0;
 
@@ -202,6 +214,10 @@ namespace omniruntime::writer {
             columnWriter->mergeRowGroupStatsIntoStripeStats();
         }
 
+        // The target is valid only during stripe emission. Parallel column writers retain
+        // their bytes privately until one of the ordered merge points below is reached.
+        writeContext_.stripeMergeTarget = outStream;
+
         // dictionary should be written before any stream is flushed
         columnWriter->writeDictionary();
 
@@ -209,9 +225,15 @@ namespace omniruntime::writer {
         // write ROW_INDEX streams
         if (options.getEnableIndex()) {
             columnWriter->writeIndex(streams);
+            columnWriter->mergeParallelStripeBuffersIfNeeded();
         }
         // write streams like PRESENT, DATA, etc.
         columnWriter->flush(streams);
+        // flush() is the only phase parallelized today; merge waits for its worker barrier.
+        columnWriter->mergeParallelStripeBuffersIfNeeded();
+
+        // Prevent accidental writes to the file output outside the stripe lifecycle.
+        writeContext_.stripeMergeTarget = nullptr;
 
         // generate and write stripe footer
         orc::proto::StripeFooter stripeFooter;
@@ -423,7 +445,18 @@ namespace omniruntime::writer {
             const orc::Type &type,
             orc::OutputStream *stream,
             const orc::WriterOptions &options) {
-        return createOmniWriterWithTimestampRebase(type, stream, options, nullptr);
+        // Keep source and behavior compatibility for existing native callers.
+        return createOmniWriter(type, stream, options, OmniWriterRuntimeOptions{});
+    }
+
+    std::unique_ptr <OmniWriter> createOmniWriter(
+            const orc::Type &type,
+            orc::OutputStream *stream,
+            const orc::WriterOptions &options,
+            const OmniWriterRuntimeOptions &runtimeOptions) {
+        // All construction converges on one implementation to keep runtime options
+        // independent from whether timestamp rebasing is requested.
+        return createOmniWriterWithTimestampRebase(type, stream, options, nullptr, runtimeOptions);
     }
 
     std::unique_ptr <OmniWriter> createOmniWriterWithTimestampRebase(
@@ -431,12 +464,27 @@ namespace omniruntime::writer {
             orc::OutputStream *stream,
             const orc::WriterOptions &options,
             std::unique_ptr<common::JulianGregorianRebase> timestampRebase) {
+        return createOmniWriterWithTimestampRebase(
+                type,
+                stream,
+                options,
+                std::move(timestampRebase),
+                OmniWriterRuntimeOptions{});
+    }
+
+    std::unique_ptr <OmniWriter> createOmniWriterWithTimestampRebase(
+            const orc::Type &type,
+            orc::OutputStream *stream,
+            const orc::WriterOptions &options,
+            std::unique_ptr<common::JulianGregorianRebase> timestampRebase,
+            const OmniWriterRuntimeOptions &runtimeOptions) {
         return std::unique_ptr<OmniWriter>(
                 new OmniWriterImpl(
                         type,
                         stream,
                         options,
-                        std::move(timestampRebase)));
+                        std::move(timestampRebase),
+                        runtimeOptions));
     }
 
 }

@@ -4,6 +4,7 @@
 #include <vector/vector_common.h>
 #include "orc/OrcFile.hh"
 #include "scan_test.h"
+#include <cstdio>
 #include <memory>
 #include <orc/Type.hh>
 #include <gtest/gtest.h>
@@ -105,6 +106,259 @@ TEST_F(WriteTest, WriteByteFlat)
     }
 
     for (auto v : readBatch) delete v;
+}
+
+// Verifies that the parallel path produces a valid multi-stripe ORC file whose
+// top-level columns can be read back with their values and ordering intact.
+TEST_F(WriteTest, ParallelSerializeTwoIntColumnsReadback)
+{
+    const int numRows = 8000;
+
+    UriInfo uri("file", filename, "", "-1");
+    std::unique_ptr<orc::OutputStream> outStream = writeFileOverride(uri);
+    std::unique_ptr<orc::Type> schema = orc::createPrimitiveType(orc::TypeKind::STRUCT);
+    schema->addStructField("c0", orc::createPrimitiveType(orc::TypeKind::INT));
+    schema->addStructField("c1", orc::createPrimitiveType(orc::TypeKind::INT));
+
+    orc::WriterOptions options;
+    options.setMemoryPool(orc::getDefaultPool());
+    options.setStripeSize(8192);
+    options.setTimezoneName("GMT");
+    // Exercise several indexed row groups while top-level columns flush in parallel.
+    options.setRowIndexStride(1000);
+
+    OmniWriterRuntimeOptions rt;
+    rt.parallelSerializeEnabled = true;
+    rt.parallelSerializeMaxThreads = 4;
+
+    std::unique_ptr<OmniWriter> writer = createOmniWriter(*schema, outStream.get(), options, rt);
+
+    auto v0 = std::make_unique<Vector<int32_t>>(numRows);
+    auto v1 = std::make_unique<Vector<int32_t>>(numRows);
+    for (int i = 0; i < numRows; ++i) {
+        v0->SetValue(i, i);
+        v0->SetNotNull(i);
+        v1->SetValue(i, i * 2 + 7);
+        v1->SetNotNull(i);
+    }
+    std::vector<BaseVector *> cols;
+    cols.push_back(v0.get());
+    cols.push_back(v1.get());
+    auto rowVec = std::make_unique<RowVector>(numRows, cols);
+    for (int i = 0; i < numRows; ++i) {
+        rowVec->SetNotNull(i);
+    }
+
+    writer->add(rowVec.get(), 0, numRows);
+    writer->close();
+    writer.reset();
+    outStream.reset();
+
+    std::vector<BaseVector *> readBatch;
+    orc::ReaderOptions readerOpts;
+    std::unique_ptr<orc::Reader> reader = omniruntime::reader::omniCreateReader(
+            readFileOverride(UriInfo("file", filename, "", "-1")), readerOpts);
+    orc::RowReaderOptions rowOpts;
+    std::unique_ptr<common::JulianGregorianRebase> julian;
+    std::unique_ptr<common::PredicateCondition> pred;
+    auto readerImpl = dynamic_cast<OmniReaderImpl *>(reader.get());
+    ASSERT_NE(readerImpl, nullptr) << "Failed to create OmniReaderImpl";
+    auto rowReader = readerImpl->createRowReader(rowOpts, julian, pred);
+    auto omniRowReader = dynamic_cast<OmniRowReaderImpl *>(rowReader.get());
+    ASSERT_NE(omniRowReader, nullptr) << "Failed to create OmniRowReaderImpl";
+    omniRowReader->next(&readBatch, nullptr, numRows);
+    ASSERT_EQ(readBatch.size(), 2u);
+    auto r0 = dynamic_cast<Vector<int32_t> *>(readBatch[0]);
+    auto r1 = dynamic_cast<Vector<int32_t> *>(readBatch[1]);
+    ASSERT_NE(r0, nullptr);
+    ASSERT_NE(r1, nullptr);
+    for (int i = 0; i < numRows; ++i) {
+        ASSERT_EQ(r0->GetValue(i), i);
+        ASSERT_EQ(r1->GetValue(i), i * 2 + 7);
+    }
+    for (auto v : readBatch) {
+        delete v;
+    }
+}
+
+// Covers dictionary-encoded string streams in the parallel path. String
+// dictionary bytes are prepared before flush(), but their stream entries are
+// emitted during flush(); the ordered merge must therefore keep physical bytes
+// aligned with the final stripe footer order.
+TEST_F(WriteTest, ParallelSerializeStringDictionaryReadback)
+{
+    const int numRows = 20000;
+    const int distinctValues = 32;
+
+    UriInfo uri("file", filename, "", "-1");
+    std::unique_ptr<orc::OutputStream> outStream = writeFileOverride(uri);
+    std::unique_ptr<orc::Type> schema = orc::createPrimitiveType(orc::TypeKind::STRUCT);
+    schema->addStructField("payload", orc::createPrimitiveType(orc::TypeKind::STRING));
+    schema->addStructField("bucket", orc::createPrimitiveType(orc::TypeKind::INT));
+
+    orc::WriterOptions options;
+    options.setMemoryPool(orc::getDefaultPool());
+    options.setStripeSize(8192);
+    options.setTimezoneName("GMT");
+    options.setRowIndexStride(1000);
+
+    OmniWriterRuntimeOptions rt;
+    rt.parallelSerializeEnabled = true;
+    rt.parallelSerializeMaxThreads = 4;
+
+    std::unique_ptr<OmniWriter> writer = createOmniWriter(*schema, outStream.get(), options, rt);
+
+    std::vector<std::string> expected(numRows);
+    auto strVec = std::make_unique<OmniStringVector>(numRows);
+    auto intVec = std::make_unique<Vector<int32_t>>(numRows);
+    for (int i = 0; i < numRows; ++i) {
+        expected[i] = "dict_value_" + std::to_string(i % distinctValues);
+        strVec->SetValue(i, std::string_view(expected[i]));
+        strVec->SetNotNull(i);
+        intVec->SetValue(i, i % 997);
+        intVec->SetNotNull(i);
+    }
+
+    std::vector<BaseVector *> cols;
+    cols.push_back(strVec.get());
+    cols.push_back(intVec.get());
+    auto rowVec = std::make_unique<RowVector>(numRows, cols);
+    for (int i = 0; i < numRows; ++i) {
+        rowVec->SetNotNull(i);
+    }
+
+    writer->add(rowVec.get(), 0, numRows);
+    writer->close();
+    writer.reset();
+    outStream.reset();
+
+    std::vector<BaseVector *> readBatch;
+    orc::ReaderOptions readerOpts;
+    std::unique_ptr<orc::Reader> reader = omniruntime::reader::omniCreateReader(
+            readFileOverride(UriInfo("file", filename, "", "-1")), readerOpts);
+    orc::RowReaderOptions rowOpts;
+    std::unique_ptr<common::JulianGregorianRebase> julian;
+    std::unique_ptr<common::PredicateCondition> pred;
+    auto readerImpl = dynamic_cast<OmniReaderImpl *>(reader.get());
+    ASSERT_NE(readerImpl, nullptr) << "Failed to create OmniReaderImpl";
+    auto rowReader = readerImpl->createRowReader(rowOpts, julian, pred);
+    auto omniRowReader = dynamic_cast<OmniRowReaderImpl *>(rowReader.get());
+    ASSERT_NE(omniRowReader, nullptr) << "Failed to create OmniRowReaderImpl";
+    omniRowReader->next(&readBatch, nullptr, numRows);
+    ASSERT_EQ(readBatch.size(), 2u);
+
+    auto strRes = dynamic_cast<OmniStringVector *>(readBatch[0]);
+    auto intRes = dynamic_cast<Vector<int32_t> *>(readBatch[1]);
+    ASSERT_NE(strRes, nullptr);
+    ASSERT_NE(intRes, nullptr);
+    for (int i = 0; i < numRows; ++i) {
+        ASSERT_EQ(strRes->GetValue(i), expected[i]) << " row " << i;
+        ASSERT_EQ(intRes->GetValue(i), i % 997) << " row " << i;
+    }
+    for (auto v : readBatch) {
+        delete v;
+    }
+}
+
+// Writes identical input through parallel and legacy serial paths, then compares
+// decoded values to guard against stream-order and merge-offset regressions.
+TEST_F(WriteTest, ParallelSerializeVsSerialTwoIntColumnsSameData)
+{
+    const int numRows = 4000;
+
+    // Keep schema, stripe settings and data identical; only the runtime parallel
+    // options differ between the two generated files.
+    auto writeOnce = [&](bool parallel, const std::string &path) {
+        UriInfo uri("file", path, "", "-1");
+        std::unique_ptr<orc::OutputStream> outStream = writeFileOverride(uri);
+        std::unique_ptr<orc::Type> schema = orc::createPrimitiveType(orc::TypeKind::STRUCT);
+        schema->addStructField("a", orc::createPrimitiveType(orc::TypeKind::INT));
+        schema->addStructField("b", orc::createPrimitiveType(orc::TypeKind::INT));
+
+        orc::WriterOptions options;
+        options.setMemoryPool(orc::getDefaultPool());
+        options.setStripeSize(16384);
+        options.setTimezoneName("GMT");
+        options.setRowIndexStride(0);
+
+        OmniWriterRuntimeOptions rt;
+        rt.parallelSerializeEnabled = parallel;
+        rt.parallelSerializeMaxThreads = parallel ? 4U : 1U;
+
+        std::unique_ptr<OmniWriter> w = createOmniWriter(*schema, outStream.get(), options, rt);
+        auto v0 = std::make_unique<Vector<int32_t>>(numRows);
+        auto v1 = std::make_unique<Vector<int32_t>>(numRows);
+        for (int i = 0; i < numRows; ++i) {
+            v0->SetValue(i, i % 997);
+            v0->SetNotNull(i);
+            v1->SetValue(i, i / 3);
+            v1->SetNotNull(i);
+        }
+        std::vector<BaseVector *> cols;
+        cols.push_back(v0.get());
+        cols.push_back(v1.get());
+        auto rowVec = std::make_unique<RowVector>(numRows, cols);
+        for (int i = 0; i < numRows; ++i) {
+            rowVec->SetNotNull(i);
+        }
+        w->add(rowVec.get(), 0, numRows);
+        w->close();
+        w.reset();
+        outStream.reset();
+    };
+
+    std::string fParallel = filename + ".p";
+    std::string fSerial = filename + ".s";
+    writeOnce(true, fParallel);
+    writeOnce(false, fSerial);
+
+    auto readPath = [&](const std::string &path) -> std::vector<BaseVector *> {
+        orc::ReaderOptions readerOpts;
+        std::unique_ptr<orc::Reader> reader = omniruntime::reader::omniCreateReader(
+                readFileOverride(UriInfo("file", path, "", "-1")), readerOpts);
+        orc::RowReaderOptions rowOpts;
+        std::unique_ptr<common::JulianGregorianRebase> julian;
+        std::unique_ptr<common::PredicateCondition> pred;
+        auto readerImpl = dynamic_cast<OmniReaderImpl *>(reader.get());
+        if (readerImpl == nullptr) {
+            ADD_FAILURE() << "OmniReaderImpl is null";
+            return {};
+        }
+        auto rowReader = readerImpl->createRowReader(rowOpts, julian, pred);
+        auto omniRowReader = dynamic_cast<OmniRowReaderImpl *>(rowReader.get());
+        if (omniRowReader == nullptr) {
+            ADD_FAILURE() << "OmniRowReaderImpl is null";
+            return {};
+        }
+        std::vector<BaseVector *> batch;
+        omniRowReader->next(&batch, nullptr, numRows);
+        return batch;
+    };
+
+    auto bp = readPath(fParallel);
+    auto bs = readPath(fSerial);
+    ASSERT_EQ(bp.size(), 2u);
+    ASSERT_EQ(bs.size(), 2u);
+    auto p0 = dynamic_cast<Vector<int32_t> *>(bp[0]);
+    auto p1 = dynamic_cast<Vector<int32_t> *>(bp[1]);
+    auto s0 = dynamic_cast<Vector<int32_t> *>(bs[0]);
+    auto s1 = dynamic_cast<Vector<int32_t> *>(bs[1]);
+    ASSERT_NE(p0, nullptr);
+    ASSERT_NE(p1, nullptr);
+    ASSERT_NE(s0, nullptr);
+    ASSERT_NE(s1, nullptr);
+    for (int i = 0; i < numRows; ++i) {
+        ASSERT_EQ(p0->GetValue(i), s0->GetValue(i)) << " row " << i;
+        ASSERT_EQ(p1->GetValue(i), s1->GetValue(i)) << " row " << i;
+    }
+    for (auto v : bp) {
+        delete v;
+    }
+    for (auto v : bs) {
+        delete v;
+    }
+    remove(fParallel.c_str());
+    remove(fSerial.c_str());
 }
 
 TEST_F(WriteTest, WriteShortFlat)
