@@ -1,6 +1,6 @@
 /*
 * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
-* Description: Unit tests for mathematical functions (acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, cot, csc)
+* Description: Unit tests for mathematical functions (acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, cot, csc, sec, sin, tan, tanh, degrees, radians)
 */
  	 
 #include <gtest/gtest.h>
@@ -519,6 +519,36 @@ TEST(MathFunctionsTest, CoshDouble) {
         expectedResults.push_back(std::cosh(x));
     }
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("cosh", inputData, expectedResults);
+}
+
+// Test sin function
+TEST(MathFunctionsTest, SinDouble) {
+    std::vector<double> inputData = {1.0, 5, 0.0, -0.5, -1.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::sin(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("sin", inputData, expectedResults);
+}
+
+// Test tan function
+TEST(MathFunctionsTest, TanDouble) {
+    std::vector<double> inputData = {1.0, 0.5, 0.0, -0.5, -1.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::tan(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("tan", inputData, expectedResults);
+}
+
+// Test tanh function
+TEST(MathFunctionsTest, TanhDouble) {
+    std::vector<double> inputData = {1.0, 0.5, 0.0, -0.5, -1.0, 10.0, -10.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(std::tanh(x));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("tanh", inputData, expectedResults);
 }
 
 // Test cbrt function
@@ -1137,6 +1167,16 @@ TEST(MathFunctionsTest, DegreesDouble) {
         expectedResults.push_back(x * (180.0 / M_PI));
     }
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("degrees", inputData, expectedResults);
+}
+
+// Test radians function (degrees -> radians, inverse of degrees)
+TEST(MathFunctionsTest, RadiansDouble) {
+    std::vector<double> inputData = {0.0, 180.0, -180.0, 90.0, 360.0, 45.0, 1.0, -90.0};
+    std::vector<double> expectedResults;
+    for (double x : inputData) {
+        expectedResults.push_back(x * (M_PI / 180.0));
+    }
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("radians", inputData, expectedResults);
 }
 
 // Test degrees function
