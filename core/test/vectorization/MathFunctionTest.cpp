@@ -1761,3 +1761,105 @@ TEST(MathFunctionsTest, DivWithNullValues) {
     delete funcExpr;
     delete context;
 }
+
+// ============================================================================
+// truncate(expr) / truncate(expr, scale) — Flink TRUNCATE(numeric[, integer]).
+// Truncates toward zero (RoundingMode.DOWN). Single-arg uses scale = 0.
+// Registered for byte/short/int/long/float/double.
+// Integral scale >= 0: unchanged; negative scale zeros digits left of decimal point
+// (e.g. truncate(12345, -1) -> 12340).
+// ============================================================================
+
+// --- Single argument (scale defaults to 0) ---
+
+// truncate(double): drop the fractional part toward zero.
+TEST(MathFunctionsTest, TruncateDoubleNoScale) {
+    std::vector<double> input =    {3.78, -3.78, 3.2, -3.9, 0.0, 5.0, -0.5};
+    std::vector<double> expected = {3.0,  -3.0,  3.0, -3.0, 0.0, 5.0,  0.0};
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("truncate", input, expected);
+}
+
+// truncate(float): drop the fractional part toward zero.
+TEST(MathFunctionsTest, TruncateFloatNoScale) {
+    std::vector<float> input =    {2.9f, -2.9f, 7.99f, -0.5f, 0.0f};
+    std::vector<float> expected = {2.0f, -2.0f, 7.0f,   0.0f, 0.0f};
+    TestUnaryMathOperation<float, OMNI_FLOAT, OMNI_FLOAT>("truncate", input, expected);
+}
+
+// truncate(int): integral values are returned unchanged.
+TEST(MathFunctionsTest, TruncateIntNoScale) {
+    std::vector<int32_t> input =    {5, -7, 0, 100, -2147483648};
+    std::vector<int32_t> expected = {5, -7, 0, 100, -2147483648};
+    TestUnaryMathOperation<int32_t, OMNI_INT, OMNI_INT>("truncate", input, expected);
+}
+
+// truncate(bigint): integral values are returned unchanged.
+TEST(MathFunctionsTest, TruncateLongNoScale) {
+    std::vector<int64_t> input =    {123456789012LL, -99LL, 0LL};
+    std::vector<int64_t> expected = {123456789012LL, -99LL, 0LL};
+    TestUnaryMathOperation<int64_t, OMNI_LONG, OMNI_LONG>("truncate", input, expected);
+}
+
+// truncate(tinyint): integral values are returned unchanged.
+TEST(MathFunctionsTest, TruncateByteNoScale) {
+    std::vector<int8_t> input =    {static_cast<int8_t>(5), static_cast<int8_t>(-7), static_cast<int8_t>(127)};
+    std::vector<int8_t> expected = {static_cast<int8_t>(5), static_cast<int8_t>(-7), static_cast<int8_t>(127)};
+    TestUnaryMathOperation<int8_t, OMNI_BYTE, OMNI_BYTE>("truncate", input, expected);
+}
+
+// truncate(smallint): integral values are returned unchanged.
+TEST(MathFunctionsTest, TruncateShortNoScale) {
+    std::vector<int16_t> input =    {static_cast<int16_t>(300), static_cast<int16_t>(-42), static_cast<int16_t>(0)};
+    std::vector<int16_t> expected = {static_cast<int16_t>(300), static_cast<int16_t>(-42), static_cast<int16_t>(0)};
+    TestUnaryMathOperation<int16_t, OMNI_SHORT, OMNI_SHORT>("truncate", input, expected);
+}
+
+// --- Two arguments (expr, scale) ---
+
+// truncate(double, scale): positive, zero and negative scales.
+TEST(MathFunctionsTest, TruncateDoubleWithScale) {
+    std::vector<double> left =     {3.14159, 3.14159, 3.14159, -3.14159, 1234.56, 987.65};
+    std::vector<int32_t> scale =   {2,       1,       0,       2,        -2,      -1};
+    std::vector<double> expected = {3.14,    3.1,     3.0,     -3.14,    1200.0,  980.0};
+    TestBinaryRoundOperation<double, OMNI_DOUBLE>("truncate", left, scale, expected);
+}
+
+// truncate(float, scale): positive scales (tolerance loosened for float precision).
+TEST(MathFunctionsTest, TruncateFloatWithScale) {
+    std::vector<float> left =     {3.14159f, -3.14159f, 12.345f};
+    std::vector<int32_t> scale =  {2,        2,         1};
+    std::vector<float> expected = {3.14f,    -3.14f,    12.3f};
+    TestBinaryRoundOperation<float, OMNI_FLOAT>("truncate", left, scale, expected, 1e-4);
+}
+
+// truncate(int, scale): scale>=0 unchanged; negative scale zeros left digits.
+TEST(MathFunctionsTest, TruncateIntWithScale) {
+    std::vector<int32_t> left =     {12345, 12345, -678,  -12345, 42};
+    std::vector<int32_t> scale =    {2,     0,     3,     -1,     -1};
+    std::vector<int32_t> expected = {12345, 12345, -678,  -12340, 40};
+    TestBinaryRoundOperation<int32_t, OMNI_INT>("truncate", left, scale, expected);
+}
+
+// truncate(bigint, scale): scale>=0 unchanged; negative scale zeros left digits.
+TEST(MathFunctionsTest, TruncateLongWithScale) {
+    std::vector<int64_t> left =     {98765LL, -1LL, 0LL, 123456789012LL, -12345LL};
+    std::vector<int32_t> scale =    {1,       0,    5,   -2,             -1};
+    std::vector<int64_t> expected = {98765LL, -1LL, 0LL, 123456789000LL, -12340LL};
+    TestBinaryRoundOperation<int64_t, OMNI_LONG>("truncate", left, scale, expected);
+}
+
+// truncate(tinyint, negative scale): zeros digits left of decimal point.
+TEST(MathFunctionsTest, TruncateByteWithNegativeScale) {
+    std::vector<int8_t> left =     {static_cast<int8_t>(127), static_cast<int8_t>(-57)};
+    std::vector<int32_t> scale =   {-1, -1};
+    std::vector<int8_t> expected = {static_cast<int8_t>(120), static_cast<int8_t>(-50)};
+    TestBinaryRoundOperation<int8_t, OMNI_BYTE>("truncate", left, scale, expected);
+}
+
+// truncate(smallint, negative scale): zeros digits left of decimal point.
+TEST(MathFunctionsTest, TruncateShortWithNegativeScale) {
+    std::vector<int16_t> left =     {static_cast<int16_t>(1234), static_cast<int16_t>(-1234)};
+    std::vector<int32_t> scale =    {-2, -2};
+    std::vector<int16_t> expected = {static_cast<int16_t>(1200), static_cast<int16_t>(-1200)};
+    TestBinaryRoundOperation<int16_t, OMNI_SHORT>("truncate", left, scale, expected);
+}

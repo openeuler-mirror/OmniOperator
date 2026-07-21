@@ -458,6 +458,30 @@ namespace omniruntime::vectorization {
         }
     };
 
+    /// pi() -> DOUBLE. 0-arg constant function returning the value of PI
+    /// (matches Flink `PI()` / Java `Math.PI` = 3.141592653589793).
+    /// Uses an explicit literal instead of M_PI for cross-compiler portability.
+    template <typename T>
+    struct PiFunction {
+        ALWAYS_INLINE Status call(double &result)
+        {
+            result = 3.141592653589793;  // Math.PI
+            return Status::OK();
+        }
+    };
+
+    /// e() -> DOUBLE. 0-arg constant function returning Euler's number
+    /// (matches Flink `E()` / Java `Math.E` = 2.718281828459045).
+    /// Uses an explicit literal instead of M_E for cross-compiler portability.
+    template <typename T>
+    struct EFunction {
+        ALWAYS_INLINE Status call(double &result)
+        {
+            result = 2.718281828459045;  // Math.E
+            return Status::OK();
+        }
+    };
+
     template <typename T>
     struct RandSeedFunctionInt32 {
         void initialize(const std::vector<omniruntime::type::DataTypeId> & /*inputTypes*/, const config::QueryConfig & config,
@@ -566,6 +590,42 @@ namespace omniruntime::vectorization {
             } else {
                 const double factor = std::pow(10, scale);
                 result = static_cast<TInput>(std::round(a * factor) / factor);
+                if (result == static_cast<TInput>(0)) {
+                    result = static_cast<TInput>(0);
+                }
+            }
+            return Status::OK();
+        }
+    };
+
+    // Truncate function: truncate(expr) default scale=0; truncate(expr, scale).
+    // byte/short/int/long/float/double only. Mirrors Flink TRUNCATE(numeric, integer): truncates
+    // (toward zero, RoundingMode.DOWN) to `scale` decimal places. Negative scale zeros digits
+    // left of the decimal point. Integral inputs with scale >= 0 are unchanged (no fractional
+    // part); negative scale uses integer division toward zero, e.g. truncate(12345, -1) -> 12340.
+    // Differs from RoundFunction only in using std::trunc instead of std::round.
+    template <typename T>
+    struct TruncateFunction {
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a)
+        {
+            return call(result, a, 0);
+        }
+
+        template <typename TInput>
+        ALWAYS_INLINE Status call(TInput &result, const TInput &a, const int32_t &scale)
+        {
+            if constexpr (std::is_integral_v<TInput>) {
+                if (scale >= 0) {
+                    result = a;
+                } else {
+                    const int64_t divisor = static_cast<int64_t>(std::pow(10, -scale));
+                    const int64_t value = static_cast<int64_t>(a);
+                    result = static_cast<TInput>((value / divisor) * divisor);
+                }
+            } else {
+                const double factor = std::pow(10, scale);
+                result = static_cast<TInput>(std::trunc(a * factor) / factor);
                 if (result == static_cast<TInput>(0)) {
                     result = static_cast<TInput>(0);
                 }
