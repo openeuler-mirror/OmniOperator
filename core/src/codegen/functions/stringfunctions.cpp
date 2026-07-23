@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cstring>
 #include <ctime>
 #include <functional>
 #include <nlohmann/json.hpp>
@@ -249,7 +250,13 @@ struct RapidJsonCache {
 
 thread_local RapidJsonCache RAPIDJSON_CACHE;
 
-std::string SerializeRapidJsonValue(const rapidjson::Value &value);
+bool IsSameCacheString(const std::string &cachedValue, const char *value, int32_t valueLen)
+{
+    if (valueLen < 0 || cachedValue.size() != static_cast<size_t>(valueLen)) {
+        return false;
+    }
+    return cachedValue.empty() || memcmp(cachedValue.data(), value, cachedValue.size()) == 0;
+}
 
 struct JsonQueryResultCacheKey {
     std::string jsonContent;
@@ -263,6 +270,14 @@ struct JsonQueryResultCacheKey {
         return wrapperBehavior == other.wrapperBehavior && emptyBehavior == other.emptyBehavior &&
                errorBehavior == other.errorBehavior && jsonContent == other.jsonContent && rawPath == other.rawPath;
     }
+
+    bool Matches(const char *jsonStr, int32_t jsonStrLen, const char *pathStr, int32_t pathStrLen,
+                 int32_t wrapper, int32_t empty, int32_t error) const
+    {
+        return wrapperBehavior == wrapper && emptyBehavior == empty && errorBehavior == error &&
+               IsSameCacheString(jsonContent, jsonStr, jsonStrLen) &&
+               IsSameCacheString(rawPath, pathStr, pathStrLen);
+    }
 };
 
 struct JsonQueryResultCacheEntry {
@@ -274,10 +289,12 @@ struct JsonQueryResultCache {
     static constexpr size_t CACHE_SIZE = 16;
     std::vector<JsonQueryResultCacheEntry> entries;
 
-    bool Get(const JsonQueryResultCacheKey &key, std::string *value)
+    bool Get(const char *jsonStr, int32_t jsonStrLen, const char *pathStr, int32_t pathStrLen, int32_t wrapperBehavior,
+             int32_t emptyBehavior, int32_t errorBehavior, std::string *value)
     {
         for (size_t i = 0; i < entries.size(); ++i) {
-            if (!(entries[i].key == key)) {
+            if (!entries[i].key.Matches(jsonStr, jsonStrLen, pathStr, pathStrLen, wrapperBehavior, emptyBehavior,
+                                        errorBehavior)) {
                 continue;
             }
             *value = entries[i].value;
@@ -315,17 +332,80 @@ struct JsonQueryResultCache {
 
 thread_local JsonQueryResultCache JSON_QUERY_RESULT_CACHE;
 
-std::string SerializeRapidJsonValueWithCache(const rapidjson::Value &value, const JsonQueryResultCacheKey &cacheKey)
-{
-    std::string result;
-    if (JSON_QUERY_RESULT_CACHE.Get(cacheKey, &result)) {
-        return result;
+struct JsonValueResultCacheKey {
+    std::string jsonContent;
+    std::string rawPath;
+    int32_t emptyBehavior = 0;
+    int32_t errorBehavior = 0;
+
+    bool operator==(const JsonValueResultCacheKey &other) const
+    {
+        return emptyBehavior == other.emptyBehavior && errorBehavior == other.errorBehavior &&
+               jsonContent == other.jsonContent && rawPath == other.rawPath;
     }
 
-    result = SerializeRapidJsonValue(value);
-    JSON_QUERY_RESULT_CACHE.Put(cacheKey, result);
-    return result;
-}
+    bool Matches(const char *jsonStr, int32_t jsonStrLen, const char *pathStr, int32_t pathStrLen, int32_t empty,
+                 int32_t error) const
+    {
+        return emptyBehavior == empty && errorBehavior == error &&
+               IsSameCacheString(jsonContent, jsonStr, jsonStrLen) &&
+               IsSameCacheString(rawPath, pathStr, pathStrLen);
+    }
+};
+
+struct JsonValueResultCacheEntry {
+    JsonValueResultCacheKey key;
+    bool isNull = false;
+    std::string value;
+};
+
+struct JsonValueResultCache {
+    static constexpr size_t CACHE_SIZE = 16;
+    std::vector<JsonValueResultCacheEntry> entries;
+
+    bool Get(const char *jsonStr, int32_t jsonStrLen, const char *pathStr, int32_t pathStrLen, int32_t emptyBehavior,
+             int32_t errorBehavior, std::string *value, bool *isNull)
+    {
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (!entries[i].key.Matches(jsonStr, jsonStrLen, pathStr, pathStrLen, emptyBehavior, errorBehavior)) {
+                continue;
+            }
+            *value = entries[i].value;
+            *isNull = entries[i].isNull;
+            if (i != 0) {
+                JsonValueResultCacheEntry hit = entries[i];
+                entries.erase(entries.begin() + i);
+                entries.insert(entries.begin(), std::move(hit));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void Put(const JsonValueResultCacheKey &key, const std::string &value, bool isNull)
+    {
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (!(entries[i].key == key)) {
+                continue;
+            }
+            entries[i].value = value;
+            entries[i].isNull = isNull;
+            if (i != 0) {
+                JsonValueResultCacheEntry hit = entries[i];
+                entries.erase(entries.begin() + i);
+                entries.insert(entries.begin(), std::move(hit));
+            }
+            return;
+        }
+
+        entries.insert(entries.begin(), JsonValueResultCacheEntry{key, isNull, value});
+        if (entries.size() > CACHE_SIZE) {
+            entries.pop_back();
+        }
+    }
+};
+
+thread_local JsonValueResultCache JSON_VALUE_RESULT_CACHE;
 
 rapidjson::Document *GetParsedJsonWithCacheRapidJson(std::string &jsonContent)
 {
@@ -697,8 +777,23 @@ extern "C" DLLEXPORT const char *JsonValueRetNull(int64_t contextPtr, const char
         return nullptr;
     }
 
+    bool cachedIsNull = false;
+    std::string result;
+    if (JSON_VALUE_RESULT_CACHE.Get(jsonStr, jsonStrLen, pathStr, pathStrLen, 0, 0, &result, &cachedIsNull)) {
+        if (cachedIsNull) {
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        *outIsNull = false;
+        *outLen = static_cast<int32_t>(result.size());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
+        return ret;
+    }
     std::string jsonContent(jsonStr, jsonStrLen);
     std::string pathContent(pathStr, pathStrLen);
+    JsonValueResultCacheKey cacheKey{jsonContent, pathContent, 0, 0};
 
     try {
         rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
@@ -715,12 +810,13 @@ extern "C" DLLEXPORT const char *JsonValueRetNull(int64_t contextPtr, const char
             return nullptr;
         }
 
-        std::string result;
         if (!TryFormatJsonValueScalarRapidJson(*current, &result)) {
+            JSON_VALUE_RESULT_CACHE.Put(cacheKey, "", true);
             *outIsNull = true;
             *outLen = 0;
             return nullptr;
         }
+        JSON_VALUE_RESULT_CACHE.Put(cacheKey, result, false);
 
         *outIsNull = false;
         *outLen = static_cast<int32_t>(result.size());
@@ -946,8 +1042,14 @@ JsonQueryWithWrapperAndBehavior(int64_t contextPtr, const char *jsonStr, int32_t
     int32_t normalizedWrapper = wrapperBehaviorIsNull ? JSON_QUERY_WITHOUT_ARRAY_WRAPPER : wrapperBehavior;
     int32_t normalizedEmpty = emptyBehaviorIsNull ? JSON_QUERY_NULL_BEHAVIOR : emptyBehavior;
     int32_t normalizedError = errorBehaviorIsNull ? JSON_QUERY_NULL_BEHAVIOR : errorBehavior;
+    std::string result;
+    if (JSON_QUERY_RESULT_CACHE.Get(jsonStr, jsonStrLen, pathStr, pathStrLen, normalizedWrapper, normalizedEmpty,
+                                    normalizedError, &result)) {
+        return CreateJsonQueryResult(contextPtr, result, outIsNull, outLen);
+    }
     std::string jsonContent(jsonStr, jsonStrLen);
     std::string rawPath(pathStr, pathStrLen);
+    JsonQueryResultCacheKey cacheKey{jsonContent, rawPath, normalizedWrapper, normalizedEmpty, normalizedError};
     JsonPathMode pathMode = JsonPathMode::LAX;
     std::string pathContent;
     if (!ParseJsonQueryPathSpec(rawPath, &pathMode, &pathContent)) {
@@ -986,9 +1088,9 @@ JsonQueryWithWrapperAndBehavior(int64_t contextPtr, const char *jsonStr, int32_t
                                                 outIsNull, outLen);
         }
 
-        JsonQueryResultCacheKey cacheKey{jsonContent, rawPath, normalizedWrapper, normalizedEmpty, normalizedError};
-        return CreateJsonQueryResult(contextPtr, SerializeRapidJsonValueWithCache(wrappedValue, cacheKey), outIsNull,
-                                     outLen);
+        result = SerializeRapidJsonValue(wrappedValue);
+        JSON_QUERY_RESULT_CACHE.Put(cacheKey, result);
+        return CreateJsonQueryResult(contextPtr, result, outIsNull, outLen);
     } catch (const std::exception &e) {
         return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, e.what(), outIsNull, outLen);
     }
@@ -1040,8 +1142,23 @@ extern "C" DLLEXPORT const char *JsonValueExtended(int64_t contextPtr, const cha
         }
     }
 
+    bool cachedIsNull = false;
+    std::string result;
+    if (JSON_VALUE_RESULT_CACHE.Get(jsonStr, jsonStrLen, pathStr, pathStrLen, emptyBehavior, errorBehavior, &result,
+                                    &cachedIsNull)) {
+        if (cachedIsNull) {
+            return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
+                                                defaultOnEmptyIsNull, outIsNull, outLen);
+        }
+        *outIsNull = false;
+        *outLen = static_cast<int32_t>(result.size());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
+        return ret;
+    }
     std::string jsonContent(jsonStr, jsonStrLen);
     std::string pathContent(pathStr, pathStrLen);
+    JsonValueResultCacheKey cacheKey{jsonContent, pathContent, emptyBehavior, errorBehavior};
 
     try {
         rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
@@ -1091,11 +1208,12 @@ extern "C" DLLEXPORT const char *JsonValueExtended(int64_t contextPtr, const cha
                                                 defaultOnEmptyIsNull, outIsNull, outLen);
         }
 
-        std::string result;
         if (!TryFormatJsonValueScalarRapidJson(*current, &result)) {
+            JSON_VALUE_RESULT_CACHE.Put(cacheKey, "", true);
             return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
                                                 defaultOnEmptyIsNull, outIsNull, outLen);
         }
+        JSON_VALUE_RESULT_CACHE.Put(cacheKey, result, false);
 
         *outIsNull = false;
         *outLen = static_cast<int32_t>(result.size());
