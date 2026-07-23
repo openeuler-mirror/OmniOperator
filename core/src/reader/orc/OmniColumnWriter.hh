@@ -32,6 +32,31 @@
 
 namespace omniruntime::writer {
 
+    /**
+     * Runtime options consumed by the column-writer tree.
+     *
+     * These values are copied from the public OmniWriterRuntimeOptions when an
+     * OmniWriter is created. Keeping them in the per-writer context avoids
+     * process-global state and allows writers with different settings to coexist.
+     */
+    struct OmniColumnWriterRuntimeOptions {
+        // Enables parallel serialization of the root struct's top-level columns.
+        bool parallelSerializeEnabled = false;
+        // Upper bound for worker tasks; the actual count is also capped by column count.
+        uint32_t parallelSerializeThreads = 1;
+    };
+
+    /**
+     * Mutable context shared by every column writer belonging to one OmniWriter.
+     *
+     * stripeMergeTarget is set only while a stripe is being emitted. Parallel
+     * child writers use it to append their private buffers to the real ORC output.
+     * The context is owned by OmniWriterImpl and therefore outlives the column tree.
+     */
+    struct OmniOrcWriteContext {
+        OmniColumnWriterRuntimeOptions columnOpts;
+        ::orc::OutputStream *stripeMergeTarget = nullptr;
+    };
 
     /**
      * The interface for writing ORC data types.
@@ -60,6 +85,12 @@ namespace omniruntime::writer {
                          const ::orc::WriterOptions &options);
 
         virtual ~OmniColumnWriter();
+
+        /**
+         * Appends newly produced bytes from private parallel buffers to the main
+         * stripe stream. Serial writers keep the default no-op implementation.
+         */
+        virtual void mergeParallelStripeBuffersIfNeeded();
 
         /**
          * Write the next group of values from this rowBatch.
@@ -187,6 +218,7 @@ namespace omniruntime::writer {
             const ::orc::Type &type,
             const ::orc::StreamsFactory &factory,
             const ::orc::WriterOptions &options,
+            OmniOrcWriteContext &ctx,
             const common::JulianGregorianRebase *timestampRebase = nullptr);
 }
 

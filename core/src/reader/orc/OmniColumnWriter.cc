@@ -24,9 +24,20 @@
 #include "orc/Int128.hh"
 #include "orc/Writer.hh"
 #include "OmniRLE.hh"
+#include "OmniMemoryOutputStream.hh"
 #include "reader/common/RebaseDate.h"
+#include "util/debug.h"
+#include <algorithm>
+#include <atomic>
+#include <future>
+#include <mutex>
 
 namespace omniruntime::writer {
+
+    namespace {
+        // Avoid emitting one activation warning for every writer/task in the process.
+        std::once_flag gOmniOrcParallelSerializeCtorParallelOnce;
+    } // namespace
 
     orc::proto::ColumnEncoding_Kind RleVersionMapper(orc::RleVersion rleVersion) {
         switch (rleVersion) {
@@ -88,6 +99,8 @@ namespace omniruntime::writer {
     OmniColumnWriter::~OmniColumnWriter() {
         // PASS
     }
+
+    void OmniColumnWriter::mergeParallelStripeBuffersIfNeeded() {}
 
     void OmniColumnWriter::addNulls(omniruntime::vec::NullsBuffer *nullsBuffer,
                                     omniruntime::vec::NullsBuffer *pNullsBuffer,
@@ -212,6 +225,7 @@ namespace omniruntime::writer {
                 const orc::Type &type,
                 const orc::StreamsFactory &factory,
                 const orc::WriterOptions &options,
+                OmniOrcWriteContext &ctx,
                 const common::JulianGregorianRebase *timestampRebase);
 
         virtual void add(omniruntime::vec::BaseVector *rowBatch,
@@ -245,24 +259,102 @@ namespace omniruntime::writer {
 
         virtual void reset() override;
 
+        virtual void mergeParallelStripeBuffersIfNeeded() override;
+
     private:
+        // Non-owning pointer to the context owned by the enclosing OmniWriterImpl.
+        OmniOrcWriteContext *orcCtx_;
         std::vector <std::unique_ptr<OmniColumnWriter>> children;
+        // The following vectors are index-aligned with children.
+        bool useParallelChildFactories_{false};
+        // Each top-level child writes into a private stream, eliminating concurrent writes to outStream.
+        std::vector<std::unique_ptr<::orc::OutputStream>> parallelChildOut_;
+        // A factory per child binds all of that child's nested ORC streams to its private output.
+        std::vector<std::unique_ptr<::orc::StreamsFactory>> parallelChildFactories_;
+        // Number of bytes already copied from each private output during the current stripe.
+        std::vector<uint64_t> parallelChildMergeOffsets_;
+
+        void mergeParallelStripeBuffersToMain();
     };
 
     OmniStructColumnWriter::OmniStructColumnWriter(
             const orc::Type &type,
             const orc::StreamsFactory &factory,
             const orc::WriterOptions &options,
+            OmniOrcWriteContext &ctx,
             const common::JulianGregorianRebase *timestampRebase) :
-            OmniColumnWriter(type, factory, options) {
-        for (unsigned int i = 0; i < type.getSubtypeCount(); ++i) {
-            const orc::Type &child = *type.getSubtype(i);
-            children.push_back(buildOmniWriter(child, factory, options, timestampRebase));
+            OmniColumnWriter(type, factory, options),
+            orcCtx_(&ctx) {
+        const auto &rt = orcCtx_->columnOpts;
+        // Parallelize only the root struct. Nested structs remain inside their top-level
+        // child's task. Row-index positions are relative to each ORC stream, so they remain
+        // valid while every top-level child writes to its own private StreamsFactory.
+        useParallelChildFactories_ =
+                (columnId == 0
+                 && type.getSubtypeCount() > 1
+                 && rt.parallelSerializeEnabled
+                 && rt.parallelSerializeThreads > 1);
+
+        if (useParallelChildFactories_) {
+            // Isolate every top-level column's complete stream tree. Workers can now
+            // serialize independently without synchronizing on the final OutputStream.
+            for (unsigned int i = 0; i < type.getSubtypeCount(); ++i) {
+                const orc::Type &child = *type.getSubtype(i);
+                auto memOut = std::make_unique<OmniMemoryOutputStream>();
+                ::orc::OutputStream *rawOut = memOut.get();
+                parallelChildOut_.push_back(std::move(memOut));
+                parallelChildFactories_.push_back(orc::createStreamsFactory(options, rawOut));
+                parallelChildMergeOffsets_.push_back(0);
+                children.push_back(buildOmniWriter(child, *parallelChildFactories_.back(), options, ctx, timestampRebase));
+            }
+        } else {
+            for (unsigned int i = 0; i < type.getSubtypeCount(); ++i) {
+                const orc::Type &child = *type.getSubtype(i);
+                children.push_back(buildOmniWriter(child, factory, options, ctx, timestampRebase));
+            }
+        }
+
+        if (useParallelChildFactories_) {
+            std::call_once(gOmniOrcParallelSerializeCtorParallelOnce, [&type, &rt, this] {
+                LogWarn(
+                    "[OmniOrcParallelSerialize] root struct: PARALLEL path enabled, topLevelColumns=%u, "
+                    "parallelSerializeThreads=%u, enableIndex=%s (logged once per process)",
+                    type.getSubtypeCount(),
+                    rt.parallelSerializeThreads,
+                    enableIndex ? "true" : "false");
+            });
         }
 
         if (enableIndex) {
             recordPosition();
         }
+    }
+
+    void OmniStructColumnWriter::mergeParallelStripeBuffersToMain() {
+        if (!useParallelChildFactories_) {
+            return;
+        }
+        if (!orcCtx_ || !orcCtx_->stripeMergeTarget) {
+            return;
+        }
+        ::orc::OutputStream *target = orcCtx_->stripeMergeTarget;
+        // Merge in schema order so the physical stream order matches the footer stream order.
+        // Only bytes after the remembered offset are copied on each invocation. Dictionary
+        // preparation stays buffered until the data flush phase, because its stream entries
+        // are emitted by flush(), not by writeDictionary().
+        for (size_t i = 0; i < parallelChildOut_.size(); ++i) {
+            auto *mem = static_cast<OmniMemoryOutputStream *>(parallelChildOut_[i].get());
+            uint64_t size = static_cast<uint64_t>(mem->size());
+            uint64_t offset = parallelChildMergeOffsets_[i];
+            if (size > offset) {
+                target->write(mem->data() + offset, static_cast<size_t>(size - offset));
+                parallelChildMergeOffsets_[i] = size;
+            }
+        }
+    }
+
+    void OmniStructColumnWriter::mergeParallelStripeBuffersIfNeeded() {
+        mergeParallelStripeBuffersToMain();
     }
 
     void OmniStructColumnWriter::add(
@@ -311,9 +403,45 @@ namespace omniruntime::writer {
     }
 
     void OmniStructColumnWriter::flush(std::vector <orc::proto::Stream> &streams) {
+        // The root struct's PRESENT stream still belongs to the main factory and must
+        // be emitted before child streams, exactly as in the serial implementation.
         OmniColumnWriter::flush(streams);
+        if (!useParallelChildFactories_) {
+            for (uint32_t i = 0; i < children.size(); ++i) {
+                children[i]->flush(streams);
+            }
+            return;
+        }
+
+        // Each child writes metadata only to its own slot. The final concatenation below
+        // restores schema order regardless of worker completion order.
+        std::vector<std::vector<orc::proto::Stream>> childStreams(children.size());
+        std::atomic<uint32_t> nextChild(0);
+        std::vector<std::future<void>> futures;
+        const auto &rt = orcCtx_->columnOpts;
+        const uint32_t workerCount = std::min<uint32_t>(
+                rt.parallelSerializeThreads,
+                static_cast<uint32_t>(children.size()));
+        // A bounded worker set avoids creating more tasks than configured. The atomic
+        // cursor dynamically balances columns with different serialization costs.
+        futures.reserve(workerCount);
+        for (uint32_t w = 0; w < workerCount; ++w) {
+            futures.push_back(std::async(std::launch::async, [this, &childStreams, &nextChild]() {
+                while (true) {
+                    uint32_t idx = nextChild.fetch_add(1);
+                    if (idx >= children.size()) {
+                        break;
+                    }
+                    children[idx]->flush(childStreams[idx]);
+                }
+            }));
+        }
+        // Barrier: private output buffers are read only after all writers have finished.
+        for (auto &fut: futures) {
+            fut.get();
+        }
         for (uint32_t i = 0; i < children.size(); ++i) {
-            children[i]->flush(streams);
+            streams.insert(streams.end(), childStreams[i].begin(), childStreams[i].end());
         }
     }
 
@@ -391,6 +519,15 @@ namespace omniruntime::writer {
 
         for (uint32_t i = 0; i < children.size(); ++i) {
             children[i]->reset();
+        }
+        if (useParallelChildFactories_) {
+            // A completed stripe has already been copied to the main output. Reset both
+            // cursors and buffers so the next stripe starts from byte zero.
+            for (size_t i = 0; i < parallelChildOut_.size(); ++i) {
+                parallelChildMergeOffsets_[i] = 0;
+                auto *mem = static_cast<OmniMemoryOutputStream *>(parallelChildOut_[i].get());
+                mem->clear();
+            }
         }
     }
 
@@ -2742,6 +2879,7 @@ namespace omniruntime::writer {
         OmniListColumnWriter(const orc::Type &type,
                              const orc::StreamsFactory &factory,
                              const orc::WriterOptions &options,
+                             OmniOrcWriteContext &ctx,
                              const common::JulianGregorianRebase *timestampRebase);
 
         ~OmniListColumnWriter() override;
@@ -2788,6 +2926,7 @@ namespace omniruntime::writer {
     OmniListColumnWriter::OmniListColumnWriter(const orc::Type &type,
                                                const orc::StreamsFactory &factory,
                                                const orc::WriterOptions &options,
+                                               OmniOrcWriteContext &ctx,
                                                const common::JulianGregorianRebase *timestampRebase) :
             OmniColumnWriter(type, factory, options),
             rleVersion(options.getRleVersion()) {
@@ -2801,7 +2940,7 @@ namespace omniruntime::writer {
                                              options.getAlignedBitpacking());
 
         if (type.getSubtypeCount() == 1) {
-            child = buildOmniWriter(*type.getSubtype(0), factory, options, timestampRebase);
+            child = buildOmniWriter(*type.getSubtype(0), factory, options, ctx, timestampRebase);
         }
 
         if (enableIndex) {
@@ -2972,6 +3111,7 @@ namespace omniruntime::writer {
         OmniMapColumnWriter(const orc::Type &type,
                             const orc::StreamsFactory &factory,
                             const orc::WriterOptions &options,
+                            OmniOrcWriteContext &ctx,
                             const common::JulianGregorianRebase *timestampRebase);
 
         ~OmniMapColumnWriter() override;
@@ -3019,6 +3159,7 @@ namespace omniruntime::writer {
     OmniMapColumnWriter::OmniMapColumnWriter(const orc::Type &type,
                                              const orc::StreamsFactory &factory,
                                              const orc::WriterOptions &options,
+                                             OmniOrcWriteContext &ctx,
                                              const common::JulianGregorianRebase *timestampRebase) :
             OmniColumnWriter(type, factory, options),
             rleVersion(options.getRleVersion()) {
@@ -3031,11 +3172,11 @@ namespace omniruntime::writer {
                                              options.getAlignedBitpacking());
 
         if (type.getSubtypeCount() > 0) {
-            keyWriter = buildOmniWriter(*type.getSubtype(0), factory, options, timestampRebase);
+            keyWriter = buildOmniWriter(*type.getSubtype(0), factory, options, ctx, timestampRebase);
         }
 
         if (type.getSubtypeCount() > 1) {
-            elemWriter = buildOmniWriter(*type.getSubtype(1), factory, options, timestampRebase);
+            elemWriter = buildOmniWriter(*type.getSubtype(1), factory, options, ctx, timestampRebase);
         }
 
         if (enableIndex) {
@@ -3241,10 +3382,14 @@ namespace omniruntime::writer {
         }
     }
 
+    // Pass the same context through every nested LIST/MAP/STRUCT writer. Only the
+    // root struct activates parallel factories, while descendants still need access
+    // to the per-writer settings and preserve timestamp-rebase propagation.
     std::unique_ptr <OmniColumnWriter> buildOmniWriter(
             const orc::Type &type,
             const orc::StreamsFactory &factory,
             const orc::WriterOptions &options,
+            OmniOrcWriteContext &ctx,
             const common::JulianGregorianRebase *timestampRebase) {
         switch (static_cast<int64_t>(type.getKind())) {
             case orc::STRUCT:
@@ -3253,6 +3398,7 @@ namespace omniruntime::writer {
                                 type,
                                 factory,
                                 options,
+                                ctx,
                                 timestampRebase));
             case orc::INT:
                 return std::unique_ptr<OmniColumnWriter>(
@@ -3365,6 +3511,7 @@ namespace omniruntime::writer {
                                 type,
                                 factory,
                                 options,
+                                ctx,
                                 timestampRebase));
             case orc::MAP:
                 return std::unique_ptr<OmniColumnWriter>(
@@ -3372,6 +3519,7 @@ namespace omniruntime::writer {
                                 type,
                                 factory,
                                 options,
+                                ctx,
                                 timestampRebase));
             default:
                 throw orc::NotImplementedYet("Type is not supported yet for creating "
