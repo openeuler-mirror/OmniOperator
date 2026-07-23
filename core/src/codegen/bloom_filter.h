@@ -12,6 +12,8 @@ namespace omniruntime {
 namespace op {
 class BloomFilter {
 public:
+    static constexpr int32_t VERSION = 1;
+
     explicit BloomFilter(int8_t *in, int32_t versionJava);
 
     explicit BloomFilter(int32_t size, int32_t version);
@@ -30,51 +32,30 @@ public:
 
     bool MightContainLong(int64_t item);
 
-    int32_t GetNumHashFunctions();
+    void MightContainLongBatch(const int64_t *items, bool *results, int32_t count);
+
+    int32_t GetVersion() const
+    {
+        return version;
+    }
 
     BitArray *GetBits()
     {
         return bits;
     }
 
-    std::unique_ptr<mem::AlignedBuffer<int8_t>> WriteData(char *serialized);
-
-
-    /**
-     * Write a 32-bit integer into the specified buffer using big-endian byte order.
-     *
-     * @param val: 32-bit integer to be written.
-     * @param buf: A pointer to the tartget buffer for storing the written bytes.
-     */
-    void WriteInt(int32_t val, int8_t *buf)
-    {
-        *buf = (val>>24) & 0xff;
-        *(buf+1) = (val>>16) & 0xff;
-        *(buf+2) = (val>>8) & 0xff;
-        *(buf+3) = val & 0xff;
-    }
-
-    /**
-     * Write a 64-bit integer into the specified buffer using big-endian byte order.
-     *
-     * @param val: 64-bit integer to be written.
-     * @param buf: A pointer to the tartget buffer for storing the written bytes.
-     */
-    void WriteLong(int64_t val, int8_t *buf)
-    {
-        *buf = (val>>56) & 0xff;
-        *(buf+1) = (val>>48) & 0xff;
-        *(buf+2) = (val>>40) & 0xff;
-        *(buf+3) = (val>>32) & 0xff;
-        *(buf+4) = (val>>24) & 0xff;
-        *(buf+5) = (val>>16) & 0xff;
-        *(buf+6) = (val>>8) & 0xff;
-        *(buf+7) = val & 0xff;
-    }
-
 private:
-    // todo Most of the values of numHashFunctions calculated by Spark are 5 to 6. In this example, the value is 5 temporarily.
-    int32_t numHashFunctions = 5;
+    // SIMD
+    static bool IsPowerOfTwo(int32_t value);
+    static int32_t GetSimdLaneCount();
+    static void BloomMaskBatch(const int64_t *hashCodes, uint64_t *masks, int32_t laneCount);
+    static void BloomIndexBatch(uint32_t bloomSize, const int64_t *hashCodes, uint64_t *indexes, int32_t laneCount);
+
+    static uint64_t BloomMask(uint64_t hashCode);
+    static uint32_t BloomIndex(uint32_t bloomSize, uint64_t hashCode);
+
+    void ValidateVersion();
+
     BitArray *bits;
     int32_t version;
 };

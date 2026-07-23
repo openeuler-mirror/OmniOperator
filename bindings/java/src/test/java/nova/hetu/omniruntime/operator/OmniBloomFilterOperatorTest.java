@@ -26,7 +26,7 @@ public class OmniBloomFilterOperatorTest {
     @Test
     public void testCreateBloomFilter() {
         DataType[] types = {IntDataType.INTEGER};
-        Object[][] datas = {{1, 6, 4, 0, 0, 0, 0, 0, 0, 0, 0}};
+        Object[][] datas = {{1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
         VecBatch inputVecBatch = createVecBatch(types, datas);
 
         OmniBloomFilterOperatorFactory factory = new OmniBloomFilterOperatorFactory(1);

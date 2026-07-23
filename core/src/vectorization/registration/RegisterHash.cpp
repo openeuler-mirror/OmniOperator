@@ -14,5 +14,7 @@ void RegisterHashFunctions(const std::string &prefix)
     RegisterMurMur3HashFunction(prefix + "mm3hash");
     // xxhash64
     RegisterXxHash64Function(prefix + "xxhash64");
+    // bloom filter
+    RegisterMightContainFunction(prefix + "might_contain");
 }
 }
