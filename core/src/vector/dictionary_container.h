@@ -28,10 +28,8 @@ public:
           dictOffset(dictOffset),
           isSliced(false)
     {
-        this->values.reserve(valueSize);
-        // init values
-        for (int32_t i = 0; i < valueSize; i++) {
-            this->values[i] = values[i];
+        if (valueSize > 0 && values != nullptr) {
+            this->values.assign(values, values + valueSize);
         }
     }
 
