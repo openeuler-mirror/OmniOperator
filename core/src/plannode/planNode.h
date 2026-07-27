@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <algorithm>
+
 #include <string>
 #include <vector>
 #include "vector/vector_batch.h"
@@ -725,6 +727,189 @@ public:
 private:
     const bool nullAware;
     const bool isShuffle;
+};
+
+/// Represents cascading hash joins for multi-table joins without intermediate results.
+/// Optimizes queries like A JOIN B JOIN C by avoiding intermediate result generation.
+/// Each level represents one join in the cascade.
+class CascadingJoinNode : public PlanNode {
+public:
+    CascadingJoinNode(const PlanNodeId &id, int32_t cascadeLevels,
+        const std::vector<std::vector<ExprPtr>>& probeKeysList,
+        const std::vector<std::vector<ExprPtr>>& buildKeysList,
+        const std::vector<std::vector<int32_t>>& buildOutputColsList,
+        const std::vector<DataTypesPtr>& buildOutputTypesList,
+        const std::vector<PlanNodePtr>& buildNodes,
+        PlanNodePtr probeNode)
+        : PlanNode(id),
+          cascadeLevels_(cascadeLevels),
+          probeKeysList_(probeKeysList),
+          buildKeysList_(buildKeysList),
+          buildOutputColsList_(buildOutputColsList),
+          buildOutputTypesList_(buildOutputTypesList),
+          buildNodes_(buildNodes),
+          probeNode_(std::move(probeNode))
+    {
+        if (cascadeLevels_ <= 0 ||
+            probeNode_ == nullptr ||
+            probeNode_->OutputType() == nullptr) {
+            throw omniruntime::exception::OmniException(
+                "INVALID_ARGUMENT",
+                "Invalid CascadingJoin root probe metadata");
+        }
+
+        const size_t levelCount =
+            static_cast<size_t>(cascadeLevels_);
+
+        if (probeKeysList_.size() != levelCount ||
+            buildKeysList_.size() != levelCount ||
+            buildOutputColsList_.size() != levelCount ||
+            buildOutputTypesList_.size() != levelCount ||
+            buildNodes_.size() != levelCount) {
+            throw omniruntime::exception::OmniException(
+                "INVALID_ARGUMENT",
+                "CascadingJoin level metadata size mismatch");
+        }
+
+        // CascadingJoin is a multi-source PlanNode:
+        //
+        //   source[0] = root probe
+        //   source[1] = level-0 build
+        //   source[2] = level-1 build
+        //   ...
+        sources_.push_back(probeNode_);
+        for (const auto& buildNode : buildNodes_) {
+            if (buildNode == nullptr ||
+                buildNode->OutputType() == nullptr) {
+                throw omniruntime::exception::OmniException(
+                    "INVALID_ARGUMENT",
+                    "Invalid CascadingJoin build node metadata");
+            }
+            sources_.push_back(buildNode);
+        }
+
+        // IMPORTANT:
+        //
+        // CascadingLookupJoinOperator::BuildFinalOutput() physically emits:
+        //
+        //   root probe selected columns
+        //   + level-0 selected build columns
+        //   + level-1 selected build columns
+        //   + ...
+        //
+        // At present the probe side emits the complete root-probe schema, and
+        // buildOutputColsList_[level] describes the build columns emitted for
+        // that level.
+        //
+        // Therefore CascadingJoinNode::OutputType() MUST describe exactly this
+        // expanded physical schema. Returning buildOutputTypesList_.back()
+        // reports only the final build table and causes parent Project/Filter
+        // nodes to resolve valid fields against an undersized input schema,
+        // e.g.:
+        //
+        //   Field index 3 out of range [0, 3)
+        //
+        // when the final build table has only three columns.
+        std::vector<DataTypePtr> outputTypes;
+
+        if (probeNode_ != nullptr && probeNode_->OutputType() != nullptr) {
+            const auto& probeTypes = probeNode_->OutputType()->Get();
+            outputTypes.insert(
+                outputTypes.end(),
+                probeTypes.begin(),
+                probeTypes.end());
+        }
+
+        for (size_t level = 0; level < levelCount; ++level) {
+            const auto& buildTypes = buildOutputTypesList_[level];
+            if (buildTypes == nullptr) {
+                throw omniruntime::exception::OmniException(
+                    "INVALID_ARGUMENT",
+                    "CascadingJoin build output type cannot be null");
+            }
+
+            const int32_t buildTypeCount = buildTypes->GetSize();
+            const auto& outputCols = buildOutputColsList_[level];
+
+            for (int32_t outputCol : outputCols) {
+                if (outputCol < 0 || outputCol >= buildTypeCount) {
+                    throw omniruntime::exception::OmniException(
+                        "INVALID_ARGUMENT",
+                        "CascadingJoin build output column is outside build schema");
+                }
+
+                outputTypes.emplace_back(
+                    buildTypes->GetType(outputCol));
+            }
+        }
+
+        outputType_ =
+            std::make_shared<DataTypes>(
+                std::move(outputTypes));
+    }
+
+    std::string_view Name() const override
+    {
+        return "CascadingJoin";
+    }
+
+    int32_t CascadeLevels() const
+    {
+        return cascadeLevels_;
+    }
+
+    const std::vector<std::vector<ExprPtr>>& ProbeKeysList() const
+    {
+        return probeKeysList_;
+    }
+
+    const std::vector<std::vector<ExprPtr>>& BuildKeysList() const
+    {
+        return buildKeysList_;
+    }
+
+    const std::vector<std::vector<int32_t>>& BuildOutputColsList() const
+    {
+        return buildOutputColsList_;
+    }
+
+    const std::vector<DataTypesPtr>& BuildOutputTypesList() const
+    {
+        return buildOutputTypesList_;
+    }
+
+    const std::vector<PlanNodePtr>& BuildNodes() const
+    {
+        return buildNodes_;
+    }
+
+    PlanNodePtr ProbeNode() const
+    {
+        return probeNode_;
+    }
+
+    const DataTypesPtr &OutputType() const override
+    {
+        return outputType_;
+    }
+
+    const std::vector<PlanNodePtr> &Sources() const override
+    {
+        return sources_;
+    }
+
+private:
+    const int32_t cascadeLevels_;
+    const std::vector<std::vector<ExprPtr>> probeKeysList_;
+    const std::vector<std::vector<ExprPtr>> buildKeysList_;
+    const std::vector<std::vector<int32_t>> buildOutputColsList_;
+    const std::vector<DataTypesPtr> buildOutputTypesList_;
+    const std::vector<PlanNodePtr> buildNodes_;
+    const PlanNodePtr probeNode_;
+    std::vector<PlanNodePtr> sources_;
+
+    // Exact physical output schema produced by CascadingLookupJoinOperator.
+    DataTypesPtr outputType_;
 };
 
 /// Represents inner/outer/semi/anti merge joins. Translates to an
