@@ -5,6 +5,7 @@
 #include "expression_codegen.h"
 
 #include <chrono>
+#include <cctype>
 #include <utility>
 #include <memory>
 #include <vector>
@@ -30,6 +31,18 @@ const int INT32_VALUE = 32;
 const int INT64_VALUE = 64;
 const int EXPRFUNC_OUT_LENGTH_ARG_INDEX = 1;
 const int EXPRFUNC_OUT_NULL_INDEX = 3;
+
+bool IsConstantJsonPathArgument(const FuncExpr &functionExpr, size_t argumentIndex)
+{
+    if (argumentIndex != 1 || functionExpr.arguments.size() < 2 ||
+        functionExpr.arguments[argumentIndex]->GetType() != ExprType::LITERAL_E) {
+        return false;
+    }
+    std::string name = functionExpr.funcName;
+    std::transform(name.begin(), name.end(), name.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return name == "json_value" || name == "json_query";
+}
 }
 
 ExpressionCodeGen::ExpressionCodeGen(std::string name, const Expr &cpExpr, op::OverflowConfig *overflowConfig)
@@ -811,8 +824,14 @@ std::vector<Value *> ExpressionCodeGen::GetDefaultFunctionArgValues(
         }
         if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
             if (fExpr.arguments[i]->GetReturnTypeId() == OMNI_CHAR) {
-                argVals.push_back(llvmTypes->CreateConstantInt(
-                    dynamic_cast<CharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
+                int32_t width = dynamic_cast<CharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth();
+                // JSON runtime functions otherwise ignore the CHAR width. A negative
+                // value is an ABI-private marker that this path came from a codegen
+                // literal and can be parsed once per compiled literal address.
+                if (IsConstantJsonPathArgument(fExpr, i)) {
+                    width = -width - 1;
+                }
+                argVals.push_back(llvmTypes->CreateConstantInt(width));
             }
             argVals.push_back(this->value->length);
             if (FuncExpr::IsCastStrStr(fExpr)) {

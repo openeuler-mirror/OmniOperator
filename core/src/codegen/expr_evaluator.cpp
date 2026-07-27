@@ -3,6 +3,7 @@
  * Description: Expression evaluator
  */
 #include "expr_evaluator.h"
+#include "codegen/functions/stringfunctions.h"
 
 namespace omniruntime::codegen {
 int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
@@ -538,6 +539,7 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
     intptr_t *nullAddrs, intptr_t *offsetAddrs, intptr_t *dictionaries)
 {
     auto rowCount = vecBatch->GetRowCount();
+    [[maybe_unused]] function::JsonRowDocumentCacheScope rowDocumentScope(reinterpret_cast<int64_t>(context));
     auto projectedVecs = std::make_unique<VectorBatch>(rowCount);
     for (int32_t i = 0; i < projectVecCount; i++) {
         BaseVector *outCol = projections[i]->Project(vecBatch, valueAddrs, nullAddrs, offsetAddrs, context,
@@ -558,6 +560,7 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
     intptr_t *dictionaries)
 {
     const int rowCount = vecBatch->GetRowCount();
+    [[maybe_unused]] function::JsonRowDocumentCacheScope rowDocumentScope(reinterpret_cast<int64_t>(context));
     auto selectedRows = selectedRowsBuffer->AllocateReuse(rowCount, false);
     int32_t numSelectedRows = filter->GetFilterFunc()(valueAddrs, rowCount, selectedRows, nullAddrs, offsetAddrs,
         reinterpret_cast<int64_t>(context), dictionaries);

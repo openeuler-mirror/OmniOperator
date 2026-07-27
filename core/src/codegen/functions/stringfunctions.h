@@ -6,6 +6,7 @@
 #define __STRINGFUNCTIONS_H__
 
 #include <iostream>
+#include <cstdint>
 #include <string>
 #include <memory>
 #include <algorithm>
@@ -28,6 +29,30 @@
 #endif
 
 namespace omniruntime::codegen::function {
+// Scalar projections evaluate all rows of one expression before advancing to
+// the next projection. Keep parsed JSON documents only for that evaluator
+// batch, keyed by the immutable input string address of each row. This is not
+// the BatchStringFunction path and does not retain documents across batches.
+void JsonRowDocumentCacheBeginBatch(int64_t contextPtr);
+void JsonRowDocumentCacheEndBatch(int64_t contextPtr);
+
+class JsonRowDocumentCacheScope {
+public:
+    explicit JsonRowDocumentCacheScope(int64_t contextPtr) : contextPtr_(contextPtr)
+    {
+        JsonRowDocumentCacheBeginBatch(contextPtr_);
+    }
+    ~JsonRowDocumentCacheScope()
+    {
+        JsonRowDocumentCacheEndBatch(contextPtr_);
+    }
+    JsonRowDocumentCacheScope(const JsonRowDocumentCacheScope &) = delete;
+    JsonRowDocumentCacheScope &operator=(const JsonRowDocumentCacheScope &) = delete;
+
+private:
+    int64_t contextPtr_;
+};
+
 extern "C" DLLEXPORT int64_t CountChar(const char *str, int32_t strLen, const char *target, int32_t targetWidth,
                                        int32_t targetLen, bool isNull);
 
