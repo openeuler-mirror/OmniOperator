@@ -365,6 +365,18 @@ void ExprPrinter::Visit(const IsNullExpr &e)
     this->indentationDepth--;
 }
 
+void ExprPrinter::Visit(const SimilarExpr &e)
+{
+    string indent = GenerateIndentation();
+    string output = indent + "Similar:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
+    std::cout << output << '\n';
+    this->indentationDepth++;
+    e.value->Accept(*this);
+    e.pattern->Accept(*this);
+    std::cout << indent + ")" << '\n';
+    this->indentationDepth--;
+}
+
 /*
  * EXAMPLE
  * concat:string(

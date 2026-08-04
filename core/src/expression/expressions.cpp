@@ -1051,6 +1051,35 @@ ExprType IsNullExpr::GetType() const
     return ExprType::IS_NULL_E;
 }
 
+SimilarExpr::SimilarExpr() : value(nullptr), pattern(nullptr) {}
+
+SimilarExpr::~SimilarExpr()
+{
+    delete value;
+    delete pattern;
+}
+
+// Look up the vectorized similar_to function; NULL inputs are handled by SimilarFunction.
+SimilarExpr::SimilarExpr(Expr *value, Expr *pattern)
+{
+    dataType = BooleanType();
+    std::vector<omniruntime::type::DataTypeId> args = {value->dataType->GetId(), pattern->dataType->GetId()};
+    auto signature = std::make_shared<FunctionSignature>("similar_to", args, dataType->GetId());
+    vectorFunction = VectorFunction::Find(signature);
+    this->value = value;
+    this->pattern = pattern;
+}
+
+uint8_t *SimilarExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "SimilarExpr only supports vectorized path.");
+}
+
+ExprType SimilarExpr::GetType() const
+{
+    return ExprType::SIMILAR_E;
+}
+
 FuncExpr::FuncExpr() : function(nullptr) {}
 
 FuncExpr::~FuncExpr()

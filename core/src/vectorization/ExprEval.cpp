@@ -574,6 +574,18 @@ bool ExprEval::TryEvaluateMd5ConcatWsFusion(const FuncExpr &e)
     return false;
 }
 
+void ExprEval::Visit(const SimilarExpr &e)
+{
+    e.value->Accept(*this);
+    e.pattern->Accept(*this);
+    if (e.vectorFunction == nullptr) {
+        OMNI_THROW("Vectorization Error:", "Vector function not found for similar_to expression");
+    }
+    BaseVector *result = nullptr;  // SimilarFunction::Apply allocates result internally (Coalesce pattern)
+    e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
+    inputValues_.push(result);
+}
+
 void ExprEval::Visit(const FuncExpr &e)
 {
     if (TryEvaluateMd5ConcatWsFusion(e)) {

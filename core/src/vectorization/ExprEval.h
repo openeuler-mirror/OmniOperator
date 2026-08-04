@@ -33,6 +33,8 @@ public:
 
     void Visit(const expressions::IsNullExpr &e) override;
 
+    void Visit(const expressions::SimilarExpr &e) override;
+
     void Visit(const expressions::FuncExpr &e) override;
 
     void Visit(const expressions::SwitchExpr &e) override;

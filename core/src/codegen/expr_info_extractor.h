@@ -32,6 +32,7 @@ public:
     void Visit(const omniruntime::expressions::CoalesceExpr &e) override;
 
     void Visit(const omniruntime::expressions::IsNullExpr &e) override;
+    void Visit(const omniruntime::expressions::SimilarExpr &e) override;
 
     void Visit(const omniruntime::expressions::FuncExpr &e) override;
 

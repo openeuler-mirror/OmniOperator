@@ -430,6 +430,20 @@ Expr *JSONParser::ParseJsonIsNotNull(const Json &jsonExpr)
     return new UnaryExpr(Operator::NOT, isNullExpr, std::make_shared<BooleanDataType>());
 }
 
+Expr *JSONParser::ParseJsonSimilarTo(const Json &jsonExpr)
+{
+    Expr *value = ParseJSON(jsonExpr["value"]);
+    if (value == nullptr) {
+        return nullptr;
+    }
+    Expr *pattern = ParseJSON(jsonExpr["pattern"]);
+    if (pattern == nullptr) {
+        delete value;
+        return nullptr;
+    }
+    return new SimilarExpr(value, pattern);
+}
+
 namespace {
 constexpr int32_t JSON_VALUE_NULL_BEHAVIOR = 0;
 constexpr int32_t JSON_VALUE_ERROR_BEHAVIOR = 1;
@@ -850,6 +864,8 @@ Expr *JSONParser::ParseJSON(const Json &jsonExpr)
         return ParseJsonIsNull(jsonExpr);
     } else if (exprTypeStr == "IS_NOT_NULL") {
         return ParseJsonIsNotNull(jsonExpr);
+    } else if (exprTypeStr == "SIMILAR_TO") {
+        return ParseJsonSimilarTo(jsonExpr);
     }else if (exprTypeStr == "FUNC" || exprTypeStr == "FUNCTION") {
         return ParseJSONFunc(jsonExpr);
     } else if (exprTypeStr == "SWITCH") {
