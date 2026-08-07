@@ -972,7 +972,8 @@ BaseVector *ColumnProjectionProxy(BaseVector *colVec, int32_t numSelectedRows, i
     }
 }
 
-VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context)
+VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context,
+    AlignedBuffer<int32_t> *selectedRowsBuffer)
 {
     context->hasFilter = false;
     const int rowCount = vecBatch->GetRowCount();
@@ -1020,6 +1021,16 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
     if (numSelectedRows == 0) {
         return nullptr;
     }
+    // Callers use this buffer to map an output row back to its input row (timestamps, row kinds).
+    if (selectedRowsBuffer != nullptr) {
+        auto *selectedRows = selectedRowsBuffer->AllocateReuse(numSelectedRows, false);
+        int32_t selectedIdx = 0;
+        for (int i = 0; i < rowCount; i++) {
+            if (selectAddr[i]) {
+                selectedRows[selectedIdx++] = i;
+            }
+        }
+    }
     auto projectedVecs = std::make_unique<VectorBatch>(numSelectedRows);
 
     context->hasFilter = true;
@@ -1033,7 +1044,9 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
             projectedVecs->Append(ColumnProjectionProxy(colVec, numSelectedRows, typeId));
             continue;
         }
-        context->SetResultRowSize(vecBatch->GetRowCount());
+        // Field access below gathers only the selected rows, so the whole expression tree
+        // must be evaluated over that compacted row space instead of the input row count.
+        context->SetResultRowSize(numSelectedRows);
         ExprEval e2(vecBatch, context);
         e2.VisitExpr(*projExprs[i]);
         auto outCol = e2.GetResult();
@@ -1054,7 +1067,7 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
     intptr_t *dictionaries)
 {
     if (!useCodegen) {
-        return ProcessFilterAndProject(vecBatch, context);
+        return ProcessFilterAndProject(vecBatch, context, selectedRowsBuffer);
     }
     const int rowCount = vecBatch->GetRowCount();
     auto selectedRows = selectedRowsBuffer->AllocateReuse(rowCount, false);
