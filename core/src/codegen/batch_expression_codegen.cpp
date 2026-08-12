@@ -134,12 +134,14 @@ CodeGenValue *BatchExpressionCodeGen::BatchLiteralExprConstantHelper(const Liter
     Value *scaleVal = nullptr;
     switch (lExpr.GetReturnTypeId()) {
         case OMNI_INT:
-        case OMNI_DATE32: {
+        case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS: {
             literalValue = llvmTypes->CreateConstantInt(lExpr.intVal);
             break;
         }
         case OMNI_TIMESTAMP:
-        case OMNI_LONG: {
+        case OMNI_LONG:
+        case OMNI_INTERVAL_DAY_TIME: {
             literalValue = llvmTypes->CreateConstantLong(lExpr.longVal);
             break;
         }
@@ -482,13 +484,15 @@ llvm::AllocaInst *BatchExpressionCodeGen::GetResultArray(omniruntime::type::Data
     AllocaInst *resultArray = nullptr;
     switch (dataTypeId) {
         case OMNI_INT:
-        case OMNI_DATE32: {
+        case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS: {
             resultArray = builder->CreateAlloca(llvmTypes->I32Type(), rowCnt, "DATA_PTR");
             break;
         }
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
-        case OMNI_LONG: {
+        case OMNI_LONG:
+        case OMNI_INTERVAL_DAY_TIME: {
             resultArray = builder->CreateAlloca(llvmTypes->I64Type(), rowCnt, "DATA_PTR");
             break;
         }
@@ -761,11 +765,13 @@ Value *BatchExpressionCodeGen::GetTypeSize(DataTypeId dataTypeId)
     switch (dataTypeId) {
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             typeSize = sizeof(int32_t);
             break;
         case OMNI_TIMESTAMP:
         case OMNI_LONG:
         case OMNI_DECIMAL64:
+        case OMNI_INTERVAL_DAY_TIME:
             typeSize = sizeof(int64_t);
             break;
         case OMNI_DOUBLE:

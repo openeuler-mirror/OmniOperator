@@ -156,10 +156,12 @@ void ExprPrinter::Visit(const LiteralExpr &e)
             break;
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             output += GetIntValOutput(e);
             break;
         case OMNI_TIMESTAMP:
         case OMNI_LONG:
+        case OMNI_INTERVAL_DAY_TIME:
             output += GetLongValOutput(e);
             break;
         case OMNI_DOUBLE:

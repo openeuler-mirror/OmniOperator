@@ -131,6 +131,7 @@ void ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec, con
     switch (literalVal.GetReturnTypeId()) {
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             SetConstantValues<int32_t>(literalVal.intVal, outVec);
             break;
         case OMNI_SHORT:
@@ -142,6 +143,7 @@ void ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec, con
         case OMNI_LONG:
         case OMNI_DECIMAL64:
         case OMNI_TIMESTAMP:
+        case OMNI_INTERVAL_DAY_TIME:
             SetConstantValues<int64_t>(literalVal.longVal, outVec);
             break;
         case OMNI_DOUBLE:
@@ -191,6 +193,7 @@ void ExprEval::Visit(const LiteralExpr &e)
         switch (e.dataType->GetId()) {
             case OMNI_INT:
             case OMNI_DATE32:
+            case OMNI_INTERVAL_MONTHS:
                 constVec = new ConstVector(e.intVal, typeId, rowSize);
                 break;
             case OMNI_SHORT:
@@ -202,6 +205,7 @@ void ExprEval::Visit(const LiteralExpr &e)
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
+            case OMNI_INTERVAL_DAY_TIME:
                 constVec = new ConstVector(e.longVal, typeId, rowSize);
                 break;
             case OMNI_DOUBLE:

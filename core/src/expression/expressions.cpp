@@ -323,10 +323,12 @@ std::string LiteralExpr::toString() const
             break;
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             output += GetIntValOutput(*this);
             break;
         case OMNI_TIMESTAMP:
         case OMNI_LONG:
+        case OMNI_INTERVAL_DAY_TIME:
             output += GetLongValOutput(*this);
             break;
         case OMNI_DOUBLE:

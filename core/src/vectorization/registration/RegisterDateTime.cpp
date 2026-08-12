@@ -21,6 +21,7 @@
 #include "../functions/DateAdd.h"
 #include "../functions/DateSub.h"
 #include "../functions/DateArithmetic.h"
+#include "../functions/TimestampIntervalArithmetic.h"
 #include "../functions/TimestampConversion.h"
 #include "../functions/MakeDate.h"
 #include "../functions/MakeTimestamp.h"
@@ -68,6 +69,7 @@ void RegisterDatetimeFunctions(const std::string &prefix)
     RegisterAddMonthsFunction(prefix + "add_months");
     RegisterDateAddFunction(prefix + "date_add");
     RegisterDateSubFunction(prefix + "date_sub");
+    RegisterTimestampIntervalArithmeticFunctions(prefix);
     RegisterTimestampMicrosFunction(prefix + "timestamp_micros");
     RegisterTimestampMillisFunction(prefix + "timestamp_millis");
     RegisterTimestampSecondsFunction(prefix + "timestamp_seconds");

@@ -24,6 +24,7 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
     switch (types.GetIds()[i]) {
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
                 reinterpret_cast<Vector<int32_t> *>(colVec)));
         case OMNI_SHORT:
@@ -35,6 +36,7 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
+        case OMNI_INTERVAL_DAY_TIME:
             return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
                 reinterpret_cast<Vector<int64_t> *>(colVec)));
         case OMNI_DOUBLE:
@@ -163,7 +165,8 @@ bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
     }
     switch (outType->GetId()) {
         case OMNI_INT:
-        case OMNI_DATE32: {
+        case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS: {
             literalVal.value.intVal = literalExpr->intVal;
             break;
         }
@@ -177,7 +180,8 @@ bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
         }
         case OMNI_LONG:
         case OMNI_DECIMAL64:
-        case OMNI_TIMESTAMP: {
+        case OMNI_TIMESTAMP:
+        case OMNI_INTERVAL_DAY_TIME: {
             literalVal.value.longVal = literalExpr->longVal;
             break;
         }
@@ -356,6 +360,7 @@ bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector 
     switch (outputTypeId) {
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             SetConstantValues<int32_t>(literalVal.value.intVal, outVec);
             break;
         case OMNI_SHORT:
@@ -367,6 +372,7 @@ bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector 
         case OMNI_LONG:
         case OMNI_DECIMAL64:
         case OMNI_TIMESTAMP:
+        case OMNI_INTERVAL_DAY_TIME:
             SetConstantValues<int64_t>(literalVal.value.longVal, outVec);
             break;
         case OMNI_DOUBLE:
@@ -592,6 +598,7 @@ BaseVector *Projection::ColumnProjectionProxy(VectorBatch *vecBatch, int32_t sel
     switch (typeIds[columnProjectionIndex]) {
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             return ColumnProjectionHelper<int32_t>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_SHORT:
             return ColumnProjectionHelper<int16_t>(vecBatch, selectedRows, numSelectedRows);
@@ -600,6 +607,7 @@ BaseVector *Projection::ColumnProjectionProxy(VectorBatch *vecBatch, int32_t sel
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
+        case OMNI_INTERVAL_DAY_TIME:
             return ColumnProjectionHelper<int64_t>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_DOUBLE:
             return ColumnProjectionHelper<double>(vecBatch, selectedRows, numSelectedRows);
@@ -980,6 +988,7 @@ BaseVector *ColumnProjectionProxy(BaseVector *colVec, int32_t numSelectedRows, i
     switch (typeId) {
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             return ColumnProjectionHelper<int32_t>(colVec, numSelectedRows);
         case OMNI_SHORT:
             return ColumnProjectionHelper<int16_t>(colVec, numSelectedRows);
@@ -988,6 +997,7 @@ BaseVector *ColumnProjectionProxy(BaseVector *colVec, int32_t numSelectedRows, i
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
+        case OMNI_INTERVAL_DAY_TIME:
             return ColumnProjectionHelper<int64_t>(colVec, numSelectedRows);
         case OMNI_DOUBLE:
             return ColumnProjectionHelper<double>(colVec, numSelectedRows);
