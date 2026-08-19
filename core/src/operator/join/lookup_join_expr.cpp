@@ -210,6 +210,9 @@ LookupJoinWithExprOperator::LookupJoinWithExprOperator(const type::DataTypes &pr
 {
     SetOperatorName(opNameForLookUpJoin);
     executionContext->SetConfig(queryConfig);
+    if (lookupJoinOperator != nullptr) {
+        identityProjections_ = lookupJoinOperator->identityProjections();
+    }
 }
 
 LookupJoinWithExprOperator::~LookupJoinWithExprOperator()

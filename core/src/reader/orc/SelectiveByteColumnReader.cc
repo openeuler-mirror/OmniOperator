@@ -23,8 +23,15 @@ void SelectiveByteColumnReader::read(
         rowsToRead, orcType_, static_cast<omniruntime::type::DataTypeId>(omniTypeId));
     inner_->next(decoded_.get(), rowsToRead, nullptr, omniTypeId);
     decodedBase_ = 0;
+    mat_ = Materialization::kBatchIndexed;
 
     if (!hasFilter()) {
+        // Whole batch decoded and every row still active, so decoded_[i] is row activeRows[i].
+        // Publishing kDense lets getValues move decoded_ instead of gathering an identical copy.
+        if (activeRows.size() == rowsToRead) {
+            mat_ = Materialization::kDense;
+            visitedRows_ = activeRows;
+        }
         return;
     }
 

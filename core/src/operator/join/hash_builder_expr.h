@@ -54,6 +54,7 @@ private:
     std::vector<int32_t> buildHashCols;
     std::vector<std::unique_ptr<Projection>> projections;
     HashBuilderOperatorFactory *operatorFactory;
+    config::QueryConfig queryConfig_{};
 };
 
 class HashBuilderWithExprOperator : public Operator {

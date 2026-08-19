@@ -14,6 +14,7 @@
 #include "type/data_type.h"
 #include "parquet/ParquetExpression.h"
 #include "codegen/Options.h"
+#include "codegen/ScanSpec.h"
 #include "reader/common/TimeRebaseInfo.h"
 
 using omniruntime::codegen::FileFormat;
@@ -93,6 +94,7 @@ private:
     std::vector<std::string> parquetIncludedColumns_;
     // filterWhileDecode global switch (injected via enhancementJson, default false).
     bool enableFilterWhileDecode_ = false;
+    std::shared_ptr<omniruntime::codegen::ScanSpec> scanSpec_;
 
 public:
     bool EnableFilterWhileDecode() const
@@ -103,6 +105,16 @@ public:
     void SetEnableFilterWhileDecode(bool enable)
     {
         enableFilterWhileDecode_ = enable;
+    }
+
+    const std::shared_ptr<omniruntime::codegen::ScanSpec> &GetScanSpec() const
+    {
+        return scanSpec_;
+    }
+
+    void SetScanSpec(const std::shared_ptr<omniruntime::codegen::ScanSpec> &scanSpec)
+    {
+        scanSpec_ = scanSpec;
     }
 
     const std::shared_ptr<UriInfo>& GetUri() const

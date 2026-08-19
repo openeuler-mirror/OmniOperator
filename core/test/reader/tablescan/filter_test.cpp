@@ -211,9 +211,10 @@ TEST(FilterTest, MergeWithRangeAndMulti)
     ExpectPasses(*merged2, {0, 2, 8, 10}, {3, 7, 11});
 }
 
-TEST(FilterTest, MergeWithValuesReturnsNullptr)
+TEST(FilterTest, MergeWithValuesIntersects)
 {
-    // Gluten does not push IN yet: Values merge with ranges returns nullptr → residual
+    // DPF IN-list (BigintValues) intersects Range / Values / Negated / Multi.
+    // Contiguous survivors collapse to BigintRange via chooseCommonFilter.
     auto range = std::make_shared<BigintRange>(1, 10, false);
     auto values = std::make_shared<BigintValues>(std::unordered_set<int64_t>{1, 2, 3}, false);
     auto multi = std::make_shared<BigintMultiRange>(
@@ -221,13 +222,33 @@ TEST(FilterTest, MergeWithValuesReturnsNullptr)
     auto negated = std::make_shared<NegatedBigintRange>(5, 5, false);
     auto values2 = std::make_shared<BigintValues>(std::unordered_set<int64_t>{2, 3}, false);
 
-    EXPECT_EQ(range->mergeWith(values.get()), nullptr);
-    EXPECT_EQ(values->mergeWith(range.get()), nullptr);
-    EXPECT_EQ(negated->mergeWith(values.get()), nullptr);
-    EXPECT_EQ(values->mergeWith(negated.get()), nullptr);
-    EXPECT_EQ(multi->mergeWith(values.get()), nullptr);
-    EXPECT_EQ(values->mergeWith(multi.get()), nullptr);
-    EXPECT_EQ(values->mergeWith(values2.get()), nullptr);
+    auto rangeAndValues = range->mergeWith(values.get());
+    ASSERT_NE(rangeAndValues, nullptr);
+    ExpectPasses(*rangeAndValues, {1, 2, 3}, {0, 4, 10});
+
+    auto valuesAndRange = values->mergeWith(range.get());
+    ASSERT_NE(valuesAndRange, nullptr);
+    ExpectPasses(*valuesAndRange, {1, 2, 3}, {0, 4, 10});
+
+    auto negatedAndValues = negated->mergeWith(values.get());
+    ASSERT_NE(negatedAndValues, nullptr);
+    ExpectPasses(*negatedAndValues, {1, 2, 3}, {5});
+
+    auto valuesAndNegated = values->mergeWith(negated.get());
+    ASSERT_NE(valuesAndNegated, nullptr);
+    ExpectPasses(*valuesAndNegated, {1, 2, 3}, {5});
+
+    auto multiAndValues = multi->mergeWith(values.get());
+    ASSERT_NE(multiAndValues, nullptr);
+    ExpectPasses(*multiAndValues, {1, 2}, {3, 8, 9});
+
+    auto valuesAndMulti = values->mergeWith(multi.get());
+    ASSERT_NE(valuesAndMulti, nullptr);
+    ExpectPasses(*valuesAndMulti, {1, 2}, {3, 8, 9});
+
+    auto valuesAndValues = values->mergeWith(values2.get());
+    ASSERT_NE(valuesAndValues, nullptr);
+    ExpectPasses(*valuesAndValues, {2, 3}, {1, 4});
 }
 
 TEST(FilterTest, MergeWithNegatedAndNegated)

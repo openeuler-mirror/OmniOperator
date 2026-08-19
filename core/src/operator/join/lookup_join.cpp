@@ -15,6 +15,8 @@
 #include "hash_builder.h"
 #include "join_spill_state.h"
 #include "lookup_join.h"
+#include "util/debug.h"
+#include "reader/common/Filter.h"
 
 
 static constexpr int8_t BUFFER_SIZE = 8;
@@ -306,6 +308,7 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
             this->buildFilterTypeIds[i] = buildTypeIds[this->buildFilterCols[i] - originalProbeColsCount];
         }
     }
+    InitIdentityProjections({});
 }
 
 LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
@@ -321,6 +324,7 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
 	this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeOutputCols, probeOutputTypes.GetIds(),
 																	buildOutputCols, buildOutputTypes,
 																    outputRowSize, outputList);
+    InitIdentityProjections(outputList);
 }
 
 LookupJoinOperator::~LookupJoinOperator()
@@ -333,6 +337,47 @@ LookupJoinOperator::~LookupJoinOperator()
     delete[] lengths;
     delete[] probeFilterTypeIds;
     delete[] buildFilterTypeIds;
+}
+
+void LookupJoinOperator::InitIdentityProjections(const std::vector<int32_t> &outputList)
+{
+    identityProjections_.clear();
+    const auto joinType = std::visit([&](auto &&arg) { return arg.GetJoinType(); }, *hashTables);
+    // Outer join must not drop probe rows; only INNER / LEFT_SEMI pass through identity for DFP.
+    if (joinType != OMNI_JOIN_TYPE_INNER && joinType != OMNI_JOIN_TYPE_LEFT_SEMI) {
+        return;
+    }
+    const auto buildSide = std::visit([&](auto &&arg) { return arg.GetBuildSide(); }, *hashTables);
+    const auto probeN = probeOutputCols.size();
+    const auto buildN = buildOutputCols.size();
+    const bool buildLeft = (buildSide == BuildSide::OMNI_BUILD_LEFT);
+
+    auto prePermutePos = [&](size_t probeIdx) -> int32_t {
+        return buildLeft ? static_cast<int32_t>(buildN + probeIdx) : static_cast<int32_t>(probeIdx);
+    };
+
+    if (outputList.empty()) {
+        for (size_t i = 0; i < probeN; ++i) {
+            identityProjections_.emplace_back(static_cast<uint32_t>(probeOutputCols[i]),
+                static_cast<uint32_t>(prePermutePos(i)));
+        }
+        return;
+    }
+    for (size_t out = 0; out < outputList.size(); ++out) {
+        const int src = outputList[out];
+        size_t probeIdx = probeN;
+        if (buildLeft) {
+            if (src >= static_cast<int32_t>(buildN)) {
+                probeIdx = static_cast<size_t>(src) - buildN;
+            }
+        } else if (src >= 0 && static_cast<size_t>(src) < probeN) {
+            probeIdx = static_cast<size_t>(src);
+        }
+        if (probeIdx < probeN) {
+            identityProjections_.emplace_back(static_cast<uint32_t>(probeOutputCols[probeIdx]),
+                static_cast<uint32_t>(out));
+        }
+    }
 }
 
 /// One Join Task has one probeSize partition, one probeSize partition has multi batches input
@@ -484,6 +529,38 @@ BlockingReason LookupJoinOperator::IsBlocked(ContinueFuture* future)
         return BlockingReason::kWaitForJoinBuild;
     }
     return BlockingReason::kNotBlocked;
+}
+
+bool LookupJoinOperator::hasPendingDynamicFilters() const
+{
+    if (dynamicFiltersPushed_ || hashTables == nullptr) {
+        return false;
+    }
+    const auto &raw = std::visit(
+        [](auto &&arg) -> const std::unordered_map<int32_t, ::common::FilterPtr> & { return arg.GetDynamicFilters(); },
+        *hashTables);
+    return !raw.empty();
+}
+
+std::unordered_map<uint32_t, ::common::FilterPtr> LookupJoinOperator::getPendingDynamicFilters()
+{
+    if (dynamicFiltersPushed_ || hashTables == nullptr) {
+        return {};
+    }
+    const auto &raw = std::visit(
+        [](auto &&arg) -> const std::unordered_map<int32_t, ::common::FilterPtr> & { return arg.GetDynamicFilters(); },
+        *hashTables);
+    const auto &buildCols = std::visit(
+        [](auto &&arg) -> const std::vector<int32_t> & { return arg.GetBuildHashCols(); }, *hashTables);
+    std::unordered_map<uint32_t, ::common::FilterPtr> pending;
+    const size_t n = std::min(probeHashCols.size(), buildCols.size());
+    for (size_t i = 0; i < n; ++i) {
+        auto it = raw.find(buildCols[i]);
+        if (it != raw.end() && it->second != nullptr) {
+            pending[static_cast<uint32_t>(probeHashCols[i])] = it->second;
+        }
+    }
+    return pending;
 }
 
 /// one Join Task has one probeSize partition, one probeSize partition has multi batches input.
@@ -709,16 +786,26 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
     }
     UpdateAddInputInfo(vecBatch->GetRowCount());
 
+    if (firstVecBatch) {
+        firstVecBatch = false;
+        InitFirst();
+        MaybeEnableReplaceWithDynamicFilter();
+    }
+
+    // Scan already applied an exact unique-key filter; skip hash probe and spill.
+    if (canReplaceWithDynamicFilter_) {
+        curInputBatch = vecBatch;
+        curProbePosition = 0;
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
+
     // spill case: AddInput we will compute active sub partition 0 first, other sub partition will be spilled
     // if active sub partition 0 batch has 0 rows, will LoadNextSpilledProbeInput, read next sub partition from disk to be active.
     // curInputBatch will be next spilled sub partition, NULL or Not NULL.
     if (TrySpillCurrentProbeInput(vecBatch)) {
         SetStatus(OMNI_STATUS_NORMAL);
         return 0;
-    }
-    if (firstVecBatch) {
-        firstVecBatch = false;
-        InitFirst();
     }
     curInputBatch = vecBatch;
     curProbePosition = 0;
@@ -743,6 +830,10 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
             SetStatus(OMNI_STATUS_FINISHED);
         }
         return 0;
+    }
+
+    if (canReplaceWithDynamicFilter_) {
+        return EmitReplacedWithDynamicFilterOutput(outputVecBatch);
     }
 
     auto inputRowCount = curInputBatch->GetRowCount();
@@ -805,6 +896,72 @@ void LookupJoinOperator::InitFirst()
             auto &&arg) { arg.InitBuildFilterCols(buildFilterCols, originalProbeColsCount, tableBuildFilterColPtrs); },
             *hashTables);
     }
+}
+
+void LookupJoinOperator::MaybeEnableReplaceWithDynamicFilter()
+{
+    canReplaceWithDynamicFilter_ = false;
+    if (!dynamicFiltersPushed_ || hashTables == nullptr) {
+        return;
+    }
+    // Align with Velox HashProbe: only replace probe when at least one filter
+    // reached an operator that can execute it (canAddDynamicFilter / Scan).
+    if (dynamicFiltersAppliedCount_ == 0) {
+        LogDebug("DFP: canReplace skipped: filter did not reach a scan (applied=0)");
+        return;
+    }
+    if (simpleFilter != nullptr) {
+        return;
+    }
+    if (joinType != OMNI_JOIN_TYPE_INNER && joinType != OMNI_JOIN_TYPE_LEFT_SEMI) {
+        return;
+    }
+    if (probeHashCols.size() != 1 || !buildOutputCols.empty()) {
+        return;
+    }
+    const auto &raw = std::visit(
+        [](auto &&arg) -> const std::unordered_map<int32_t, ::common::FilterPtr> & { return arg.GetDynamicFilters(); },
+        *hashTables);
+    if (raw.empty()) {
+        return;
+    }
+    for (const auto &[channel, filter] : raw) {
+        (void)channel;
+        if (filter != nullptr && filter->kind() == ::common::FilterKind::kBigintValuesUsingBloomFilter) {
+            LogDebug("DFP: canReplace skipped bloom probeCh=%d", probeHashCols[0]);
+            return;
+        }
+    }
+    const bool hasDuplicateKeys = std::visit([](auto &&arg) { return arg.HasDuplicateKeys(); }, *hashTables);
+    if (hasDuplicateKeys) {
+        LogDebug("DFP: canReplace skipped duplicate build keys probeCh=%d", probeHashCols[0]);
+        return;
+    }
+    canReplaceWithDynamicFilter_ = true;
+    int filterKind = -1;
+    if (!raw.empty() && raw.begin()->second != nullptr) {
+        filterKind = static_cast<int>(raw.begin()->second->kind());
+    }
+    LogDebug("DFP: canReplaceWithDynamicFilter enabled joinType=%d probeCh=%d filterKind=%d "
+            "filterCount=%zu appliedCount=%zu",
+        static_cast<int>(joinType), probeHashCols[0], filterKind, raw.size(), dynamicFiltersAppliedCount_);
+}
+
+int32_t LookupJoinOperator::EmitReplacedWithDynamicFilterOutput(VectorBatch **outputVecBatch)
+{
+    outputBuilder->BuildPassthroughProbeOutput(curInputBatch, outputVecBatch, buildSide);
+    VectorHelper::FreeVecBatch(curInputBatch);
+    curInputBatch = nullptr;
+    curProbePosition = 0;
+    if (noMoreInput_) {
+        SetStatus(OMNI_STATUS_FINISHED);
+    }
+    if ((*outputVecBatch != nullptr)) {
+        UpdateGetOutputInfo((*outputVecBatch)->GetRowCount());
+    } else {
+        UpdateGetOutputInfo(0);
+    }
+    return 0;
 }
 
 template <typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
@@ -2530,6 +2687,42 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
         }
         vectorBatch->Append(buildColumn);
     }
+}
+
+void LookupJoinOutputBuilder::BuildPassthroughProbeOutput(
+    VectorBatch *probeInput, VectorBatch **outputVecBatch, BuildSide buildSide)
+{
+    const int32_t rowCount = probeInput->GetRowCount();
+    auto output = std::make_unique<VectorBatch>(rowCount);
+    auto *outputPtr = output.get();
+    for (size_t j = 0; j < probeOutputCols.size(); ++j) {
+        auto *column = probeInput->Get(probeOutputCols[j]);
+        outputPtr->Append(VectorHelper::SliceVector(column, 0, rowCount));
+    }
+    if (buildSide == OMNI_BUILD_LEFT && !buildOutputCols.empty()) {
+        BaseVector **pVector = output->GetVectors();
+        std::rotate(pVector, pVector + probeOutputCols.size(), pVector + output->GetVectorCount());
+    }
+    std::vector<int32_t> tmpVec(outputList);
+    if (!tmpVec.empty()) {
+        BaseVector **pVector = output->GetVectors();
+        for (int i = 0; i < static_cast<int>(tmpVec.size()); i++) {
+            if (tmpVec[i] != i) {
+                auto temp = pVector[i];
+                int src = tmpVec[i];
+                int dst = i;
+                do {
+                    pVector[dst] = pVector[src];
+                    tmpVec[dst] = dst;
+                    dst = src;
+                    src = tmpVec[dst];
+                } while (src != i);
+                pVector[dst] = temp;
+                tmpVec[dst] = dst;
+            }
+        }
+    }
+    *outputVecBatch = output.release();
 }
 
 void LookupJoinOutputBuilder::BuildOutput(

@@ -10,8 +10,121 @@
  */
 
 #include "SplitReader.h"
+#include "reader/common/Filter.h"
+#include "util/debug.h"
+
+#include <string>
 
 namespace omniruntime::connector::hive {
+
+bool SplitReader::partitionValuePassesFilter(
+    const ::common::Filter *filter, type::DataTypeId typeId, const std::string &val)
+{
+    if (filter == nullptr) {
+        return true;
+    }
+    try {
+        switch (typeId) {
+            case omniruntime::type::OMNI_BYTE:
+            case omniruntime::type::OMNI_SHORT:
+            case omniruntime::type::OMNI_INT:
+            case omniruntime::type::OMNI_LONG:
+            case omniruntime::type::OMNI_DECIMAL64:
+            case omniruntime::type::OMNI_DATE64:
+                return filter->testInt64(std::stoll(val));
+            case omniruntime::type::OMNI_DATE32:
+                if (val.size() == 10 && val[4] == '-' && val[7] == '-') {
+                    return filter->testInt64(ParseDate32(val));
+                }
+                return filter->testInt64(std::stoll(val));
+            case omniruntime::type::OMNI_BOOLEAN:
+                return filter->testBool(val == "true" || val == "1");
+            case omniruntime::type::OMNI_FLOAT:
+            case omniruntime::type::OMNI_DOUBLE:
+                return filter->testDouble(std::stod(val));
+            case omniruntime::type::OMNI_CHAR:
+            case omniruntime::type::OMNI_VARCHAR:
+            case omniruntime::type::OMNI_VARBINARY:
+                return filter->testBytes(val.data(), static_cast<int32_t>(val.size()));
+            default:
+                return filter->testInt64(std::stoll(val));
+        }
+    } catch (...) {
+        LogDebug("DFP: failed to parse partition value '%s' typeId=%d; keeping split", val.c_str(),
+            static_cast<int>(typeId));
+        return true;
+    }
+}
+
+bool SplitReader::partitionKeysPassFilters()
+{
+    if (scanSpec_ == nullptr || hiveSplit_ == nullptr) {
+        return true;
+    }
+    int filterCount = 0;
+    int matchedPartKeys = 0;
+    for (const auto &child : scanSpec_->children()) {
+        if (child == nullptr || child->filter() == nullptr) {
+            continue;
+        }
+        ++filterCount;
+        const auto &name = child->fieldName();
+        auto partIt = hiveSplit_->partitionKeys.find(name);
+        if (partIt == hiveSplit_->partitionKeys.end()) {
+            continue;
+        }
+        ++matchedPartKeys;
+        const auto *filter = child->filter();
+        if (!partIt->second.has_value()) {
+            if (!filter->testNull()) {
+                LogDebug("DFP: skip split null partition %s fails filter", name.c_str());
+                return false;
+            }
+            continue;
+        }
+        type::DataTypeId typeId = type::OMNI_LONG;
+        if (partitionKeys_ != nullptr) {
+            auto handleIt = partitionKeys_->find(name);
+            if (handleIt != partitionKeys_->end() && handleIt->second != nullptr &&
+                handleIt->second->dataType() != nullptr) {
+                typeId = handleIt->second->dataType()->GetId();
+            }
+        }
+        if (!partitionValuePassesFilter(filter, typeId, partIt->second.value())) {
+            LogDebug("DFP: skip split partition %s='%s' fails filter kind=%d typeId=%d path=%s", name.c_str(),
+                partIt->second.value().c_str(), static_cast<int>(filter->kind()), static_cast<int>(typeId),
+                hiveSplit_->filePath.c_str());
+            return false;
+        }
+        if (!partitionFilterDiagLogged_) {
+            partitionFilterDiagLogged_ = true;
+            LogDebug("DFP: partition filter matched spec=%s splitVal='%s' kind=%d typeId=%d kept=1 path=%s",
+                name.c_str(), partIt->second.value().c_str(), static_cast<int>(filter->kind()),
+                static_cast<int>(typeId), hiveSplit_->filePath.c_str());
+        }
+    }
+    if (filterCount > 0 && matchedPartKeys == 0 && !partitionFilterDiagLogged_) {
+        partitionFilterDiagLogged_ = true;
+        std::string specNames;
+        for (const auto &child : scanSpec_->children()) {
+            if (child != nullptr && child->filter() != nullptr) {
+                specNames.append(child->fieldName()).append(",");
+            }
+        }
+        std::string splitNames;
+        for (const auto &kv : hiveSplit_->partitionKeys) {
+            splitNames.append(kv.first);
+            if (kv.second.has_value()) {
+                splitNames.append("=").append(kv.second.value());
+            }
+            splitNames.append(",");
+        }
+        LogDebug("DFP: partition filter NOT applied specFilters=%s splitPartKeys=%s splitPartKeyCount=%zu path=%s",
+            specNames.c_str(), splitNames.c_str(), hiveSplit_->partitionKeys.size(), hiveSplit_->filePath.c_str());
+    }
+    return true;
+}
+
 SplitReader::SplitReader(
     const std::shared_ptr<const hive::HiveConnectorSplit> &hiveSplit,
     const std::shared_ptr<const HiveTableHandle> &hiveTableHandle,
@@ -54,12 +167,25 @@ void SplitReader::prepareSplit(omniruntime::type::RowTypePtr &rowType, uint64_t 
     baseReaderOpts_->SetCoalesceMaxBytes(hiveConfig_->maxCoalescedBytes());
     baseReaderOpts_->SetCoalesceMaxDistance(hiveConfig_->maxCoalescedDistance());
     baseReaderOpts_->SetFilePreloadThreshold(static_cast<int64_t>(hiveConfig_->filePreloadThreshold()));
+    if (!partitionKeysPassFilters()) {
+        emptySplit_ = true;
+        return;
+    }
     createReader();
     createRowReader(rowType, batchLen);
 }
 
 uint64_t SplitReader::next(vec::VectorBatch **output_, int *omniTypeId, uint64_t batchLen)
 {
+    // Filter may arrive after prepareSplit; re-check so a late DF still skips.
+    if (!emptySplit_ && !partitionKeysPassFilters()) {
+        emptySplit_ = true;
+    }
+    if (emptySplit_ || baseRowReader_ == nullptr) {
+        emptySplit_ = true;
+        *output_ = new vec::VectorBatch(0);
+        return 0;
+    }
     std::vector<omniruntime::vec::BaseVector *> *recordBatch;
     uint64_t batchRowSize = baseRowReader_->Next(&recordBatch, omniTypeId, batchLen);
 

@@ -95,10 +95,11 @@ private:
 
 class OmniDriver : public std::enable_shared_from_this<OmniDriver> {
 public:
-    OmniDriver()
+    explicit OmniDriver(bool dynamicFilterPushdownEnabled = false)
         : curOperatorId_(0),
           blockingReason_(BlockingReason::kNotBlocked),
-          blockedOperatorId_(0) {}
+          blockedOperatorId_(0),
+          dynamicFilterPushdownEnabled_(dynamicFilterPushdownEnabled) {}
  
     // Run this pipeline until it produces a batch of data or get blocked.
     vec::VectorBatch* Next(ContinueFuture* future, StopReason* stopReason);
@@ -161,6 +162,8 @@ private:
         std::shared_ptr<BlockingState>& blockingState,
         vec::VectorBatch** result);
 
+    void pushdownFilters(size_t operatorIndex);
+
     ALWAYS_INLINE StopReason BlockDriver(
         const std::shared_ptr<OmniDriver>& self,
         size_t blockedOperatorId,
@@ -185,6 +188,7 @@ private:
 
     bool closed_{false};
     bool finished_{false};
+    bool dynamicFilterPushdownEnabled_{false};
 
     PipelineStats pipelineStats_;
 };

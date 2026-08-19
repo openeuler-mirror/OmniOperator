@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <string>
+#include <unordered_map>
 #include <vector>
 #include "type/data_type.h"
 #include "reader/common/Filter.h"
@@ -157,6 +159,17 @@ public:
             return nullptr;
         }
         return it->second;
+    }
+
+    /// Child whose output channel matches 'channel' (top-level projected fields).
+    ScanSpec *getChildByChannel(type::column_index_t channel) const
+    {
+        for (const auto &child : children_) {
+            if (child && child->channel() == channel) {
+                return child.get();
+            }
+        }
+        return nullptr;
     }
 
     // Pushed filter; orthogonal to projectOut_ (filter-only / filter+project).

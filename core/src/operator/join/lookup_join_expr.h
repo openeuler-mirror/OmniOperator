@@ -51,6 +51,7 @@ private:
     std::vector<std::unique_ptr<Projection>> projections;
     std::vector<ProjFunc> projectFuncs;
     LookupJoinOperatorFactory *operatorFactory;
+    config::QueryConfig queryConfig_{};
 };
 
 class LookupJoinWithExprOperator : public Operator {
@@ -67,6 +68,33 @@ public:
     OmniStatus Close() override;
 
     BlockingReason IsBlocked(ContinueFuture* future) override;
+
+    bool hasPendingDynamicFilters() const override
+    {
+        return lookupJoinOperator != nullptr && lookupJoinOperator->hasPendingDynamicFilters();
+    }
+
+    std::unordered_map<uint32_t, ::common::FilterPtr> getPendingDynamicFilters() override
+    {
+        if (lookupJoinOperator == nullptr) {
+            return {};
+        }
+        return lookupJoinOperator->getPendingDynamicFilters();
+    }
+
+    void clearPendingDynamicFilters() override
+    {
+        if (lookupJoinOperator != nullptr) {
+            lookupJoinOperator->clearPendingDynamicFilters();
+        }
+    }
+
+    void onDynamicFiltersPushed(size_t appliedCount) override
+    {
+        if (lookupJoinOperator != nullptr) {
+            lookupJoinOperator->onDynamicFiltersPushed(appliedCount);
+        }
+    }
 
     void noMoreInput() override
     {

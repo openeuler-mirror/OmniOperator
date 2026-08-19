@@ -39,8 +39,6 @@ public:
 
 private:
     std::vector<std::unique_ptr<SelectiveColumnReader>> children_;
-    std::vector<int> filterOrder_;
-    std::vector<int> projectOrder_;
     int numOutputChannels_ = 0;
     std::vector<common::vector_size_t> active_;
     std::vector<common::vector_size_t> survivors_;

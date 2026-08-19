@@ -4,6 +4,7 @@
  */
 #include "join_hash_table_variants.h"
 #include "operator/util/operator_util.h"
+#include "util/debug.h"
 
 namespace omniruntime {
 namespace op {
@@ -1329,6 +1330,88 @@ void JoinHashTableVariants<KeyType, RowRefListType>::InitBuildFilterCols(std::ve
             auto buildColumns = GetColumns(hashTableIdx)[buildFilterCol];
             tableBuildFilterColPtrs[hashTableIdx].emplace_back(buildColumns);
         }
+    }
+}
+
+template <typename KeyType, typename RowRefListType>
+void JoinHashTableVariants<KeyType, RowRefListType>::BuildDynamicFilters()
+{
+    if (dynamicFiltersBuilt_) {
+        return;
+    }
+    bool anyTable = false;
+    for (uint32_t p = 0; p < hashTableCount; ++p) {
+        if (arrayTables[p] || hashTables[p]) {
+            anyTable = true;
+            break;
+        }
+    }
+    if (!anyTable) {
+        return;
+    }
+    if (joinType != OMNI_JOIN_TYPE_INNER && joinType != OMNI_JOIN_TYPE_LEFT_SEMI &&
+        joinType != OMNI_JOIN_TYPE_RIGHT) {
+        LogDebug("DFP: skip filter generation, unsupported joinType=%d", static_cast<int>(joinType));
+        dynamicFiltersBuilt_ = true;
+        return;
+    }
+    if (isMultiCols || buildHashCols.size() != 1) {
+        LogDebug("DFP: skip filter generation, composite/multi-column join key (cols=%zu multi=%d)",
+            buildHashCols.size(), static_cast<int>(isMultiCols));
+        dynamicFiltersBuilt_ = true;
+        return;
+    }
+    if constexpr (!IS_SIMPLE_KEY) {
+        LogDebug("DFP: skip filter generation, key type is not int8/int16/int32/int64");
+        dynamicFiltersBuilt_ = true;
+        return;
+    } else {
+        std::unordered_set<int64_t> values;
+        bool overflow = false;
+        const size_t kMax = ::common::kMaxInListSizeForDynamicFilter;
+        for (uint32_t p = 0; p < hashTableCount && !overflow; ++p) {
+            if (hashTableTypes[p] == HashTableImplementationType::ARRAY_HASH_TABLE && arrayTables[p]) {
+                const int64_t minVal = maxMins[p].second;
+                arrayTables[p]->ForEachValue([&](auto *rowRef, int index) {
+                    if (index >= 0 && rowRef != nullptr && rowRef->GetRowCount() > 1) {
+                        hasDuplicateKeys_ = true;
+                    }
+                    if (overflow || index < 0) {
+                        return;
+                    }
+                    values.insert(minVal + static_cast<int64_t>(index));
+                    if (values.size() > kMax) {
+                        overflow = true;
+                    }
+                });
+            } else if (hashTables[p]) {
+                hashTables[p]->hashmap.ForEachKV([&](const KeyType &key, auto *rowRef) {
+                    if (rowRef != nullptr && rowRef->GetRowCount() > 1) {
+                        hasDuplicateKeys_ = true;
+                    }
+                    if (overflow) {
+                        return;
+                    }
+                    values.insert(static_cast<int64_t>(key));
+                    if (values.size() > kMax) {
+                        overflow = true;
+                    }
+                });
+            }
+        }
+        dynamicFiltersBuilt_ = true;
+        if (overflow) {
+            LogDebug("DFP: skip filter generation, distinct keys > %zu", kMax);
+            return;
+        }
+        auto filter = ::common::chooseCommonFilter(values, /*nullAllowed*/ false);
+        if (filter == nullptr) {
+            LogDebug("DFP: skip filter generation, chooseCommonFilter returned null distinct=%zu", values.size());
+            return;
+        }
+        dynamicFilters_[buildHashCols[0]] = std::move(filter);
+        LogDebug("DFP: generated filter buildChannel=%d distinct=%zu kind=%d", buildHashCols[0],
+            values.size(), static_cast<int>(dynamicFilters_[buildHashCols[0]]->kind()));
     }
 }
 

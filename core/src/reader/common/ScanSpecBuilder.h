@@ -25,6 +25,15 @@ namespace omniruntime::reader {
 // supported by the selective reader. ARRAY, MAP, and STRUCT remain unsupported.
 bool allSelectedColumnsAreSupported(const omniruntime::type::RowType &rowType);
 
+// Apply JSON vecPredicateCondition onto an existing ScanSpec (AND-merge with any
+// filters already on the children). usable/needResidual same as makeScanSpec.
+void applyVecPredicateToScanSpec(
+    omniruntime::codegen::ScanSpec &root,
+    const omniruntime::type::RowType &rowType,
+    const std::shared_ptr<nlohmann::json> &enhancementJson,
+    bool &usable, bool &needResidual,
+    std::shared_ptr<::common::PredicateCondition> &residualPredicate);
+
 // usable=false → parse failed, fall back to legacy path; needResidual=true → residualPredicate is the
 // unpushed subtree (must call init(batchLen)).
 std::shared_ptr<omniruntime::codegen::ScanSpec> makeScanSpec(

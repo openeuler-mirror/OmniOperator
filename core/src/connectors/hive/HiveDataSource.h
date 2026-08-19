@@ -48,6 +48,8 @@ public:
 
     std::optional<vec::VectorBatch *> next(uint64_t size) override;
 
+    void addDynamicFilter(type::column_index_t channel, ::common::FilterPtr filter) override;
+
     uint64_t getCompletedRows() const override
     {
         return completedRows_;

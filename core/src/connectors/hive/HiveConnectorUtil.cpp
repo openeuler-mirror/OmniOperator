@@ -194,6 +194,7 @@ void configureRowReaderOptions(
             baseReaderOpts->SetOrcRowReaderOptions(rowReaderOptions);
             baseReaderOpts->SetRowType(rowType);
             baseReaderOpts->SetFileRowType(fileRowType);
+            baseReaderOpts->SetScanSpec(scanSpec);
             break;
         }
         case FileFormat::PARQUET: {

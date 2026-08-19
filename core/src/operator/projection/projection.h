@@ -27,7 +27,37 @@ class ProjectionOperator : public Operator {
 public:
     explicit ProjectionOperator(std::shared_ptr<ExpressionEvaluator> &exprEvaluator)
         : projectedVecs(nullptr), exprEvaluator(exprEvaluator)
-    {}
+    {
+        const auto &projs = exprEvaluator->GetProjections();
+        for (uint32_t out = 0; out < projs.size(); ++out) {
+            if (!projs[out]) {
+                continue;
+            }
+            if (projs[out]->IsColumnProjection()) {
+                identityProjections_.emplace_back(
+                    static_cast<uint32_t>(projs[out]->GetColumnProjectionIndex()), out);
+                continue;
+            }
+            const auto *expr = projs[out]->GetExpr();
+            while (expr != nullptr && expr->GetType() == expressions::ExprType::FUNC_E) {
+                const auto *func = static_cast<const expressions::FuncExpr *>(expr);
+                if (func->arguments.size() != 1) {
+                    expr = nullptr;
+                    break;
+                }
+                const auto &name = func->funcName;
+                if (name != "CAST" && name != "cast" && name != "CAST_null" && name != "alias" && name != "ALIAS") {
+                    expr = nullptr;
+                    break;
+                }
+                expr = func->arguments[0];
+            }
+            if (expr != nullptr && expr->GetType() == expressions::ExprType::FIELD_E) {
+                identityProjections_.emplace_back(
+                    static_cast<uint32_t>(static_cast<const expressions::FieldExpr *>(expr)->colVal), out);
+            }
+        }
+    }
 
     ~ProjectionOperator() override = default;
 

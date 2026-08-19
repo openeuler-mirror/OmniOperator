@@ -80,6 +80,13 @@ public:
         broadcastParallelBuildPolicy_ = policy;
     }
 
+    void SetDynamicFilterPushdownEnabled(bool enabled);
+
+    bool IsDynamicFilterPushdownEnabled() const
+    {
+        return dynamicFilterPushdownEnabled_;
+    }
+
     const BroadcastParallelBuildPolicy &GetBroadcastParallelBuildPolicy() const
     {
         return broadcastParallelBuildPolicy_;
@@ -149,6 +156,7 @@ private:
     bool prebuilt_ = false;   // true when variants were injected from cache
     bool ownsVariants_ = true; // false when variants are owned by cache
     bool cachePinned_ = false; // true when cache owns this factory after publish
+    bool dynamicFilterPushdownEnabled_ = false;
 
     template <class RowRefListType>
     HashTableVariants *InitVariant(int32_t buildHashColsCount, int32_t operatorCount, JoinType joinType,
@@ -165,7 +173,8 @@ public:
         std::vector<int32_t> buildHashCols, JoinSpillState *joinSpillState,
         bool prebuilt = false, std::string broadcastHashTableId = "",
         HashBuilderOperatorFactory* ownerFactory = nullptr,
-        BroadcastParallelBuildPolicy broadcastParallelBuildPolicy = {});
+        BroadcastParallelBuildPolicy broadcastParallelBuildPolicy = {},
+        bool dynamicFilterPushdownEnabled = false);
 
     ~HashBuilderOperator() = default;
 
@@ -225,6 +234,7 @@ private:
     const std::string broadcastHashTableId_;
     // Back-pointer to factory so we can release its ownership after cache publish.
     HashBuilderOperatorFactory* ownerFactory_ = nullptr;
+    const bool dynamicFilterPushdownEnabled_ = false;
 };
 
 int32_t GetTypeLength(int buildHashColsCount, DataTypes& buildTypes, std::vector<int32_t>& buildHashCols);

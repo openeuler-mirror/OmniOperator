@@ -16,14 +16,6 @@
 namespace omniruntime {
 namespace op {
 
-struct IdentityProjection {
-    IdentityProjection(uint32_t _inputChannel, uint32_t _outputChannel)
-        : inputChannel(_inputChannel), outputChannel(_outputChannel) {}
-
-    const uint32_t inputChannel;
-    const uint32_t outputChannel;
-};
-
 class UnnestOperatorFactory : public OperatorFactory {
 public:
     explicit UnnestOperatorFactory(std::shared_ptr<const UnnestNode> planNode) : planNode_(planNode) {}
@@ -104,7 +96,6 @@ private:
     const bool withOrdinality_;
     const bool outer_;
     std::vector<uint32_t> unnestChannels_;
-    std::vector<IdentityProjection> identityProjections_;
 
     vec::VectorBatch *outputVecBatch;
     int32_t outputTypeSize_;

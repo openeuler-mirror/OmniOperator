@@ -200,6 +200,11 @@ public:
     /// Spark partition id for deterministic per-partition behavior (e.g. rand(seed)). Aligned with Velox "spark.partition_id".
     static constexpr const char *kSparkPartitionId = "spark.partition_id";
 
+    /// Push BHJ build-side join-key filters to the probe TableScan (default off).
+    static constexpr const char *kDynamicFilterPushdownEnabled = "dynamic_filter_pushdown_enabled";
+    static constexpr const char *kDynamicFilterPushdownEnabledSpark =
+        "spark.gluten.sql.columnar.backend.omni.dynamicFilterPushdown.enabled";
+
     uint64_t maxRowCount() const
     {
         static constexpr uint64_t kDefault = 12UL << 20;
@@ -483,6 +488,15 @@ public:
     {
         constexpr int32_t kDefault = 0;
         return get<int32_t>(kSparkPartitionId, kDefault);
+    }
+
+    bool dynamicFilterPushdownEnabled() const
+    {
+        if (get<bool>(kDynamicFilterPushdownEnabled, false)) {
+            return true;
+        }
+        // Spark session key may be forwarded into native conf as-is (keys containing "omni").
+        return get<bool>(kDynamicFilterPushdownEnabledSpark, false);
     }
 
     /// Test-only method to override the current query config properties.

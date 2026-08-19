@@ -5,6 +5,8 @@
 #define __OMNI_OPERATOR_H__
 
 #include <cstdint>
+#include <optional>
+#include <unordered_map>
 #include <vector>
 
 #include "execution_context.h"
@@ -14,11 +16,21 @@
 #include "metrics/metrics.h"
 #include "compute/reason.h"
 #include "compute/operator_stats.h"
+#include "reader/common/Filter.h"
 
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 using namespace omniruntime::compute;
+
+struct IdentityProjection {
+    IdentityProjection(uint32_t _inputChannel, uint32_t _outputChannel)
+        : inputChannel(_inputChannel), outputChannel(_outputChannel) {}
+
+    uint32_t inputChannel;
+    uint32_t outputChannel;
+};
+
 class Operator {
 public:
     Operator()
@@ -199,6 +211,37 @@ public:
         operatorId_ = opId;
     }
 
+    /// True when this operator consumes a dynamically generated filter (TableScan).
+    virtual bool canAddDynamicFilter() const
+    {
+        return false;
+    }
+
+    virtual void addDynamicFilter(uint32_t /*channel*/, ::common::FilterPtr /*filter*/) {}
+
+    /// LookupJoin (and wrappers) expose build-side filters for Driver pushdown.
+    virtual bool hasPendingDynamicFilters() const
+    {
+        return false;
+    }
+
+    virtual std::unordered_map<uint32_t, ::common::FilterPtr> getPendingDynamicFilters()
+    {
+        return {};
+    }
+
+    virtual void clearPendingDynamicFilters() {}
+
+    /// Driver reports how many pending filters actually reached an operator
+    /// with canAddDynamicFilter() (typically TableScan). Zero means the walk
+    /// was blocked (e.g. ValueStream) and the join must keep probing.
+    virtual void onDynamicFiltersPushed(size_t /*appliedCount*/) {}
+
+    const std::vector<IdentityProjection> &identityProjections() const
+    {
+        return identityProjections_;
+    }
+
     OperatorStats& stats()
     {
         return stats_;
@@ -217,6 +260,7 @@ protected:
     vec::VectorBatch* inputVecBatch = nullptr;
     bool noMoreInput_{true};
     int32_t inputOperatorCnt_{0};
+    std::vector<IdentityProjection> identityProjections_;
 
     void UpdateAddInputInfo(int32_t rowCount)
     {
