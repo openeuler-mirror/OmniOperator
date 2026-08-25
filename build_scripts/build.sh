@@ -86,6 +86,9 @@ else
       elif [ "$i" == '--enable-sveht' ]; then
           echo "-- ENABLE SVEHT"
           OPTIONS+=" -DSVEHT=ON"
+      elif [ "$i" == '--enable-taper' ]; then
+          echo "-- ENABLE TAPER"
+          OPTIONS+=" -DTAPER=ON"
       else
           exit_with_message_and_print_help "ERROR: Invalid option: $i"
       fi

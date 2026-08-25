@@ -17,6 +17,7 @@
 #include "type/data_types.h"
 #include "common_join.h"
 #include "row_ref.h"
+#include "operator/join/taper_join_hash_table_variants.h"
 
 #ifdef SVEHT
 #include "sve_join_hash_table32.h"
@@ -40,18 +41,14 @@ using JoinHashMap =
 template <typename KeyType, typename RowRefListType>
 using JoinHashTableVariant = ColumnSerializeHandler<JoinHashMap<KeyType, RowRefListType *>>;
 
-enum class HashTableImplementationType {
-    NORMAL_HASH_TABLE,
-    ARRAY_HASH_TABLE,
-    SVE_HASH_TABLE32
-};
-
 template <typename KeyType, typename RowRefListType> class JoinHashTableVariants {
 public:
     using Key = KeyType;
     using Mapped = RowRefListType;
     static constexpr bool IS_SIMPLE_KEY = (std::is_same_v<KeyType, int16_t> || std::is_same_v<KeyType, int32_t> ||
                                            std::is_same_v<KeyType, int64_t>);
+
+    ALWAYS_INLINE bool HasDuplicates() const { return true; } // default to true
 
     explicit JoinHashTableVariants(uint32_t hashTableCount, DataTypes *buildDataTypes,
         std::vector<int32_t> &buildHashCols, JoinType joinType, BuildSide buildSide, bool isMultiCols = false);
@@ -72,6 +69,9 @@ public:
     {
         return this->buildTypes;
     }
+
+    ALWAYS_INLINE std::vector<int32_t>& GetBuildHashCols() { return buildHashCols; }
+    ALWAYS_INLINE const std::vector<int32_t>& GetBuildHashCols() const { return buildHashCols; }
 
     ALWAYS_INLINE void SetProbeTypes(DataTypes *probeDataTypes)
     {
@@ -94,6 +94,9 @@ public:
         return sve32HashTables[partitionIndex];
     }
 #endif
+    // Uniform raw accessors for taper array-join dispatch (non-taper returns null; taper path never invoked).
+    ALWAYS_INLINE char** GetArraySlots(int32_t /*partitionIndex*/) { return nullptr; }
+    ALWAYS_INLINE bool* GetArrayAssigned(int32_t /*partitionIndex*/) { return nullptr; }
 
     ALWAYS_INLINE std::pair<int64_t, int64_t> &GetmaxMinValue(int32_t partitionIndex)
     {
@@ -159,12 +162,14 @@ public:
 
     KeyType GetKeyValue(BaseVector **probeHashColumns, int32_t probePosition);
 
+    ALWAYS_INLINE void IncrementVisited() { visitedCounts++; }
+
     void PositionVisited(ForwardIterator<RowRefListType> it)
     {
         if constexpr (std::is_same_v<RowRefListType, RowRefListWithFlags>) {
             if (!it->visited) {
                 it->visited = true;
-                visitedCounts++;
+                IncrementVisited();
             }
         }
     }
@@ -184,7 +189,7 @@ public:
         return totalVisitedCounts;
     }
 
-    ALWAYS_INLINE void SetTotalVisitedCounts(int cnt)
+    ALWAYS_INLINE void AddTotalVisitedCounts(int cnt)
     {
         totalVisitedCounts += cnt;
     }
@@ -217,6 +222,17 @@ public:
     void BuildHashTable(int32_t partitionIndex);
 
     void Prepare(int32_t partitionIndex);
+
+    ALWAYS_INLINE void SetTaperStoredColumns(const std::vector<int32_t>&) {}
+
+    ALWAYS_INLINE RowContainer* GetTaperRowContainer(int32_t) const { return nullptr; }
+    ALWAYS_INLINE const std::vector<int32_t>& GetTaperStoredColIndices() const { return buildHashCols; }
+    ALWAYS_INLINE char* Find(BaseVector**, int32_t, int32_t, uint32_t) { return nullptr; }
+    ALWAYS_INLINE void FindBatch(int32_t, int32_t, const std::vector<int8_t>&,
+        omniruntime::vec::BaseVector**, int32_t, bool, uint32_t,
+        const std::vector<int64_t>&, std::vector<char*>&) const {}
+    ALWAYS_INLINE bool IsSerMode() const { return false; }
+    ALWAYS_INLINE void SetSerMode() {}
 
     void InitBuildFilterCols(std::vector<int32_t> &buildFilterCols, int32_t originalProbeColsCount,
         std::vector<std::vector<BaseVector **>> &tableBuildFilterColPtrs);
@@ -325,7 +341,15 @@ using HashTableVariants =
     JoinHashTableVariants<int128_t, RowRefList>, JoinHashTableVariants<int128_t, RowRefListWithFlags>,
     JoinHashTableVariants<int8_t, RowRefListWithFlags>, JoinHashTableVariants<int16_t, RowRefListWithFlags>,
     JoinHashTableVariants<int32_t, RowRefListWithFlags>, JoinHashTableVariants<int64_t, RowRefListWithFlags>,
-    JoinHashTableVariants<Decimal128, RowRefListWithFlags>, JoinHashTableVariants<StringRef, RowRefListWithFlags>>;
+    JoinHashTableVariants<Decimal128, RowRefListWithFlags>, JoinHashTableVariants<StringRef, RowRefListWithFlags>
+#ifdef OMNI_USE_TAPER_JOIN
+    ,
+    TaperJoinHashTableVariants<int8_t,  false>, TaperJoinHashTableVariants<int8_t,  true>,
+    TaperJoinHashTableVariants<int16_t, false>, TaperJoinHashTableVariants<int16_t, true>,
+    TaperJoinHashTableVariants<int32_t, false>, TaperJoinHashTableVariants<int32_t, true>,
+    TaperJoinHashTableVariants<int64_t, false>, TaperJoinHashTableVariants<int64_t, true>
+#endif
+    >;
 }
 }
 #endif // OMNI_RUNTIME_JOIN_HASH_TABLE_VARIANTS_H
