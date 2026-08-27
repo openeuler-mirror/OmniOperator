@@ -11,6 +11,7 @@
 #include "vectorization/functions/Cast.h"
 #include "vectorization/functions/NamedStruct.h"
 #include "vectorization/functions/MapFunction.h"
+#include "vectorization/functions/MathDecimalFunctions.h"
 #include "vectorization/functions/JsonObject.h"
 #include "vectorization/functions/JsonArray.h"
 #include "type/data_type.h"
@@ -428,6 +429,32 @@ BinaryExpr::BinaryExpr()
     dataType = BooleanType();
 }
 
+namespace {
+std::pair<ArithmeticOp, ArithmeticEvalMode> NormalizeArithmeticOperator(Operator op)
+{
+    switch (op) {
+        case Operator::ADD:
+            return {ArithmeticOp::ADD, ArithmeticEvalMode::LEGACY};
+        case Operator::SUB:
+            return {ArithmeticOp::SUBTRACT, ArithmeticEvalMode::LEGACY};
+        case Operator::MUL:
+            return {ArithmeticOp::MULTIPLY, ArithmeticEvalMode::LEGACY};
+        case Operator::DIV:
+            return {ArithmeticOp::DIVIDE, ArithmeticEvalMode::LEGACY};
+        case Operator::TRY_ADD:
+            return {ArithmeticOp::ADD, ArithmeticEvalMode::TRY};
+        case Operator::TRY_SUB:
+            return {ArithmeticOp::SUBTRACT, ArithmeticEvalMode::TRY};
+        case Operator::TRY_MUL:
+            return {ArithmeticOp::MULTIPLY, ArithmeticEvalMode::TRY};
+        case Operator::TRY_DIV:
+            return {ArithmeticOp::DIVIDE, ArithmeticEvalMode::TRY};
+        default:
+            return {ArithmeticOp::INVALID, ArithmeticEvalMode::LEGACY};
+    }
+}
+} // namespace
+
 std::string GetStringOp(Operator op)
 {
     switch (op) {
@@ -474,9 +501,28 @@ BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePt
     left = leftExpr;
     right = rightExpr;
     dataType = std::move(dt);
+    const auto arithmeticSpec = NormalizeArithmeticOperator(bop);
+    arithmeticOp = arithmeticSpec.first;
+    evalMode = arithmeticSpec.second;
     std::vector<omniruntime::type::DataTypeId> args = {left->dataType->GetId(), right->dataType->GetId()};
     auto signature = std::make_shared<FunctionSignature>(GetStringOp(bop), args, dataType->GetId());
     vectorFunction = VectorFunction::Find(signature);
+}
+
+bool BinaryExpr::SupportsCheckedArithmeticVectorization() const
+{
+    if (arithmeticOp == ArithmeticOp::INVALID || left == nullptr || right == nullptr ||
+        left->dataType == nullptr || right->dataType == nullptr || dataType == nullptr ||
+        evalMode == ArithmeticEvalMode::LEGACY) {
+        return false;
+    }
+    const auto leftType = left->dataType->GetId();
+    const auto rightType = right->dataType->GetId();
+    const auto resultType = dataType->GetId();
+    const bool allDecimal = left->dataType->isDecimal() && right->dataType->isDecimal() && dataType->isDecimal();
+    const bool primitive = leftType == OMNI_BYTE || leftType == OMNI_SHORT || leftType == OMNI_INT ||
+        leftType == OMNI_LONG || leftType == OMNI_FLOAT || leftType == OMNI_DOUBLE;
+    return allDecimal || (primitive && leftType == rightType && leftType == resultType);
 }
 
 BinaryExpr::~BinaryExpr()
@@ -1090,6 +1136,20 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     if (funcName == "CAST") {
         vectorFunction = std::make_shared<CastFunction>(args[0]->dataType, dataType);
     }
+    if (!arguments.empty() && arguments[0]->dataType != nullptr &&
+        vectorization::IsDecimalTypeId(arguments[0]->dataType->GetId())) {
+        std::vector<DataTypePtr> decArgTypes;
+        decArgTypes.reserve(arguments.size());
+        for (auto *a : arguments) {
+            decArgTypes.push_back(a->dataType);
+        }
+        if (auto decMathFn = vectorization::TryCreateDecimalMathFunction(funcName, decArgTypes)) {
+            vectorFunction = decMathFn;
+        } else if (auto decToDecFn = vectorization::TryCreateDecimalToDecimalFunction(funcName, decArgTypes)) {
+            // Scale-preserving DECIMAL -> DECIMAL (sign): output type equals the operand type.
+            vectorFunction = decToDecFn;
+        }
+    }
 }
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
@@ -1105,7 +1165,11 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     if (this->function == nullptr) {
         this->function = FunctionRegistry::LookupFunction(signature.get());
     }
-    vectorFunction = VectorFunction::Find(signature);
+    constantInputs = GetConstantInputs(arguments);
+    vectorFunction = VectorFunction::Find(signature, constantInputs);
+    if (vectorFunction == nullptr) {
+        vectorFunction = VectorFunction::Find(signature);
+    }
     if (funcName == "named_struct") {
         vectorFunction = std::make_shared<NamedStructFunction>(GetInputDataTypes());
     }
@@ -1125,6 +1189,20 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     }
     if (funcName == "CAST") {
         vectorFunction = std::make_shared<CastFunction>(args[0]->dataType, dataType);
+    }
+    if (!arguments.empty() && arguments[0]->dataType != nullptr &&
+        vectorization::IsDecimalTypeId(arguments[0]->dataType->GetId())) {
+        std::vector<DataTypePtr> decArgTypes;
+        decArgTypes.reserve(arguments.size());
+        for (auto *a : arguments) {
+            decArgTypes.push_back(a->dataType);
+        }
+        if (auto decMathFn = vectorization::TryCreateDecimalMathFunction(funcName, decArgTypes)) {
+            vectorFunction = decMathFn;
+        } else if (auto decToDecFn = vectorization::TryCreateDecimalToDecimalFunction(funcName, decArgTypes)) {
+            // Scale-preserving DECIMAL -> DECIMAL (sign): output type equals the operand type.
+            vectorFunction = decToDecFn;
+        }
     }
 }
 
@@ -1139,7 +1217,11 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     });
     auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
     this->function = FunctionRegistry::LookupFunction(signature.get());
-    vectorFunction = VectorFunction::Find(signature);
+    constantInputs = GetConstantInputs(arguments);
+    vectorFunction = VectorFunction::Find(signature, constantInputs);
+    if (vectorFunction == nullptr) {
+        vectorFunction = VectorFunction::Find(signature);
+    }
     if (funcName == "named_struct") {
         vectorFunction = std::make_shared<NamedStructFunction>(GetInputDataTypes());
     }
@@ -1159,6 +1241,20 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     }
     if (funcName == "CAST") {
         vectorFunction = std::make_shared<CastFunction>(args[0]->dataType, dataType);
+    }
+    if (!arguments.empty() && arguments[0]->dataType != nullptr &&
+        vectorization::IsDecimalTypeId(arguments[0]->dataType->GetId())) {
+        std::vector<DataTypePtr> decArgTypes;
+        decArgTypes.reserve(arguments.size());
+        for (auto *a : arguments) {
+            decArgTypes.push_back(a->dataType);
+        }
+        if (auto decMathFn = vectorization::TryCreateDecimalMathFunction(funcName, decArgTypes)) {
+            vectorFunction = decMathFn;
+        } else if (auto decToDecFn = vectorization::TryCreateDecimalToDecimalFunction(funcName, decArgTypes)) {
+            // Scale-preserving DECIMAL -> DECIMAL (sign): output type equals the operand type.
+            vectorFunction = decToDecFn;
+        }
     }
 }
 

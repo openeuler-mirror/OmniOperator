@@ -7,6 +7,7 @@
 #include <string>
 #include "codegen/expr_evaluator.h"
 #include "type/data_type.h"
+#include "vectorization/functions/TryArithmetic.h"
 #include "vectorization/functions/Md5ConcatWsFusion.h"
 
 namespace omniruntime::vectorization {
@@ -14,6 +15,15 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::mem;
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
+
+BaseVector *PreserveDecimalType(BaseVector *source, BaseVector *projected)
+{
+    if (source->GetDataType() != nullptr &&
+        (source->GetTypeId() == OMNI_DECIMAL64 || source->GetTypeId() == OMNI_DECIMAL128)) {
+        VectorHelper::SetVectorDataType(projected, source->GetDataType().get());
+    }
+    return projected;
+}
 
 template <typename T>
 BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
@@ -25,12 +35,13 @@ BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
         if (constVec->HasNull() && constVec->IsNull(0)) {
             newConst->SetNulls(0, true, numSelectedRows);
         }
-        return newConst;
+        return PreserveDecimalType(colVec, newConst);
     }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
-        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
+        return PreserveDecimalType(
+            colVec, reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows));
     }
-    return reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows);
+    return PreserveDecimalType(colVec, reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows));
 }
 
 template <typename T>
@@ -43,13 +54,15 @@ BaseVector *ColumnProjectionCopyPositionsHelper(BaseVector *colVec, int32_t *sel
         if (constVec->HasNull() && constVec->IsNull(0)) {
             newConst->SetNulls(0, true, numSelectedRows);
         }
-        return newConst;
+        return PreserveDecimalType(colVec, newConst);
     }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
-        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->CopyPositions(selectedRows, 0,
-            numSelectedRows);
+        return PreserveDecimalType(colVec,
+            reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->CopyPositions(
+                selectedRows, 0, numSelectedRows));
     }
-    return reinterpret_cast<Vector<T> *>(colVec)->CopyPositions(selectedRows, 0, numSelectedRows);
+    return PreserveDecimalType(
+        colVec, reinterpret_cast<Vector<T> *>(colVec)->CopyPositions(selectedRows, 0, numSelectedRows));
 }
 
 template <typename T>
@@ -266,6 +279,9 @@ void ExprEval::Visit(const LiteralExpr &e)
         }
         if (constVec != nullptr && e.isNull) {
             constVec->SetNulls(0, true, constVec->GetSize());
+        }
+        if (constVec != nullptr && (typeId == OMNI_DECIMAL64 || typeId == OMNI_DECIMAL128)) {
+            VectorHelper::SetVectorDataType(constVec, e.dataType.get());
         }
         inputValues_.push(constVec);
         return;
@@ -490,12 +506,21 @@ void ExprEval::Visit(const BinaryExpr &e)
 {
     e.left->Accept(*this);
     e.right->Accept(*this);
-    if (e.vectorFunction == nullptr) {
+
+    auto vectorFunction = e.vectorFunction;
+    if (e.arithmeticOp != ArithmeticOp::INVALID && e.evalMode != ArithmeticEvalMode::LEGACY) {
+        if (e.checkedArithmeticVectorFunction == nullptr) {
+            e.checkedArithmeticVectorFunction = CreateBinaryArithmeticFunction(
+                e.arithmeticOp, e.evalMode, e.left->dataType, e.right->dataType, e.dataType);
+        }
+        vectorFunction = e.checkedArithmeticVectorFunction;
+    }
+    if (vectorFunction == nullptr) {
         OMNI_THROW("Vectorization Error:", "Vector function not found for binary expression");
     }
 
     BaseVector *result = nullptr;
-    e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
+    vectorFunction->Apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }
 

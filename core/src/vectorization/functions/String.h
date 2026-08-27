@@ -40,6 +40,12 @@ inline int32_t Utf8FirstCodepoint(const char* data, size_t size, int& byteLen) {
     }
     unsigned char u1 = u[1];
     if (u0 >= 192 && u0 <= 223) {
+        // 0xC0/0xC1 are always invalid lead bytes (overlong encoding of <= 0x7F).
+        // Continuation byte must be 10xxxxxx (0x80..0xBF).
+        if (u0 < 0xC2 || (u1 & 0xC0) != 0x80) {
+            byteLen = 1;
+            return -1;
+        }
         byteLen = 2;
         return (u0 - 192) * 64 + (u1 - 128);
     }
@@ -53,6 +59,12 @@ inline int32_t Utf8FirstCodepoint(const char* data, size_t size, int& byteLen) {
     }
     unsigned char u2 = u[2];
     if (u0 >= 224 && u0 <= 239) {
+        // Continuation bytes must be 10xxxxxx; reject overlong 3-byte (< U+0800).
+        if ((u1 & 0xC0) != 0x80 || (u2 & 0xC0) != 0x80 ||
+            (u0 == 0xe0 && u1 < 0xa0)) {
+            byteLen = 1;
+            return -1;
+        }
         byteLen = 3;
         return (u0 - 224) * 4096 + (u1 - 128) * 64 + (u2 - 128);
     }
@@ -62,6 +74,13 @@ inline int32_t Utf8FirstCodepoint(const char* data, size_t size, int& byteLen) {
     }
     unsigned char u3 = u[3];
     if (u0 >= 240 && u0 <= 247) {
+        // Continuation bytes must be 10xxxxxx; reject overlong (0xf0,u1<0x90)
+        // and out-of-range > U+10FFFF (0xf4,u1>0x8f).
+        if ((u1 & 0xC0) != 0x80 || (u2 & 0xC0) != 0x80 || (u3 & 0xC0) != 0x80 ||
+            (u0 == 0xf0 && u1 < 0x90) || (u0 == 0xf4 && u1 > 0x8f)) {
+            byteLen = 1;
+            return -1;
+        }
         byteLen = 4;
         return (u0 - 240) * 262144 + (u1 - 128) * 4096 + (u2 - 128) * 64 + (u3 - 128);
     }
@@ -1272,24 +1291,6 @@ struct OverlayFunction {
     }
 };
 
-namespace detail {
-/// Helper function to convert a hex character to its numeric value.
-/// Returns -1 for invalid hex characters.
-/// Supports: '0'-'9' -> 0-9, 'A'-'F' -> 10-15, 'a'-'f' -> 10-15
-ALWAYS_INLINE int8_t fromHex(char c) {
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    }
-    if (c >= 'A' && c <= 'F') {
-        return 10 + c - 'A';
-    }
-    if (c >= 'a' && c <= 'f') {
-        return 10 + c - 'a';
-    }
-    return -1;
-}
-} // namespace detail
-
 /// unhex function
 /// unhex(string) -> varbinary
 /// Converts a hexadecimal string to binary data.
@@ -1318,7 +1319,7 @@ struct UnhexFunction {
         size_t i = 0;
         // Handle odd-length input: first character is a single hex digit
         if ((input.size() & 0x01) != 0) {
-            const auto v = detail::fromHex(inputBuffer[0]);
+            const auto v = fromHex(inputBuffer[0]);
             if (v == -1) {
                 return false;  // Invalid hex character, return NULL
             }
@@ -1328,8 +1329,8 @@ struct UnhexFunction {
 
         // Process pairs of hex characters
         while (i < input.size()) {
-            const auto first = detail::fromHex(inputBuffer[i]);
-            const auto second = detail::fromHex(inputBuffer[i + 1]);
+            const auto first = fromHex(inputBuffer[i]);
+            const auto second = fromHex(inputBuffer[i + 1]);
             if (first == -1 || second == -1) {
                 return false;  // Invalid hex character, return NULL
             }
@@ -1346,6 +1347,24 @@ struct UnhexFunction {
             return false;  // NULL input returns NULL
         }
         return call(result, *input);
+    }
+
+private:
+    /// Convert a hex character to its numeric value.
+    /// Returns -1 for invalid hex characters.
+    /// Supports: '0'-'9' -> 0-9, 'A'-'F' -> 10-15, 'a'-'f' -> 10-15
+    ALWAYS_INLINE static int8_t fromHex(char c)
+    {
+        if (c >= '0' && c <= '9') {
+            return c - '0';
+        }
+        if (c >= 'A' && c <= 'F') {
+            return 10 + c - 'A';
+        }
+        if (c >= 'a' && c <= 'f') {
+            return 10 + c - 'a';
+        }
+        return -1;
     }
 };
 
@@ -2201,6 +2220,171 @@ struct FlinkLocateFunction {
     {
         // Call the non-nullable version for better code reuse
         return call(result, *subString, *string, *start);
+    }
+};
+// ============================================================================
+// ENCODE(string, charset) -> varbinary
+// Encodes a UTF-8 string into binary data using the specified character set.
+// Supported charsets: US-ASCII, ISO-8859-1, UTF-8, UTF-16BE, UTF-16LE, UTF-16.
+// Returns NULL if either argument is NULL, charset is unsupported, or a character
+// cannot be represented in the target charset.
+// ============================================================================
+
+namespace encode_detail {
+
+inline bool EqualsIgnoreCase(const std::string_view& a, const std::string_view& b)
+{
+    if (a.size() != b.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (std::tolower(static_cast<unsigned char>(a[i])) !=
+            std::tolower(static_cast<unsigned char>(b[i]))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+inline bool EncodeAscii(std::string& result, const std::string_view& input)
+{
+    size_t pos = 0;
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        if (cp > 0x7F) {
+            return false;
+        }
+        result.push_back(static_cast<char>(cp));
+        pos += byteLen;
+    }
+    return true;
+}
+
+inline bool EncodeIso88591(std::string& result, const std::string_view& input)
+{
+    size_t pos = 0;
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        if (cp > 0xFF) {
+            return false;
+        }
+        result.push_back(static_cast<char>(cp));
+        pos += byteLen;
+    }
+    return true;
+}
+
+inline bool EncodeUtf8(std::string& result, const std::string_view& input)
+{
+    size_t pos = 0;
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        pos += byteLen;
+    }
+    result.assign(input.data(), input.size());
+    return true;
+}
+
+inline bool EncodeUtf16BE(std::string& result, const std::string_view& input)
+{
+    size_t pos = 0;
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        if (cp <= 0xFFFF) {
+            result.push_back(static_cast<char>((cp >> 8) & 0xFF));
+            result.push_back(static_cast<char>(cp & 0xFF));
+        } else {
+            int32_t adjusted = cp - 0x10000;
+            uint16_t high = static_cast<uint16_t>(0xD800 + (adjusted >> 10));
+            uint16_t low = static_cast<uint16_t>(0xDC00 + (adjusted & 0x3FF));
+            result.push_back(static_cast<char>((high >> 8) & 0xFF));
+            result.push_back(static_cast<char>(high & 0xFF));
+            result.push_back(static_cast<char>((low >> 8) & 0xFF));
+            result.push_back(static_cast<char>(low & 0xFF));
+        }
+        pos += byteLen;
+    }
+    return true;
+}
+
+inline bool EncodeUtf16LE(std::string& result, const std::string_view& input)
+{
+    size_t pos = 0;
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        if (cp <= 0xFFFF) {
+            result.push_back(static_cast<char>(cp & 0xFF));
+            result.push_back(static_cast<char>((cp >> 8) & 0xFF));
+        } else {
+            int32_t adjusted = cp - 0x10000;
+            uint16_t high = static_cast<uint16_t>(0xD800 + (adjusted >> 10));
+            uint16_t low = static_cast<uint16_t>(0xDC00 + (adjusted & 0x3FF));
+            result.push_back(static_cast<char>(high & 0xFF));
+            result.push_back(static_cast<char>((high >> 8) & 0xFF));
+            result.push_back(static_cast<char>(low & 0xFF));
+            result.push_back(static_cast<char>((low >> 8) & 0xFF));
+        }
+        pos += byteLen;
+    }
+    return true;
+}
+
+inline bool EncodeUtf16(std::string& result, const std::string_view& input)
+{
+    // Write BOM (U+FEFF) in big-endian
+    result.push_back(static_cast<char>(0xFE));
+    result.push_back(static_cast<char>(0xFF));
+    return EncodeUtf16BE(result, input);
+}
+
+} // namespace encode_detail
+
+template <typename T>
+struct EncodeFunction {
+    ALWAYS_INLINE bool call(std::string& result, const std::string_view& input,
+                            const std::string_view& charset)
+    {
+        if (encode_detail::EqualsIgnoreCase(charset, "US-ASCII") ||
+            encode_detail::EqualsIgnoreCase(charset, "ASCII")) {
+            return encode_detail::EncodeAscii(result, input);
+        }
+        if (encode_detail::EqualsIgnoreCase(charset, "ISO-8859-1") ||
+            encode_detail::EqualsIgnoreCase(charset, "LATIN1")) {
+            return encode_detail::EncodeIso88591(result, input);
+        }
+        if (encode_detail::EqualsIgnoreCase(charset, "UTF-8")) {
+            return encode_detail::EncodeUtf8(result, input);
+        }
+        if (encode_detail::EqualsIgnoreCase(charset, "UTF-16BE")) {
+            return encode_detail::EncodeUtf16BE(result, input);
+        }
+        if (encode_detail::EqualsIgnoreCase(charset, "UTF-16LE")) {
+            return encode_detail::EncodeUtf16LE(result, input);
+        }
+        if (encode_detail::EqualsIgnoreCase(charset, "UTF-16")) {
+            return encode_detail::EncodeUtf16(result, input);
+        }
+        return false;
     }
 };
 
