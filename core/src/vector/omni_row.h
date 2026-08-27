@@ -776,8 +776,9 @@ class RowInfo {
 public:
     uint8_t *row;
     int32_t length;
+    bool ownsRow = false;
 
-    RowInfo(uint8_t *row, int32_t length) : row(row), length(length) {}
+    RowInfo(uint8_t *row, int32_t length, bool ownsRow = false) : row(row), length(length), ownsRow(ownsRow) {}
 
     RowInfo() = default;
 
@@ -785,11 +786,14 @@ public:
     {
         this->row = rowInfo.row;
         this->length = rowInfo.length;
+        this->ownsRow = rowInfo.ownsRow;
     }
 
     ~RowInfo()
     {
-        mem::Allocator::GetAllocator()->Free(row, length);
+        if (ownsRow) {
+            mem::Allocator::GetAllocator()->Free(row, length);
+        }
     }
 };
 
