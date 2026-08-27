@@ -266,7 +266,7 @@ TEST(omni_row, fill_buffer_and_deserial_to_vector)
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
         rowBuffer.TransValueFromVectorBatch(vecBatch, i);
         auto len = rowBuffer.FillBuffer();
-        rows.emplace_back(rowBuffer.TakeRowBuffer(), len);
+        rows.emplace_back(rowBuffer.TakeRowBuffer(), len, true);
     }
 
     auto parser = std::make_unique<RowParser>(types);
@@ -303,7 +303,7 @@ TEST(omni_row, fill_buffer_and_check_hash)
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
         rowBuffer.TransValueFromVectorBatch(vecBatch, i);
         auto len = rowBuffer.FillBuffer();
-        rows.emplace_back(rowBuffer.GetRowBuffer(), len);
+        rows.emplace_back(rowBuffer.GetRowBuffer(), len, true);
         // 3.get hash position for shuffle
         int32_t hashPos = rowBuffer.CalculateHashPos();
 
@@ -341,7 +341,7 @@ TEST(omni_row, fill_buffer_performance)
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
         rowBuffer.TransValueFromVectorBatch(vecBatch, i);
         auto len = rowBuffer.FillBuffer();
-        rows.emplace_back(rowBuffer.TakeRowBuffer(), len);
+        rows.emplace_back(rowBuffer.TakeRowBuffer(), len, true);
     }
     t.End();
     VectorHelper::FreeVecBatch(vecBatch);
@@ -361,7 +361,7 @@ TEST(omni_row, fill_bool_buffer_and_deserial_to_vector)
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
         rowBuffer.TransValueFromVectorBatch(vecBatch, i);
         auto len = rowBuffer.FillBuffer();
-        rows.emplace_back(rowBuffer.TakeRowBuffer(), len);
+        rows.emplace_back(rowBuffer.TakeRowBuffer(), len, true);
     }
 
     auto parser = std::make_unique<RowParser>(types);
@@ -466,7 +466,7 @@ TEST(omni_row, fill_buffer_and_deserial_to_map_vector)
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
         rowBuffer.TransValueFromVectorBatch(vecBatch, i);
         auto len = rowBuffer.FillBuffer();
-        rows.emplace_back(rowBuffer.TakeRowBuffer(), len);
+        rows.emplace_back(rowBuffer.TakeRowBuffer(), len, true);
     }
 
     auto parser = std::make_unique<RowParser>(types);
