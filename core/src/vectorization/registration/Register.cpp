@@ -51,6 +51,8 @@ extern void RegisterFlinkCompareFunctions(const std::string &prefix);
 
 extern void RegisterFlinkStringFunctions(const std::string &prefix);
 
+extern void RegisterFlinkDateTimeFunctions(const std::string &prefix);
+
 int RegisterFunctions::Register()
 {
     RegisterAllFunctions();
@@ -77,6 +79,7 @@ void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
     RegisterCollectionFunctions(prefix);
     RegisterFlinkCompareFunctions(prefix);
     RegisterFlinkStringFunctions(prefix);
+    RegisterFlinkDateTimeFunctions(prefix);
 }
 
 // Called from CreateProjections/ProjectionOperatorFactory so that ProjectVec can resolve

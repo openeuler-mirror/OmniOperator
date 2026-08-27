@@ -41,8 +41,6 @@
 #include "../functions/CurrentDateTimeFunctions.h"
 #include "../functions/ConvertTz.h"
 #include "../functions/DateTrunc.h"
-#include "../functions/Floor.h"
-#include "../functions/Ceil.h"
 #include "../functions/Time.h"
 #include "../functions/TimestampDiff.h"
 #include "RegistrationHelpers.h"
@@ -107,19 +105,7 @@ void RegisterDatetimeFunctions(const std::string &prefix)
 
     RegisterConvertTzFunction(prefix + "convert_tz");
 
-    RegisterFunction<LocalTimeFunction, int64_t>(prefix + "flink_localtime", {}, OMNI_LONG);
-
-    RegisterFunction<LocalTimestampFunction, int64_t>(prefix + "flink_localtimestamp", {}, OMNI_LONG);
-
     RegisterFunction<CurrentTimestampFunction, int64_t>(prefix + "current_timestamp", {}, OMNI_LONG); //因为codgen有同名函数，所以不能加前缀
-
-    RegisterFunction<CurrentRowTimestampFunction, int64_t>(prefix + "flink_current_row_timestamp", {}, OMNI_LONG);
-
-    RegisterFunction<CurrentDateFunction, int32_t>(prefix + "flink_current_date", {}, OMNI_INT);
-
-    RegisterFloorFunction(prefix + "flink_floor_time");
-
-    RegisterCeilFunction(prefix + "flink_ceil_time");
 
     RegisterTimeFunction(prefix + "time");
 

@@ -34,6 +34,65 @@ protected:
     }
 };
 
+// Helper: test decimal unary operations (ceil/floor/abs) for DECIMAL64/DECIMAL128
+template <typename ValueType, typename DecimalDataTypeT, DataTypeId DTID>
+void TestDecimalUnaryOperation(
+    const std::string& functionName,
+    const std::vector<ValueType>& inputData,
+    const std::vector<ValueType>& expectedResults,
+    int32_t precision,
+    int32_t scale,
+    const std::vector<int32_t>& nullIndices = {})
+{
+    int32_t rowSize = static_cast<int32_t>(inputData.size());
+    auto decType = std::make_shared<DecimalDataTypeT>(precision, scale);
+    BaseVector* rawInput = VectorHelper::CreateComplexVector(decType.get(), rowSize);
+    auto* inputVector = static_cast<Vector<ValueType>*>(rawInput);
+    for (int32_t i = 0; i < rowSize; ++i) {
+        inputVector->SetValue(i, inputData[i]);
+        inputVector->SetNotNull(i);
+    }
+    std::vector<bool> nullFlags(rowSize, false);
+    for (int32_t idx : nullIndices) {
+        rawInput->SetNull(idx);
+        nullFlags[idx] = true;
+    }
+
+    std::vector<DataTypeId> argTypes = {DTID};
+    auto signature = std::make_shared<FunctionSignature>(functionName, argTypes, DTID);
+    auto vectorFunction = VectorFunction::Find(signature);
+    ASSERT_NE(vectorFunction, nullptr);
+
+    ExecutionContext context;
+    context.SetResultRowSize(rowSize);
+    std::stack<BaseVector*> args;
+    args.push(rawInput);
+
+    BaseVector* rawResult = nullptr;
+    auto resultType = std::make_shared<DataType>(DTID);
+    vectorFunction->Apply(args, resultType, rawResult, &context);
+    ASSERT_NE(rawResult, nullptr);
+
+    auto* resultVector = static_cast<Vector<ValueType>*>(rawResult);
+    ASSERT_NE(resultVector, nullptr);
+
+    for (int32_t i = 0; i < rowSize; ++i) {
+        if (nullFlags[i]) {
+            EXPECT_TRUE(rawResult->IsNull(i)) << "Result should be NULL at index " << i;
+        } else {
+            EXPECT_FALSE(rawResult->IsNull(i)) << "Result should not be NULL at index " << i;
+            ValueType actual = resultVector->GetValue(i);
+            ValueType expected = expectedResults[i];
+            EXPECT_EQ(actual, expected)
+                << "Value mismatch at index " << i << " for " << functionName
+                << "(" << inputData[i] << ")"
+                << ", expected=" << expected << ", actual=" << actual;
+        }
+    }
+
+    delete rawResult;
+}
+
 // Test floor function with double inputs
 TEST_F(FloorTest, FloorDouble) {
     
@@ -398,4 +457,34 @@ TEST_F(FloorTest, FloorDoubleReturnDouble) {
     }
 
     delete rawResult;
+}
+
+// Test floor(DECIMAL64) -> DECIMAL64 with scale=2
+TEST_F(FloorTest, FloorDec64) {
+    TestDecimalUnaryOperation<int64_t, Decimal64DataType, OMNI_DECIMAL64>(
+        "floor", {12345, -12345, 10000, -50, 0, 999}, {123, -124, 100, -1, 0, 9}, 18, 2);
+}
+
+// Test floor(DECIMAL64) with NULL input
+TEST_F(FloorTest, FloorDec64Null) {
+    TestDecimalUnaryOperation<int64_t, Decimal64DataType, OMNI_DECIMAL64>(
+        "floor", {12345, -12345, 10000, -50}, {12345, -124, 10000, -1}, 18, 2, {0, 2});
+}
+
+// Test floor(DECIMAL128) -> DECIMAL128 with scale=2
+TEST_F(FloorTest, FloorDec128) {
+    TestDecimalUnaryOperation<Decimal128, Decimal128DataType, OMNI_DECIMAL128>(
+        "floor",
+        {Decimal128(12345), Decimal128(-12345), Decimal128(10000), Decimal128(-50), Decimal128(0), Decimal128(999)},
+        {Decimal128(123), Decimal128(-124), Decimal128(100), Decimal128(-1), Decimal128(0), Decimal128(9)},
+        38, 2);
+}
+
+// Test floor(DECIMAL128) with NULL input
+TEST_F(FloorTest, FloorDec128Null) {
+    TestDecimalUnaryOperation<Decimal128, Decimal128DataType, OMNI_DECIMAL128>(
+        "floor",
+        {Decimal128(12345), Decimal128(-12345), Decimal128(10000), Decimal128(-50)},
+        {Decimal128(12345), Decimal128(-124), Decimal128(10000), Decimal128(-1)},
+        38, 2, {0, 2});
 }

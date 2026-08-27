@@ -46,7 +46,7 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<TanFunction, double, double>(prefix + "tan", {OMNI_DOUBLE}, OMNI_DOUBLE);
 	RegisterFunction<CbrtFunction, double, double>(prefix + "cbrt", {OMNI_DOUBLE}, OMNI_DOUBLE);
 	RegisterFunction<CeilFunction, int64_t, int64_t>(prefix + "ceil", {OMNI_LONG}, OMNI_LONG);
-	RegisterFunction<CeilFunction, int64_t, double>(prefix + "ceil", {OMNI_DOUBLE}, OMNI_LONG);
+    RegisterFunction<CeilFunction, int32_t, int32_t>(prefix + "ceil", {OMNI_INT}, OMNI_INT);
 	RegisterFunction<CeilFunction, double, double>(prefix + "ceil", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SignFunction, double, double>(prefix + "sign", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SinhFunction, double, double>(prefix + "sinh", {OMNI_DOUBLE}, OMNI_DOUBLE);
@@ -106,9 +106,25 @@ void RegisterMathFunctions(const std::string &prefix)
 
     // Register floor: floor(long) -> long, floor(double) -> long (Spark), floor(double) -> double (Flink)
     // In Spark, floor must return Long type; in Flink, floor(DOUBLE) returns DOUBLE
+    RegisterFunction<FloorFunction, int32_t, int32_t>(prefix + "floor", {OMNI_INT}, OMNI_INT);
     RegisterFunction<FloorFunction, int64_t, int64_t>(prefix + "floor", {OMNI_LONG}, OMNI_LONG);
-    RegisterFunction<FloorFunction, int64_t, double>(prefix + "floor", {OMNI_DOUBLE}, OMNI_LONG);
     RegisterFunction<FloorFunction, double, double>(prefix + "floor", {OMNI_DOUBLE}, OMNI_DOUBLE);
+
+    // Register floor/ceil/abs/negative for DECIMAL64 via vectorized path
+    VectorFunction::RegisterVectorFunction(prefix + "floor", {OMNI_DECIMAL64}, OMNI_DECIMAL64,
+        std::make_shared<FloorDec64Func>());
+    VectorFunction::RegisterVectorFunction(prefix + "ceil", {OMNI_DECIMAL64}, OMNI_DECIMAL64,
+        std::make_shared<CeilDec64Func>());
+    VectorFunction::RegisterVectorFunction(prefix + "abs", {OMNI_DECIMAL64}, OMNI_DECIMAL64,
+        std::make_shared<AbsDec64Func>());
+
+    // Register floor/ceil/abs for DECIMAL128 via vectorized path
+    VectorFunction::RegisterVectorFunction(prefix + "floor", {OMNI_DECIMAL128}, OMNI_DECIMAL128,
+        std::make_shared<FloorDec128Func>());
+    VectorFunction::RegisterVectorFunction(prefix + "ceil", {OMNI_DECIMAL128}, OMNI_DECIMAL128,
+        std::make_shared<CeilDec128Func>());
+    VectorFunction::RegisterVectorFunction(prefix + "abs", {OMNI_DECIMAL128}, OMNI_DECIMAL128,
+        std::make_shared<AbsDec128Func>());
 
     // Register factorial: factorial(int) -> bigint
     // Input: int32 (OMNI_INT), Output: int64 (OMNI_LONG)

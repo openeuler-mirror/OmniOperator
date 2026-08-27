@@ -27,7 +27,8 @@ private:
 
     bool nullResult_; // value returned when input is NULL (UNKNOWN).
     bool negateValue_; //if true, the non-NULL input value is negated before output.
-// Mapping to SQL semantics:    IS NOT TRUE  : nullResult=true,  negateValue=true
+// Mapping to SQL semantics:    IS TRUE      : nullResult=false, negateValue=false
+// IS NOT TRUE  : nullResult=true,  negateValue=true
 // IS FALSE     : nullResult=false, negateValue=true
 // IS NOT FALSE : nullResult=true,  negateValue=false
 }; 
