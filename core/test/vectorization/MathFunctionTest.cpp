@@ -628,7 +628,7 @@ TEST(MathFunctionsTest, ceilDouble) {
     for (double x : inputData) {
         expectedResults.push_back(std::ceil(x));
     }
-    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_LONG>("ceil", inputData, expectedResults);
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("ceil", inputData, expectedResults);
 }
 
 
