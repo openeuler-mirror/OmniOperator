@@ -134,19 +134,19 @@ void RegisterStringFunctions(const std::string &prefix)
     // Support all combinations of VARCHAR/CHAR string types and INT32/INT64 integer types
     RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int32_t>(
         prefix + "locate", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_INT);
-    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>( 
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>(
         prefix + "locate", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_LONG}, OMNI_INT);
     RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int32_t>(
         prefix + "locate", {OMNI_VARCHAR, OMNI_CHAR, OMNI_INT}, OMNI_INT);
-    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>( 
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>(
         prefix + "locate", {OMNI_VARCHAR, OMNI_CHAR, OMNI_LONG}, OMNI_INT);
     RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int32_t>(
         prefix + "locate", {OMNI_CHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_INT);
-    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>( 
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>(
         prefix + "locate", {OMNI_CHAR, OMNI_VARCHAR, OMNI_LONG}, OMNI_INT);
     RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int32_t>(
         prefix + "locate", {OMNI_CHAR, OMNI_CHAR, OMNI_INT}, OMNI_INT);
-    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>( 
+    RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>(
         prefix + "locate", {OMNI_CHAR, OMNI_CHAR, OMNI_LONG}, OMNI_INT);
 
     // position(substring, string) -> integer, equivalent to locate(substring, string, 1)
