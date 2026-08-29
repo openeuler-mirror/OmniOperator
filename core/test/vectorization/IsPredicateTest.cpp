@@ -115,7 +115,6 @@ const std::vector<PredicateTestParam>& PredicateCases() {
         {"is_true",        true,  false, false}, // IS TRUE:         NULL->false, TRUE->true,  FALSE->false
         {"is_false",       false, true,  false}, // IS FALSE:        NULL->false, TRUE->false, FALSE->true
         {"is_not_false",   true,  false, true},  // IS NOT FALSE:    NULL->true,  TRUE->true,  FALSE->false
-        {"is_not_true",    false, true,  true},  // IS NOT TRUE:     NULL->true,  TRUE->false, FALSE->true
     };
     return cases;
 }

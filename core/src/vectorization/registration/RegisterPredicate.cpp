@@ -18,10 +18,6 @@ void RegisterPredicateFunctions(const std::string &prefix)
     auto isTrueFunction = std::make_shared<IsBooleanFunction>(false, false);
     VectorFunction::RegisterVectorFunction(prefix + "is_true", {OMNI_BOOLEAN}, OMNI_BOOLEAN, isTrueFunction);
 
-    // IS NOT TRUE: NULL->true, non-NULL->!value
-    auto isNotTrueFunction = std::make_shared<IsBooleanFunction>(true, true);
-    VectorFunction::RegisterVectorFunction(prefix + "is_not_true", {OMNI_BOOLEAN}, OMNI_BOOLEAN, isNotTrueFunction);
-
     // IS FALSE: NULL->false, non-NULL->!value
     auto isFalseFunction = std::make_shared<IsBooleanFunction>(false, true);
     VectorFunction::RegisterVectorFunction(prefix + "is_false", {OMNI_BOOLEAN}, OMNI_BOOLEAN, isFalseFunction);
