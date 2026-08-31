@@ -148,10 +148,10 @@ TEST(IsDecimalTest, SurroundingWhitespace) {
     delete result;
 }
 
-// Special values accepted by Double.parseDouble (case-insensitive).
+// Special values: Java Double.parseDouble is case-sensitive ("NaN" / "Infinity" only).
 TEST(IsDecimalTest, SpecialValues) {
-    std::vector<std::string> in = {"NaN", "Infinity", "-Infinity", "+Infinity", "nan", "INFINITY"};
-    std::vector<bool> expected = {true, true, true, true, true, true};
+    std::vector<std::string> in = {"NaN", "Infinity", "-Infinity", "+Infinity", "nan", "INFINITY", "NAN", "infinity", "INF"};
+    std::vector<bool> expected = {true, true, true, true, false, false, false, false, false};
     BaseVector* input = CreateStringVector(in);
     BaseVector* result = ExecuteIsDecimal(input, OMNI_VARCHAR);
     ValidateBool(result, expected);
@@ -179,10 +179,11 @@ TEST(IsDecimalTest, EmptyAndWhitespaceOnly) {
     delete result;
 }
 
-// By design the grammar does NOT accept Java 'd'/'f' suffixes or hex floats.
-TEST(IsDecimalTest, JavaSuffixesAndHexNotAccepted) {
-    std::vector<std::string> in = {"1d", "2.5f", "0x1p3", "0x10", "1D", "3F"};
-    std::vector<bool> expected = {false, false, false, false, false, false};
+// Java type suffixes f/F/d/D are accepted by Double.parseDouble; hex floats are not
+// required for SQL (and "0x10" is also rejected by Java — missing 'p' exponent).
+TEST(IsDecimalTest, JavaSuffixesAcceptedHexRejected) {
+    std::vector<std::string> in = {"1d", "2.5f", "0x1p3", "0x10", "1D", "3F", "1ff"};
+    std::vector<bool> expected = {true, true, false, false, true, true, false};
     BaseVector* input = CreateStringVector(in);
     BaseVector* result = ExecuteIsDecimal(input, OMNI_VARCHAR);
     ValidateBool(result, expected);

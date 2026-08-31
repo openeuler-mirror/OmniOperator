@@ -11,18 +11,21 @@
  * `false` output (Flink semantics), which the SimpleFunction default null
  * propagation (NULL in -> NULL out) cannot express.
  *
- * The parser is hand-written to match Java Double.parseDouble's accepted
- * grammar (NOT std::stod, which differs on NaN/Infinity case sensitivity,
- * "5." handling, and hex-float support). Java's `d/D/f/F` type suffixes and
- * hexadecimal floating literals (0x1p3) are intentionally NOT accepted; those
- * forms are effectively never present in SQL string data.
+ * The parser is hand-written to match Java Double.parseDouble (used by Flink
+ * SqlFunctionUtils.isDecimal via isInteger || isLong || isDouble). Differences
+ * vs std::stod that must be preserved:
+ *   - NaN / Infinity are case-sensitive exact tokens ("NaN", "Infinity"),
+ *     with an optional leading +/- (NOT "nan" / "infinity" / "INF").
+ *   - Trailing Java type suffixes f/F/d/D are accepted ("1f", "2.5D").
+ *   - Trailing dot is accepted ("5.").
+ * Hexadecimal floats (0x1p3) are not required for SQL string data and are
+ * left unaccepted (Double.parseDouble("0x10") also fails — no 'p' exponent).
  */
 
 #include "vectorization/functions/IsDecimal.h"
 #include "vectorization/VectorFunction.h"
 #include "vector/vector.h"
 
-#include <cctype>
 #include <stack>
 
 namespace omniruntime::vectorization {
@@ -38,39 +41,19 @@ ALWAYS_INLINE bool IsJavaAsciiWhitespace(unsigned char c)
     return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
 }
 
-/// Case-insensitive ASCII compare of s against a lowercase literal.
-ALWAYS_INLINE bool EqualsIgnoreCaseAscii(std::string_view s, const char *lowerLit)
-{
-    size_t i = 0;
-    for (; i < s.size(); ++i) {
-        char c = static_cast<char>(std::tolower(static_cast<unsigned char>(s[i])));
-        if (lowerLit[i] == '\0' || c != lowerLit[i]) {
-            return false;
-        }
-    }
-    return lowerLit[i] == '\0';
-}
-
-/// Returns true iff s (already trimmed) is a Java Double.parseDouble special value:
-///   NaN | Infinity | +Infinity | -Infinity  (case-insensitive)
+/// Returns true iff s (already trimmed) is a Java Double.parseDouble special
+/// value. Tokens are case-sensitive exact matches (OpenJDK FloatingDecimal):
+///   [+-]? NaN | [+-]? Infinity
 bool IsSpecialValue(std::string_view s)
 {
-    if (EqualsIgnoreCaseAscii(s, "nan")) {
-        return true;
+    if (!s.empty() && (s[0] == '+' || s[0] == '-')) {
+        s = s.substr(1);
     }
-    if (EqualsIgnoreCaseAscii(s, "infinity")) {
-        return true;
-    }
-    if (s.size() >= 1 && (s[0] == '+' || s[0] == '-')) {
-        if (EqualsIgnoreCaseAscii(s.substr(1), "infinity")) {
-            return true;
-        }
-    }
-    return false;
+    return s == "NaN" || s == "Infinity";
 }
 
 /// Returns true iff s (already trimmed) matches the Java Double.parseDouble decimal grammar:
-///   [+-]? ( Digits [. [Digits]] | . Digits ) [ (e|E) [+-]? Digits ]
+///   [+-]? ( Digits [. [Digits]] | . Digits ) [ (e|E) [+-]? Digits ] [fFdD]
 /// At least one digit must appear in the significand and the whole string must be consumed.
 bool IsNumericLiteral(std::string_view s)
 {
@@ -123,6 +106,11 @@ bool IsNumericLiteral(std::string_view s)
         if (!seenExpDigits) {
             return false;
         }
+    }
+
+    // Optional Java type suffix, accepted by Double.parseDouble ("1f", "2.5D").
+    if (i < len && (s[i] == 'f' || s[i] == 'F' || s[i] == 'd' || s[i] == 'D')) {
+        ++i;
     }
 
     return i == len;  // must consume the whole string
