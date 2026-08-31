@@ -52,6 +52,10 @@ namespace omniruntime::vec {
     /**
      * determine whether a certain type is a container storage, like std::string_view, and
      * a general type such as int/long is an array storage
+     *
+     * is_container_v is true only for types stored via LargeStringContainer (offset + char buffer).
+     * omniruntime::vec::StringView is a fixed-size 16-byte struct stored in AlignedBuffer — NOT a
+     * container type, so it correctly resolves to false here without any additional specialization.
      * @tparam RAW_DATA_TYPE
      */
     template <typename RAW_DATA_TYPE>

@@ -3,6 +3,8 @@
  * Description: FilterAndProject operator source file
  */
 #include "filter_and_project.h"
+#include <algorithm>
+#include <iostream>
 #include "expression/jsonparser/jsonparser.h"
 #include "operator/config/operator_config.h"
 #include "util/config/QueryConfig.h"
@@ -15,6 +17,131 @@ using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace omniruntime::mem;
 using namespace std;
+
+namespace {
+bool IsStringViewComparisonCandidate(const BinaryExpr *binaryExpr)
+{
+    if (binaryExpr->op != expressions::Operator::EQ &&
+        binaryExpr->op != expressions::Operator::NEQ) {
+        return false;
+    }
+    return binaryExpr->left->GetReturnTypeId() == OMNI_STRING_VIEW ||
+        binaryExpr->right->GetReturnTypeId() == OMNI_STRING_VIEW;
+}
+
+void CollectStringViewComparisonFields(const Expr *expr, const DataTypes &sourceTypes,
+    std::vector<int32_t> &fieldIndexes, bool &foundComparison)
+{
+    if (expr == nullptr) {
+        return;
+    }
+    switch (expr->GetType()) {
+        case ExprType::BINARY_E: {
+            const auto *binaryExpr = static_cast<const BinaryExpr *>(expr);
+            if (IsStringViewComparisonCandidate(binaryExpr)) {
+                const Expr *fieldSide = nullptr;
+                const Expr *literalSide = nullptr;
+                if (binaryExpr->left->GetType() == ExprType::FIELD_E &&
+                    binaryExpr->right->GetType() == ExprType::LITERAL_E) {
+                    fieldSide = binaryExpr->left;
+                    literalSide = binaryExpr->right;
+                } else if (binaryExpr->right->GetType() == ExprType::FIELD_E &&
+                    binaryExpr->left->GetType() == ExprType::LITERAL_E) {
+                    fieldSide = binaryExpr->right;
+                    literalSide = binaryExpr->left;
+                } else {
+                    OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION",
+                        "StringView EQ/NEQ must compare a field with a literal");
+                }
+
+                const auto *fieldExpr = static_cast<const FieldExpr *>(fieldSide);
+                if (fieldSide->GetReturnTypeId() != OMNI_STRING_VIEW) {
+                    OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION",
+                        "StringView field type mismatch: expected {}, actual {}",
+                        static_cast<int32_t>(OMNI_STRING_VIEW),
+                        static_cast<int32_t>(fieldSide->GetReturnTypeId()));
+                }
+                if (literalSide->GetReturnTypeId() != OMNI_STRING_VIEW) {
+                    OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION",
+                        "StringView literal type mismatch: expected {}, actual {}",
+                        static_cast<int32_t>(OMNI_STRING_VIEW),
+                        static_cast<int32_t>(literalSide->GetReturnTypeId()));
+                }
+                if (fieldExpr->colVal < 0 || fieldExpr->colVal >= sourceTypes.GetSize()) {
+                    OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION",
+                        "StringView field index {} is outside source type range {}",
+                        fieldExpr->colVal, sourceTypes.GetSize());
+                }
+                if (sourceTypes.GetIds()[fieldExpr->colVal] != OMNI_STRING_VIEW) {
+                    OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION",
+                        "StringView source type mismatch at field {}: expected {}, actual {}",
+                        fieldExpr->colVal, static_cast<int32_t>(OMNI_STRING_VIEW),
+                        static_cast<int32_t>(sourceTypes.GetIds()[fieldExpr->colVal]));
+                }
+                fieldIndexes.push_back(fieldExpr->colVal);
+                foundComparison = true;
+            }
+            CollectStringViewComparisonFields(binaryExpr->left, sourceTypes, fieldIndexes, foundComparison);
+            CollectStringViewComparisonFields(binaryExpr->right, sourceTypes, fieldIndexes, foundComparison);
+            return;
+        }
+        case ExprType::UNARY_E:
+            CollectStringViewComparisonFields(
+                static_cast<const UnaryExpr *>(expr)->exp, sourceTypes, fieldIndexes, foundComparison);
+            return;
+        case ExprType::IS_NULL_E:
+            CollectStringViewComparisonFields(
+                static_cast<const IsNullExpr *>(expr)->value, sourceTypes, fieldIndexes, foundComparison);
+            return;
+        default:
+            return;
+    }
+}
+} // namespace
+
+StringViewFilterValidationInfo ValidateStringViewFilterForRuntime(
+    const Expr *filterExpr, const DataTypes &sourceTypes)
+{
+    if (filterExpr == nullptr) {
+        OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION", "Filter expression is null");
+    }
+    if (!filterExpr->supportVectorized()) {
+        OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION",
+            "StringView filter expression does not support ExprEval vectorization");
+    }
+    StringViewFilterValidationInfo info;
+    bool foundComparison = false;
+    CollectStringViewComparisonFields(filterExpr, sourceTypes, info.fieldIndexes, foundComparison);
+    if (!foundComparison) {
+        OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION",
+            "No OMNI_STRING_VIEW EQ/NEQ field-literal predicate found");
+    }
+    std::sort(info.fieldIndexes.begin(), info.fieldIndexes.end());
+    info.fieldIndexes.erase(
+        std::unique(info.fieldIndexes.begin(), info.fieldIndexes.end()), info.fieldIndexes.end());
+    return info;
+}
+
+void ValidateStringViewInputBatch(VectorBatch *vecBatch, const std::vector<int32_t> &fieldIndexes)
+{
+    if (vecBatch == nullptr) {
+        OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION", "Filter input batch is null");
+    }
+    for (const auto fieldIndex : fieldIndexes) {
+        if (fieldIndex < 0 || fieldIndex >= vecBatch->GetVectorCount()) {
+            OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION",
+                "StringView input field index {} is outside vector range {}",
+                fieldIndex, vecBatch->GetVectorCount());
+        }
+        const auto *vector = vecBatch->Get(fieldIndex);
+        if (vector == nullptr || vector->GetTypeId() != OMNI_STRING_VIEW) {
+            OMNI_THROW("STRING_VIEW_RUNTIME_VALIDATION",
+                "StringView filter input mismatch at field {}: expected {}, actual {}",
+                fieldIndex, static_cast<int32_t>(OMNI_STRING_VIEW),
+                vector == nullptr ? -1 : static_cast<int32_t>(vector->GetTypeId()));
+        }
+    }
+}
 
 SimpleFilter::SimpleFilter(const Expr &expression)
     : codegen(nullptr), expression(&expression), func(nullptr), initialized(false)
@@ -82,7 +209,7 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
 
 Operator *FilterAndProjectOperatorFactory::CreateOperator()
 {
-    return new FilterAndProjectOperator(this->exprEvaluator);
+    return new FilterAndProjectOperator(this->exprEvaluator, this->stringViewValidationFields);
 }
 
 OperatorFactory *CreateFilterOperatorFactory(
@@ -100,11 +227,24 @@ OperatorFactory *CreateFilterOperatorFactory(
         projections = filterNode->ProjectList();
     }
     auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, sourceTypes, queryConfig);
-    return new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    std::vector<int32_t> stringViewValidationFields;
+    if (queryConfig.StringViewRuntimeValidationEnabled()) {
+        stringViewValidationFields = ValidateStringViewFilterForRuntime(filterExpr, sourceTypes).fieldIndexes;
+    }
+    return new FilterAndProjectOperatorFactory(move(exprEvaluator), move(stringViewValidationFields));
 }
 
 int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
+    if (!stringViewValidationFields.empty()) {
+        ValidateStringViewInputBatch(vecBatch, stringViewValidationFields);
+        if (!stringViewValidationLogged) {
+            std::cout << "SV_E2E_FILTER fieldType=OMNI_STRING_VIEW "
+                      << "literalType=OMNI_STRING_VIEW inputType=OMNI_STRING_VIEW "
+                      << "vectorized=true useCodegen=false" << std::endl;
+            stringViewValidationLogged = true;
+        }
+    }
     if (vecBatch->GetRowCount() > 0) {
         projectedVecs = this->exprEvaluator->Evaluate(vecBatch, executionContext.get(), &selectedRowsBuffer);
     }

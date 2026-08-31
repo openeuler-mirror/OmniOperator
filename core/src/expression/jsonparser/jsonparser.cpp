@@ -127,6 +127,15 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
             auto width = jsonExpr["width"].get<int32_t>();
             return new LiteralExpr(stringVal, std::make_shared<VarcharDataType>(width));
         }
+        case OMNI_STRING_VIEW: {
+            // StringView string literal: same payload as VARCHAR (stringVal), but StringViewDataType
+            // (fixed 16B, no width). Without this case a StringView literal fell to default below and
+            // became a bogus int-0 literal with null stringVal -> ExprEval read it via the VARCHAR
+            // LargeStringContainer path -> SIGSEGV. Requires gluten to tag the literal dataType=26
+            // (Constant.OMNI_STRING_VIEW_TYPE must use toValue, not ordinal).
+            auto *stringVal = new string(jsonExpr["value"].get<string>());
+            return new LiteralExpr(stringVal, std::make_shared<StringViewDataType>());
+        }
         default:
             return new LiteralExpr(0, std::make_shared<DataType>());
     }

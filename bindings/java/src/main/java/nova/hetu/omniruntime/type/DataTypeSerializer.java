@@ -143,6 +143,9 @@ public class DataTypeSerializer {
                 case OMNI_CHAR:
                     subType = CharDataType.class;
                     break;
+                case OMNI_STRING_VIEW:
+                    subType = StringViewDataType.class;
+                    break;
                 case OMNI_DECIMAL64:
                     subType = Decimal64DataType.class;
                     break;

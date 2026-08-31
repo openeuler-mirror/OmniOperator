@@ -77,6 +77,8 @@ public class VecFactory {
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 return new VarcharVec(nativeVector);
+            case OMNI_STRING_VIEW:
+                return new StringViewVec(nativeVector);
             case OMNI_DECIMAL128:
                 return new Decimal128Vec(nativeVector);
             default:
@@ -158,6 +160,8 @@ public class VecFactory {
             case OMNI_CHAR:
                 return new VarcharVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
                         nativeVectorOffsetBufAddress, size);
+            case OMNI_STRING_VIEW:
+                return new StringViewVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             case OMNI_DECIMAL128:
                 return new Decimal128Vec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             default:
@@ -196,6 +200,8 @@ public class VecFactory {
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 return new VarcharVec(size);
+            case OMNI_STRING_VIEW:
+                return new StringViewVec(size);
             case OMNI_DECIMAL128:
                 return new Decimal128Vec(size);
             default:

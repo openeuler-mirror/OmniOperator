@@ -394,6 +394,10 @@ namespace omniruntime::reader {
         omniruntime::vec::BaseVector* nextAsDictionary(
             uint64_t numValues, uint64_t *incomingNulls, int omniTypeId);
 
+        // Materialize dictionary ids as flat StringView values until DictionaryVector<StringView>
+        // is supported. Distinct payloads are stored once per stripe; rows share that buffer.
+        omniruntime::vec::BaseVector* nextAsStringView(uint64_t numValues, uint64_t *incomingNulls);
+
         private:
             std::shared_ptr<::orc::StringDictionary> dictionary;
             std::unique_ptr<OmniRleDecoderV2> rle;
@@ -402,6 +406,11 @@ namespace omniruntime::reader {
             // ORC dictionary converted to Omni format; built once per stripe and shared across batches.
             std::shared_ptr<omniruntime::vec::LargeStringContainer<std::string_view>> omniDict_;
             int32_t omniDictSize_ = 0;
+
+            // ORC dictionary as flat StringView entries; built lazily once per stripe. StringView
+            // output batches share its string buffer; the shared_ptr keeps that buffer alive even
+            // after this reader is reset on stripe change (so batches never dangle).
+            std::shared_ptr<omniruntime::vec::Vector<omniruntime::vec::StringView>> omniDictSV_;
 
         public:
             OmniStringDictionaryColumnReader(const ::orc::Type& type, ::orc::StripeStreams& stipe);

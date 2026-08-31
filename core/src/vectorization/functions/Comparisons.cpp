@@ -236,6 +236,13 @@ std::shared_ptr<VectorFunction> MakeImpl(const std::string &functionName, const 
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_CHAR>>();
         case OMNI_VARBINARY:
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_VARBINARY>>();
+        case OMNI_STRING_VIEW:
+            // StringView is a 16-byte fixed-width value type, so the template uses the default
+            // (non-isStringLike) branch:
+            // T=StringView, FlatVectorType=Vector<StringView>, ConstVector<StringView>。
+            // StringView provides operator==, operator<, and compare, so std::equal_to<> and
+            // std::less<> work directly.
+            return std::make_shared<ComparisonFunction<StdCmp, OMNI_STRING_VIEW>>();
         default: OMNI_THROW("Compare error:", "{} Not support type!", functionName);
     }
 }
@@ -244,6 +251,12 @@ std::shared_ptr<VectorFunction> makeEqualTo(const std::string &name, const std::
     const config::QueryConfig &)
 {
     return MakeImpl<Equal, std::equal_to<>>(name, inputArgs);
+}
+
+std::shared_ptr<VectorFunction> makeNotEqualTo(const std::string &name, const std::vector<DataTypeId> &inputArgs,
+    const config::QueryConfig &)
+{
+    return MakeImpl<NotEqual, std::not_equal_to<>>(name, inputArgs);
 }
 
 std::shared_ptr<VectorFunction> makeLessThan(const std::string &name, const std::vector<DataTypeId> &inputArgs,

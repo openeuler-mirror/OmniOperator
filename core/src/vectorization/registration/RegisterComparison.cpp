@@ -11,6 +11,7 @@ namespace omniruntime::vectorization {
 void RegisterCompareFunctions(const std::string &prefix)
 {
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("equal"), makeEqualTo);
+    VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("notEqual"), makeNotEqualTo);
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("greaterThan"), makeGreaterThan);
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("greaterThanEqual"), makeGreaterThanOrEqual);
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("lessThan"), makeLessThan);

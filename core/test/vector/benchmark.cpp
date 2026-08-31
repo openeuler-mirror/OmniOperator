@@ -104,7 +104,7 @@ template <typename T> void bm_slice_vector_getvalue(benchmark::State &state)
         }
     }
 
-    std::cerr << "total: " << total << std::endl;
+    benchmark::DoNotOptimize(total);
     delete parent;
     delete vector;
 }

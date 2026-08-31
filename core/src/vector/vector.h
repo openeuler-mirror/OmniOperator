@@ -18,9 +18,11 @@
 #include "util/bit_map.h"
 #include "util/compiler_util.h"
 #include "large_string_container.h"
+#include "string_view.h"
 #include "memory/aligned_buffer.h"
 #include "type/data_type.h"
 #include "nulls_buffer.h"
+#include "libboundscheck/include/securec.h"
 
 namespace omniruntime::vec::unsafe {
 class UnsafeBaseVector;
@@ -896,6 +898,313 @@ public:
 private:
     friend class unsafe::UnsafeStringVector;
     std::shared_ptr<LargeStringContainer<std::string_view>> container;
+};
+
+/**
+ * Vector specialization for StringView.
+ *
+ * Storage:
+ *  - valuesBuffer: AlignedBuffer<StringView> — contiguous 16-byte structs (O(1) random access)
+ *  - stringBuffer: LargeStringBuffer — external char arena for non-inline strings (size > 12)
+ *
+ * Inline strings (size <= 12) are fully self-contained in the StringView struct; no arena bytes
+ * are consumed.  Non-inline strings copy their payload into stringBuffer and the StringView stores
+ * a pointer into that arena.
+ *
+ * If stringBuffer runs out of space, GrowStringBuffer() reallocates it and fixes up all
+ * outstanding non-inline pointers in the values array.
+ */
+template <>
+class Vector<StringView> : public BaseVector {
+public:
+    explicit Vector(int32_t vSize, int32_t capacityInBytes = INITIAL_STRING_SIZE)
+        : BaseVector(vSize),
+          stringBuffer(std::make_shared<LargeStringBuffer>(static_cast<size_t>(capacityInBytes)))
+    {
+        this->dataTypeId = OMNI_STRING_VIEW;
+        valuesBuffer = std::make_shared<AlignedBuffer<StringView>>(vSize);
+        values = valuesBuffer->GetBuffer();
+        capacity = vSize;
+        int64_t vectorCapacity = sizeof(Vector<StringView>) + sizeof(NullsBuffer) +
+            sizeof(AlignedBuffer<uint8_t>) + sizeof(AlignedBuffer<StringView>) +
+            static_cast<int64_t>(stringBuffer->Capacity());
+        omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+    }
+
+    // Used by Vector<DictionaryContainer<StringView>> — does not allocate values or string buffer.
+    Vector(int32_t vSize, Encoding encoding, NullsBuffer *nullsBufferPtr = nullptr, int32_t sliceOffset = 0)
+        : BaseVector(vSize, encoding, nullsBufferPtr, sliceOffset)
+    {
+        this->dataTypeId = OMNI_STRING_VIEW;
+        capacity = vSize;
+        int64_t vectorCapacity = sizeof(Vector<StringView>) + sizeof(NullsBuffer);
+        omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+    }
+
+    // Creates a new vector of `vSize` elements that shares `source`'s string buffer.
+    // Allows SetNoCopy to safely reference substrings from source's string buffer
+    // without copying; the shared_ptr keeps the buffer alive even after source is destroyed.
+    explicit Vector(int32_t vSize, Vector<StringView>& source)
+        : BaseVector(vSize), stringBuffer(source.stringBuffer)
+    {
+        this->dataTypeId = OMNI_STRING_VIEW;
+        sharesStringBuffer_ = true;
+        valuesBuffer = std::make_shared<AlignedBuffer<StringView>>(vSize);
+        values = valuesBuffer->GetBuffer();
+        capacity = vSize;
+        int64_t vectorCapacity = sizeof(Vector<StringView>) + sizeof(NullsBuffer);
+        omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+    }
+
+    ~Vector() override
+    {
+        int64_t vectorCapacity = sizeof(Vector<StringView>) + sizeof(NullsBuffer);
+        if (!isSliced && !sharesStringBuffer_ && stringBuffer != nullptr) {
+            vectorCapacity += sizeof(AlignedBuffer<uint8_t>) + sizeof(AlignedBuffer<StringView>) +
+                static_cast<int64_t>(stringBuffer->Capacity());
+        }
+        omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
+        omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+    }
+
+    /* *
+     * Set the value at the indicated index.
+     * Inline values are stored directly in the struct; non-inline values are copied into
+     * the string buffer and the StringView is updated to point into it.
+     */
+    void ALWAYS_INLINE SetValue(int32_t index, StringView value)
+    {
+        if (value.isInline()) {
+            values[index] = value;
+        } else {
+            const char *dest = AppendToStringBuffer(value.data(), value.size());
+            values[index] = StringView(dest, static_cast<int32_t>(value.size()));
+        }
+    }
+
+    /* *
+     * Stores the StringView at the given index without copying data into the string buffer.
+     * The caller is responsible for ensuring the pointed-to data outlives this vector;
+     * using the shared-buffer constructor guarantees this automatically.
+     */
+    void ALWAYS_INLINE SetNoCopy(int32_t index, StringView value)
+    {
+        values[index] = value;
+    }
+
+    /* *
+     * Gets the value of the vector at the indicated index.
+     */
+    ALWAYS_INLINE StringView GetValue(int32_t index) const
+    {
+        return values[index + offset];
+    }
+
+    /* *
+     * Returns a reference (offset-aware, no copy) to the StringView at the indicated index.
+     * Needed when converting to std::string_view: a by-value StringView copy whose payload is
+     * inline (<=12B, stored in the 16B struct) would dangle once the copy dies. The buffer slot
+     * referenced here outlives the access. (StringView::operator std::string_view() const&& is
+     * deleted, so converting an rvalue copy is a compile error — use this ref accessor instead.)
+     */
+    ALWAYS_INLINE const StringView &GetValueRef(int32_t index) const
+    {
+        return values[index + offset];
+    }
+
+    /* *
+     * Appends `length` elements from `other` starting at `positionOffset` into this vector.
+     */
+    void Append(BaseVector *other, int positionOffset, int length)
+    {
+        if (UNLIKELY(positionOffset + length > size)) {
+            std::string message("append vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+        auto src = reinterpret_cast<Vector<StringView> *>(other);
+        for (int32_t i = 0; i < length; i++) {
+            int32_t srcIdx = i;
+            int32_t dstIdx = i + positionOffset;
+            if (src->IsNull(srcIdx)) {
+                SetNull(dstIdx);
+            } else {
+                SetValue(dstIdx, src->GetValue(srcIdx));
+            }
+        }
+    }
+
+    /* *
+     * Copies the values at the indicated positions into a new vector.
+     * Zero-copy materialization: the new vector shares this vector's string buffer
+     * (refcounted) and only the 16-byte views are copied; non-inline views keep pointing
+     * into the shared buffer, so no payload bytes move (same model as Slice / Velox
+     * acquireSharedStringBuffers). Trade-off: a sparse selection pins the whole source
+     * buffer until the output dies — compaction heuristic is future work (KT.1).
+     */
+    BaseVector *CopyPositions(const int *positions, int positionOffset, int length) override
+    {
+        if (UNLIKELY((positions == nullptr) || (length < 0))) {
+            std::string message("positions is null or the input length is incorrect: %d.", length);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+        auto vector = new Vector<StringView>(length, *this);
+        auto startPositions = positions + positionOffset;
+        for (int32_t i = 0; i < length; i++) {
+            int position = startPositions[i];
+            if (UNLIKELY(position == -1)) {
+                vector->SetNull(i);
+                continue;
+            }
+            if (UNLIKELY(IsNull(position))) {
+                vector->SetNull(i);
+            } else {
+                vector->SetNoCopy(i, GetValue(position));
+            }
+        }
+        return vector;
+    }
+
+    /* *
+     * Creates a read-only slice that shares the values and string buffers with the parent.
+     */
+    BaseVector *Slice(int positionOffset, int length, bool isCopy = false) override
+    {
+        if (UNLIKELY(positionOffset + length > size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+        auto sliced = new Vector<StringView>(length, valuesBuffer, stringBuffer, nullsBuffer.get(), positionOffset);
+        sliced->SetOffset(offset + positionOffset);
+        sliced->SetSliced(true);
+        return sliced;
+    }
+
+    /* *
+     * Expands the vector to accommodate needCapacity elements.
+     * Only the values array and nulls buffer are grown; the string buffer is unchanged
+     * because existing StringView pointers remain valid.
+     */
+    void Expand(int32_t needCapacity) override
+    {
+        if (needCapacity <= size) {
+            return;
+        }
+        if (needCapacity <= capacity) {
+            size = needCapacity;
+            return;
+        }
+
+        int32_t newCapacity = std::max(capacity * 2, needCapacity);
+        int32_t oldSize = size;
+
+        auto oldValuesBuffer = valuesBuffer;
+        auto oldValues = values;
+        valuesBuffer = std::make_shared<AlignedBuffer<StringView>>(newCapacity);
+        values = valuesBuffer->GetBuffer();
+        if (oldValues != nullptr) {
+            error_t res = memcpy_s(values, newCapacity * sizeof(StringView),
+                                   oldValues, oldSize * sizeof(StringView));
+            if (res != EOK) {
+                throw OmniException("ERROR: Vector<StringView> Expand memcpy_s failed", std::to_string(res));
+            }
+        }
+
+        auto oldNullsBuffer = nullsBuffer;
+        nullsBuffer = std::make_shared<NullsBuffer>(newCapacity);
+        if (oldNullsBuffer != nullptr) {
+            nullsBuffer->SetNulls(0, oldNullsBuffer.get(), oldSize);
+        }
+        capacity = newCapacity;
+        size = needCapacity;
+    }
+
+    StringView *GetValuesBuffer()
+    {
+        return values;
+    }
+
+protected:
+    friend class unsafe::UnsafeVector;
+    std::shared_ptr<AlignedBuffer<StringView>> valuesBuffer;
+    StringView *values = nullptr;
+    int32_t capacity = 0;
+    std::shared_ptr<LargeStringBuffer> stringBuffer;
+    bool sharesStringBuffer_ = false;
+
+private:
+    /* Shared constructor used by Slice — shares both buffers with the parent. */
+    Vector(int32_t vSize, std::shared_ptr<AlignedBuffer<StringView>> valuesBuffer,
+        std::shared_ptr<LargeStringBuffer> stringBuffer, NullsBuffer *nullsBufferPtr, int32_t sliceOffset = 0)
+        : BaseVector(vSize, OMNI_FLAT, nullsBufferPtr, sliceOffset),
+          valuesBuffer(valuesBuffer),
+          stringBuffer(stringBuffer)
+    {
+        this->dataTypeId = OMNI_STRING_VIEW;
+        this->values = this->valuesBuffer->GetBuffer();
+        this->capacity = vSize;
+        int64_t vectorCapacity = sizeof(Vector<StringView>) + sizeof(NullsBuffer);
+        omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+    }
+
+    /* Appends `len` bytes to the string buffer, growing it if necessary, and returns
+     * a stable pointer to the copied bytes. */
+    const char *AppendToStringBuffer(const char *data, size_t len)
+    {
+        uint64_t usedSize = stringBuffer->Size();
+        if (usedSize + len > stringBuffer->Capacity()) {
+            GrowStringBuffer(usedSize + len);
+            usedSize = stringBuffer->Size();
+        }
+        char *dest = stringBuffer->Data() + usedSize;
+        error_t res = memcpy_s(dest, stringBuffer->Capacity() - usedSize, data, len);
+        if (UNLIKELY(res != EOK)) {
+            throw OmniException("ERROR: Vector<StringView> string buffer memcpy_s failed", std::to_string(res));
+        }
+        stringBuffer->SetSize(usedSize + len);
+        return dest;
+    }
+
+    /* Reallocates the string buffer to at least `neededBytes`, copies all existing string data,
+     * and fixes up all non-inline StringView pointers in the values array. */
+    void GrowStringBuffer(uint64_t neededBytes)
+    {
+        uint64_t newCapacity = std::max(stringBuffer->Capacity() * 2, neededBytes);
+        const char *oldData = stringBuffer->Data();
+
+        auto newBuffer = std::make_shared<LargeStringBuffer>(newCapacity);
+        newBuffer->SetSize(stringBuffer->Size());
+        error_t res = memcpy_s(newBuffer->Data(), newCapacity, oldData, stringBuffer->Size());
+        if (UNLIKELY(res != EOK)) {
+            throw OmniException("ERROR: Vector<StringView> GrowStringBuffer memcpy_s failed", std::to_string(res));
+        }
+
+        // Fix up all non-inline StringView pointers to point into the new buffer.
+        // Only fix up pointers that actually fall within the old buffer's used range —
+        // uninitialized entries may contain garbage pointers that must not be dereferenced.
+        const char *newData = newBuffer->Data();
+        const uint64_t oldUsedSize = stringBuffer->Size();
+        for (int32_t i = 0; i < size; i++) {
+            if (!IsNull(i) && !values[i].isInline()) {
+                ptrdiff_t off = values[i].data() - oldData;
+                if (off >= 0 && static_cast<uint64_t>(off) < oldUsedSize) {
+                    values[i] = StringView(newData + off, static_cast<int32_t>(values[i].size()));
+                }
+            }
+        }
+
+        // Account for the capacity difference.
+        int64_t delta = static_cast<int64_t>(newCapacity) - static_cast<int64_t>(stringBuffer->Capacity());
+        if (delta > 0) {
+            omniruntime::mem::ThreadMemoryManager::ReportMemory(delta);
+        }
+        stringBuffer = std::move(newBuffer);
+    }
 };
 }
 

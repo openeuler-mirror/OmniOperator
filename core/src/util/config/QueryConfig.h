@@ -180,6 +180,8 @@ public:
     static constexpr const char *KAdaptivePartialAggregationMinRows = "adaptive_partial_aggregation_min_rows";
     static constexpr const char *KAdaptivePartialAggregationRatio = "adaptive_partial_aggregation_ratio";
     static constexpr const char *KPreferVectorizationExpression = "prefer_vectorization_expression";
+    static constexpr const char *KStringViewRuntimeValidationEnabled =
+        "string_view_runtime_validation_enabled";
 
     /// When true, each executor builds the BHJ hash table only once and shares it
     /// across all tasks that probe the same broadcast relation.
@@ -444,6 +446,12 @@ public:
     {
         constexpr bool kDefaultValue = false;
         return get<bool>(KPreferVectorizationExpression, kDefaultValue);
+    }
+
+    bool StringViewRuntimeValidationEnabled() const
+    {
+        constexpr bool kDefaultValue = false;
+        return get<bool>(KStringViewRuntimeValidationEnabled, kDefaultValue);
     }
 
     bool buildHashTableOncePerExecutor() const

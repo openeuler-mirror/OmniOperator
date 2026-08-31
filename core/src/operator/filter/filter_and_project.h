@@ -95,10 +95,22 @@ private:
 OperatorFactory *CreateFilterOperatorFactory(
     std::shared_ptr<const FilterNode> filterNode, const config::QueryConfig &queryConfig);
 
+struct StringViewFilterValidationInfo {
+    std::vector<int32_t> fieldIndexes;
+};
+
+StringViewFilterValidationInfo ValidateStringViewFilterForRuntime(
+    const expressions::Expr *filterExpr, const type::DataTypes &sourceTypes);
+
+void ValidateStringViewInputBatch(
+    omniruntime::vec::VectorBatch *vecBatch, const std::vector<int32_t> &fieldIndexes);
+
 class FilterAndProjectOperator : public Operator {
 public:
-    explicit FilterAndProjectOperator(std::shared_ptr<ExpressionEvaluator> &exprEvaluator)
-        : projectedVecs(nullptr), exprEvaluator(exprEvaluator)
+    explicit FilterAndProjectOperator(std::shared_ptr<ExpressionEvaluator> &exprEvaluator,
+        std::vector<int32_t> stringViewValidationFields = {})
+        : projectedVecs(nullptr), exprEvaluator(exprEvaluator),
+          stringViewValidationFields(std::move(stringViewValidationFields))
     {
         SetOperatorName(metricsNameFilter);
     }
@@ -117,12 +129,16 @@ private:
     omniruntime::mem::AlignedBuffer<int32_t> selectedRowsBuffer;
     omniruntime::vec::VectorBatch *projectedVecs;
     std::shared_ptr<ExpressionEvaluator> &exprEvaluator;
+    std::vector<int32_t> stringViewValidationFields;
+    bool stringViewValidationLogged = false;
 };
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
-    explicit FilterAndProjectOperatorFactory(std::shared_ptr<ExpressionEvaluator> &&exprEvaluator)
-        : exprEvaluator(std::move(exprEvaluator))
+    explicit FilterAndProjectOperatorFactory(std::shared_ptr<ExpressionEvaluator> &&exprEvaluator,
+        std::vector<int32_t> stringViewValidationFields = {})
+        : exprEvaluator(std::move(exprEvaluator)),
+          stringViewValidationFields(std::move(stringViewValidationFields))
     {
         this->exprEvaluator->FilterFuncGeneration();
     }
@@ -133,6 +149,7 @@ public:
 
 private:
     std::shared_ptr<ExpressionEvaluator> exprEvaluator;
+    std::vector<int32_t> stringViewValidationFields;
 };
 } // namespace op
 } // namespace omniruntime

@@ -327,9 +327,9 @@ namespace common {
         }
     }
 
-    template <typename VectorType>
+    template <typename VectorType, typename OutVectorType>
     void SetStringVectorValue(int32_t rowCount, VectorType *baseVector,
-        Vector<LargeStringContainer<std::string_view>> *selectedBaseVector, const uint8_t *bitMark, bool isAllNull,
+        OutVectorType *selectedBaseVector, const uint8_t *bitMark, bool isAllNull,
         bool isAllNotNull)
     {
         int32_t index = 0;
@@ -490,6 +490,18 @@ namespace common {
                             dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(selectedBaseVector), bitMark,
                             isAllNull, isAllNotNull);
                     }
+                    break;
+                }
+                case OMNI_STRING_VIEW: {
+                    // The reader emits a flat Vector<StringView> (dictionary columns are materialized
+                    // to flat StringView vectors in the reader), so only the flat path is needed here.
+                    // It mirrors the VARCHAR flat path, but both input and output are Vector<StringView>.
+                    // Without this branch the default path throws "No such 26 type support", causing
+                    // filterData to fail, the predicate to be silently skipped, and incorrect results.
+                    auto svVector = dynamic_cast<Vector<StringView> *>(baseVector);
+                    SetStringVectorValue(rowCount, svVector,
+                        dynamic_cast<Vector<StringView> *>(selectedBaseVector), bitMark,
+                        isAllNull, isAllNotNull);
                     break;
                 }
                 default: {

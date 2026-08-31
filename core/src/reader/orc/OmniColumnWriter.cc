@@ -1993,7 +1993,7 @@ namespace omniruntime::writer {
                 } else {
                     charData = padBuffer.data();
                     // the padding is exactly 1 byte per char
-                    length[i] = length[i] + static_cast<int64_t>(maxLength - charLength);
+                    length[i] = static_cast<int64_t>(originLength + maxLength - charLength);
                     memcpy(padBuffer.data(), sv.data(), originLength);
                     memset(padBuffer.data() + originLength,
                            ' ',

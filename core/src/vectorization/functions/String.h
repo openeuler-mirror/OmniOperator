@@ -266,6 +266,21 @@ struct StartsWithFunction {
         result = std::equal(pattern.begin(), pattern.end(), str.begin());
         return Status::OK();
     }
+
+    // StringView vectorized overloads — delegate to the std::string_view version above
+    // (vec::StringView implicitly converts to std::string_view).
+    // {SV,SV}: when e2e stringview.enabled, string literals are also built as StringView (SubstraitToOmniExpr);
+    // {SV,VARCHAR}: fallback for mixed types.
+    ALWAYS_INLINE Status call(bool &result, const omniruntime::vec::StringView &str,
+        const omniruntime::vec::StringView &pattern)
+    {
+        return call(result, std::string_view(str), std::string_view(pattern));
+    }
+
+    ALWAYS_INLINE Status call(bool &result, const omniruntime::vec::StringView &str, const std::string_view &pattern)
+    {
+        return call(result, std::string_view(str), pattern);
+    }
 };
 
 /// endsWith function
@@ -286,6 +301,18 @@ struct EndsWithFunction {
         result = std::equal(pattern.rbegin(), pattern.rend(), str.rbegin());
         return Status::OK();
     }
+
+    // StringView vectorized overloads — delegate to the std::string_view version above. {SV,SV} + {SV,VARCHAR} fallback.
+    ALWAYS_INLINE Status call(bool &result, const omniruntime::vec::StringView &str,
+        const omniruntime::vec::StringView &pattern)
+    {
+        return call(result, std::string_view(str), std::string_view(pattern));
+    }
+
+    ALWAYS_INLINE Status call(bool &result, const omniruntime::vec::StringView &str, const std::string_view &pattern)
+    {
+        return call(result, std::string_view(str), pattern);
+    }
 };
 
 /// contains function
@@ -299,9 +326,167 @@ struct ContainsFunction {
         result = std::string_view(str).find(std::string_view(pattern)) != std::string_view::npos;
         return true;
     }
+
+    // StringView vectorized overloads — delegate to the std::string_view version above. {SV,SV} + {SV,VARCHAR} fallback.
+    ALWAYS_INLINE bool call(bool &result, const omniruntime::vec::StringView &str,
+        const omniruntime::vec::StringView &pattern)
+    {
+        return call(result, std::string_view(str), std::string_view(pattern));
+    }
+
+    ALWAYS_INLINE bool call(bool &result, const omniruntime::vec::StringView &str, const std::string_view &pattern)
+    {
+        return call(result, std::string_view(str), pattern);
+    }
 };
 
 /// trim function
+// ---------------------------------------------------------------------------
+// Sub-view range helpers — shared by the VARCHAR copy path (result.assign) and the
+// StringView zero-copy SV-out path. Each returns the [off, len] byte window into the
+// input that the function selects; len == 0 means an empty result. The SV-out
+// VectorFunctions in StringViewSliceFunctions.cpp reuse these to build zero-copy
+// StringView sub-views (StringView(input.data()+off, len)) — so the window logic
+// lives in exactly one place.
+// ---------------------------------------------------------------------------
+
+/// substr(input, start, length) -> [off, len] window. Spark semantics: start==0 -> first char;
+/// negative start counts from the end; length<=0 or start past end -> empty. ASCII fast path +
+/// Unicode path. (Windowing logic extracted verbatim from the former SubstrFunction::doCall.)
+inline void SubstrComputeRange(const std::string_view &input, int32_t start, int32_t length,
+    size_t &off, size_t &len)
+{
+    off = 0;
+    len = 0;
+    if (length <= 0) {
+        return;
+    }
+    if (start == 0) {
+        start = 1;
+    }
+
+    // ASCII fast path: when all bytes < 0x80, char_count == byte_count
+    if (IsAsciiString(input)) {
+        int32_t numCharacters = static_cast<int32_t>(input.size());
+        if (start < 0) {
+            start = numCharacters + start + 1;
+        }
+        int32_t last;
+        if (numCharacters - start + 1 < length) {
+            last = numCharacters;
+        } else {
+            last = start + length - 1;
+        }
+        if (start <= 0) {
+            start = 1;
+        }
+        length = last - start + 1;
+        if (length <= 0) {
+            return;
+        }
+        size_t byteStart = static_cast<size_t>(start - 1);
+        size_t byteLen = static_cast<size_t>(length);
+        if (byteStart >= input.size()) {
+            return;
+        }
+        if (byteStart + byteLen > input.size()) {
+            byteLen = input.size() - byteStart;
+        }
+        off = byteStart;
+        len = byteLen;
+        return;
+    }
+
+    // Unicode path: single-pass to compute numCharacters and startByte,
+    // then one cappedByteLengthUnicode for the segment length.
+    int64_t numCharacters = 0;
+    size_t startByte = input.size();
+    const int32_t adjustedStart = (start > 0) ? start : 1;
+    const size_t targetStartChar = static_cast<size_t>(adjustedStart - 1);
+    bool startByteFound = false;
+
+    const char* ptr = input.data();
+    const char* end = ptr + input.size();
+    while (ptr < end) {
+        if (!startByteFound && numCharacters == static_cast<int64_t>(targetStartChar)) {
+            startByte = static_cast<size_t>(ptr - input.data());
+            startByteFound = true;
+        }
+        auto charSize = stringImpl::utf8proc_char_length(ptr);
+        ptr += UNLIKELY(charSize < 0) ? 1 : charSize;
+        numCharacters++;
+    }
+
+    if (start < 0) {
+        start = static_cast<int32_t>(numCharacters) + start + 1;
+    }
+    int32_t last;
+    if (numCharacters - start + 1 < length) {
+        last = static_cast<int32_t>(numCharacters);
+    } else {
+        last = start + length - 1;
+    }
+    if (start <= 0) {
+        start = 1;
+    }
+    length = last - start + 1;
+    if (length <= 0) {
+        return;
+    }
+
+    // Recompute startByte if start changed due to negative adjustment
+    if (!startByteFound || static_cast<int64_t>(targetStartChar) != static_cast<int64_t>(start - 1)) {
+        startByte = static_cast<size_t>(stringImpl::cappedByteLengthUnicode(
+            input.data(), static_cast<int64_t>(input.size()), static_cast<int64_t>(start - 1)));
+    }
+
+    size_t segmentByteLen = static_cast<size_t>(stringImpl::cappedByteLengthUnicode(
+        input.data() + startByte, static_cast<int64_t>(input.size()) - static_cast<int64_t>(startByte),
+        static_cast<int64_t>(length)));
+    off = startByte;
+    len = segmentByteLen;
+}
+
+/// trim(str): strip leading+trailing ' ' -> [off, len]. All-space -> len 0.
+inline void TrimComputeRange(const std::string_view &s, size_t &off, size_t &len)
+{
+    auto start = s.find_first_not_of(" ");
+    if (start == std::string_view::npos) {
+        off = 0;
+        len = 0;
+        return;
+    }
+    auto end = s.find_last_not_of(" ");
+    off = start;
+    len = end - start + 1;
+}
+
+/// ltrim(str): strip leading ' ' -> [off, len].
+inline void LTrimComputeRange(const std::string_view &s, size_t &off, size_t &len)
+{
+    auto start = s.find_first_not_of(" ");
+    if (start == std::string_view::npos) {
+        off = 0;
+        len = 0;
+        return;
+    }
+    off = start;
+    len = s.size() - start;
+}
+
+/// rtrim(str): strip trailing ' ' -> [off, len] (off always 0).
+inline void RTrimComputeRange(const std::string_view &s, size_t &off, size_t &len)
+{
+    auto end = s.find_last_not_of(" ");
+    if (end == std::string_view::npos) {
+        off = 0;
+        len = 0;
+        return;
+    }
+    off = 0;
+    len = end + 1;
+}
+
 /// trim(string) -> string
 /// Removes leading and trailing whitespace characters from the input string.
 /// Whitespace characters include space, tab, newline, carriage return, etc.
@@ -325,6 +510,16 @@ struct TrimFunction {
         result = std::string(str->substr(start, end - start + 1));
         return true;
     }
+
+    // StringView vectorized overload — delegate to the std::string_view version (SV-in / VARCHAR-out).
+    ALWAYS_INLINE bool callNullable(std::string &result, const omniruntime::vec::StringView *str)
+    {
+        if (str == nullptr) {
+            return false;
+        }
+        std::string_view sv(*str);
+        return callNullable(result, &sv);
+    }
 };
 
 template <typename T>
@@ -342,6 +537,16 @@ struct LTrimFunction {
         result = std::string(str->substr(start));
         return true;
     }
+
+    // StringView vectorized overload — delegate to the std::string_view version (SV-in / VARCHAR-out).
+    ALWAYS_INLINE bool callNullable(std::string &result, const omniruntime::vec::StringView *str)
+    {
+        if (str == nullptr) {
+            return false;
+        }
+        std::string_view sv(*str);
+        return callNullable(result, &sv);
+    }
 };
 
 template <typename T>
@@ -358,6 +563,16 @@ struct RTrimFunction {
         }
         result.assign(str->data(), end + 1);
         return true;
+    }
+
+    // StringView vectorized overload — delegate to the std::string_view version (SV-in / VARCHAR-out).
+    ALWAYS_INLINE bool callNullable(std::string &result, const omniruntime::vec::StringView *str)
+    {
+        if (str == nullptr) {
+            return false;
+        }
+        std::string_view sv(*str);
+        return callNullable(result, &sv);
     }
 };
 
@@ -388,6 +603,28 @@ struct TrimWithCharsFunction {
         result = std::string(str->substr(start, end - start + 1));
         return true;
     }
+
+    // StringView vectorized overloads. Arg order is (trimStr, str); str is the SV column being trimmed,
+    // trimStr is the char-set literal (SV literal -> {SV,SV}; VARCHAR literal -> {VARCHAR,SV}).
+    ALWAYS_INLINE bool callNullable(std::string &result, const omniruntime::vec::StringView *trimStr,
+        const omniruntime::vec::StringView *str)
+    {
+        if (str == nullptr || trimStr == nullptr) {
+            return false;
+        }
+        std::string_view t(*trimStr);
+        std::string_view s(*str);
+        return callNullable(result, &t, &s);
+    }
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *trimStr,
+        const omniruntime::vec::StringView *str)
+    {
+        if (str == nullptr || trimStr == nullptr) {
+            return false;
+        }
+        std::string_view s(*str);
+        return callNullable(result, trimStr, &s);
+    }
 };
 
 template <typename T>
@@ -405,6 +642,27 @@ struct LTrimWithCharsFunction {
         result = std::string(str->substr(start));
         return true;
     }
+
+    // StringView vectorized overloads. Arg order (trimStr, str); str is the SV column being trimmed.
+    ALWAYS_INLINE bool callNullable(std::string &result, const omniruntime::vec::StringView *trimStr,
+        const omniruntime::vec::StringView *str)
+    {
+        if (str == nullptr || trimStr == nullptr) {
+            return false;
+        }
+        std::string_view t(*trimStr);
+        std::string_view s(*str);
+        return callNullable(result, &t, &s);
+    }
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *trimStr,
+        const omniruntime::vec::StringView *str)
+    {
+        if (str == nullptr || trimStr == nullptr) {
+            return false;
+        }
+        std::string_view s(*str);
+        return callNullable(result, trimStr, &s);
+    }
 };
 
 template <typename T>
@@ -421,6 +679,27 @@ struct RTrimWithCharsFunction {
         }
         result.assign(str->data(), end + 1);
         return true;
+    }
+
+    // StringView vectorized overloads. Arg order (trimStr, str); str is the SV column being trimmed.
+    ALWAYS_INLINE bool callNullable(std::string &result, const omniruntime::vec::StringView *trimStr,
+        const omniruntime::vec::StringView *str)
+    {
+        if (str == nullptr || trimStr == nullptr) {
+            return false;
+        }
+        std::string_view t(*trimStr);
+        std::string_view s(*str);
+        return callNullable(result, &t, &s);
+    }
+    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *trimStr,
+        const omniruntime::vec::StringView *str)
+    {
+        if (str == nullptr || trimStr == nullptr) {
+            return false;
+        }
+        std::string_view s(*str);
+        return callNullable(result, trimStr, &s);
     }
 };
 
@@ -477,6 +756,54 @@ struct LocateFunction {
         // Call the non-nullable version for better code reuse
         return call(result, *subString, *string, *start);
     }
+
+    // StringView vectorized overloads — haystack (string) is an SV column, substring is an SV or VARCHAR literal.
+    // Delegate to the std::string_view version above. start takes int32_t; int64_t (LONG registration) narrows
+    // implicitly, matching the existing VARCHAR path.
+    ALWAYS_INLINE bool call(int32_t &result, const omniruntime::vec::StringView &subString,
+        const omniruntime::vec::StringView &string, const int32_t &start)
+    {
+        return call(result, std::string_view(subString), std::string_view(string), start);
+    }
+
+    ALWAYS_INLINE bool call(int32_t &result, const std::string_view &subString,
+        const omniruntime::vec::StringView &string, const int32_t &start)
+    {
+        return call(result, subString, std::string_view(string), start);
+    }
+};
+
+/// instr(string, substring) -> int : 1-based position of the first occurrence (Unicode); 0 if not found, 1 if substr is empty.
+/// Same semantics as codegen InStr (= locate(substring, string, 1)). The vectorized version did not exist before —
+/// added here, but registered only for the StringView path (see RegisterString.cpp); VARCHAR instr still goes through
+/// codegen, so its behavior is unchanged.
+template <typename T>
+struct InStrFunction {
+    ALWAYS_INLINE bool call(int32_t &result, const std::string_view &str, const std::string_view &subStr)
+    {
+        if (subStr.empty()) {
+            result = 1;
+            return true;
+        }
+        if (subStr.size() > str.size()) {
+            result = 0;
+            return true;
+        }
+        result = static_cast<int32_t>(stringImpl::StringPosition<false /*isAscii*/, true /*lpos*/>(str, subStr, 1));
+        return true;
+    }
+
+    // StringView vectorized overloads — string (arg0) is an SV column, substring (arg1) is an SV or VARCHAR literal. Delegate to the std::string_view version.
+    ALWAYS_INLINE bool call(int32_t &result, const omniruntime::vec::StringView &str,
+        const omniruntime::vec::StringView &subStr)
+    {
+        return call(result, std::string_view(str), std::string_view(subStr));
+    }
+
+    ALWAYS_INLINE bool call(int32_t &result, const omniruntime::vec::StringView &str, const std::string_view &subStr)
+    {
+        return call(result, std::string_view(str), subStr);
+    }
 };
 
 /// substr(string, start) -> varchar
@@ -496,6 +823,18 @@ struct SubstrFunction {
     ALWAYS_INLINE bool call(std::string &result, const std::string_view &input, int32_t start, int32_t length)
     {
         return doCall(result, input, start, length);
+    }
+
+    // StringView vectorized overloads — input is an SV column, start/length are INT.
+    // Delegate to the std::string_view versions above (SV-in / VARCHAR-out).
+    ALWAYS_INLINE bool call(std::string &result, const omniruntime::vec::StringView &input, int32_t start)
+    {
+        return call(result, std::string_view(input), start);
+    }
+    ALWAYS_INLINE bool call(std::string &result, const omniruntime::vec::StringView &input, int32_t start,
+        int32_t length)
+    {
+        return call(result, std::string_view(input), start, length);
     }
 
 private:
@@ -630,6 +969,20 @@ struct CharLengthFunction {
     {
         return call(result, *str);
     }
+
+    // StringView overload — StringView is a 16B fixed-width value type, read via FlatVectorReader<StringView>.
+    // Delegate to the std::string_view version above (vec::StringView implicitly converts to std::string_view),
+    // preserving Spark length's Unicode code-point count semantics (stringImpl::length). Do not use raw size()
+    // (that is the byte count and would be wrong for multi-byte characters).
+    ALWAYS_INLINE bool call(int32_t &result, const omniruntime::vec::StringView &str)
+    {
+        return call(result, std::string_view(str));
+    }
+
+    ALWAYS_INLINE bool callNullable(int32_t &result, const omniruntime::vec::StringView *str)
+    {
+        return call(result, std::string_view(*str));
+    }
 };
 
 /// ascii(string) -> int32
@@ -643,6 +996,11 @@ struct AsciiFunction {
         }
         int byteLen = 0;
         result = Utf8FirstCodepoint(s.data(), s.size(), byteLen);
+    }
+
+    // StringView vectorized overload — delegate to the std::string_view version above.
+    ALWAYS_INLINE void call(int32_t& result, const omniruntime::vec::StringView& s) {
+        call(result, std::string_view(s));
     }
 };
 
@@ -717,6 +1075,65 @@ struct LowerFunction {
             return false;
         }
         return call(result, *input);
+    }
+
+    // StringView vectorized overload — StringView is a 16B fixed-width value type, read via
+    // FlatVectorReader<StringView>. Delegate to the std::string_view version above (vec::StringView
+    // implicitly converts to std::string_view). Output stays VARCHAR (SimpleFunction has no StringView
+    // output writer); the SV benefit here is the cheaper 16B fixed-width input read.
+    ALWAYS_INLINE bool call(std::string& result, const omniruntime::vec::StringView& input)
+    {
+        return call(result, std::string_view(input));
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string& result, const omniruntime::vec::StringView* input)
+    {
+        if (input == nullptr) {
+            return false;
+        }
+        return call(result, std::string_view(*input));
+    }
+};
+
+/// upper function
+/// upper(string) -> string
+/// Converts ASCII letters a-z to A-Z; all other bytes (including UTF-8 multibyte sequences, whose
+/// bytes are all >= 0x80 and thus never in the a-z range) are left unchanged. This byte-wise ASCII
+/// behavior matches the existing codegen upper (ToUpperStr in codegen/functions/stringfunctions.cpp),
+/// so the vectorized SV path is semantically identical to the VARCHAR codegen path. Empty -> empty;
+/// NULL input yields NULL output.
+template <typename T>
+struct UpperFunction {
+    ALWAYS_INLINE bool call(std::string& result, const std::string_view& input)
+    {
+        result.resize(input.size());
+        for (size_t i = 0; i < input.size(); ++i) {
+            unsigned char c = static_cast<unsigned char>(input[i]);
+            result[i] = (c >= 'a' && c <= 'z') ? static_cast<char>(c - 32) : input[i];
+        }
+        return true;
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string& result, const std::string_view* input)
+    {
+        if (input == nullptr) {
+            return false;
+        }
+        return call(result, *input);
+    }
+
+    // StringView vectorized overload — delegate to the std::string_view version (SV-in / VARCHAR-out).
+    ALWAYS_INLINE bool call(std::string& result, const omniruntime::vec::StringView& input)
+    {
+        return call(result, std::string_view(input));
+    }
+
+    ALWAYS_INLINE bool callNullable(std::string& result, const omniruntime::vec::StringView* input)
+    {
+        if (input == nullptr) {
+            return false;
+        }
+        return call(result, std::string_view(*input));
     }
 };
 
