@@ -1185,7 +1185,7 @@ TEST(MathFunctionsTest, DegreesDouble) {
     std::vector<double> inputData = {0.0, 1.0, -1.0, 3.14, -3.14, M_PI, -M_PI, M_PI / 2.0, M_PI / 4.0};
     std::vector<double> expectedResults;
     for (double x : inputData) {
-        expectedResults.push_back(x * (180.0 / M_PI));
+        expectedResults.push_back(x * 180.0 / M_PI);
     }
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("degrees", inputData, expectedResults);
 }
@@ -1210,7 +1210,7 @@ TEST(MathFunctionsTest, DegreesDoubleEdgeCases) {
                                      std::numeric_limits<double>::max()};
     std::vector<double> expectedResults;
     for (double x : inputData) {
-        expectedResults.push_back(x * (180.0 / M_PI));
+        expectedResults.push_back(x * 180.0 / M_PI);
     }
     TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("degrees", inputData, expectedResults);
 }
@@ -1222,7 +1222,7 @@ TEST(MathFunctionsTest, DegreesDoubleExprEval) {
     std::vector<double> expectedResults;
     std::string functionName = "degrees";
     for (double x : inputData) {
-        expectedResults.push_back(x * (180.0 / M_PI));
+        expectedResults.push_back(x * 180.0 / M_PI);
     }
     int rowSize = static_cast<int>(inputData.size());
     auto returnType = std::make_shared<DataType>(OMNI_DOUBLE);

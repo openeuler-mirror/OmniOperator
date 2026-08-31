@@ -188,7 +188,7 @@ private:
 /// function for DECIMAL64/DECIMAL128 inputs. Kernels MUST mirror the DOUBLE-overload impl in
 /// MathFunctions.h exactly (incl. NaN/Inf at domain boundaries). In particular `cot` uses
 /// `1 / std::tan(x)` (matching CotFunction::call), and degrees/radians use the same
-/// `x*(180/π)` / `x*(π/180)` as Degrees/RadiansFunction. Captureless lambdas disambiguate the
+/// `x*180/π` / `x*(π/180)` as Degrees/RadiansFunction. Captureless lambdas disambiguate the
 /// overloaded std:: math functions and decay to plain function pointers.
 inline const std::unordered_map<std::string, UnaryDoubleMathOp> &DecimalMathFunctionTable()
 {
@@ -203,7 +203,7 @@ inline const std::unordered_map<std::string, UnaryDoubleMathOp> &DecimalMathFunc
         {"tan",     [](double x) { return std::tan(x); }},
         {"tanh",    [](double x) { return std::tanh(x); }},
         {"cot",     [](double x) { return 1.0 / std::tan(x); }},
-        {"degrees", [](double x) { return x * (180.0 / M_PI); }},
+        {"degrees", [](double x) { return x * 180.0 / M_PI; }},
         {"radians", [](double x) { return x * (M_PI / 180.0); }},
     };
     return table;

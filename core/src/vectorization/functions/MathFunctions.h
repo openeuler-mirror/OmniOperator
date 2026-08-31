@@ -291,7 +291,8 @@ namespace omniruntime::vectorization {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput &result, const TInput &a)
         {
-            result = a * (180.0 / M_PI);
+            // Match Java Math.toDegrees: angrad * 180.0 / PI (not a * (180/PI)).
+            result = a * 180.0 / M_PI;
             return Status::OK();
         }
     };
