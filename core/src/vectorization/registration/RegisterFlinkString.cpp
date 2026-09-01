@@ -37,5 +37,42 @@ void RegisterFlinkStringFunctions(const std::string &prefix)
         prefix + "flink_substr", {OMNI_CHAR, OMNI_INT}, OMNI_VARCHAR);
     RegisterFunction<FlinkSubstrFunction, std::string, std::string_view, int32_t, int32_t>(
         prefix + "flink_substr", {OMNI_CHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
+
+    // Flink LPAD (SqlFunctionUtils.lpad): a negative length or empty pad string
+    // yields NULL, where Spark's "lpad" yields an empty string.
+    RegisterFunction<FlinkLPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "flink_lpad", {OMNI_VARCHAR, OMNI_LONG, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkLPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "flink_lpad", {OMNI_VARCHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkLPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "flink_lpad", {OMNI_CHAR, OMNI_LONG, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkLPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "flink_lpad", {OMNI_CHAR, OMNI_INT, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkLPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "flink_lpad", {OMNI_VARCHAR, OMNI_LONG, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkLPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "flink_lpad", {OMNI_VARCHAR, OMNI_INT, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkLPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "flink_lpad", {OMNI_CHAR, OMNI_LONG, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkLPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "flink_lpad", {OMNI_CHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR);
+
+    // Flink RPAD (SqlFunctionUtils.rpad): same NULL boundaries as flink_lpad.
+    RegisterFunction<FlinkRPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "flink_rpad", {OMNI_VARCHAR, OMNI_LONG, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkRPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "flink_rpad", {OMNI_VARCHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkRPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "flink_rpad", {OMNI_CHAR, OMNI_LONG, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkRPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "flink_rpad", {OMNI_CHAR, OMNI_INT, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkRPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "flink_rpad", {OMNI_VARCHAR, OMNI_LONG, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkRPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "flink_rpad", {OMNI_VARCHAR, OMNI_INT, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkRPadFunction, std::string, std::string_view, int64_t, std::string_view>(
+        prefix + "flink_rpad", {OMNI_CHAR, OMNI_LONG, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<FlinkRPadFunction, std::string, std::string_view, int32_t, std::string_view>(
+        prefix + "flink_rpad", {OMNI_CHAR, OMNI_INT, OMNI_VARCHAR}, OMNI_VARCHAR);
 }
 }
