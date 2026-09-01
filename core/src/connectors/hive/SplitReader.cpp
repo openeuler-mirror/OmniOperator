@@ -15,6 +15,8 @@
 
 #include <string>
 
+#include <nlohmann/json.hpp>
+
 namespace omniruntime::connector::hive {
 
 bool SplitReader::partitionValuePassesFilter(
@@ -125,6 +127,24 @@ bool SplitReader::partitionKeysPassFilters()
     return true;
 }
 
+namespace {
+
+std::string BuildTextEnhancementJson(
+    const std::string& enhancementJson,
+    const std::unordered_map<std::string, std::string>& customSplitInfo)
+{
+    const std::string jsonStr = enhancementJson.empty() ? "{}" : enhancementJson;
+    auto json = nlohmann::json::parse(jsonStr);
+    for (const auto& [key, value] : customSplitInfo) {
+        if (key.rfind("text.", 0) == 0) {
+            json[key] = value;
+        }
+    }
+    return json.dump();
+}
+
+} // namespace
+
 SplitReader::SplitReader(
     const std::shared_ptr<const hive::HiveConnectorSplit> &hiveSplit,
     const std::shared_ptr<const HiveTableHandle> &hiveTableHandle,
@@ -227,7 +247,11 @@ uint64_t SplitReader::next(vec::VectorBatch **output_, int *omniTypeId, uint64_t
 
 void SplitReader::createReader()
 {
-    baseReaderOpts_->ParseEnhanceJson(hiveTableHandle_->GetEnhancementJson(), hiveSplit_->fileFormat);
+    auto enhancementJson = hiveTableHandle_->GetEnhancementJson();
+    if (hiveSplit_->fileFormat == codegen::FileFormat::TEXT) {
+        enhancementJson = BuildTextEnhancementJson(enhancementJson, hiveSplit_->customSplitInfo);
+    }
+    baseReaderOpts_->ParseEnhanceJson(enhancementJson, hiveSplit_->fileFormat);
     configureReaderOptions(hiveConfig_, hiveSplit_, baseReaderOpts_);
     baseReader_ = omniruntime::reader::GetReaderFactory(hiveSplit_->fileFormat)
         ->CreateReader(baseReaderOpts_);
