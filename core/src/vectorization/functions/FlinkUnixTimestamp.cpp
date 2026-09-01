@@ -143,17 +143,20 @@ protected:
 
         const bool hasFormatArg = (formatArg != nullptr);
         const bool formatIsConst = hasFormatArg && (formatArg->GetEncoding() == OMNI_ENCODING_CONST);
+        // LEGACY: trailing whitespace OK. allowUnconsumedSuffix: Flink SimpleDateFormat
+        // ignores leftover characters after a successful prefix parse (u15 r_def).
         constexpr bool isLegacy = true;
+        constexpr bool allowUnconsumedSuffix = true;
 
         // Pre-compile const/default format once.
         datetime::CompiledParseFormat constCompiledFormat;
         if (hasFormatArg) {
             if (formatIsConst && !formatArg->IsNull(0)) {
                 std::string_view formatView = VectorHelper::GetStringValueFromVector(formatArg, 0);
-                constCompiledFormat = datetime::CompileParseFormat(formatView, isLegacy);
+                constCompiledFormat = datetime::CompileParseFormat(formatView, isLegacy, allowUnconsumedSuffix);
             }
         } else {
-            constCompiledFormat = datetime::CompileParseFormat(kDefaultFormat, isLegacy);
+            constCompiledFormat = datetime::CompileParseFormat(kDefaultFormat, isLegacy, allowUnconsumedSuffix);
         }
 
         // Resolve the session timezone from the trailing tz arg (Plan A).
@@ -182,7 +185,7 @@ protected:
             const datetime::CompiledParseFormat *compiledFormat = &constCompiledFormat;
             if (hasFormatArg && !formatIsConst) {
                 std::string_view formatView = VectorHelper::GetStringValueFromVector(formatArg, row);
-                rowCompiledFormat = datetime::CompileParseFormat(formatView, isLegacy);
+                rowCompiledFormat = datetime::CompileParseFormat(formatView, isLegacy, allowUnconsumedSuffix);
                 compiledFormat = &rowCompiledFormat;
             }
 

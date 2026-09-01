@@ -27,10 +27,12 @@ struct CompiledParseFormat {
     ParseFormatKind parseFormatKind{ParseFormatKind::GENERAL};
     bool hasFractional{false};
     bool allowTrailingWhitespace{true};
+    bool allowUnconsumedSuffix{false};
     bool emptySourceFormat{false};
 };
 
-CompiledParseFormat CompileParseFormat(std::string_view jodaFormat, bool allowTrailingWhitespace);
+CompiledParseFormat CompileParseFormat(std::string_view jodaFormat, bool allowTrailingWhitespace,
+    bool allowUnconsumedSuffix = false);
 
 bool ParseDateTimeString(
     std::string_view input,

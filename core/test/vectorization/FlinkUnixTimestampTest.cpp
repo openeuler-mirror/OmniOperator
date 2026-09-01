@@ -168,6 +168,28 @@ TEST(FlinkUnixTimestampTest, WithTzOneArgUtc) {
     delete result;
 }
 
+TEST(FlinkUnixTimestampTest, WithTzOneArgIgnoresUnconsumedMillisSuffix) {
+    // Flink SimpleDateFormat.parse("1970-01-01 00:00:00.001") with default
+    // pattern "yyyy-MM-dd HH:mm:ss" succeeds and ignores leftover ".001".
+    // Too-short input (date only) still fails -> Long.MIN_VALUE.
+    std::vector<std::string> inputs = {
+        "1970-01-01 00:00:00.001",
+        "1970-01-01 00:00:00 extra",
+        "2000-01-01"
+    };
+    std::vector<int64_t> expected = {0, 0, kLongMinValue};
+
+    BaseVector* inputVec = FlinkUnixTimestampTestHelper::CreateStringVector(inputs);
+    BaseVector* tzVec = FlinkUnixTimestampTestHelper::CreateConstStringVector("UTC", inputs.size());
+    std::stack<BaseVector*> args;
+    args.push(inputVec);
+    args.push(tzVec);
+    BaseVector* result = nullptr;
+    FlinkUnixTimestampTestHelper::ExecuteWithTz({OMNI_VARCHAR, OMNI_VARCHAR}, args, result, inputs.size());
+    FlinkUnixTimestampTestHelper::ValidateResult(result, expected, inputs.size());
+    delete result;
+}
+
 TEST(FlinkUnixTimestampTest, WithTzOneArgShanghai) {
     // session tz = "Asia/Shanghai" (+8):
     //   '1970-01-01 08:00:00' Shanghai = 00:00:00 UTC = 0.

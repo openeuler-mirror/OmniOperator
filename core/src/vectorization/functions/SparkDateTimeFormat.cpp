@@ -112,12 +112,20 @@ bool ParseDigits(std::string_view input, size_t offset, size_t length, int32_t &
 bool HasValidStandardSuffix(
     std::string_view input,
     size_t standardLength,
-    bool allowTrailingWhitespace)
+    bool allowTrailingWhitespace,
+    bool allowUnconsumedSuffix)
 {
     if (input.size() == standardLength) {
         return true;
     }
-    if (!allowTrailingWhitespace || input.size() < standardLength) {
+    if (input.size() < standardLength) {
+        return false;
+    }
+    // Flink SimpleDateFormat: leftover after a successful prefix parse is ignored.
+    if (allowUnconsumedSuffix) {
+        return true;
+    }
+    if (!allowTrailingWhitespace) {
         return false;
     }
     for (size_t i = standardLength; i < input.size(); ++i) {
@@ -141,7 +149,8 @@ bool TryParseStandardDateTime(
     }
 
     const size_t standardLength = hasTime ? kYmdHmsLength : kYmdLength;
-    if (!HasValidStandardSuffix(input, standardLength, format.allowTrailingWhitespace) ||
+    if (!HasValidStandardSuffix(input, standardLength, format.allowTrailingWhitespace,
+            format.allowUnconsumedSuffix) ||
         input[4] != '-' || input[7] != '-' ||
         (hasTime && (input[10] != ' ' || input[13] != ':' || input[16] != ':'))) {
         return false;
@@ -461,7 +470,8 @@ int32_t FormatYmdHms(const std::tm &timeInfo, char *output, size_t capacity)
 
 } // namespace
 
-CompiledParseFormat CompileParseFormat(std::string_view jodaFormat, bool allowTrailingWhitespace)
+CompiledParseFormat CompileParseFormat(std::string_view jodaFormat, bool allowTrailingWhitespace,
+    bool allowUnconsumedSuffix)
 {
     ParseFormatKind parseFormatKind = ParseFormatKind::GENERAL;
     if (jodaFormat == "yyyy-MM-dd") {
@@ -474,6 +484,7 @@ CompiledParseFormat CompileParseFormat(std::string_view jodaFormat, bool allowTr
         parseFormatKind,
         jodaFormat.find('S') != std::string_view::npos,
         allowTrailingWhitespace,
+        allowUnconsumedSuffix,
         jodaFormat.empty()};
 }
 
@@ -508,13 +519,15 @@ bool ParseDateTimeString(
         return false;
     }
 
-    if (format.allowTrailingWhitespace) {
-        while (*parseEnd == ' ') {
-            ++parseEnd;
+    if (!format.allowUnconsumedSuffix) {
+        if (format.allowTrailingWhitespace) {
+            while (*parseEnd == ' ') {
+                ++parseEnd;
+            }
         }
-    }
-    if (*parseEnd != '\0') {
-        return false;
+        if (*parseEnd != '\0') {
+            return false;
+        }
     }
 
     const int64_t seconds = Timestamp::calendarUtcToEpoch(timeInfo);
