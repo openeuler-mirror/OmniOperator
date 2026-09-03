@@ -597,7 +597,53 @@ void ExprEval::Visit(const FuncExpr &e)
     inputValues_.push(result);
 }
 
-void ExprEval::Visit(const SwitchExpr &e) {}
+// 上游 ExprEval 已实现 SwitchExpr 的向量化求值；此前为空实现时，含 CASE 的表达式
+// 在 useCodegen=false 回退向量化路径会造成 inputValues_ 栈失衡 → GetResult 段错误。
+// 本实现逐行取值（移植自 upstream，与 VectorHelper 现有 API 一致）。
+void ExprEval::Visit(const SwitchExpr &e)
+{
+    std::vector<std::pair<BaseVector *, BaseVector *>> whenVecs;
+    whenVecs.reserve(e.whenClause.size());
+    for (const auto &when : e.whenClause) {
+        when.first->Accept(*this);
+        auto *condVec = inputValues_.top();
+        inputValues_.pop();
+        when.second->Accept(*this);
+        auto *resultVec = inputValues_.top();
+        inputValues_.pop();
+        whenVecs.emplace_back(condVec, resultVec);
+    }
+    BaseVector *elseVec = nullptr;
+    if (e.falseExpr != nullptr) {
+        e.falseExpr->Accept(*this);
+        elseVec = inputValues_.top();
+        inputValues_.pop();
+    }
+
+    auto *result = VectorHelper::CreateFlatVector(e.dataType->GetId(), rowSize);
+    for (int32_t row = 0; row < rowSize; ++row) {
+        BaseVector *selected = elseVec;
+        for (const auto &when : whenVecs) {
+            if (!when.first->IsNull(row) &&
+                VectorHelper::GetValueFromVector<bool>(when.first, row)) {
+                selected = when.second;
+                break;
+            }
+        }
+        if (selected == nullptr || selected->IsNull(row)) {
+            VectorHelper::SetNull(result, row);
+        } else {
+            VectorHelper::CopyValue(selected, row, result, row);
+        }
+    }
+
+    for (auto &when : whenVecs) {
+        delete when.first;
+        delete when.second;
+    }
+    delete elseVec;
+    inputValues_.push(result);
+}
 
 void ExprEval::Visit(const ParamRefExpr &e) {
     int32_t paramIdx = paramNameToIdxMap[e.paramName_];
