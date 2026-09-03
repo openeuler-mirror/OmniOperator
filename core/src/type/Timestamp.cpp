@@ -176,7 +176,8 @@ void Timestamp::toGMT(const tz::TimeZone &zone)
     std::chrono::seconds sysSeconds;
 
     try {
-        sysSeconds = zone.to_sys(std::chrono::seconds(seconds_));
+        sysSeconds = zone.to_sys(
+            std::chrono::seconds(seconds_), tz::TimeZone::TChoose::kEarliest);
     } catch (const std::invalid_argument &e) {
         // Invalid argument means we hit a conversion not supported by
         // external/date. Need to throw a RuntimeError so that try() statements do

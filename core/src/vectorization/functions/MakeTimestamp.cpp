@@ -193,7 +193,8 @@ public:
                 const int64_t localSec = daysSinceEpoch * kSecsPerDay + microsSinceMidnight / kMicrosPerSec;
                 const int64_t microsFraction = microsSinceMidnight % kMicrosPerSec;
                 try {
-                    const auto sysSec = sessionTz->to_sys(std::chrono::seconds(localSec));
+                    const auto sysSec = sessionTz->to_sys(
+                        std::chrono::seconds(localSec), tz::TimeZone::TChoose::kEarliest);
                     resultRaw[i] = static_cast<int64_t>(sysSec.count()) * kMicrosPerSec + microsFraction;
                 } catch (...) {
                     result->SetNull(i);
