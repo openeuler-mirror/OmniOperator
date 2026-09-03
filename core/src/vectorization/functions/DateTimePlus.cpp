@@ -19,6 +19,10 @@ void RegisterDateTimePlusFunctions(const std::string &prefix)
     // DATE + months -> DATE
     RegisterFunction<DateTimePlusYearMonthFunction, int32_t, int32_t, int32_t>(
         prefix + "datetime_plus_year_month", {OMNI_DATE32, OMNI_INT}, OMNI_DATE32);
+    // 上游 Adaptor（87f8d00）把 DATE 列映射为 OMNI_INT。与 DateArithmetic.cpp 的
+    // {OMNI_DATE32|OMNI_INT} 双注册模式一致，INT 约定的 DATE 同样接受（同为 int32 epoch 天）。
+    RegisterFunction<DateTimePlusYearMonthFunction, int32_t, int32_t, int32_t>(
+        prefix + "datetime_plus_year_month", {OMNI_INT, OMNI_INT}, OMNI_INT);
     // TIMESTAMP(ms) + months -> TIMESTAMP(ms)
     RegisterFunction<DateTimePlusYearMonthFunction, int64_t, int64_t, int32_t>(
         prefix + "datetime_plus_year_month", {OMNI_LONG, OMNI_INT}, OMNI_LONG);
