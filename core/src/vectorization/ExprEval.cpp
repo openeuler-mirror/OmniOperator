@@ -7,6 +7,7 @@
 #include <string>
 #include "codegen/expr_evaluator.h"
 #include "type/data_type.h"
+#include "vectorization/functions/TryArithmetic.h"
 #include "vectorization/functions/Md5ConcatWsFusion.h"
 
 namespace omniruntime::vectorization {
@@ -14,6 +15,15 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::mem;
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
+
+BaseVector *PreserveDecimalType(BaseVector *source, BaseVector *projected)
+{
+    if (source->GetDataType() != nullptr &&
+        (source->GetTypeId() == OMNI_DECIMAL64 || source->GetTypeId() == OMNI_DECIMAL128)) {
+        VectorHelper::SetVectorDataType(projected, source->GetDataType().get());
+    }
+    return projected;
+}
 
 template <typename T>
 BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
@@ -25,12 +35,13 @@ BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
         if (constVec->HasNull() && constVec->IsNull(0)) {
             newConst->SetNulls(0, true, numSelectedRows);
         }
-        return newConst;
+        return PreserveDecimalType(colVec, newConst);
     }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
-        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
+        return PreserveDecimalType(
+            colVec, reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows));
     }
-    return reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows);
+    return PreserveDecimalType(colVec, reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows));
 }
 
 template <typename T>
@@ -43,13 +54,15 @@ BaseVector *ColumnProjectionCopyPositionsHelper(BaseVector *colVec, int32_t *sel
         if (constVec->HasNull() && constVec->IsNull(0)) {
             newConst->SetNulls(0, true, numSelectedRows);
         }
-        return newConst;
+        return PreserveDecimalType(colVec, newConst);
     }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
-        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->CopyPositions(selectedRows, 0,
-            numSelectedRows);
+        return PreserveDecimalType(colVec,
+            reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->CopyPositions(
+                selectedRows, 0, numSelectedRows));
     }
-    return reinterpret_cast<Vector<T> *>(colVec)->CopyPositions(selectedRows, 0, numSelectedRows);
+    return PreserveDecimalType(
+        colVec, reinterpret_cast<Vector<T> *>(colVec)->CopyPositions(selectedRows, 0, numSelectedRows));
 }
 
 template <typename T>
@@ -271,6 +284,9 @@ void ExprEval::Visit(const LiteralExpr &e)
         if (constVec != nullptr && e.isNull) {
             constVec->SetNulls(0, true, constVec->GetSize());
         }
+        if (constVec != nullptr && (typeId == OMNI_DECIMAL64 || typeId == OMNI_DECIMAL128)) {
+            VectorHelper::SetVectorDataType(constVec, e.dataType.get());
+        }
         inputValues_.push(constVec);
         return;
     }
@@ -462,12 +478,21 @@ void ExprEval::Visit(const BinaryExpr &e)
 {
     e.left->Accept(*this);
     e.right->Accept(*this);
-    if (e.vectorFunction == nullptr) {
+
+    auto vectorFunction = e.vectorFunction;
+    if (e.arithmeticOp != ArithmeticOp::INVALID && e.evalMode != ArithmeticEvalMode::LEGACY) {
+        if (e.checkedArithmeticVectorFunction == nullptr) {
+            e.checkedArithmeticVectorFunction = CreateBinaryArithmeticFunction(
+                e.arithmeticOp, e.evalMode, e.left->dataType, e.right->dataType, e.dataType);
+        }
+        vectorFunction = e.checkedArithmeticVectorFunction;
+    }
+    if (vectorFunction == nullptr) {
         OMNI_THROW("Vectorization Error:", "Vector function not found for binary expression");
     }
 
     BaseVector *result = nullptr;
-    e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
+    vectorFunction->Apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }
 
@@ -485,6 +510,24 @@ void ExprEval::Visit(const InExpr &e)
     dynamic_cast<ArrayVector *>(searchArray.get())->SetValue(0, vector.get());
     inputValues_.push(searchArray.get());
     auto temp = inputValues_;
+    e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
+    inputValues_.push(result);
+}
+
+void ExprEval::Visit(const InSubqueryExpr &e)
+{
+    // Evaluate the probe value
+    e.value->Accept(*this);
+
+    // Evaluate the subquery result
+    e.subqueryResult->Accept(*this);
+
+    // Get the vector function for in_subquery
+    if (e.vectorFunction == nullptr) {
+        OMNI_THROW("Vectorization Error:", "Vector function not found for in_subquery expression");
+    }
+
+    BaseVector *result = nullptr;
     e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }
@@ -567,7 +610,8 @@ void ExprEval::Visit(const FuncExpr &e)
     }
     BaseVector *result = nullptr;
     auto resolved = e.vectorFunction;
-    bool needQueryConfig = (e.funcName == "spark_partition_id" || e.funcName == "uuid" || e.funcName == "rand");
+    bool needQueryConfig = (e.funcName == "spark_partition_id" || e.funcName == "uuid" || e.funcName == "rand"
+        || e.funcName == "flink_localtime" || e.funcName == "flink_localtimestamp" || e.funcName == "flink_current_date");
     if (resolved == nullptr || needQueryConfig) {
         std::vector<DataTypeId> argTypes(e.arguments.size());
         std::transform(e.arguments.begin(), e.arguments.end(), argTypes.begin(),
@@ -601,7 +645,50 @@ void ExprEval::Visit(const FuncExpr &e)
     inputValues_.push(result);
 }
 
-void ExprEval::Visit(const SwitchExpr &e) {}
+void ExprEval::Visit(const SwitchExpr &e)
+{
+    std::vector<std::pair<BaseVector *, BaseVector *>> whenVecs;
+    whenVecs.reserve(e.whenClause.size());
+    for (const auto &when : e.whenClause) {
+        when.first->Accept(*this);
+        auto *condVec = inputValues_.top();
+        inputValues_.pop();
+        when.second->Accept(*this);
+        auto *resultVec = inputValues_.top();
+        inputValues_.pop();
+        whenVecs.emplace_back(condVec, resultVec);
+    }
+    BaseVector *elseVec = nullptr;
+    if (e.falseExpr != nullptr) {
+        e.falseExpr->Accept(*this);
+        elseVec = inputValues_.top();
+        inputValues_.pop();
+    }
+
+    auto *result = VectorHelper::CreateFlatVector(e.dataType->GetId(), rowSize);
+    for (int32_t row = 0; row < rowSize; ++row) {
+        BaseVector *selected = elseVec;
+        for (const auto &when : whenVecs) {
+            if (!when.first->IsNull(row) &&
+                VectorHelper::GetValueFromVector<bool>(when.first, row)) {
+                selected = when.second;
+                break;
+            }
+        }
+        if (selected == nullptr || selected->IsNull(row)) {
+            VectorHelper::SetNull(result, row);
+        } else {
+            VectorHelper::CopyValue(selected, row, result, row);
+        }
+    }
+
+    for (auto &when : whenVecs) {
+        delete when.first;
+        delete when.second;
+    }
+    delete elseVec;
+    inputValues_.push(result);
+}
 
 void ExprEval::Visit(const ParamRefExpr &e) {
     int32_t paramIdx = paramNameToIdxMap[e.paramName_];
