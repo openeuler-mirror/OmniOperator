@@ -40,6 +40,12 @@ inline int32_t Utf8FirstCodepoint(const char* data, size_t size, int& byteLen) {
     }
     unsigned char u1 = u[1];
     if (u0 >= 192 && u0 <= 223) {
+        // 0xC0/0xC1 are always invalid lead bytes (overlong encoding of <= 0x7F).
+        // Continuation byte must be 10xxxxxx (0x80..0xBF).
+        if (u0 < 0xC2 || (u1 & 0xC0) != 0x80) {
+            byteLen = 1;
+            return -1;
+        }
         byteLen = 2;
         return (u0 - 192) * 64 + (u1 - 128);
     }
@@ -53,6 +59,12 @@ inline int32_t Utf8FirstCodepoint(const char* data, size_t size, int& byteLen) {
     }
     unsigned char u2 = u[2];
     if (u0 >= 224 && u0 <= 239) {
+        // Continuation bytes must be 10xxxxxx; reject overlong 3-byte (< U+0800).
+        if ((u1 & 0xC0) != 0x80 || (u2 & 0xC0) != 0x80 ||
+            (u0 == 0xe0 && u1 < 0xa0)) {
+            byteLen = 1;
+            return -1;
+        }
         byteLen = 3;
         return (u0 - 224) * 4096 + (u1 - 128) * 64 + (u2 - 128);
     }
@@ -62,6 +74,13 @@ inline int32_t Utf8FirstCodepoint(const char* data, size_t size, int& byteLen) {
     }
     unsigned char u3 = u[3];
     if (u0 >= 240 && u0 <= 247) {
+        // Continuation bytes must be 10xxxxxx; reject overlong (0xf0,u1<0x90)
+        // and out-of-range > U+10FFFF (0xf4,u1>0x8f).
+        if ((u1 & 0xC0) != 0x80 || (u2 & 0xC0) != 0x80 || (u3 & 0xC0) != 0x80 ||
+            (u0 == 0xf0 && u1 < 0x90) || (u0 == 0xf4 && u1 > 0x8f)) {
+            byteLen = 1;
+            return -1;
+        }
         byteLen = 4;
         return (u0 - 240) * 262144 + (u1 - 128) * 4096 + (u2 - 128) * 64 + (u3 - 128);
     }
@@ -1251,24 +1270,6 @@ struct OverlayFunction {
     }
 };
 
-namespace detail {
-/// Helper function to convert a hex character to its numeric value.
-/// Returns -1 for invalid hex characters.
-/// Supports: '0'-'9' -> 0-9, 'A'-'F' -> 10-15, 'a'-'f' -> 10-15
-ALWAYS_INLINE int8_t fromHex(char c) {
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    }
-    if (c >= 'A' && c <= 'F') {
-        return 10 + c - 'A';
-    }
-    if (c >= 'a' && c <= 'f') {
-        return 10 + c - 'a';
-    }
-    return -1;
-}
-} // namespace detail
-
 /// unhex function
 /// unhex(string) -> varbinary
 /// Converts a hexadecimal string to binary data.
@@ -1297,7 +1298,7 @@ struct UnhexFunction {
         size_t i = 0;
         // Handle odd-length input: first character is a single hex digit
         if ((input.size() & 0x01) != 0) {
-            const auto v = detail::fromHex(inputBuffer[0]);
+            const auto v = fromHex(inputBuffer[0]);
             if (v == -1) {
                 return false;  // Invalid hex character, return NULL
             }
@@ -1307,8 +1308,8 @@ struct UnhexFunction {
 
         // Process pairs of hex characters
         while (i < input.size()) {
-            const auto first = detail::fromHex(inputBuffer[i]);
-            const auto second = detail::fromHex(inputBuffer[i + 1]);
+            const auto first = fromHex(inputBuffer[i]);
+            const auto second = fromHex(inputBuffer[i + 1]);
             if (first == -1 || second == -1) {
                 return false;  // Invalid hex character, return NULL
             }
@@ -1325,6 +1326,24 @@ struct UnhexFunction {
             return false;  // NULL input returns NULL
         }
         return call(result, *input);
+    }
+
+private:
+    /// Convert a hex character to its numeric value.
+    /// Returns -1 for invalid hex characters.
+    /// Supports: '0'-'9' -> 0-9, 'A'-'F' -> 10-15, 'a'-'f' -> 10-15
+    ALWAYS_INLINE static int8_t fromHex(char c)
+    {
+        if (c >= '0' && c <= '9') {
+            return c - '0';
+        }
+        if (c >= 'A' && c <= 'F') {
+            return 10 + c - 'A';
+        }
+        if (c >= 'a' && c <= 'f') {
+            return 10 + c - 'a';
+        }
+        return -1;
     }
 };
 
@@ -2079,6 +2098,416 @@ private:
         int64_t byteCount = stringImpl::cappedByteLengthUnicode(
             input.data() + startByte, static_cast<int64_t>(input.size()) - startByte, charCount);
         result.assign(input.data() + startByte, static_cast<size_t>(byteCount));
+        return true;
+    }
+};
+
+// ============================================================================
+// ENCODE(string, charset) -> varbinary
+// Encodes a UTF-8 string into binary data using the specified character set.
+// Supported charsets: US-ASCII, ISO-8859-1, UTF-8, UTF-16BE, UTF-16LE, UTF-16.
+// Returns NULL if either argument is NULL, charset is unsupported, or a character
+// cannot be represented in the target charset.
+// ============================================================================
+
+namespace encode_detail {
+
+inline bool EqualsIgnoreCase(const std::string_view& a, const std::string_view& b)
+{
+    if (a.size() != b.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (std::tolower(static_cast<unsigned char>(a[i])) !=
+            std::tolower(static_cast<unsigned char>(b[i]))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+inline bool EncodeAscii(std::string& result, const std::string_view& input)
+{
+    size_t pos = 0;
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        if (cp > 0x7F) {
+            return false;
+        }
+        result.push_back(static_cast<char>(cp));
+        pos += byteLen;
+    }
+    return true;
+}
+
+inline bool EncodeIso88591(std::string& result, const std::string_view& input)
+{
+    size_t pos = 0;
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        if (cp > 0xFF) {
+            return false;
+        }
+        result.push_back(static_cast<char>(cp));
+        pos += byteLen;
+    }
+    return true;
+}
+
+inline bool EncodeUtf8(std::string& result, const std::string_view& input)
+{
+    size_t pos = 0;
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        pos += byteLen;
+    }
+    result.assign(input.data(), input.size());
+    return true;
+}
+
+inline bool EncodeUtf16BE(std::string& result, const std::string_view& input)
+{
+    size_t pos = 0;
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        if (cp <= 0xFFFF) {
+            result.push_back(static_cast<char>((cp >> 8) & 0xFF));
+            result.push_back(static_cast<char>(cp & 0xFF));
+        } else {
+            int32_t adjusted = cp - 0x10000;
+            uint16_t high = static_cast<uint16_t>(0xD800 + (adjusted >> 10));
+            uint16_t low = static_cast<uint16_t>(0xDC00 + (adjusted & 0x3FF));
+            result.push_back(static_cast<char>((high >> 8) & 0xFF));
+            result.push_back(static_cast<char>(high & 0xFF));
+            result.push_back(static_cast<char>((low >> 8) & 0xFF));
+            result.push_back(static_cast<char>(low & 0xFF));
+        }
+        pos += byteLen;
+    }
+    return true;
+}
+
+inline bool EncodeUtf16LE(std::string& result, const std::string_view& input)
+{
+    size_t pos = 0;
+    while (pos < input.size()) {
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(input.data() + pos, input.size() - pos, byteLen);
+        if (cp < 0) {
+            return false;
+        }
+        if (cp <= 0xFFFF) {
+            result.push_back(static_cast<char>(cp & 0xFF));
+            result.push_back(static_cast<char>((cp >> 8) & 0xFF));
+        } else {
+            int32_t adjusted = cp - 0x10000;
+            uint16_t high = static_cast<uint16_t>(0xD800 + (adjusted >> 10));
+            uint16_t low = static_cast<uint16_t>(0xDC00 + (adjusted & 0x3FF));
+            result.push_back(static_cast<char>(high & 0xFF));
+            result.push_back(static_cast<char>((high >> 8) & 0xFF));
+            result.push_back(static_cast<char>(low & 0xFF));
+            result.push_back(static_cast<char>((low >> 8) & 0xFF));
+        }
+        pos += byteLen;
+    }
+    return true;
+}
+
+inline bool EncodeUtf16(std::string& result, const std::string_view& input)
+{
+    // Write BOM (U+FEFF) in big-endian
+    result.push_back(static_cast<char>(0xFE));
+    result.push_back(static_cast<char>(0xFF));
+    return EncodeUtf16BE(result, input);
+}
+
+} // namespace encode_detail
+
+template <typename T>
+struct EncodeFunction {
+    ALWAYS_INLINE bool call(std::string& result, const std::string_view& input,
+                            const std::string_view& charset)
+    {
+        if (encode_detail::EqualsIgnoreCase(charset, "US-ASCII") ||
+            encode_detail::EqualsIgnoreCase(charset, "ASCII")) {
+            return encode_detail::EncodeAscii(result, input);
+        }
+        if (encode_detail::EqualsIgnoreCase(charset, "ISO-8859-1") ||
+            encode_detail::EqualsIgnoreCase(charset, "LATIN1")) {
+            return encode_detail::EncodeIso88591(result, input);
+        }
+        if (encode_detail::EqualsIgnoreCase(charset, "UTF-8")) {
+            return encode_detail::EncodeUtf8(result, input);
+        }
+        if (encode_detail::EqualsIgnoreCase(charset, "UTF-16BE")) {
+            return encode_detail::EncodeUtf16BE(result, input);
+        }
+        if (encode_detail::EqualsIgnoreCase(charset, "UTF-16LE")) {
+            return encode_detail::EncodeUtf16LE(result, input);
+        }
+        if (encode_detail::EqualsIgnoreCase(charset, "UTF-16")) {
+            return encode_detail::EncodeUtf16(result, input);
+        }
+        return false;
+    }
+};
+
+// ============================================================================
+// DECODE(binary, charset) -> varchar
+// Decodes binary data using the specified character set into a UTF-8 string.
+// Supported charsets: US-ASCII, ISO-8859-1, UTF-8, UTF-16BE, UTF-16LE, UTF-16.
+// Returns NULL if either argument is NULL, charset is unsupported, or data is
+// invalid for the specified charset.
+// ============================================================================
+
+namespace decode_detail {
+
+inline bool EqualsIgnoreCase(const std::string_view& a, const std::string_view& b)
+{
+    if (a.size() != b.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (std::tolower(static_cast<unsigned char>(a[i])) !=
+            std::tolower(static_cast<unsigned char>(b[i]))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+inline bool DecodeAscii(std::string& result, const std::string_view& binary)
+{
+    for (unsigned char c : binary) {
+        if (c > 0x7F) {
+            return false;
+        }
+    }
+    result.assign(binary.data(), binary.size());
+    return true;
+}
+
+inline bool DecodeIso88591(std::string& result, const std::string_view& binary)
+{
+    result.reserve(binary.size());
+    for (unsigned char c : binary) {
+        AppendUtf8Codepoint(result, c);
+    }
+    return true;
+}
+
+inline bool ValidateUtf8(const std::string_view& data)
+{
+    size_t i = 0;
+    while (i < data.size()) {
+        unsigned char c = static_cast<unsigned char>(data[i]);
+        int expectedLen;
+        unsigned int minCp;
+        if (c <= 0x7F) {
+            ++i;
+            continue;
+        } else if ((c & 0xE0) == 0xC0) {
+            expectedLen = 2;
+            minCp = 0x80;
+        } else if ((c & 0xF0) == 0xE0) {
+            expectedLen = 3;
+            minCp = 0x800;
+        } else if ((c & 0xF8) == 0xF0) {
+            expectedLen = 4;
+            minCp = 0x10000;
+        } else {
+            return false;
+        }
+        if (i + expectedLen > data.size()) {
+            return false;
+        }
+        for (int j = 1; j < expectedLen; ++j) {
+            if ((static_cast<unsigned char>(data[i + j]) & 0xC0) != 0x80) {
+                return false;
+            }
+        }
+        int byteLen = 0;
+        int32_t cp = Utf8FirstCodepoint(data.data() + i, data.size() - i, byteLen);
+        if (cp < 0 || static_cast<unsigned int>(cp) < minCp) {
+            return false;
+        }
+        if (cp >= 0xD800 && cp <= 0xDFFF) {
+            return false;
+        }
+        if (cp > 0x10FFFF) {
+            return false;
+        }
+        i += expectedLen;
+    }
+    return true;
+}
+
+inline bool DecodeUtf8(std::string& result, const std::string_view& binary)
+{
+    if (!ValidateUtf8(binary)) {
+        return false;
+    }
+    result.assign(binary.data(), binary.size());
+    return true;
+}
+
+inline bool DecodeUtf16BE(std::string& result, const std::string_view& binary)
+{
+    if (binary.size() % 2 != 0) {
+        return false;
+    }
+    const auto* data = reinterpret_cast<const unsigned char*>(binary.data());
+    size_t numUnits = binary.size() / 2;
+    for (size_t i = 0; i < numUnits; ++i) {
+        uint16_t unit = (static_cast<uint16_t>(data[i * 2]) << 8) |
+                         static_cast<uint16_t>(data[i * 2 + 1]);
+        if (unit >= 0xD800 && unit <= 0xDBFF) {
+            ++i;
+            if (i >= numUnits) {
+                return false;
+            }
+            uint16_t low = (static_cast<uint16_t>(data[i * 2]) << 8) |
+                            static_cast<uint16_t>(data[i * 2 + 1]);
+            if (low < 0xDC00 || low > 0xDFFF) {
+                return false;
+            }
+            int32_t cp = 0x10000 + ((static_cast<int32_t>(unit) - 0xD800) << 10) +
+                          (static_cast<int32_t>(low) - 0xDC00);
+            AppendUtf8Codepoint(result, cp);
+        } else if (unit >= 0xDC00 && unit <= 0xDFFF) {
+            return false;
+        } else {
+            AppendUtf8Codepoint(result, unit);
+        }
+    }
+    return true;
+}
+
+inline bool DecodeUtf16LE(std::string& result, const std::string_view& binary)
+{
+    if (binary.size() % 2 != 0) {
+        return false;
+    }
+    const auto* data = reinterpret_cast<const unsigned char*>(binary.data());
+    size_t numUnits = binary.size() / 2;
+    for (size_t i = 0; i < numUnits; ++i) {
+        uint16_t unit = static_cast<uint16_t>(data[i * 2]) |
+                        (static_cast<uint16_t>(data[i * 2 + 1]) << 8);
+        if (unit >= 0xD800 && unit <= 0xDBFF) {
+            ++i;
+            if (i >= numUnits) {
+                return false;
+            }
+            uint16_t low = static_cast<uint16_t>(data[i * 2]) |
+                           (static_cast<uint16_t>(data[i * 2 + 1]) << 8);
+            if (low < 0xDC00 || low > 0xDFFF) {
+                return false;
+            }
+            int32_t cp = 0x10000 + ((static_cast<int32_t>(unit) - 0xD800) << 10) +
+                          (static_cast<int32_t>(low) - 0xDC00);
+            AppendUtf8Codepoint(result, cp);
+        } else if (unit >= 0xDC00 && unit <= 0xDFFF) {
+            return false;
+        } else {
+            AppendUtf8Codepoint(result, unit);
+        }
+    }
+    return true;
+}
+
+inline bool DecodeUtf16(std::string& result, const std::string_view& binary)
+{
+    if (binary.size() < 2) {
+        if (binary.empty()) {
+            result.clear();
+            return true;
+        }
+        return false;
+    }
+    const auto* data = reinterpret_cast<const unsigned char*>(binary.data());
+    uint16_t first = (static_cast<uint16_t>(data[0]) << 8) | static_cast<uint16_t>(data[1]);
+    if (first == 0xFEFF) {
+        std::string_view payload = binary.substr(2);
+        return DecodeUtf16BE(result, payload);
+    }
+    if (first == 0xFFFE) {
+        std::string_view payload = binary.substr(2);
+        return DecodeUtf16LE(result, payload);
+    }
+    return DecodeUtf16BE(result, binary);
+}
+
+} // namespace decode_detail
+
+template <typename T>
+struct DecodeFunction {
+    ALWAYS_INLINE bool callNullable(std::string& result, const std::string_view* binary,
+                            const std::string_view* charset)
+    {
+        if (binary == nullptr || charset == nullptr) {
+            return false;
+        }
+        if (decode_detail::EqualsIgnoreCase(*charset, "US-ASCII") ||
+            decode_detail::EqualsIgnoreCase(*charset, "ASCII")) {
+            return decode_detail::DecodeAscii(result, *binary);
+        }
+        if (decode_detail::EqualsIgnoreCase(*charset, "ISO-8859-1") ||
+            decode_detail::EqualsIgnoreCase(*charset, "LATIN1")) {
+            return decode_detail::DecodeIso88591(result, *binary);
+        }
+        if (decode_detail::EqualsIgnoreCase(*charset, "UTF-8")) {
+            return decode_detail::DecodeUtf8(result, *binary);
+        }
+        if (decode_detail::EqualsIgnoreCase(*charset, "UTF-16BE")) {
+            return decode_detail::DecodeUtf16BE(result, *binary);
+        }
+        if (decode_detail::EqualsIgnoreCase(*charset, "UTF-16LE")) {
+            return decode_detail::DecodeUtf16LE(result, *binary);
+        }
+        if (decode_detail::EqualsIgnoreCase(*charset, "UTF-16")) {
+            return decode_detail::DecodeUtf16(result, *binary);
+        }
+        return false;
+    }
+};
+
+/// is_digit(string) -> bool
+/// Returns true if all characters in the string are digits ('0'-'9'), false otherwise.
+/// Empty string returns false. NULL input yields NULL output.
+template <typename T>
+struct IsDigitFunction {
+    ALWAYS_INLINE bool callNullable(bool &result, const std::string_view *str)
+    {
+        if (str == nullptr) {
+            return false;
+        }
+        if (str->empty()) {
+            result = false;
+            return true;
+        }
+        for (char c : *str) {
+            if (c < '0' || c > '9') {
+                result = false;
+                return true;
+            }
+        }
+        result = true;
         return true;
     }
 };

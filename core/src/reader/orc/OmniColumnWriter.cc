@@ -25,6 +25,8 @@
 #include "orc/Writer.hh"
 #include "OmniRLE.hh"
 #include "reader/common/RebaseDate.h"
+#include "type/Timestamp.h"
+#include "type/tz/TimeZoneMap.h"
 
 namespace omniruntime::writer {
 
@@ -212,7 +214,8 @@ namespace omniruntime::writer {
                 const orc::Type &type,
                 const orc::StreamsFactory &factory,
                 const orc::WriterOptions &options,
-                const common::JulianGregorianRebase *timestampRebase);
+                const common::JulianGregorianRebase *timestampRebase,
+                int64_t rawOffsetMicros = 0);
 
         virtual void add(omniruntime::vec::BaseVector *rowBatch,
                          omniruntime::vec::NullsBuffer *pNullsBuffer,
@@ -253,11 +256,12 @@ namespace omniruntime::writer {
             const orc::Type &type,
             const orc::StreamsFactory &factory,
             const orc::WriterOptions &options,
-            const common::JulianGregorianRebase *timestampRebase) :
+            const common::JulianGregorianRebase *timestampRebase,
+            int64_t rawOffsetMicros) :
             OmniColumnWriter(type, factory, options) {
         for (unsigned int i = 0; i < type.getSubtypeCount(); ++i) {
             const orc::Type &child = *type.getSubtype(i);
-            children.push_back(buildOmniWriter(child, factory, options, timestampRebase));
+            children.push_back(buildOmniWriter(child, factory, options, timestampRebase, rawOffsetMicros));
         }
 
         if (enableIndex) {
@@ -2372,7 +2376,8 @@ namespace omniruntime::writer {
                                   const orc::StreamsFactory &factory,
                                   const orc::WriterOptions &options,
                                   bool isInstantType,
-                                  const common::JulianGregorianRebase *timestampRebase);
+                                  const common::JulianGregorianRebase *timestampRebase,
+                                  int64_t rawOffsetMicros);
 
         virtual void add(
                 omniruntime::vec::BaseVector *rowBatch,
@@ -2401,6 +2406,14 @@ namespace omniruntime::writer {
         const orc::Timezone &timezone;
         const common::JulianGregorianRebase *timestampRebase;
         const bool isUTC;
+        // Paimon ORC instant: when true, apply Spark-compatible Gregorian->Julian rebase plus
+        // session-timezone offset so the stored instant matches Spark's own ORC writer.
+        const bool useSparkInstantConvention;
+        const int64_t gmtEpochSecs;
+        // Session-timezone modern raw offset in micros (passed from JVM via JNI), used as
+        // a fallback when a per-value DST offset is unavailable.
+        const int64_t tzOffsetMicros;
+        const omniruntime::tz::TimeZone *sessionZone;
     };
 
     static const orc::Timezone &resolveWriterTimezone(const orc::WriterOptions &options) {
@@ -2414,12 +2427,30 @@ namespace omniruntime::writer {
         return options.getTimezone();
     }
 
+    static const omniruntime::tz::TimeZone *locateSessionZone(
+            const orc::WriterOptions &options,
+            bool enabled) {
+        if (!enabled) {
+            return nullptr;
+        }
+        try {
+            const std::string tzName = options.getTimezoneName();
+            if (tzName.empty()) {
+                return nullptr;
+            }
+            return omniruntime::tz::locateZone(tzName, false);
+        } catch (...) {
+            return nullptr;
+        }
+    }
+
     OmniTimestampColumnWriter::OmniTimestampColumnWriter(
             const orc::Type &type,
             const orc::StreamsFactory &factory,
             const orc::WriterOptions &options,
             bool isInstantType,
-            const common::JulianGregorianRebase *rebase) :
+            const common::JulianGregorianRebase *rebase,
+            int64_t rawOffsetMicros) :
             OmniColumnWriter(type, factory, options),
             rleVersion(options.getRleVersion()),
             timezone(isInstantType ?
@@ -2428,7 +2459,14 @@ namespace omniruntime::writer {
             timestampRebase(rebase),
             isUTC(isInstantType ||
                   options.getTimezoneName() == "GMT" ||
-                  options.getTimezoneName() == "UTC") {
+                  options.getTimezoneName() == "UTC"),
+            useSparkInstantConvention(isInstantType &&
+                    options.getTimezoneName() != "GMT" &&
+                    options.getTimezoneName() != "UTC" &&
+                    rawOffsetMicros != 0),
+            gmtEpochSecs(orc::getTimezoneByName("GMT").getEpoch()),
+            tzOffsetMicros(useSparkInstantConvention ? rawOffsetMicros : 0L),
+            sessionZone(locateSessionZone(options, useSparkInstantConvention)) {
         std::unique_ptr <orc::BufferedOutputStream> dataStream =
                 factory.createStream(orc::proto::Stream_Kind_DATA);
         std::unique_ptr <orc::BufferedOutputStream> secondaryStream =
@@ -2495,14 +2533,44 @@ namespace omniruntime::writer {
         return static_cast<int64_t>(rebasedDays) * MICROS_PER_DAY + microsInDay;
     }
 
+    // Match Spark's TimeZone.getOffset behavior for historical values with DST.
+    // Keep the raw-offset fallback before 1900 because Omni tzdb exposes LMT for
+    // ancient dates while Spark's Java TimeZone path uses the modern raw offset.
+    static int64_t DstAwareOffsetMicros(const omniruntime::tz::TimeZone *zone,
+                                        int64_t utcSeconds,
+                                        int64_t fallbackOffsetMicros) {
+        static constexpr int64_t SECONDS_AT_1900_01_01 = -2208988800L;
+        if (zone == nullptr || utcSeconds < SECONDS_AT_1900_01_01) {
+            return fallbackOffsetMicros;
+        }
+        try {
+            omniruntime::Timestamp utc(utcSeconds);
+            omniruntime::Timestamp local = utc;
+            local.toTimezone(*zone);
+            return (local.getSeconds() - utcSeconds) * 1000000L;
+        } catch (...) {
+            return fallbackOffsetMicros;
+        }
+    }
+
     void OmniTimestampColumnWriter::processSingleValue(
             int64_t micros,
             int64_t &outSec,
             int64_t &outNano,
             orc::TimestampColumnStatisticsImpl *tsStats) {
-        const int64_t rebasedMicros =
-                timestampRebase == nullptr ? rebaseGregorianToJulianMicros(micros) :
-                timestampRebase->RebaseGregorianToJulianMicros(micros);
+        int64_t rebasedMicros;
+        if (useSparkInstantConvention) {
+            // Spark ORC instant stores rebaseGregorianToJulian(micros) minus
+            // TimeZone.getOffset(instant). Use a per-value DST-aware offset so
+            // Omni-written files round-trip the same historical timestamps as Spark.
+            const int64_t rebased = rebaseGregorianToJulianMicros(micros);
+            const int64_t utcSeconds = floorDiv(rebased, 1000000L);
+            rebasedMicros = rebased - DstAwareOffsetMicros(sessionZone, utcSeconds, tzOffsetMicros);
+        } else {
+            rebasedMicros =
+                    timestampRebase == nullptr ? rebaseGregorianToJulianMicros(micros) :
+                    timestampRebase->RebaseGregorianToJulianMicros(micros);
+        }
         //secs = Seconds since 1970 UTC
         int64_t secs = rebasedMicros / 1000000;
         if (rebasedMicros % 1000000 < 0) {
@@ -2521,7 +2589,11 @@ namespace omniruntime::writer {
 
         tsStats->update(millsUTC, static_cast<int32_t>(nanos % 1000000));
 
-        secs -= timezone.getEpoch();
+        if (useSparkInstantConvention) {
+            secs -= gmtEpochSecs;
+        } else {
+            secs -= timezone.getEpoch();
+        }
 
         if (secs < 0 && nanos > 999999) {
             secs += 1;
@@ -2742,7 +2814,8 @@ namespace omniruntime::writer {
         OmniListColumnWriter(const orc::Type &type,
                              const orc::StreamsFactory &factory,
                              const orc::WriterOptions &options,
-                             const common::JulianGregorianRebase *timestampRebase);
+                             const common::JulianGregorianRebase *timestampRebase,
+                             int64_t rawOffsetMicros = 0);
 
         ~OmniListColumnWriter() override;
 
@@ -2788,7 +2861,8 @@ namespace omniruntime::writer {
     OmniListColumnWriter::OmniListColumnWriter(const orc::Type &type,
                                                const orc::StreamsFactory &factory,
                                                const orc::WriterOptions &options,
-                                               const common::JulianGregorianRebase *timestampRebase) :
+                                               const common::JulianGregorianRebase *timestampRebase,
+                                               int64_t rawOffsetMicros) :
             OmniColumnWriter(type, factory, options),
             rleVersion(options.getRleVersion()) {
 
@@ -2801,7 +2875,7 @@ namespace omniruntime::writer {
                                              options.getAlignedBitpacking());
 
         if (type.getSubtypeCount() == 1) {
-            child = buildOmniWriter(*type.getSubtype(0), factory, options, timestampRebase);
+            child = buildOmniWriter(*type.getSubtype(0), factory, options, timestampRebase, rawOffsetMicros);
         }
 
         if (enableIndex) {
@@ -2972,7 +3046,8 @@ namespace omniruntime::writer {
         OmniMapColumnWriter(const orc::Type &type,
                             const orc::StreamsFactory &factory,
                             const orc::WriterOptions &options,
-                            const common::JulianGregorianRebase *timestampRebase);
+                            const common::JulianGregorianRebase *timestampRebase,
+                            int64_t rawOffsetMicros = 0);
 
         ~OmniMapColumnWriter() override;
 
@@ -3019,7 +3094,8 @@ namespace omniruntime::writer {
     OmniMapColumnWriter::OmniMapColumnWriter(const orc::Type &type,
                                              const orc::StreamsFactory &factory,
                                              const orc::WriterOptions &options,
-                                             const common::JulianGregorianRebase *timestampRebase) :
+                                             const common::JulianGregorianRebase *timestampRebase,
+                                             int64_t rawOffsetMicros) :
             OmniColumnWriter(type, factory, options),
             rleVersion(options.getRleVersion()) {
         std::unique_ptr <orc::BufferedOutputStream> lengthStream =
@@ -3031,11 +3107,11 @@ namespace omniruntime::writer {
                                              options.getAlignedBitpacking());
 
         if (type.getSubtypeCount() > 0) {
-            keyWriter = buildOmniWriter(*type.getSubtype(0), factory, options, timestampRebase);
+            keyWriter = buildOmniWriter(*type.getSubtype(0), factory, options, timestampRebase, rawOffsetMicros);
         }
 
         if (type.getSubtypeCount() > 1) {
-            elemWriter = buildOmniWriter(*type.getSubtype(1), factory, options, timestampRebase);
+            elemWriter = buildOmniWriter(*type.getSubtype(1), factory, options, timestampRebase, rawOffsetMicros);
         }
 
         if (enableIndex) {
@@ -3245,7 +3321,8 @@ namespace omniruntime::writer {
             const orc::Type &type,
             const orc::StreamsFactory &factory,
             const orc::WriterOptions &options,
-            const common::JulianGregorianRebase *timestampRebase) {
+            const common::JulianGregorianRebase *timestampRebase,
+            int64_t rawOffsetMicros) {
         switch (static_cast<int64_t>(type.getKind())) {
             case orc::STRUCT:
                 return std::unique_ptr<OmniColumnWriter>(
@@ -3253,7 +3330,8 @@ namespace omniruntime::writer {
                                 type,
                                 factory,
                                 options,
-                                timestampRebase));
+                                timestampRebase,
+                                rawOffsetMicros));
             case orc::INT:
                 return std::unique_ptr<OmniColumnWriter>(
                         new OmniIntColumnWriter(
@@ -3333,7 +3411,8 @@ namespace omniruntime::writer {
                                 factory,
                                 options,
                                 false,
-                                timestampRebase));
+                                timestampRebase,
+                                rawOffsetMicros));
             case orc::TIMESTAMP_INSTANT:
                 return std::unique_ptr<OmniColumnWriter>(
                         new OmniTimestampColumnWriter(
@@ -3341,7 +3420,8 @@ namespace omniruntime::writer {
                                 factory,
                                 options,
                                 true,
-                                timestampRebase));
+                                timestampRebase,
+                                rawOffsetMicros));
             case orc::DECIMAL:
                 if (type.getPrecision() <= OmniDecimal64ColumnWriter::MAX_PRECISION_64) {
                     return std::unique_ptr<OmniColumnWriter>(
@@ -3365,14 +3445,16 @@ namespace omniruntime::writer {
                                 type,
                                 factory,
                                 options,
-                                timestampRebase));
+                                timestampRebase,
+                                rawOffsetMicros));
             case orc::MAP:
                 return std::unique_ptr<OmniColumnWriter>(
                         new OmniMapColumnWriter(
                                 type,
                                 factory,
                                 options,
-                                timestampRebase));
+                                timestampRebase,
+                                rawOffsetMicros));
             default:
                 throw orc::NotImplementedYet("Type is not supported yet for creating "
                                              "ColumnWriter.");

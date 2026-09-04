@@ -18,6 +18,7 @@
 #include <vector>
 #include "type/data_type.h"
 #include "type/decimal128.h"
+#include "expression/arithmetic_spec.h"
 #include <locale>
 #include <regex>
 #include <codecvt>
@@ -69,6 +70,7 @@ enum class ExprType {
     BINARY_E,
     UNARY_E,
     IN_E,
+    IN_SUBQUERY_E,
     BETWEEN_E,
     IF_E,
     SWITCH_E,
@@ -285,6 +287,9 @@ public:
 class BinaryExpr : public Expr {
 public:
     Operator op = Operator::EQ;
+    ArithmeticOp arithmeticOp = ArithmeticOp::INVALID;
+    ArithmeticEvalMode evalMode = ArithmeticEvalMode::LEGACY;
+    mutable std::shared_ptr<VectorFunction> checkedArithmeticVectorFunction;
     Expr *left = nullptr;
     Expr *right = nullptr;
 
@@ -293,6 +298,7 @@ public:
     BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePtr dt);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+    bool SupportsCheckedArithmeticVectorization() const;
 
     uint8_t* computeEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
     uint8_t* computeAND(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
@@ -302,7 +308,8 @@ public:
 
     bool supportVectorized() const override
     {
-        return vectorFunction != nullptr && left->supportVectorized() && right->supportVectorized();
+        return (vectorFunction != nullptr || SupportsCheckedArithmeticVectorization()) &&
+            left->supportVectorized() && right->supportVectorized();
     }
 
     std::string toString() const override;
@@ -334,6 +341,37 @@ public:
         for (uint32_t i = 0; i < this->arguments.size(); i++) {
             output += (this->arguments[i])->toString();
         }
+        output += ")";
+        return output;
+    }
+};
+
+// InSubqueryExpr represents "value IN (subquery)" semantics.
+// Returns TRUE if value equals any row in the subquery result set.
+// Three-valued NULL logic:
+//   - value is NULL -> NULL
+//   - value matches a non-NULL row -> TRUE
+//   - no match and subquery contains NULL -> NULL
+//   - no match and subquery has no NULL -> FALSE
+class InSubqueryExpr : public Expr {
+public:
+    Expr *value = nullptr;              // The value to compare against subquery results
+    Expr *subqueryResult = nullptr;     // Expression referencing subquery output column
+    int32_t subqueryColIdx = -1;        // Column index of subquery result
+
+    InSubqueryExpr();
+    ~InSubqueryExpr() override;
+    InSubqueryExpr(Expr *val, Expr *subResult, int32_t colIdx);
+
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
+
+    std::string toString() const override
+    {
+        std::string indent = "";
+        std::string output = indent + "InSubquery:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(";
+        output += this->value->toString();
+        output += ", subquery_col=" + std::to_string(subqueryColIdx);
         output += ")";
         return output;
     }

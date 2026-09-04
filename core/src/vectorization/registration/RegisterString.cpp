@@ -14,6 +14,7 @@
 #include "../functions/EqualStringFunction.h"
 #include "../functions/ConcatFunction.h"
 #include "../functions/ReverseFunction.h"
+#include "../functions/ParseUrl.h"
 #include "../functions/FusedMd5ConcatWsFunction.h"
 #ifdef OMNI_HAVE_ISAL_CRYPTO_MD5
 #include "../functions/Md5VectorFunction.h"
@@ -25,6 +26,32 @@ void RegisterStringFunctions(const std::string &prefix)
 {
     RegisterFunction<InstrFunction, int32_t, std::string_view, std::string_view>(prefix + "instr", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_INT);
     RegisterFunction<ReplaceFunction, std::string, std::string_view, std::string_view, std::string_view>(prefix + "replace", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    // parse_url(url, part[, key]) -> varchar
+    // Supports all CHAR/VARCHAR argument combinations.
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_VARCHAR, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_CHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_CHAR, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_VARCHAR, OMNI_CHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_VARCHAR, OMNI_CHAR, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_CHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_CHAR, OMNI_VARCHAR, OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_CHAR, OMNI_CHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<ParseUrlFunction, std::string, std::string_view, std::string_view, std::string_view>(
+        prefix + "parse_url", {OMNI_CHAR, OMNI_CHAR, OMNI_CHAR}, OMNI_VARCHAR);
     RegisterString<StartsWithFunction>({prefix + "StartsWith"});
     RegisterString<EndsWithFunction>({prefix + "EndsWith"});
     RegisterString<ContainsFunction>({prefix + "Contains"});
@@ -57,6 +84,21 @@ void RegisterStringFunctions(const std::string &prefix)
     RegisterFunction<UnBase64Function, std::string, std::string_view>(prefix + "unbase64", {OMNI_VARCHAR}, OMNI_VARBINARY);
     // unhex(string) -> varbinary: converts hex string to binary data
     RegisterFunction<UnhexFunction, std::string, std::string_view>(prefix + "unhex", {OMNI_VARCHAR}, OMNI_VARBINARY);
+
+    // encode(string, charset) -> varbinary: encodes string using specified charset (US-ASCII, ISO-8859-1, UTF-8, UTF-16BE, UTF-16LE, UTF-16)
+    RegisterFunction<EncodeFunction, std::string, std::string_view, std::string_view>(
+        prefix + "encode", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARBINARY);
+    RegisterFunction<EncodeFunction, std::string, std::string_view, std::string_view>(
+        prefix + "encode", {OMNI_CHAR, OMNI_VARCHAR}, OMNI_VARBINARY);
+    RegisterFunction<EncodeFunction, std::string, std::string_view, std::string_view>(
+        prefix + "encode", {OMNI_VARCHAR, OMNI_CHAR}, OMNI_VARBINARY);
+    RegisterFunction<EncodeFunction, std::string, std::string_view, std::string_view>(
+        prefix + "encode", {OMNI_CHAR, OMNI_CHAR}, OMNI_VARBINARY);
+    // decode(binary, charset) -> varchar: decodes binary using specified charset (US-ASCII, ISO-8859-1, UTF-8, UTF-16BE, UTF-16LE, UTF-16)
+    RegisterFunction<DecodeFunction, std::string, std::string_view, std::string_view>(
+        prefix + "decode", {OMNI_VARBINARY, OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<DecodeFunction, std::string, std::string_view, std::string_view>(
+        prefix + "decode", {OMNI_VARBINARY, OMNI_CHAR}, OMNI_VARCHAR);
 
     VectorFunction::RegisterVectorFunction("split", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_ARRAY,
         std::make_shared<SplitFunction>());
@@ -253,6 +295,11 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "levenshtein", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_INT);
     RegisterFunction<LevenshteinDistanceFunction, int32_t, std::string_view, std::string_view, int64_t>(
         prefix + "levenshtein", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_LONG}, OMNI_INT);
+
+    // is_digit(string) -> bool
+    // Returns true if all characters are digits ('0'-'9'), false otherwise.
+    RegisterFunction<IsDigitFunction, bool, std::string_view>(
+        prefix + "is_digit", {OMNI_VARCHAR}, OMNI_BOOLEAN);
 
     RegisterFunction<Sha1HexStringFunction, std::string, std::string_view>(prefix + "sha1", {OMNI_VARBINARY}, OMNI_VARCHAR);
     RegisterFunction<Sha2HexStringFunction, std::string, std::string_view, int32_t>(prefix + "sha2", {OMNI_VARBINARY, OMNI_INT}, OMNI_VARCHAR);

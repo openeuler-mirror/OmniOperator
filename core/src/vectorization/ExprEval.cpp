@@ -7,6 +7,7 @@
 #include <string>
 #include "codegen/expr_evaluator.h"
 #include "type/data_type.h"
+#include "vectorization/functions/TryArithmetic.h"
 #include "vectorization/functions/Md5ConcatWsFusion.h"
 
 namespace omniruntime::vectorization {
@@ -14,6 +15,15 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::mem;
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
+
+BaseVector *PreserveDecimalType(BaseVector *source, BaseVector *projected)
+{
+    if (source->GetDataType() != nullptr &&
+        (source->GetTypeId() == OMNI_DECIMAL64 || source->GetTypeId() == OMNI_DECIMAL128)) {
+        VectorHelper::SetVectorDataType(projected, source->GetDataType().get());
+    }
+    return projected;
+}
 
 template <typename T>
 BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
@@ -25,12 +35,13 @@ BaseVector *ColumnProjectionHelper(BaseVector *colVec, int32_t numSelectedRows)
         if (constVec->HasNull() && constVec->IsNull(0)) {
             newConst->SetNulls(0, true, numSelectedRows);
         }
-        return newConst;
+        return PreserveDecimalType(colVec, newConst);
     }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
-        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
+        return PreserveDecimalType(
+            colVec, reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows));
     }
-    return reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows);
+    return PreserveDecimalType(colVec, reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows));
 }
 
 template <typename T>
@@ -43,13 +54,15 @@ BaseVector *ColumnProjectionCopyPositionsHelper(BaseVector *colVec, int32_t *sel
         if (constVec->HasNull() && constVec->IsNull(0)) {
             newConst->SetNulls(0, true, numSelectedRows);
         }
-        return newConst;
+        return PreserveDecimalType(colVec, newConst);
     }
     if (colVec->GetEncoding() == OMNI_DICTIONARY) {
-        return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->CopyPositions(selectedRows, 0,
-            numSelectedRows);
+        return PreserveDecimalType(colVec,
+            reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->CopyPositions(
+                selectedRows, 0, numSelectedRows));
     }
-    return reinterpret_cast<Vector<T> *>(colVec)->CopyPositions(selectedRows, 0, numSelectedRows);
+    return PreserveDecimalType(
+        colVec, reinterpret_cast<Vector<T> *>(colVec)->CopyPositions(selectedRows, 0, numSelectedRows));
 }
 
 template <typename T>
@@ -267,6 +280,9 @@ void ExprEval::Visit(const LiteralExpr &e)
         if (constVec != nullptr && e.isNull) {
             constVec->SetNulls(0, true, constVec->GetSize());
         }
+        if (constVec != nullptr && (typeId == OMNI_DECIMAL64 || typeId == OMNI_DECIMAL128)) {
+            VectorHelper::SetVectorDataType(constVec, e.dataType.get());
+        }
         inputValues_.push(constVec);
         return;
     }
@@ -458,12 +474,21 @@ void ExprEval::Visit(const BinaryExpr &e)
 {
     e.left->Accept(*this);
     e.right->Accept(*this);
-    if (e.vectorFunction == nullptr) {
+
+    auto vectorFunction = e.vectorFunction;
+    if (e.arithmeticOp != ArithmeticOp::INVALID && e.evalMode != ArithmeticEvalMode::LEGACY) {
+        if (e.checkedArithmeticVectorFunction == nullptr) {
+            e.checkedArithmeticVectorFunction = CreateBinaryArithmeticFunction(
+                e.arithmeticOp, e.evalMode, e.left->dataType, e.right->dataType, e.dataType);
+        }
+        vectorFunction = e.checkedArithmeticVectorFunction;
+    }
+    if (vectorFunction == nullptr) {
         OMNI_THROW("Vectorization Error:", "Vector function not found for binary expression");
     }
 
     BaseVector *result = nullptr;
-    e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
+    vectorFunction->Apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }
 
@@ -481,6 +506,24 @@ void ExprEval::Visit(const InExpr &e)
     dynamic_cast<ArrayVector *>(searchArray.get())->SetValue(0, vector.get());
     inputValues_.push(searchArray.get());
     auto temp = inputValues_;
+    e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
+    inputValues_.push(result);
+}
+
+void ExprEval::Visit(const InSubqueryExpr &e)
+{
+    // Evaluate the probe value
+    e.value->Accept(*this);
+
+    // Evaluate the subquery result
+    e.subqueryResult->Accept(*this);
+
+    // Get the vector function for in_subquery
+    if (e.vectorFunction == nullptr) {
+        OMNI_THROW("Vectorization Error:", "Vector function not found for in_subquery expression");
+    }
+
+    BaseVector *result = nullptr;
     e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }
@@ -563,7 +606,8 @@ void ExprEval::Visit(const FuncExpr &e)
     }
     BaseVector *result = nullptr;
     auto resolved = e.vectorFunction;
-    bool needQueryConfig = (e.funcName == "spark_partition_id" || e.funcName == "uuid" || e.funcName == "rand");
+    bool needQueryConfig = (e.funcName == "spark_partition_id" || e.funcName == "uuid" || e.funcName == "rand"
+        || e.funcName == "flink_localtime" || e.funcName == "flink_localtimestamp" || e.funcName == "flink_current_date");
     if (resolved == nullptr || needQueryConfig) {
         std::vector<DataTypeId> argTypes(e.arguments.size());
         std::transform(e.arguments.begin(), e.arguments.end(), argTypes.begin(),
@@ -597,9 +641,6 @@ void ExprEval::Visit(const FuncExpr &e)
     inputValues_.push(result);
 }
 
-// 上游 ExprEval 已实现 SwitchExpr 的向量化求值；此前为空实现时，含 CASE 的表达式
-// 在 useCodegen=false 回退向量化路径会造成 inputValues_ 栈失衡 → GetResult 段错误。
-// 本实现逐行取值（移植自 upstream，与 VectorHelper 现有 API 一致）。
 void ExprEval::Visit(const SwitchExpr &e)
 {
     std::vector<std::pair<BaseVector *, BaseVector *>> whenVecs;

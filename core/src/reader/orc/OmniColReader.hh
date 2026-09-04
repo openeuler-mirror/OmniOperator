@@ -28,6 +28,10 @@
 #include "OmniByteRLE.hh"
 #include "reader/common/JulianGregorianRebase.h"
 
+namespace omniruntime::tz {
+    class TimeZone;
+}
+
 namespace omniruntime::reader {
 
     class OmniColumnReader: public ::orc::ColumnReader {
@@ -72,7 +76,7 @@ namespace omniruntime::reader {
 
     public:
         OmniStructColumnReader(const ::orc::Type& type, ::orc::StripeStreams& stipe,
-            common::JulianGregorianRebase *julianPtr);
+            common::JulianGregorianRebase *julianPtr, int64_t rawOffsetMicros = 0);
 
         uint64_t skip(uint64_t numValues) override;
 
@@ -123,7 +127,7 @@ namespace omniruntime::reader {
 
     public:
         OmniMapColumnReader(const orc::Type& type, orc::StripeStreams& stipe,
-                            common::JulianGregorianRebase *julianPtr);
+                            common::JulianGregorianRebase *julianPtr, int64_t rawOffsetMicros = 0);
 
         uint64_t skip(uint64_t numValues) override;
 
@@ -160,7 +164,7 @@ namespace omniruntime::reader {
 
     public:
         OmniListColumnReader(const orc::Type& type, orc::StripeStreams& stripe,
-                             common::JulianGregorianRebase *julianPtr);
+                             common::JulianGregorianRebase *julianPtr, int64_t rawOffsetMicros = 0);
 
         uint64_t skip(uint64_t numValues) override;
 
@@ -255,11 +259,17 @@ namespace omniruntime::reader {
         const int64_t epochOffset;
         const bool sameTimezone;
         common::JulianGregorianRebase *julianPtr;
+        // Paimon ORC instant: reverse Spark's session-tz shift. tzOffsetMicros is the
+        // modern raw-offset fallback; sessionZone supplies the per-value DST offset.
+        const bool useSparkInstantConvention;
+        const int64_t tzOffsetMicros;
+        const omniruntime::tz::TimeZone *sessionZone;
 
     public:
         OmniTimestampColumnReader(const ::orc::Type& type,
                                 ::orc::StripeStreams& stripe,
-                                bool isInstantType, common::JulianGregorianRebase *julianPtr);
+                                bool isInstantType, common::JulianGregorianRebase *julianPtr,
+                                int64_t rawOffsetMicros = 0);
         ~OmniTimestampColumnReader() override;
 
         uint64_t skip(uint64_t numValues) override;
@@ -556,7 +566,8 @@ namespace omniruntime::reader {
 
     std::unique_ptr<::orc::ColumnReader> omniBuildReader(const ::orc::Type& type,
                                                     ::orc::StripeStreams& stripe,
-                                                    common::JulianGregorianRebase *julianPtr);
+                                                    common::JulianGregorianRebase *julianPtr,
+                                                    int64_t rawOffsetMicros = 0);
 
     void scaleInt128(::orc::Int128& value, uint32_t scale, uint32_t currentScale);
 
