@@ -12,9 +12,13 @@
 #include "../functions/Like.h"
 #include "../functions/EqualStringFunction.h"
 #include "../functions/ConcatFunction.h"
+#ifdef STRINGVIEW_ENABLE
 #include "../functions/ConcatStringViewFunction.h"
+#endif
 #include "../functions/ReverseFunction.h"
+#ifdef STRINGVIEW_ENABLE
 #include "../functions/StringViewSliceFunctions.h"
+#endif
 #include "../functions/FusedMd5ConcatWsFunction.h"
 #ifdef OMNI_HAVE_ISAL_CRYPTO_MD5
 #include "../functions/Md5VectorFunction.h"
@@ -25,20 +29,26 @@ namespace omniruntime::vectorization {
 void RegisterStringFunctions(const std::string &prefix)
 {
     RegisterString<StartsWithFunction>({prefix + "StartsWith"});
+#ifdef STRINGVIEW_ENABLE
     RegisterFunction<StartsWithFunction, bool, omniruntime::vec::StringView, omniruntime::vec::StringView>(
         prefix + "StartsWith", {OMNI_STRING_VIEW, OMNI_STRING_VIEW}, OMNI_BOOLEAN);
     RegisterFunction<StartsWithFunction, bool, omniruntime::vec::StringView, std::string_view>(
         prefix + "StartsWith", {OMNI_STRING_VIEW, OMNI_VARCHAR}, OMNI_BOOLEAN);
+#endif
     RegisterString<EndsWithFunction>({prefix + "EndsWith"});
+#ifdef STRINGVIEW_ENABLE
     RegisterFunction<EndsWithFunction, bool, omniruntime::vec::StringView, omniruntime::vec::StringView>(
         prefix + "EndsWith", {OMNI_STRING_VIEW, OMNI_STRING_VIEW}, OMNI_BOOLEAN);
     RegisterFunction<EndsWithFunction, bool, omniruntime::vec::StringView, std::string_view>(
         prefix + "EndsWith", {OMNI_STRING_VIEW, OMNI_VARCHAR}, OMNI_BOOLEAN);
+#endif
     RegisterString<ContainsFunction>({prefix + "Contains"});
+#ifdef STRINGVIEW_ENABLE
     RegisterFunction<ContainsFunction, bool, omniruntime::vec::StringView, omniruntime::vec::StringView>(
         prefix + "Contains", {OMNI_STRING_VIEW, OMNI_STRING_VIEW}, OMNI_BOOLEAN);
     RegisterFunction<ContainsFunction, bool, omniruntime::vec::StringView, std::string_view>(
         prefix + "Contains", {OMNI_STRING_VIEW, OMNI_VARCHAR}, OMNI_BOOLEAN);
+#endif
     RegisterFunction<TrimFunction, std::string, std::string_view>(prefix + "Trim", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<LTrimFunction, std::string, std::string_view>(prefix + "LTrim", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<RTrimFunction, std::string, std::string_view>(prefix + "RTrim", {OMNI_VARCHAR}, OMNI_VARCHAR);
@@ -48,6 +58,7 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "LTrim", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<RTrimWithCharsFunction, std::string, std::string_view, std::string_view>(
         prefix + "RTrim", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR);
+#ifdef STRINGVIEW_ENABLE
     RegisterFunction<TrimFunction, std::string, omniruntime::vec::StringView>(
         prefix + "Trim", {OMNI_STRING_VIEW}, OMNI_VARCHAR);
     RegisterFunction<LTrimFunction, std::string, omniruntime::vec::StringView>(
@@ -66,25 +77,32 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "RTrim", {OMNI_STRING_VIEW, OMNI_STRING_VIEW}, OMNI_VARCHAR);
     RegisterFunction<RTrimWithCharsFunction, std::string, std::string_view, omniruntime::vec::StringView>(
         prefix + "RTrim", {OMNI_VARCHAR, OMNI_STRING_VIEW}, OMNI_VARCHAR);
+#endif
     RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_CHAR}, OMNI_VARCHAR);
+#ifdef STRINGVIEW_ENABLE
     RegisterFunction<LowerFunction, std::string, omniruntime::vec::StringView>(
         prefix + "lower", {OMNI_STRING_VIEW}, OMNI_VARCHAR);
     RegisterFunction<UpperFunction, std::string, omniruntime::vec::StringView>(
         prefix + "upper", {OMNI_STRING_VIEW}, OMNI_VARCHAR);
+#endif
     RegisterFunction<SoundexFunction, std::string, std::string_view>(prefix + "soundex", {OMNI_VARCHAR}, OMNI_VARCHAR);
 
     // char_length / character_length / length(string) -> integer (character count, Unicode-aware)
     RegisterFunction<CharLengthFunction, int32_t, std::string_view>(prefix + "length", {OMNI_VARCHAR}, OMNI_INT);
     RegisterFunction<CharLengthFunction, int32_t, std::string_view>(prefix + "length", {OMNI_CHAR}, OMNI_INT);
+#ifdef STRINGVIEW_ENABLE
     RegisterFunction<CharLengthFunction, int32_t, omniruntime::vec::StringView>(
         prefix + "length", {OMNI_STRING_VIEW}, OMNI_INT);
+#endif
     // length(binary) -> integer (byte count)
     RegisterFunction<BinaryLengthFunction, int32_t, std::string_view>(prefix + "length", {OMNI_VARBINARY}, OMNI_INT);
     // ascii(string) -> int32; align with velox (Varchar), add CHAR for upstream compatibility
     RegisterFunction<AsciiFunction, int32_t, std::string_view>(prefix + "ascii", {OMNI_VARCHAR}, OMNI_INT);
+#ifdef STRINGVIEW_ENABLE
     RegisterFunction<AsciiFunction, int32_t, omniruntime::vec::StringView>(
         prefix + "ascii", {OMNI_STRING_VIEW}, OMNI_INT);
+#endif
     RegisterFunction<ChrFunction, std::string, int64_t>(prefix + "chr", {OMNI_LONG}, OMNI_VARCHAR);
     RegisterFunction<ChrFunction, std::string, int64_t>(prefix + "char", {OMNI_LONG}, OMNI_VARCHAR);
     RegisterFunction<Base64Function, std::string, std::string_view>(prefix + "base64", {OMNI_VARBINARY}, OMNI_VARCHAR);
@@ -101,6 +119,7 @@ void RegisterStringFunctions(const std::string &prefix)
         std::make_shared<LikeFunction>(2));
     VectorFunction::RegisterVectorFunction("LIKE", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
         std::make_shared<LikeFunction>(3));
+#ifdef STRINGVIEW_ENABLE
     VectorFunction::RegisterVectorFunction("LIKE", {OMNI_STRING_VIEW, OMNI_STRING_VIEW}, OMNI_BOOLEAN,
         std::make_shared<LikeFunction>(2));
     VectorFunction::RegisterVectorFunction("LIKE", {OMNI_STRING_VIEW, OMNI_VARCHAR}, OMNI_BOOLEAN,
@@ -109,11 +128,13 @@ void RegisterStringFunctions(const std::string &prefix)
         OMNI_BOOLEAN, std::make_shared<LikeFunction>(3));
     VectorFunction::RegisterVectorFunction("LIKE", {OMNI_STRING_VIEW, OMNI_VARCHAR, OMNI_VARCHAR},
         OMNI_BOOLEAN, std::make_shared<LikeFunction>(3));
+#endif
     // Spark + Gluten: substr(string, start), substr(string, start, length); Gluten maps "substring" -> "substr"
     RegisterFunction<SubstrFunction, std::string, std::string_view, int32_t>(
         prefix + "substr", {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR);
     RegisterFunction<SubstrFunction, std::string, std::string_view, int32_t, int32_t>(
         prefix + "substr", {OMNI_VARCHAR, OMNI_INT, OMNI_INT}, OMNI_VARCHAR);
+#ifdef STRINGVIEW_ENABLE
     RegisterFunction<SubstrFunction, std::string, omniruntime::vec::StringView, int32_t>(
         prefix + "substr", {OMNI_STRING_VIEW, OMNI_INT}, OMNI_VARCHAR);
     RegisterFunction<SubstrFunction, std::string, omniruntime::vec::StringView, int32_t, int32_t>(
@@ -129,11 +150,13 @@ void RegisterStringFunctions(const std::string &prefix)
         std::make_shared<TrimStringViewFunction>(TrimStringViewFunction::Kind::LTrim));
     VectorFunction::RegisterVectorFunction(prefix + "RTrim", {OMNI_STRING_VIEW}, OMNI_STRING_VIEW,
         std::make_shared<TrimStringViewFunction>(TrimStringViewFunction::Kind::RTrim));
+#endif
 
     // Register concat function with variable arity support
     // Register multiple signatures for different argument counts (2 to 10 arguments)
     auto concatFunction = std::make_shared<ConcatFunction>();
     VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
+#ifdef STRINGVIEW_ENABLE
     VectorFunction::RegisterVectorFunction("concat", {OMNI_STRING_VIEW, OMNI_STRING_VIEW}, OMNI_VARCHAR, concatFunction);
     VectorFunction::RegisterVectorFunction("concat", {OMNI_STRING_VIEW, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
     VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_STRING_VIEW}, OMNI_VARCHAR, concatFunction);
@@ -142,6 +165,7 @@ void RegisterStringFunctions(const std::string &prefix)
         concatSVOut);
     VectorFunction::RegisterVectorFunction("concat", {OMNI_STRING_VIEW, OMNI_VARCHAR}, OMNI_STRING_VIEW, concatSVOut);
     VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_STRING_VIEW}, OMNI_STRING_VIEW, concatSVOut);
+#endif
     VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
     VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
     VectorFunction::RegisterVectorFunction("concat", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_VARCHAR, concatFunction);
@@ -186,6 +210,7 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "locate", {OMNI_CHAR, OMNI_CHAR, OMNI_INT}, OMNI_INT);
     RegisterFunction<LocateFunction, int32_t, std::string_view, std::string_view, int64_t>(
         prefix + "locate", {OMNI_CHAR, OMNI_CHAR, OMNI_LONG}, OMNI_INT);
+#ifdef STRINGVIEW_ENABLE
     RegisterFunction<LocateFunction, int32_t, omniruntime::vec::StringView, omniruntime::vec::StringView, int32_t>(
         prefix + "locate", {OMNI_STRING_VIEW, OMNI_STRING_VIEW, OMNI_INT}, OMNI_INT);
     RegisterFunction<LocateFunction, int32_t, omniruntime::vec::StringView, omniruntime::vec::StringView, int64_t>(
@@ -198,6 +223,7 @@ void RegisterStringFunctions(const std::string &prefix)
         prefix + "instr", {OMNI_STRING_VIEW, OMNI_STRING_VIEW}, OMNI_INT);
     RegisterFunction<InStrFunction, int32_t, omniruntime::vec::StringView, std::string_view>(
         prefix + "instr", {OMNI_STRING_VIEW, OMNI_VARCHAR}, OMNI_INT);
+#endif
 
     // position(substring, string) -> integer, equivalent to locate(substring, string, 1)
     RegisterFunction<PositionFunction, int32_t, std::string_view, std::string_view>(

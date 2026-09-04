@@ -79,11 +79,16 @@ DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
         case OMNI_CHAR:
             return CharType(dataTypeJson[WIDTH].get<uint32_t>());
         case OMNI_STRING_VIEW:
+#ifdef STRINGVIEW_ENABLE
             // StringView is a fixed-width (16B) type, no width param. Needed so plans/types that
             // cross JNI as serialized JSON with a StringView group/join key (HashAggregation,
             // Join) can be deserialized — without this, DataTypeJsonParser hits the default
             // "Not Supported Data Type : 26" branch, returns nullptr, and Deserialize SIGSEGVs.
             return StringViewType();
+#else
+            throw omniruntime::exception::OmniException("STRING_VIEW_DISABLED",
+                "StringView type was requested but this native build was configured with STRINGVIEW_ENABLE=OFF");
+#endif
         case OMNI_CONTAINER: {
             std::vector<DataTypePtr> fieldTypes;
             for (const auto &fieldJson : dataTypeJson[FIELD_TYPES]) {

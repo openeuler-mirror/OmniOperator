@@ -236,6 +236,7 @@ std::shared_ptr<VectorFunction> MakeImpl(const std::string &functionName, const 
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_CHAR>>();
         case OMNI_VARBINARY:
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_VARBINARY>>();
+#ifdef STRINGVIEW_ENABLE
         case OMNI_STRING_VIEW:
             // StringView is a 16-byte fixed-width value type, so the template uses the default
             // (non-isStringLike) branch:
@@ -243,6 +244,7 @@ std::shared_ptr<VectorFunction> MakeImpl(const std::string &functionName, const 
             // StringView provides operator==, operator<, and compare, so std::equal_to<> and
             // std::less<> work directly.
             return std::make_shared<ComparisonFunction<StdCmp, OMNI_STRING_VIEW>>();
+#endif
         default: OMNI_THROW("Compare error:", "{} Not support type!", functionName);
     }
 }

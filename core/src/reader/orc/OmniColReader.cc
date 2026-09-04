@@ -362,9 +362,17 @@ namespace omniruntime::reader {
                 // This removes vector-level dictionary indirection, but not by copying every row:
                 // the per-stripe StringView dictionary owns each distinct payload once and the
                 // flat rows store views into that shared buffer.
+#ifdef STRINGVIEW_ENABLE
                 auto* dictVec = (dataTypeId == omniruntime::type::OMNI_STRING_VIEW)
                     ? dictStrReader->nextAsStringView(numValues, hasNull ? nulls->GetNulls() : nullptr)
                     : dictStrReader->nextAsDictionary(numValues, hasNull ? nulls->GetNulls() : nullptr, dataTypeId);
+#else
+                if (dataTypeId == omniruntime::type::OMNI_STRING_VIEW) {
+                    throw std::runtime_error("StringView ORC reader was requested but this native build was configured with STRINGVIEW_ENABLE=OFF");
+                }
+                auto* dictVec = dictStrReader->nextAsDictionary(
+                    numValues, hasNull ? nulls->GetNulls() : nullptr, dataTypeId);
+#endif
                 vecs.push_back(dictVec);
             } else {
                 auto omnivector = omniruntime::reader::makeNewVector(numValues, orcType, dataTypeId);
@@ -1074,9 +1082,13 @@ namespace omniruntime::reader {
         // Vector<StringView>, otherwise the default VARCHAR container. Blob read logic above
         // is identical for both; only element type / target vector differ.
         if (omniTypeId == omniruntime::type::OMNI_STRING_VIEW) {
+#ifdef STRINGVIEW_ENABLE
             auto svVector = reinterpret_cast<omniruntime::vec::Vector<omniruntime::vec::StringView>*>(vec);
             FillDirectStringValues<omniruntime::vec::Vector<omniruntime::vec::StringView>,
                 omniruntime::vec::StringView>(svVector, ptr, lengthPtr, numValues, hasNull, nullsTrans, isChar);
+#else
+            throw std::runtime_error("StringView ORC reader was requested but this native build was configured with STRINGVIEW_ENABLE=OFF");
+#endif
         } else {
             auto varcharVector = reinterpret_cast<omniruntime::vec::Vector<
                 omniruntime::vec::LargeStringContainer<std::string_view>>*>(vec);

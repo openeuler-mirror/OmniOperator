@@ -9,6 +9,14 @@ source $(cd $(dirname ${BASH_SOURCE[0]}) && pwd)/env_check.sh
 TARGZ_NAME=boostkit-omniop-operator-2.2.0-aarch64
 ZIP_NAME=BoostKit-omniop_2.2.0
 
+# StringView is disabled unless the command-line feature flag is supplied.
+STRINGVIEW_ENABLE=OFF
+if [ "$1" = '--stringview-enable' ]; then
+  STRINGVIEW_ENABLE=ON
+  shift
+fi
+export STRINGVIEW_ENABLE
+
 # if either help or --help is provided, the usage should be printed prior to exit
 if [ "$1" = 'help' ] || [ "$1" = '--help' ]; then
   print_usage

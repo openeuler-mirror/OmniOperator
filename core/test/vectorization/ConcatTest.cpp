@@ -360,6 +360,7 @@ TEST(ConcatTest, ConcatFunctionMultipleArgsTest) {
 
 // ---------------- StringView (SV-in / VARCHAR-out) variants ----------------
 
+#ifdef STRINGVIEW_ENABLE
 TEST(ConcatTest, ConcatSVBothStringView) {
     int rowSize = 4;
     // mix of inline (<=12B) and non-inline (>12B) StringView values
@@ -551,3 +552,4 @@ TEST(ConcatTest, ConcatSVOutResultOwnsBuffer) {
     ConcatFunctionTestHelper::ValidateStringViewResult(resultSvVec, expectedStrs, rowSize);
     delete resultVector;
 }
+#endif

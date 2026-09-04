@@ -3668,6 +3668,7 @@ void RunStringViewFilterTest(bool batchMode, const std::string& filterValue, int
     delete overflowConfig;
 }
 
+#ifdef STRINGVIEW_ENABLE
 TEST(FilterTest, StringViewShortEqualityFilterRowByRow)
 {
     RunStringViewFilterTest(false, "hello", 5);
@@ -4837,5 +4838,6 @@ TEST(FilterTest, StringViewFilterOutputThenSlice)
     delete factory;
     delete overflowConfig;
 }
+#endif
 
 }

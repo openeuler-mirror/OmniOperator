@@ -333,9 +333,10 @@
      delete result;
  }
  
- // ---------------- StringView (SV-in / VARCHAR-out) variants ----------------
+// ---------------- StringView (SV-in / VARCHAR-out) variants ----------------
 
- TEST(SubstrTest, SVTwoArgInlineAndNonInline) {
+#ifdef STRINGVIEW_ENABLE
+TEST(SubstrTest, SVTwoArgInlineAndNonInline) {
      // "hi" (inline), "my string here" (14B non-inline), "apple" (inline)
      std::vector<std::string> strings = {"hi", "my string here", "apple"};
      std::vector<int32_t> starts = {1, 4, 3};
@@ -466,6 +467,7 @@
      BaseVector* startVec = SubstrFunctionTestHelper::CreateInt32Vector(starts);
      BaseVector* result = nullptr;
      SubstrFunctionTestHelper::ExecuteSubstrTwoArgSVOut(strVec, startVec, result); // frees strVec/startVec
-     SubstrFunctionTestHelper::ValidateStringViewResult(result, expected, 1);
-     delete result;
- }
+    SubstrFunctionTestHelper::ValidateStringViewResult(result, expected, 1);
+    delete result;
+}
+#endif

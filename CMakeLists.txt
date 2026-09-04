@@ -87,6 +87,14 @@ endif()
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
+# StringView is an opt-in native feature. Keep it disabled in the default build so
+# downstream users that do not enable it do not compile its dedicated functions and tests.
+option(STRINGVIEW_ENABLE "Build native StringView support" OFF)
+if (STRINGVIEW_ENABLE)
+    add_compile_definitions(STRINGVIEW_ENABLE)
+endif ()
+message(STATUS "Option STRINGVIEW_ENABLE: ${STRINGVIEW_ENABLE}")
+
 if (EXISTS $ENV{OMNI_HOME})
     set(CMAKE_INSTALL_PREFIX $ENV{OMNI_HOME}/lib)
 else ()

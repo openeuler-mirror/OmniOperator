@@ -12,7 +12,7 @@ print_gcc_lib() {
 print_help() {
   echo "
   Usage:
-  build.sh [type:binding-target] [options]
+  build.sh [--stringview-enable] [type:binding-target] [options]
 
   Binding Targets:
     java                               = Java binding library
@@ -24,6 +24,7 @@ print_help() {
     coverage                           = Enable Coverage
 
   Options:
+    --stringview-enable                = Enable optional StringView native support
     all                                = Enable All Module Debug, Include: OPERATOR,VECTOR,LLVM
     op,   --enable-operator-debug      = Enable Operator Debug
     vec,  --enable-vector-debug        = Enable Vector Debug

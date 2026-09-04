@@ -493,6 +493,7 @@ namespace common {
                     break;
                 }
                 case OMNI_STRING_VIEW: {
+#ifdef STRINGVIEW_ENABLE
                     // The reader emits a flat Vector<StringView> (dictionary columns are materialized
                     // to flat StringView vectors in the reader), so only the flat path is needed here.
                     // It mirrors the VARCHAR flat path, but both input and output are Vector<StringView>.
@@ -503,6 +504,10 @@ namespace common {
                         dynamic_cast<Vector<StringView> *>(selectedBaseVector), bitMark,
                         isAllNull, isAllNotNull);
                     break;
+#else
+                    throw omniruntime::exception::OmniException("STRING_VIEW_DISABLED",
+                        "StringView reader predicate was requested but this native build was configured with STRINGVIEW_ENABLE=OFF");
+#endif
                 }
                 default: {
                     LogError("No such %d type support", dataType);

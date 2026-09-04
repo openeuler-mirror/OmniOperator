@@ -315,6 +315,7 @@ TEST(LowerTest, InvalidUtf8PreservesRemainingBytes) {
 
 // ---------------- StringView (SV-in / VARCHAR-out) variants ----------------
 
+#ifdef STRINGVIEW_ENABLE
 TEST(LowerTest, SVBasicAsciiInline) {
     // all values <= 12 bytes -> stored inline in the 16B StringView
     std::vector<std::string> strings = {"ABCDEFG", "HELLO", "WORLD"};
@@ -368,3 +369,4 @@ TEST(LowerTest, SVGreekUnicodeNonInline) {
     delete strVec;
     delete result;
 }
+#endif

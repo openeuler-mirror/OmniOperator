@@ -221,7 +221,9 @@ inline std::vector<std::shared_ptr<codegen::FunctionSignature>> ComparisonSignat
             type::OMNI_VARCHAR,
             type::OMNI_CHAR,
             type::OMNI_VARBINARY,
+#ifdef STRINGVIEW_ENABLE
             type::OMNI_STRING_VIEW,
+#endif
             type::OMNI_DATE32,
             type::OMNI_DATE64,
             type::OMNI_TIMESTAMP,

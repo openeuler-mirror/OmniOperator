@@ -54,7 +54,9 @@ void RegisterIsNullFunction(const std::string &name)
         {OMNI_BYTE},
         {OMNI_FLOAT},
         {OMNI_VARBINARY},
+#ifdef STRINGVIEW_ENABLE
         {OMNI_STRING_VIEW},
+#endif
         {OMNI_ARRAY},
         {OMNI_MAP},
         {OMNI_ROW}

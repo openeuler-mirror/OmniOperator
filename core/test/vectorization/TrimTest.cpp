@@ -314,6 +314,7 @@ TEST(TrimTest, TwoArgsTrimSpace) {
 
 // ---------------- StringView (SV-in / VARCHAR-out) variants ----------------
 
+#ifdef STRINGVIEW_ENABLE
 TEST(TrimTest, SVSingleArgTrimSpace) {
     // mix of inline (<=12B) and non-inline (>12B) StringView values
     std::vector<std::string> strings = {
@@ -444,3 +445,4 @@ TEST(TrimTest, SVOutNullPropagation) {
     EXPECT_TRUE(result->IsNull(1)) << "Row 1 should be NULL";
     EXPECT_EQ(std::string(resultVec->GetValueRef(2).data(), resultVec->GetValueRef(2).size()), "c");
 }
+#endif
