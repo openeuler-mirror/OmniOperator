@@ -41,6 +41,10 @@ void RegisterDateTimePlusFunctions(const std::string &prefix)
     // DATE + interval -> TIMESTAMP(ms)：date 提升为毫秒，保留时间分量。
     RegisterFunction<DateTimePlusDayTimeFunction, int64_t, int32_t, int64_t>(
         prefix + "datetime_plus_day_time", {OMNI_DATE32, OMNI_LONG}, OMNI_LONG);
+    // 上游 Adaptor 把 DATE 列映射为 OMNI_INT；CAST(DATE AS TIMESTAMP) 会被 Calcite
+    // 降级为 date + INTERVAL '0' SECOND，走的就是 INT 约定的该签名。
+    RegisterFunction<DateTimePlusDayTimeFunction, int64_t, int32_t, int64_t>(
+        prefix + "datetime_plus_day_time", {OMNI_INT, OMNI_LONG}, OMNI_LONG);
     // TIMESTAMP(ms) + interval -> TIMESTAMP(ms)：纯毫秒加法。
     RegisterFunction<DateTimePlusDayTimeFunction, int64_t, int64_t, int64_t>(
         prefix + "datetime_plus_day_time", {OMNI_LONG, OMNI_LONG}, OMNI_LONG);
