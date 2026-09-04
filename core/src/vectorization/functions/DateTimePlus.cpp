@@ -34,6 +34,10 @@ void RegisterDateTimePlusFunctions(const std::string &prefix)
     // DATE + interval -> DATE：天内毫秒截断，天数须装入 int32。
     RegisterFunction<DateTimePlusDayTimeFunction, int32_t, int32_t, int64_t>(
         prefix + "datetime_plus_day_time", {OMNI_DATE32, OMNI_LONG}, OMNI_DATE32);
+    // 上游 Adaptor（87f8d00）把 DATE 列映射为 OMNI_INT；与 DateArithmetic.cpp 的双注册
+    // 模式一致，INT 约定的 DATE 同样接受（同为 int32 epoch 天）。
+    RegisterFunction<DateTimePlusDayTimeFunction, int32_t, int32_t, int64_t>(
+        prefix + "datetime_plus_day_time", {OMNI_INT, OMNI_LONG}, OMNI_INT);
     // DATE + interval -> TIMESTAMP(ms)：date 提升为毫秒，保留时间分量。
     RegisterFunction<DateTimePlusDayTimeFunction, int64_t, int32_t, int64_t>(
         prefix + "datetime_plus_day_time", {OMNI_DATE32, OMNI_LONG}, OMNI_LONG);
