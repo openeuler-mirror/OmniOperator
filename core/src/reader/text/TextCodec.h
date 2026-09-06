@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -41,6 +42,10 @@ public:
         const std::vector<TextFieldView>& fields, std::string& output) const = 0;
 };
 
-std::unique_ptr<TextCodec> CreateTextCodec(TextCodecKind kind);
+std::unique_ptr<TextCodec> CreateTextCodec(const TextFormatOptions& options);
+
+std::unique_ptr<TextCodec> CreateTextCodec(
+    const TextFormatOptions& options,
+    const std::vector<int32_t>& projectedFieldIndices);
 
 } // namespace omniruntime::reader::text

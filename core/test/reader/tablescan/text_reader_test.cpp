@@ -11,6 +11,7 @@
 #include <limits>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <unistd.h>
@@ -76,21 +77,96 @@ struct ReadResult {
     uint64_t rows = 0;
 };
 
-TEST(TextFormatOptionsTest, AcceptsOnlyPhaseOneCombination)
+TEST(TextFormatOptionsTest, AcceptsSupportedCodecCombinations)
 {
     TextFormatOptions valid;
     valid.sourceKind = TextSourceKind::SPARK_TEXT;
     valid.codecKind = TextCodecKind::RAW_LINE;
-    valid.charset = "UTF-8";
-    valid.compressionCodec = "NONE";
-    EXPECT_NO_THROW(valid.ValidatePhaseOne());
+    valid.common.charset = "UTF-8";
+    valid.common.compressionCodec = "NONE";
+    valid.dialect = RawLineOptions{};
+    EXPECT_NO_THROW(valid.Validate());
 
     auto invalid = valid;
     invalid.codecKind = TextCodecKind::LAZY_SIMPLE;
-    EXPECT_THROW(invalid.ValidatePhaseOne(), std::runtime_error);
+    EXPECT_THROW(invalid.Validate(), std::runtime_error);
     invalid = valid;
-    invalid.compressionCodec = "gzip";
-    EXPECT_THROW(invalid.ValidatePhaseOne(), std::runtime_error);
+    invalid.common.compressionCodec = "gzip";
+    EXPECT_THROW(invalid.Validate(), std::runtime_error);
+
+    TextFormatOptions lazy;
+    lazy.sourceKind = TextSourceKind::HIVE_TEXT;
+    lazy.codecKind = TextCodecKind::LAZY_SIMPLE;
+    lazy.common.charset = "UTF-8";
+    lazy.common.compressionCodec = "NONE";
+    LazySimpleOptions lazyDialect;
+    lazyDialect.delimited.fieldDelimiter = '|';
+    lazy.dialect = lazyDialect;
+    EXPECT_NO_THROW(lazy.Validate());
+}
+
+TEST(LazySimpleSerdeCodecTest, HandlesDelimiterEscapeAndNull)
+{
+    TextFormatOptions options;
+    options.sourceKind = TextSourceKind::HIVE_TEXT;
+    options.codecKind = TextCodecKind::LAZY_SIMPLE;
+    options.common.charset = "UTF-8";
+    options.common.compressionCodec = "NONE";
+    LazySimpleOptions lazy;
+    lazy.delimited.fieldDelimiter = '|';
+    lazy.delimited.nullLiteral = "NULL";
+    lazy.delimited.escapeEnabled = true;
+    lazy.delimited.escapeChar = '\\';
+    options.dialect = lazy;
+
+    auto codec = CreateTextCodec(options);
+    DecodedTextRecord decoded;
+    codec->DecodeRecord(R"(left|escaped\|value|NULL)", decoded);
+    ASSERT_EQ(decoded.fields.size(), 3);
+    EXPECT_EQ(decoded.fields[0].value, "left");
+    EXPECT_EQ(decoded.fields[1].value, "escaped|value");
+    EXPECT_TRUE(decoded.fields[2].isNull);
+
+    std::string encoded;
+    codec->EncodeRecord(
+        {{false, "left"}, {false, "escaped|value"}, {true, {}}}, encoded);
+    EXPECT_EQ(encoded, R"(left|escaped\|value|NULL)");
+}
+
+TEST(LazySimpleSerdeCodecTest, DecodesOnlyProjectedFieldsInOutputOrder)
+{
+    TextFormatOptions options;
+    options.sourceKind = TextSourceKind::HIVE_TEXT;
+    options.codecKind = TextCodecKind::LAZY_SIMPLE;
+    options.common.charset = "UTF-8";
+    options.common.compressionCodec = "NONE";
+    LazySimpleOptions lazy;
+    lazy.delimited.fieldDelimiter = '|';
+    lazy.delimited.nullLiteral = "NULL";
+    lazy.delimited.escapeEnabled = true;
+    lazy.delimited.escapeChar = '\\';
+    options.dialect = lazy;
+
+    auto codec = CreateTextCodec(options, {2, 0});
+    DecodedTextRecord decoded;
+    codec->DecodeRecord(R"(left|escaped\|value|NULL|ignored\|tail)", decoded);
+    ASSERT_EQ(decoded.fields.size(), 2);
+    EXPECT_TRUE(decoded.fields[0].isNull);
+    EXPECT_FALSE(decoded.fields[1].isNull);
+    EXPECT_EQ(decoded.fields[1].value, "left");
+    EXPECT_TRUE(decoded.storage.empty());
+
+    codec = CreateTextCodec(options, {1});
+    codec->DecodeRecord(R"(ignored\|prefix|selected\|value|tail)", decoded);
+    ASSERT_EQ(decoded.fields.size(), 1);
+    EXPECT_EQ(decoded.fields[0].value, "selected|value");
+
+    codec = CreateTextCodec(options, {3, 1});
+    codec->DecodeRecord("left|", decoded);
+    ASSERT_EQ(decoded.fields.size(), 2);
+    EXPECT_TRUE(decoded.fields[0].isNull);
+    EXPECT_FALSE(decoded.fields[1].isNull);
+    EXPECT_TRUE(decoded.fields[1].value.empty());
 }
 
 ReadResult ReadText(
@@ -118,6 +194,82 @@ ReadResult ReadText(
                 for (uint64_t row = 0; row < rows; ++row) {
                     result.values.emplace_back(
                         vec::VectorHelper::GetStringValueFromVector(batch->at(0), row));
+                }
+            }
+        }
+        if (batch != nullptr) {
+            for (auto* vector : *batch) {
+                delete vector;
+            }
+            delete batch;
+        }
+        batch = nullptr;
+        rows = rowReader->Next(&batch, nullptr, batchSize);
+    }
+    delete batch;
+    std::remove(path.c_str());
+    return result;
+}
+
+struct LazyReadResult {
+    std::vector<std::vector<std::string>> values;
+    std::vector<std::vector<bool>> nulls;
+    std::vector<uint64_t> batchSizes;
+    uint64_t rows = 0;
+};
+
+LazyReadResult ReadLazySimple(
+    const std::string& content,
+    const std::vector<std::string>& projectedNames,
+    uint64_t batchSize)
+{
+    const auto path = MakeTempPath(".txt");
+    WriteBytes(path, content);
+    auto options = std::make_shared<ReaderOptions>();
+    options->ParseEnhanceJson(
+        R"({"text.source_kind":"HIVE_TEXT","text.codec_kind":"LAZY_SIMPLE",)"
+        R"("text.charset":"UTF-8","text.line_separator":"",)"
+        R"("text.compression_codec":"NONE","text.field_delimiter":"|",)"
+        R"("text.null_literal":"NULL","text.escape_enabled":"true",)"
+        R"("text.escape_char":"\\"})",
+        codegen::FileFormat::TEXT);
+    options->SetUri(std::make_shared<UriInfo>("file", path, "", "-1"));
+    options->SetSplitStart(0);
+    options->SetSplitEnd(std::numeric_limits<int64_t>::max());
+
+    std::vector<type::DataTypePtr> projectedTypes(
+        projectedNames.size(), type::VarcharType());
+    auto projectedNamesCopy = projectedNames;
+    options->SetRowType(type::ROW(
+        std::move(projectedNamesCopy), std::move(projectedTypes)));
+    options->SetFileRowType(type::ROW(
+        std::vector<std::string>{"a", "b", "c", "d"},
+        std::vector<type::DataTypePtr>{
+            type::VarcharType(), type::VarcharType(),
+            type::VarcharType(), type::VarcharType()}));
+
+    auto reader = GetReaderFactory(codegen::FileFormat::TEXT)->CreateReader(options);
+    auto rowReader = reader->CreateRowReader();
+    LazyReadResult result;
+    result.values.resize(projectedNames.size());
+    result.nulls.resize(projectedNames.size());
+    std::vector<vec::BaseVector*>* batch = nullptr;
+    auto rows = rowReader->Next(&batch, nullptr, batchSize);
+    while (rows > 0) {
+        result.rows += rows;
+        result.batchSizes.push_back(rows);
+        EXPECT_NE(batch, nullptr);
+        EXPECT_EQ(batch == nullptr ? 0 : batch->size(), projectedNames.size());
+        if (batch != nullptr && batch->size() == projectedNames.size()) {
+            for (size_t column = 0; column < batch->size(); ++column) {
+                EXPECT_EQ(batch->at(column)->GetSize(), rows);
+                for (uint64_t row = 0; row < rows; ++row) {
+                    const auto isNull = batch->at(column)->IsNull(static_cast<int32_t>(row));
+                    result.nulls[column].push_back(isNull);
+                    result.values[column].push_back(isNull
+                        ? std::string{}
+                        : std::string(vec::VectorHelper::GetStringValueFromVector(
+                              batch->at(column), row)));
                 }
             }
         }
@@ -206,6 +358,19 @@ TEST(TextReaderTest, SupportsEmptyProjection)
         std::numeric_limits<int64_t>::max(), false, 1).rows, 2);
 }
 
+TEST(TextReaderTest, ReadsLazySimpleProjectedColumnsWithoutFullRecordBatch)
+{
+    auto result = ReadLazySimple(
+        "a\\|0|b0|c0|tail0\na1||NULL|tail1\na2|b2", {"c", "a"}, 2);
+    EXPECT_EQ(result.rows, 3);
+    EXPECT_EQ(result.batchSizes, (std::vector<uint64_t>{2, 1}));
+    ASSERT_EQ(result.values.size(), 2);
+    EXPECT_EQ(result.values[0], (std::vector<std::string>{"c0", "", ""}));
+    EXPECT_EQ(result.nulls[0], (std::vector<bool>{false, true, true}));
+    EXPECT_EQ(result.values[1], (std::vector<std::string>{"a|0", "a1", "a2"}));
+    EXPECT_EQ(result.nulls[1], (std::vector<bool>{false, false, false}));
+}
+
 TEST(TextWriterTest, WritesFlatValuesEmptyAndNull)
 {
     const auto path = MakeTempPath(".txt");
@@ -268,6 +433,41 @@ TEST(TextWriterTest, WritesDictionaryAndConstVectors)
     delete base;
     delete constant;
     EXPECT_EQ(ReadBytes(path), "right\nleft\nright\nconstant\nconstant\n");
+    std::remove(path.c_str());
+}
+
+TEST(TextWriterTest, WritesLazySimpleMultipleColumns)
+{
+    TextFormatOptions options;
+    options.sourceKind = TextSourceKind::HIVE_TEXT;
+    options.codecKind = TextCodecKind::LAZY_SIMPLE;
+    options.common.charset = "UTF-8";
+    options.common.compressionCodec = "NONE";
+    LazySimpleOptions lazy;
+    lazy.delimited.fieldDelimiter = '|';
+    lazy.delimited.nullLiteral = "NULL";
+    options.dialect = lazy;
+    auto schema = type::ROW(
+        std::vector<std::string>{"name", "age"},
+        std::vector<type::DataTypePtr>{type::VarcharType(), type::IntType()});
+
+    const auto path = MakeTempPath(".txt");
+    TextWriter writer(options, schema);
+    writer.Init(UriInfo("file", path, "", "-1"));
+    auto* names = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>>*>(
+        vec::VectorHelper::CreateStringVector(2));
+    names->SetValue(0, "alice");
+    names->SetNull(1);
+    auto* ages = new vec::Vector<int32_t>(2);
+    ages->SetValue(0, 10);
+    ages->SetValue(1, 20);
+
+    writer.Write({names, ages}, 0, 2);
+    writer.Close();
+
+    delete names;
+    delete ages;
+    EXPECT_EQ(ReadBytes(path), "alice|10\nNULL|20\n");
     std::remove(path.c_str());
 }
 

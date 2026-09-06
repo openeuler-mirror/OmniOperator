@@ -26,12 +26,4 @@ void RawLineCodec::EncodeRecord(
     }
 }
 
-std::unique_ptr<TextCodec> CreateTextCodec(TextCodecKind kind)
-{
-    if (kind == TextCodecKind::RAW_LINE) {
-        return std::make_unique<RawLineCodec>();
-    }
-    throw std::runtime_error("Unsupported Text codec.");
-}
-
 } // namespace omniruntime::reader::text

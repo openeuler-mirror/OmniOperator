@@ -16,6 +16,7 @@
 #include "reader/text/TextCodec.h"
 #include "reader/text/TextFormatOptions.h"
 #include "reader/text/TextLineScanner.h"
+#include "reader/text/TextValueConverter.h"
 
 namespace omniruntime::reader::text {
 
@@ -34,6 +35,7 @@ public:
 private:
     TextReader& reader_;
     std::unique_ptr<TextCodec> codec_;
+    std::unique_ptr<TextValueConverter> valueConverter_;
     std::unique_ptr<TextLineScanner> lineScanner_;
 };
 

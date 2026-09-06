@@ -14,7 +14,7 @@ namespace omniruntime::reader::text {
 std::unique_ptr<Reader> TextReaderFactory::CreateReader(std::shared_ptr<ReaderOptions>& options)
 {
     auto textOptions = TextFormatOptions::FromJson(options->GetEnhancementJson());
-    textOptions.ValidatePhaseOne();
+    textOptions.Validate();
     auto reader = std::make_unique<TextReader>(options, std::move(textOptions));
     reader->InitReader();
     return reader;

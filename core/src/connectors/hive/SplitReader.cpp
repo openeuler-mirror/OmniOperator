@@ -131,13 +131,24 @@ namespace {
 
 std::string BuildTextEnhancementJson(
     const std::string& enhancementJson,
-    const std::unordered_map<std::string, std::string>& customSplitInfo)
+    const std::unordered_map<std::string, std::string>& customSplitInfo,
+    const std::shared_ptr<const HiveConfig>& hiveConfig)
 {
     const std::string jsonStr = enhancementJson.empty() ? "{}" : enhancementJson;
     auto json = nlohmann::json::parse(jsonStr);
     for (const auto& [key, value] : customSplitInfo) {
         if (key.rfind("text.", 0) == 0) {
             json[key] = value;
+        }
+    }
+    const auto& config = hiveConfig->config();
+    if (!json.contains("text.session_timezone") || json["text.session_timezone"].get<std::string>().empty()) {
+        if (config->ValueExists("spark.sql.session.timeZone")) {
+            json["text.session_timezone"] =
+                config->Get<std::string>("spark.sql.session.timeZone", "");
+        } else if (config->ValueExists("spark.gluten.sql.session.timeZone.default")) {
+            json["text.session_timezone"] =
+                config->Get<std::string>("spark.gluten.sql.session.timeZone.default", "");
         }
     }
     return json.dump();
@@ -249,7 +260,8 @@ void SplitReader::createReader()
 {
     auto enhancementJson = hiveTableHandle_->GetEnhancementJson();
     if (hiveSplit_->fileFormat == codegen::FileFormat::TEXT) {
-        enhancementJson = BuildTextEnhancementJson(enhancementJson, hiveSplit_->customSplitInfo);
+        enhancementJson = BuildTextEnhancementJson(
+            enhancementJson, hiveSplit_->customSplitInfo, hiveConfig_);
     }
     baseReaderOpts_->ParseEnhanceJson(enhancementJson, hiveSplit_->fileFormat);
     configureReaderOptions(hiveConfig_, hiveSplit_, baseReaderOpts_);

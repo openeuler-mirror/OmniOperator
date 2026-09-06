@@ -11,6 +11,7 @@
 
 #include "reader/arrowadapter/FileSystemAdapter.h"
 #include "util/omni_exception.h"
+#include "vector/unsafe_vector.h"
 #include "vector/vector_helper.h"
 
 namespace omniruntime::reader::text {
@@ -83,8 +84,27 @@ TextRowReader::TextRowReader(TextReader& reader)
         reader.GetFileSize(),
         options_->GetSplitStart(),
         options_->GetSplitEnd());
-    if (fileRowType_ != nullptr && fileRowType_->size() > 0) {
-        codec_ = CreateTextCodec(reader.GetTextOptions().codecKind);
+    if (rowType_ == nullptr) {
+        throw std::runtime_error("Text reader projected row type is missing.");
+    }
+    if (reader_.GetTextOptions().IsLazySimple() && rowType_->size() > 0) {
+        if (fileRowType_ == nullptr) {
+            throw std::runtime_error("LazySimple reader requires projected and full file schemas.");
+        }
+        valueConverter_ = std::make_unique<TextValueConverter>(
+            reader.GetTextOptions().common.sessionTimezone);
+        std::vector<int32_t> projectedFieldIndices;
+        projectedFieldIndices.reserve(rowType_->size());
+        for (const auto& name : rowType_->names()) {
+            const auto index = fileRowType_->getChildIdxIfExists(name);
+            if (!index.has_value()) {
+                throw std::runtime_error("LazySimple projected column is missing from the file schema: " + name);
+            }
+            projectedFieldIndices.push_back(static_cast<int32_t>(*index));
+        }
+        codec_ = CreateTextCodec(reader.GetTextOptions(), projectedFieldIndices);
+    } else if (rowType_->size() > 0) {
+        codec_ = CreateTextCodec(reader.GetTextOptions());
     }
 }
 
@@ -99,33 +119,35 @@ uint64_t TextRowReader::NextDirect(
     if (batch == nullptr || batchLen == 0) {
         return 0;
     }
-    if (fileRowType_ == nullptr || fileRowType_->size() > 1) {
-        throw std::runtime_error("Text reader requires zero or one projected file column.");
-    }
-    if (fileRowType_->size() == 0) {
+    const auto& textOptions = reader_.GetTextOptions();
+    if (rowType_->size() == 0) {
         return lineScanner_->CountRows(batchLen);
     }
-    if (fileRowType_->size() == 1) {
-        auto typeId = fileRowType_->childAt(0)->GetId();
-        if (typeId != type::OMNI_VARCHAR && typeId != type::OMNI_CHAR) {
-            throw std::runtime_error("Text reader projected column must be String.");
+    if (textOptions.IsRawLine()) {
+        if (rowType_->size() > 1) {
+            throw std::runtime_error("RawLine reader requires zero or one projected file column.");
+        }
+        if (rowType_->size() == 1) {
+            auto typeId = rowType_->childAt(0)->GetId();
+            if (typeId != type::OMNI_VARCHAR && typeId != type::OMNI_CHAR) {
+                throw std::runtime_error("RawLine reader projected column must be String.");
+            }
         }
     }
 
-    std::vector<std::string> records;
-    records.reserve(batchLen);
-    while (records.size() < batchLen) {
-        std::string_view record;
-        if (!lineScanner_->NextLine(record)) {
-            break;
+    if (textOptions.IsRawLine() && rowType_->size() == 1) {
+        std::vector<std::string> records;
+        records.reserve(batchLen);
+        while (records.size() < batchLen) {
+            std::string_view record;
+            if (!lineScanner_->NextLine(record)) {
+                break;
+            }
+            records.emplace_back(record);
         }
-        records.emplace_back(record);
-    }
-    if (records.empty()) {
-        return 0;
-    }
-
-    if (fileRowType_->size() == 1) {
+        if (records.empty()) {
+            return 0;
+        }
         std::unique_ptr<vec::BaseVector> outputBase(
             vec::VectorHelper::CreateStringVector(records.size()));
         auto* output = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>>*>(
@@ -143,8 +165,52 @@ uint64_t TextRowReader::NextDirect(
             }
         }
         batch->push_back(outputBase.release());
+        return records.size();
     }
-    return records.size();
+    if (textOptions.IsLazySimple() && rowType_->size() > 0) {
+        using StringVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
+        std::vector<std::unique_ptr<vec::BaseVector>> stringColumns;
+        std::vector<StringVector*> writableColumns;
+        stringColumns.reserve(rowType_->size());
+        writableColumns.reserve(rowType_->size());
+        for (int32_t column = 0; column < rowType_->size(); ++column) {
+            std::unique_ptr<vec::BaseVector> stringColumn(
+                vec::VectorHelper::CreateStringVector(static_cast<uint32_t>(batchLen)));
+            writableColumns.push_back(reinterpret_cast<StringVector*>(stringColumn.get()));
+            stringColumns.emplace_back(std::move(stringColumn));
+        }
+
+        DecodedTextRecord decoded;
+        uint64_t rows = 0;
+        std::string_view record;
+        while (rows < batchLen && lineScanner_->NextLine(record)) {
+            codec_->DecodeRecord(record, decoded);
+            if (decoded.fields.size() != writableColumns.size()) {
+                throw std::runtime_error("LazySimpleCodec output does not match projected schema.");
+            }
+            for (size_t column = 0; column < writableColumns.size(); ++column) {
+                if (decoded.fields[column].isNull) {
+                    writableColumns[column]->SetNull(static_cast<int32_t>(rows));
+                } else {
+                    writableColumns[column]->SetValue(
+                        static_cast<int32_t>(rows), decoded.fields[column].value);
+                }
+            }
+            ++rows;
+        }
+        if (rows == 0) {
+            return 0;
+        }
+        for (int32_t column = 0; column < rowType_->size(); ++column) {
+            vec::unsafe::UnsafeBaseVector::SetSize(
+                stringColumns[column].get(), static_cast<int32_t>(rows));
+            auto converted = valueConverter_->DecodeColumn(
+                std::move(stringColumns[column]), rowType_->childAt(column));
+            batch->push_back(converted.release());
+        }
+        return rows;
+    }
+    throw std::runtime_error("Unsupported Text reader codec.");
 }
 
 uint64_t TextRowReader::Next(

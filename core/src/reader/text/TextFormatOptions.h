@@ -4,8 +4,10 @@
  */
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <variant>
 
 #include <nlohmann/json.hpp>
 
@@ -25,17 +27,55 @@ enum class TextCodecKind {
     CSV
 };
 
-struct TextFormatOptions {
-    TextSourceKind sourceKind = TextSourceKind::UNKNOWN;
-    TextCodecKind codecKind = TextCodecKind::UNKNOWN;
+struct CommonTextOptions {
     std::string charset;
     std::string lineSeparator;
     std::string compressionCodec;
+    std::string sessionTimezone;
+    bool splitable = true;
+};
+
+struct RawLineOptions {
     bool wholeText = false;
+};
+
+struct DelimitedOptions {
+    char fieldDelimiter = '\0';
+    std::string nullLiteral;
+    bool escapeEnabled = false;
+    char escapeChar = '\0';
+    uint32_t skipInputLines = 0;
+    bool emitHeader = false;
+};
+
+struct LazySimpleOptions {
+    DelimitedOptions delimited;
+    char collectionDelimiter = '\0';
+    char mapKeyDelimiter = '\0';
+    bool lastColumnTakesRest = false;
+};
+
+struct CsvOptions {
+    DelimitedOptions delimited;
+    char quote = '"';
+    std::string parseMode;
+};
+
+using TextDialectOptions = std::variant<RawLineOptions, LazySimpleOptions, CsvOptions>;
+
+struct TextFormatOptions {
+    TextSourceKind sourceKind = TextSourceKind::UNKNOWN;
+    TextCodecKind codecKind = TextCodecKind::UNKNOWN;
+    CommonTextOptions common;
+    TextDialectOptions dialect = RawLineOptions{};
 
     static TextFormatOptions FromJson(const std::shared_ptr<nlohmann::json>& json);
 
-    void ValidatePhaseOne() const;
+    void Validate() const;
+    bool IsRawLine() const;
+    bool IsLazySimple() const;
+    const RawLineOptions& RawLine() const;
+    const LazySimpleOptions& LazySimple() const;
 };
 
 } // namespace omniruntime::reader::text

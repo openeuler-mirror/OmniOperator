@@ -39,7 +39,8 @@ target_link_libraries(${READER_TARGET} PUBLIC
         Parquet::parquet_shared
         nlohmann_json::nlohmann_json
         orc
-        hdfs)
+        hdfs
+        vectorization)
 install(TARGETS ${READER_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 file(GLOB READER_HEAD_FILES  ${SOURCE_ROOT}/src/reader/*.h)

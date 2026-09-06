@@ -212,8 +212,17 @@ void configureRowReaderOptions(
             break;
         }
         case FileFormat::TEXT: {
-            baseReaderOpts->SetRowType(rowType);
-            baseReaderOpts->SetFileRowType(fileRowType);
+            // Text readers emit file data columns only. SplitReader appends partition columns
+            // afterwards. LazySimple additionally needs the complete table data schema to map
+            // projected names to physical field ordinals.
+            baseReaderOpts->SetRowType(fileRowType);
+            auto codec = hiveSplit->customSplitInfo.find("text.codec_kind");
+            if (codec != hiveSplit->customSplitInfo.end() && codec->second == "LAZY_SIMPLE" &&
+                hiveTableHandle->dataColumns() != nullptr) {
+                baseReaderOpts->SetFileRowType(hiveTableHandle->dataColumns());
+            } else {
+                baseReaderOpts->SetFileRowType(fileRowType);
+            }
             baseReaderOpts->SetSplitStart(static_cast<int64_t>(hiveSplit->start));
             uint64_t splitEnd = (hiveSplit->length == std::numeric_limits<uint64_t>::max())
                                 ? hiveSplit->length
