@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -294,10 +295,8 @@ public:
         auto& vecBatches = inputVecBatches_[partitionIndex];
         for (size_t i = 0; i < vecBatches.size(); ++i) {
             CollectTaperRows(partitionIndex, vecBatches[i], static_cast<uint32_t>(i));
-        }
-        // Free build-side VectorBatches -- data now stored in RowContainer
-        for (auto* vb : vecBatches) {
-            vec::VectorHelper::FreeVecBatch(vb);
+            // Free each batch immediately after copying to RowContainer
+            vec::VectorHelper::FreeVecBatch(vecBatches[i]);
         }
         vecBatches.clear();
     }
@@ -578,6 +577,22 @@ public:
     const std::vector<int32_t>& GetTaperStoredColIndices() const { return taperStoredColIndices_; }
     const std::vector<int32_t>& GetBuildHashCols() const { return buildHashCols_; }
 
+    /// Returns a varchar resolver (row, rcColIdx) -> string_view bound to the
+    /// handler owning partition 'idx''s RowContainer. The resolver is cached on
+    /// this table so the returned pointer stays valid; null when the handler
+    /// is unavailable.
+    const RowContainer::VarcharResolver* GetTaperVarcharResolver(int idx) {
+        if (isSer_ && idx >= 0 && static_cast<size_t>(idx) < serHandlers_.size() && serHandlers_[idx]) {
+            varcharResolverCache_ = serHandlers_[idx]->GetVarcharResolver();
+            return &varcharResolverCache_;
+        }
+        if (idx >= 0 && static_cast<size_t>(idx) < handlers_.size() && handlers_[idx]) {
+            varcharResolverCache_ = handlers_[idx]->GetVarcharResolver();
+            return &varcharResolverCache_;
+        }
+        return nullptr;
+    }
+
     void SetSerMode() { isSer_ = true; serHandlers_.resize(tableCount_); }
     bool IsSerMode() const { return isSer_; }
 
@@ -599,7 +614,8 @@ private:
     BuildSide buildSide_ = OMNI_BUILD_UNKNOWN;
     OmniStatus status_ = OmniStatus::OMNI_STATUS_NORMAL;
     std::vector<std::unique_ptr<TaperJoinFixedHandler<KeyType, NeedVisited>>> handlers_;
-    std::vector<std::unique_ptr<TaperJoinSerializedHandler>> serHandlers_;
+    std::vector<std::unique_ptr<TaperJoinSerializedHandler<NeedVisited>>> serHandlers_;
+    RowContainer::VarcharResolver varcharResolverCache_ {};
     uint32_t visitedCounts = 0;
     uint32_t totalVisitedCounts = 0;
 
@@ -640,7 +656,6 @@ inline uint64_t SerFastHashMix(uint64_t a, uint64_t b)
 template <typename KeyType, bool NeedVisited>
 void TaperJoinHashTableVariants<KeyType, NeedVisited>::CollectTaperRows(
     int32_t partitionIndex, vec::VectorBatch* vecBatch, uint32_t batchIdx) {
-    (void)batchIdx;
     auto rowCount = vecBatch->GetRowCount();
     if (rowCount <= 0) return;
 
@@ -666,7 +681,7 @@ void TaperJoinHashTableVariants<KeyType, NeedVisited>::CollectTaperRows(
                 case type::OMNI_DOUBLE: case type::OMNI_DATE64: case type::OMNI_TIME64:
                     keySizes[c] = 8; break;
                 case type::OMNI_VARCHAR: case type::OMNI_CHAR: case type::OMNI_VARBINARY:
-                    keySizes[c] = sizeof(char*) + sizeof(uint32_t); break;
+                    keySizes[c] = 0; break;
                 case type::OMNI_ARRAY: case type::OMNI_MAP: case type::OMNI_ROW:
                     keySizes[c] = sizeof(char*) + sizeof(size_t); isVar[c] = true; break;
                 case type::OMNI_DECIMAL128: keySizes[c] = sizeof(Decimal128); break;
@@ -686,7 +701,7 @@ void TaperJoinHashTableVariants<KeyType, NeedVisited>::CollectTaperRows(
         }
         auto* ctx = executionContexts_[partitionIndex].get();
         if (isSer_) {
-            serHandlers_[partitionIndex] = std::make_unique<TaperJoinSerializedHandler>(*ctx->GetArena());
+            serHandlers_[partitionIndex] = std::make_unique<TaperJoinSerializedHandler<NeedVisited>>(*ctx->GetArena());
             serHandlers_[partitionIndex]->InitRowContainer(keySizes, isVar, typeIds, varcharCols, keyColIndices);
         } else {
             handlers_[partitionIndex] = std::make_unique<TaperJoinFixedHandler<KeyType, NeedVisited>>(
@@ -704,23 +719,23 @@ void TaperJoinHashTableVariants<KeyType, NeedVisited>::CollectTaperRows(
     }
     std::vector<char*> rows(rowCount);
     if (isSer_) {
-        serHandlers_[partitionIndex]->AppendRows(decoded.data(), 0, rowCount, rows.data());
+        serHandlers_[partitionIndex]->AppendRows(decoded.data(), 0, rowCount, batchIdx, rows.data());
     } else if (partitionIndex == 0 && !isMultiColumn_ && arrayAnalyzer_.active) {
         auto& sc = taperStoredColIndices_.empty() ? buildHashCols_ : taperStoredColIndices_;
         auto itf = std::find(sc.begin(), sc.end(), buildHashCols_[0]);
         int32_t keyIdx = (itf != sc.end()) ? static_cast<int32_t>(std::distance(sc.begin(), itf)) : 0;
-        handlers_[partitionIndex]->template AppendRows<true>(decoded.data(), 0, rowCount, rows.data(),
+        handlers_[partitionIndex]->template AppendRows<true>(decoded.data(), 0, rowCount, batchIdx, rows.data(),
             keyIdx, &arrayAnalyzer_.min, &arrayAnalyzer_.max, &arrayAnalyzer_.feasible);
         if (arrayAnalyzer_.min != INT64_MAX) arrayAnalyzer_.hasValue = true;
         if (!arrayAnalyzer_.feasible) arrayAnalyzer_.active = false;
     } else {
-        handlers_[partitionIndex]->template AppendRows<false>(decoded.data(), 0, rowCount, rows.data());
+        handlers_[partitionIndex]->template AppendRows<false>(decoded.data(), 0, rowCount, batchIdx, rows.data());
     }
     // Transfer string container ownership to handler before decoded vectors go out of scope
     if (isSer_) {
-        serHandlers_[partitionIndex]->HoldStringContainers(decoded.data());
+        serHandlers_[partitionIndex]->HoldStringContainers(decoded.data(), batchIdx);
     } else {
-        handlers_[partitionIndex]->HoldStringContainers(decoded.data());
+        handlers_[partitionIndex]->HoldStringContainers(decoded.data(), batchIdx);
     }
 }
 
@@ -760,15 +775,12 @@ void TaperJoinHashTableVariants<KeyType, NeedVisited>::BuildTaperHashTableSerial
                     if (w == 0) {
                         if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR ||
                             typeId == type::OMNI_VARBINARY) {
-                            auto storage = RowContainer::ReadValue<RowContainer::StringViewStorage>(rows[i], colOff);
-                            if (storage.data != nullptr) {
-                                colHash = HashUtil::HashValue(
-                                    reinterpret_cast<int8_t*>(const_cast<char*>(storage.data)),
-                                    static_cast<int32_t>(storage.size));
-                            } else {
-                                isNulls[i] = true;
-                                colHash = kNullHash;
-                            }
+                            auto sv = serHandler->GetVarcharString(colIdx, rows[i]);
+                            // Null keys are already filtered via the row null bit above;
+                            // empty strings are valid keys and must be hashed normally.
+                            colHash = HashUtil::HashValue(
+                                reinterpret_cast<int8_t*>(const_cast<char*>(sv.data())),
+                                static_cast<int32_t>(sv.size()));
                         } else if (typeId == type::OMNI_ARRAY || typeId == type::OMNI_MAP || typeId == type::OMNI_ROW) {
                             auto* dataPtr = RowContainer::ReadValue<char*>(rows[i], colOff);
                             auto dataLen = RowContainer::ReadValue<size_t>(rows[i], colOff + sizeof(char*));
@@ -856,7 +868,7 @@ void TaperJoinHashTableVariants<KeyType, NeedVisited>::BuildTaperHashTableFixed(
                         if (ret.IsInsert()) {
                             ret.SetValue(rows[i]);
                         } else {
-                            *RowContainer::NextPtr(rows[i], payloadOff) = ret.GetValue();
+                            RowContainer::SetNextPtr(rows[i], payloadOff, ret.GetValue());
                             ret.SetValue(rows[i]);
                         }
                     }

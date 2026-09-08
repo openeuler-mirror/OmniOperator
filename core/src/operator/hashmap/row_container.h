@@ -8,11 +8,15 @@
 
 #include <cstdint>
 #include <cstring>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include <memory>
 #include "memory/simple_arena_allocator.h"
 #include "util/compiler_util.h"
+#include "vector/dictionary_container.h"
+#include "vector/large_string_container.h"
+#include "vector/vector.h"
 
 namespace omniruntime::vec {
 class BaseVector;
@@ -109,14 +113,47 @@ public:
     /// For TAPER join, the payload region reuses the AggState area.
     int32_t PayloadOffset() const { return aggStateOffset; }
 
-    /// Return a pointer to the "next" chain pointer stored at the given payload offset.
-    static char** NextPtr(char* row, int32_t payloadOffset) {
-        return reinterpret_cast<char**>(row + payloadOffset);
+    /// Size of a packed row pointer (6 bytes, saving 2 bytes vs full 8-byte pointer).
+    static constexpr int32_t kRowPtrSize = 6;
+
+    /// Pack a pointer into a 6-byte buffer (lower 48 bits).
+    static ALWAYS_INLINE void SetPackedPtr(char* buf, char* ptr) {
+        uint64_t val = reinterpret_cast<uint64_t>(ptr);
+        memcpy(buf, &val, kRowPtrSize);
+    }
+
+    /// Unpack a pointer from a 6-byte buffer.
+    static ALWAYS_INLINE char* GetPackedPtr(const char* buf) {
+        uint64_t val = 0;
+        memcpy(&val, buf, kRowPtrSize);
+        return reinterpret_cast<char*>(val);
+    }
+
+    /// Read the "next" chain pointer stored at the given payload offset (6-byte packed).
+    static char* GetNextPtr(char* row, int32_t payloadOffset) {
+        return GetPackedPtr(row + payloadOffset);
+    }
+
+    /// Write the "next" chain pointer at the given payload offset (6-byte packed).
+    static void SetNextPtr(char* row, int32_t payloadOffset, char* ptr) {
+        SetPackedPtr(row + payloadOffset, ptr);
     }
 
     /// Return a pointer to the "visited" byte stored after the next pointer in the payload.
     static uint8_t* VisitedPtr(char* row, int32_t payloadOffset) {
-        return reinterpret_cast<uint8_t*>(row + payloadOffset + sizeof(char*));
+        return reinterpret_cast<uint8_t*>(row + payloadOffset + kRowPtrSize);
+    }
+
+    /// Read a 4-byte value (memcpy-based, safe for unaligned offsets).
+    static ALWAYS_INLINE uint32_t GetUint32(const char* buf) {
+        uint32_t v;
+        memcpy(&v, buf, sizeof(uint32_t));
+        return v;
+    }
+
+    /// Write a 4-byte value (memcpy-based, safe for unaligned offsets).
+    static ALWAYS_INLINE void SetUint32(char* buf, uint32_t v) {
+        memcpy(buf, &v, sizeof(uint32_t));
     }
 
     /// Get the fixed row size.
@@ -143,6 +180,56 @@ public:
         uint32_t size;
     };
 
+    /// Lightweight view over the TAPER handler's per-column/per-batch varchar
+    /// container snapshot. Passed to ExtractColumn instead of a std::function
+    /// so the per-row resolution inlines into the extraction loop.
+    /// All pointers must outlive every row resolved through this struct
+    /// (they point at the owning TaperJoin*Handler's members).
+    struct VarcharResolver {
+        using ContainerVec = std::vector<std::shared_ptr<void>>;
+        const std::vector<ContainerVec>* containers;                 // [colIdx][batchId]
+        const std::vector<std::vector<int32_t>>* encodings;          // [colIdx][batchId]
+        const std::vector<std::vector<StringViewStorage>>* consts;   // [colIdx][batchId]
+        const std::vector<std::vector<int32_t>>* vecOffsets;         // [colIdx][batchId]
+        int32_t idOffset;                                            // row offset of batchId
+
+        /// Read batchId/rowId from the row payload and resolve the string.
+        ALWAYS_INLINE std::string_view Resolve(int32_t colIdx, const char* row) const
+        {
+            uint32_t batchId = GetUint32(row + idOffset);
+            uint32_t rowId = GetUint32(row + idOffset + 4);
+            return ResolveById(colIdx, batchId, rowId);
+        }
+
+        /// Resolve a string from an already-extracted (batchId, rowId).
+        ALWAYS_INLINE std::string_view ResolveById(int32_t colIdx, uint32_t batchId,
+            uint32_t rowId) const
+        {
+            if (colIdx >= static_cast<int32_t>(encodings->size()) ||
+                colIdx >= static_cast<int32_t>(containers->size())) {
+                return {};
+            }
+            const auto& encVec = (*encodings)[colIdx];
+            const auto& contVec = (*containers)[colIdx];
+            if (batchId >= encVec.size() || batchId >= contVec.size()) {
+                return {};
+            }
+            auto enc = encVec[batchId];
+            if (enc == OMNI_DICTIONARY) {
+                auto* dict = static_cast<DictionaryContainer<std::string_view>*>(
+                    contVec[batchId].get());
+                return dict->GetValue(static_cast<int32_t>(rowId) + (*vecOffsets)[colIdx][batchId]);
+            }
+            if (enc == OMNI_ENCODING_CONST) {
+                const auto& cs = (*consts)[colIdx][batchId];
+                return {cs.data, cs.size};
+            }
+            auto* lsc = static_cast<LargeStringContainer<std::string_view>*>(
+                contVec[batchId].get());
+            return lsc->GetValue(static_cast<int32_t>(rowId) + (*vecOffsets)[colIdx][batchId]);
+        }
+    };
+
     /// Iterate through all allocated rows and collect pointers to active rows.
     /// This follows the bolt RowContainer::listRows pattern.
     /// @param iter      Iterator tracking position across calls
@@ -153,8 +240,12 @@ public:
 
     /// Extract a key column from a set of rows into an output vector.
     /// This dispatches by type to the appropriate vector setter.
+    /// For varchar columns, 'varcharResolver' (when provided) retrieves the string
+    /// via batchId/rowId stored in the payload (TAPER layout with keySizes=0);
+    /// otherwise a StringViewStorage is read from the key area.
     void ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
-                       vec::BaseVector* outputVector);
+                       vec::BaseVector* outputVector,
+                       const VarcharResolver* varcharResolver = nullptr);
 
     /// Compare a key column in a row against a decoded vector value.
     /// Used for speculative key verification.

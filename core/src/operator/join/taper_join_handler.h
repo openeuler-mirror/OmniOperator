@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -72,24 +73,13 @@ static ALWAYS_INLINE void TaperFixedWriter(char* row, const TaperColMeta& m, int
     }
 }
 
+// Noop writer for varchar columns when keySizes=0.
+// Only sets null bit; no data stored in key area.
+// String data is accessible via colStringContainers_[c][batchId].GetValue(rowId).
 template <int Enc>
-static ALWAYS_INLINE void TaperVarcharWriter(char* row, const TaperColMeta& m, int32_t idx) {
+static ALWAYS_INLINE void TaperVarcharNoopWriter(char* row, const TaperColMeta& m, int32_t idx) {
     if (m.nulls && BitUtil::IsBitSet(reinterpret_cast<const uint64_t*>(m.nulls), idx)) {
         RowContainer::SetNullAt(row, m.nullByte, m.nullMask);
-        return;
-    }
-    if constexpr (Enc == vec::OMNI_ENCODING_CONST) {
-        RowContainer::StoreValue<RowContainer::StringViewStorage>(row, m.offset, m.constStr);
-    } else if constexpr (Enc == vec::OMNI_DICTIONARY) {
-        auto* dictVec = static_cast<Vector<DictionaryContainer<std::string_view>>*>(const_cast<void*>(m.container));
-        auto sv = dictVec->GetValue(idx);
-        RowContainer::StoreValue<RowContainer::StringViewStorage>(
-            row, m.offset, {sv.data(), static_cast<uint32_t>(sv.size())});
-    } else {
-        auto* lscVec = static_cast<Vector<LargeStringContainer<std::string_view>>*>(const_cast<void*>(m.container));
-        auto sv = lscVec->GetValue(idx);
-        RowContainer::StoreValue<RowContainer::StringViewStorage>(
-            row, m.offset, {sv.data(), static_cast<uint32_t>(sv.size())});
     }
 }
 
@@ -281,20 +271,24 @@ static ALWAYS_INLINE void SetupVarcharColMeta(TaperColMeta& m, const vec::Decode
     auto* vec = decodedCol.Base();
     m.enc = vec->GetEncoding();
     if (m.enc == OMNI_ENCODING_CONST) {
-        if (constStrCache[c].data == nullptr) {
-            auto sv0 = static_cast<ConstVector<std::string_view>*>(vec)->GetConstValue();
+        // Different vecBatches may carry different const values; refresh the
+        // arena copy whenever the incoming value differs from the cached one.
+        auto sv0 = static_cast<ConstVector<std::string_view>*>(vec)->GetConstValue();
+        auto& cached = constStrCache[c];
+        if (cached.data == nullptr || cached.size != sv0.size() ||
+            memcmp(cached.data, sv0.data(), sv0.size()) != 0) {
             auto* buf = reinterpret_cast<char*>(arena->Allocate(sv0.size()));
             memcpy(buf, sv0.data(), sv0.size());
-            constStrCache[c] = {buf, static_cast<uint32_t>(sv0.size())};
+            cached = {buf, static_cast<uint32_t>(sv0.size())};
         }
         m.constStr = constStrCache[c];
-        m.writer = &TaperVarcharWriter<OMNI_ENCODING_CONST>;
+        m.writer = &TaperVarcharNoopWriter<OMNI_ENCODING_CONST>;
     } else if (m.enc == OMNI_DICTIONARY) {
         m.container = static_cast<Vector<DictionaryContainer<std::string_view>>*>(vec);
-        m.writer = &TaperVarcharWriter<OMNI_DICTIONARY>;
+        m.writer = &TaperVarcharNoopWriter<OMNI_DICTIONARY>;
     } else {
         m.container = static_cast<Vector<LargeStringContainer<std::string_view>>*>(vec);
-        m.writer = &TaperVarcharWriter<OMNI_FLAT>;
+        m.writer = &TaperVarcharNoopWriter<OMNI_FLAT>;
     }
 }
 
@@ -340,8 +334,8 @@ public:
     using HashTable = TaperFlatHashTable<KeyType, false>;
 
     // Size in bytes of the per-row payload stored past key + null data.
-    // Layout: [next: char*][visited: uint8_t]
-    static constexpr int32_t kPayloadSize = sizeof(char*) + 1;
+    // Layout: [next: 6-byte packed ptr][visited: uint8_t] (visited only when NeedVisited is true)
+    static constexpr int32_t kPayloadSize = RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0) + 8;
 
     TaperJoinFixedHandler() = default;
     TaperJoinFixedHandler(mem::SimpleArenaAllocator& pool, uint8_t /*initDegree*/)
@@ -408,27 +402,21 @@ public:
                 case type::OMNI_VARCHAR:
                 case type::OMNI_CHAR:
                 case type::OMNI_VARBINARY: {
+                    // keySizes=0, no data stored in key area.
+                    // string data accessible via colStringContainers_[c][batchId].GetValue(rowId)
+                    // Only CONST encoding needs arena copy for constStrCache_.
                     auto* vec = decodedCols[c].Base();
                     auto enc = vec->GetEncoding();
-                    std::string_view sv;
                     if (enc == OMNI_ENCODING_CONST) {
-                        if (constStrCache_[c].data == nullptr) {
-                            sv = static_cast<ConstVector<std::string_view>*>(vec)->GetConstValue();
+                        // Refresh the arena copy when the incoming const value differs
+                        auto sv = static_cast<ConstVector<std::string_view>*>(vec)->GetConstValue();
+                        auto& cached = constStrCache_[c];
+                        if (cached.data == nullptr || cached.size != sv.size() ||
+                            memcmp(cached.data, sv.data(), sv.size()) != 0) {
                             auto* buf = reinterpret_cast<char*>(arena_->Allocate(sv.size()));
                             memcpy(buf, sv.data(), sv.size());
-                            constStrCache_[c] = {buf, static_cast<uint32_t>(sv.size())};
+                            cached = {buf, static_cast<uint32_t>(sv.size())};
                         }
-                        RowContainer::StoreValue<RowContainer::StringViewStorage>(row, offset,
-                            constStrCache_[c]);
-                    } else if (enc == OMNI_DICTIONARY) {
-                        sv = decodedCols[c].GetValue<std::string_view>(rowIdx);
-                        RowContainer::StoreValue<RowContainer::StringViewStorage>(row, offset,
-                            {sv.data(), static_cast<uint32_t>(sv.size())});
-                    } else {
-                        sv = static_cast<Vector<LargeStringContainer<std::string_view>>*>(vec)
-                                 ->GetValue(rowIdx);
-                        RowContainer::StoreValue<RowContainer::StringViewStorage>(row, offset,
-                            {sv.data(), static_cast<uint32_t>(sv.size())});
                     }
                     break;
                 }
@@ -445,16 +433,22 @@ public:
             }
         }
 
-        // Set payload: next=null, visited=0
+        // Set payload: next=null (6-byte packed), visited=0 (only when NeedVisited is true)
+        // batchId (4B) + rowId (4B) at the end of payload
         auto payloadOff = rows_->PayloadOffset();
-        *reinterpret_cast<char**>(row + payloadOff) = nullptr;
-        *reinterpret_cast<uint8_t*>(row + payloadOff + sizeof(char*)) = 0;
+        RowContainer::SetNextPtr(row, payloadOff, nullptr);
+        auto batchIdOff = payloadOff + RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0);
+        RowContainer::SetUint32(row + batchIdOff, vecBatchIdx);
+        RowContainer::SetUint32(row + batchIdOff + 4, rowIdx);
+        if constexpr (NeedVisited) {
+            *reinterpret_cast<uint8_t*>(row + payloadOff + RowContainer::kRowPtrSize) = 0;
+        }
 
         return row;
     }
 
     template <bool Analyze = false>
-    void AppendRows(vec::DecodedVector* decodedCols, int32_t startRow, int32_t count, char** rows,
+    void AppendRows(vec::DecodedVector* decodedCols, int32_t startRow, int32_t count, uint32_t vecBatchIdx, char** rows,
         int32_t analyzeCol = -1, int64_t* analyzeMin = nullptr, int64_t* analyzeMax = nullptr,
         bool* feasible = nullptr) {
         std::vector<TaperColMeta> colMeta(numCols_);
@@ -612,6 +606,20 @@ public:
                         }
                     }
                 }
+                // Set batchId/rowId in payload for batch path
+                {
+                    auto payloadOff = rows_->PayloadOffset();
+                    auto batchIdOff = payloadOff + RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0);
+                    for (int32_t i = 0; i < n; ++i) {
+                        char* r = base + i * frs;
+                        RowContainer::SetNextPtr(r, payloadOff, nullptr);
+                        RowContainer::SetUint32(r + batchIdOff, vecBatchIdx);
+                        RowContainer::SetUint32(r + batchIdOff + 4, static_cast<uint32_t>(startRow + i));
+                        if constexpr (NeedVisited) {
+                            *reinterpret_cast<uint8_t*>(r + payloadOff + RowContainer::kRowPtrSize) = 0;
+                        }
+                    }
+                }
                 return;
             }
         }
@@ -653,6 +661,17 @@ public:
                     }
                 }
             }
+            // Set payload: next=null, batchId/rowId, visited
+            {
+                auto payloadOff = rows_->PayloadOffset();
+                auto batchIdOff = payloadOff + RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0);
+                RowContainer::SetNextPtr(row, payloadOff, nullptr);
+                RowContainer::SetUint32(row + batchIdOff, vecBatchIdx);
+                RowContainer::SetUint32(row + batchIdOff + 4, static_cast<uint32_t>(idx));
+                if constexpr (NeedVisited) {
+                    *reinterpret_cast<uint8_t*>(row + payloadOff + RowContainer::kRowPtrSize) = 0;
+                }
+            }
         }
     }
 
@@ -692,38 +711,83 @@ public:
                 if (!initFlag) {
                     char* oldHead = GetRowPtr(buf);
                     SetRowPtr(buf, rows[rowIdx]);
-                    *reinterpret_cast<char**>(rows[rowIdx] + payloadOff) = oldHead;
+                    RowContainer::SetNextPtr(rows[rowIdx], payloadOff, oldHead);
                 }
             });
     }
 
     /// Transfer string container shared_ptrs from decoded vectors to keep backing data alive
     /// after the source VectorBatch is freed. Must be called once per vecBatch before FreeVecBatch.
-    void HoldStringContainers(omniruntime::vec::DecodedVector* decodedCols) {
-        constStrCache_.assign(numCols_, {nullptr, 0});
+    void HoldStringContainers(omniruntime::vec::DecodedVector* decodedCols, uint32_t batchIdx) {
+        colStringContainers_.resize(numCols_);
+        colStringEncodings_.resize(numCols_);
+        colConstStrs_.resize(numCols_);
+        colVecOffsets_.resize(numCols_);
         for (int32_t c = 0; c < numCols_; ++c) {
             if (typeIds_[c] == type::OMNI_VARCHAR || typeIds_[c] == type::OMNI_CHAR ||
                 typeIds_[c] == type::OMNI_VARBINARY) {
                 auto* vec = decodedCols[c].Base();
-                if (vec->GetEncoding() == OMNI_ENCODING_CONST) {
-                    continue; // Const data copied into arena, no container to hold
-                }
-                if (vec->GetEncoding() == OMNI_DICTIONARY) {
-                    stringContainers_.push_back(
-                        unsafe::UnsafeDictionaryVector::GetDictionaryOriginal<std::string_view>(
-                            static_cast<Vector<DictionaryContainer<std::string_view>>*>(vec)));
+                auto enc = vec->GetEncoding();
+                std::shared_ptr<void> container;
+                if (enc == OMNI_ENCODING_CONST) {
+                    container = nullptr; // Const data kept via colConstStrs_ snapshot below
+                } else if (enc == OMNI_DICTIONARY) {
+                    container = unsafe::UnsafeDictionaryVector::GetDictionaryOriginal<std::string_view>(
+                        static_cast<Vector<DictionaryContainer<std::string_view>>*>(vec));
                 } else {
-                    stringContainers_.push_back(
-                        std::static_pointer_cast<void>(
-                            unsafe::UnsafeStringVector::GetContainer(
-                                static_cast<Vector<LargeStringContainer<std::string_view>>*>(vec))));
+                    container = std::static_pointer_cast<void>(
+                        unsafe::UnsafeStringVector::GetContainer(
+                            static_cast<Vector<LargeStringContainer<std::string_view>>*>(vec)));
                 }
+                if (colStringContainers_[c].size() <= batchIdx)
+                    colStringContainers_[c].resize(batchIdx + 1);
+                if (colStringEncodings_[c].size() <= batchIdx)
+                    colStringEncodings_[c].resize(batchIdx + 1, OMNI_FLAT);
+                if (colConstStrs_[c].size() <= batchIdx)
+                    colConstStrs_[c].resize(batchIdx + 1);
+                if (colVecOffsets_[c].size() <= batchIdx)
+                    colVecOffsets_[c].resize(batchIdx + 1, 0);
+                colStringContainers_[c][batchIdx] = std::move(container);
+                colStringEncodings_[c][batchIdx] = enc;
+                // Snapshot the const value for this batch (each batch may carry a
+                // different const) and the vector offset (sliced vector support).
+                colConstStrs_[c][batchIdx] = constStrCache_[c];
+                colVecOffsets_[c][batchIdx] = vec->GetOffset();
             }
         }
     }
 
+    /// Resolver view over this handler's per-column/per-batch container snapshot.
+    /// All member pointers are stable while this handler lives.
+    RowContainer::VarcharResolver GetVarcharResolver() const {
+        return {&colStringContainers_, &colStringEncodings_, &colConstStrs_, &colVecOffsets_,
+            rows_->PayloadOffset() + RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0)};
+    }
+
+    /// Retrieve varchar string from a row by reading batchId/rowId from payload
+    /// and looking up the original container. The returned string_view is valid
+    /// as long as the container (colStringContainers_/colConstStrs_) is alive.
+    std::string_view GetVarcharString(int32_t colIdx, const char* row) const {
+        return GetVarcharResolver().Resolve(colIdx, row);
+    }
+
+private:
+    /// Resolve a string_view from the per-column/per-batch container snapshot.
+    /// Applies the source vector's offset so sliced vectors read correctly.
+    std::string_view GetVarcharByRowId(int32_t colIdx, uint32_t batchId, uint32_t rowId) const {
+        return GetVarcharResolver().ResolveById(colIdx, batchId, rowId);
+    }
+
+public:
     bool HasDuplicates() const { return rows_ && rows_->NumRows() > static_cast<int64_t>(table_->Size()); }
     uint32_t Size() const { return static_cast<uint32_t>(table_->Size()); }
+
+    /// Free hash table chunks (system-allocated memory, not from arena).
+    void ClearTable() { if (table_) table_->Clear(); }
+
+    /// Reset RowContainer tracking state (allocations, counts, free list).
+    /// Must be called after the arena is reset to keep state consistent.
+    void ResetRowContainer() { if (rows_) rows_->Reset(); }
 
 private:
     int32_t numCols_ = 0;
@@ -731,13 +795,17 @@ private:
     std::vector<int32_t> typeIds_;
     std::unique_ptr<HashTable> table_;
     std::unique_ptr<RowContainer> rows_;
-    std::vector<std::shared_ptr<void>> stringContainers_;
+    std::vector<std::vector<std::shared_ptr<void>>> colStringContainers_;
+    std::vector<std::vector<int32_t>> colStringEncodings_;
+    std::vector<std::vector<RowContainer::StringViewStorage>> colConstStrs_;
+    std::vector<std::vector<int32_t>> colVecOffsets_;
     std::vector<RowContainer::StringViewStorage> constStrCache_;
 };
 
 // Serialized-key TAPER join handler for multi-column or non-integer keys.
 // Uses int64_t hash as the hash-table key; row pointers are packed into
 // 6 bytes (lower 48 bits) for space efficiency.
+template <bool NeedVisited>
 class TaperJoinSerializedHandler {
 public:
     using HashTable = TaperFlatHashTable<int64_t, true>;
@@ -766,7 +834,21 @@ public:
         if (table_) table_->Reserve(numRows);
     }
 
-    char* AppendRow(omniruntime::vec::DecodedVector* decodedCols, int32_t rowIdx, uint32_t /*vecBatchIdx*/) {
+    /// Resolver view over this handler's per-column/per-batch container snapshot.
+    /// All member pointers are stable while this handler lives.
+    RowContainer::VarcharResolver GetVarcharResolver() const {
+        return {&colStringContainers_, &colStringEncodings_, &colConstStrs_, &colVecOffsets_,
+            rows_->PayloadOffset() + RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0)};
+    }
+
+    /// Retrieve varchar string from a row by reading batchId/rowId from payload
+    /// and looking up the original container. The returned string_view is valid
+    /// as long as the container (colStringContainers_/colConstStrs_) is alive.
+    std::string_view GetVarcharString(int32_t colIdx, const char* row) const {
+        return GetVarcharResolver().Resolve(colIdx, row);
+    }
+
+    char* AppendRow(omniruntime::vec::DecodedVector* decodedCols, int32_t rowIdx, uint32_t vecBatchIdx) {
         char* row = rows_->NewRow();
 
         for (int32_t c = 0; c < numCols_; ++c) {
@@ -795,27 +877,21 @@ public:
                 case type::OMNI_VARCHAR:
                 case type::OMNI_CHAR:
                 case type::OMNI_VARBINARY: {
+                    // keySizes=0, no data stored in key area.
+                    // string data accessible via colStringContainers_[c][batchId].GetValue(rowId)
+                    // Only CONST encoding needs arena copy for constStrCache_.
                     auto* vec = decodedCols[c].Base();
                     auto enc = vec->GetEncoding();
-                    std::string_view sv;
                     if (enc == OMNI_ENCODING_CONST) {
-                        if (constStrCache_[c].data == nullptr) {
-                            sv = static_cast<ConstVector<std::string_view>*>(vec)->GetConstValue();
+                        // Refresh the arena copy when the incoming const value differs
+                        auto sv = static_cast<ConstVector<std::string_view>*>(vec)->GetConstValue();
+                        auto& cached = constStrCache_[c];
+                        if (cached.data == nullptr || cached.size != sv.size() ||
+                            memcmp(cached.data, sv.data(), sv.size()) != 0) {
                             auto* buf = reinterpret_cast<char*>(arena_->Allocate(sv.size()));
                             memcpy(buf, sv.data(), sv.size());
-                            constStrCache_[c] = {buf, static_cast<uint32_t>(sv.size())};
+                            cached = {buf, static_cast<uint32_t>(sv.size())};
                         }
-                        RowContainer::StoreValue<RowContainer::StringViewStorage>(row, offset,
-                            constStrCache_[c]);
-                    } else if (enc == OMNI_DICTIONARY) {
-                        sv = decodedCols[c].GetValue<std::string_view>(rowIdx);
-                        RowContainer::StoreValue<RowContainer::StringViewStorage>(row, offset,
-                            {sv.data(), static_cast<uint32_t>(sv.size())});
-                    } else {
-                        sv = static_cast<Vector<LargeStringContainer<std::string_view>>*>(vec)
-                                 ->GetValue(rowIdx);
-                        RowContainer::StoreValue<RowContainer::StringViewStorage>(row, offset,
-                            {sv.data(), static_cast<uint32_t>(sv.size())});
                     }
                     break;
                 }
@@ -833,13 +909,18 @@ public:
         }
 
         auto payloadOff = rows_->PayloadOffset();
-        *reinterpret_cast<char**>(row + payloadOff) = nullptr;
-        *reinterpret_cast<uint8_t*>(row + payloadOff + sizeof(char*)) = 0;
+        RowContainer::SetNextPtr(row, payloadOff, nullptr);
+        auto batchIdOff = payloadOff + RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0);
+        RowContainer::SetUint32(row + batchIdOff, vecBatchIdx);
+        RowContainer::SetUint32(row + batchIdOff + 4, rowIdx);
+        if constexpr (NeedVisited) {
+            *reinterpret_cast<uint8_t*>(row + payloadOff + RowContainer::kRowPtrSize) = 0;
+        }
         return row;
     }
 
     template <bool Analyze = false>
-    void AppendRows(vec::DecodedVector* decodedCols, int32_t startRow, int32_t count, char** rows,
+    void AppendRows(vec::DecodedVector* decodedCols, int32_t startRow, int32_t count, uint32_t vecBatchIdx, char** rows,
         int32_t analyzeCol = -1, int64_t* analyzeMin = nullptr, int64_t* analyzeMax = nullptr,
         bool* feasible = nullptr) {
         std::vector<TaperColMeta> colMeta(numCols_);
@@ -956,6 +1037,17 @@ public:
                     }
                 }
             }
+            // Set payload: next=null, batchId/rowId, visited
+            {
+                auto payloadOff = rows_->PayloadOffset();
+                auto batchIdOff = payloadOff + RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0);
+                RowContainer::SetNextPtr(row, payloadOff, nullptr);
+                RowContainer::SetUint32(row + batchIdOff, vecBatchIdx);
+                RowContainer::SetUint32(row + batchIdOff + 4, static_cast<uint32_t>(idx));
+                if constexpr (NeedVisited) {
+                    *reinterpret_cast<uint8_t*>(row + payloadOff + RowContainer::kRowPtrSize) = 0;
+                }
+            }
         }
     }
 
@@ -1006,10 +1098,18 @@ public:
                         RowContainer::ReadValue<Decimal128>(row2, off)) return false;
                     break;
                 case type::OMNI_VARCHAR: case type::OMNI_CHAR: case type::OMNI_VARBINARY: {
-                    auto sv1 = RowContainer::ReadValue<RowContainer::StringViewStorage>(row1, off);
-                    auto sv2 = RowContainer::ReadValue<RowContainer::StringViewStorage>(row2, off);
-                    if (sv1.size != sv2.size) return false;
-                    if (memcmp(sv1.data, sv2.data, sv1.size) != 0) return false;
+                    // Read batchId/rowId from payload instead of StringViewStorage from key area
+                    auto payloadOff = rows_->PayloadOffset();
+                    auto batchIdOff = payloadOff + RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0);
+                    uint32_t b1 = RowContainer::GetUint32(row1 + batchIdOff);
+                    uint32_t r1 = RowContainer::GetUint32(row1 + batchIdOff + 4);
+                    uint32_t b2 = RowContainer::GetUint32(row2 + batchIdOff);
+                    uint32_t r2 = RowContainer::GetUint32(row2 + batchIdOff + 4);
+                    if (b1 == b2 && r1 == r2) break; // same row
+                    std::string_view sv1 = GetVarcharByRowId(colIdx, b1, r1);
+                    std::string_view sv2 = GetVarcharByRowId(colIdx, b2, r2);
+                    if (sv1.size() != sv2.size()) return false;
+                    if (memcmp(sv1.data(), sv2.data(), sv1.size()) != 0) return false;
                     break;
                 }
                 case type::OMNI_ARRAY:
@@ -1101,21 +1201,26 @@ public:
         return idxFrom;
     }
 
-    int32_t BatchCompareVarcharColumn(int32_t colIdx, int32_t count, int32_t offset,
+    /// probeIdx indexes probeDecodedCols_ (probe key order); buildIdx is the
+    /// RowContainer column index used for the build-side container lookup.
+    int32_t BatchCompareVarcharColumn(int32_t probeIdx, int32_t buildIdx, int32_t count, int32_t offset,
                                       uint32_t nullByte, uint8_t nullMask, int32_t *indices, int32_t &idxFrom,
                                       const int32_t *positions)
     {
-        const auto& decoded = probeDecodedCols_[colIdx];
+        const auto& decoded = probeDecodedCols_[probeIdx];
+        auto payloadOff = rows_->PayloadOffset();
+        auto batchIdOff = payloadOff + RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0);
         if (decoded.GetLayout() == vec::DVecLayout::Flat) {
+            auto* lsc = static_cast<Vector<LargeStringContainer<std::string_view>>*>(decoded.Base());
             for (int32_t i = idxFrom; i < count; ++i) {
                 PrefetchHelper::PrefetchRowString(workingUpdateRows_.data(), offset, nullByte, nullMask, count, i);
                 int32_t ki = indices[i];
                 char* row = workingUpdateRows_[i];
-                auto storage = RowContainer::ReadValue<RowContainer::StringViewStorage>(row, offset);
-                std::string_view sv =
-                    static_cast<Vector<LargeStringContainer<std::string_view>>*>(decoded.Base())
-                        ->GetValue(positions[ki]);
-                if (storage.size != sv.size() || memcmp(storage.data, sv.data(), storage.size) != 0) {
+                uint32_t batchId = RowContainer::GetUint32(row + batchIdOff);
+                uint32_t rowId = RowContainer::GetUint32(row + batchIdOff + 4);
+                std::string_view sv = lsc->GetValue(positions[ki]);
+                std::string_view rowSv = GetVarcharByRowId(buildIdx, batchId, rowId);
+                if (rowSv.size() != sv.size() || memcmp(rowSv.data(), sv.data(), rowSv.size()) != 0) {
                     std::swap(indices[i], indices[idxFrom]);
                     std::swap(workingUpdateRows_[i], workingUpdateRows_[idxFrom]);
                     idxFrom++;
@@ -1128,8 +1233,10 @@ public:
                 PrefetchHelper::PrefetchRowString(workingUpdateRows_.data(), offset, nullByte, nullMask, count, i);
                 int32_t ki = indices[i];
                 char* row = workingUpdateRows_[i];
-                auto storage = RowContainer::ReadValue<RowContainer::StringViewStorage>(row, offset);
-                if (storage.size != sv.size() || memcmp(storage.data, sv.data(), storage.size) != 0) {
+                uint32_t batchId = RowContainer::GetUint32(row + batchIdOff);
+                uint32_t rowId = RowContainer::GetUint32(row + batchIdOff + 4);
+                std::string_view rowSv = GetVarcharByRowId(buildIdx, batchId, rowId);
+                if (rowSv.size() != sv.size() || memcmp(rowSv.data(), sv.data(), rowSv.size()) != 0) {
                     std::swap(indices[i], indices[idxFrom]);
                     std::swap(workingUpdateRows_[i], workingUpdateRows_[idxFrom]);
                     idxFrom++;
@@ -1137,15 +1244,16 @@ public:
             }
             return idxFrom;
         }
+        auto* dictVec = static_cast<Vector<DictionaryContainer<std::string_view>>*>(decoded.Base());
         for (int32_t i = idxFrom; i < count; ++i) {
             PrefetchHelper::PrefetchRowString(workingUpdateRows_.data(), offset, nullByte, nullMask, count, i);
             int32_t ki = indices[i];
             char* row = workingUpdateRows_[i];
-            auto storage = RowContainer::ReadValue<RowContainer::StringViewStorage>(row, offset);
-            std::string_view sv =
-                static_cast<Vector<DictionaryContainer<std::string_view>>*>(decoded.Base())
-                    ->GetValue(positions[ki]);
-            if (storage.size != sv.size() || memcmp(storage.data, sv.data(), storage.size) != 0) {
+            uint32_t batchId = RowContainer::GetUint32(row + batchIdOff);
+            uint32_t rowId = RowContainer::GetUint32(row + batchIdOff + 4);
+            std::string_view sv = dictVec->GetValue(positions[ki]);
+            std::string_view rowSv = GetVarcharByRowId(buildIdx, batchId, rowId);
+            if (rowSv.size() != sv.size() || memcmp(rowSv.data(), sv.data(), rowSv.size()) != 0) {
                 std::swap(indices[i], indices[idxFrom]);
                 std::swap(workingUpdateRows_[i], workingUpdateRows_[idxFrom]);
                 idxFrom++;
@@ -1227,14 +1335,17 @@ public:
                     if (w == 0) {
                         if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR ||
                             typeId == type::OMNI_VARBINARY) {
-                            auto rowSv = RowContainer::ReadValue<RowContainer::StringViewStorage>(
-                                const_cast<char*>(row), colOff);
-                            if (rowSv.data == nullptr) return false;
+                            // Read batchId/rowId from payload instead of StringViewStorage from key area
+                            auto payloadOff = rows_->PayloadOffset();
+                            auto batchIdOff = payloadOff + RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0);
+                            uint32_t batchId = RowContainer::GetUint32(row + batchIdOff);
+                            uint32_t rowId = RowContainer::GetUint32(row + batchIdOff + 4);
+                            std::string_view rowSv = GetVarcharByRowId(colIdx, batchId, rowId);
                             std::string_view sv =
                                 static_cast<Vector<LargeStringContainer<std::string_view>>*>(decoded.Base())
                                     ->GetValue(probePosition);
-                            if (rowSv.size != sv.size()) return false;
-                            if (memcmp(rowSv.data, sv.data(), rowSv.size) != 0) return false;
+                            if (rowSv.size() != sv.size()) return false;
+                            if (memcmp(rowSv.data(), sv.data(), rowSv.size()) != 0) return false;
                         } else if (typeId == type::OMNI_ARRAY || typeId == type::OMNI_MAP || typeId == type::OMNI_ROW) {
                             auto* storedPtr = RowContainer::ReadValue<char*>(const_cast<char*>(row), colOff);
                             if (storedPtr == nullptr) return false;
@@ -1309,8 +1420,8 @@ public:
 
             if (w == 0) {
                 if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR || typeId == type::OMNI_VARBINARY) {
-                    idxFrom = BatchCompareVarcharColumn(k, cmpCount, col.Offset(), col.NullByte(), col.NullMask(),
-                        workingUpdateIndices_.data(), idxFrom, probePositions);
+                    idxFrom = BatchCompareVarcharColumn(k, colIdx, cmpCount, col.Offset(), col.NullByte(),
+                        col.NullMask(), workingUpdateIndices_.data(), idxFrom, probePositions);
                 } else if (typeId == type::OMNI_ARRAY || typeId == type::OMNI_MAP || typeId == type::OMNI_ROW) {
                     idxFrom = BatchCompareComplexColumn(typeId, k, cmpCount, col.Offset(), col.NullByte(),
                         col.NullMask(), workingUpdateIndices_.data(), idxFrom, probePositions);
@@ -1435,7 +1546,7 @@ public:
                 // key 相等 → prepend 到冲突链
                 char* oldHead = existingRow;
                 SetRowPtr(workingUpdateChunkData_[i], rows[rowIdx]);
-                *reinterpret_cast<char**>(rows[rowIdx] + payloadOff) = oldHead;
+                RowContainer::SetNextPtr(rows[rowIdx], payloadOff, oldHead);
             } else {
                 // key 不等 → 留给第三轮
                 workingUpdateIndices_[remainCount] = rowIdx;
@@ -1458,7 +1569,7 @@ public:
                     if (!initFlag) {
                         char* oldHead = GetRowPtr(data);
                         SetRowPtr(data, rows[rowIdx]);
-                        *reinterpret_cast<char**>(rows[rowIdx] + payloadOff) = oldHead;
+                        RowContainer::SetNextPtr(rows[rowIdx], payloadOff, oldHead);
                     }
                 });
         }
@@ -1467,25 +1578,41 @@ public:
 
     /// Transfer string container shared_ptrs from decoded vectors to keep backing data alive
     /// after the source VectorBatch is freed. Must be called once per vecBatch before FreeVecBatch.
-    void HoldStringContainers(omniruntime::vec::DecodedVector* decodedCols) {
-        constStrCache_.assign(numCols_, {nullptr, 0});
+    void HoldStringContainers(omniruntime::vec::DecodedVector* decodedCols, uint32_t batchIdx) {
+        colStringContainers_.resize(numCols_);
+        colStringEncodings_.resize(numCols_);
+        colConstStrs_.resize(numCols_);
+        colVecOffsets_.resize(numCols_);
         for (int32_t c = 0; c < numCols_; ++c) {
             if (typeIds_[c] == type::OMNI_VARCHAR || typeIds_[c] == type::OMNI_CHAR ||
                 typeIds_[c] == type::OMNI_VARBINARY) {
                 auto* vec = decodedCols[c].Base();
-                if (vec->GetEncoding() == OMNI_ENCODING_CONST) {
-                    continue; // Const data copied into arena, no container to hold
-                }
-                if (vec->GetEncoding() == OMNI_DICTIONARY) {
-                    stringContainers_.push_back(
-                        unsafe::UnsafeDictionaryVector::GetDictionaryOriginal<std::string_view>(
-                            static_cast<Vector<DictionaryContainer<std::string_view>>*>(vec)));
+                auto enc = vec->GetEncoding();
+                std::shared_ptr<void> container;
+                if (enc == OMNI_ENCODING_CONST) {
+                    container = nullptr; // Const data kept via colConstStrs_ snapshot below
+                } else if (enc == OMNI_DICTIONARY) {
+                    container = unsafe::UnsafeDictionaryVector::GetDictionaryOriginal<std::string_view>(
+                        static_cast<Vector<DictionaryContainer<std::string_view>>*>(vec));
                 } else {
-                    stringContainers_.push_back(
-                        std::static_pointer_cast<void>(
-                            unsafe::UnsafeStringVector::GetContainer(
-                                static_cast<Vector<LargeStringContainer<std::string_view>>*>(vec))));
+                    container = std::static_pointer_cast<void>(
+                        unsafe::UnsafeStringVector::GetContainer(
+                            static_cast<Vector<LargeStringContainer<std::string_view>>*>(vec)));
                 }
+                if (colStringContainers_[c].size() <= batchIdx)
+                    colStringContainers_[c].resize(batchIdx + 1);
+                if (colStringEncodings_[c].size() <= batchIdx)
+                    colStringEncodings_[c].resize(batchIdx + 1, OMNI_FLAT);
+                if (colConstStrs_[c].size() <= batchIdx)
+                    colConstStrs_[c].resize(batchIdx + 1);
+                if (colVecOffsets_[c].size() <= batchIdx)
+                    colVecOffsets_[c].resize(batchIdx + 1, 0);
+                colStringContainers_[c][batchIdx] = std::move(container);
+                colStringEncodings_[c][batchIdx] = enc;
+                // Snapshot the const value for this batch (each batch may carry a
+                // different const) and the vector offset (sliced vector support).
+                colConstStrs_[c][batchIdx] = constStrCache_[c];
+                colVecOffsets_[c][batchIdx] = vec->GetOffset();
             }
         }
     }
@@ -1493,8 +1620,21 @@ public:
     bool HasDuplicates() const { return rows_ && rows_->NumRows() > static_cast<int64_t>(table_->Size()); }
     uint32_t Size() const { return static_cast<uint32_t>(table_->Size()); }
 
+    /// Free hash table chunks (system-allocated memory, not from arena).
+    void ClearTable() { if (table_) table_->Clear(); }
+
+    /// Reset RowContainer tracking state (allocations, counts, free list).
+    /// Must be called after the arena is reset to keep state consistent.
+    void ResetRowContainer() { if (rows_) rows_->Reset(); }
+
 private:
-    static constexpr int32_t kPayloadSize = sizeof(char*) + 1;
+    static constexpr int32_t kPayloadSize = RowContainer::kRowPtrSize + (NeedVisited ? 1 : 0) + 8;
+
+    /// Resolve a string_view from the per-column/per-batch container snapshot.
+    /// Applies the source vector's offset so sliced vectors read correctly.
+    std::string_view GetVarcharByRowId(int32_t colIdx, uint32_t batchId, uint32_t rowId) const {
+        return GetVarcharResolver().ResolveById(colIdx, batchId, rowId);
+    }
 
     int32_t numCols_ = 0;
     mem::SimpleArenaAllocator* arena_ = nullptr;
@@ -1506,7 +1646,10 @@ private:
     std::vector<char*> workingUpdateChunkData_;
     std::vector<char*> workingUpdateRows_;
     int32_t workingUpdateCount_ = 0;
-    std::vector<std::shared_ptr<void>> stringContainers_;
+    std::vector<std::vector<std::shared_ptr<void>>> colStringContainers_;
+    std::vector<std::vector<int32_t>> colStringEncodings_;
+    std::vector<std::vector<RowContainer::StringViewStorage>> colConstStrs_;
+    std::vector<std::vector<int32_t>> colVecOffsets_;
     std::vector<RowContainer::StringViewStorage> constStrCache_;
     std::vector<vec::DecodedVector> probeDecodedCols_;
     int32_t probeDecodedRowCount_ = 0;

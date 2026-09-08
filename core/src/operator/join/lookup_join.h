@@ -5,7 +5,9 @@
 #ifndef __LOOKUP_JOIN_H__
 #define __LOOKUP_JOIN_H__
 
+#include <functional>
 #include <memory>
+#include <string_view>
 #include "plannode/planNode.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
@@ -63,14 +65,20 @@ public:
         existJoinBuildIndex.clear();
         taperRC_ = nullptr;
         taperStoredColIndices_.clear();
+        taperVarcharResolver_ = nullptr;
         taperNeedsUnvisited_ = false;
     }
 
     void AppendRowTaper(int32_t probePosition, omniruntime::vec::BaseVector*** array, uint64_t address, char* rowPtr);
     void AppendRowsTaper(int32_t probePosition, char* const* rows, int32_t count);
     void AppendRowsTaperBatched(const int32_t* positions, char* const* rows, int32_t count);
-    void SetTaperOutput(const omniruntime::op::RowContainer* rc, const std::vector<int32_t>& storedCols);
+    void SetTaperOutput(const omniruntime::op::RowContainer* rc, const std::vector<int32_t>& storedCols,
+        const omniruntime::op::RowContainer::VarcharResolver* varcharResolver = nullptr);
     ALWAYS_INLINE void SetTaperNeedsUnvisited() { taperNeedsUnvisited_ = true; }
+    ALWAYS_INLINE const omniruntime::op::RowContainer::VarcharResolver* GetTaperVarcharResolver() const
+    {
+        return taperVarcharResolver_;
+    }
 
     static const uint32_t SHIFT_SIZE_32 = 32;
     static ALWAYS_INLINE uint64_t EncodeAddress(uint32_t rowId, uint32_t vectorBatchId)
@@ -156,6 +164,7 @@ private:
     std::vector<bool> existJoinBuildIndex;
     const RowContainer* taperRC_ = nullptr;
     std::vector<int32_t> taperStoredColIndices_;
+    const RowContainer::VarcharResolver* taperVarcharResolver_ = nullptr;
     bool taperNeedsUnvisited_ = false;
 };
 

@@ -6,6 +6,9 @@
 #ifndef OMNI_RUNTIME_JOIN_HASH_TABLE_VARIANTS_H
 #define OMNI_RUNTIME_JOIN_HASH_TABLE_VARIANTS_H
 
+#include <functional>
+#include <stdexcept>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -227,12 +230,23 @@ public:
 
     ALWAYS_INLINE RowContainer* GetTaperRowContainer(int32_t) const { return nullptr; }
     ALWAYS_INLINE const std::vector<int32_t>& GetTaperStoredColIndices() const { return buildHashCols; }
-    ALWAYS_INLINE char* Find(BaseVector**, int32_t, int32_t, uint32_t) { return nullptr; }
-    ALWAYS_INLINE void FindBatch(int32_t, int32_t, const std::vector<int8_t>&,
-        omniruntime::vec::BaseVector**, int32_t, bool, uint32_t,
-        const std::vector<int64_t>&, std::vector<char*>&) const {}
+    // Null has no legitimate consumer semantics: falling back silently would read the empty
+    // key area as garbage. Only the taper variant can answer this call.
+    ALWAYS_INLINE const RowContainer::VarcharResolver* GetTaperVarcharResolver(int32_t)
+    {
+        throw std::runtime_error("GetTaperVarcharResolver called on non-taper hash table");
+    }
     ALWAYS_INLINE bool IsSerMode() const { return false; }
     ALWAYS_INLINE void SetSerMode() {}
+
+    // Taper-only batch probe. Guarded by IsTaperTable() at call sites; a no-op here would
+    // silently leave chain heads empty and produce wrong results, so fail fast instead.
+    ALWAYS_INLINE void FindBatch(int32_t, int32_t, const std::vector<int8_t>&,
+        omniruntime::vec::BaseVector**, int32_t, bool, uint32_t,
+        const std::vector<int64_t>&, std::vector<char*>&) const
+    {
+        throw std::runtime_error("FindBatch called on non-taper hash table");
+    }
 
     void InitBuildFilterCols(std::vector<int32_t> &buildFilterCols, int32_t originalProbeColsCount,
         std::vector<std::vector<BaseVector **>> &tableBuildFilterColPtrs);

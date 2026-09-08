@@ -254,6 +254,11 @@ void LookupOuterJoinOperator::AppendAllUnvisitedRows(VectorBatch *vectorBatch, c
         auto* rc = std::visit([&](auto&& arg) { return arg.GetTaperRowContainer(0); }, *hashTables);
         const auto& storedCols = std::visit([&](auto&& arg) { return arg.GetTaperStoredColIndices(); }, *hashTables);
         auto* rcc = const_cast<RowContainer*>(rc);
+        // Varchar keys carry only batchId/rowId in the payload; pass the resolver
+        // so ExtractColumn resolves strings via the held containers.
+        auto* varcharResolver = (rc != nullptr)
+            ? std::visit([&](auto&& arg) { return arg.GetTaperVarcharResolver(0); }, *hashTables)
+            : nullptr;
         for (int32_t col = 0; col < buildOutputColsCount; col++) {
             uint32_t outputCol = buildOutputCols[col];
             int32_t rcColIdx = 0;
@@ -263,7 +268,7 @@ void LookupOuterJoinOperator::AppendAllUnvisitedRows(VectorBatch *vectorBatch, c
             }
             auto* outVec = vectorBatch->GetVectors()[col + probeOutputColsCount];
             rcc->ExtractColumn(taperUnvisitedRowPtrs_.data() + outputtedRowCount,
-                               rowCount, rcColIdx, outVec);
+                               rowCount, rcColIdx, outVec, varcharResolver);
         }
         return;
     }

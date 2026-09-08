@@ -251,7 +251,8 @@ static inline void ExtractFixedWidthColumnImpl(char** rows, int32_t totalRows, i
 
 
 void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
-                                  vec::BaseVector* outputVector)
+                                  vec::BaseVector* outputVector,
+                                  const VarcharResolver* varcharResolver)
 {
     if (colIdx >= numKeys) {
         return; // AggState columns are extracted separately
@@ -351,6 +352,9 @@ void RowContainer::ExtractColumn(char** rows, int32_t totalRows, int32_t colIdx,
                 }
                 if (rows[i] == nullptr || IsNullAt(rows[i], nullByte, nullMask)) {
                     vec->SetNull(i);
+                } else if (varcharResolver != nullptr) {
+                    // TAPER layout: key area holds no string data; read via payload batchId/rowId
+                    vec->SetValue(i, varcharResolver->Resolve(colIdx, rows[i]));
                 } else {
                     auto storage = RowContainer::ReadValue<RowContainer::StringViewStorage>(rows[i], offset);
                     vec->SetValue(i, std::string_view(storage.data, storage.size));
