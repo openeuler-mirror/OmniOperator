@@ -8,9 +8,10 @@ set -e
 print_usage() {
   echo "
   Usage:
-    build.sh [type]
+    build.sh [--stringview-enable] [type]
 
   Types:
+    --stringview-enable                = Enable optional StringView native support
     [default]                          = Enable Default Options (equivalent to Release)
     package                            = Enable Package
     release                            = Enable Release

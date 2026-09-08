@@ -355,8 +355,24 @@ namespace omniruntime::reader {
             auto* omniReader = reinterpret_cast<OmniColumnReader*>(&(*iter->get()));
             auto* dictStrReader = dynamic_cast<OmniStringDictionaryColumnReader*>(omniReader);
             if (dictStrReader != nullptr) {
+                // DictionaryVector currently has a VARCHAR/std::string_view representation only;
+                // there is no DictionaryVector<StringView> (or downstream marshalling support) yet.
+                // Keep ORC dictionary encoding (ids + shared dictionary) for VARCHAR. For a
+                // StringView request, decode the ids into a flat Vector<StringView> instead.
+                // This removes vector-level dictionary indirection, but not by copying every row:
+                // the per-stripe StringView dictionary owns each distinct payload once and the
+                // flat rows store views into that shared buffer.
+#ifdef STRINGVIEW_ENABLE
+                auto* dictVec = (dataTypeId == omniruntime::type::OMNI_STRING_VIEW)
+                    ? dictStrReader->nextAsStringView(numValues, hasNull ? nulls->GetNulls() : nullptr)
+                    : dictStrReader->nextAsDictionary(numValues, hasNull ? nulls->GetNulls() : nullptr, dataTypeId);
+#else
+                if (dataTypeId == omniruntime::type::OMNI_STRING_VIEW) {
+                    throw std::runtime_error("StringView ORC reader was requested but this native build was configured with STRINGVIEW_ENABLE=OFF");
+                }
                 auto* dictVec = dictStrReader->nextAsDictionary(
                     numValues, hasNull ? nulls->GetNulls() : nullptr, dataTypeId);
+#endif
                 vecs.push_back(dictVec);
             } else {
                 auto omnivector = omniruntime::reader::makeNewVector(numValues, orcType, dataTypeId);
@@ -860,7 +876,7 @@ namespace omniruntime::reader {
                         throw ::orc::ParseError("Entry index out of range in StringDictionaryColumn");
                     }
 
-                    //求出长度，如果为char，则需要去除最后的空格
+                    // Determine the length and trim trailing spaces for CHAR values.
                     auto len = dictionaryOffsets[entry+1] -
                                dictionaryOffsets[entry];
                     char* ptr = blob + dictionaryOffsets[entry];
@@ -880,7 +896,7 @@ namespace omniruntime::reader {
                     throw ::orc::ParseError("Entry index out of range in StringDictionaryColumn");
                 }
 
-                //求出长度，如果为char，则需要去除最后的空格
+                // Determine the length and trim trailing spaces for CHAR values.
                 auto len = dictionaryOffsets[entry+1] -
                            dictionaryOffsets[entry];
                 char* ptr = blob + dictionaryOffsets[entry];
@@ -937,7 +953,95 @@ namespace omniruntime::reader {
         return BitUtil::HasBitSet(nullsScratch, 0, static_cast<int32_t>(rowsToRead));
     }
 
-    void OmniStringDirectColumnReader::next(BaseVector *vec, uint64_t numValues, 
+    // Materialize ORC dictionary ids to a flat Vector<StringView>. This is the temporary SV path
+    // until DictionaryVector<StringView> is supported: copy each distinct dictionary payload once
+    // into the per-stripe template, then let every output row reference that shared buffer.
+    BaseVector* OmniStringDictionaryColumnReader::nextAsStringView(
+        uint64_t numValues, uint64_t *incomingNulls) {
+        // Build the per-stripe StringView dictionary template once (lazy). Each distinct entry is
+        // copied into omniDictSV_'s own string buffer exactly once (CHAR trailing spaces trimmed
+        // here, matching omniDict_); long entries live in its arena, short (<=12B) inline.
+        if (omniDictSV_ == nullptr) {
+            omniDictSV_ = std::make_shared<omniruntime::vec::Vector<omniruntime::vec::StringView>>(
+                omniDictSize_ > 0 ? omniDictSize_ : 1);
+            char *blob = dictionary->dictionaryBlob.data();
+            int64_t *offsets = dictionary->dictionaryOffset.data();
+            for (int32_t k = 0; k < omniDictSize_; ++k) {
+                long len = offsets[k + 1] - offsets[k];
+                char *ptr = blob + offsets[k];
+                if (isChar) {
+                    FindLastNotEmpty(ptr, len);
+                }
+                omniDictSV_->SetValue(k, omniruntime::vec::StringView(ptr, static_cast<int32_t>(len)));
+            }
+        }
+
+        // Flat output that SHARES the template's string buffer (shared_ptr => safe cross-stripe /
+        // cross-batch), so SetNoCopy stores views pointing into it without any per-row payload copy.
+        auto *outVec = new omniruntime::vec::Vector<omniruntime::vec::StringView>(
+            static_cast<int32_t>(numValues), *omniDictSV_);
+        auto nulls = omniruntime::vec::unsafe::UnsafeBaseVector::GetNulls(outVec);
+        readNulls(this, numValues, incomingNulls, nulls);
+        bool hasNull = outVec->HasNull();
+        auto nullsTrans = reinterpret_cast<uint64_t*>(nulls);
+
+        std::vector<int32_t> indices(numValues, 0);
+        rle->next(indices.data(), numValues, nullsTrans);
+        uint64_t dictionaryCount = dictionary->dictionaryOffset.size() - 1;
+
+        for (uint64_t i = 0; i < numValues; ++i) {
+            if (hasNull && BitUtil::IsBitSet(nullsTrans, i)) {
+                outVec->SetNull(i);
+                continue;
+            }
+            if (indices[i] < 0 || static_cast<uint64_t>(indices[i]) >= dictionaryCount) {
+                delete outVec;
+                throw ::orc::ParseError("Entry index out of range in StringDictionaryColumn");
+            }
+            outVec->SetNoCopy(i, omniDictSV_->GetValueRef(indices[i]));
+        }
+        return outVec;
+    }
+
+    // Fill a flat string vector from a direct-encoded ORC blob. Templated on the output
+    // vector type + element type so VARCHAR (std::string_view) and StringView
+    // (OMNI_STRING_VIEW) share one loop. SetValue copies the payload into the vector's own
+    // buffer, so pointing Elem at the transient stack blob (`tempPtr`) is safe.
+    template <typename OmniVec, typename Elem>
+    static void FillDirectStringValues(OmniVec *outVec, char *tempPtr, const int64_t *lengthPtr,
+        uint64_t numValues, bool hasNull, uint64_t *nullsTrans, bool isChar)
+    {
+        size_t filledSlots = 0;
+        if (hasNull) {
+            while (filledSlots < numValues) {
+                if (!BitUtil::IsBitSet(nullsTrans, filledSlots)) {
+                    // Determine the length and trim trailing spaces for CHAR values.
+                    long len = lengthPtr[filledSlots];
+                    if (isChar) {
+                        FindLastNotEmpty(tempPtr, len);
+                    }
+                    outVec->SetValue(filledSlots, Elem(tempPtr, len));
+                    tempPtr += lengthPtr[filledSlots];
+                } else {
+                    outVec->SetNull(filledSlots);
+                }
+                filledSlots += 1;
+            }
+        } else {
+            while (filledSlots < numValues) {
+                // Determine the length and trim trailing spaces for CHAR values.
+                long len = lengthPtr[filledSlots];
+                if (isChar) {
+                    FindLastNotEmpty(tempPtr, len);
+                }
+                outVec->SetValue(filledSlots, Elem(tempPtr, len));
+                tempPtr += lengthPtr[filledSlots];
+                filledSlots += 1;
+            }
+        }
+    }
+
+    void OmniStringDirectColumnReader::next(BaseVector *vec, uint64_t numValues,
         uint64_t *incomingNulls, int omniTypeId) {
         auto nulls = omniruntime::vec::unsafe::UnsafeBaseVector::GetNulls(vec);
         readNulls(this, numValues, incomingNulls, nulls);
@@ -974,40 +1078,23 @@ namespace omniruntime::reader {
             lastBufferLength -= moreBytes;
         }
 
-        auto varcharVector = reinterpret_cast<omniruntime::vec::Vector<
-            omniruntime::vec::LargeStringContainer<std::string_view>>*>(vec);
-        size_t filledSlots = 0;
-        char* tempPtr = ptr;
-        if (hasNull) {
-            while (filledSlots < numValues) {
-                if (!BitUtil::IsBitSet(nullsTrans, filledSlots)) {
-                    //求出长度，如果为char，则需要去除最后的空格
-                    auto len = lengthPtr[filledSlots];
-                    if (isChar) {
-                        FindLastNotEmpty(tempPtr, len);
-                    }
-                    auto data = std::string_view(tempPtr, len);
-                    varcharVector->SetValue(filledSlots, data);
-
-                    tempPtr += lengthPtr[filledSlots];
-                } else {
-                    varcharVector->SetNull(filledSlots);
-                }
-                filledSlots += 1;
-            }
+        // Fill target vector honoring the requested output type: OMNI_STRING_VIEW -> flat
+        // Vector<StringView>, otherwise the default VARCHAR container. Blob read logic above
+        // is identical for both; only element type / target vector differ.
+        if (omniTypeId == omniruntime::type::OMNI_STRING_VIEW) {
+#ifdef STRINGVIEW_ENABLE
+            auto svVector = reinterpret_cast<omniruntime::vec::Vector<omniruntime::vec::StringView>*>(vec);
+            FillDirectStringValues<omniruntime::vec::Vector<omniruntime::vec::StringView>,
+                omniruntime::vec::StringView>(svVector, ptr, lengthPtr, numValues, hasNull, nullsTrans, isChar);
+#else
+            throw std::runtime_error("StringView ORC reader was requested but this native build was configured with STRINGVIEW_ENABLE=OFF");
+#endif
         } else {
-            while (filledSlots < numValues) {
-                //求出长度，如果为char，则需要去除最后的空格
-                auto len = lengthPtr[filledSlots];
-                if (isChar) {
-                    FindLastNotEmpty(tempPtr, len);
-                }
-                auto data = std::string_view(tempPtr, len);
-                varcharVector->SetValue(filledSlots, data);
-
-                tempPtr += lengthPtr[filledSlots];
-                filledSlots += 1;
-            }
+            auto varcharVector = reinterpret_cast<omniruntime::vec::Vector<
+                omniruntime::vec::LargeStringContainer<std::string_view>>*>(vec);
+            FillDirectStringValues<omniruntime::vec::Vector<
+                omniruntime::vec::LargeStringContainer<std::string_view>>, std::string_view>(
+                varcharVector, ptr, lengthPtr, numValues, hasNull, nullsTrans, isChar);
         }
     }
 
@@ -1404,33 +1491,6 @@ namespace omniruntime::reader {
         return numValues;
     }
 
-    size_t OmniStringDirectColumnReader::computeSize(const int64_t* lengths, uint64_t *nulls,
-        uint64_t numValues) {
-        size_t totalLength = 0;
-        if (nulls) {
-            for(size_t i = 0; i < numValues; ++i) {
-                if (!BitUtil::IsBitSet(nulls, i)) {
-                    totalLength += static_cast<size_t>(lengths[i]);
-                }
-            }
-        } else {
-            for(size_t i = 0; i < numValues; ++i) {
-                totalLength += static_cast<size_t>(lengths[i]);
-            }
-        }
-        return totalLength;
-    }
-
-    void OmniStringDirectColumnReader::seekToRowGroup(
-            std::unordered_map<uint64_t, PositionProvider>& positions) {
-        OmniColumnReader::seekToRowGroup(positions);
-        blobStream->seek(positions.at(columnId));
-        lengthRle->seek(positions.at(columnId));
-        // clear buffer state after seek
-        lastBuffer = nullptr;
-        lastBufferLength =0;
-    }
-
     bool OmniStringDirectColumnReader::readNullsForBatch(uint64_t rowsToRead, uint64_t *nullsScratch)
     {
         if (!notNullDecoder) {
@@ -1485,6 +1545,33 @@ namespace omniruntime::reader {
             lastBufferLength -= take;
             filled += take;
         }
+    }
+
+    size_t OmniStringDirectColumnReader::computeSize(const int64_t* lengths, uint64_t *nulls,
+        uint64_t numValues) {
+        size_t totalLength = 0;
+        if (nulls) {
+            for(size_t i = 0; i < numValues; ++i) {
+                if (!BitUtil::IsBitSet(nulls, i)) {
+                    totalLength += static_cast<size_t>(lengths[i]);
+                }
+            }
+        } else {
+            for(size_t i = 0; i < numValues; ++i) {
+                totalLength += static_cast<size_t>(lengths[i]);
+            }
+        }
+        return totalLength;
+    }
+
+    void OmniStringDirectColumnReader::seekToRowGroup(
+            std::unordered_map<uint64_t, PositionProvider>& positions) {
+        OmniColumnReader::seekToRowGroup(positions);
+        blobStream->seek(positions.at(columnId));
+        lengthRle->seek(positions.at(columnId));
+        // clear buffer state after seek
+        lastBuffer = nullptr;
+        lastBufferLength =0;
     }
 
     OmniStringDictionaryColumnReader::OmniStringDictionaryColumnReader(const Type& type, StripeStreams& stripe)

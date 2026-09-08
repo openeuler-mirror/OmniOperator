@@ -81,6 +81,35 @@ public:
     static void ExecuteLower(BaseVector* stringVec, BaseVector*& result) {
         ExecuteLowerWithInputType(stringVec, OMNI_VARCHAR, result);
     }
+
+    // Builds a StringView (16B fixed-width value) input column. Values <= 12 bytes are stored
+    // inline; longer values are stored out-of-line (prefix + heap pointer into `values`, which
+    // must outlive execution). Mirrors FillStringViewVector in the microbench.
+    static BaseVector* CreateStringViewVector(const std::vector<std::string>& values) {
+        auto* vec = new Vector<StringView>(values.size());
+        vec->SetIsField(true);
+        for (size_t i = 0; i < values.size(); ++i) {
+            vec->SetValue(i, StringView(values[i]));
+        }
+        return vec;
+    }
+
+    // Executes lower on a StringView input column, asserting the StringView-specific registration
+    // is what gets selected (SV-in / VARCHAR-out): input is OMNI_STRING_VIEW and VectorFunction::Find
+    // resolves the {OMNI_STRING_VIEW}->OMNI_VARCHAR overload added in RegisterString.cpp.
+    static void ExecuteLowerSV(BaseVector* stringVec, BaseVector*& result) {
+        ASSERT_EQ(stringVec->GetTypeId(), OMNI_STRING_VIEW) << "input must be a StringView column";
+        std::vector<DataTypeId> inputTypeIds = {OMNI_STRING_VIEW};
+        auto sig = std::make_shared<FunctionSignature>("lower", inputTypeIds, OMNI_VARCHAR);
+        auto fn = VectorFunction::Find(sig);
+        ASSERT_NE(fn, nullptr) << "lower(StringView) overload not found — SV registration missing";
+        auto outputType = std::make_shared<DataType>(OMNI_VARCHAR);
+        ExecutionContext ctx;
+        ctx.SetResultRowSize(stringVec->GetSize());
+        std::stack<BaseVector*> args;
+        args.push(stringVec);
+        ASSERT_NO_THROW(fn->Apply(args, outputType, result, &ctx));
+    }
 };
 
 TEST(LowerTest, BasicAscii) {
@@ -283,3 +312,61 @@ TEST(LowerTest, InvalidUtf8PreservesRemainingBytes) {
     delete strVec;
     delete result;
 }
+
+// ---------------- StringView (SV-in / VARCHAR-out) variants ----------------
+
+#ifdef STRINGVIEW_ENABLE
+TEST(LowerTest, SVBasicAsciiInline) {
+    // all values <= 12 bytes -> stored inline in the 16B StringView
+    std::vector<std::string> strings = {"ABCDEFG", "HELLO", "WORLD"};
+    std::vector<std::string> expected = {"abcdefg", "hello", "world"};
+    BaseVector* strVec = LowerFunctionTestHelper::CreateStringViewVector(strings);
+    BaseVector* result = nullptr;
+    LowerFunctionTestHelper::ExecuteLowerSV(strVec, result);
+    LowerFunctionTestHelper::ValidateStringResult(result, expected, 3);
+    delete strVec;
+    delete result;
+}
+
+TEST(LowerTest, SVNonInline) {
+    // all values > 12 bytes -> stored out-of-line (4-byte prefix + heap pointer)
+    std::vector<std::string> strings = {"ABCDEFGHIJKLMNOP", "HELLO_WORLD_ABCDE", "MixedCaseLongString"};
+    std::vector<std::string> expected = {"abcdefghijklmnop", "hello_world_abcde", "mixedcaselongstring"};
+    BaseVector* strVec = LowerFunctionTestHelper::CreateStringViewVector(strings);
+    BaseVector* result = nullptr;
+    LowerFunctionTestHelper::ExecuteLowerSV(strVec, result);
+    LowerFunctionTestHelper::ValidateStringResult(result, expected, 3);
+    delete strVec;
+    delete result;
+}
+
+TEST(LowerTest, SVNullPropagation) {
+    std::vector<std::string> strings = {"ABC", "xyz", "Hi", "BYE"};
+    BaseVector* strVec = LowerFunctionTestHelper::CreateStringViewVector(strings);
+    strVec->SetNull(1);
+    strVec->SetNull(3);
+    BaseVector* result = nullptr;
+    LowerFunctionTestHelper::ExecuteLowerSV(strVec, result);
+    auto* resultVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(result);
+    ASSERT_NE(resultVec, nullptr);
+    EXPECT_EQ(resultVec->GetValue(0), "abc");
+    EXPECT_TRUE(resultVec->IsNull(1)) << "Row 1 should be NULL";
+    EXPECT_EQ(resultVec->GetValue(2), "hi");
+    EXPECT_TRUE(resultVec->IsNull(3)) << "Row 3 should be NULL";
+    delete strVec;
+    delete result;
+}
+
+TEST(LowerTest, SVGreekUnicodeNonInline) {
+    // multi-byte UTF-8, > 12 bytes -> exercises non-inline SV read + unicode delegation
+    // (final-sigma semantics identical to the VARCHAR path; both delegate to the same call()).
+    std::vector<std::string> strings = {u8"ΠΑΣΑ HELLO", u8"hello Σ WORLD"};
+    std::vector<std::string> expected = {u8"πασα hello", u8"hello σ world"};
+    BaseVector* strVec = LowerFunctionTestHelper::CreateStringViewVector(strings);
+    BaseVector* result = nullptr;
+    LowerFunctionTestHelper::ExecuteLowerSV(strVec, result);
+    LowerFunctionTestHelper::ValidateStringResult(result, expected, 2);
+    delete strVec;
+    delete result;
+}
+#endif

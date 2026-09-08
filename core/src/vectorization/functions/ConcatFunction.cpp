@@ -86,6 +86,20 @@ std::string_view ConcatFunction::GetStringValueFromVector(BaseVector *vec, int32
 {
     Encoding encoding = vec->GetEncoding();
 
+    // StringView (16B) input (SV-in / VARCHAR-out): return a view over the referenced StringView stored
+    // in the vector buffer via GetValueRef / GetConstValueRef, so inline (<=12B) data does not dangle
+    // (a temporary StringView's inline bytes would). The caller (ApplyConcat) copies immediately via
+    // append. Type-aware, so any SV/VARCHAR mix of arguments is handled. Mirrors Like.cpp's SV reader.
+    if (vec->GetTypeId() == OMNI_STRING_VIEW) {
+        if (encoding == OMNI_ENCODING_CONST) {
+            return static_cast<ConstVector<StringView> *>(vec)->GetConstValueRef();
+        } else if (encoding == OMNI_FLAT) {
+            return static_cast<Vector<StringView> *>(vec)->GetValueRef(row);
+        } else {
+            OMNI_THROW("Concat function Error", "Unsupported encoding type for StringView string");
+        }
+    }
+
     if (encoding == OMNI_ENCODING_CONST) {
         auto *constVec = static_cast<ConstVector<std::string_view> *>(vec);
         return constVec->GetConstValue();

@@ -10,6 +10,7 @@
 #include <vector/array_vector.h>
 #include <vector/row_vector.h>
 #include "vector/large_string_container.h"
+#include "vector/string_view.h"
 #include "type/string_ref.h"
 namespace omniruntime {
 namespace op {
@@ -116,6 +117,11 @@ template <> struct NativeAndVectorType<type::DataTypeId::OMNI_VARBINARY> {
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_ROW> {
     using type = vec::RowType;
     using vector = vec::RowVector;
+    using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
+};
+template <> struct NativeAndVectorType<type::DataTypeId::OMNI_STRING_VIEW> {
+    using type = vec::StringView;
+    using vector = vec::Vector<type>;
     using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
 };
 }

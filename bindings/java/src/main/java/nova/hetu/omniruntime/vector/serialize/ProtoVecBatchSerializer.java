@@ -33,6 +33,7 @@ import nova.hetu.omniruntime.vector.OmniBufferFactory;
 import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.ByteVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.StringViewVec;
 import nova.hetu.omniruntime.vector.FloatVec;
 import nova.hetu.omniruntime.vector.ArrayVec;
 import nova.hetu.omniruntime.vector.StructVec;
@@ -67,7 +68,33 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 .toByteArray();
     }
 
+    // Copies a StringView vector's string content into a fresh VARCHAR vector so it can be serialized
+    // through the existing VARCHAR proto path (the VecBatchSerde proto schema has no StringView type
+    // id). Caller closes the returned vector.
+    private static VarcharVec stringViewToVarchar(StringViewVec sv) {
+        int rows = sv.getSize();
+        VarcharVec varcharVec = new VarcharVec(rows);
+        for (int i = 0; i < rows; i++) {
+            if (sv.isNull(i)) {
+                varcharVec.setNull(i);
+            } else {
+                varcharVec.set(i, sv.get(i));
+            }
+        }
+        return varcharVec;
+    }
+
     private VecBatchSerde.Vec buildProtoVec(Vec vec, int[] ids) {
+        // StringView (OMNI_STRING_VIEW, id 26) has no proto DataTypeId. Serialize its content as a
+        // VARCHAR proto vec (offset+data): the native broadcast/shuffle consumer reads the build
+        // column by its runtime vector type, so a VARCHAR payload carrying a StringView-declared
+        // substrait type round-trips correctly.
+        if (vec instanceof StringViewVec) {
+            VarcharVec asVarchar = stringViewToVarchar((StringViewVec) vec);
+            VecBatchSerde.Vec protoVec = buildProtoVec(asVarchar, ids);
+            asVarchar.close();
+            return protoVec;
+        }
         VecBatchSerde.Vec.Builder protoVecBuilder = VecBatchSerde.Vec.newBuilder();
         VecBatchSerde.DataTypeExt.Builder protoDataTypeExtBuild = VecBatchSerde.DataTypeExt.newBuilder();
         VecBatchSerde.VecEncoding.Builder protoVecEncodingBuild = VecBatchSerde.VecEncoding.newBuilder();

@@ -11,6 +11,7 @@
 #include "util/test_util.h"
 #include "util/config_util.h"
 #include "vector/unsafe_vector.h"
+#include "vector/string_view.h"
 #include "expression/jsonparser/jsonparser.h"
 #include "type/data_type_serializer.h"
 
@@ -3578,7 +3579,7 @@ TEST(FilterTest, DISABLED_FilterStruct)
             }
         }
         })";
-    
+
     int64_t col1[3] = {1, 23, 4};
     int64_t col2[3] = {4, 23, 4};
     std::vector<DataTypePtr> vecOfTypes = {LongType(), LongType()};
@@ -3610,4 +3611,1233 @@ TEST(FilterTest, DISABLED_FilterStruct)
     delete overflowConfig;
     delete factory;
 }
+
+// Filter a Vector<StringView> using an equality expression (column == filterValue).
+// Tests both the single-row (non-batch) and batch LLVM codegen paths for OMNI_STRING_VIEW.
+void RunStringViewFilterTest(bool batchMode, const std::string& filterValue, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(batchMode);
+
+    const int32_t numRows = 11;
+    // Alternating inline (≤12 bytes) and non-inline (>12 bytes) strings.
+    std::vector<std::string> strs = {
+        "hello", "world_is_longer", "hello", "foo_bar_baz_qux", "hello",
+        "bar_baz_qux_quux", "hello", "baz_qux_quux_corge", "hello", "world_is_longer",
+        "xyz_longer_str"
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
+        new FieldExpr(0, svType),
+        new LiteralExpr(new std::string(filterValue), svType),
+        BooleanType());
+
+        std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    if (out != nullptr) {
+        auto *outVec = reinterpret_cast<Vector<StringView> *>(out->Get(0));
+        for (int32_t i = 0; i < returned; i++) {
+            EXPECT_EQ(std::string(outVec->GetValue(i)), filterValue);
+        }
+        VectorHelper::FreeVecBatch(out);
+    } else {
+        FAIL() << "GetOutput returned nullptr";
+    }
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+#ifdef STRINGVIEW_ENABLE
+TEST(FilterTest, StringViewShortEqualityFilterRowByRow)
+{
+    RunStringViewFilterTest(false, "hello", 5);
+}
+
+TEST(FilterTest, StringViewShortEqualityFilterBatch)
+{
+    RunStringViewFilterTest(true, "hello", 5);
+}
+
+TEST(FilterTest, StringViewLongEqualityFilterRowByRow)
+{
+    RunStringViewFilterTest(false, "world_is_longer", 2);
+}
+
+TEST(FilterTest, StringViewLongEqualityFilterBatch)
+{
+    RunStringViewFilterTest(true, "world_is_longer", 2);
+}
+
+void RunStringViewFilterNETest(bool batchMode, const std::string& filterValue, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(batchMode);
+
+    const int32_t numRows = 11;
+    // Alternating inline (≤12 bytes) and non-inline (>12 bytes) strings.
+    std::vector<std::string> strs = {
+        "hello", "world_is_longer", "hello", "foo_bar_baz_qux", "hello",
+        "bar_baz_qux_quux", "hello", "baz_qux_quux_corge", "hello", "world_is_longer",
+        "xyz_longer_str"
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::NEQ,
+        new FieldExpr(0, svType),
+        new LiteralExpr(new std::string(filterValue), svType),
+        BooleanType());
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    if (out != nullptr) {
+        auto *outVec = reinterpret_cast<Vector<StringView> *>(out->Get(0));
+        for (int32_t i = 0; i < returned; i++) {
+            EXPECT_NE(std::string(outVec->GetValue(i)), filterValue);
+        }
+        VectorHelper::FreeVecBatch(out);
+    } else {
+        FAIL() << "GetOutput returned nullptr";
+    }
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, StringViewShortNotEqualityFilterRowByRow)
+{
+    RunStringViewFilterNETest(false, "hello", 6);
+}
+TEST(FilterTest, StringViewShortNotEqualityFilterRowByBatch)
+{
+    RunStringViewFilterNETest(true, "hello", 6);
+}
+TEST(FilterTest, StringViewLongNotEqualityFilterRowByRow)
+{
+    RunStringViewFilterNETest(false, "world_is_longer", 9);
+}
+TEST(FilterTest, StringViewLongNotEqualityFilterBatch)
+{
+    RunStringViewFilterNETest(true, "world_is_longer", 9);
+}
+
+// length(string_view) -> int — vectorized StringView support for the first batch of read-only functions (task #4).
+// Verifies that a length() filter on a StringView column goes through the vectorized path:
+//   ExprEval (StringView column projection) -> SimpleFunction (CharLengthFunction's vec::StringView overload)
+//   -> the {OMNI_STRING_VIEW}->OMNI_INT overload registered by RegisterString.
+// It also acts as a discriminator: the codegen path has no StringView length, only the vectorized overload does —
+// so a PASS proves the filter operator picked the vectorized (ExprEval) path for the StringView function and that
+// FlatVectorReader<StringView> correctly read out the Vector<StringView>.
+// Note: only row-by-row is tested (batchMode=false) — the batch codegen path has no StringView length support yet.
+void RunStringViewLengthFilterTest(int32_t targetLen, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
+    const int32_t numRows = 8;
+    // Pure ASCII (char count == byte count, so length is well-defined); mix of inline (<=12B) and non-inline (>12B).
+    std::vector<std::string> strs = {
+        "hello",            // 5
+        "hi",               // 2
+        "world_is_longer",  // 15  (non-inline)
+        "abcde",            // 5
+        "xy",               // 2
+        "foo_bar_baz_qux",  // 15  (non-inline)
+        "tests",            // 5
+        "ab",               // 2
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    // Runtime assertion (1): the input column's physical type really is StringView, not VARCHAR.
+    ASSERT_EQ(col->GetTypeId(), type::OMNI_STRING_VIEW) << "input column is not OMNI_STRING_VIEW";
+
+    // filter: length(col0) == targetLen
+    // Use new FuncExpr rather than GetFuncExpr: the latter uses codegen FunctionRegistry::LookupFunction (which
+    // has no StringView length and returns nullptr); the FuncExpr constructor goes through VectorFunction::Find and
+    // hits the vectorized SimpleFunctionRegistry, and since codegen can't find it, isSupportCodegen_=false, so the
+    // operator automatically picks the vectorized (ExprEval) path.
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, svType));
+    auto *lengthExpr = new FuncExpr("length", args, IntType());
+    // Runtime assertion (2): the length({OMNI_STRING_VIEW})->OMNI_INT signature resolved to a non-null vectorized function.
+    // VectorFunction::Find matches the signature exactly, and only the SV overload registered here can match
+    // (VARCHAR signatures / codegen don't), so non-null implies the StringView length overload was registered and
+    // resolved correctly. If the SV overload were missing, this would be null and the assertion would fail.
+    ASSERT_NE(lengthExpr->vectorFunction, nullptr)
+        << "length(OMNI_STRING_VIEW) did not resolve to a vectorized function";
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
+        lengthExpr,
+        new LiteralExpr(targetLen, IntType()),
+        BooleanType());
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    if (out != nullptr) {
+        auto *outVec = reinterpret_cast<Vector<StringView> *>(out->Get(0));
+        for (int32_t i = 0; i < returned; i++) {
+            EXPECT_EQ(static_cast<int32_t>(std::string(outVec->GetValue(i)).size()), targetLen);
+        }
+        VectorHelper::FreeVecBatch(out);
+    } else {
+        FAIL() << "GetOutput returned nullptr";
+    }
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, StringViewLengthFilterShort)
+{
+    RunStringViewLengthFilterTest(5, 3);   // hello, abcde, tests
+}
+TEST(FilterTest, StringViewLengthFilterNonInline)
+{
+    RunStringViewLengthFilterTest(15, 2);  // world_is_longer, foo_bar_baz_qux
+}
+TEST(FilterTest, StringViewLengthFilterTiny)
+{
+    RunStringViewLengthFilterTest(2, 3);   // hi, xy, ab
+}
+
+// startsWith(string_view, pattern) -> bool — a binary predicate from the first batch of read-only functions.
+// patternIsStringView controls the literal type, exercising the literal-type behavior of binary predicates:
+//   true  -> {OMNI_STRING_VIEW, OMNI_STRING_VIEW} overload (when e2e stringview.enabled, literals are also built as SV)
+//   false -> {OMNI_STRING_VIEW, OMNI_VARCHAR} fallback overload (literal stays VARCHAR)
+// The boolean-returning StartsWith FuncExpr serves directly as the filter root; codegen has no SV StartsWith,
+// so the operator takes the vectorized (ExprEval) path.
+void RunStringViewStartsWithFilterTest(const std::string &pattern, bool patternIsStringView, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
+    const int32_t numRows = 8;
+    std::vector<std::string> strs = {
+        "hello",                 // he ✓
+        "world_is_longer",       // ✗ (non-inline)
+        "help",                  // he ✓
+        "xyzabc",                // ✗
+        "heading_for_the_hills", // he ✓ (non-inline, >12B)
+        "head",                  // he ✓
+        "foobar",                // ✗
+        "hi",                    // ✗ (h but not he)
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    // Runtime assertion (1): the input column's physical type really is StringView.
+    ASSERT_EQ(col->GetTypeId(), type::OMNI_STRING_VIEW) << "input column is not OMNI_STRING_VIEW";
+
+    // filter: startsWith(col0, pattern)
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, svType));
+    auto patternType = patternIsStringView ? StringViewType() : VarcharType();
+    args.push_back(new LiteralExpr(new std::string(pattern), patternType));
+    auto *filterExpr = new FuncExpr("StartsWith", args, BooleanType());
+    // Runtime assertion (2): StartsWith's SV signature resolved to a non-null vectorized function (only the SV overload registered here can match).
+    ASSERT_NE(filterExpr->vectorFunction, nullptr)
+        << "StartsWith(OMNI_STRING_VIEW, ...) did not resolve to a vectorized function";
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    if (out != nullptr) {
+        auto *outVec = reinterpret_cast<Vector<StringView> *>(out->Get(0));
+        for (int32_t i = 0; i < returned; i++) {
+            // each row really does start with pattern
+            EXPECT_EQ(std::string(outVec->GetValue(i)).rfind(pattern, 0), 0u);
+        }
+        VectorHelper::FreeVecBatch(out);
+    } else {
+        FAIL() << "GetOutput returned nullptr";
+    }
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, StringViewStartsWithSVLiteral)
+{
+    RunStringViewStartsWithFilterTest("he", true, 4);   // hello, help, heading_for_the_hills, head
+}
+TEST(FilterTest, StringViewStartsWithVarcharLiteral)
+{
+    RunStringViewStartsWithFilterTest("he", false, 4);  // same as above, via the {SV,VARCHAR} overload
+}
+TEST(FilterTest, StringViewStartsWithNonInlineMatch)
+{
+    RunStringViewStartsWithFilterTest("heading", true, 1);  // only heading_for_the_hills (non-inline)
+}
+
+// endsWith(string_view, pattern) -> bool — same template as startsWith, exercising both the {SV,SV} and {SV,VARCHAR} paths.
+void RunStringViewEndsWithFilterTest(const std::string &pattern, bool patternIsStringView, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
+    const int32_t numRows = 8;
+    std::vector<std::string> strs = {
+        "running",              // ng ✓
+        "hello",                // ✗
+        "a_very_long_running",  // ng ✓ (non-inline, >12B)
+        "world",                // ✗
+        "song",                 // ng ✓
+        "foobar",               // ✗
+        "ping",                 // ng ✓
+        "hi",                   // ✗
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    // Runtime assertion (1): the input column's physical type really is StringView.
+    ASSERT_EQ(col->GetTypeId(), type::OMNI_STRING_VIEW) << "input column is not OMNI_STRING_VIEW";
+
+    // filter: endsWith(col0, pattern)
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, svType));
+    auto patternType = patternIsStringView ? StringViewType() : VarcharType();
+    args.push_back(new LiteralExpr(new std::string(pattern), patternType));
+    auto *filterExpr = new FuncExpr("EndsWith", args, BooleanType());
+    // Runtime assertion (2): EndsWith's SV signature resolved to a non-null vectorized function.
+    ASSERT_NE(filterExpr->vectorFunction, nullptr)
+        << "EndsWith(OMNI_STRING_VIEW, ...) did not resolve to a vectorized function";
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    if (out != nullptr) {
+        auto *outVec = reinterpret_cast<Vector<StringView> *>(out->Get(0));
+        for (int32_t i = 0; i < returned; i++) {
+            std::string s(outVec->GetValue(i));
+            // each row really does end with pattern
+            ASSERT_GE(s.size(), pattern.size());
+            EXPECT_EQ(s.compare(s.size() - pattern.size(), pattern.size(), pattern), 0);
+        }
+        VectorHelper::FreeVecBatch(out);
+    } else {
+        FAIL() << "GetOutput returned nullptr";
+    }
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, StringViewEndsWithSVLiteral)
+{
+    RunStringViewEndsWithFilterTest("ng", true, 4);   // running, a_very_long_running, song, ping
+}
+TEST(FilterTest, StringViewEndsWithVarcharLiteral)
+{
+    RunStringViewEndsWithFilterTest("ng", false, 4);  // same as above, via the {SV,VARCHAR} overload
+}
+TEST(FilterTest, StringViewEndsWithNonInlineMatch)
+{
+    RunStringViewEndsWithFilterTest("long_running", true, 1);  // only a_very_long_running (non-inline)
+}
+
+// contains(string_view, pattern) -> bool — same template as startsWith, exercising both the {SV,SV} and {SV,VARCHAR} paths.
+void RunStringViewContainsFilterTest(const std::string &pattern, bool patternIsStringView, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
+    const int32_t numRows = 8;
+    std::vector<std::string> strs = {
+        "foobar",                 // bar ✓ (suffix)
+        "hello",                  // ✗
+        "the_bartender_is_here",  // bar ✓ (middle, non-inline >12B)
+        "world",                  // ✗
+        "crowbar",                // bar ✓ (suffix)
+        "xyz",                    // ✗
+        "barber",                 // bar ✓ (prefix)
+        "hi",                     // ✗
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    // Runtime assertion (1): the input column's physical type really is StringView.
+    ASSERT_EQ(col->GetTypeId(), type::OMNI_STRING_VIEW) << "input column is not OMNI_STRING_VIEW";
+
+    // filter: contains(col0, pattern)
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, svType));
+    auto patternType = patternIsStringView ? StringViewType() : VarcharType();
+    args.push_back(new LiteralExpr(new std::string(pattern), patternType));
+    auto *filterExpr = new FuncExpr("Contains", args, BooleanType());
+    // Runtime assertion (2): Contains's SV signature resolved to a non-null vectorized function.
+    ASSERT_NE(filterExpr->vectorFunction, nullptr)
+        << "Contains(OMNI_STRING_VIEW, ...) did not resolve to a vectorized function";
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    if (out != nullptr) {
+        auto *outVec = reinterpret_cast<Vector<StringView> *>(out->Get(0));
+        for (int32_t i = 0; i < returned; i++) {
+            // each row really does contain pattern
+            EXPECT_NE(std::string(outVec->GetValue(i)).find(pattern), std::string::npos);
+        }
+        VectorHelper::FreeVecBatch(out);
+    } else {
+        FAIL() << "GetOutput returned nullptr";
+    }
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, StringViewContainsSVLiteral)
+{
+    RunStringViewContainsFilterTest("bar", true, 4);   // foobar, the_bartender_is_here, crowbar, barber
+}
+TEST(FilterTest, StringViewContainsVarcharLiteral)
+{
+    RunStringViewContainsFilterTest("bar", false, 4);  // same as above, via the {SV,VARCHAR} overload
+}
+TEST(FilterTest, StringViewContainsNonInlineMatch)
+{
+    RunStringViewContainsFilterTest("tender", true, 1);  // only the_bartender_is_here (non-inline)
+}
+
+// ascii(string_view) -> int — a single-argument read-only function (following the length template); returns the first character's code point.
+void RunStringViewAsciiFilterTest(int32_t targetCode, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
+    const int32_t numRows = 8;
+    // Pure ASCII, so the first character's code point is well-defined; mix of inline and non-inline (>12B).
+    std::vector<std::string> strs = {
+        "hello",                 // 'h' = 104
+        "world",                 // 'w' = 119
+        "house_is_long_enough",  // 'h' = 104 (non-inline)
+        "apple",                 // 'a' = 97
+        "hi",                    // 'h' = 104
+        "xyz",                   // 'x' = 120
+        "hammer_time_long_str",  // 'h' = 104 (non-inline)
+        "banana",                // 'b' = 98
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    // Runtime assertion (1): the input column's physical type really is StringView.
+    ASSERT_EQ(col->GetTypeId(), type::OMNI_STRING_VIEW) << "input column is not OMNI_STRING_VIEW";
+
+    // filter: ascii(col0) == targetCode
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, svType));
+    auto *asciiExpr = new FuncExpr("ascii", args, IntType());
+    // Runtime assertion (2): ascii's SV signature resolved to a non-null vectorized function.
+    ASSERT_NE(asciiExpr->vectorFunction, nullptr)
+        << "ascii(OMNI_STRING_VIEW) did not resolve to a vectorized function";
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
+        asciiExpr,
+        new LiteralExpr(targetCode, IntType()),
+        BooleanType());
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    if (out != nullptr) {
+        auto *outVec = reinterpret_cast<Vector<StringView> *>(out->Get(0));
+        for (int32_t i = 0; i < returned; i++) {
+            std::string s(outVec->GetValue(i));
+            ASSERT_FALSE(s.empty());
+            EXPECT_EQ(static_cast<int32_t>(static_cast<unsigned char>(s[0])), targetCode);
+        }
+        VectorHelper::FreeVecBatch(out);
+    } else {
+        FAIL() << "GetOutput returned nullptr";
+    }
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, StringViewAsciiFilterH)
+{
+    RunStringViewAsciiFilterTest(104, 4);  // 'h': hello, house_is_long_enough, hi, hammer_time_long_str
+}
+TEST(FilterTest, StringViewAsciiFilterA)
+{
+    RunStringViewAsciiFilterTest(97, 1);   // 'a': apple
+}
+
+// locate(substring, string, start) -> int — 1-based position, returns 0 if not found.
+// haystack (string) is an SV column; substrIsStringView selects the {SV,SV,*} vs {VARCHAR,SV,*} overload for substring.
+// Uses (locate(...) <cmpOp> cmpVal) as the filter, also verifying position semantics (==2 tests the exact position + start).
+void RunStringViewLocateFilterTest(const std::string &substr, bool substrIsStringView,
+    omniruntime::expressions::Operator cmpOp, int32_t cmpVal, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
+    const int32_t numRows = 8;
+    std::vector<std::string> strs = {
+        "banana",                  // "an" at position 2
+        "hello",                   // no "an" -> 0
+        "the_anaconda_is_longer",  // "an" at position 5 (non-inline)
+        "world",                   // 0
+        "candy",                   // "an" at position 2
+        "xyz",                     // 0
+        "orange",                  // "an" at position 3
+        "hi",                      // 0
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    // Runtime assertion (1): the input column's physical type really is StringView.
+    ASSERT_EQ(col->GetTypeId(), type::OMNI_STRING_VIEW) << "input column is not OMNI_STRING_VIEW";
+
+    // locate(substr, col0, 1) <cmpOp> cmpVal
+    std::vector<Expr *> args;
+    auto substrType = substrIsStringView ? StringViewType() : VarcharType();
+    args.push_back(new LiteralExpr(new std::string(substr), substrType));
+    args.push_back(new FieldExpr(0, svType));
+    args.push_back(new LiteralExpr(1, IntType()));
+    auto *locateExpr = new FuncExpr("locate", args, IntType());
+    // Runtime assertion (2): locate's SV signature (string = SV column) resolved to a non-null vectorized function.
+    ASSERT_NE(locateExpr->vectorFunction, nullptr)
+        << "locate(..., OMNI_STRING_VIEW, ...) did not resolve to a vectorized function";
+    auto *filterExpr = new BinaryExpr(cmpOp, locateExpr, new LiteralExpr(cmpVal, IntType()), BooleanType());
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    if (out != nullptr) {
+        VectorHelper::FreeVecBatch(out);
+    } else {
+        FAIL() << "GetOutput returned nullptr";
+    }
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, StringViewLocateSVLiteralFound)
+{
+    // locate("an", col, 1) > 0 -> banana, the_anaconda_is_longer, candy, orange
+    RunStringViewLocateFilterTest("an", true, omniruntime::expressions::Operator::GT, 0, 4);
+}
+TEST(FilterTest, StringViewLocateVarcharLiteralFound)
+{
+    RunStringViewLocateFilterTest("an", false, omniruntime::expressions::Operator::GT, 0, 4);
+}
+TEST(FilterTest, StringViewLocateExactPosition)
+{
+    // locate("an", col, 1) == 2 -> banana, candy (the_anaconda=5, orange=3 excluded)
+    RunStringViewLocateFilterTest("an", true, omniruntime::expressions::Operator::EQ, 2, 2);
+}
+
+// LIKE(string, pattern) -> bool — uses the VectorFunction mechanism (not SimpleFunction); % matches any string, _ matches a single character.
+// LikeFunction::GetStringValueFromVector now handles OMNI_STRING_VIEW vectors (FLAT/CONST). pattern may be an SV or VARCHAR literal.
+void RunStringViewLikeFilterTest(const std::string &pattern, bool patternIsStringView, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
+    const int32_t numRows = 8;
+    std::vector<std::string> strs = {
+        "hello",                //
+        "world_is_longer",      // (non-inline)
+        "help",                 //
+        "xyzabc",               //
+        "house_is_quite_long",  // (non-inline)
+        "head",                 //
+        "foobar",               //
+        "hi",                   //
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    // Runtime assertion (1): the input column's physical type really is StringView.
+    ASSERT_EQ(col->GetTypeId(), type::OMNI_STRING_VIEW) << "input column is not OMNI_STRING_VIEW";
+
+    // filter: col0 LIKE pattern
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, svType));
+    auto patternType = patternIsStringView ? StringViewType() : VarcharType();
+    args.push_back(new LiteralExpr(new std::string(pattern), patternType));
+    auto *filterExpr = new FuncExpr("LIKE", args, BooleanType());
+    // Runtime assertion (2): LIKE's SV signature resolved to a non-null vectorized function (the SV LikeFunction registered here).
+    ASSERT_NE(filterExpr->vectorFunction, nullptr)
+        << "LIKE(OMNI_STRING_VIEW, ...) did not resolve to a vectorized function";
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    if (out != nullptr) {
+        VectorHelper::FreeVecBatch(out);
+    } else {
+        FAIL() << "GetOutput returned nullptr";
+    }
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, StringViewLikePrefixSVLiteral)
+{
+    // 'h%' -> hello, help, house_is_quite_long, head, hi
+    RunStringViewLikeFilterTest("h%", true, 5);
+}
+TEST(FilterTest, StringViewLikePrefixVarcharLiteral)
+{
+    RunStringViewLikeFilterTest("h%", false, 5);
+}
+TEST(FilterTest, StringViewLikeUnderscoreWildcard)
+{
+    // '_e%' -> any 1 character + 'e' + anything: hello, help, head
+    RunStringViewLikeFilterTest("_e%", true, 3);
+}
+
+// instr(string, substring) -> int — 1-based position, 0 if not found. Note the argument order is the reverse of locate: instr(str, substr).
+// The vectorized version did not exist before (only codegen); added here and registered only for StringView. string (arg0) = SV column, substring selects {SV,SV} vs {SV,VARCHAR}.
+void RunStringViewInStrFilterTest(const std::string &substr, bool substrIsStringView,
+    omniruntime::expressions::Operator cmpOp, int32_t cmpVal, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
+    const int32_t numRows = 8;
+    std::vector<std::string> strs = {
+        "banana",                  // "an" at position 2
+        "hello",                   // none -> 0
+        "the_anaconda_is_longer",  // "an" at position 5 (non-inline)
+        "world",                   // 0
+        "candy",                   // "an" at position 2
+        "xyz",                     // 0
+        "orange",                  // "an" at position 3
+        "hi",                      // 0
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    // Runtime assertion (1): the input column's physical type really is StringView.
+    ASSERT_EQ(col->GetTypeId(), type::OMNI_STRING_VIEW) << "input column is not OMNI_STRING_VIEW";
+
+    // instr(col0, substr) <cmpOp> cmpVal
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, svType));
+    auto substrType = substrIsStringView ? StringViewType() : VarcharType();
+    args.push_back(new LiteralExpr(new std::string(substr), substrType));
+    auto *instrExpr = new FuncExpr("instr", args, IntType());
+    // Runtime assertion (2): instr's SV signature (string = SV column) resolved to a non-null vectorized function.
+    ASSERT_NE(instrExpr->vectorFunction, nullptr)
+        << "instr(OMNI_STRING_VIEW, ...) did not resolve to a vectorized function";
+    auto *filterExpr = new BinaryExpr(cmpOp, instrExpr, new LiteralExpr(cmpVal, IntType()), BooleanType());
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    if (out != nullptr) {
+        VectorHelper::FreeVecBatch(out);
+    } else {
+        FAIL() << "GetOutput returned nullptr";
+    }
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, StringViewInStrSVLiteralFound)
+{
+    // instr(col, "an") > 0 -> banana, the_anaconda_is_longer, candy, orange
+    RunStringViewInStrFilterTest("an", true, omniruntime::expressions::Operator::GT, 0, 4);
+}
+TEST(FilterTest, StringViewInStrVarcharLiteralFound)
+{
+    RunStringViewInStrFilterTest("an", false, omniruntime::expressions::Operator::GT, 0, 4);
+}
+TEST(FilterTest, StringViewInStrExactPosition)
+{
+    // instr(col, "an") == 2 -> banana, candy (the_anaconda=5, orange=3 excluded)
+    RunStringViewInStrFilterTest("an", true, omniruntime::expressions::Operator::EQ, 2, 2);
+}
+
+void RunStringViewFilterEvaluatorTest(bool batchMode, const std::string& filterValue, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(batchMode);
+
+    const int32_t numRows = 11;
+    // Alternating inline (≤12 bytes) and non-inline (>12 bytes) strings.
+    std::vector<std::string> strs = {
+        "hello", "world_is_longer", "hello", "foo_bar_baz_qux", "hello",
+        "bar_baz_qux_quux", "hello", "baz_qux_quux_corge", "hello", "world_is_longer",
+        "xyz_longer_str"
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
+        new FieldExpr(0, svType),
+        new LiteralExpr(new std::string(filterValue), svType),
+        BooleanType());
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    // this is important part as it will trigger
+    // jit compilation of the expression
+    exprEvaluator->FilterFuncGeneration();
+
+    omniruntime::mem::AlignedBuffer<int32_t> selectedRowsBuffer(numRows);
+    ExecutionContext execContext;
+
+    auto out = exprEvaluator->Evaluate(vecBatch, &execContext, &selectedRowsBuffer);
+    // Check for null before dereferencing: Evaluate returns nullptr when the codegen projection path
+    // does not support this type, and calling GetRowCount first would cause a SIGSEGV.
+    ASSERT_NE(out, nullptr) << "Evaluate returned nullptr";
+    auto returned = out->GetRowCount();
+
+    EXPECT_EQ(returned, expectedMatch);
+
+    auto *outVec = reinterpret_cast<Vector<StringView> *>(out->Get(0));
+    for (int32_t i = 0; i < returned; i++) {
+        EXPECT_EQ(std::string(outVec->GetValue(i)), filterValue);
+    }
+    VectorHelper::FreeVecBatch(out);
+
+
+    delete overflowConfig;
+    delete vecBatch;
+}
+
+TEST(FilterTest, RunEvaluatorStringViewShortFilterRowByRow)
+{
+    RunStringViewFilterEvaluatorTest(false, "hello", 5);
+}
+
+TEST(FilterTest, RunEvaluatorStringViewShortFilterBatch)
+{
+    RunStringViewFilterEvaluatorTest(true, "hello", 5);
+}
+
+TEST(FilterTest, RunEvaluatorStringViewLongFilterRowByRow)
+{
+    RunStringViewFilterEvaluatorTest(false, "world_is_longer", 2);
+}
+
+TEST(FilterTest, RunEvaluatorStringViewLongFilterBatch)
+{
+    RunStringViewFilterEvaluatorTest(true, "world_is_longer", 2);
+}
+
+// ---------------------------------------------------------------------------
+// Vectorization (ExprEval) path for OMNI_STRING_VIEW EQ / NEQ predicates
+// (Plan 01 EXPREVAL-VECTORIZATION, blocks ②③④ + notEqual registration).
+//
+// StringView is not supported by LLVM codegen, so the filter is evaluated through
+// ExprEval (FieldExpr/LiteralExpr StringView cases +
+// ComparisonFunction<Equal|NotEqual, OMNI_STRING_VIEW>). Asserts the unsupported
+// codegen capability and correctness for inline (≤12B) and non-inline (>12B)
+// StringView values.
+//
+// Both EQ and NEQ are now registered as vector functions ("equal"/"notEqual" in
+// ComparisonSignatures), so both must take the vectorization path.
+// ---------------------------------------------------------------------------
+void RunStringViewFilterVectorizedTest(bool batchMode, omniruntime::expressions::Operator op,
+    const std::string& filterValue, int32_t expectedMatch)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(batchMode);
+
+    const int32_t numRows = 11;
+    std::vector<std::string> strs = {
+        "hello", "world_is_longer", "hello", "foo_bar_baz_qux", "hello",
+        "bar_baz_qux_quux", "hello", "baz_qux_quux_corge", "hello", "world_is_longer",
+        "xyz_longer_str"
+    };
+
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    auto *filterExpr = new BinaryExpr(op,
+        new FieldExpr(0, svType),
+        new LiteralExpr(new std::string(filterValue), svType),
+        BooleanType());
+
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    // 5th arg preferVectorization=true → route to ExprEval (not codegen).
+    auto exprEvaluator =
+        std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig, true);
+
+    // StringView EQ/NEQ must remain outside the LLVM codegen path.
+    EXPECT_FALSE(exprEvaluator->IsSupportCodegen())
+        << "StringView predicate unexpectedly reports LLVM codegen support";
+
+    exprEvaluator->FilterFuncGeneration();  // no-op when !useCodegen
+
+    omniruntime::mem::AlignedBuffer<int32_t> selectedRowsBuffer(numRows);
+    ExecutionContext execContext;
+
+    auto out = exprEvaluator->Evaluate(vecBatch, &execContext, &selectedRowsBuffer);
+    ASSERT_NE(out, nullptr) << "Evaluate returned nullptr";
+    auto returned = out->GetRowCount();
+    EXPECT_EQ(returned, expectedMatch);
+
+    auto *outVec = reinterpret_cast<Vector<StringView> *>(out->Get(0));
+    for (int32_t i = 0; i < returned; i++) {
+        if (op == omniruntime::expressions::Operator::EQ) {
+            EXPECT_EQ(std::string(outVec->GetValue(i)), filterValue);
+        } else {
+            EXPECT_NE(std::string(outVec->GetValue(i)), filterValue);
+        }
+    }
+    VectorHelper::FreeVecBatch(out);
+
+    delete overflowConfig;
+    delete vecBatch;
+}
+
+TEST(FilterTest, VectorizedStringViewShortEqRowByRow)
+{
+    RunStringViewFilterVectorizedTest(false, omniruntime::expressions::Operator::EQ, "hello", 5);
+}
+
+TEST(FilterTest, VectorizedStringViewShortEqBatch)
+{
+    RunStringViewFilterVectorizedTest(true, omniruntime::expressions::Operator::EQ, "hello", 5);
+}
+
+TEST(FilterTest, VectorizedStringViewLongEqRowByRow)
+{
+    RunStringViewFilterVectorizedTest(false, omniruntime::expressions::Operator::EQ, "world_is_longer", 2);
+}
+
+TEST(FilterTest, VectorizedStringViewLongEqBatch)
+{
+    RunStringViewFilterVectorizedTest(true, omniruntime::expressions::Operator::EQ, "world_is_longer", 2);
+}
+
+TEST(FilterTest, VectorizedStringViewShortNeqRowByRow)
+{
+    RunStringViewFilterVectorizedTest(false, omniruntime::expressions::Operator::NEQ, "hello", 6);
+}
+
+TEST(FilterTest, VectorizedStringViewShortNeqBatch)
+{
+    RunStringViewFilterVectorizedTest(true, omniruntime::expressions::Operator::NEQ, "hello", 6);
+}
+
+TEST(FilterTest, VectorizedStringViewLongNeqRowByRow)
+{
+    RunStringViewFilterVectorizedTest(false, omniruntime::expressions::Operator::NEQ, "world_is_longer", 9);
+}
+
+TEST(FilterTest, VectorizedStringViewLongNeqBatch)
+{
+    RunStringViewFilterVectorizedTest(true, omniruntime::expressions::Operator::NEQ, "world_is_longer", 9);
+}
+
+std::shared_ptr<ExpressionEvaluator> MakeStringViewValidationEvaluator(
+    Expr *filterExpr, const DataTypes &inputTypes, bool preferVectorization)
+{
+    std::vector<Expr *> projections = { new FieldExpr(0, inputTypes.Get()[0]) };
+    auto overflowConfig = std::make_unique<OverflowConfig>();
+    return std::make_shared<ExpressionEvaluator>(
+        filterExpr, projections, inputTypes, overflowConfig.get(), preferVectorization);
+}
+
+TEST(FilterTest, StringViewRuntimeValidationAcceptsNestedAndReversedPredicates)
+{
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+    auto *comparison = new BinaryExpr(omniruntime::expressions::Operator::NEQ,
+        new LiteralExpr(new std::string("tiny"), svType),
+        new FieldExpr(0, svType), BooleanType());
+    auto *notNull = new UnaryExpr(omniruntime::expressions::Operator::NOT,
+        new IsNullExpr(new FieldExpr(0, svType)), BooleanType());
+    auto *filterExpr = new BinaryExpr(
+        omniruntime::expressions::Operator::AND, notNull, comparison, BooleanType());
+    auto evaluator = MakeStringViewValidationEvaluator(filterExpr, inputTypes, true);
+
+    auto info = ValidateStringViewFilterForRuntime(filterExpr, inputTypes);
+    ASSERT_EQ(info.fieldIndexes.size(), 1);
+    EXPECT_EQ(info.fieldIndexes[0], 0);
+    EXPECT_FALSE(evaluator->IsSupportCodegen());
+}
+
+TEST(FilterTest, StringViewRuntimeValidationRejectsLiteralTypeMismatch)
+{
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
+        new FieldExpr(0, svType),
+        new LiteralExpr(new std::string("tiny"), VarcharType()), BooleanType());
+    EXPECT_THROW(
+        ValidateStringViewFilterForRuntime(filterExpr, inputTypes),
+        omniruntime::exception::OmniException);
+}
+
+TEST(FilterTest, StringViewRuntimeValidationRejectsSourceTypeMismatch)
+{
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType() }));
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
+        new FieldExpr(0, svType),
+        new LiteralExpr(new std::string("tiny"), svType), BooleanType());
+    EXPECT_THROW(
+        ValidateStringViewFilterForRuntime(filterExpr, inputTypes),
+        omniruntime::exception::OmniException);
+}
+
+TEST(FilterTest, StringViewRuntimeValidationRejectsMissingStringViewPredicate)
+{
+    auto varcharType = VarcharType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ varcharType }));
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
+        new FieldExpr(0, varcharType),
+        new LiteralExpr(new std::string("tiny"), varcharType), BooleanType());
+    EXPECT_THROW(
+        ValidateStringViewFilterForRuntime(filterExpr, inputTypes),
+        omniruntime::exception::OmniException);
+}
+
+TEST(FilterTest, StringViewRuntimeValidationUsesVectorizedRouteWithoutPreference)
+{
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
+        new FieldExpr(0, svType),
+        new LiteralExpr(new std::string("tiny"), svType), BooleanType());
+    auto evaluator = MakeStringViewValidationEvaluator(filterExpr, inputTypes, false);
+    ASSERT_FALSE(evaluator->IsSupportCodegen());
+
+    auto info = ValidateStringViewFilterForRuntime(filterExpr, inputTypes);
+    ASSERT_EQ(info.fieldIndexes.size(), 1);
+    EXPECT_EQ(info.fieldIndexes[0], 0);
+}
+
+TEST(FilterTest, StringViewRuntimeValidationRejectsVarcharInputBatch)
+{
+    auto *vecBatch = new VectorBatch(1);
+    vecBatch->Append(new Vector<LargeStringContainer<std::string_view>>(1));
+
+    EXPECT_THROW(
+        ValidateStringViewInputBatch(vecBatch, { 0 }),
+        omniruntime::exception::OmniException);
+    delete vecBatch;
+}
+
+TEST(FilterTest, StringViewRuntimeValidationIsDisabledByDefault)
+{
+    omniruntime::config::QueryConfig queryConfig;
+    EXPECT_FALSE(queryConfig.StringViewRuntimeValidationEnabled());
+
+    std::unordered_map<std::string, std::string> values = {
+        { omniruntime::config::QueryConfig::KStringViewRuntimeValidationEnabled, "true" }
+    };
+    omniruntime::config::QueryConfig enabledConfig(values);
+    EXPECT_TRUE(enabledConfig.StringViewRuntimeValidationEnabled());
+}
+
+// ---------------------------------------------------------------------------
+// VectorHelper dispatch for OMNI_STRING_VIEW (Plan 01-04, audit gaps G1/G2)
+//
+// Before the fix, VectorHelper::SliceVector / CopyPositionsVector had no
+// OMNI_STRING_VIEW case and hit `default` → OmniException. These exercise the
+// helper-level dispatch that real operators (filter output, limit, shuffle)
+// rely on when materializing a subset of rows from a StringView column.
+// ---------------------------------------------------------------------------
+
+namespace {
+// inline (<=12B), non-inline (>12B), and a null row.
+Vector<StringView> *MakeMixedStringViewVector()
+{
+    auto *vec = new Vector<StringView>(5);
+    vec->SetValue(0, StringView("hi"));                        // inline
+    vec->SetValue(1, StringView("this_is_a_long_value_123"));  // non-inline
+    vec->SetNull(2);                                           // null
+    vec->SetValue(3, StringView("abc"));                       // inline
+    vec->SetValue(4, StringView("another_long_string_val"));   // non-inline
+    return vec;
+}
+} // namespace
+
+TEST(FilterTest, StringViewVectorHelperSlice)
+{
+    auto *vec = MakeMixedStringViewVector();
+    auto *batch = new VectorBatch(5);
+    batch->Append(vec);
+
+    // Slice [1, 4): rows 1,2,3 → non-inline, null, inline
+    auto *sliced = reinterpret_cast<Vector<StringView> *>(VectorHelper::SliceVector(vec, 1, 3));
+    ASSERT_NE(sliced, nullptr);
+    EXPECT_EQ(sliced->GetTypeId(), type::OMNI_STRING_VIEW);
+    EXPECT_EQ(sliced->GetSize(), 3);
+    EXPECT_EQ(std::string(sliced->GetValue(0)), "this_is_a_long_value_123");
+    EXPECT_TRUE(sliced->IsNull(1));
+    EXPECT_EQ(std::string(sliced->GetValue(2)), "abc");
+
+    delete sliced;
+    VectorHelper::FreeVecBatch(batch);
+}
+
+TEST(FilterTest, StringViewVectorHelperCopyPositions)
+{
+    auto *vec = MakeMixedStringViewVector();
+    auto *batch = new VectorBatch(5);
+    batch->Append(vec);
+
+    // Reorder/select rows 4,2,1,0 → non-inline, null, non-inline, inline
+    int positions[] = {4, 2, 1, 0};
+    auto *copied =
+        reinterpret_cast<Vector<StringView> *>(VectorHelper::CopyPositionsVector(vec, positions, 0, 4));
+    ASSERT_NE(copied, nullptr);
+    EXPECT_EQ(copied->GetTypeId(), type::OMNI_STRING_VIEW);
+    EXPECT_EQ(copied->GetSize(), 4);
+    EXPECT_EQ(std::string(copied->GetValue(0)), "another_long_string_val");
+    EXPECT_TRUE(copied->IsNull(1));
+    EXPECT_EQ(std::string(copied->GetValue(2)), "this_is_a_long_value_123");
+    EXPECT_EQ(std::string(copied->GetValue(3)), "hi");
+
+    delete copied;
+    VectorHelper::FreeVecBatch(batch);
+}
+
+// End-to-end: real FilterAndProjectOperator output, then slice the result via
+// VectorHelper — proves the operator→helper path for StringView is unblocked.
+TEST(FilterTest, StringViewFilterOutputThenSlice)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
+
+    const int32_t numRows = 6;
+    std::vector<std::string> strs = {
+        "match_value_long", "x", "match_value_long", "y", "match_value_long", "z"
+    };
+    auto svType = StringViewType();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ svType }));
+
+    auto *col = new Vector<StringView>(numRows);
+    for (int i = 0; i < numRows; i++) {
+        col->SetValue(i, StringView(strs[i]));
+    }
+    auto *vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(col);
+
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
+        new FieldExpr(0, svType),
+        new LiteralExpr(new std::string("match_value_long"), svType),
+        BooleanType());
+    std::vector<Expr *> projections = { new FieldExpr(0, svType) };
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    auto *op = factory->CreateOperator();
+
+    op->AddInput(vecBatch);
+    VectorBatch *out = nullptr;
+    int32_t returned = op->GetOutput(&out);
+    EXPECT_EQ(returned, 3);  // three "match_value_long" rows
+    ASSERT_NE(out, nullptr);
+
+    // Now slice the filter OUTPUT (StringView vector) — this is what would crash
+    // pre-fix when downstream operators materialize a sub-range.
+    auto *outVec = out->Get(0);
+    auto *sliced = reinterpret_cast<Vector<StringView> *>(VectorHelper::SliceVector(outVec, 1, 2));
+    ASSERT_NE(sliced, nullptr);
+    EXPECT_EQ(sliced->GetSize(), 2);
+    EXPECT_EQ(std::string(sliced->GetValue(0)), "match_value_long");
+    EXPECT_EQ(std::string(sliced->GetValue(1)), "match_value_long");
+
+    delete sliced;
+    VectorHelper::FreeVecBatch(out);
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+#endif
+
 }

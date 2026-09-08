@@ -209,6 +209,11 @@ std::shared_ptr<DataType> VarcharType()
     return std::make_shared<VarcharDataType>(INT_MAX);
 }
 
+std::shared_ptr<DataType> StringViewType()
+{
+    return std::make_shared<StringViewDataType>();
+}
+
 std::shared_ptr<DataType> CharType()
 {
     return std::make_shared<CharDataType>(CHAR_MAX_WIDTH);

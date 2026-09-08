@@ -5,6 +5,7 @@
 #define OMNI_RUNTIME_VECTOR_HELPER_H
 
 #include "vector.h"
+#include "string_view.h"
 #include "large_string_container.h"
 #include "unsafe_vector.h"
 #include "type/data_types.h"
@@ -88,6 +89,9 @@ public:
         if constexpr (std::is_same_v<T, std::string_view>) {
             return new Vector<LargeStringContainer<std::string_view>>(size, capacityInBytes, typeId);
         }
+        if constexpr (std::is_same_v<T, StringView>) {
+            return new Vector<StringView>(size, capacityInBytes);
+        }
         return new Vector<T>(size, typeId);
     }
 
@@ -98,6 +102,9 @@ public:
         using T = typename type::NativeType<typeId>::type;
         if constexpr (std::is_same_v<T, std::string_view>) {
             return std::make_shared<Vector<LargeStringContainer<std::string_view>>>(size, capacityInBytes, typeId);
+        }
+        if constexpr (std::is_same_v<T, StringView>) {
+            return std::make_shared<Vector<StringView>>(size, capacityInBytes);
         }
         return std::make_shared<Vector<T>>(size, typeId);
     }
@@ -118,6 +125,9 @@ public:
             std::string_view data = std::string_view(static_cast<std::string *>(value)->data(),
                 static_cast<std::string *>(value)->length());
             static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetValue(index, data);
+        } else if constexpr (std::is_same_v<T, StringView>) {
+            std::string_view sv = *static_cast<std::string_view *>(value);
+            static_cast<Vector<StringView> *>(vector)->SetValue(index, StringView(sv));
         } else {
             static_cast<Vector<T> *>(vector)->SetValue(index, *static_cast<T *>(value));
         }
@@ -336,6 +346,11 @@ public:
     static ALWAYS_INLINE BaseVector *CreateStringVector(uint32_t vectorSize)
     {
         return new Vector<LargeStringContainer<std::string_view>>(vectorSize);
+    }
+
+    static ALWAYS_INLINE BaseVector *CreateStringViewVector(uint32_t vectorSize)
+    {
+        return new Vector<StringView>(vectorSize);
     }
 
     static ALWAYS_INLINE void AppendVectors(VectorBatch *vectorBatch, const type::DataTypes &sourceTypes,

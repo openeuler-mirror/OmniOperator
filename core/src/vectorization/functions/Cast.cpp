@@ -1114,8 +1114,44 @@ void CastFunction::CastToString(BaseVector* input, BaseVector*& result, Executio
             // String to string, just copy
             result = input;
             break;
+        case OMNI_STRING_VIEW:
+            CastStringViewToOmniVarchar(input, result, context);
+            break;
         default:
             OMNI_THROW("Cast function Error", "Unsupported cast to string from " + TypeUtil::TypeToString(fromType_->GetId()));
+    }
+}
+
+void CastFunction::CastStringViewToOmniVarchar(BaseVector* input, BaseVector*& result, ExecutionContext* context) const {
+    auto size = context->GetResultRowSize();
+    result = VectorHelper::CreateFlatVector(OMNI_VARCHAR, size);
+    auto *out = static_cast<Vector<LargeStringContainer<std::string_view>> *>(result);
+    if (input->GetEncoding() == OMNI_ENCODING_CONST) {
+        if (input->IsNull(0)) {
+            result->SetNulls(0, true, size);
+            return;
+        }
+        StringView sv = static_cast<ConstVector<StringView> *>(input)->GetConstValue();
+        std::string_view view(sv.data(), sv.size());
+        for (int32_t row = 0; row < size; ++row) {
+            out->SetValue(row, view); // SetValue deep-copies bytes into the varchar buffer
+        }
+        return;
+    }
+    auto *src = static_cast<Vector<StringView> *>(input);
+    for (int32_t row = 0; row < size; ++row) {
+        if (input->IsNull(row)) {
+            // Must use the VARCHAR vector's own SetNull (advances the offset buffer). BaseVector::SetNull
+            // is non-virtual and only touches the null bitmap; calling it via a BaseVector* leaves
+            // offsets[row+1] unset, so a null row (esp. the last) leaves offsets[size]=0 →
+            // getRealValueBufCapacityInBytes()=0 → the proto serializer drops ALL values → broadcast
+            // build-side StringView corruption.
+            out->SetNull(row);
+            continue;
+        }
+        StringView sv = src->GetValue(row);
+        std::string_view view(sv.data(), sv.size()); // safe for inline & non-inline; SetValue copies out
+        out->SetValue(row, view);
     }
 }
 

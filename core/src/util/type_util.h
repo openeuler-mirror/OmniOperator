@@ -86,6 +86,8 @@ std::shared_ptr<omniruntime::type::DataType> BooleanType();
 
 std::shared_ptr<omniruntime::type::DataType> VarcharType();
 
+std::shared_ptr<omniruntime::type::DataType> StringViewType();
+
 std::shared_ptr<omniruntime::type::DataType> CharType();
 
 std::shared_ptr<omniruntime::type::DataType> VarBinaryType();

@@ -6,6 +6,15 @@ set -e
 
 source $(cd $(dirname ${BASH_SOURCE[0]}) && pwd)/env_check.sh
 
+# Preserve the value passed by the top-level build.sh, while also allowing this
+# script to be used directly with the same feature flag.
+STRINGVIEW_ENABLE="${STRINGVIEW_ENABLE:-OFF}"
+if [ "$1" = '--stringview-enable' ]; then
+  STRINGVIEW_ENABLE=ON
+  shift
+fi
+export STRINGVIEW_ENABLE
+
 # if either help or --help is provided, the usage should be printed prior to exit
 if [ "$1" = 'help' ] || [ "$1" = '--help' ]; then
   print_help
@@ -91,6 +100,8 @@ else
 fi
 echo "-- Exclude Batch Functions"
 OPTIONS+=" -DEXCLUDE_BATCH_FUNCTIONS=ON"
+# Forward the optional StringView feature selection to CMake for every build mode.
+OPTIONS+=" -DSTRINGVIEW_ENABLE=${STRINGVIEW_ENABLE:-OFF}"
 print_gcc_lib
 
 # need to delete the CMakeCache.txt to refresh the options

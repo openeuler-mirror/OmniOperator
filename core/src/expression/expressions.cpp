@@ -73,6 +73,18 @@ std::vector<BaseVector *> GetConstantInputs(const std::vector<Expr *> &arguments
                 case OMNI_VARBINARY:
                     constantInputs.push_back(new ConstVector(std::string_view(*literalExpr->stringVal), typeId));
                     break;
+                case OMNI_STRING_VIEW:
+#ifdef STRINGVIEW_ENABLE
+                    // StringView 16B fixed-width constant: construct from (const char*, len) to avoid a temporary
+                    // std::string_view triggering the deleted rvalue overload ambiguity (same handling as ExprEval::Visit(LiteralExpr)).
+                    constantInputs.push_back(new ConstVector<StringView>(
+                        StringView(literalExpr->stringVal->data(),
+                            static_cast<int32_t>(literalExpr->stringVal->size())), typeId));
+                    break;
+#else
+                    throw omniruntime::exception::OmniException("STRING_VIEW_DISABLED",
+                        "StringView expression was requested but this native build was configured with STRINGVIEW_ENABLE=OFF");
+#endif
                 default: LogError("Do not support such vector type %d", typeId);
             }
         } else {
@@ -336,6 +348,9 @@ std::string LiteralExpr::toString() const
             output += GetCharValOutput(*this);
             break;
         case OMNI_VARCHAR:
+            output += GetCharValOutput(*this);
+            break;
+        case OMNI_STRING_VIEW:
             output += GetCharValOutput(*this);
             break;
         case OMNI_DECIMAL64:

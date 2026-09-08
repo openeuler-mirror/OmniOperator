@@ -63,6 +63,9 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
         case OMNI_ARRAY:
         case OMNI_MAP:
             break;
+        case OMNI_STRING_VIEW:
+            this->isSupportCodegen_ = false;
+            break;
         default:
             this->isSupportCodegen_ = false;
             break;
@@ -93,6 +96,9 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_ROW:
         case OMNI_ARRAY:
         case OMNI_MAP:
+            this->isSupportCodegen_ = false;
+            break;
+        case OMNI_STRING_VIEW:
             this->isSupportCodegen_ = false;
             break;
         default:

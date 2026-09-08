@@ -94,6 +94,12 @@ namespace omniruntime::reader {
             case omniruntime::type::OMNI_VARCHAR:
                 return std::make_unique<omniruntime::vec::Vector<
                     omniruntime::vec::LargeStringContainer<std::string_view>>>(numValues);
+            case omniruntime::type::OMNI_STRING_VIEW:
+#ifdef STRINGVIEW_ENABLE
+                return std::make_unique<omniruntime::vec::Vector<omniruntime::vec::StringView>>(numValues);
+#else
+                throw std::runtime_error("StringView ORC reader was requested but this native build was configured with STRINGVIEW_ENABLE=OFF");
+#endif
             default:
                 throw std::runtime_error(
                     "MakeVarcharVector Not support vector for this type: " +

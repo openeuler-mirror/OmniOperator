@@ -146,7 +146,13 @@ void LikeFunction::ApplyLike(BaseVector* strVec, BaseVector* patternVec, BaseVec
     result = VectorHelper::CreateFlatVector(outputType->GetId(), size);
 
     if (patternVec->GetEncoding() == OMNI_ENCODING_CONST) {
-        std::string_view patternSv = reinterpret_cast<ConstVector<std::string_view>*>(patternVec)->GetConstValue();
+        std::string_view patternSv;
+        if (patternVec->GetTypeId() == OMNI_STRING_VIEW) {
+            const StringView& pattern = static_cast<ConstVector<StringView>*>(patternVec)->GetConstValueRef();
+            patternSv = pattern;
+        } else {
+            patternSv = reinterpret_cast<ConstVector<std::string_view>*>(patternVec)->GetConstValue();
+        }
         for (int32_t row = 0; row < size; ++row) {
             if (strVec->IsNull(row)) {
                 result->SetNull(row);
@@ -190,7 +196,13 @@ void LikeFunction::ApplyLikeWithEscape(BaseVector* strVec, BaseVector* patternVe
             }
             return;
         }
-        std::string_view esc = reinterpret_cast<ConstVector<std::string_view>*>(escapeVec)->GetConstValue();
+        std::string_view esc;
+        if (escapeVec->GetTypeId() == OMNI_STRING_VIEW) {
+            const StringView& escape = static_cast<ConstVector<StringView>*>(escapeVec)->GetConstValueRef();
+            esc = escape;
+        } else {
+            esc = reinterpret_cast<ConstVector<std::string_view>*>(escapeVec)->GetConstValue();
+        }
         std::string_view escSeq;
         if (!ValidateSingleCharEscape(esc, escSeq)) {
             OMNI_THROW("Like function Error", "Escape string must be a single character");
@@ -199,7 +211,13 @@ void LikeFunction::ApplyLikeWithEscape(BaseVector* strVec, BaseVector* patternVe
     }
 
     if (patternVec->GetEncoding() == OMNI_ENCODING_CONST) {
-        std::string_view patternSv = reinterpret_cast<ConstVector<std::string_view>*>(patternVec)->GetConstValue();
+        std::string_view patternSv;
+        if (patternVec->GetTypeId() == OMNI_STRING_VIEW) {
+            const StringView& pattern = static_cast<ConstVector<StringView>*>(patternVec)->GetConstValueRef();
+            patternSv = pattern;
+        } else {
+            patternSv = reinterpret_cast<ConstVector<std::string_view>*>(patternVec)->GetConstValue();
+        }
         for (int32_t row = 0; row < size; ++row) {
             if (strVec->IsNull(row) || patternVec->IsNull(row)) {
                 result->SetNull(row);
@@ -269,6 +287,18 @@ bool LikeFunction::MatchLike(const std::string_view& str, const std::string_view
 
 std::string_view LikeFunction::GetStringValueFromVector(BaseVector* vec, int32_t row) {
     Encoding encoding = vec->GetEncoding();
+    if (vec->GetTypeId() == OMNI_STRING_VIEW) {
+        // StringView column/constant: a 16B fixed-width value type. Take a reference into the buffer/const and then
+        // convert to std::string_view — converting a copy (GetValue/GetConstValue) would leave the string_view of an
+        // inline (<=12B) string dangling.
+        if (encoding == OMNI_ENCODING_CONST) {
+            return static_cast<ConstVector<StringView>*>(vec)->GetConstValueRef();
+        }
+        if (encoding == OMNI_FLAT) {
+            return static_cast<Vector<StringView>*>(vec)->GetValueRef(row);
+        }
+        OMNI_THROW("Like function Error", "Unsupported encoding for OMNI_STRING_VIEW string");
+    }
     if (encoding == OMNI_ENCODING_CONST) {
         auto* constVec = static_cast<ConstVector<std::string_view>*>(vec);
         return constVec->GetConstValue();

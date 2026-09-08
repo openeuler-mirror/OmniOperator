@@ -61,6 +61,7 @@ TEST(VectorizationTest, InExprInt32Test)
     delete context;
 }
 
+#ifdef STRINGVIEW_ENABLE
 TEST(VectorizationTest, InExprStringViewTest)
 {
     int rowSize = 5;
@@ -99,3 +100,4 @@ TEST(VectorizationTest, InExprStringViewTest)
     delete inExpr;
     delete context;
 }
+#endif

@@ -159,6 +159,17 @@ struct Equal {
 };
 
 template <typename T>
+struct NotEqual {
+    constexpr bool operator()(const T &a, const T &b) const
+    {
+        // Negation of SparkSQL equality so NaN semantics stay consistent
+        // (NaN == NaN is true in Spark, hence NaN != NaN is false).
+        Equal<T> equal;
+        return !equal(a, b);
+    }
+};
+
+template <typename T>
 struct LessOrEqual {
     constexpr bool operator()(const T &a, const T &b) const
     {
@@ -179,6 +190,9 @@ struct GreaterOrEqual : private Less<T> {
 };
 
 std::shared_ptr<VectorFunction> makeEqualTo(const std::string &name, const std::vector<type::DataTypeId> &inputArgs,
+    const config::QueryConfig &);
+
+std::shared_ptr<VectorFunction> makeNotEqualTo(const std::string &name, const std::vector<type::DataTypeId> &inputArgs,
     const config::QueryConfig &);
 
 std::shared_ptr<VectorFunction> makeLessThan(const std::string &name, const std::vector<type::DataTypeId> &inputArgs,
@@ -207,6 +221,9 @@ inline std::vector<std::shared_ptr<codegen::FunctionSignature>> ComparisonSignat
             type::OMNI_VARCHAR,
             type::OMNI_CHAR,
             type::OMNI_VARBINARY,
+#ifdef STRINGVIEW_ENABLE
+            type::OMNI_STRING_VIEW,
+#endif
             type::OMNI_DATE32,
             type::OMNI_DATE64,
             type::OMNI_TIMESTAMP,

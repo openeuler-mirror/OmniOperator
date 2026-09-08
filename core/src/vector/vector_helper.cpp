@@ -715,6 +715,10 @@ void *VectorHelper::UnsafeGetValues(BaseVector *vector)
             return reinterpret_cast<void *>(
                 unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<bool> *>(vector)));
         }
+        case type::OMNI_STRING_VIEW: {
+            return reinterpret_cast<void *>(
+                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<StringView> *>(vector)));
+        }
         case type::OMNI_VARBINARY:
         case type::OMNI_VARCHAR:
         case type::OMNI_CHAR: {
@@ -922,6 +926,9 @@ BaseVector *VectorHelper::SliceVector(BaseVector *vector, int positionOffset, in
             return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->Slice(positionOffset,
                 length);
         }
+        case type::OMNI_STRING_VIEW: {
+            return reinterpret_cast<Vector<StringView> *>(vector)->Slice(positionOffset, length);
+        }
         case type::OMNI_ARRAY: {
             return reinterpret_cast<ArrayVector *>(vector)->Slice(positionOffset, length);
         }
@@ -1055,6 +1062,9 @@ BaseVector *VectorHelper::CopyPositionsVector(BaseVector *vector, int *positions
         case type::OMNI_CHAR: {
             return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->CopyPositions(
                 positions, offset, length);
+        }
+        case type::OMNI_STRING_VIEW: {
+            return reinterpret_cast<Vector<StringView> *>(vector)->CopyPositions(positions, offset, length);
         }
         case type::OMNI_DECIMAL128: {
             return reinterpret_cast<Vector<type::Decimal128> *>(vector)->CopyPositions(positions, offset, length);

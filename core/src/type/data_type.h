@@ -17,12 +17,13 @@
 namespace omniruntime {
 namespace vec {
 class BaseVector;
+struct StringView;
 }
 }
 
 namespace omniruntime {
 namespace type {
-constexpr int32_t DATA_TYPE_MAX_COUNT = 28;
+constexpr int32_t DATA_TYPE_MAX_COUNT = 29;
 const std::string ID = "id";
 const std::string WIDTH = "width";
 const std::string PRECISION = "precision";
@@ -70,6 +71,7 @@ enum DataTypeId {
     OMNI_TIMESTAMP_WITH_TIME_ZONE = 23,
     OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE = 24,
     OMNI_MULTISET = 25,
+    OMNI_STRING_VIEW = 26,
     OMNI_ARRAY = 30,
     OMNI_MAP = 31,
     OMNI_ROW = 32,
@@ -238,6 +240,11 @@ template <> struct NativeType<DataTypeId::OMNI_ROW> {
     static constexpr bool isFixedWidth = false;
 };
 
+template <> struct NativeType<DataTypeId::OMNI_STRING_VIEW> {
+    using type = vec::StringView;
+    static constexpr const char* name = "STRING_VIEW";
+};
+
 #define DYNAMIC_TYPE_DISPATCH(CALLBACK, typeId, ...)                                          \
     [&]() {                                                                                   \
         switch (typeId) {                                                                     \
@@ -286,6 +293,9 @@ template <> struct NativeType<DataTypeId::OMNI_ROW> {
             case OMNI_TIMESTAMP: {                                                            \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_TIMESTAMP>(__VA_ARGS__);  \
             }                                                                                 \
+            case OMNI_STRING_VIEW: {                                                          \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_STRING_VIEW>(__VA_ARGS__);\
+            }                                                                                 \
             default:                                                                          \
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",              \
                     "Can not handle this type " + std::to_string(typeId));                    \
@@ -302,6 +312,7 @@ template <> inline constexpr DataTypeId TYPE_ID<float> = DataTypeId::OMNI_FLOAT;
 template <> inline constexpr DataTypeId TYPE_ID<bool> = DataTypeId::OMNI_BOOLEAN;
 template <> inline constexpr DataTypeId TYPE_ID<Decimal128> = DataTypeId::OMNI_DECIMAL128;
 template <> inline constexpr DataTypeId TYPE_ID<std::string_view> = DataTypeId::OMNI_CHAR;
+template <> inline constexpr DataTypeId TYPE_ID<vec::StringView> = DataTypeId::OMNI_STRING_VIEW;
 
 enum DateUnit {
     DAY = 0,
@@ -410,6 +421,7 @@ public:
     }
 };
 
+using StringViewDataType = FixedWidthDataType<OMNI_STRING_VIEW>;
 using ByteDataType = FixedWidthDataType<OMNI_BYTE>;
 using IntDataType = FixedWidthDataType<OMNI_INT>;
 using ShortDataType = FixedWidthDataType<OMNI_SHORT>;

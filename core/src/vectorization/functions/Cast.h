@@ -48,6 +48,10 @@ private:
     void CastTimestampToString(BaseVector* input, BaseVector*& result, ExecutionContext* context) const;
     void CastDecimal64ToString(BaseVector* input, BaseVector*& result, ExecutionContext* context) const;
     void CastDecimal128ToString(BaseVector* input, BaseVector*& result, ExecutionContext* context) const;
+    // cast(string_view as varchar) -- StringView fallback: materialize 16B StringView into a varchar
+    // (LargeStringContainer) vector so operators without StringView support (e.g. Sort key comparison)
+    // can consume it. Deep-copies non-inline content. See StringView cast fallback design.
+    void CastStringViewToOmniVarchar(BaseVector* input, BaseVector*& result, ExecutionContext* context) const;
     // cast(Xxx as date)
     void CastToDate(BaseVector* input, BaseVector*& result, ExecutionContext* context) const;
     // cast(Xxx as timestamp)

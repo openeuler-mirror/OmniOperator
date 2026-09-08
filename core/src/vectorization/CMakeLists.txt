@@ -1,4 +1,7 @@
 file(GLOB_RECURSE VECTORIZATION_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
+if (NOT STRINGVIEW_ENABLE)
+    list(FILTER VECTORIZATION_LIST EXCLUDE REGEX ".*/(ConcatStringViewFunction|StringViewSliceFunctions)\\.cpp$")
+endif ()
 set(VECTORIZATION_TARGET vectorization)
 add_library(${VECTORIZATION_TARGET} ${VECTORIZATION_LIST})
 

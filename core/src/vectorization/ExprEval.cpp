@@ -243,6 +243,18 @@ void ExprEval::Visit(const LiteralExpr &e)
             case OMNI_VARBINARY:
                 constVec = new ConstVector(std::string_view(*e.stringVal), typeId, rowSize);
                 break;
+            case OMNI_STRING_VIEW:
+#ifdef STRINGVIEW_ENABLE
+                // StringView is a 16-byte fixed-width struct. For non-inline values its data pointer
+                // refers to e.stringVal's buffer, which LiteralExpr owns throughout evaluation.
+                // Construct it from (const char*, len) to avoid the deleted std::string_view rvalue
+                // overload and its resulting ambiguity.
+                constVec = new ConstVector<StringView>(
+                    StringView(e.stringVal->data(), static_cast<int32_t>(e.stringVal->size())), typeId, rowSize);
+                break;
+#else
+                OMNI_THROW("STRING_VIEW_DISABLED", "StringView expression was requested but this native build was configured with STRINGVIEW_ENABLE=OFF");
+#endif
             case OMNI_MAP: {
                 // Non-root null map literals (e.g. stack padding: array(col, null)) must match
                 // batch row count; size 1 would overrun in variadic functions like array()/named_struct().
@@ -402,6 +414,9 @@ void ExprEval::Visit(const FieldExpr &e)
                 inputValues_.push(
                     ColumnProjectionVarCharCopyPositionsHelper<std::string_view>(colVec, selectRow, selectSize));
                 break;
+            case OMNI_STRING_VIEW:
+                inputValues_.push(ColumnProjectionCopyPositionsHelper<StringView>(colVec, selectRow, selectSize));
+                break;
             case OMNI_ARRAY:
                 inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->CopyPositions(selectRow, 0, selectSize));
                 break;
@@ -447,6 +462,9 @@ void ExprEval::Visit(const FieldExpr &e)
         case OMNI_CHAR:
         case OMNI_VARBINARY:
             inputValues_.push(ColumnProjectionVarCharVectorHelper<std::string_view>(colVec, rowSize));
+            break;
+        case OMNI_STRING_VIEW:
+            inputValues_.push(ColumnProjectionHelper<StringView>(colVec, rowSize));
             break;
         case OMNI_ARRAY:
             inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->Slice(0, rowSize));
