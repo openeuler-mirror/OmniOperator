@@ -27,6 +27,9 @@
 
 namespace simd {
 
+// -1 地址（全 1）：Sort8Rows 地址侧 padding 哨兵；回拷后据此识别泄漏并换回真实地址。
+constexpr uint64_t kPaddingAddrSentinel = 0xFFFFFFFFFFFFFFFFULL;
+
 #define MAX_LEVELS 50
 
 struct SortAscending {
@@ -1215,9 +1218,9 @@ void Sort8Rows(Traits st, T *OMNI_RESTRICT keys, uint64_t *OMNI_RESTRICT address
     // [FIX] padding对(值=LONG.MAX,地址=-1)与真实LONG.MAX平局时，-1被排进真实地址槽导致下游越界崩，与padding区被挤出的真实地址换回即可
     if (kKeysPerRow >= 2) {
         for (size_t scI = 0; scI < num_lanes; ++scI) {
-            if (addresses[scI] == 0xFFFFFFFFFFFFFFFFULL) {
+            if (addresses[scI] == kPaddingAddrSentinel) {
                 for (size_t scJ = num_lanes; scJ < kRows * kLanesPerRow; ++scJ) {
-                    if (addrBuf[scJ] != 0xFFFFFFFFFFFFFFFFULL) {
+                    if (addrBuf[scJ] != kPaddingAddrSentinel) {
                         const uint64_t scTmp = addresses[scI];
                         addresses[scI] = addrBuf[scJ];
                         addrBuf[scJ] = scTmp;
