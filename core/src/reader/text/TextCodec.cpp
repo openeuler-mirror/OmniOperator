@@ -8,11 +8,15 @@
 
 #include "reader/text/LazySimpleSerdeCodec.h"
 #include "reader/text/RawLineCodec.h"
+#include "reader/text/CsvCodec.h"
 
 namespace omniruntime::reader::text {
 
 std::unique_ptr<TextCodec> CreateTextCodec(const TextFormatOptions& options)
 {
+    if (options.IsCsv()) {
+        return std::make_unique<CsvCodec>(options);
+    }
     if (options.IsRawLine()) {
         return std::make_unique<RawLineCodec>();
     }
@@ -26,6 +30,9 @@ std::unique_ptr<TextCodec> CreateTextCodec(
     const TextFormatOptions& options,
     const std::vector<int32_t>& projectedFieldIndices)
 {
+    if (options.IsCsv()) {
+        return std::make_unique<CsvCodec>(options, projectedFieldIndices);
+    }
     if (options.IsLazySimple()) {
         return std::make_unique<LazySimpleSerdeCodec>(
             options.LazySimple(), projectedFieldIndices);

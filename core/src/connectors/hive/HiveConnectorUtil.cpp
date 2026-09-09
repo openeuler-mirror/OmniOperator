@@ -217,7 +217,8 @@ void configureRowReaderOptions(
             // projected names to physical field ordinals.
             baseReaderOpts->SetRowType(fileRowType);
             auto codec = hiveSplit->customSplitInfo.find("text.codec_kind");
-            if (codec != hiveSplit->customSplitInfo.end() && codec->second == "LAZY_SIMPLE" &&
+            if (codec != hiveSplit->customSplitInfo.end() &&
+                (codec->second == "LAZY_SIMPLE" || codec->second == "CSV") &&
                 hiveTableHandle->dataColumns() != nullptr) {
                 baseReaderOpts->SetFileRowType(hiveTableHandle->dataColumns());
             } else {

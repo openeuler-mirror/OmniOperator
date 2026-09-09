@@ -3,6 +3,7 @@
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  */
 
+#include <arrow/io/memory.h>
 #include <gtest/gtest.h>
 
 #include <cstdio>
@@ -22,7 +23,9 @@
 #include "reader/common/UriInfo.h"
 #include "reader/text/TextFormatOptions.h"
 #include "reader/text/TextLineScanner.h"
+#include "reader/text/TextValueConverter.h"
 #include "reader/text/TextWriter.h"
+#include "reader/text/TextReader.h"
 #include "type/data_type.h"
 #include "vector/vector.h"
 #include "vector/vector_helper.h"
@@ -70,6 +73,186 @@ std::shared_ptr<ReaderOptions> MakeReaderOptions(
     options->SetRowType(rowType);
     options->SetFileRowType(rowType);
     return options;
+}
+
+TextFormatOptions CsvTestOptions(bool hive = false)
+{
+    TextFormatOptions options;
+    options.sourceKind = hive ? TextSourceKind::HIVE_TEXT : TextSourceKind::SPARK_CSV;
+    options.codecKind = TextCodecKind::CSV;
+    options.common.charset = "UTF-8";
+    options.common.compressionCodec = "NONE";
+    CsvOptions csv;
+    csv.delimited.fieldDelimiter = ',';
+    csv.delimited.escapeEnabled = true;
+    csv.delimited.escapeChar = hive ? '"' : '\\';
+    csv.delimited.nullLiteral = "NULL";
+    csv.parseMode = "PERMISSIVE";
+    options.dialect = csv;
+    return options;
+}
+
+TEST(CsvCodecTest, ProjectionSkipsUnneededEscapesAndPreservesOutputOrder)
+{
+    const auto options = CsvTestOptions();
+    auto codec = CreateTextCodec(options, {2, 0, 4});
+    DecodedTextRecord decoded;
+    codec->DecodeRecord(R"(left,"ignored\"field",NULL,tail)", decoded);
+    ASSERT_EQ(decoded.fields.size(), 3);
+    EXPECT_TRUE(decoded.fields[0].isNull);
+    EXPECT_EQ(decoded.fields[1].value, "left");
+    EXPECT_TRUE(decoded.fields[2].isNull);
+    EXPECT_TRUE(decoded.storage.empty());
+}
+
+TEST(CsvCodecTest, QuotingEscapesMissingAndEmptyFields)
+{
+    auto codec = CreateTextCodec(CsvTestOptions());
+    DecodedTextRecord decoded;
+    codec->DecodeRecord(R"("a,b","a\"b","a""b","",,NULL,)", decoded);
+    ASSERT_EQ(decoded.fields.size(), 7);
+    EXPECT_EQ(decoded.fields[0].value, "a,b");
+    EXPECT_EQ(decoded.fields[1].value, "a\"b");
+    EXPECT_EQ(decoded.fields[2].value, "\"a\"\"b\"");
+    EXPECT_FALSE(decoded.fields[3].isNull);
+    EXPECT_TRUE(decoded.fields[3].value.empty());
+    EXPECT_TRUE(decoded.fields[4].isNull);
+    EXPECT_TRUE(decoded.fields[5].isNull);
+    EXPECT_TRUE(decoded.fields[6].isNull);
+    codec->DecodeRecord("\"abc\"   ,tail", decoded);
+    ASSERT_EQ(decoded.fields.size(), 2);
+    EXPECT_EQ(decoded.fields[0].value, "abc");
+    codec->DecodeRecord("\"abc\"x,tail", decoded);
+    EXPECT_EQ(decoded.fields[0].value, "\"abc\"x");
+}
+
+TEST(CsvCodecTest, HiveDefaultsAndSparkWriterHaveDistinctSemantics)
+{
+    auto hive = CreateTextCodec(CsvTestOptions(true), {0, 1, 2});
+    DecodedTextRecord decoded;
+    hive->DecodeRecord(R"("a""b",,NULL)", decoded);
+    ASSERT_EQ(decoded.fields.size(), 3);
+    EXPECT_EQ(decoded.fields[0].value, "a\"b");
+    EXPECT_FALSE(decoded.fields[1].isNull);
+    EXPECT_EQ(decoded.fields[2].value, "NULL");
+    hive->DecodeRecord("", decoded);
+    EXPECT_TRUE(decoded.fields[0].isNull);
+    hive->DecodeRecord("a,\"unfinished", decoded);
+    EXPECT_EQ(decoded.fields[0].value, "a");
+    EXPECT_TRUE(decoded.fields[1].isNull);
+    hive->DecodeRecord(R"("plain","a,b",tail)", decoded);
+    EXPECT_EQ(decoded.fields[0].value, "plain");
+    EXPECT_EQ(decoded.fields[1].value, "a,b");
+    EXPECT_EQ(decoded.fields[2].value, "tail");
+    EXPECT_TRUE(decoded.storage.empty());
+
+    std::string encoded;
+    auto sparkWriter = CreateTextCodec(CsvTestOptions());
+    sparkWriter->EncodeRecord({{false, " a "}, {false, ""}, {true, {}}, {false, "a\"b"}}, encoded);
+    EXPECT_EQ(encoded, R"(a,"",NULL,"a\"b")");
+    hive->EncodeRecord({{false, " a "}, {false, ""}, {true, {}}, {false, "a\"b"}}, encoded);
+    EXPECT_EQ(encoded, R"(" a ","",,"a""b")");
+}
+
+TEST(CsvCodecTest, SparkDefaultEmptyValueIsIndependentOfQuoteCharacter)
+{
+    auto options = CsvTestOptions();
+    auto csv = options.Csv();
+    csv.quote = '\'';
+    options.dialect = csv;
+    auto codec = CreateTextCodec(options);
+    std::string encoded;
+    codec->EncodeRecord({{false, ""}, {false, " a,b "}}, encoded);
+    EXPECT_EQ(encoded, "\"\",'a,b'");
+}
+
+TEST(TextLineScannerTest, CsvCountSkipsBlankLinesAcrossSmallBuffers)
+{
+    const std::string contents = " \r\n\t\nfirst\r" + std::string(70000, 'x') + "\n\nlast";
+    auto file = std::make_shared<arrow::io::BufferReader>(arrow::Buffer::FromString(contents));
+    TextLineScanner scanner(file, contents.size(), 0, contents.size(), 7);
+    EXPECT_EQ(scanner.CountRows(2, true), 2);
+    EXPECT_EQ(scanner.CountRows(2, true), 1);
+    EXPECT_EQ(scanner.CountRows(2, true), 0);
+    TextLineScanner raw(file, contents.size(), 0, contents.size(), 7);
+    EXPECT_EQ(raw.CountRows(10), 6);
+}
+
+TEST(TextReaderTest, CsvHeaderProjectionAndWriterUseCommonTextPath)
+{
+    auto format = CsvTestOptions();
+    std::get<CsvOptions>(format.dialect).delimited.emitHeader = true;
+    const auto path = MakeTempPath(".csv");
+    auto schema = type::ROW(std::vector<std::string>{"name", "age"},
+        std::vector<type::DataTypePtr>{type::VarcharType(), type::VarcharType()});
+    {
+        TextWriter writer(format, schema);
+        writer.Init(UriInfo("file", path, "", "-1"));
+        writer.Close();
+    }
+    EXPECT_EQ(ReadBytes(path), "name,age\n");
+    WriteBytes(path, "name,age\nfirst,10\n\nsecond,20\n");
+    auto options = MakeReaderOptions(path, 0, std::numeric_limits<int64_t>::max(), false);
+    options->SetFileRowType(schema);
+    options->SetRowType(type::ROW(std::vector<std::string>{"age"},
+        std::vector<type::DataTypePtr>{type::VarcharType()}));
+    auto& csv = std::get<CsvOptions>(format.dialect);
+    csv.delimited.emitHeader = false;
+    csv.delimited.skipInputLines = 1;
+    TextReader reader(options, format);
+    reader.InitReader();
+    auto rows = reader.CreateRowReader();
+    std::vector<vec::BaseVector*>* batch = nullptr;
+    ASSERT_EQ(rows->Next(&batch, nullptr, 17), 2);
+    ASSERT_NE(batch, nullptr);
+    ASSERT_EQ(batch->size(), 1);
+    EXPECT_EQ(vec::VectorHelper::GetStringValueFromVector(batch->front(), 0), "10");
+    EXPECT_EQ(vec::VectorHelper::GetStringValueFromVector(batch->front(), 1), "20");
+    delete batch->front();
+    delete batch;
+    std::remove(path.c_str());
+}
+
+TEST(TextReaderTest, CsvZeroProjectionUsesNoVectorsAndSplitsDoNotDuplicateRows)
+{
+    const auto path = MakeTempPath(".csv");
+    const std::string contents = " \nname,age\r\nfirst,10\rsecond,20\n\nlast,30";
+    WriteBytes(path, contents);
+    auto format = CsvTestOptions();
+    std::get<CsvOptions>(format.dialect).delimited.skipInputLines = 1;
+    uint64_t total = 0;
+    for (int64_t start = 0; start < static_cast<int64_t>(contents.size()); start += 16) {
+        auto options = MakeReaderOptions(path, start, start + 16, false);
+        TextReader reader(options, format);
+        reader.InitReader();
+        auto rowReader = reader.CreateRowReader();
+        uint64_t count = 1;
+        while (count != 0) {
+            std::vector<vec::BaseVector*>* batch = nullptr;
+            count = rowReader->Next(&batch, nullptr, 2);
+            total += count;
+            if (batch != nullptr) {
+                EXPECT_TRUE(batch->empty());
+            }
+            delete batch;
+        }
+    }
+    EXPECT_EQ(total, 3);
+    std::remove(path.c_str());
+}
+
+TEST(TextLineScannerTest, CsvBomAndCountPreserveDataAndIgnoreBlankRecords)
+{
+    const std::string contents = "\xef\xbb\xbf \r\nvalue\r\n";
+    auto file = std::make_shared<arrow::io::BufferReader>(arrow::Buffer::FromString(contents));
+    TextLineScanner scanner(file, contents.size(), 0, contents.size(), 4, true);
+    EXPECT_EQ(scanner.CountRows(10, true), 1);
+    TextLineScanner records(file, contents.size(), 0, contents.size(), 4, true);
+    std::string_view value;
+    ASSERT_TRUE(records.NextLine(value));
+    EXPECT_EQ(value, " ");
+    ASSERT_TRUE(records.NextLine(value));
+    EXPECT_EQ(value, "value");
 }
 
 struct ReadResult {
@@ -469,6 +652,41 @@ TEST(TextWriterTest, WritesLazySimpleMultipleColumns)
     delete ages;
     EXPECT_EQ(ReadBytes(path), "alice|10\nNULL|20\n");
     std::remove(path.c_str());
+}
+
+TEST(TextValueConverterTest, ReusesTimeExpressionsForCustomFormats)
+{
+    TextValueConverter converter("UTC");
+    std::unique_ptr<vec::BaseVector> timestampsInput(
+        vec::VectorHelper::CreateStringVector(3));
+    auto* timestampStrings = reinterpret_cast<
+        vec::Vector<vec::LargeStringContainer<std::string_view>>*>(timestampsInput.get());
+    timestampStrings->SetValue(0, "2026/08/01 04:34:56");
+    timestampStrings->SetValue(1, "2026-08-02 05:35:57");
+    timestampStrings->SetValue(2, "invalid");
+    auto timestamps = converter.DecodeColumn(std::move(timestampsInput), type::TimestampType(), {},
+        {"yyyy/MM/dd HH:mm:ss", "yyyy-MM-dd HH:mm:ss"});
+    EXPECT_FALSE(timestamps->IsNull(0));
+    EXPECT_FALSE(timestamps->IsNull(1));
+    EXPECT_TRUE(timestamps->IsNull(2));
+
+    auto formattedTimestamp = converter.EncodeColumn(
+        timestamps.get(), type::TimestampType(), 0, 2, {}, "yyyy/MM/dd HH:mm:ss");
+    EXPECT_EQ(vec::VectorHelper::GetStringValueFromVector(formattedTimestamp.get(), 0),
+        "2026/08/01 04:34:56");
+    EXPECT_EQ(vec::VectorHelper::GetStringValueFromVector(formattedTimestamp.get(), 1),
+        "2026/08/02 05:35:57");
+
+    std::unique_ptr<vec::BaseVector> datesInput(vec::VectorHelper::CreateStringVector(1));
+    auto* dateStrings = reinterpret_cast<
+        vec::Vector<vec::LargeStringContainer<std::string_view>>*>(datesInput.get());
+    dateStrings->SetValue(0, "2026/08/03");
+    auto dates = converter.DecodeColumn(
+        std::move(datesInput), type::Date32Type(), "yyyy/MM/dd");
+    ASSERT_FALSE(dates->IsNull(0));
+    auto formattedDate = converter.EncodeColumn(
+        dates.get(), type::Date32Type(), 0, 1, "yyyy/MM/dd");
+    EXPECT_EQ(vec::VectorHelper::GetStringValueFromVector(formattedDate.get(), 0), "2026/08/03");
 }
 
 } // namespace

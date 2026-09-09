@@ -120,6 +120,19 @@ void TextWriter::Init(const UriInfo& uri)
     }
     output_ = std::move(outputResult).ValueUnsafe();
     closed_ = false;
+    if (options_.IsCsv() && options_.Csv().delimited.emitHeader) {
+        std::vector<TextFieldView> fields;
+        for (const auto& name : rowType_->names()) {
+            fields.push_back({false, name});
+        }
+        std::string header;
+        codec_->EncodeRecord(fields, header);
+        header.push_back('\n');
+        const auto status = output_->Write(header.data(), header.size());
+        if (!status.ok()) {
+            throw OmniException(status.ToString().c_str());
+        }
+    }
 }
 
 void TextWriter::Write(vec::BaseVector* vector, int64_t start, int64_t end)
@@ -184,9 +197,13 @@ void TextWriter::Write(
 
     std::vector<std::unique_ptr<vec::BaseVector>> stringColumns;
     stringColumns.reserve(vectors.size());
+    const bool useCsvFormats = options_.sourceKind == TextSourceKind::SPARK_CSV;
+    const auto& timestampFormats = options_.temporal.timestampFormats;
     for (size_t column = 0; column < vectors.size(); ++column) {
         stringColumns.emplace_back(valueConverter_.EncodeColumn(
-            vectors[column], rowType_->childAt(static_cast<int32_t>(column)), start, end));
+            vectors[column], rowType_->childAt(static_cast<int32_t>(column)), start, end,
+            useCsvFormats ? options_.temporal.dateFormat : std::string{},
+            useCsvFormats && !timestampFormats.empty() ? timestampFormats.front() : std::string{}));
     }
 
     std::vector<TextFieldView> fields(vectors.size());

@@ -4,6 +4,7 @@
  */
 #include "reader/text/TextFormatOptions.h"
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace omniruntime::reader::text {
@@ -64,6 +65,14 @@ TextFormatOptions TextFormatOptions::FromJson(const std::shared_ptr<nlohmann::js
     options.common.compressionCodec = json->value("text.compression_codec", std::string{});
     options.common.sessionTimezone = json->value("text.session_timezone", std::string{});
     options.common.splitable = json->value("text.splitable", std::string("true")) == "true";
+    options.temporal.dateFormat = json->value("text.date_format", std::string{});
+    const auto timestampFormatCount = static_cast<size_t>(
+        std::stoul(json->value("text.timestamp_format_count", std::string("0"))));
+    options.temporal.timestampFormats.reserve(timestampFormatCount);
+    for (size_t index = 0; index < timestampFormatCount; ++index) {
+        options.temporal.timestampFormats.emplace_back(
+            json->value("text.timestamp_format_" + std::to_string(index), std::string{}));
+    }
 
     if (options.codecKind == TextCodecKind::RAW_LINE) {
         RawLineOptions raw;
@@ -87,6 +96,18 @@ TextFormatOptions TextFormatOptions::FromJson(const std::shared_ptr<nlohmann::js
         lazy.collectionDelimiter = collection.size() == 1 ? collection.front() : '\0';
         lazy.mapKeyDelimiter = mapKey.size() == 1 ? mapKey.front() : '\0';
         options.dialect = lazy;
+    } else if (options.codecKind == TextCodecKind::CSV) {
+        CsvOptions csv;
+        csv.delimited.fieldDelimiter = ParseSingleByte(*json, "text.field_delimiter", false);
+        csv.delimited.nullLiteral = json->value("text.null_literal", std::string{});
+        csv.delimited.escapeEnabled = true;
+        csv.delimited.escapeChar = ParseSingleByte(*json, "text.escape_char", false);
+        csv.delimited.skipInputLines = static_cast<uint32_t>(
+            std::stoul(json->value("text.skip_input_lines", std::string("0"))));
+        csv.delimited.emitHeader = json->value("text.emit_header", std::string("false")) == "true";
+        csv.quote = ParseSingleByte(*json, "text.quote", false);
+        csv.parseMode = json->value("text.parse_mode", std::string("PERMISSIVE"));
+        options.dialect = csv;
     }
     return options;
 }
@@ -104,6 +125,17 @@ bool TextFormatOptions::IsLazySimple() const
 const RawLineOptions& TextFormatOptions::RawLine() const
 {
     return std::get<RawLineOptions>(dialect);
+}
+
+bool TextFormatOptions::IsCsv() const
+{
+    return codecKind == TextCodecKind::CSV &&
+        (sourceKind == TextSourceKind::SPARK_CSV || sourceKind == TextSourceKind::HIVE_TEXT);
+}
+
+const CsvOptions& TextFormatOptions::Csv() const
+{
+    return std::get<CsvOptions>(dialect);
 }
 
 const LazySimpleOptions& TextFormatOptions::LazySimple() const
@@ -124,6 +156,10 @@ void TextFormatOptions::Validate() const
     }
     if (!common.splitable) {
         throw std::runtime_error("Native Text supports splitable input only.");
+    }
+    if (std::any_of(temporal.timestampFormats.begin(), temporal.timestampFormats.end(),
+            [](const std::string& format) { return format.empty(); })) {
+        throw std::runtime_error("Text timestamp format must not be empty.");
     }
     if (IsRawLine()) {
         if (RawLine().wholeText) {
@@ -147,6 +183,28 @@ void TextFormatOptions::Validate() const
         }
         if (lazy.lastColumnTakesRest) {
             throw std::runtime_error("LazySimple last-column-takes-rest is not supported.");
+        }
+        return;
+    }
+    if (IsCsv()) {
+        const auto& csv = Csv();
+        const auto delimiter = csv.delimited.fieldDelimiter;
+        const auto hiveEscape = csv.delimited.escapeChar == '"' ? '\\' : csv.delimited.escapeChar;
+        if (sourceKind == TextSourceKind::HIVE_TEXT &&
+            (delimiter == hiveEscape || csv.quote == hiveEscape)) {
+            throw std::runtime_error("OpenCSV reader delimiter, quote and escape must be different.");
+        }
+        if (delimiter == '\0' || delimiter == '\r' || delimiter == '\n' ||
+            csv.quote == '\0' || csv.quote == '\r' || csv.quote == '\n' ||
+            csv.delimited.escapeChar == '\0' || csv.delimited.escapeChar == '\r' ||
+            csv.delimited.escapeChar == '\n' || delimiter == csv.quote ||
+            delimiter == csv.delimited.escapeChar) {
+            throw std::runtime_error("Unsupported CSV delimiter/quote/escape combination.");
+        }
+        if (csv.parseMode != "PERMISSIVE" || csv.delimited.skipInputLines > 1 ||
+            (sourceKind == TextSourceKind::HIVE_TEXT &&
+                (csv.delimited.skipInputLines != 0 || csv.delimited.emitHeader))) {
+            throw std::runtime_error("Unsupported CSV mode or header option.");
         }
         return;
     }

@@ -7,6 +7,7 @@
 #include <arrow/result.h>
 
 #include <stdexcept>
+#include <algorithm>
 #include <utility>
 
 #include "reader/arrowadapter/FileSystemAdapter.h"
@@ -17,6 +18,67 @@
 namespace omniruntime::reader::text {
 
 using omniruntime::exception::OmniException;
+
+namespace {
+
+// CSV's scalar lexical rules differ from SQL CAST. Keep normalization here,
+// before the shared column conversion, and never apply it to LazySimple.
+bool NormalizeCsvValue(std::string_view& value, type::DataTypeId typeId, std::string& scratch)
+{
+    if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR) {
+        return true;
+    }
+    if (typeId == type::OMNI_BOOLEAN) {
+        auto matches = [&](std::string_view expected) {
+            return value.size() == expected.size() &&
+                std::equal(value.begin(), value.end(), expected.begin(),
+                    [](unsigned char left, char right) { return (left | 0x20) == right; });
+        };
+        return matches("true") || matches("false");
+    }
+    const bool integer = typeId == type::OMNI_BYTE || typeId == type::OMNI_SHORT ||
+        typeId == type::OMNI_INT || typeId == type::OMNI_LONG;
+    const bool decimal = typeId == type::OMNI_DECIMAL64 || typeId == type::OMNI_DECIMAL128;
+    if (decimal && value.find(',') != std::string_view::npos) {
+        scratch.clear();
+        for (const char byte : value) {
+            if (byte != ',') {
+                scratch.push_back(byte);
+            }
+        }
+        value = scratch;
+    }
+    if (integer || decimal) {
+        if (value.empty()) {
+            return false;
+        }
+        size_t position = value.front() == '+' || value.front() == '-' ? 1 : 0;
+        bool digits = false;
+        bool dot = false;
+        for (; position < value.size(); ++position) {
+            const char byte = value[position];
+            if (byte >= '0' && byte <= '9') {
+                digits = true;
+            } else if (decimal && byte == '.' && !dot) {
+                dot = true;
+            } else if (decimal && (byte == 'e' || byte == 'E') && digits) {
+                ++position;
+                if (position < value.size() && (value[position] == '+' || value[position] == '-')) {
+                    ++position;
+                }
+                return position < value.size() &&
+                    std::all_of(value.begin() + position, value.end(),
+                        [](char digit) { return digit >= '0' && digit <= '9'; });
+            } else {
+                return false;
+            }
+        }
+        return digits;
+    }
+    return true;
+}
+
+} // namespace
 
 TextReader::TextReader(std::shared_ptr<ReaderOptions> options, TextFormatOptions textOptions)
     : textOptions_(std::move(textOptions))
@@ -79,15 +141,22 @@ TextRowReader::TextRowReader(TextReader& reader)
     options_ = reader.GetOptions();
     rowType_ = options_->GetRowType();
     fileRowType_ = options_->GetFileRowType();
+    auto splitStart = options_->GetSplitStart();
+    const auto& format = reader.GetTextOptions();
     lineScanner_ = std::make_unique<TextLineScanner>(
         reader.GetFile(),
         reader.GetFileSize(),
-        options_->GetSplitStart(),
-        options_->GetSplitEnd());
+        splitStart,
+        options_->GetSplitEnd(), DEFAULT_TEXT_READ_BUFFER_SIZE,
+        format.IsCsv());
+    if (splitStart == 0 && format.IsCsv() && format.Csv().delimited.skipInputLines != 0) {
+        // Spark CSVHeaderChecker extracts a header only from the first file split.
+        lineScanner_->CountRows(1, true);
+    }
     if (rowType_ == nullptr) {
         throw std::runtime_error("Text reader projected row type is missing.");
     }
-    if (reader_.GetTextOptions().IsLazySimple() && rowType_->size() > 0) {
+    if ((format.IsLazySimple() || format.IsCsv()) && rowType_->size() > 0) {
         if (fileRowType_ == nullptr) {
             throw std::runtime_error("LazySimple reader requires projected and full file schemas.");
         }
@@ -121,7 +190,8 @@ uint64_t TextRowReader::NextDirect(
     }
     const auto& textOptions = reader_.GetTextOptions();
     if (rowType_->size() == 0) {
-        return lineScanner_->CountRows(batchLen);
+        return lineScanner_->CountRows(batchLen,
+            textOptions.sourceKind == TextSourceKind::SPARK_CSV);
     }
     if (textOptions.IsRawLine()) {
         if (rowType_->size() > 1) {
@@ -167,7 +237,7 @@ uint64_t TextRowReader::NextDirect(
         batch->push_back(outputBase.release());
         return records.size();
     }
-    if (textOptions.IsLazySimple() && rowType_->size() > 0) {
+    if ((textOptions.IsLazySimple() || textOptions.IsCsv()) && rowType_->size() > 0) {
         using StringVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
         std::vector<std::unique_ptr<vec::BaseVector>> stringColumns;
         std::vector<StringVector*> writableColumns;
@@ -183,17 +253,28 @@ uint64_t TextRowReader::NextDirect(
         DecodedTextRecord decoded;
         uint64_t rows = 0;
         std::string_view record;
+        std::string valueScratch;
         while (rows < batchLen && lineScanner_->NextLine(record)) {
+            if (textOptions.sourceKind == TextSourceKind::SPARK_CSV &&
+                std::all_of(record.begin(), record.end(),
+                    [](unsigned char byte) { return byte <= ' '; })) {
+                continue;
+            }
             codec_->DecodeRecord(record, decoded);
             if (decoded.fields.size() != writableColumns.size()) {
                 throw std::runtime_error("LazySimpleCodec output does not match projected schema.");
             }
             for (size_t column = 0; column < writableColumns.size(); ++column) {
-                if (decoded.fields[column].isNull) {
+                auto value = decoded.fields[column].value;
+                const bool valid = decoded.fields[column].isNull ||
+                    textOptions.sourceKind != TextSourceKind::SPARK_CSV ||
+                    NormalizeCsvValue(value, rowType_->childAt(static_cast<int32_t>(column))->GetId(),
+                        valueScratch);
+                if (decoded.fields[column].isNull || !valid) {
                     writableColumns[column]->SetNull(static_cast<int32_t>(rows));
                 } else {
                     writableColumns[column]->SetValue(
-                        static_cast<int32_t>(rows), decoded.fields[column].value);
+                        static_cast<int32_t>(rows), value);
                 }
             }
             ++rows;
@@ -205,7 +286,9 @@ uint64_t TextRowReader::NextDirect(
             vec::unsafe::UnsafeBaseVector::SetSize(
                 stringColumns[column].get(), static_cast<int32_t>(rows));
             auto converted = valueConverter_->DecodeColumn(
-                std::move(stringColumns[column]), rowType_->childAt(column));
+                std::move(stringColumns[column]), rowType_->childAt(column),
+                textOptions.temporal.dateFormat,
+                textOptions.temporal.timestampFormats);
             batch->push_back(converted.release());
         }
         return rows;

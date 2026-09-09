@@ -23,15 +23,18 @@ public:
         int64_t fileSize,
         int64_t splitStart,
         int64_t splitEnd,
-        int64_t bufferSize = DEFAULT_TEXT_READ_BUFFER_SIZE);
+        int64_t bufferSize = DEFAULT_TEXT_READ_BUFFER_SIZE,
+        bool stripUtf8Bom = false);
 
     // The returned view remains valid until the next scanner call.
     bool NextLine(std::string_view& line);
 
     // Counts records without materializing their contents.
-    uint64_t CountRows(uint64_t maxRows);
+    uint64_t CountRows(uint64_t maxRows, bool skipBlankLines = false);
 
 private:
+    template <bool skipBlankLines>
+    uint64_t CountRowsImpl(uint64_t maxRows);
     bool CanStartRecord() const;
     bool LoadBuffer(int64_t position);
     bool ReadByte(int64_t position, uint8_t& value);

@@ -38,7 +38,8 @@ TextLineScanner::TextLineScanner(
     int64_t fileSize,
     int64_t splitStart,
     int64_t splitEnd,
-    int64_t bufferSize)
+    int64_t bufferSize,
+    bool stripUtf8Bom)
     : file_(std::move(file)),
       fileSize_(std::max<int64_t>(0, fileSize)),
       splitEnd_(splitEnd < 0 || splitEnd == std::numeric_limits<int64_t>::max()
@@ -52,6 +53,16 @@ TextLineScanner::TextLineScanner(
     }
     if (bufferSize_ <= 0) {
         throw std::runtime_error("Text line scanner buffer size must be positive.");
+    }
+    if (stripUtf8Bom && cursor_ == 0 && fileSize_ >= 3) {
+        uint8_t first = 0;
+        uint8_t second = 0;
+        uint8_t third = 0;
+        if (ReadByte(0, first) && ReadByte(1, second) && ReadByte(2, third) &&
+            first == 0xef && second == 0xbb && third == 0xbf) {
+            cursor_ = 3;
+            return;
+        }
     }
     AlignToSplitStart();
 }
@@ -205,10 +216,17 @@ bool TextLineScanner::NextLine(std::string_view& line)
     return false;
 }
 
-uint64_t TextLineScanner::CountRows(uint64_t maxRows)
+uint64_t TextLineScanner::CountRows(uint64_t maxRows, bool skipBlankLines)
+{
+    return skipBlankLines ? CountRowsImpl<true>(maxRows) : CountRowsImpl<false>(maxRows);
+}
+
+template <bool skipBlankLines>
+uint64_t TextLineScanner::CountRowsImpl(uint64_t maxRows)
 {
     uint64_t rows = 0;
     bool recordStarted = false;
+    bool nonBlank = false;
     while (rows < maxRows) {
         if (!recordStarted) {
             if (!CanStartRecord()) {
@@ -228,6 +246,9 @@ uint64_t TextLineScanner::CountRows(uint64_t maxRows)
             const bool separatorAtBufferEnd = value == '\r' && current == end;
             ++cursor_;
             if (value != '\n' && value != '\r') {
+                if constexpr (skipBlankLines) {
+                    nonBlank = nonBlank || value > ' ';
+                }
                 continue;
             }
             if (value == '\r') {
@@ -241,7 +262,10 @@ uint64_t TextLineScanner::CountRows(uint64_t maxRows)
                 }
             }
 
-            ++rows;
+            if (!skipBlankLines || nonBlank) {
+                ++rows;
+            }
+            nonBlank = false;
             recordStarted = false;
             if (rows >= maxRows || !CanStartRecord()) {
                 return rows;
@@ -253,7 +277,7 @@ uint64_t TextLineScanner::CountRows(uint64_t maxRows)
         }
 
         if (cursor_ >= fileSize_) {
-            if (recordStarted) {
+            if (recordStarted && (!skipBlankLines || nonBlank)) {
                 ++rows;
             }
             break;

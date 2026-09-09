@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <variant>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -33,6 +34,11 @@ struct CommonTextOptions {
     std::string compressionCodec;
     std::string sessionTimezone;
     bool splitable = true;
+};
+
+struct TemporalTextOptions {
+    std::string dateFormat;
+    std::vector<std::string> timestampFormats;
 };
 
 struct RawLineOptions {
@@ -67,6 +73,7 @@ struct TextFormatOptions {
     TextSourceKind sourceKind = TextSourceKind::UNKNOWN;
     TextCodecKind codecKind = TextCodecKind::UNKNOWN;
     CommonTextOptions common;
+    TemporalTextOptions temporal;
     TextDialectOptions dialect = RawLineOptions{};
 
     static TextFormatOptions FromJson(const std::shared_ptr<nlohmann::json>& json);
@@ -74,8 +81,10 @@ struct TextFormatOptions {
     void Validate() const;
     bool IsRawLine() const;
     bool IsLazySimple() const;
+    bool IsCsv() const;
     const RawLineOptions& RawLine() const;
     const LazySimpleOptions& LazySimple() const;
+    const CsvOptions& Csv() const;
 };
 
 } // namespace omniruntime::reader::text
