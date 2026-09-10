@@ -5,11 +5,14 @@
 #include "reader/common/PredicateOperatorType.h"
 #include "reader/common/ScanSpecBuilder.h"
 #include "type/data_type.h"
+#include "util/debug.h"
 #include <nlohmann/json.hpp>
 #include <limits>
 #include <numeric>
 #include "OrcFileOverride.hh"
 #include "RegionCoalescer.h"
+#include <list>
+#include <unordered_map>
 
 namespace omniruntime::reader {
 
@@ -101,21 +104,42 @@ OrcRowReader::OrcRowReader(std::shared_ptr<FileContents> contents, const std::sh
     rowType_ = options->GetRowType();
     fileRowType_ = options->GetFileRowType();
 
-    // Capability gate (when switch ON): all selected cols are supported types AND at least one
-    // pushable single-column filter → new path; else fall back to legacy.
-    // Success on new path: no log. Any fallback: LogWarn with a distinct reason (no silent fallback).
+    // Capability gate (when switch ON): all selected cols are supported types → Selective
+    // path (Velox-style). Dynamic filters are applied onto the HiveDataSource ScanSpec
+    // before the reader is constructed; JSON static predicates AND-merge onto the same tree.
+    // The ScanSpec is where dynamic filters are installed, so it is needed on both the selective
+    // and the legacy path: statistics-based row group pruning applies to either one.
+    scanSpec_ = options->GetScanSpec();
+
     if (options->EnableFilterWhileDecode() && rowType_ != nullptr) {
         bool allSupported = allSelectedColumnsAreSupported(*rowType_);
         const auto &enhancementJson = options->GetEnhancementJson();
         bool hasPredicate = enhancementJson != nullptr && enhancementJson->contains("vecPredicateCondition");
-        bool usable = false;
+        bool usable = true;
         bool needResidual = false;
-        if (allSupported && hasPredicate) {
-            scanSpec_ = makeScanSpec(*rowType_, enhancementJson, usable, needResidual, residualPredicate_);
+        if (scanSpec_ == nullptr) {
+            scanSpec_ = std::make_shared<codegen::ScanSpec>("root");
+            for (uint32_t i = 0; i < rowType_->size(); ++i) {
+                scanSpec_->addField(rowType_->nameOf(i), i);
+            }
         }
-        bool hasPushable = usable && scanSpec_ != nullptr && scanSpec_->hasAnyLeafFilter();
-        useFilterWhileDecode_ = allSupported && hasPushable;
+        if (allSupported && hasPredicate) {
+            applyVecPredicateToScanSpec(*scanSpec_, *rowType_, enhancementJson, usable, needResidual,
+                                        residualPredicate_);
+            if (!usable) {
+                // Keep Hive spec (may already hold a dynamic filter); skip residual.
+                needResidual = false;
+                residualPredicate_ = nullptr;
+                usable = true;
+            }
+        }
+        useFilterWhileDecode_ = allSupported;
         applyResidual_ = useFilterWhileDecode_ && needResidual;
+
+        if (useFilterWhileDecode_ && scanSpec_ != nullptr) {
+            LogDebug("FWD: OrcRowReader selective path hasAnyLeafFilter=%d children=%zu",
+                static_cast<int>(scanSpec_->hasAnyLeafFilter()), scanSpec_->children().size());
+        }
 
         // Residual required but evaluator missing → disable new path to avoid under-filtering.
         if (applyResidual_ && residualPredicate_ == nullptr) {
@@ -127,26 +151,114 @@ OrcRowReader::OrcRowReader(std::shared_ptr<FileContents> contents, const std::sh
         }
 
         if (!useFilterWhileDecode_) {
-            const char *reason = nullptr;
-            if (!allSupported) {
-                reason = "selected columns include unsupported types "
-                         "(supports primitive ORC scalars; array/map/row remain on the legacy path)";
-            } else if (!hasPredicate) {
-                // When Gluten does not push IN etc., C++ sees no JSON — same as pure projection.
-                reason = "no vecPredicateCondition from Gluten "
-                         "(pure projection, or unsupported predicates such as IN that Gluten does not push down)";
-            } else if (!usable) {
-                reason = "predicate JSON could not be parsed into scan filters";
-            } else if (!hasPushable) {
-                reason = "no pushable single-column filter "
-                         "(e.g. pure cross-column OR/NOT); selective path has no benefit over legacy";
-            } else {
-                reason = "residual remainingFilter was required but could not be built "
-                         "(refusing new path to avoid missing filters)";
-            }
+            const char *reason = !allSupported
+                ? "selected columns include unsupported types "
+                  "(supports primitive ORC scalars; array/map/row remain on the legacy path)"
+                : "residual remainingFilter was required but could not be built "
+                  "(refusing new path to avoid missing filters)";
             LogWarn("filterWhileDecode is enabled but this scan fell back to the legacy ORC path: %s", reason);
         }
     }
+
+    // Collect every leaf whose statistics can be tested, not only those that already carry a
+    // filter: a dynamic filter can be installed on the ScanSpec after this reader was built.
+    CollectStatsPrunableColumns(this->getSelectedType(), scanSpec_.get(), statsPrunableColumns_);
+}
+
+OrcRowReader::~OrcRowReader()
+{
+    // One line per split: this is the signal that tells whether a dynamic filter actually saved
+    // decode work, as opposed to merely rejecting rows after they were already decoded.
+    if (prunedRowGroups_ > 0 || prunedStripes_ > 0) {
+        LogDebug("DFP: split pruned %llu row groups and %llu whole stripes from ScanSpec statistics",
+                 static_cast<unsigned long long>(prunedRowGroups_),
+                 static_cast<unsigned long long>(prunedStripes_));
+    }
+}
+
+bool OrcRowReader::StatsPruningActive() const
+{
+    return !statsPrunableColumns_.empty() && footer->rowindexstride() > 0 && scanSpec_ != nullptr &&
+           scanSpec_->hasAnyLeafFilter();
+}
+
+bool OrcRowReader::RowGroupMayMatchFilters(uint32_t rowGroupEntryId) const
+{
+    for (const auto &column : statsPrunableColumns_) {
+        if (column.spec == nullptr || !column.spec->hasFilter()) {
+            continue;
+        }
+        const auto it = rowIndexes.find(column.columnId);
+        if (it == rowIndexes.end()) {
+            continue;
+        }
+        const auto &rowIndex = it->second;
+        if (static_cast<int32_t>(rowGroupEntryId) >= rowIndex.entry_size()) {
+            continue;
+        }
+        const auto &entry = rowIndex.entry(static_cast<int32_t>(rowGroupEntryId));
+        if (!entry.has_statistics()) {
+            continue;
+        }
+        if (!StatsMayContainMatch(column, entry.statistics())) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void OrcRowReader::PickIncludedRowGroups()
+{
+    if (sargsApplier != nullptr) {
+        // Copy: the SARG mask belongs to the applier and is only recomputed per stripe.
+        includedRowGroups_ = sargsApplier->getRowGroups();
+    } else {
+        includedRowGroups_.clear();
+    }
+
+    const uint64_t stride = footer->rowindexstride();
+    if (!StatsPruningActive() || rowIndexes.empty() || rowsInCurrentStripe == 0 || stride == 0) {
+        return;
+    }
+
+    const uint64_t groups = (rowsInCurrentStripe + stride - 1) / stride;
+    if (includedRowGroups_.size() < groups) {
+        includedRowGroups_.resize(groups, true);
+    }
+
+    uint64_t pruned = 0;
+    for (uint64_t rg = 0; rg < groups; ++rg) {
+        if (!includedRowGroups_[rg]) {
+            continue;
+        }
+        if (!RowGroupMayMatchFilters(static_cast<uint32_t>(rg))) {
+            includedRowGroups_[rg] = false;
+            ++pruned;
+        }
+    }
+    prunedRowGroups_ += pruned;
+    if (pruned > 0) {
+        LogDebug("DFP: stripe %llu pruned %llu/%llu row groups by ScanSpec statistics",
+                 static_cast<unsigned long long>(currentStripe), static_cast<unsigned long long>(pruned),
+                 static_cast<unsigned long long>(groups));
+    }
+}
+
+bool OrcRowReader::AnyRowGroupSelectedFrom(uint64_t rowInStripe) const
+{
+    if (includedRowGroups_.empty()) {
+        return true;
+    }
+    const uint64_t stride = footer->rowindexstride();
+    if (stride == 0) {
+        return true;
+    }
+    for (uint64_t rg = rowInStripe / stride; rg < includedRowGroups_.size(); ++rg) {
+        if (includedRowGroups_[rg]) {
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -155,6 +267,7 @@ void OrcRowReader::StartNextStripe()
     reader.reset(); // ColumnReaders use lots of memory; free old memory first
     rowIndexes.clear();
     bloomFilterIndex.clear();
+    includedRowGroups_.clear();
 
     do {
         currentStripeInfo = footer->stripes(static_cast<int>(currentStripe));
@@ -171,24 +284,46 @@ void OrcRowReader::StartNextStripe()
         currentStripeFooter = getStripeFooter(currentStripeInfo, *contents_.get());
         rowsInCurrentStripe = currentStripeInfo.numberofrows();
 
-        // Prefetch selected streams (index + data) before loadStripeIndex() so reads hit cache.
-        PrefetchSelectedStreams();
-
-        if (sargsApplier) {
-            // read row group statistics and bloom filters of current stripe
-            loadStripeIndex();
-            // select row groups to read in the current stripe
-            sargsApplier->pickRowGroups(rowsInCurrentStripe, rowIndexes, bloomFilterIndex);
-            if (sargsApplier->hasSelectedFrom(currentRowInStripe)) {
-                // current stripe has at least one row group matching the predicate
-                break;
-            } else {
-                // advance to next stripe when current stripe has no matching rows
-                currentStripe += 1;
-                currentRowInStripe = 0;
-            }
+        const bool prunable = sargsApplier != nullptr || StatsPruningActive();
+        if (!prunable) {
+            // Nothing can eliminate rows here, so warm index and data in one coalesced pass.
+            PrefetchSelectedStreams(PrefetchScope::kAll);
+            break;
         }
-    } while (sargsApplier && currentStripe < lastStripe);
+
+        // Read the index first. It is small, and if pruning eliminates the whole stripe we avoid
+        // pulling any of its data streams at all.
+        PrefetchSelectedStreams(PrefetchScope::kIndexOnly);
+        loadStripeIndex();
+        if (sargsApplier != nullptr) {
+            sargsApplier->pickRowGroups(rowsInCurrentStripe, rowIndexes, bloomFilterIndex);
+        }
+        PickIncludedRowGroups();
+
+        if (AnyRowGroupSelectedFrom(currentRowInStripe)) {
+            PrefetchSelectedStreams(PrefetchScope::kDataOnly);
+            break;
+        }
+
+        // No surviving row group: advance without ever touching the data streams.
+        ++prunedStripes_;
+        currentStripe += 1;
+        currentRowInStripe = 0;
+        rowsInCurrentStripe = 0;
+        rowIndexes.clear();
+        bloomFilterIndex.clear();
+        includedRowGroups_.clear();
+    } while (currentStripe < lastStripe);
+
+    if (currentStripe >= lastStripe) {
+        // Every remaining stripe was pruned. NextDirect used to fall through to
+        // reader->next() with reader_ already reset() — SIGSEGV. NextSelective already
+        // checks currentStripe after StartNextStripe; the legacy path must do the same.
+        reader.reset();
+        selectiveStructReader_.reset();
+        rowsInCurrentStripe = 0;
+        return;
+    }
 
     if (currentStripe < lastStripe) {
         // get writer timezone info from stripe footer to help understand timestamp values.
@@ -200,31 +335,49 @@ void OrcRowReader::StartNextStripe()
                                                currentStripeFooter, currentStripeInfo.offset(),
                                                *contents_->stream, writerTimezone,
                                                readerTimezone);
-        reader = omniruntime::reader::omniBuildReader(getSelectedType(), stripeStreams,
-            (julianPtr == nullptr) ? nullptr : julianPtr.get());
-
-        // New path: also build SelectiveStructColumnReader (does not wrap the top-level legacy reader).
+        // Exactly one reader tree per stripe. The selective tree builds its own inner readers for
+        // every column, so also building the legacy tree would open every stream twice, allocate a
+        // second decompression buffer per stream, and re-read and re-decode every string
+        // dictionary -- all for a tree that NextSelective never touches.
         if (useFilterWhileDecode_) {
+            reader.reset();
             selectiveStructReader_ = std::make_unique<SelectiveStructColumnReader>(
                 getSelectedType(), stripeStreams, scanSpec_.get(),
                 (julianPtr == nullptr) ? nullptr : julianPtr.get());
+        } else {
+            reader = omniruntime::reader::omniBuildReader(getSelectedType(), stripeStreams,
+                (julianPtr == nullptr) ? nullptr : julianPtr.get());
         }
 
-        // New path skips intra-stripe row-group seek (not forwarded to selective children);
-        // stripe-level sarg still applies.
-        if (sargsApplier && !useFilterWhileDecode_) {
-            // move to the 1st selected row group when PPD is enabled.
+        if (!includedRowGroups_.empty()) {
+            // move to the 1st selected row group when PPD or statistics pruning is in effect.
             currentRowInStripe = advanceToNextRowGroup(currentRowInStripe, rowsInCurrentStripe,
-                                                       footer->rowindexstride(), sargsApplier->getRowGroups());
+                                                       footer->rowindexstride(), includedRowGroups_);
             previousRow = firstRowOfStripe[currentStripe] + currentRowInStripe - 1;
             if (currentRowInStripe > 0) {
-                seekToRowGroup(static_cast<uint32_t>(currentRowInStripe / footer->rowindexstride()));
+                const auto rowGroupId =
+                    static_cast<uint32_t>(currentRowInStripe / footer->rowindexstride());
+                if (useFilterWhileDecode_) {
+                    SeekSelectiveToRowGroup(rowGroupId);
+                } else {
+                    seekToRowGroup(rowGroupId);
+                }
             }
         }
     }
 }
 
-void OrcRowReader::PrefetchSelectedStreams()
+namespace {
+
+// The two kinds loadStripeIndex() consumes; everything else in a stripe is column data.
+bool IsIndexStreamKind(::orc::proto::Stream_Kind kind)
+{
+    return kind == ::orc::proto::Stream_Kind_ROW_INDEX || kind == ::orc::proto::Stream_Kind_BLOOM_FILTER_UTF8;
+}
+
+} // namespace
+
+void OrcRowReader::PrefetchSelectedStreams(PrefetchScope scope)
 {
     auto *prefetchable = dynamic_cast<PrefetchableInputStream *>(contents_->stream.get());
     if (prefetchable == nullptr) {
@@ -235,8 +388,17 @@ void OrcRowReader::PrefetchSelectedStreams()
         return; // coalescing disabled by config
     }
 
-    // A column's index streams share its column id, so they are included too.
-    const std::vector<bool> &selected = this->getSelectedColumns();
+    // Every selected column is fetched, filter columns and projections alike.
+    //
+    // Restricting this to filter columns only pays off with lazy materialization, where a
+    // projection is opened after filtering and can be skipped for batches that survive nothing.
+    // SelectiveStructColumnReader has no such deferral: it reads every projection in the same
+    // batch, and even the empty-survivor path still walks their data streams through skipBatch.
+    // Narrowing therefore saves no IO at all -- it only drops the projections out of the coalesced
+    // read, leaving them to the chunked synchronous reads in the input stream's cache-miss path,
+    // interleaved with decoding.
+    const std::vector<bool> &prefetchCols = this->getSelectedColumns();
+
     std::vector<IoRegion> regions;
     regions.reserve(static_cast<size_t>(currentStripeFooter.streams_size()));
     uint64_t offset = currentStripeInfo.offset();
@@ -244,10 +406,16 @@ void OrcRowReader::PrefetchSelectedStreams()
         const auto &stream = currentStripeFooter.streams(i);
         uint64_t length = stream.length();
         uint64_t column = stream.column();
-        if (column < selected.size() && selected[column]) {
+        const bool isIndex = stream.has_kind() && IsIndexStreamKind(stream.kind());
+        const bool inScope = scope == PrefetchScope::kAll ||
+                             (scope == PrefetchScope::kIndexOnly ? isIndex : !isIndex);
+        if (inScope && column < prefetchCols.size() && prefetchCols[column]) {
             regions.push_back(IoRegion{offset, length});
         }
         offset += length;
+    }
+    if (regions.empty()) {
+        return;
     }
 
     const int64_t maxDistance = options_->GetCoalesceMaxDistance();
@@ -271,11 +439,20 @@ uint64_t OrcRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omniTyp
     if (currentRowInStripe == 0) {
         StartNextStripe();
     }
+    if (currentStripe >= lastStripe || reader == nullptr) {
+        if (lastStripe > 0) {
+            previousRow = firstRowOfStripe[lastStripe - 1] +
+                          footer->stripes(static_cast<int>(lastStripe - 1)).numberofrows();
+        } else {
+            previousRow = 0;
+        }
+        return 0;
+    }
 
     uint64_t rowsToRead = std::min(batchLen, rowsInCurrentStripe - currentRowInStripe);
-    if (sargsApplier) {
+    if (!includedRowGroups_.empty()) {
         rowsToRead = computeBatchSize(rowsToRead, currentRowInStripe, rowsInCurrentStripe,
-                                      footer->rowindexstride(), sargsApplier->getRowGroups());
+                                      footer->rowindexstride(), includedRowGroups_);
     }
     if (rowsToRead == 0) {
         previousRow = lastStripe <= 0 ? footer->numberofrows() :
@@ -291,9 +468,9 @@ uint64_t OrcRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omniTyp
     }
     previousRow = firstRowOfStripe[currentStripe] + currentRowInStripe;
     currentRowInStripe += rowsToRead;
-    if (sargsApplier) {
+    if (!includedRowGroups_.empty()) {
         uint64_t nextRowToRead = advanceToNextRowGroup(currentRowInStripe, rowsInCurrentStripe,
-                                                       footer->rowindexstride(), sargsApplier->getRowGroups());
+                                                       footer->rowindexstride(), includedRowGroups_);
         if (currentRowInStripe != nextRowToRead) {
             // it is guaranteed to be at start of a row group
             currentRowInStripe = nextRowToRead;
@@ -315,13 +492,36 @@ uint64_t OrcRowReader::NextSelective(std::vector<BaseVector *> *batch, int *omni
     while (currentStripe < lastStripe) {
         if (currentRowInStripe == 0) {
             StartNextStripe();
-            if (currentStripe >= lastStripe) {
+            if (currentStripe >= lastStripe || selectiveStructReader_ == nullptr) {
                 break;
             }
         }
 
         uint64_t rowsToRead = std::min(batchLen, rowsInCurrentStripe - currentRowInStripe);
+        if (!includedRowGroups_.empty()) {
+            rowsToRead = computeBatchSize(rowsToRead, currentRowInStripe, rowsInCurrentStripe,
+                                          footer->rowindexstride(), includedRowGroups_);
+        }
         if (rowsToRead == 0) {
+            // Pruning can leave the cursor on an excluded row group; step over it and retry
+            // instead of reporting end of split.
+            if (currentRowInStripe < rowsInCurrentStripe && !includedRowGroups_.empty()) {
+                const uint64_t nextRowToRead = advanceToNextRowGroup(
+                    currentRowInStripe, rowsInCurrentStripe, footer->rowindexstride(), includedRowGroups_);
+                if (nextRowToRead > currentRowInStripe) {
+                    currentRowInStripe = nextRowToRead;
+                    if (currentRowInStripe < rowsInCurrentStripe) {
+                        SeekSelectiveToRowGroup(
+                            static_cast<uint32_t>(currentRowInStripe / footer->rowindexstride()));
+                        continue;
+                    }
+                }
+            }
+            if (currentRowInStripe >= rowsInCurrentStripe) {
+                currentStripe += 1;
+                currentRowInStripe = 0;
+                continue;
+            }
             previousRow = lastStripe <= 0 ? footer->numberofrows() :
                           firstRowOfStripe[lastStripe - 1] +
                           footer->stripes(static_cast<int>(lastStripe - 1)).numberofrows();
@@ -335,6 +535,17 @@ uint64_t OrcRowReader::NextSelective(std::vector<BaseVector *> *batch, int *omni
 
         previousRow = firstRowOfStripe[currentStripe] + currentRowInStripe;
         currentRowInStripe += rowsToRead;
+        if (!includedRowGroups_.empty()) {
+            uint64_t nextRowToRead = advanceToNextRowGroup(currentRowInStripe, rowsInCurrentStripe,
+                                                           footer->rowindexstride(), includedRowGroups_);
+            if (currentRowInStripe != nextRowToRead) {
+                currentRowInStripe = nextRowToRead;
+                if (currentRowInStripe < rowsInCurrentStripe) {
+                    SeekSelectiveToRowGroup(
+                        static_cast<uint32_t>(currentRowInStripe / footer->rowindexstride()));
+                }
+            }
+        }
         if (currentRowInStripe >= rowsInCurrentStripe) {
             currentStripe += 1;
             currentRowInStripe = 0;
@@ -371,12 +582,23 @@ uint64_t OrcRowReader::Next(std::vector<BaseVector *> **batch, int *omniTypeID, 
     }
 
     // DATE32 rebase: new path by rowType_ channel; legacy by fileRowType_.
+    // Partition columns live on rowType_ beyond recordBatch; never index past the vectors
+    // Next actually produced (at() on a missing slot is a SIGSEGV, not an exception here).
     const auto &rebaseRowType = useFilterWhileDecode_ ? rowType_ : fileRowType_;
-    for (int i = 0; i < rebaseRowType->size(); ++i) {
-        if (rebaseRowType->childAt(i)->GetId() == type::DataTypeId::OMNI_DATE32) {
-            auto vector = recordBatch->at(i);
-            for (int j = 0; j < batchRowSize; ++j) {
-                auto intVector = reinterpret_cast<Vector<int32_t> *>(vector);
+    if (rebaseRowType != nullptr && recordBatch != nullptr) {
+        const uint32_t n = std::min(rebaseRowType->size(), static_cast<uint32_t>(recordBatch->size()));
+        for (uint32_t i = 0; i < n; ++i) {
+            if (rebaseRowType->childAt(i) == nullptr ||
+                rebaseRowType->childAt(i)->GetId() != type::DataTypeId::OMNI_DATE32) {
+                continue;
+            }
+            auto *vector = recordBatch->at(i);
+            if (vector == nullptr) {
+                continue;
+            }
+            auto *intVector = reinterpret_cast<Vector<int32_t> *>(vector);
+            const int rows = static_cast<int>(batchRowSize);
+            for (int j = 0; j < rows; ++j) {
                 auto srcVal = intVector->GetValue(j);
                 auto finalVal = (GetJulianDaysPtr()->RebaseJulianToGregorianDays(srcVal));
                 intVector->SetValue(j, finalVal);
@@ -384,5 +606,26 @@ uint64_t OrcRowReader::Next(std::vector<BaseVector *> **batch, int *omniTypeID, 
         }
     }
     return batchRowSize;
+}
+
+void OrcRowReader::SeekSelectiveToRowGroup(uint32_t rowGroupEntryId)
+{
+    if (selectiveStructReader_ == nullptr) {
+        return;
+    }
+    // Keep position lists alive for the duration of seek: PositionProvider holds iterators.
+    std::list<std::list<uint64_t>> positions;
+    std::unordered_map<uint64_t, ::orc::PositionProvider> positionProviders;
+    for (auto rowIndex = rowIndexes.cbegin(); rowIndex != rowIndexes.cend(); ++rowIndex) {
+        const uint64_t colId = rowIndex->first;
+        const auto &entry = rowIndex->second.entry(static_cast<int32_t>(rowGroupEntryId));
+        positions.emplace_back();
+        auto &position = positions.back();
+        for (int pos = 0; pos != entry.positions_size(); ++pos) {
+            position.push_back(entry.positions(pos));
+        }
+        positionProviders.insert(std::make_pair(colId, ::orc::PositionProvider(position)));
+    }
+    selectiveStructReader_->seekToRowGroup(positionProviders);
 }
 }

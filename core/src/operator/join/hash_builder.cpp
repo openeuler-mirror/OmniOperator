@@ -194,6 +194,15 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateFromCachedVariants
     return factory;
 }
 
+void HashBuilderOperatorFactory::SetDynamicFilterPushdownEnabled(bool enabled)
+{
+    dynamicFilterPushdownEnabled_ = enabled;
+    // Cached BHJ table is already built; generate the filter before probe TableScan starts.
+    if (enabled && prebuilt_ && hashTablesVariants != nullptr) {
+        std::visit([&](auto &&arg) { arg.BuildDynamicFilters(); }, *hashTablesVariants);
+    }
+}
+
 void HashBuilderOperatorFactory::InjectCachedVariants(
     HashTableVariants* cachedVariants, const std::string& broadcastHashTableId)
 {
@@ -204,6 +213,9 @@ void HashBuilderOperatorFactory::InjectCachedVariants(
     ownsVariants_ = false;
     prebuilt_ = true;
     broadcastHashTableId_ = broadcastHashTableId;
+    if (dynamicFilterPushdownEnabled_ && hashTablesVariants != nullptr) {
+        std::visit([&](auto &&arg) { arg.BuildDynamicFilters(); }, *hashTablesVariants);
+    }
 }
 
 Operator *HashBuilderOperatorFactory::CreateOperator()
@@ -213,14 +225,16 @@ Operator *HashBuilderOperatorFactory::CreateOperator()
         operatorIndex++ % std::visit([&](auto &&arg) { return arg.GetHashTableCount(); }, *hashTablesVariants);
     return new HashBuilderOperator(this->buildTypes, hashTablesVariants, partitionIndex, joinSpillEnabled_,
         joinMaxSpillRunRows_, joinSubPartCfg_, buildHashCols, joinSpillState_.get(),
-        prebuilt_, broadcastHashTableId_, this, broadcastParallelBuildPolicy_);
+        prebuilt_, broadcastHashTableId_, this, broadcastParallelBuildPolicy_,
+        dynamicFilterPushdownEnabled_);
 }
 
 HashBuilderOperator::HashBuilderOperator(const DataTypes &buildTypes, HashTableVariants *hashTables,
     int32_t partitionIndex, bool joinSpillEnabled, uint64_t joinMaxSpillRunRows,
     JoinSubPartitionConfig joinSubPartCfg, std::vector<int32_t> buildHashCols, JoinSpillState *joinSpillState,
-    bool prebuilt, std::string broadcastHashTableId, HashBuilderOperatorFactory* ownerFactory,
-    BroadcastParallelBuildPolicy broadcastParallelBuildPolicy)
+    bool prebuilt, std::string broadcastHashTableId,     HashBuilderOperatorFactory* ownerFactory,
+    BroadcastParallelBuildPolicy broadcastParallelBuildPolicy,
+    bool dynamicFilterPushdownEnabled)
     : buildTypes(buildTypes),
       partitionIndex(partitionIndex),
       hashTablesVariants(hashTables),
@@ -235,7 +249,8 @@ HashBuilderOperator::HashBuilderOperator(const DataTypes &buildTypes, HashTableV
       joinSpillState_(joinSpillState),
       prebuilt_(prebuilt),
       broadcastHashTableId_(std::move(broadcastHashTableId)),
-      ownerFactory_(ownerFactory)
+      ownerFactory_(ownerFactory),
+      dynamicFilterPushdownEnabled_(dynamicFilterPushdownEnabled)
 {
     SetOperatorName(opNameForHashBuilder);
 }
@@ -350,6 +365,9 @@ int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVec
 
     // Pre-built path: hash table already ready from executor-level cache; just mark done.
     if (prebuilt_) {
+        if (dynamicFilterPushdownEnabled_) {
+            std::visit([&](auto &&arg) { arg.BuildDynamicFilters(); }, *hashTablesVariants);
+        }
         SetStatus(OMNI_STATUS_FINISHED);
         std::visit([&](auto &&arg) { arg.SetStatus(OMNI_STATUS_FINISHED); }, *hashTablesVariants);
         return 0;
@@ -405,6 +423,9 @@ int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVec
                 *hashTablesVariants);
         }
         UpdateGetOutputInfo(hashTableSize);
+    }
+    if (dynamicFilterPushdownEnabled_) {
+        std::visit([&](auto &&arg) { arg.BuildDynamicFilters(); }, *hashTablesVariants);
     }
     SetStatus(OMNI_STATUS_FINISHED);
     std::visit([&](auto &&arg) { arg.SetStatus(OMNI_STATUS_FINISHED); }, *hashTablesVariants);

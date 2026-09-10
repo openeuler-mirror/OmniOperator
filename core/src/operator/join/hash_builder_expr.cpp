@@ -78,6 +78,9 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType 
     : HashBuilderWithExprOperatorFactory(joinType, buildSide, buildTypes, buildHashKeys, hashTableCount, overflowConfig)
 {
     this->queryConfig_ = queryConfig;
+    if (this->operatorFactory != nullptr) {
+        this->operatorFactory->SetDynamicFilterPushdownEnabled(queryConfig.dynamicFilterPushdownEnabled());
+    }
 }
 
 HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()

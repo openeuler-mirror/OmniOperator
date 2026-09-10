@@ -25,6 +25,7 @@
 #include "util/config/ConfigBase.h"
 #include <type/data_type.h>
 #include <unordered_map>
+#include "reader/common/Filter.h"
 #include "codegen/expr_evaluator.h"
 #include "util/format.h"
 
@@ -182,6 +183,8 @@ public:
     {
         return 0;
     }
+
+    virtual void addDynamicFilter(type::column_index_t /*channel*/, ::common::FilterPtr /*filter*/) {}
 };
 
 // Collection of context data for use in a DataSource, IndexSource or DataSink.

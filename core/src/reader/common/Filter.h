@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -192,6 +193,32 @@ public:
     bool testDouble(double value) const override { return test(static_cast<T>(value)); }
     bool testFloat(float value) const override { return test(static_cast<T>(value)); }
 
+    bool testDoubleRange(double mn, double mx, bool hasNull) const override
+    {
+        if (hasNull && nullAllowed_) {
+            return true;
+        }
+        // The complement of an interval covers both tails, so a min/max pair almost never
+        // excludes it; keeping the range is correct and avoids a misleading special case.
+        if (negated_) {
+            return true;
+        }
+        // NaN bounds make every comparison false, which keeps the range.
+        if (!lowerUnbounded_) {
+            const double bound = static_cast<double>(lower_);
+            if (lowerExclusive_ ? mx <= bound : mx < bound) {
+                return false;
+            }
+        }
+        if (!upperUnbounded_) {
+            const double bound = static_cast<double>(upper_);
+            if (upperExclusive_ ? mn >= bound : mn > bound) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     bool test(T value) const
     {
         bool inside = true;
@@ -311,9 +338,38 @@ private:
 class BigintValues final : public Filter {
 public:
     BigintValues(std::unordered_set<int64_t> values, bool nullAllowed)
-        : Filter(FilterKind::kBigintValuesUsingHashTable, nullAllowed), values_(std::move(values)) {}
+        : Filter(FilterKind::kBigintValuesUsingHashTable, nullAllowed), values_(std::move(values))
+    {
+        for (int64_t v : values_) {
+            min_ = std::min(min_, v);
+            max_ = std::max(max_, v);
+        }
+    }
 
-    bool testInt64(int64_t v) const override { return values_.count(v) != 0; }
+    // The bounds check is not just a shortcut for the hash lookup: it is what makes an IN-list
+    // usable for statistics pruning, which is where a dynamic filter saves actual decode work.
+    bool testInt64(int64_t v) const override
+    {
+        if (v < min_ || v > max_) {
+            return false;
+        }
+        return values_.count(v) != 0;
+    }
+
+    bool testInt64Range(int64_t mn, int64_t mx, bool hasNull) const override
+    {
+        if (hasNull && nullAllowed_) {
+            return true;
+        }
+        if (mn == mx) {
+            return testInt64(mn);
+        }
+        return !(mn > max_ || mx < min_);
+    }
+
+    const std::unordered_set<int64_t> &values() const { return values_; }
+    int64_t min() const { return min_; }
+    int64_t max() const { return max_; }
 
     FilterPtr mergeWith(const Filter *other) const override;
     FilterPtr clone(bool nullAllowed) const override
@@ -323,7 +379,17 @@ public:
 
 private:
     std::unordered_set<int64_t> values_;
+    // An empty value set leaves min_ > max_, which rejects every value and every range.
+    int64_t min_ = std::numeric_limits<int64_t>::max();
+    int64_t max_ = std::numeric_limits<int64_t>::min();
 };
+
+// Distinct-key → Filter for dynamic filter pushdown (Velox createBigintValues).
+// empty → AlwaysFalse; contiguous → BigintRange; otherwise → BigintValues.
+// Cap matches VectorHasher::kMaxDistinct (100000): beyond that Velox also
+// drops the exact IN-list (Bloom is a separate path, not in this slice).
+constexpr size_t kMaxInListSizeForDynamicFilter = 100000;
+FilterPtr chooseCommonFilter(const std::unordered_set<int64_t> &values, bool nullAllowed = false);
 
 // Bytes/string range (Velox BytesRange). Equality when lower==upper and both ends closed.
 class BytesRange final : public Filter {

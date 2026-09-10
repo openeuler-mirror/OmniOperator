@@ -13,6 +13,7 @@
 #include "reader/common/PredicateUtil.h"
 #include "orc/StripeStream.hh"
 #include "codegen/ScanSpec.h"
+#include "RowGroupStatsFilter.hh"
 #include "SelectiveStructColumnReader.hh"
 
 using ::orc::InputStream;
@@ -26,7 +27,7 @@ class OrcRowReader : public omniruntime::reader::RowReader, public ::orc::RowRea
 public:
     OrcRowReader() = default;
 
-    ~OrcRowReader() override = default;
+    ~OrcRowReader() override;
 
     OrcRowReader(std::shared_ptr<FileContents> contents, const std::shared_ptr<ReaderOptions> &options);
 
@@ -50,8 +51,29 @@ public:
     void StartNextStripe();
 
 private:
-    // Prefetch the current stripe's selected streams as coalesced reads before loadStripeIndex().
-    void PrefetchSelectedStreams();
+    // Index streams are read on their own so that a stripe eliminated by statistics costs only
+    // the index, not a prefetch of every data stream in it.
+    enum class PrefetchScope : uint8_t { kIndexOnly, kDataOnly, kAll };
+
+    // Prefetch the current stripe's selected streams as coalesced reads.
+    void PrefetchSelectedStreams(PrefetchScope scope);
+
+    // Seek selective children to a row group. Base RowReaderImpl::seekToRowGroup only moves the
+    // unused legacy reader on the filter-while-decode path.
+    void SeekSelectiveToRowGroup(uint32_t rowGroupEntryId);
+
+    // Fill includedRowGroups_ for the current stripe: the SargsApplier mask, further reduced by
+    // the ScanSpec filters (which is where dynamic filters live).
+    void PickIncludedRowGroups();
+
+    bool RowGroupMayMatchFilters(uint32_t rowGroupEntryId) const;
+
+    // True when at least one row group at or after 'rowInStripe' survived pruning.
+    bool AnyRowGroupSelectedFrom(uint64_t rowInStripe) const;
+
+    // Whether the ScanSpec currently carries a filter worth testing against the row index. This is
+    // re-evaluated per stripe because dynamic filters arrive while the scan is already running.
+    bool StatsPruningActive() const;
 
     std::shared_ptr <FileContents> contents_;
     std::vector<BaseVector *> *batch;
@@ -62,6 +84,12 @@ private:
     std::shared_ptr<common::PredicateCondition> residualPredicate_; // Unpushed residual subtree
     std::shared_ptr<codegen::ScanSpec> scanSpec_;
     std::unique_ptr<SelectiveStructColumnReader> selectiveStructReader_;
+
+    std::vector<StatsPrunableColumn> statsPrunableColumns_;
+    // Row groups to read in the current stripe. Empty means "no pruning information, read all".
+    std::vector<bool> includedRowGroups_;
+    uint64_t prunedRowGroups_ = 0;
+    uint64_t prunedStripes_ = 0;
 };
 
 class OrcReader : public omniruntime::reader::Reader, public ::orc::ReaderImpl {

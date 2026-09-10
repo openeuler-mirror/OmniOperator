@@ -20,6 +20,7 @@
 #include "util/debug.h"
 #include "vector/vector_helper.h"
 #include <memory>
+#include <optional>
 
 namespace omniruntime::compute {
 std::atomic_uint64_t BlockingState::numBlockdDrivers_{0};
@@ -168,6 +169,9 @@ StopReason OmniDriver::RunInternal(
                 if (blockingReason_ != BlockingReason::kNotBlocked) {
                     return BlockDriver(self, i, std::move(future), blockingState);
                 }
+                if (dynamicFilterPushdownEnabled_) {
+                    pushdownFilters(static_cast<size_t>(i));
+                }
 
                 if (i < numOperators - 1) {
                     auto *nextOp = operators_[i + 1].get();
@@ -273,6 +277,67 @@ StopReason OmniDriver::RunInternal(
     }
 }
 #undef CALL_OPERATOR
+
+namespace {
+std::optional<uint32_t> GetIdentityInputChannel(
+    const std::vector<omniruntime::op::IdentityProjection> &projections, uint32_t outputChannel)
+{
+    for (const auto &p : projections) {
+        if (p.outputChannel == outputChannel) {
+            return p.inputChannel;
+        }
+    }
+    return std::nullopt;
+}
+} // namespace
+
+void OmniDriver::pushdownFilters(size_t operatorIndex)
+{
+    if (!dynamicFilterPushdownEnabled_ || operatorIndex == 0) {
+        return;
+    }
+    auto *source = operators_[operatorIndex].get();
+    if (source == nullptr || !source->hasPendingDynamicFilters()) {
+        return;
+    }
+    auto filters = source->getPendingDynamicFilters();
+    if (filters.empty()) {
+        return;
+    }
+    source->clearPendingDynamicFilters();
+    size_t appliedCount = 0;
+    LogDebug("DFP: pushdownFilters from op[%zu] %s filterCount=%zu", operatorIndex,
+        source->operatorType().c_str(), filters.size());
+    for (auto &[channel, filter] : filters) {
+        std::optional<uint32_t> mapped = channel;
+        for (int32_t j = static_cast<int32_t>(operatorIndex) - 1; j >= 0 && mapped.has_value(); --j) {
+            auto *prev = operators_[static_cast<size_t>(j)].get();
+            if (prev == nullptr) {
+                continue;
+            }
+            if (prev->canAddDynamicFilter()) {
+                prev->addDynamicFilter(*mapped, filter);
+                ++appliedCount;
+                LogDebug("DFP: applied filter origCh=%u finalCh=%u to op[%d] %s", channel, *mapped, j,
+                    prev->operatorType().c_str());
+                mapped.reset();
+                break;
+            }
+            const auto nextMapped = GetIdentityInputChannel(prev->identityProjections(), *mapped);
+            if (!nextMapped.has_value()) {
+                LogDebug("DFP: blocked at op[%d] %s (no identity mapping for ch=%u)", j,
+                    prev->operatorType().c_str(), *mapped);
+                break;
+            }
+            mapped = nextMapped;
+        }
+        if (mapped.has_value()) {
+            LogDebug("DFP: filter origCh=%u did not reach a scan (stopped at pipeline start)", channel);
+        }
+    }
+    source->onDynamicFiltersPushed(appliedCount);
+    LogDebug("DFP: pushdownFilters done op[%zu] appliedCount=%zu", operatorIndex, appliedCount);
+}
 
 StopReason OmniDriver::BlockDriver(
     const std::shared_ptr<OmniDriver> &self,

@@ -446,6 +446,54 @@ nlohmann::json extractFiltersFromRemainingFilter(nlohmann::json &node, const omn
 
 } // namespace
 
+void applyVecPredicateToScanSpec(ScanSpec &root, const omniruntime::type::RowType &rowType,
+                                 const std::shared_ptr<nlohmann::json> &enhancementJson, bool &usable,
+                                 bool &needResidual,
+                                 std::shared_ptr<::common::PredicateCondition> &residualPredicate)
+{
+    usable = false;
+    needResidual = false;
+    residualPredicate = nullptr;
+    const int n = rowType.size();
+    std::vector<FilterPtr> filters(n);
+    try {
+        auto condStr = (*enhancementJson)["vecPredicateCondition"].get<std::string>();
+        auto cond = nlohmann::json::parse(condStr);
+        nlohmann::json residual = extractFiltersFromRemainingFilter(cond, rowType, filters, /*negated*/ false);
+        const auto &children = root.children();
+        for (int i = 0; i < n && i < static_cast<int>(children.size()); ++i) {
+            if (!filters[i]) {
+                continue;
+            }
+            if (children[i]->filter() != nullptr) {
+                const int oldKind = static_cast<int>(children[i]->filter()->kind());
+                auto merged = children[i]->filter()->mergeWith(filters[i].get());
+                if (merged == nullptr) {
+                    LogWarn("FWD: mergeWith returned null col=%d name=%s existingKind=%d jsonKind=%d; "
+                            "keeping JSON filter (existing predicate dropped; Conjunction not implemented)",
+                        i, children[i]->fieldName().c_str(), oldKind,
+                        static_cast<int>(filters[i]->kind()));
+                    children[i]->setFilter(filters[i]);
+                } else {
+                    children[i]->setFilter(std::move(merged));
+                }
+            } else {
+                children[i]->setFilter(filters[i]);
+            }
+        }
+        needResidual = !residual.is_null();
+        if (needResidual) {
+            residualPredicate = ::common::BuildResidualPredicateCondition(residual, n);
+        }
+        usable = true;
+    } catch (const std::exception &e) {
+        LogError("applyVecPredicateToScanSpec fallback: %s", e.what());
+        usable = false;
+        needResidual = false;
+        residualPredicate = nullptr;
+    }
+}
+
 std::shared_ptr<ScanSpec> makeScanSpec(const omniruntime::type::RowType &rowType,
                                        const std::shared_ptr<nlohmann::json> &enhancementJson, bool &usable,
                                        bool &needResidual,
@@ -459,29 +507,7 @@ std::shared_ptr<ScanSpec> makeScanSpec(const omniruntime::type::RowType &rowType
     for (int i = 0; i < n; ++i) {
         root->addField(rowType.nameOf(i), i);
     }
-
-    std::vector<FilterPtr> filters(n);
-    try {
-        auto condStr = (*enhancementJson)["vecPredicateCondition"].get<std::string>();
-        auto cond = nlohmann::json::parse(condStr);
-        nlohmann::json residual = extractFiltersFromRemainingFilter(cond, rowType, filters, /*negated*/ false);
-        const auto &children = root->children();
-        for (int i = 0; i < n; ++i) {
-            if (filters[i]) {
-                children[i]->setFilter(filters[i]);
-            }
-        }
-        needResidual = !residual.is_null();
-        if (needResidual) {
-            residualPredicate = ::common::BuildResidualPredicateCondition(residual, n);
-        }
-        usable = true;
-    } catch (const std::exception &e) {
-        LogError("makeScanSpec fallback to legacy path: %s", e.what());
-        usable = false;
-        needResidual = false;
-        residualPredicate = nullptr;
-    }
+    applyVecPredicateToScanSpec(*root, rowType, enhancementJson, usable, needResidual, residualPredicate);
     return root;
 }
 

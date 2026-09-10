@@ -46,6 +46,9 @@ LookupJoinWrapperOperator::LookupJoinWrapperOperator(LookupJoinWithExprOperator 
       isNeedOuterJoin(isNeedOuterJoin)
 {
     SetOperatorName(opNameForLookUpJoin);
+    if (this->lookupJoinWithExprOperator != nullptr) {
+        identityProjections_ = this->lookupJoinWithExprOperator->identityProjections();
+    }
 }
 
 LookupJoinWrapperOperator::~LookupJoinWrapperOperator()

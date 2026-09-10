@@ -65,6 +65,11 @@ public:
 
     void prepareSplit(omniruntime::type::RowTypePtr &rowType, uint64_t batchLen);
 
+    bool emptySplit() const
+    {
+        return emptySplit_;
+    }
+
     std::string toString() const;
 
     void createReader();
@@ -81,10 +86,17 @@ protected:
     std::unique_ptr <omniruntime::reader::RowReader> baseRowReader_;
     std::shared_ptr <ReaderOptions> baseReaderOpts_;
     bool emptySplit_;
+    bool partitionFilterDiagLogged_ = false;
     omniruntime::type::RowTypePtr rowType_;
     omniruntime::type::RowTypePtr fileRowType_;
 
     void createRowReader(omniruntime::type::RowTypePtr &rowType, uint64_t batchLen);
+
+    // Evaluate ScanSpec filters that land on Hive partition columns against this
+    // split's partition values (Velox testFilters). False → skip the file.
+    bool partitionKeysPassFilters();
+    bool partitionValuePassesFilter(
+        const ::common::Filter *filter, type::DataTypeId typeId, const std::string &val);
 
     int64_t StringToTimestamp(const std::string &timeStr)
     {

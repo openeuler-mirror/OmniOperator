@@ -13,6 +13,7 @@
 
 #include <string>
 #include <unordered_map>
+#include "util/debug.h"
 
 namespace omniruntime::connector::hive {
 
@@ -64,6 +65,37 @@ HiveDataSource::HiveDataSource(
                              partitionKeys_, infoColumns_, specialColumns_);
 }
 
+void HiveDataSource::addDynamicFilter(type::column_index_t channel, ::common::FilterPtr filter)
+{
+    if (scanSpec_ == nullptr || filter == nullptr) {
+        return;
+    }
+    auto *child = scanSpec_->getChildByChannel(channel);
+    if (child == nullptr) {
+        LogDebug("DFP: HiveDataSource has no ScanSpec child for channel %u", static_cast<unsigned>(channel));
+        return;
+    }
+    if (child->filter() != nullptr) {
+        const int oldKind = static_cast<int>(child->filter()->kind());
+        auto merged = child->filter()->mergeWith(filter.get());
+        if (merged == nullptr) {
+            LogDebug("DFP: mergeWith returned null channel=%u name=%s existingKind=%d incomingKind=%d; "
+                    "keeping incoming filter (existing predicate dropped; Conjunction not implemented)",
+                static_cast<unsigned>(channel), child->fieldName().c_str(), oldKind,
+                static_cast<int>(filter->kind()));
+            child->setFilter(std::move(filter));
+        } else {
+            child->setFilter(std::move(merged));
+        }
+    } else {
+        child->setFilter(std::move(filter));
+    }
+    LogDebug("DFP: HiveDataSource applied filter channel=%u kind=%d name=%s",
+        static_cast<unsigned>(channel),
+        child->filter() != nullptr ? static_cast<int>(child->filter()->kind()) : -1,
+        child->fieldName().c_str());
+}
+
 std::unique_ptr<SplitReader> HiveDataSource::createSplitReader() {
     return SplitReader::create(
             split_,
@@ -86,6 +118,9 @@ void HiveDataSource::addSplit(std::shared_ptr<ConnectorSplit> split, uint64_t si
 }
 
 std::optional<vec::VectorBatch *> HiveDataSource::next(uint64_t size) {
+    if (splitReader_ != nullptr && splitReader_->emptySplit()) {
+        return getEmptyOutput();
+    }
     const std::vector <std::shared_ptr<omniruntime::type::DataType>> children = readerOutputType_->Children();
     std::vector<int> dataTypeIdVector;
     for (int i = 0; i < children.size(); i++) {

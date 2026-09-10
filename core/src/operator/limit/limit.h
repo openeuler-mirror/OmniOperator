@@ -15,7 +15,7 @@ namespace omniruntime {
 namespace op {
 class LimitOperatorFactory : public OperatorFactory {
 public:
-    explicit LimitOperatorFactory(int32_t limit, int32_t offset);
+    LimitOperatorFactory(int32_t limit, int32_t offset, int32_t columnCount = 0);
 
     ~LimitOperatorFactory() override;
 
@@ -28,11 +28,12 @@ public:
 private:
     int32_t limit;
     int32_t offset;
+    int32_t columnCount;
 };
 
 class LimitOperator : public Operator {
 public:
-    explicit LimitOperator(int32_t limit, int32_t offset);
+    LimitOperator(int32_t limit, int32_t offset, int32_t columnCount = 0);
 
     ~LimitOperator() override;
 

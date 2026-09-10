@@ -33,6 +33,7 @@ public:
     void BuildOutput(BaseVector **probeOutputColumns, JoinType joinType,
                      bool isShuffleExchangeBuildPlan, VectorBatch **outputVecBatch, BuildSide buildSide);
     void ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeAllColumns, int32_t rowCount);
+    void BuildPassthroughProbeOutput(VectorBatch *probeInput, VectorBatch **outputVecBatch, BuildSide buildSide);
     template <bool isInnerJoin, bool isShuffleExchangeBuildPlan>
     void ConstructBuildColumns(VectorBatch *vectorBatch, int32_t rowCount);
     template<bool isMatched> void AppendExistenceRow(int32_t probePosition);
@@ -223,8 +224,25 @@ public:
     BlockingReason IsBlocked(ContinueFuture* future) override;
     bool needsInput() override;
 
+    bool hasPendingDynamicFilters() const override;
+
+    std::unordered_map<uint32_t, ::common::FilterPtr> getPendingDynamicFilters() override;
+
+    void clearPendingDynamicFilters() override
+    {
+        dynamicFiltersPushed_ = true;
+    }
+
+    void onDynamicFiltersPushed(size_t appliedCount) override
+    {
+        dynamicFiltersAppliedCount_ = appliedCount;
+    }
+
 private:
     void InitFirst();
+    void InitIdentityProjections(const std::vector<int32_t> &outputList);
+    void MaybeEnableReplaceWithDynamicFilter();
+    int32_t EmitReplacedWithDynamicFilterOutput(omniruntime::vec::VectorBatch **outputVecBatch);
 
     template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
     void ArrayJoinProbeSIMDNeon(BaseVector ***buildColumns, size_t probeHashColsCount,
@@ -353,6 +371,9 @@ private:
     uint32_t probeSpillReadSubPartition_ = 0;
     size_t probeSpillReadFileIndex_ = 0;
     uint64_t probeSpilledRows_ = 0;
+    bool dynamicFiltersPushed_ = false;
+    size_t dynamicFiltersAppliedCount_ = 0;
+    bool canReplaceWithDynamicFilter_ = false;
 };
 } // end of op
 } // end of omniruntime

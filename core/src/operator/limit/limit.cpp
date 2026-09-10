@@ -9,7 +9,8 @@ using namespace std;
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-LimitOperatorFactory::LimitOperatorFactory(int32_t limit, int32_t offset) : limit(limit), offset(offset) {}
+LimitOperatorFactory::LimitOperatorFactory(int32_t limit, int32_t offset, int32_t columnCount)
+    : limit(limit), offset(offset), columnCount(columnCount) {}
 
 LimitOperatorFactory::~LimitOperatorFactory() {}
 
@@ -20,16 +21,26 @@ LimitOperatorFactory *LimitOperatorFactory::CreateLimitOperatorFactory(int32_t l
 
 LimitOperatorFactory *LimitOperatorFactory::CreateLimitOperatorFactory(std::shared_ptr<const LimitNode> planNode)
 {
-    return new LimitOperatorFactory(planNode->Count(), planNode->Offset());
+    int32_t outputColumnCount = 0;
+    if (planNode != nullptr && planNode->OutputType() != nullptr) {
+        outputColumnCount = planNode->OutputType()->GetSize();
+    }
+    return new LimitOperatorFactory(planNode->Count(), planNode->Offset(), outputColumnCount);
 }
 
 Operator *LimitOperatorFactory::CreateOperator()
 {
-    return new LimitOperator(limit, offset);
+    return new LimitOperator(limit, offset, columnCount);
 }
 
-LimitOperator::LimitOperator(int32_t limit, int32_t offset)
-    : remainingLimit(limit), remainingOffset(offset), outputVecBatch(nullptr) {}
+LimitOperator::LimitOperator(int32_t limit, int32_t offset, int32_t columnCount)
+    : remainingLimit(limit), remainingOffset(offset), outputVecBatch(nullptr)
+{
+    identityProjections_.reserve(static_cast<size_t>(columnCount));
+    for (int32_t i = 0; i < columnCount; ++i) {
+        identityProjections_.emplace_back(static_cast<uint32_t>(i), static_cast<uint32_t>(i));
+    }
+}
 
 LimitOperator::~LimitOperator() {}
 
@@ -47,6 +58,12 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
 
     int32_t rowCount = vecBatch->GetRowCount();
     int32_t vectorCount = vecBatch->GetVectorCount();
+    if (identityProjections_.empty() && vectorCount > 0) {
+        identityProjections_.reserve(static_cast<size_t>(vectorCount));
+        for (int32_t i = 0; i < vectorCount; ++i) {
+            identityProjections_.emplace_back(static_cast<uint32_t>(i), static_cast<uint32_t>(i));
+        }
+    }
 
     // 1. calculate how many rows this batch needs to skip
     int32_t start = remainingOffset < rowCount ? remainingOffset : rowCount;

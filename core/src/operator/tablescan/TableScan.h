@@ -17,6 +17,8 @@
 #include "operator/operator_factory.h"
 #include "vector/vector_batch.h"
 #include "compute/task.h"
+#include "reader/common/Filter.h"
+#include <unordered_map>
 
 namespace omniruntime {
 namespace op {
@@ -65,6 +67,13 @@ public:
         return true;
     }
 
+    bool canAddDynamicFilter() const override
+    {
+        return true;
+    }
+
+    void addDynamicFilter(uint32_t channel, ::common::FilterPtr filter) override;
+
     /// The name of runtime stats specific to table scan.
     /// The number of running table scan drivers.
     ///
@@ -75,6 +84,8 @@ public:
 
 private:
     bool getSplit();
+
+    void flushPendingDynamicFilters();
 
     const std::shared_ptr <connector::ConnectorTableHandle> tableHandle_;
     const std::unordered_map <std::string, std::shared_ptr<connector::ColumnHandle>> columnHandles_;
@@ -91,6 +102,7 @@ private:
     std::shared_ptr <SplitsStore> splitsStore_;
 
     int32_t readySplitIndex = 0;
+    std::unordered_map<uint32_t, ::common::FilterPtr> pendingDynamicFilters_;
 };
 } // namespace op
 } // namespace omniruntime

@@ -95,12 +95,6 @@ SelectiveStructColumnReader::SelectiveStructColumnReader(const ::orc::Type &root
         }
 
         auto reader = MakeSelectiveChild(childSpec, childOrcType, stripe, julian);
-        int idx = static_cast<int>(children_.size());
-        if (reader->hasFilter()) {
-            filterOrder_.push_back(idx);
-        } else {
-            projectOrder_.push_back(idx);
-        }
         if (childSpec->projectOut()) {
             numOutputChannels_ =
                 std::max(numOutputChannels_, static_cast<int>(childSpec->channel()) + 1);
@@ -115,9 +109,21 @@ uint64_t SelectiveStructColumnReader::read(uint64_t rowsToRead, std::vector<Base
     std::iota(active_.begin(), active_.end(), 0);
     common::RowSet rows(active_.data(), active_.size());
 
+    std::vector<int> filtered;
+    std::vector<int> projected;
+    filtered.reserve(children_.size());
+    projected.reserve(children_.size());
+    for (int k = 0; k < static_cast<int>(children_.size()); ++k) {
+        if (children_[k]->hasFilter()) {
+            filtered.push_back(k);
+        } else {
+            projected.push_back(k);
+        }
+    }
+
     size_t fi = 0;
-    for (; fi < filterOrder_.size(); ++fi) {
-        int k = filterOrder_[fi];
+    for (; fi < filtered.size(); ++fi) {
+        int k = filtered[fi];
         children_[k]->read(rowsToRead, rows, omniTypeId[k]);
         const auto &out = children_[k]->outputRows();
         rows = common::RowSet(out.data(), out.size());
@@ -130,19 +136,19 @@ uint64_t SelectiveStructColumnReader::read(uint64_t rowsToRead, std::vector<Base
     survivors_.assign(rows.begin(), rows.end());
     common::RowSet survivors(survivors_.data(), survivors_.size());
 
-    for (size_t j = fi; j < filterOrder_.size(); ++j) {
-        children_[filterOrder_[j]]->skipBatch(rowsToRead, omniTypeId[filterOrder_[j]]);
+    for (size_t j = fi; j < filtered.size(); ++j) {
+        children_[filtered[j]]->skipBatch(rowsToRead, omniTypeId[filtered[j]]);
     }
 
     if (survivors.empty()) {
-        for (int k : projectOrder_) {
+        for (int k : projected) {
             children_[k]->skipBatch(rowsToRead, omniTypeId[k]);
         }
         outBatch.clear();
         return 0;
     }
 
-    for (int k : projectOrder_) {
+    for (int k : projected) {
         children_[k]->read(rowsToRead, survivors, omniTypeId[k]);
     }
 

@@ -11,6 +11,7 @@
 #include <thread>
 #include <atomic>
 #include <exception>
+#include <unordered_map>
 
 #include "operator/status.h"
 #include "operator/hashmap/crc_hasher.h"
@@ -20,6 +21,7 @@
 #include "type/data_types.h"
 #include "common_join.h"
 #include "row_ref.h"
+#include "reader/common/Filter.h"
 
 namespace omniruntime {
 namespace op {
@@ -48,8 +50,8 @@ template <typename KeyType, typename RowRefListType> class JoinHashTableVariants
 public:
     using Key = KeyType;
     using Mapped = RowRefListType;
-    static constexpr bool IS_SIMPLE_KEY = (std::is_same_v<KeyType, int16_t> || std::is_same_v<KeyType, int32_t> ||
-                                           std::is_same_v<KeyType, int64_t>);
+    static constexpr bool IS_SIMPLE_KEY = (std::is_same_v<KeyType, int8_t> || std::is_same_v<KeyType, int16_t> ||
+                                           std::is_same_v<KeyType, int32_t> || std::is_same_v<KeyType, int64_t>);
 
     explicit JoinHashTableVariants(uint32_t hashTableCount, DataTypes *buildDataTypes,
         std::vector<int32_t> &buildHashCols, JoinType joinType, BuildSide buildSide, bool isMultiCols = false);
@@ -163,6 +165,23 @@ public:
     ALWAYS_INLINE BaseVector ***GetColumns(int32_t partitionIndex) const
     {
         return columns[partitionIndex];
+    }
+
+    ALWAYS_INLINE const std::vector<int32_t> &GetBuildHashCols() const
+    {
+        return buildHashCols;
+    }
+
+    void BuildDynamicFilters();
+
+    const std::unordered_map<int32_t, ::common::FilterPtr> &GetDynamicFilters() const
+    {
+        return dynamicFilters_;
+    }
+
+    ALWAYS_INLINE bool HasDuplicateKeys() const
+    {
+        return hasDuplicateKeys_;
     }
 
     ALWAYS_INLINE JoinType GetJoinType() const
@@ -295,6 +314,9 @@ private:
     size_t sizeOfRowRefList = 0;
     bool isNeedNullKeyTable = false;
     OmniStatus status = OmniStatus::OMNI_STATUS_NORMAL;
+    std::unordered_map<int32_t, ::common::FilterPtr> dynamicFilters_;
+    bool dynamicFiltersBuilt_ = false;
+    bool hasDuplicateKeys_ = false;
 };
 
 using HashTableVariants =

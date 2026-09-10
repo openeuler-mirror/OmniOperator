@@ -9,7 +9,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-// Filter::mergeWith (Velox-aligned). Range kinds covered; Values(IN) may return nullptr → residual.
+// Filter::mergeWith (Velox-aligned). Range and Values(IN) intersect; unknown kinds return nullptr.
 
 #include "Filter.h"
 
@@ -234,6 +234,29 @@ FilterPtr FloatingPointRange<T, Kind>::mergeWith(const Filter *other) const
 
 template class FloatingPointRange<double, FilterKind::kDoubleRange>;
 
+FilterPtr chooseCommonFilter(const std::unordered_set<int64_t> &values, bool nullAllowed)
+{
+    if (values.empty()) {
+        return nullAllowed ? IsNull::instance() : AlwaysFalse::instance();
+    }
+    int64_t mn = *values.begin();
+    int64_t mx = mn;
+    for (int64_t v : values) {
+        mn = std::min(mn, v);
+        mx = std::max(mx, v);
+    }
+    const auto count = values.size();
+    if (count > kMaxInListSizeForDynamicFilter) {
+        return nullptr;
+    }
+    const bool contiguous = (mx >= mn) &&
+        (static_cast<uint64_t>(mx) - static_cast<uint64_t>(mn) + 1ULL == static_cast<uint64_t>(count));
+    if (contiguous) {
+        return std::make_shared<BigintRange>(mn, mx, nullAllowed);
+    }
+    return std::make_shared<BigintValues>(values, nullAllowed);
+}
+
 FilterPtr BigintRange::mergeWith(const Filter *other) const
 {
     switch (other->kind()) {
@@ -243,6 +266,8 @@ FilterPtr BigintRange::mergeWith(const Filter *other) const
             return other->mergeWith(this);
         case FilterKind::kIsNotNull:
             return std::make_shared<BigintRange>(lower_, upper_, /*nullAllowed*/ false);
+        case FilterKind::kBigintValuesUsingHashTable:
+            return other->mergeWith(this);
         case FilterKind::kBigintRange: {
             const auto *rb = static_cast<const BigintRange *>(other);
             int64_t lo = std::max(lower_, rb->lower());
@@ -318,6 +343,8 @@ FilterPtr NegatedBigintRange::mergeWith(const Filter *other) const
             const auto *multi = static_cast<const BigintMultiRange *>(other);
             return combineNegatedRangeOnIntRanges(lower_, upper_, multi->ranges(), bothNullAllowed);
         }
+        case FilterKind::kBigintValuesUsingHashTable:
+            return other->mergeWith(this);
         default:
             return nullptr;
     }
@@ -371,6 +398,7 @@ FilterPtr BigintMultiRange::mergeWith(const Filter *other) const
             return std::make_shared<BigintMultiRange>(ranges_, /*nullAllowed*/ false);
         case FilterKind::kBigintRange:
         case FilterKind::kNegatedBigintRange:
+        case FilterKind::kBigintValuesUsingHashTable:
             return other->mergeWith(this);
         case FilterKind::kBigintMultiRange: {
             const auto *multi = static_cast<const BigintMultiRange *>(other);
@@ -392,8 +420,21 @@ FilterPtr BigintValues::mergeWith(const Filter *other) const
             return other->mergeWith(this);
         case FilterKind::kIsNotNull:
             return std::make_shared<BigintValues>(values_, /*nullAllowed*/ false);
+        case FilterKind::kBigintRange:
+        case FilterKind::kBigintValuesUsingHashTable:
+        case FilterKind::kNegatedBigintRange:
+        case FilterKind::kBigintMultiRange: {
+            std::unordered_set<int64_t> kept;
+            kept.reserve(values_.size());
+            for (int64_t v : values_) {
+                if (other->testInt64(v)) {
+                    kept.insert(v);
+                }
+            }
+            return chooseCommonFilter(kept, nullAllowed_ && other->testNull());
+        }
         default:
-            return nullptr; // IN not merged yet; leave to residual
+            return nullptr;
     }
 }
 

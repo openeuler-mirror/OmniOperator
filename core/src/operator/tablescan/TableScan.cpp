@@ -19,6 +19,7 @@
 #include "compute/task.h"
 #include "codegen/time_util.h"
 #include "type/data_type.h"
+#include "util/debug.h"
 
 namespace omniruntime {
 namespace op {
@@ -65,6 +66,46 @@ TableScanOperator::~TableScanOperator() {}
 int32_t TableScanOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {
     return 0;
+}
+
+void TableScanOperator::addDynamicFilter(uint32_t channel, ::common::FilterPtr filter)
+{
+    if (filter == nullptr) {
+        return;
+    }
+    auto it = pendingDynamicFilters_.find(channel);
+    if (it != pendingDynamicFilters_.end() && it->second != nullptr) {
+        const int oldKind = static_cast<int>(it->second->kind());
+        auto merged = it->second->mergeWith(filter.get());
+        if (merged == nullptr) {
+            LogDebug("DFP: TableScan pending mergeWith returned null channel=%u existingKind=%d incomingKind=%d; "
+                    "keeping incoming filter (existing predicate dropped; Conjunction not implemented)",
+                static_cast<unsigned>(channel), oldKind, static_cast<int>(filter->kind()));
+            pendingDynamicFilters_[channel] = std::move(filter);
+        } else {
+            pendingDynamicFilters_[channel] = std::move(merged);
+        }
+    } else {
+        pendingDynamicFilters_[channel] = std::move(filter);
+    }
+    LogDebug("DFP: TableScan pending filter channel=%u dataSource=%s", static_cast<unsigned>(channel),
+        dataSource_ != nullptr ? "ready" : "null");
+    if (dataSource_ != nullptr) {
+        dataSource_->addDynamicFilter(channel, pendingDynamicFilters_[channel]);
+        pendingDynamicFilters_.erase(channel);
+    }
+}
+
+void TableScanOperator::flushPendingDynamicFilters()
+{
+    if (dataSource_ == nullptr || pendingDynamicFilters_.empty()) {
+        return;
+    }
+    LogDebug("DFP: TableScan flushing %zu pending filter(s) onto DataSource", pendingDynamicFilters_.size());
+    for (auto &[channel, filter] : pendingDynamicFilters_) {
+        dataSource_->addDynamicFilter(channel, filter);
+    }
+    pendingDynamicFilters_.clear();
 }
 
 int32_t TableScanOperator::GetOutput(VectorBatch **outputVecBatch)
@@ -156,6 +197,7 @@ bool TableScanOperator::getSplit()
     if (dataSource_ == nullptr) {
         dataSource_ = connector_->createDataSource(outputType_, tableHandle_, columnHandles_);
     }
+    flushPendingDynamicFilters();
 
     dataSource_->addSplit(connectorSplit, maxReadBatchSize_);
 

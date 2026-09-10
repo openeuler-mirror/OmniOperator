@@ -40,6 +40,38 @@ public:
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
     OmniStatus Close() override;
 
+    BlockingReason IsBlocked(ContinueFuture *future) override
+    {
+        return lookupJoinWithExprOperator->IsBlocked(future);
+    }
+
+    bool hasPendingDynamicFilters() const override
+    {
+        return lookupJoinWithExprOperator != nullptr && lookupJoinWithExprOperator->hasPendingDynamicFilters();
+    }
+
+    std::unordered_map<uint32_t, ::common::FilterPtr> getPendingDynamicFilters() override
+    {
+        if (lookupJoinWithExprOperator == nullptr) {
+            return {};
+        }
+        return lookupJoinWithExprOperator->getPendingDynamicFilters();
+    }
+
+    void clearPendingDynamicFilters() override
+    {
+        if (lookupJoinWithExprOperator != nullptr) {
+            lookupJoinWithExprOperator->clearPendingDynamicFilters();
+        }
+    }
+
+    void onDynamicFiltersPushed(size_t appliedCount) override
+    {
+        if (lookupJoinWithExprOperator != nullptr) {
+            lookupJoinWithExprOperator->onDynamicFiltersPushed(appliedCount);
+        }
+    }
+
     void noMoreInput() override
     {
         noMoreInput_ = true;

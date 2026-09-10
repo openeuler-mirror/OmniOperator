@@ -34,8 +34,36 @@
 #include "operator/tablescan/TableScan.h"
 #include "compute/task.h"
 #include "operator/join/join_sub_partitioner.h"
+#include "connectors/hive/HiveConnector.h"
+#include "util/debug.h"
 
 namespace omniruntime::compute {
+
+namespace {
+
+bool ResolveDynamicFilterPushdownEnabled(const config::QueryConfig &queryConfig)
+{
+    if (queryConfig.dynamicFilterPushdownEnabled()) {
+        return true;
+    }
+    // Gluten getOmniConf forwards Spark keys containing "omni" onto HiveConnector, even when
+    // GetQueryContextConf did not copy them into QueryConfig (cpp-omni not rebuilt).
+    for (const auto &[id, connector] : omniruntime::connector::getAllConnectors()) {
+        auto hive = std::dynamic_pointer_cast<omniruntime::connector::hive::HiveConnector>(connector);
+        if (hive == nullptr || hive->connectorConfig() == nullptr) {
+            continue;
+        }
+        const auto &cfg = hive->connectorConfig();
+        if (cfg->Get<bool>(config::QueryConfig::kDynamicFilterPushdownEnabledSpark, false) ||
+            cfg->Get<bool>(config::QueryConfig::kDynamicFilterPushdownEnabled, false)) {
+            LogDebug("DFP: enabled via connector config id=%s (QueryConfig key was missing)", id.c_str());
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
 
 // Returns ture if source nodes must run in a separate pipeline
 bool MustStartNewPipeline(int sourceId) { return sourceId != 0; }
@@ -207,7 +235,7 @@ void planDetail(
 {
     OperatorFactory* factory = nullptr;
     if (!currentOperators) {
-        drivers->emplace_back(std::make_unique<OmniDriver>());
+        drivers->emplace_back(std::make_unique<OmniDriver>(ResolveDynamicFilterPushdownEnabled(queryConfig)));
         currentOperators = drivers->back()->operators();
         factories = drivers->back()->operatorFactories();
     }
@@ -269,6 +297,7 @@ void planDetail(
         }
         res.second->SetJoinSpillSubPartitionPolicy(joinSpillV1Enabled, queryConfig.maxSpillRunRows(), subPartCfg);
         res.second->SetJoinSpillState(joinSpillState);
+        res.second->SetDynamicFilterPushdownEnabled(ResolveDynamicFilterPushdownEnabled(queryConfig));
         if (isBHJ && !res.second->IsPrebuilt() && !HasExprBuildKeys(joinNode)) {
             res.second->SetBroadcastParallelBuildPolicy(
                 op::BroadcastParallelBuildPolicy::FromQueryConfig(queryConfig));

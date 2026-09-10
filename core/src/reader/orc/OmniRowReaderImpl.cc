@@ -189,6 +189,15 @@ namespace omniruntime::reader {
         if (currentRowInStripe == 0) {
             startNextStripe();
         }
+        if (currentStripe >= lastStripe || reader == nullptr) {
+            if (lastStripe > 0) {
+                previousRow = firstRowOfStripe[lastStripe - 1] +
+                              footer->stripes(static_cast<int>(lastStripe - 1)).numberofrows();
+            } else {
+                previousRow = 0;
+            }
+            return 0;
+        }
         uint64_t rowsToRead =
                 std::min(batchLen,
                          rowsInCurrentStripe - currentRowInStripe);
