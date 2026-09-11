@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "reader/arrowadapter/FileSystemAdapter.h"
+#include "reader/text/TextCompressionStream.h"
 #include "util/omni_exception.h"
 #include "vector/unsafe_vector.h"
 #include "vector/vector_helper.h"
@@ -143,15 +144,24 @@ TextRowReader::TextRowReader(TextReader& reader)
     fileRowType_ = options_->GetFileRowType();
     auto splitStart = options_->GetSplitStart();
     const auto& format = reader.GetTextOptions();
-    lineScanner_ = std::make_unique<TextLineScanner>(
-        reader.GetFile(),
-        reader.GetFileSize(),
-        splitStart,
-        options_->GetSplitEnd(), DEFAULT_TEXT_READ_BUFFER_SIZE,
-        format.IsCsv());
+    if (format.Compression() == TextCompressionKind::NONE) {
+        lineScanner_ = std::make_unique<TextLineScanner>(
+            reader.GetFile(),
+            reader.GetFileSize(),
+            splitStart,
+            options_->GetSplitEnd(), DEFAULT_TEXT_READ_BUFFER_SIZE,
+            format.IsCsv());
+    } else {
+        if (splitStart != 0 || options_->GetSplitEnd() < reader.GetFileSize()) {
+            throw std::runtime_error("Compressed Text reader requires a whole-file split.");
+        }
+        sequentialLineScanner_ = std::make_unique<SequentialTextLineScanner>(
+            CreateTextSequentialInput(reader.GetFile(), format.Compression()),
+            DEFAULT_TEXT_READ_BUFFER_SIZE, format.IsCsv());
+    }
     if (splitStart == 0 && format.IsCsv() && format.Csv().delimited.skipInputLines != 0) {
         // Spark CSVHeaderChecker extracts a header only from the first file split.
-        lineScanner_->CountRows(1, true);
+        CountRows(1, true);
     }
     if (rowType_ == nullptr) {
         throw std::runtime_error("Text reader projected row type is missing.");
@@ -177,6 +187,20 @@ TextRowReader::TextRowReader(TextReader& reader)
     }
 }
 
+bool TextRowReader::NextLine(std::string_view& line)
+{
+    return lineScanner_ != nullptr
+        ? lineScanner_->NextLine(line)
+        : sequentialLineScanner_->NextLine(line);
+}
+
+uint64_t TextRowReader::CountRows(uint64_t maxRows, bool skipBlankLines)
+{
+    return lineScanner_ != nullptr
+        ? lineScanner_->CountRows(maxRows, skipBlankLines)
+        : sequentialLineScanner_->CountRows(maxRows, skipBlankLines);
+}
+
 uint64_t TextRowReader::Next(uint64_t, vec::VectorPtr&)
 {
     return 0;
@@ -190,7 +214,7 @@ uint64_t TextRowReader::NextDirect(
     }
     const auto& textOptions = reader_.GetTextOptions();
     if (rowType_->size() == 0) {
-        return lineScanner_->CountRows(batchLen,
+        return CountRows(batchLen,
             textOptions.sourceKind == TextSourceKind::SPARK_CSV);
     }
     if (textOptions.IsRawLine()) {
@@ -210,7 +234,7 @@ uint64_t TextRowReader::NextDirect(
         records.reserve(batchLen);
         while (records.size() < batchLen) {
             std::string_view record;
-            if (!lineScanner_->NextLine(record)) {
+            if (!NextLine(record)) {
                 break;
             }
             records.emplace_back(record);
@@ -254,7 +278,7 @@ uint64_t TextRowReader::NextDirect(
         uint64_t rows = 0;
         std::string_view record;
         std::string valueScratch;
-        while (rows < batchLen && lineScanner_->NextLine(record)) {
+        while (rows < batchLen && NextLine(record)) {
             if (textOptions.sourceKind == TextSourceKind::SPARK_CSV &&
                 std::all_of(record.begin(), record.end(),
                     [](unsigned char byte) { return byte <= ' '; })) {

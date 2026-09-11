@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <arrow/filesystem/filesystem.h>
@@ -16,6 +17,7 @@
 #include "reader/text/TextCodec.h"
 #include "reader/text/TextFormatOptions.h"
 #include "reader/text/TextLineScanner.h"
+#include "reader/text/SequentialTextLineScanner.h"
 #include "reader/text/TextValueConverter.h"
 
 namespace omniruntime::reader::text {
@@ -33,10 +35,14 @@ public:
     uint64_t Next(std::vector<BaseVector*>** batch, int* omniTypeId, uint64_t batchLen) override;
 
 private:
+    bool NextLine(std::string_view& line);
+    uint64_t CountRows(uint64_t maxRows, bool skipBlankLines);
+
     TextReader& reader_;
     std::unique_ptr<TextCodec> codec_;
     std::unique_ptr<TextValueConverter> valueConverter_;
     std::unique_ptr<TextLineScanner> lineScanner_;
+    std::unique_ptr<SequentialTextLineScanner> sequentialLineScanner_;
 };
 
 class TextReader final : public Reader {

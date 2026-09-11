@@ -40,6 +40,9 @@ target_link_libraries(${READER_TARGET} PUBLIC
         nlohmann_json::nlohmann_json
         orc
         hdfs
+        z
+        snappy
+        lz4
         vectorization)
 install(TARGETS ${READER_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
 

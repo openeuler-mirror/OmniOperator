@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iterator>
 #include <limits>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -21,6 +22,7 @@
 #include "reader/ReaderFactory.h"
 #include "reader/ReaderOptions.h"
 #include "reader/common/UriInfo.h"
+#include "reader/text/TextCompressionStream.h"
 #include "reader/text/TextFormatOptions.h"
 #include "reader/text/TextLineScanner.h"
 #include "reader/text/TextValueConverter.h"
@@ -275,6 +277,10 @@ TEST(TextFormatOptionsTest, AcceptsSupportedCodecCombinations)
     EXPECT_THROW(invalid.Validate(), std::runtime_error);
     invalid = valid;
     invalid.common.compressionCodec = "gzip";
+    EXPECT_THROW(invalid.Validate(), std::runtime_error);
+    invalid.common.splitable = false;
+    EXPECT_NO_THROW(invalid.Validate());
+    invalid.common.compressionCodec = "bzip2";
     EXPECT_THROW(invalid.Validate(), std::runtime_error);
 
     TextFormatOptions lazy;
@@ -570,6 +576,97 @@ TEST(TextWriterTest, WritesFlatValuesEmptyAndNull)
     delete vector;
     EXPECT_EQ(ReadBytes(path), "value\n\n\n");
     std::remove(path.c_str());
+}
+
+TEST(TextWriterTest, RoundTripsSupportedCompressionCodecs)
+{
+    const std::vector<std::string> codecs = {"GZIP", "DEFLATE", "SNAPPY", "LZ4"};
+    const std::string longValue(300000, 'x');
+    for (const auto& compression : codecs) {
+        TextFormatOptions format;
+        format.sourceKind = TextSourceKind::SPARK_TEXT;
+        format.codecKind = TextCodecKind::RAW_LINE;
+        format.common.charset = "UTF-8";
+        format.common.compressionCodec = compression;
+        format.common.splitable = false;
+        format.dialect = RawLineOptions{};
+        const auto path = MakeTempPath("." + compression);
+        auto schema = type::ROW(std::vector<std::string>{"value"},
+            std::vector<type::DataTypePtr>{type::VarcharType()});
+        {
+            TextWriter writer(format, schema);
+            writer.Init(UriInfo("file", path, "", "-1"));
+            auto* values = reinterpret_cast<
+                vec::Vector<vec::LargeStringContainer<std::string_view>>*>(
+                vec::VectorHelper::CreateStringVector(3));
+            values->SetValue(0, "first");
+            values->SetValue(1, longValue);
+            values->SetValue(2, "last");
+            writer.Write(values, 0, 3);
+            writer.Close();
+            delete values;
+        }
+
+        auto readerOptions = MakeReaderOptions(
+            path, 0, std::numeric_limits<int64_t>::max(), true);
+        TextReader reader(readerOptions, format);
+        reader.InitReader();
+        auto rowReader = reader.CreateRowReader();
+        std::vector<vec::BaseVector*>* batch = nullptr;
+        ASSERT_EQ(rowReader->Next(&batch, nullptr, 8), 3) << compression;
+        ASSERT_NE(batch, nullptr);
+        ASSERT_EQ(batch->size(), 1);
+        EXPECT_EQ(vec::VectorHelper::GetStringValueFromVector(batch->front(), 0), "first");
+        EXPECT_EQ(vec::VectorHelper::GetStringValueFromVector(batch->front(), 1), longValue);
+        EXPECT_EQ(vec::VectorHelper::GetStringValueFromVector(batch->front(), 2), "last");
+        delete batch->front();
+        delete batch;
+
+        auto countOptions = MakeReaderOptions(
+            path, 0, std::numeric_limits<int64_t>::max(), false);
+        TextReader countReader(countOptions, format);
+        countReader.InitReader();
+        auto countRows = countReader.CreateRowReader();
+        batch = nullptr;
+        EXPECT_EQ(countRows->Next(&batch, nullptr, 8), 3) << compression;
+        ASSERT_NE(batch, nullptr);
+        EXPECT_TRUE(batch->empty());
+        delete batch;
+        std::remove(path.c_str());
+
+        const auto emptyPath = MakeTempPath(".empty." + compression);
+        {
+            TextWriter writer(format, schema);
+            writer.Init(UriInfo("file", emptyPath, "", "-1"));
+            writer.Close();
+        }
+        auto emptyOptions = MakeReaderOptions(
+            emptyPath, 0, std::numeric_limits<int64_t>::max(), true);
+        TextReader emptyReader(emptyOptions, format);
+        emptyReader.InitReader();
+        auto emptyRows = emptyReader.CreateRowReader();
+        batch = nullptr;
+        EXPECT_EQ(emptyRows->Next(&batch, nullptr, 8), 0) << compression;
+        EXPECT_EQ(batch, nullptr);
+        std::remove(emptyPath.c_str());
+    }
+}
+
+TEST(TextCompressionStreamTest, RejectsChunkBeyondRemainingFileBeforeAllocation)
+{
+    // One-byte decoded block, claiming a 1 MB compressed chunk with no payload.
+    const std::string header("\0\0\0\1\0\x10\0\0", 8);
+    for (const auto codec : {TextCompressionKind::SNAPPY, TextCompressionKind::LZ4}) {
+        auto file = std::make_shared<arrow::io::BufferReader>(arrow::Buffer::FromString(header));
+        auto input = CreateTextSequentialInput(file, codec);
+        uint8_t value = 0;
+        try {
+            input->Read(&value, 1);
+            FAIL() << "Truncated chunk was accepted";
+        } catch (const std::runtime_error& error) {
+            EXPECT_STREQ(error.what(), "Truncated Hadoop Text compressed chunk.");
+        }
+    }
 }
 
 TEST(TextWriterTest, CreatesMissingLocalParentDirectories)

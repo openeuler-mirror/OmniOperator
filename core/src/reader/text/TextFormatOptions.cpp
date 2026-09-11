@@ -5,6 +5,8 @@
 #include "reader/text/TextFormatOptions.h"
 
 #include <algorithm>
+#include <cctype>
+#include <limits>
 #include <stdexcept>
 
 namespace omniruntime::reader::text {
@@ -50,6 +52,13 @@ char ParseSingleByte(const nlohmann::json& json, const char* key, bool allowEmpt
     return value.front();
 }
 
+std::string Uppercase(std::string value)
+{
+    std::transform(value.begin(), value.end(), value.begin(),
+        [](unsigned char byte) { return static_cast<char>(std::toupper(byte)); });
+    return value;
+}
+
 } // namespace
 
 TextFormatOptions TextFormatOptions::FromJson(const std::shared_ptr<nlohmann::json>& json)
@@ -65,6 +74,12 @@ TextFormatOptions TextFormatOptions::FromJson(const std::shared_ptr<nlohmann::js
     options.common.compressionCodec = json->value("text.compression_codec", std::string{});
     options.common.sessionTimezone = json->value("text.session_timezone", std::string{});
     options.common.splitable = json->value("text.splitable", std::string("true")) == "true";
+    const auto compressionBlockSize = std::stoull(
+        json->value("text.compression_block_size", std::string("262144")));
+    if (compressionBlockSize > std::numeric_limits<uint32_t>::max()) {
+        throw std::runtime_error("Text compression block size is too large.");
+    }
+    options.common.compressionBlockSize = static_cast<uint32_t>(compressionBlockSize);
     options.temporal.dateFormat = json->value("text.date_format", std::string{});
     const auto timestampFormatCount = static_cast<size_t>(
         std::stoul(json->value("text.timestamp_format_count", std::string("0"))));
@@ -143,6 +158,27 @@ const LazySimpleOptions& TextFormatOptions::LazySimple() const
     return std::get<LazySimpleOptions>(dialect);
 }
 
+TextCompressionKind TextFormatOptions::Compression() const
+{
+    const auto codec = Uppercase(common.compressionCodec.empty() ? "NONE" : common.compressionCodec);
+    if (codec == "NONE" || codec == "UNCOMPRESSED") {
+        return TextCompressionKind::NONE;
+    }
+    if (codec == "GZIP") {
+        return TextCompressionKind::GZIP;
+    }
+    if (codec == "DEFLATE") {
+        return TextCompressionKind::DEFLATE;
+    }
+    if (codec == "SNAPPY") {
+        return TextCompressionKind::SNAPPY;
+    }
+    if (codec == "LZ4") {
+        return TextCompressionKind::LZ4;
+    }
+    throw std::runtime_error("Unsupported Native Text compression codec: " + common.compressionCodec);
+}
+
 void TextFormatOptions::Validate() const
 {
     if (common.charset != "UTF-8") {
@@ -151,11 +187,12 @@ void TextFormatOptions::Validate() const
     if (!common.lineSeparator.empty()) {
         throw std::runtime_error("Native Text does not support custom line separators.");
     }
-    if (common.compressionCodec != "NONE") {
-        throw std::runtime_error("Native Text does not support compression yet.");
+    const auto compression = Compression();
+    if (compression != TextCompressionKind::NONE && common.splitable) {
+        throw std::runtime_error("Compressed Native Text input must use a whole-file split.");
     }
-    if (!common.splitable) {
-        throw std::runtime_error("Native Text supports splitable input only.");
+    if (common.compressionBlockSize == 0) {
+        throw std::runtime_error("Text compression block size must be positive.");
     }
     if (std::any_of(temporal.timestampFormats.begin(), temporal.timestampFormats.end(),
             [](const std::string& format) { return format.empty(); })) {

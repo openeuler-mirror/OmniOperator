@@ -95,7 +95,12 @@ TextWriter::TextWriter(TextFormatOptions options, type::RowTypePtr rowType)
 
 TextWriter::~TextWriter()
 {
-    if (output_ != nullptr && !closed_) {
+    if (outputSink_ != nullptr && !closed_) {
+        try {
+            outputSink_->Close();
+        } catch (...) {
+        }
+    } else if (output_ != nullptr && !closed_) {
         output_->Close();
     }
 }
@@ -119,6 +124,8 @@ void TextWriter::Init(const UriInfo& uri)
         throw OmniException(outputResult.status().ToString().c_str());
     }
     output_ = std::move(outputResult).ValueUnsafe();
+    outputSink_ = CreateTextOutputSink(output_, options_.Compression(),
+        options_.common.compressionBlockSize);
     closed_ = false;
     if (options_.IsCsv() && options_.Csv().delimited.emitHeader) {
         std::vector<TextFieldView> fields;
@@ -128,10 +135,7 @@ void TextWriter::Init(const UriInfo& uri)
         std::string header;
         codec_->EncodeRecord(fields, header);
         header.push_back('\n');
-        const auto status = output_->Write(header.data(), header.size());
-        if (!status.ok()) {
-            throw OmniException(status.ToString().c_str());
-        }
+        outputSink_->Write(reinterpret_cast<const uint8_t*>(header.data()), header.size());
     }
 }
 
@@ -143,7 +147,7 @@ void TextWriter::Write(vec::BaseVector* vector, int64_t start, int64_t end)
 void TextWriter::Write(
     const std::vector<vec::BaseVector*>& vectors, int64_t start, int64_t end)
 {
-    if (output_ == nullptr || closed_) {
+    if (outputSink_ == nullptr || closed_) {
         throw std::runtime_error("Text writer is not open.");
     }
     if (vectors.size() != static_cast<size_t>(rowType_->size())) {
@@ -170,15 +174,9 @@ void TextWriter::Write(
     static constexpr char LINE_FEED = '\n';
     auto writeRecord = [this](const std::string& encoded) {
         if (!encoded.empty()) {
-            auto status = output_->Write(encoded.data(), encoded.size());
-            if (!status.ok()) {
-                throw OmniException(status.ToString().c_str());
-            }
+            outputSink_->Write(reinterpret_cast<const uint8_t*>(encoded.data()), encoded.size());
         }
-        auto status = output_->Write(&LINE_FEED, 1);
-        if (!status.ok()) {
-            throw OmniException(status.ToString().c_str());
-        }
+        outputSink_->Write(reinterpret_cast<const uint8_t*>(&LINE_FEED), 1);
     };
 
     std::string encoded;
@@ -223,13 +221,10 @@ void TextWriter::Write(
 
 void TextWriter::Close()
 {
-    if (output_ == nullptr || closed_) {
+    if (outputSink_ == nullptr || closed_) {
         return;
     }
-    auto status = output_->Close();
-    if (!status.ok()) {
-        throw OmniException(status.ToString().c_str());
-    }
+    outputSink_->Close();
     closed_ = true;
 }
 

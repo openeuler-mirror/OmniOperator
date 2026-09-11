@@ -28,12 +28,21 @@ enum class TextCodecKind {
     CSV
 };
 
+enum class TextCompressionKind {
+    NONE = 0,
+    GZIP,
+    DEFLATE,
+    SNAPPY,
+    LZ4
+};
+
 struct CommonTextOptions {
     std::string charset;
     std::string lineSeparator;
     std::string compressionCodec;
     std::string sessionTimezone;
     bool splitable = true;
+    uint32_t compressionBlockSize = 256 * 1024;
 };
 
 struct TemporalTextOptions {
@@ -85,6 +94,7 @@ struct TextFormatOptions {
     const RawLineOptions& RawLine() const;
     const LazySimpleOptions& LazySimple() const;
     const CsvOptions& Csv() const;
+    TextCompressionKind Compression() const;
 };
 
 } // namespace omniruntime::reader::text

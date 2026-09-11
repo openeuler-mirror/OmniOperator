@@ -13,6 +13,7 @@
 
 #include "reader/common/UriInfo.h"
 #include "reader/text/TextCodec.h"
+#include "reader/text/TextCompressionStream.h"
 #include "reader/text/TextValueConverter.h"
 #include "type/data_type.h"
 #include "vector/vector.h"
@@ -40,6 +41,7 @@ private:
     TextValueConverter valueConverter_;
     std::shared_ptr<arrow::fs::FileSystem> fileSystem_;
     std::shared_ptr<arrow::io::OutputStream> output_;
+    std::unique_ptr<TextOutputSink> outputSink_;
     bool closed_ = false;
 };
 
