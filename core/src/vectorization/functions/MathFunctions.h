@@ -407,7 +407,7 @@ using namespace omniruntime::type;
     struct PModIntFunction {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput& result, const TInput a, const TInput n) {
-            TInput r;
+            TInput r = 0;
             Status status = RemainderFunction<T>().call(r, a, n);
             if (!status.ok()) {
                 return status;
