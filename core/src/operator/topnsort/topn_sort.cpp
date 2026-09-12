@@ -64,6 +64,12 @@ bool EqualValueTemplate(BaseVector *leftVec, int32_t leftPos, BaseVector *rightV
             } else {
                 return false;
             }
+        } else if constexpr (typeId == OMNI_FLOAT) {
+            if (std::abs(leftValue - rightValue) < __FLT_EPSILON__) {
+                return true;
+            } else {
+                return false;
+            }
         } else {
             return leftValue == rightValue;
         }
@@ -231,7 +237,8 @@ static std::vector<GetValueFunc> getValueFromFlatFuncs = {
     GetValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     GetValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                           // OMNI_CONTAINER,
-    GetValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    GetValueFromFlat<OMNI_BYTE>,       // OMNI_BYTE
+    GetValueFromFlat<OMNI_FLOAT>       // OMNI_FLOAT
 };
 
 static std::vector<CompareOptimizeFunc> compareOptimizeFromFlatFuncs = {
@@ -253,7 +260,8 @@ static std::vector<CompareOptimizeFunc> compareOptimizeFromFlatFuncs = {
     CompareValueOptimizeFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueOptimizeFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                       // OMNI_CONTAINER,
-    CompareValueOptimizeFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    CompareValueOptimizeFromFlat<OMNI_BYTE>,       // OMNI_BYTE
+    CompareValueOptimizeFromFlat<OMNI_FLOAT>       // OMNI_FLOAT
 };
 
 static std::vector<CompareFunc> compareFromFlatFuncs = {
@@ -275,7 +283,8 @@ static std::vector<CompareFunc> compareFromFlatFuncs = {
     CompareValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                               // OMNI_CONTAINER,
-    CompareValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    CompareValueFromFlat<OMNI_BYTE>,        // OMNI_BYTE
+    CompareValueFromFlat<OMNI_FLOAT>        // OMNI_FLOAT
 };
 
 static std::vector<CompareFunc> compareFromDictionaryFuncs = {
@@ -297,7 +306,8 @@ static std::vector<CompareFunc> compareFromDictionaryFuncs = {
     CompareValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                     // OMNI_CONTAINER,
-    CompareValueFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    CompareValueFromDictionary<OMNI_BYTE>,        // OMNI_BYTE
+    CompareValueFromDictionary<OMNI_FLOAT>        // OMNI_FLOAT
 };
 
 static std::vector<EqualFunc> equalFromFlatFuncs = {
@@ -319,7 +329,8 @@ static std::vector<EqualFunc> equalFromFlatFuncs = {
     EqualValueTemplate<OMNI_VARCHAR>,    // OMNI_VARCHAR
     EqualValueTemplate<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                             // OMNI_CONTAINER,
-    EqualValueTemplate<OMNI_BYTE>        // OMNI_BYTE
+    EqualValueTemplate<OMNI_BYTE>,       // OMNI_BYTE
+    EqualValueTemplate<OMNI_FLOAT>        // OMNI_FLOAT
 };
 
 static std::vector<CreateVectorFunc> createVectorFromFlatFuncs = {
@@ -341,7 +352,8 @@ static std::vector<CreateVectorFunc> createVectorFromFlatFuncs = {
     CreateVectorFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CreateVectorFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                               // OMNI_CONTAINER,
-    CreateVectorFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    CreateVectorFromFlat<OMNI_BYTE>,       // OMNI_BYTE
+    CreateVectorFromFlat<OMNI_FLOAT>       // OMNI_FLOAT
 };
 
 static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
@@ -363,7 +375,8 @@ static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
     CreateVectorFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CreateVectorFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                     // OMNI_CONTAINER,
-    CreateVectorFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    CreateVectorFromDictionary<OMNI_BYTE>,        // OMNI_BYTE
+    CreateVectorFromDictionary<OMNI_FLOAT>        // OMNI_FLOAT
 };
 
 static std::vector<SetValueFunc> setValueFromFlatFuncs = {
@@ -385,7 +398,8 @@ static std::vector<SetValueFunc> setValueFromFlatFuncs = {
     SetValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     SetValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                           // OMNI_CONTAINER,
-    SetValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    SetValueFromFlat<OMNI_BYTE>,       // OMNI_BYTE
+    SetValueFromFlat<OMNI_FLOAT>       // OMNI_FLOAT
 };
 
 static std::vector<SetValueFunc> setValueFromDictionaryFuncs = {
@@ -407,7 +421,8 @@ static std::vector<SetValueFunc> setValueFromDictionaryFuncs = {
     SetValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     SetValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                 // OMNI_CONTAINER,
-    SetValueFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    SetValueFromDictionary<OMNI_BYTE>,        // OMNI_BYTE
+    SetValueFromDictionary<OMNI_FLOAT>        // OMNI_FLOAT
 };
 
 TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n, bool isStrictTopN,
