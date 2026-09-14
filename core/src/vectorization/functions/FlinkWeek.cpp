@@ -130,6 +130,8 @@ static bool getIsoWeekFromEpochSeconds(int64_t seconds, int32_t &week)
 /// Returns NULL if the input is NULL (or out of range).
 class FlinkWeekFunction : public VectorFunction {
 public:
+    explicit FlinkWeekFunction(bool hasTz) : hasTz_(hasTz) {}
+
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         op::ExecutionContext *context) const override
     {
@@ -137,11 +139,10 @@ public:
             return;
         }
 
-        // Optional timezone arg sits on top of the stack (rightmost operand).
-        // flink_week:        args = [input]
-        // flink_week_with_tz: args = [input, tz]
+        // Arity comes from the registered signature (hasTz_), not args.size():
+        // the eval stack is shared with sibling expressions.
         BaseVector *tzArg = nullptr;
-        if (args.size() >= 2) {
+        if (hasTz_) {
             tzArg = args.top();
             args.pop();
         }
@@ -171,8 +172,7 @@ public:
         // The tz arg (when present) is a constant session zone-id literal from
         // the Java side; resolve it once when it is a const non-null vector.
         const tz::TimeZone *constZone = nullptr;
-        bool hasTz = (tzArg != nullptr);
-        bool tzIsConst = hasTz && (tzArg->GetEncoding() == OMNI_ENCODING_CONST);
+        bool tzIsConst = hasTz_ && (tzArg->GetEncoding() == OMNI_ENCODING_CONST);
         if (tzIsConst && !tzArg->IsNull(0)) {
             constZone = ResolveSessionTimeZone(VectorHelper::GetStringValueFromVector(tzArg, 0));
         }
@@ -206,7 +206,7 @@ public:
                 // seconds (for TIMESTAMP_WITH_LOCAL_TIME_ZONE input). The ISO
                 // week is then derived from those wall-clock seconds.
                 const tz::TimeZone *zone = constZone;
-                if (hasTz && !tzIsConst) {
+                if (hasTz_ && !tzIsConst) {
                     zone = tzArg->IsNull(i) ? nullptr
                         : ResolveSessionTimeZone(VectorHelper::GetStringValueFromVector(tzArg, i));
                 }
@@ -221,10 +221,13 @@ public:
             });
         }
         delete inputArg;
-        if (hasTz) {
+        if (hasTz_) {
             delete tzArg;
         }
     }
+
+private:
+    const bool hasTz_;
 };
 } // namespace
 
@@ -233,10 +236,9 @@ void RegisterFlinkWeekFunction(const std::string &name)
     // Only OMNI_INT (date = days since epoch) and OMNI_LONG (Flink TIMESTAMP =
     // millis since epoch) are supported, per the Flink WEEK semantics this
     // function mirrors. OMNI_LONG uses millisecond (not microsecond) units.
-    VectorFunction::RegisterVectorFunction(name, {OMNI_INT}, OMNI_INT,
-        std::make_shared<FlinkWeekFunction>());
-    VectorFunction::RegisterVectorFunction(name, {OMNI_LONG}, OMNI_INT,
-        std::make_shared<FlinkWeekFunction>());
+    auto func = std::make_shared<FlinkWeekFunction>(false);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_INT}, OMNI_INT, func);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_LONG}, OMNI_INT, func);
 }
 
 void RegisterFlinkWeekWithTzFunction(const std::string &name)
@@ -244,11 +246,9 @@ void RegisterFlinkWeekWithTzFunction(const std::string &name)
     // _with_tz variant: same input types plus an explicit VARCHAR timezone arg
     // (appended by the OmniAdaptor for TIMESTAMP_WITH_LOCAL_TIME_ZONE). The tz
     // is only applied on the OMNI_LONG path; OMNI_INT (date) stays in UTC.
-    // Reuses the same FlinkWeekFunction class - it detects the tz arg by
-    // args.size() >= 2.
-    VectorFunction::RegisterVectorFunction(name, {OMNI_INT, OMNI_VARCHAR}, OMNI_INT,
-        std::make_shared<FlinkWeekFunction>());
-    VectorFunction::RegisterVectorFunction(name, {OMNI_LONG, OMNI_VARCHAR}, OMNI_INT,
-        std::make_shared<FlinkWeekFunction>());
+    // Reuses the same FlinkWeekFunction class; arity is encoded in hasTz_.
+    auto func = std::make_shared<FlinkWeekFunction>(true);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_INT, OMNI_VARCHAR}, OMNI_INT, func);
+    VectorFunction::RegisterVectorFunction(name, {OMNI_LONG, OMNI_VARCHAR}, OMNI_INT, func);
 }
 }
