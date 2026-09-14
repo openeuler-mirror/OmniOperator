@@ -2172,20 +2172,16 @@ private:
 };
 
 /// flink_locate(substring, string, start) -> integer
-/// Flink LOCATE, differs from Spark locate only in that a start position of 0 is
-/// treated as 1 (Spark returns 0 for start < 1). Negative start still yields 0.
+/// Flink LOCATE, differs from Spark locate only in that a start position less than 1 is
+/// treated as 1 (Spark returns 0 for start < 1).
 template <typename T>
 struct FlinkLocateFunction {
     // Non-nullable version for better performance when all arguments are non-null
     ALWAYS_INLINE bool call(int32_t &result, const std::string_view &subString,
         const std::string_view &string, const int32_t &start)
     {
-        // Flink: start == 0 behaves the same as start == 1
-        int32_t actualStart = (start == 0) ? 1 : start;
-        if (actualStart < 1) {
-            result = 0;
-            return true;
-        }
+        // Flink: start < 1 behaves the same as start == 1 (including negative start)
+        int32_t actualStart = (start < 1) ? 1 : start;
         if (subString.empty()) {
             result = 1;
             return true;

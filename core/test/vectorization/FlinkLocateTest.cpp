@@ -2,8 +2,8 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * Description: Flink locate function unit tests
  *   flink_locate(substring, string, start) -> int32
- *   Returns 1-based position; 0 if not found or invalid start.
- *   Differs from Spark locate only in that start == 0 is treated as start == 1.
+ *   Returns 1-based position; 0 if not found.
+ *   Differs from Spark locate only in that start < 1 is treated as start == 1.
  */
 
 #include <gtest/gtest.h>
@@ -134,13 +134,13 @@ TEST(FlinkLocateTest, ZeroStartEqualsOne) {
     delete result;
 }
 
-// Combined: start == 0 behaves like 1, negative start still yields 0, start beyond length yields 0.
-// Contrast with Spark locate, where all three rows would return 0.
+// Combined: start == 0 and negative start both behave like start == 1; start beyond length yields 0.
+// Contrast with Spark locate, where start < 1 would return 0.
 TEST(FlinkLocateTest, ZeroNegativeAndOverflowStart) {
     std::vector<std::string> subStrings = {"aa", "aa", "aa"};
     std::vector<std::string> strings = {"aaads", "aaads", "aaads"};
     std::vector<int32_t> starts = {0, -1, 10};
-    std::vector<int32_t> expected = {1, 0, 0};
+    std::vector<int32_t> expected = {1, 1, 0};
     BaseVector* subVec = FlinkLocateFunctionTestHelper::CreateStringVector(subStrings);
     BaseVector* strVec = FlinkLocateFunctionTestHelper::CreateStringVector(strings);
     BaseVector* startVec = FlinkLocateFunctionTestHelper::CreateNumericVector(starts, OMNI_INT);
