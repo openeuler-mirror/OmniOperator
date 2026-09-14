@@ -17,6 +17,12 @@ std::vector<Function> DateTimeFunctionRegistry::GetFunctions()
                  {OMNI_LONG}, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(GetHourFromTimestampWithTz), "get_hour_with_tz", {},
                  {OMNI_LONG, OMNI_VARCHAR}, OMNI_INT, INPUT_DATA),
+        // Adaptor EXTRACT(HOUR) emits flink_hour / flink_hour_with_tz. Alias the
+        // existing codegen impl so ExprVerifier can keep the codegen path.
+        Function(reinterpret_cast<void *>(GetHourFromTimestamp), "flink_hour", {},
+                 {OMNI_LONG}, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(GetHourFromTimestampWithTz), "flink_hour_with_tz", {},
+                 {OMNI_LONG, OMNI_VARCHAR}, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(UnixTimestampFromStr), "unix_timestamp", {},
             { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(UnixTimestampFromDate), "unix_timestamp", {},
