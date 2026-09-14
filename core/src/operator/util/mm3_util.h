@@ -322,31 +322,13 @@ static void NeonDouble(omniruntime::vec::Vector<double>* currentCol, std::vector
     uint32_t row = 0;
 
     for (; row + STEP_FOUR < rowCount; row += STEP_FOUR) {
-        // load 4 doubles to 2 128-bit registers
-        float64x2_t dval0 = vld1q_f64(reinterpret_cast<double*>(value_ptr + row));
-        float64x2_t dval1 = vld1q_f64(reinterpret_cast<double*>(value_ptr + row + 2));
+        // 与 NeonLong 一致：把 4 个 double 的 64-bit 位按低/高 32 位解交织。
+        // vld2q_u32 将 8 个 uint32（=4 个 double）按偶/奇位置拆成低 32 位与高 32 位两组。
+        uint32x4x2_t value = vld2q_u32(reinterpret_cast<uint32_t*>(value_ptr + row));
+        uint32x4_t vlow = value.val[0];
+        uint32x4_t vhigh = value.val[1];
 
-        // reinterpret the bit pattern of double as uint64_t
-        uint64x2_t u64_0 = vreinterpretq_u64_f64(dval0);
-        uint64x2_t u64_1 = vreinterpretq_u64_f64(dval1);
-
-        // for register u64_0, extract the high 32 bits and low 32 bits
-        uint32x4_t low_high_0;
-        low_high_0 = vsetq_lane_u32(vgetq_lane_u64(u64_0, 0) & 0xFFFFFFFF, low_high_0, 0);
-        low_high_0 = vsetq_lane_u32(vgetq_lane_u64(u64_0, 0) >> 32, low_high_0, 1);
-        low_high_0 = vsetq_lane_u32(vgetq_lane_u64(u64_0, 1) & 0xFFFFFFFF, low_high_0, 2);
-        low_high_0 = vsetq_lane_u32(vgetq_lane_u64(u64_0, 1) >> 32, low_high_0, 3);
-
-        uint32x4_t low_high_1;
-        low_high_1 = vsetq_lane_u32(vgetq_lane_u64(u64_1, 0) & 0xFFFFFFFF, low_high_1, 0);
-        low_high_1 = vsetq_lane_u32(vgetq_lane_u64(u64_1, 0) >> 32, low_high_1, 1);
-        low_high_1 = vsetq_lane_u32(vgetq_lane_u64(u64_1, 1) & 0xFFFFFFFF, low_high_1, 2);
-        low_high_1 = vsetq_lane_u32(vgetq_lane_u64(u64_1, 1) >> 32, low_high_1, 3);
-
-        uint32x4_t vlow = vcombine_u32(vget_low_u32(low_high_0), vget_low_u32(low_high_1));
-        uint32x4_t vhigh = vcombine_u32(vget_high_u32(low_high_0), vget_high_u32(low_high_1));
-
-        uint32x4_t vseed = vld1q_u32(partition_ptr + row);
+        uint32x4_t vseed = vld1q_u32(reinterpret_cast<uint32_t*>(partition_ptr + row));
 
         uint32x4_t k1 = MixK1_Neon(vlow);
         uint32x4_t h1 = MixH1_Neon(vseed, k1);
