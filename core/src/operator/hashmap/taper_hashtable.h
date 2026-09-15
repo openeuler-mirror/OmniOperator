@@ -1,6 +1,6 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2026-2028. All rights reserved.
-*/
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2028. All rights reserved.
+ */
 
 #pragma once
 
@@ -11,18 +11,18 @@
 #include <sstream>
 #include <type_traits>
 
-#include "util/compiler_util.h"
-#include "util/bit_util.h"
-#include "memory/simple_arena_allocator.h"
 #include "memory/allocator.h"
-
+#include "memory/simple_arena_allocator.h"
+#include "util/bit_util.h"
+#include "util/compiler_util.h"
 
 // #define TAPER_HASH_STAT
 // #define HWP_PREFETCH
 // #define DISABLE_PREFETCH
 #define DUMMY_CMP [](auto, auto, auto) { return false; }
 
-namespace omniruntime::op {
+namespace omniruntime {
+namespace op {
 
 static constexpr size_t kHashMapPrefetchDist = 16;
 
@@ -154,8 +154,11 @@ class TaperHashTableBase : public TaperContainer {
   using ChunkPtr = TaperHashTableChunk*;
   using ChunkPos = uint32_t;
 
-  // from raw_hash_set
-  // using difference_type = ptrdiff_t;
+  enum class Operation : int {
+    kInsert,
+    kRehash,
+    kSearch,
+  };
 
   TaperHashTableBase(
       mem::SimpleArenaAllocator& memPool,
@@ -185,6 +188,16 @@ class TaperHashTableBase : public TaperContainer {
 
   size_t Capacity() {
     return GetChunksCapacity() * elemNumInChunk_;
+  }
+
+  void Reserve(size_t numElements) {
+    auto needed = BitUtil::divRoundUp(numElements, static_cast<size_t>(elemNumInChunk_));
+    auto cap = BitUtil::nextPowerOfTwo(needed);
+    auto total = cap * elemNumInChunk_;
+    if (numElements * 4 > total * 3) cap <<= 1;  // join threshold: 0.75
+    if (cap <= GetChunksCapacity()) return;
+    FreeChunks();
+    Init(static_cast<uint32_t>(cap - 1));
   }
 
   void Clear() override {
@@ -242,7 +255,7 @@ class TaperHashTableBase : public TaperContainer {
 
   virtual std::string DbgDump(const std::string& fnPart) = 0;
 
- private:
+ protected:
   ChunkPos GetChunkPos(size_t hashVal) {
     return hashVal & lastChunkIdx_;
   }
@@ -365,21 +378,15 @@ class TaperHashTableBase : public TaperContainer {
   size_t hwpPrefetchTerminateCount_ = 0;
 #endif
 
-#ifdef DEBUG_STAT_ENABLED
-  debug::DebugStat* debugStat() {
-    return &debugStat_;
-  }
-#endif
-
  private:
   mem::SimpleArenaAllocator &pool;
   mem::Allocator* systemAlloc_ = nullptr;
   GroupbyHashCalculator<Key> hashCalculator {};
 
   ChunkPtr chunks_ = nullptr;
-
-  BatchContext emplaceContext_;
+  BatchContext operateContext_;
   BatchContext rehashContext_;
+
   static constexpr int32_t kStringPrefetchDist = 16;
 
   uint32_t size_ = 0;
@@ -443,13 +450,13 @@ class TaperHashTableBase : public TaperContainer {
   }
 
   template <
-      bool InsertOnly,
+      Operation Op = Operation::kInsert,
       bool StoreValue = true,
       typename FKCmp,
       typename Derived,
       typename FInit,
       typename FUpdate>
-  void EmplaceImpl(
+  void Operate(
       Derived& derived,
       const Key& key,
       FKCmp&& fKeyCmp,
@@ -458,7 +465,7 @@ class TaperHashTableBase : public TaperContainer {
     auto hashVal = Hash(key);
     auto chunkPos = GetChunkPos(hashVal);
     size_t collisionBatch = 1;
-    while (!derived.template TryEmplaceAtPos<InsertOnly, StoreValue>(
+    while (!derived.template TryOperateAtPos<Op, StoreValue>(
         key,
         hashVal,
         chunkPos,
@@ -477,14 +484,18 @@ class TaperHashTableBase : public TaperContainer {
         p1RehashCollisionCount_++;
       }
 #endif
-      OMNI_CHECK_D(collisionBatch <= GetChunksCapacity());
-      if (ShouldExpand()) {
-        ExpandCapacityDirectly(derived);
-        chunkPos = GetChunkPos(hashVal);
-        collisionBatch = 1;
-      } else {
+      if constexpr (Op == Operation::kSearch) {
         chunkPos = GetRehashPos(collisionBatch, chunkPos);
         ++collisionBatch;
+      } else {
+        if (ShouldExpand()) {
+          ExpandCapacityDirectly(derived);
+          chunkPos = GetChunkPos(hashVal);
+          collisionBatch = 1;
+        } else {
+          chunkPos = GetRehashPos(collisionBatch, chunkPos);
+          ++collisionBatch;
+        }
       }
     }
 #ifdef TAPER_HASH_STAT
@@ -515,13 +526,15 @@ class TaperHashTableBase : public TaperContainer {
   }
 
   template <
+      Operation Op = Operation::kInsert,
       bool StoreValue,
       typename Derived,
       typename Filter,
       typename FKCmp,
       typename FInit,
-      typename FUpdate>
-  void EmplaceBatchImpl(
+      typename FUpdate
+      >
+  void OperateBatch(
       Derived& derived,
       const Key* keys,
       uint32_t numRows,
@@ -529,27 +542,29 @@ class TaperHashTableBase : public TaperContainer {
       FKCmp&& fKeyCmp,
       FInit&& fInit,
       FUpdate&& fUpdate) {
-    if (Capacity() < numRows) {
-      // 容量小于插入行数时，有可能在扩容过程中再次触发扩容，目前还没有处理该逻辑
-      EmplaceBatchDirectly<StoreValue>(
-          derived,
-          keys,
-          numRows,
-          std::forward<Filter>(filter),
-          std::forward<FKCmp>(fKeyCmp),
-          std::forward<FInit>(fInit),
-          std::forward<FUpdate>(fUpdate));
+    if constexpr (Op == Operation::kInsert) {
+      if (Capacity() < numRows) {
+        // 容量小于插入行数时，有可能在扩容过程中再次触发扩容，目前还没有处理该逻辑
+        EmplaceBatchDirectly<StoreValue>(
+            derived,
+            keys,
+            numRows,
+            std::forward<Filter>(filter),
+            std::forward<FKCmp>(fKeyCmp),
+            std::forward<FInit>(fInit),
+            std::forward<FUpdate>(fUpdate));
       return;
     }
+    }
 
-    ResetEmplaceContext(keys, numRows);
+    ResetOperateContext(keys, numRows);
     uint32_t collisionBatch = 1;
     int32_t collisionCount = 0;
     bool resized = false;
     auto resetPositions = [&](size_t begin, size_t end) {
       for (auto i = begin; i != end; i++) {
-        emplaceContext_.chunkPositions[i] =
-            GetChunkPos(emplaceContext_.hashVals[i]);
+        operateContext_.chunkPositions[i] =
+            GetChunkPos(operateContext_.hashVals[i]);
       }
     };
 
@@ -557,15 +572,17 @@ class TaperHashTableBase : public TaperContainer {
                              uint32_t rowIdx,
                              int32_t hashIdx,
                              ResizeProc&& resizeProc) {
-      auto succeed = derived.template TryEmplaceAtPos<false, StoreValue>(
+      auto succeed = derived.template TryOperateAtPos<Op, StoreValue>(
           KeyAt(keys, rowIdx),
-          emplaceContext_.hashVals[hashIdx],
-          emplaceContext_.chunkPositions[hashIdx],
+          operateContext_.hashVals[hashIdx],
+          operateContext_.chunkPositions[hashIdx],
           [&](const Key& key, Chunk& chunk, uint8_t slot) {
             return fKeyCmp(rowIdx, key, chunk, slot);
           },
           [&](auto data) { fInit(rowIdx, data); },
-          [&](auto data, bool initFlag) { fUpdate(rowIdx, data, initFlag); });
+          [&](auto data, bool initFlag) {
+            fUpdate(rowIdx, data, initFlag);
+          });
       if (!succeed) {
 #ifdef TAPER_HASH_STAT
         p2CollisionCount_++;
@@ -573,16 +590,18 @@ class TaperHashTableBase : public TaperContainer {
           p2FirstCollisionCount_++;
         }
 #endif
-        emplaceContext_.collisionIndices[collisionCount].pos = rowIdx;
-        emplaceContext_.hashVals[collisionCount] =
-            emplaceContext_.hashVals[hashIdx];
-        emplaceContext_.chunkPositions[collisionCount] = GetRehashPos(
-            collisionBatch, emplaceContext_.chunkPositions[hashIdx]);
+        operateContext_.collisionIndices[collisionCount].pos = rowIdx;
+        operateContext_.hashVals[collisionCount] =
+            operateContext_.hashVals[hashIdx];
+        operateContext_.chunkPositions[collisionCount] = GetRehashPos(
+            collisionBatch, operateContext_.chunkPositions[hashIdx]);
         collisionCount++;
-        if (ShouldExpand()) {
-          ExpandCapacityIteratively(derived);
-          resized = true;
-          resizeProc();
+        if constexpr (Op == Operation::kInsert) {
+          if (ShouldExpand()) {
+            ExpandCapacityIteratively(derived);
+            resized = true;
+            resizeProc();
+          }
         }
       }
 #ifdef TAPER_HASH_STAT
@@ -591,16 +610,15 @@ class TaperHashTableBase : public TaperContainer {
       }
 #endif
     };
-
     auto tryEmplaceRehashedCollisions = [&] {
       resetPositions(0, collisionCount);
       auto curCount = collisionCount;
       collisionCount = 0;
-      HwpPrefetch(emplaceContext_.chunkPositions, curCount);
+      HwpPrefetch(operateContext_.chunkPositions, curCount);
       for (int32_t idx = 0; idx < curCount; idx++) {
-        prefetchIdx(emplaceContext_.chunkPositions, idx, curCount);
+        prefetchIdx(operateContext_.chunkPositions, idx, curCount);
         // 这里需要保证只rehash一次（hash表容量超过num_rows才使用该模式），不然这里再次处理rehash的话，逻辑就复杂了
-        tryEmplaceIdx(emplaceContext_.collisionIndices[idx].pos, idx, [&] {
+        tryEmplaceIdx(operateContext_.collisionIndices[idx].pos, idx, [&] {
           OMNI_CHECK_D(false);
         });
       }
@@ -614,10 +632,10 @@ class TaperHashTableBase : public TaperContainer {
       collisionBatch = 1;
       tryEmplaceRehashedCollisions();
       resetPositions(remainIdxFrom, remainIdxTo);
-      HwpPrefetch(emplaceContext_.chunkPositions, remainIdxFrom, remainIdxTo);
+      HwpPrefetch(operateContext_.chunkPositions, remainIdxFrom, remainIdxTo);
     };
 
-    HwpPrefetch(emplaceContext_.chunkPositions);
+    HwpPrefetch(operateContext_.chunkPositions);
     // 第一遍尝试插入所有元素，并且将冲突的元素记下来等后续处理
     for (uint32_t i = 0; i < numRows; ++i) {
       if (filter(i)) {
@@ -626,7 +644,7 @@ class TaperHashTableBase : public TaperContainer {
 #ifdef TAPER_HASH_STAT
       p2EmplaceCount_++;
 #endif
-      prefetchIdx(emplaceContext_.chunkPositions, i, numRows);
+      prefetchIdx(operateContext_.chunkPositions, i, numRows);
       tryEmplaceIdx(i, i, [&] { resizeProc(i + 1, numRows); });
     }
 
@@ -635,10 +653,10 @@ class TaperHashTableBase : public TaperContainer {
       auto curCount = collisionCount;
       collisionCount = 0;
       collisionBatch++;
-      HwpPrefetch(emplaceContext_.chunkPositions, curCount);
+      HwpPrefetch(operateContext_.chunkPositions, curCount);
       for (int32_t idx = 0; idx < curCount; idx++) {
-        prefetchIdx(emplaceContext_.chunkPositions, idx, curCount);
-        tryEmplaceIdx(emplaceContext_.collisionIndices[idx].pos, idx, [&] {
+        prefetchIdx(operateContext_.chunkPositions, idx, curCount);
+        tryEmplaceIdx(operateContext_.collisionIndices[idx].pos, idx, [&] {
           resizeProc(idx + 1, curCount);
         });
       }
@@ -667,7 +685,7 @@ class TaperHashTableBase : public TaperContainer {
 #ifdef TAPER_HASH_STAT
       p1EmplaceCount_++;
 #endif
-      EmplaceImpl<false, StoreValue>(
+      derived.template Operate<Operation::kInsert, StoreValue>(
           derived,
           KeyAt(keys, i),
           [&](const Key& key, Chunk& chunk, uint8_t slot) {
@@ -787,12 +805,12 @@ class TaperHashTableBase : public TaperContainer {
     return *reinterpret_cast<const Key*>(rows[idx]);
   }
 
-  void ResetEmplaceContext(const Key* keys, uint32_t numRows) {
-    emplaceContext_.Resize(numRows);
+  void ResetOperateContext(const Key* keys, uint32_t numRows) {
+    operateContext_.Resize(numRows);
     for (uint32_t i = 0; i < numRows; i++) {
       auto val = Hash(KeyAt(keys, i));
-      emplaceContext_.hashVals[i] = val;
-      emplaceContext_.chunkPositions[i] = GetChunkPos(val);
+      operateContext_.hashVals[i] = val;
+      operateContext_.chunkPositions[i] = GetChunkPos(val);
     }
   }
 
@@ -873,6 +891,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
   using VisitorPos = typename Base::VisitorPos;
   using Value = typename Base::Value;
   using PHBitMask = typename taper::PHBitMask;
+  using Operation = typename Base::Operation;
 
   friend class TaperHashTableBase<Key, KeyScattered>;
 
@@ -994,10 +1013,27 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
       Filter&& filter,
       FInit&& fInit,
       FUpdate&& fUpdate) {
-    Base::template EmplaceBatchImpl<true>(
+    Base::template OperateBatch<Operation::kInsert, true>(
         *this,
         keys,
         numRows,
+        std::forward<Filter>(filter),
+        [&](uint32_t, const Key& key, Chunk& chunk, uint8_t slot) {
+          return Base::KeyEquals(key, GetChunkKey(chunk, slot));
+        },
+        std::forward<FInit>(fInit),
+        std::forward<FUpdate>(fUpdate));
+  }
+
+  // Probe counterpart of EmplaceBatch (read-only)
+  template <typename Filter, typename FInit, typename FUpdate>
+  void ProbeBatch(
+      const Key* keys,
+      uint32_t numKeys,
+      Filter&& filter,
+      FInit&& fInit,
+      FUpdate&& fUpdate) {
+    Base::template OperateBatch<Operation::kSearch, true>(*this, keys, numKeys,
         std::forward<Filter>(filter),
         [&](uint32_t, const Key& key, Chunk& chunk, uint8_t slot) {
           return Base::KeyEquals(key, GetChunkKey(chunk, slot));
@@ -1011,7 +1047,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
       const Key* keys,
       uint32_t numRows,
       Filter&& filter) {
-    Base::template EmplaceBatchImpl<false>(
+    Base::template OperateBatch<Operation::kInsert, false>(
         *this,
         keys,
         numRows,
@@ -1026,13 +1062,21 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
   template <typename FKCmp, typename FInit, typename FUpdate>
   void
   Emplace(const Key& key, FKCmp&& fKeyCmp, FInit&& fInit, FUpdate&& fUpdate) {
-    Base::template EmplaceImpl<false>(*this, key, fKeyCmp, fInit, fUpdate);
+    Base::template Operate<Operation::kInsert>(*this, key, fKeyCmp, fInit, fUpdate);
   }
 
   template <typename FInit, typename FUpdate>
  void
   Emplace(const Key& key, FInit&& fInit, FUpdate&& fUpdate) {
-    Base::template EmplaceImpl<false>(*this, key, DUMMY_CMP, fInit, fUpdate);
+    Base::template Operate<Operation::kInsert>(*this, key, DUMMY_CMP, fInit, fUpdate);
+  }
+
+  template <typename FKCmp, typename FInit, typename FUpdate>
+  void Probe(const Key& key, FKCmp&& fKeyCmp, FInit&& fInit, FUpdate&& fUpdate) {
+    Base::template Operate<Operation::kSearch>(*this, key,
+        std::forward<FKCmp>(fKeyCmp),
+        std::forward<FInit>(fInit),
+        std::forward<FUpdate>(fUpdate));
   }
 
   Visitor GetResultVisitor() {
@@ -1099,12 +1143,12 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
   }
 
   template <
-      bool IsExpansion,
+      Operation Op,
       bool StoreValue = true,
       typename FKCmp,
       typename FInit,
       typename FUpdate>
-  bool TryEmplaceAtPos(
+  bool TryOperateAtPos(
       const Key& key,
       size_t hashVal,
       ChunkPos chunkPos,
@@ -1115,17 +1159,21 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
     uint8_t tagHash = (hashVal >> 16) & 0x7F;
 
     auto tags = curChunk->GetU64Tags();
-    if constexpr (!IsExpansion) {
+    if constexpr (Op != Operation::kRehash) {
       for (auto i : PHBitMask::MatchTag(tags, tagHash)) {
         if (fKeyCmp(key, *curChunk, i)) {
           if constexpr (StoreValue) {
-            fUpdate(GetChunkValue(*curChunk, i).buf, false);
+            fUpdate(reinterpret_cast<char*>(&GetChunkValue(*curChunk, i)), false);
           }
           return true;
         }
       }
     }
     for (auto i : PHBitMask::MatchEmpty(tags, emptyTags_)) {
+      if constexpr (Op == Operation::kSearch) {
+        fUpdate(reinterpret_cast<char*>(&GetChunkValue(*curChunk, i)), true);
+        return true;
+      }
       Base::IncSize();
       curChunk->TagsBuf()[i] = tagHash;
       SetChunkKey(*curChunk, i, key);
@@ -1146,7 +1194,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
       ChunkPos chunkPos) {
     auto chunk = visitor.GetChunk(visitorPos.chunkPos.chunk);
     if (Base::ValueSize() == 0) {
-      return TryEmplaceAtPos<true, false>(
+      return TryOperateAtPos<Operation::kInsert, false>(
           GetChunkKey(*chunk, visitorPos.chunkPos.tag),
           hashVal,
           chunkPos,
@@ -1154,7 +1202,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
           [](char*) {},
           [](char*, bool) {});
     }
-    return TryEmplaceAtPos<true>(
+    return TryOperateAtPos<Operation::kRehash, true>(
         GetChunkKey(*chunk, visitorPos.chunkPos.tag),
         hashVal,
         chunkPos,
@@ -1167,7 +1215,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
 
   void RehashEmplace(const Visitor& visitor) {
     if (Base::ValueSize() == 0) {
-      Base::template EmplaceImpl<true, false>(
+      Base::template Operate<Operation::kRehash, false>(
           *this,
           visitor.CurKey(),
           DUMMY_CMP,
@@ -1175,7 +1223,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
           [](char*, bool) {});
       return;
     }
-    Base::template EmplaceImpl<true>(
+    Base::template Operate<Operation::kRehash, true>(
         *this,
         visitor.CurKey(),
         DUMMY_CMP,
@@ -1201,6 +1249,7 @@ class TaperFlatHashTable : public TaperHashTableBase<Key, KeyScattered> {
     }
   }
 };
-} // namespace omniruntime::op
+} // namespace op
+} // namespace omniruntime
 
 #undef DUMMY_CMP
