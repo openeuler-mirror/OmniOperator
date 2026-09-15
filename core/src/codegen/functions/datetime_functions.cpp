@@ -9,6 +9,7 @@
 #include "codegen/time_util.h"
 #include "util/TimeUtils.h"
 #include "type/tzdb/tzdb_list.h"
+#include "vectorization/functions/DateTimePlus.h"
 #include <algorithm>
 #include <stdexcept>
 
@@ -300,6 +301,79 @@ extern "C" DLLEXPORT int64_t DateAddDays(int64_t timestamp, bool isNullTimestamp
     
     *retIsNull = false;
     return result;
+}
+
+extern "C" DLLEXPORT int32_t DateTimePlusYearMonthDate(int32_t date, bool isNullDate,
+    int32_t months, bool isNullMonths, bool *retIsNull)
+{
+    if (isNullDate || isNullMonths) {
+        *retIsNull = true;
+        return 0;
+    }
+    int32_t result = 0;
+    *retIsNull = !vectorization::detail::AddMonthsToDate(date, months, result);
+    return result;
+}
+
+extern "C" DLLEXPORT int64_t DateTimePlusYearMonthTimestamp(int64_t timestampMillis, bool isNullTimestamp,
+    int32_t months, bool isNullMonths, bool *retIsNull)
+{
+    if (isNullTimestamp || isNullMonths) {
+        *retIsNull = true;
+        return 0;
+    }
+    int64_t result = 0;
+    *retIsNull = !vectorization::detail::AddMonthsToTimestamp(timestampMillis, months, result);
+    return result;
+}
+
+extern "C" DLLEXPORT int64_t TimePlusYearMonth(int64_t timeMillis, bool isNullTime,
+    int32_t months, bool isNullMonths, bool *retIsNull)
+{
+    (void)months;
+    *retIsNull = isNullTime || isNullMonths;
+    return *retIsNull ? 0 : timeMillis;
+}
+
+extern "C" DLLEXPORT int32_t DateTimePlusDayTimeDate(int32_t date, bool isNullDate,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull)
+{
+    if (isNullDate || isNullInterval) {
+        *retIsNull = true;
+        return 0;
+    }
+    const int64_t intervalDays = intervalMillis / vectorization::detail::MILLIS_PER_DAY;
+    if (intervalDays < std::numeric_limits<int32_t>::min()
+        || intervalDays > std::numeric_limits<int32_t>::max()) {
+        *retIsNull = true;
+        return 0;
+    }
+    *retIsNull = false;
+    return vectorization::detail::Int32FromBits(
+        static_cast<uint32_t>(date) + static_cast<uint32_t>(intervalDays));
+}
+
+extern "C" DLLEXPORT int64_t DateTimePlusDayTimeDateTimestamp(int32_t date, bool isNullDate,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull)
+{
+    if (isNullDate || isNullInterval) {
+        *retIsNull = true;
+        return 0;
+    }
+    *retIsNull = false;
+    const int64_t dateMillis = static_cast<int64_t>(date) * vectorization::detail::MILLIS_PER_DAY;
+    return vectorization::detail::AddInt64Wrapping(dateMillis, intervalMillis);
+}
+
+extern "C" DLLEXPORT int64_t DateTimePlusDayTimeTimestamp(int64_t timestampMillis, bool isNullTimestamp,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull)
+{
+    if (isNullTimestamp || isNullInterval) {
+        *retIsNull = true;
+        return 0;
+    }
+    *retIsNull = false;
+    return vectorization::detail::AddInt64Wrapping(timestampMillis, intervalMillis);
 }
 
 extern "C" DLLEXPORT int64_t ToTimestampLtz(int64_t numeric, bool isNull1,

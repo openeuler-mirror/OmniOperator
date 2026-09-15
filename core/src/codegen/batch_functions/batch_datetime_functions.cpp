@@ -3,6 +3,7 @@
  * Description: batch date time functions implementation
  */
 #include "batch_datetime_functions.h"
+#include "codegen/functions/datetime_functions.h"
 #include <ctime>
 #include "codegen/context_helper.h"
 #include "type/date32.h"
@@ -92,5 +93,59 @@ extern "C" DLLEXPORT void BatchFromUnixTimeRetNull(bool *outputNull, int64_t con
     char **output, int32_t *outLens, int32_t rowCnt)
 {
     BatchFromUnixTime(outputNull, contextPtr, timestamps, fmtStrs, fmtLens, tzStrs, tzLen, output, outLens, rowCnt);
+}
+
+extern "C" DLLEXPORT void BatchDateTimePlusYearMonthDate(int32_t *dates, bool *isNullDate,
+    int32_t *months, bool *isNullMonths, bool *retIsNull, int32_t *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = DateTimePlusYearMonthDate(
+            dates[i], isNullDate[i], months[i], isNullMonths[i], &retIsNull[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchDateTimePlusYearMonthTimestamp(int64_t *timestamps, bool *isNullTimestamp,
+    int32_t *months, bool *isNullMonths, bool *retIsNull, int64_t *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = DateTimePlusYearMonthTimestamp(
+            timestamps[i], isNullTimestamp[i], months[i], isNullMonths[i], &retIsNull[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchTimePlusYearMonth(int64_t *times, bool *isNullTime,
+    int32_t *months, bool *isNullMonths, bool *retIsNull, int64_t *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = TimePlusYearMonth(
+            times[i], isNullTime[i], months[i], isNullMonths[i], &retIsNull[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchDateTimePlusDayTimeDate(int32_t *dates, bool *isNullDate,
+    int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int32_t *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = DateTimePlusDayTimeDate(
+            dates[i], isNullDate[i], intervalMillis[i], isNullInterval[i], &retIsNull[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchDateTimePlusDayTimeDateTimestamp(int32_t *dates, bool *isNullDate,
+    int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int64_t *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = DateTimePlusDayTimeDateTimestamp(
+            dates[i], isNullDate[i], intervalMillis[i], isNullInterval[i], &retIsNull[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchDateTimePlusDayTimeTimestamp(int64_t *timestamps, bool *isNullTimestamp,
+    int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int64_t *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = DateTimePlusDayTimeTimestamp(
+            timestamps[i], isNullTimestamp[i], intervalMillis[i], isNullInterval[i], &retIsNull[i]);
+    }
 }
 }

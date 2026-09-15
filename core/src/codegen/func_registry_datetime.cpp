@@ -52,7 +52,19 @@ std::vector<Function> DateTimeFunctionRegistry::GetFunctions()
             INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
         Function(reinterpret_cast<void*>(DateAddDays), "date_add_days", {},
             {OMNI_LONG, OMNI_INT}, OMNI_LONG,
-            INPUT_DATA_AND_NULL_AND_RETURN_NULL)
+            INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimePlusYearMonthDate), "datetime_plus_year_month", {},
+            {OMNI_DATE32, OMNI_INT}, OMNI_DATE32, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimePlusYearMonthTimestamp), "datetime_plus_year_month", {},
+            {OMNI_LONG, OMNI_INT}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(TimePlusYearMonth), "time_plus_year_month", {},
+            {OMNI_LONG, OMNI_INT}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimePlusDayTimeDate), "datetime_plus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_DATE32, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimePlusDayTimeDateTimestamp), "datetime_plus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimePlusDayTimeTimestamp), "datetime_plus_day_time", {},
+            {OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL)
     };
     return dateTimeFnRegistry;
 };
