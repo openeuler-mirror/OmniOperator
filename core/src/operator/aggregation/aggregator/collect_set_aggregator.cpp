@@ -134,7 +134,10 @@ template<DataTypeId IN_ID, DataTypeId OUT_ID>
 void CollectSetAggregator<IN_ID, OUT_ID>::InitState(AggregateState *state) {
     SetState<InType> *setState = SetState<InType>::CastState(state + aggStateOffset);
     using stateType = typename AggNativeAndVectorType<IN_ID>::type;
-    DefaultHashMap<stateType, int8_t>* uniqueValues = new DefaultHashMap<stateType, int8_t>();
+    // Bug-XXX: default BaseHashMap initializes 2^15=32768 buckets per group (mem::Allocator accounted,
+    // ~0.29MB/group for int, ~1.34MB for string), so collect_set with many groups blows MEM_CAP instantly.
+    // Start with 2^4=16 buckets and grow on demand (Grower doubles); per-group sets are typically tiny.
+    DefaultHashMap<stateType, int8_t>* uniqueValues = new DefaultHashMap<stateType, int8_t>(6);
     uniqueValues->Reset();
     setState->uniqueValuesAddr = reinterpret_cast<int64_t>(uniqueValues);
     allocatedUniqueValuesAddrs_.push_back(setState->uniqueValuesAddr);
