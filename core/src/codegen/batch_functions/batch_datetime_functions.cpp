@@ -95,6 +95,15 @@ extern "C" DLLEXPORT void BatchFromUnixTimeRetNull(bool *outputNull, int64_t con
     BatchFromUnixTime(outputNull, contextPtr, timestamps, fmtStrs, fmtLens, tzStrs, tzLen, output, outLens, rowCnt);
 }
 
+extern "C" DLLEXPORT void BatchFromUnixTimeWithoutTz(int64_t contextPtr, int64_t *timestamps,
+    const char **fmtStrs, int32_t *fmtLens, bool *resIsNull, char **output, int32_t *outLens, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = FromUnixTimeWithoutTz(contextPtr, timestamps[i], fmtStrs[i], fmtLens[i],
+            resIsNull[i], &outLens[i]);
+    }
+}
+
 extern "C" DLLEXPORT void BatchDateTimePlusYearMonthDate(int32_t *dates, bool *isNullDate,
     int32_t *months, bool *isNullMonths, bool *retIsNull, int32_t *output, int32_t rowCnt)
 {

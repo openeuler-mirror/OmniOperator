@@ -31,6 +31,9 @@ extern "C" DLLEXPORT void BatchFromUnixTimeRetNull(bool *outputNull, int64_t con
     const char **fmtStrs, int32_t *fmtLens, const char **tzStrs, int32_t *tzLens,
     char **output, int32_t *outLens, int32_t rowCnt);
 
+extern "C" DLLEXPORT void BatchFromUnixTimeWithoutTz(int64_t contextPtr, int64_t *timestamps,
+    const char **fmtStrs, int32_t *fmtLens, bool *resIsNull, char **output, int32_t *outLens, int32_t rowCnt);
+
 extern "C" DLLEXPORT void BatchDateTimePlusYearMonthDate(int32_t *dates, bool *isNullDate,
     int32_t *months, bool *isNullMonths, bool *retIsNull, int32_t *output, int32_t rowCnt);
 extern "C" DLLEXPORT void BatchDateTimePlusYearMonthTimestamp(int64_t *timestamps, bool *isNullTimestamp,
