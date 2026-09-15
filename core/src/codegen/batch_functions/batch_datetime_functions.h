@@ -46,5 +46,12 @@ extern "C" DLLEXPORT void BatchDateTimePlusDayTimeDateTimestamp(int32_t *dates, 
     int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int64_t *output, int32_t rowCnt);
 extern "C" DLLEXPORT void BatchDateTimePlusDayTimeTimestamp(int64_t *timestamps, bool *isNullTimestamp,
     int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int64_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchDateTimeMinusDayTimeDate(int32_t *dates, bool *isNullDate,
+    int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int32_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchDateTimeMinusDayTimeDateTimestamp(int32_t *dates, bool *isNullDate,
+    int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int64_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchDateTimeMinusDayTimeTimestamp(int64_t *timestamps, bool *isNullTimestamp,
+    int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int64_t *output, int32_t rowCnt);
 }
 #endif // OMNI_RUNTIME_BATCH_DATETIME_FUNCTIONS_H

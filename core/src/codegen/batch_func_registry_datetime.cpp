@@ -33,6 +33,12 @@ std::vector<Function> BatchDateTimeFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchDateTimePlusDayTimeDateTimestamp), "batch_datetime_plus_day_time", {},
             {OMNI_DATE32, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(BatchDateTimePlusDayTimeTimestamp), "batch_datetime_plus_day_time", {},
+            {OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchDateTimeMinusDayTimeDate), "batch_datetime_minus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_DATE32, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchDateTimeMinusDayTimeDateTimestamp), "batch_datetime_minus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchDateTimeMinusDayTimeTimestamp), "batch_datetime_minus_day_time", {},
             {OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL) };
 
     return batchDateTimeFunctions;

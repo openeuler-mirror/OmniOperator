@@ -78,5 +78,13 @@ extern "C" DLLEXPORT int64_t DateTimePlusDayTimeDateTimestamp(int32_t date, bool
     int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
 extern "C" DLLEXPORT int64_t DateTimePlusDayTimeTimestamp(int64_t timestampMillis, bool isNullTimestamp,
     int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
+
+// Adaptor emits datetime_minus_day_time for timestamp - INTERVAL. Wrap plus(-interval).
+extern "C" DLLEXPORT int32_t DateTimeMinusDayTimeDate(int32_t date, bool isNullDate,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
+extern "C" DLLEXPORT int64_t DateTimeMinusDayTimeDateTimestamp(int32_t date, bool isNullDate,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
+extern "C" DLLEXPORT int64_t DateTimeMinusDayTimeTimestamp(int64_t timestampMillis, bool isNullTimestamp,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
 }
 #endif // OMNI_RUNTIME_DATETIME_FUNCTIONS_H

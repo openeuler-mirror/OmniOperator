@@ -70,6 +70,13 @@ std::vector<Function> DateTimeFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(DateTimePlusDayTimeDateTimestamp), "datetime_plus_day_time", {},
             {OMNI_DATE32, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(DateTimePlusDayTimeTimestamp), "datetime_plus_day_time", {},
+            {OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        // Adaptor timestamp - INTERVAL emits datetime_minus_day_time (old path was BINARY SUBTRACT).
+        Function(reinterpret_cast<void *>(DateTimeMinusDayTimeDate), "datetime_minus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_DATE32, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimeMinusDayTimeDateTimestamp), "datetime_minus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimeMinusDayTimeTimestamp), "datetime_minus_day_time", {},
             {OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL)
     };
     return dateTimeFnRegistry;

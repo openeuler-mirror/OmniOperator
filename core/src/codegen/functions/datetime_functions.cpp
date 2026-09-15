@@ -376,6 +376,34 @@ extern "C" DLLEXPORT int64_t DateTimePlusDayTimeTimestamp(int64_t timestampMilli
     return vectorization::detail::AddInt64Wrapping(timestampMillis, intervalMillis);
 }
 
+namespace {
+int64_t NegateInt64Wrapping(int64_t value)
+{
+    return vectorization::detail::Int64FromBits(uint64_t{0} - static_cast<uint64_t>(value));
+}
+}
+
+extern "C" DLLEXPORT int32_t DateTimeMinusDayTimeDate(int32_t date, bool isNullDate,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull)
+{
+    return DateTimePlusDayTimeDate(date, isNullDate, NegateInt64Wrapping(intervalMillis),
+        isNullInterval, retIsNull);
+}
+
+extern "C" DLLEXPORT int64_t DateTimeMinusDayTimeDateTimestamp(int32_t date, bool isNullDate,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull)
+{
+    return DateTimePlusDayTimeDateTimestamp(date, isNullDate, NegateInt64Wrapping(intervalMillis),
+        isNullInterval, retIsNull);
+}
+
+extern "C" DLLEXPORT int64_t DateTimeMinusDayTimeTimestamp(int64_t timestampMillis, bool isNullTimestamp,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull)
+{
+    return DateTimePlusDayTimeTimestamp(timestampMillis, isNullTimestamp,
+        NegateInt64Wrapping(intervalMillis), isNullInterval, retIsNull);
+}
+
 extern "C" DLLEXPORT int64_t ToTimestampLtz(int64_t numeric, bool isNull1,
                                             int32_t precision, bool isNull2,
                                             bool* retIsNull) {

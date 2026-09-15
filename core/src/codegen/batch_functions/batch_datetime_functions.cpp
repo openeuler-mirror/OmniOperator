@@ -157,4 +157,31 @@ extern "C" DLLEXPORT void BatchDateTimePlusDayTimeTimestamp(int64_t *timestamps,
             timestamps[i], isNullTimestamp[i], intervalMillis[i], isNullInterval[i], &retIsNull[i]);
     }
 }
+
+extern "C" DLLEXPORT void BatchDateTimeMinusDayTimeDate(int32_t *dates, bool *isNullDate,
+    int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int32_t *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = DateTimeMinusDayTimeDate(
+            dates[i], isNullDate[i], intervalMillis[i], isNullInterval[i], &retIsNull[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchDateTimeMinusDayTimeDateTimestamp(int32_t *dates, bool *isNullDate,
+    int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int64_t *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = DateTimeMinusDayTimeDateTimestamp(
+            dates[i], isNullDate[i], intervalMillis[i], isNullInterval[i], &retIsNull[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchDateTimeMinusDayTimeTimestamp(int64_t *timestamps, bool *isNullTimestamp,
+    int64_t *intervalMillis, bool *isNullInterval, bool *retIsNull, int64_t *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = DateTimeMinusDayTimeTimestamp(
+            timestamps[i], isNullTimestamp[i], intervalMillis[i], isNullInterval[i], &retIsNull[i]);
+    }
+}
 }
