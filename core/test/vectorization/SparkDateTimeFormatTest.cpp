@@ -43,6 +43,16 @@ TEST(SparkDateTimeFormatTest, ClassifiesAndParsesStandardLayouts)
     EXPECT_EQ(dateTimeMicros, 1'709'210'096'000'000);
 }
 
+TEST(SparkDateTimeFormatTest, UnconsumedSuffixRejectedByDefaultAcceptedWhenEnabled)
+{
+    const auto strict = CompileParseFormat("yyyy-MM-dd HH:mm:ss", false);
+    const auto flinkLike = CompileParseFormat("yyyy-MM-dd HH:mm:ss", true, true);
+    int64_t micros = 0;
+    EXPECT_FALSE(ParseDateTimeString("1970-01-01 00:00:00.001", strict, micros));
+    ASSERT_TRUE(ParseDateTimeString("1970-01-01 00:00:00.001", flinkLike, micros));
+    EXPECT_EQ(micros, 0);
+}
+
 TEST(SparkDateTimeFormatTest, ReusesCompiledParseFormat)
 {
     const auto format = CompileParseFormat("yyyy-MM-dd HH:mm:ss.SSS", false);

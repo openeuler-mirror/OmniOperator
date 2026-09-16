@@ -3,7 +3,9 @@
  * Description: Unit tests for the Flink specific string functions
  *   flink_substr(string, pos[, length]) -> varchar   (BinaryStringDataUtil.substringSQL)
  *   flink_replace(string, search, replacement) -> varchar   (Java String.replace)
- * They exist next to Spark's "substr"/"replace" because the boundary semantics differ.
+ *   flink_lpad(string, size, padString) -> varchar   (SqlFunctionUtils.lpad)
+ *   flink_rpad(string, size, padString) -> varchar   (SqlFunctionUtils.rpad)
+ * They exist next to Spark's "substr"/"replace"/"lpad"/"rpad" because the boundary semantics differ.
  */
 
 #include <gtest/gtest.h>
@@ -229,7 +231,115 @@ TEST(FlinkReplaceTest, NullArgumentsPropagate) {
     delete result;
 }
 
-// Spark's "substr"/"replace" must keep their original behaviour.
+TEST(FlinkLPadTest, NegativeLengthAndEmptyPadAreNull) {
+    // Flink SqlFunctionUtils.lpad: len < 0 or pad == "" -> NULL; len == 0 -> ''.
+    //                                s       len  pad   expected
+    // hi                               4    ??    ??hi
+    // hello                            2    ??    he
+    // hi                               0    ??    ''
+    // hi                              -1    ??    NULL
+    // ab                               5    xyz   xyzab
+    // ab                               5    #     ###ab
+    // abc                              3    ?     abc
+    // 你好                             4    ab    ab你好
+    // (empty)                          3    ?     ???
+    // hi                               4    ''    NULL   (empty pad)
+    std::vector<std::string> strings = {"hi", "hello", "hi", "hi", "ab", "ab", "abc",
+                                        "你好", "", "hi"};
+    std::vector<int32_t> sizes = {4, 2, 0, -1, 5, 5, 3, 4, 3, 4};
+    std::vector<std::string> pads = {"??", "??", "??", "??", "xyz", "#", "?", "ab", "?", ""};
+    std::vector<bool> noNulls(strings.size(), false);
+    std::vector<std::string> expected = {"??hi", "he", "", "", "xyzab", "###ab", "abc",
+                                         "ab你好", "???", ""};
+    std::vector<bool> expectedNulls = {false, false, false, true, false, false, false,
+                                       false, false, true};
+
+    BaseVector *strVec = MakeStringVector(strings, noNulls);
+    BaseVector *sizeVec = MakeInt32Vector(sizes, noNulls);
+    BaseVector *padVec = MakeStringVector(pads, noNulls);
+    BaseVector *result = nullptr;
+    ApplyStringFunction("flink_lpad", {strVec, sizeVec, padVec}, result);
+    ExpectStrings(result, expected, expectedNulls);
+
+    delete strVec;
+    delete sizeVec;
+    delete padVec;
+    delete result;
+}
+
+TEST(FlinkRPadTest, NegativeLengthAndEmptyPadAreNull) {
+    // Flink SqlFunctionUtils.rpad: len < 0 or pad == "" -> NULL; len == 0 -> ''.
+    //                                s       len  pad   expected
+    // hi                               4    ??    hi??
+    // hello                            2    ??    he
+    // hi                               0    ??    ''
+    // hi                              -1    ??    NULL
+    // ab                               5    xyz   abxyz
+    // ab                               5    #     ab###
+    // abc                              3    ?     abc
+    // 你好                             4    ab    你好ab
+    // (empty)                          3    ?     ???
+    // hi                               4    ''    NULL   (empty pad)
+    std::vector<std::string> strings = {"hi", "hello", "hi", "hi", "ab", "ab", "abc",
+                                        "你好", "", "hi"};
+    std::vector<int32_t> sizes = {4, 2, 0, -1, 5, 5, 3, 4, 3, 4};
+    std::vector<std::string> pads = {"??", "??", "??", "??", "xyz", "#", "?", "ab", "?", ""};
+    std::vector<bool> noNulls(strings.size(), false);
+    std::vector<std::string> expected = {"hi??", "he", "", "", "abxyz", "ab###", "abc",
+                                         "你好ab", "???", ""};
+    std::vector<bool> expectedNulls = {false, false, false, true, false, false, false,
+                                       false, false, true};
+
+    BaseVector *strVec = MakeStringVector(strings, noNulls);
+    BaseVector *sizeVec = MakeInt32Vector(sizes, noNulls);
+    BaseVector *padVec = MakeStringVector(pads, noNulls);
+    BaseVector *result = nullptr;
+    ApplyStringFunction("flink_rpad", {strVec, sizeVec, padVec}, result);
+    ExpectStrings(result, expected, expectedNulls);
+
+    delete strVec;
+    delete sizeVec;
+    delete padVec;
+    delete result;
+}
+
+TEST(FlinkRPadTest, NullArgumentsPropagate) {
+    std::vector<std::string> strings = {"hi", "hi", "hi"};
+    std::vector<int32_t> sizes = {4, 4, 4};
+    std::vector<std::string> pads = {"?", "?", "?"};
+
+    BaseVector *strVec = MakeStringVector(strings, {true, false, false});
+    BaseVector *sizeVec = MakeInt32Vector(sizes, {false, true, false});
+    BaseVector *padVec = MakeStringVector(pads, {false, false, true});
+    BaseVector *result = nullptr;
+    ApplyStringFunction("flink_rpad", {strVec, sizeVec, padVec}, result);
+    ExpectStrings(result, {"", "", ""}, {true, true, true});
+
+    delete strVec;
+    delete sizeVec;
+    delete padVec;
+    delete result;
+}
+
+TEST(FlinkLPadTest, NullArgumentsPropagate) {
+    std::vector<std::string> strings = {"hi", "hi", "hi"};
+    std::vector<int32_t> sizes = {4, 4, 4};
+    std::vector<std::string> pads = {"?", "?", "?"};
+
+    BaseVector *strVec = MakeStringVector(strings, {true, false, false});
+    BaseVector *sizeVec = MakeInt32Vector(sizes, {false, true, false});
+    BaseVector *padVec = MakeStringVector(pads, {false, false, true});
+    BaseVector *result = nullptr;
+    ApplyStringFunction("flink_lpad", {strVec, sizeVec, padVec}, result);
+    ExpectStrings(result, {"", "", ""}, {true, true, true});
+
+    delete strVec;
+    delete sizeVec;
+    delete padVec;
+    delete result;
+}
+
+// Spark's "substr"/"replace"/"lpad" must keep their original behaviour.
 TEST(SparkSemanticsUnchangedTest, SubstrAndReplace) {
     std::vector<std::string> strings = {"hello", "hello"};
     std::vector<int32_t> positions = {-6, 1};
@@ -251,6 +361,22 @@ TEST(SparkSemanticsUnchangedTest, SubstrAndReplace) {
     ApplyStringFunction("replace", {replaceStrVec, searchVec, replacementVec}, replaceResult);
     ExpectStrings(replaceResult, {"abc"}, {false});
 
+    // Spark lpad: negative length and empty pad yield '' (not NULL).
+    BaseVector *lpadStrVec = MakeStringVector({"hi", "hi"}, {false, false});
+    BaseVector *lpadSizeVec = MakeInt32Vector({-1, 4}, {false, false});
+    BaseVector *lpadPadVec = MakeStringVector({"??", ""}, {false, false});
+    BaseVector *lpadResult = nullptr;
+    ApplyStringFunction("lpad", {lpadStrVec, lpadSizeVec, lpadPadVec}, lpadResult);
+    ExpectStrings(lpadResult, {"", ""}, {false, false});
+
+    // Spark rpad: negative length and empty pad yield '' (not NULL).
+    BaseVector *rpadStrVec = MakeStringVector({"hi", "hi"}, {false, false});
+    BaseVector *rpadSizeVec = MakeInt32Vector({-1, 4}, {false, false});
+    BaseVector *rpadPadVec = MakeStringVector({"??", ""}, {false, false});
+    BaseVector *rpadResult = nullptr;
+    ApplyStringFunction("rpad", {rpadStrVec, rpadSizeVec, rpadPadVec}, rpadResult);
+    ExpectStrings(rpadResult, {"", ""}, {false, false});
+
     delete strVec;
     delete posVec;
     delete lenVec;
@@ -259,4 +385,12 @@ TEST(SparkSemanticsUnchangedTest, SubstrAndReplace) {
     delete searchVec;
     delete replacementVec;
     delete replaceResult;
+    delete lpadStrVec;
+    delete lpadSizeVec;
+    delete lpadPadVec;
+    delete lpadResult;
+    delete rpadStrVec;
+    delete rpadSizeVec;
+    delete rpadPadVec;
+    delete rpadResult;
 }

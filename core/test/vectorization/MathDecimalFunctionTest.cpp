@@ -197,8 +197,8 @@ const auto kCosh = [](double x) { return std::cosh(x); };
 const auto kTan  = [](double x) { return std::tan(x); };
 const auto kTanh = [](double x) { return std::tanh(x); };
 const auto kCot  = [](double x) { return 1.0 / std::tan(x); };
-// degrees/radians mirror Degrees/RadiansFunction (x*(180/π) / x*(π/180)).
-const auto kDegrees = [](double x) { return x * (180.0 / M_PI); };
+// degrees/radians mirror Degrees/RadiansFunction (x*180/π / x*(π/180)).
+const auto kDegrees = [](double x) { return x * 180.0 / M_PI; };
 const auto kRadians = [](double x) { return x * (M_PI / 180.0); };
 
 /// Run the binary atan2(y, x) on two DECIMAL64 columns with (possibly different) scales.
@@ -599,7 +599,7 @@ TEST(MathDecimalFunctionTest, DecimalMatchesDoubleCot) {
 }
 
 // ============================================================================
-// DEGREES (radians -> degrees, x*(180/π); odd function)
+// DEGREES (radians -> degrees, x*180/π; odd function)
 // ============================================================================
 
 TEST(MathDecimalFunctionTest, DegreesDecimal64) {
