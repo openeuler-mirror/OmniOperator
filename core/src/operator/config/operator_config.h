@@ -129,21 +129,25 @@ public:
 class SparkSpillConfig : public SpillConfig {
 public:
     SparkSpillConfig(bool enabled, const std::string &spillPath, uint64_t maxSpillBytes, int32_t numElementsThreshold,
-        int32_t memUsagePctThreshold, uint64_t writeBufferSize, bool isCompressEnabled)
+        double memUsageFraction, uint64_t writeBufferSize, bool isCompressEnabled)
         : SpillConfig(SPILL_CONFIG_SPARK, enabled, spillPath, maxSpillBytes, writeBufferSize, isCompressEnabled),
           numElementsForSpillThreshold(numElementsThreshold)
     {
-        auto limit = mem::MemoryManager::GetGlobalMemoryLimit();
+        OMNI_CHECK(memUsageFraction > 0.0 && memUsageFraction <= 1.0,
+            "Spill memory fraction must be in (0, 1]");
+        const auto limit = mem::MemoryManager::GetGlobalMemoryLimit();
         if (limit == mem::MemoryManager::UNLIMIT) {
             memUsageForSpillThreshold = INT64_MAX;
         } else {
-            memUsageForSpillThreshold = limit * memUsagePctThreshold / 100;
+            // Avoid rounding INT64_MAX to 2^63 before converting it back to int64_t.
+            memUsageForSpillThreshold = memUsageFraction == 1.0
+                ? limit : static_cast<int64_t>(limit * memUsageFraction);
         }
     }
 
     SparkSpillConfig(const std::string &spillPath, uint64_t maxSpillBytes, int32_t numElementsThreshold,
-        int32_t memUsageThreshold = 90, uint64_t writeBufferSize = 0, bool isCompressEnabled = false)
-        : SparkSpillConfig(true, spillPath, maxSpillBytes, numElementsThreshold, memUsageThreshold, writeBufferSize, isCompressEnabled)
+        double memUsageFraction = 0.9, uint64_t writeBufferSize = 0, bool isCompressEnabled = false)
+        : SparkSpillConfig(true, spillPath, maxSpillBytes, numElementsThreshold, memUsageFraction, writeBufferSize, isCompressEnabled)
     {}
 
     SparkSpillConfig(const std::string &spillPath, int32_t numElementsThreshold)
