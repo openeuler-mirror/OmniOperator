@@ -30,6 +30,10 @@ const std::string NORMALIZE_ZERO_FN_STR = "batch_NormalizeNaNAndZero";
 const std::string GREATEST_NUM_FN_STR = "batch_Greatest";
 const std::string POWER_FN_STR = "batch_power";
 const std::string NEGATIVE_FN_STR = "batch_negative";
+const std::string IS_TRUE_FN_STR = "batch_is_true";
+const std::string IS_FALSE_FN_STR = "batch_is_false";
+const std::string IS_NOT_TRUE_FN_STR = "batch_is_not_true";
+const std::string IS_NOT_FALSE_FN_STR = "batch_is_not_false";
 }
 
 std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
@@ -160,7 +164,12 @@ std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchNegative<int32_t>), NEGATIVE_FN_STR, {}, { OMNI_INT }, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchNegative<int64_t>), NEGATIVE_FN_STR, {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchNegative<float>), NEGATIVE_FN_STR, {}, { OMNI_FLOAT }, OMNI_FLOAT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchNegative<double>), NEGATIVE_FN_STR, {}, { OMNI_DOUBLE }, OMNI_DOUBLE, INPUT_DATA)
+        Function(reinterpret_cast<void *>(BatchNegative<double>), NEGATIVE_FN_STR, {}, { OMNI_DOUBLE }, OMNI_DOUBLE, INPUT_DATA),
+
+        Function(reinterpret_cast<void *>(BatchIsTrue), IS_TRUE_FN_STR, {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchIsFalse), IS_FALSE_FN_STR, {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchIsNotTrue), IS_NOT_TRUE_FN_STR, {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchIsNotFalse), IS_NOT_FALSE_FN_STR, {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA)
     };
 
     return batchMathFunctions;

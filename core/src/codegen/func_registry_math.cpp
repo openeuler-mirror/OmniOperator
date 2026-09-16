@@ -393,7 +393,14 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(Negative<int32_t>), NegativeFnStr(), {}, { OMNI_INT}, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(Negative<int64_t>), NegativeFnStr(), {}, { OMNI_LONG}, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(Negative<float>), NegativeFnStr(), {}, { OMNI_FLOAT}, OMNI_FLOAT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(Negative<double>), NegativeFnStr(), {}, { OMNI_DOUBLE}, OMNI_DOUBLE, INPUT_DATA)
+        Function(reinterpret_cast<void *>(Negative<double>), NegativeFnStr(), {}, { OMNI_DOUBLE}, OMNI_DOUBLE, INPUT_DATA),
+
+        // Adaptor IS TRUE / IS FALSE predicates. Keep codegen LookupFunction succeeding
+        // so a mixed Calc (e.g. DATE_FORMAT + FILTER IS TRUE) does not fall back to ExprEval.
+        Function(reinterpret_cast<void *>(IsTrue), "is_true", {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(IsFalse), "is_false", {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(IsNotTrue), "is_not_true", {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(IsNotFalse), "is_not_false", {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA)
     };
 
     return mathFnRegistry;

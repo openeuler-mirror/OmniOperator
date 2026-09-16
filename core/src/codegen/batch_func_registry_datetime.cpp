@@ -19,7 +19,27 @@ std::vector<Function> BatchDateTimeFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchFromUnixTime), "batch_from_unixtime", {},
             { OMNI_LONG, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(BatchFromUnixTimeRetNull), "batch_from_unixtime_null", {},
-            { OMNI_LONG, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true) };
+            { OMNI_LONG, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(BatchFromUnixTimeWithoutTz), "batch_from_unixtime_without_tz", {},
+            { OMNI_LONG, OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchDateTimePlusYearMonthDate), "batch_datetime_plus_year_month", {},
+            {OMNI_DATE32, OMNI_INT}, OMNI_DATE32, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchDateTimePlusYearMonthTimestamp), "batch_datetime_plus_year_month", {},
+            {OMNI_LONG, OMNI_INT}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchTimePlusYearMonth), "batch_time_plus_year_month", {},
+            {OMNI_LONG, OMNI_INT}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchDateTimePlusDayTimeDate), "batch_datetime_plus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_DATE32, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchDateTimePlusDayTimeDateTimestamp), "batch_datetime_plus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchDateTimePlusDayTimeTimestamp), "batch_datetime_plus_day_time", {},
+            {OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchDateTimeMinusDayTimeDate), "batch_datetime_minus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_DATE32, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchDateTimeMinusDayTimeDateTimestamp), "batch_datetime_minus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchDateTimeMinusDayTimeTimestamp), "batch_datetime_minus_day_time", {},
+            {OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL) };
 
     return batchDateTimeFunctions;
 }
