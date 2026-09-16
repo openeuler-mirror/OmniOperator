@@ -105,6 +105,13 @@ if (NOT IS_COVERAGE_BUILD)
     endif ()
 endif ()
 
+option(TAPER "Enable taper hash table" ON)
+message(STATUS "Option Enable TAPER: ${TAPER}")
+if (TAPER)
+    # OMNI_USE_TAPER_JOIN: use taper hash table for join
+    add_definitions(-DOMNI_USE_TAPER_JOIN)
+endif ()
+
 #-ffast-math
 #-fopt-info-vec-optimized
 set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} ${SIMD_COMPILE_LEVEL} -fno-var-tracking-assignments -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")

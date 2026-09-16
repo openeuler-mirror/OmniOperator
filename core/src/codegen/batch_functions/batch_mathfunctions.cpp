@@ -501,4 +501,36 @@ extern "C" DLLEXPORT void BatchRoundLong(int64_t *num, int32_t *decimals, bool *
         output[i] = RoundOperator(num[i], decimals[i]);
     }
 }
+
+extern "C" DLLEXPORT void BatchIsTrue(bool *value, bool *resIsNull, bool *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = !resIsNull[i] && value[i];
+        resIsNull[i] = false;
+    }
+}
+
+extern "C" DLLEXPORT void BatchIsFalse(bool *value, bool *resIsNull, bool *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = !resIsNull[i] && !value[i];
+        resIsNull[i] = false;
+    }
+}
+
+extern "C" DLLEXPORT void BatchIsNotTrue(bool *value, bool *resIsNull, bool *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = resIsNull[i] || !value[i];
+        resIsNull[i] = false;
+    }
+}
+
+extern "C" DLLEXPORT void BatchIsNotFalse(bool *value, bool *resIsNull, bool *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        output[i] = resIsNull[i] || value[i];
+        resIsNull[i] = false;
+    }
+}
 }

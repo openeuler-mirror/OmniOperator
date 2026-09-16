@@ -32,6 +32,7 @@ print_help() {
     --enable-dt                        = Enable DT checker
     --exclude-test                     = Exclude Test Source
     --enable-sveht                     = Enable SVE vectorized hash tables
+    --enable-taper                     = Enable taper hash table
   "
 }
 

@@ -687,3 +687,23 @@ extern "C" DLLEXPORT double Expm1Function(double a)
 {
     return std::expm1(a);
 }
+
+extern "C" DLLEXPORT bool IsTrue(bool value, bool isNull)
+{
+    return !isNull && value;
+}
+
+extern "C" DLLEXPORT bool IsFalse(bool value, bool isNull)
+{
+    return !isNull && !value;
+}
+
+extern "C" DLLEXPORT bool IsNotTrue(bool value, bool isNull)
+{
+    return isNull || !value;
+}
+
+extern "C" DLLEXPORT bool IsNotFalse(bool value, bool isNull)
+{
+    return isNull || value;
+}

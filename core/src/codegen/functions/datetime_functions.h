@@ -65,5 +65,26 @@ extern "C" DLLEXPORT int64_t ToTimestampLtzInt(int32_t numeric, bool isNull1,
 extern "C" DLLEXPORT int64_t CurrentTimestamp();
 extern "C" DLLEXPORT int64_t CurrentWatermark(int64_t contextPtr, bool* retIsNull);
 extern "C" DLLEXPORT int64_t DateAddDays(int64_t timestamp, bool isNullTimestamp, int32_t days, bool isNullDays, bool* retIsNull);
+
+extern "C" DLLEXPORT int32_t DateTimePlusYearMonthDate(int32_t date, bool isNullDate,
+    int32_t months, bool isNullMonths, bool *retIsNull);
+extern "C" DLLEXPORT int64_t DateTimePlusYearMonthTimestamp(int64_t timestampMillis, bool isNullTimestamp,
+    int32_t months, bool isNullMonths, bool *retIsNull);
+extern "C" DLLEXPORT int64_t TimePlusYearMonth(int64_t timeMillis, bool isNullTime,
+    int32_t months, bool isNullMonths, bool *retIsNull);
+extern "C" DLLEXPORT int32_t DateTimePlusDayTimeDate(int32_t date, bool isNullDate,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
+extern "C" DLLEXPORT int64_t DateTimePlusDayTimeDateTimestamp(int32_t date, bool isNullDate,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
+extern "C" DLLEXPORT int64_t DateTimePlusDayTimeTimestamp(int64_t timestampMillis, bool isNullTimestamp,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
+
+// Adaptor emits datetime_minus_day_time for timestamp - INTERVAL. Wrap plus(-interval).
+extern "C" DLLEXPORT int32_t DateTimeMinusDayTimeDate(int32_t date, bool isNullDate,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
+extern "C" DLLEXPORT int64_t DateTimeMinusDayTimeDateTimestamp(int32_t date, bool isNullDate,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
+extern "C" DLLEXPORT int64_t DateTimeMinusDayTimeTimestamp(int64_t timestampMillis, bool isNullTimestamp,
+    int64_t intervalMillis, bool isNullInterval, bool *retIsNull);
 }
 #endif // OMNI_RUNTIME_DATETIME_FUNCTIONS_H

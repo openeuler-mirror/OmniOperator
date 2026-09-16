@@ -78,14 +78,17 @@ static const tz::TimeZone *ResolveSessionTimeZone(const std::string_view &tzView
 /// Returns integer 0-59. Returns NULL if the input is NULL (or out of range).
 class FlinkSecondFunction : public VectorFunction {
 public:
+    explicit FlinkSecondFunction(bool hasTz) : hasTz_(hasTz) {}
+
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         op::ExecutionContext *context) const override
     {
-        // Optional timezone arg sits on top of the stack (rightmost operand).
-        // flink_X:        args = [input]
-        // flink_X_with_tz: args = [input, tz]
+        // Arity comes from the registered signature (hasTz_), not args.size():
+        // the eval stack is shared with sibling expressions.
+        // flink_X:         args top = [input]
+        // flink_X_with_tz: args top = [input, tz]
         BaseVector *tzArg = nullptr;
-        if (args.size() >= 2) {
+        if (hasTz_) {
             tzArg = args.top();
             args.pop();
         }
@@ -115,8 +118,7 @@ public:
         // The tz arg (when present) is a constant session zone-id literal from
         // the Java side; resolve it once when it is a const non-null vector.
         const tz::TimeZone *constZone = nullptr;
-        bool hasTz = (tzArg != nullptr);
-        bool tzIsConst = hasTz && (tzArg->GetEncoding() == OMNI_ENCODING_CONST);
+        bool tzIsConst = hasTz_ && (tzArg->GetEncoding() == OMNI_ENCODING_CONST);
         if (tzIsConst && !tzArg->IsNull(0)) {
             constZone = ResolveSessionTimeZone(VectorHelper::GetStringValueFromVector(tzArg, 0));
         }
@@ -132,7 +134,7 @@ public:
                 // nullptr zone => UTC wall-clock; non-null zone => session-local
                 // wall-clock (for TIMESTAMP_WITH_LOCAL_TIME_ZONE input).
                 const tz::TimeZone *zone = constZone;
-                if (hasTz && !tzIsConst) {
+                if (hasTz_ && !tzIsConst) {
                     zone = tzArg->IsNull(i) ? nullptr
                         : ResolveSessionTimeZone(VectorHelper::GetStringValueFromVector(tzArg, i));
                 }
@@ -142,25 +144,28 @@ public:
             });
         }
         delete inputArg;
-        if (hasTz) {
+        if (hasTz_) {
             delete tzArg;
         };
     }
+
+private:
+    const bool hasTz_;
 };
 } // namespace
 
 void RegisterFlinkSecondFunction(const std::string &name)
 {
     VectorFunction::RegisterVectorFunction(name, {OMNI_LONG}, OMNI_INT,
-        std::make_shared<FlinkSecondFunction>());
+        std::make_shared<FlinkSecondFunction>(false));
 }
 
 void RegisterFlinkSecondWithTzFunction(const std::string &name)
 {
     // _with_tz variant: OMNI_LONG plus an explicit VARCHAR timezone arg
     // (appended by the OmniAdaptor for TIMESTAMP_WITH_LOCAL_TIME_ZONE).
-    // Reuses the same class - it detects the tz arg by args.size() >= 2.
+    // Reuses the same class; arity is encoded in hasTz_.
     VectorFunction::RegisterVectorFunction(name, {OMNI_LONG, OMNI_VARCHAR}, OMNI_INT,
-        std::make_shared<FlinkSecondFunction>());
+        std::make_shared<FlinkSecondFunction>(true));
 }
 }

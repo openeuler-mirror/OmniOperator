@@ -11,12 +11,21 @@
 #include <iostream>
 #include <random>
 #include <utility>
+#include <cstring>
+#include <limits>
+#include <stack>
 #include "type/decimal128.h"
 #include "type/data_type.h"
+#include "type/decimal_operations.h"
 #include "vectorization/functions/Arithmetic.h"
+#include "vectorization/VectorFunction.h"
+#include "vectorization/SelectivityVector.h"
+#include "util/bit_util.h"
 #include "util/config/QueryConfig.h"
 
 namespace omniruntime::vectorization {
+using namespace omniruntime::vec;
+using namespace omniruntime::type;
     template <typename T>
     struct AbsFunction {
         template <typename TInput>
@@ -399,7 +408,7 @@ namespace omniruntime::vectorization {
     struct PModIntFunction {
         template <typename TInput>
         ALWAYS_INLINE Status call(TInput& result, const TInput a, const TInput n) {
-            TInput r;
+            TInput r = 0;
             Status status = RemainderFunction<T>().call(r, a, n);
             if (!status.ok()) {
                 return status;
@@ -807,4 +816,165 @@ namespace omniruntime::vectorization {
         }
     };
 
+    // ===================== Decimal Vectorization Functions (unified) =====================
+    // Type traits isolate the int64_t (DECIMAL64) vs Decimal128 (DECIMAL128) differences;
+    // a single policy + Apply template then covers floor/ceil for both widths.
+
+    // ---- Type traits ----
+
+    struct Decimal64Traits {
+        using ValueType    = int64_t;
+        using WideType     = int64_t;
+        using DataType     = Decimal64DataType;
+        static constexpr int32_t kDefaultPrecision = MAX_DECIMAL64_DIGITS;
+        static WideType powerOfTen(int32_t scale) { return INT64_TEN_POWERS_TABLE[scale]; }
+        static WideType toWide(ValueType v)       { return v; }
+        static ValueType fromWide(WideType v)     { return v; }
+    };
+
+    struct Decimal128Traits {
+        using ValueType    = Decimal128;
+        using WideType     = int128_t;
+        using DataType     = Decimal128DataType;
+        static constexpr int32_t kDefaultPrecision = Decimal128::MAX_LONG_PRECISION;
+        static WideType powerOfTen(int32_t scale) { return kPowersOfTen[scale]; }
+        static WideType toWide(ValueType v)       { return v.ToInt128(); }
+        static ValueType fromWide(WideType v)     { return Decimal128(v); }
+    };
+
+    // ---- Unified helpers ----
+
+    template <typename Traits>
+    inline int32_t GetDecScale(BaseVector *vec)
+    {
+        auto &dt = vec->GetDataType();
+        if (dt) {
+            auto *dec = dynamic_cast<const DecimalDataType *>(dt.get());
+            if (dec != nullptr) {
+                return dec->GetScale();
+            }
+        }
+        return 0;
+    }
+
+    template <typename Traits>
+    inline int32_t GetDecPrecision(BaseVector *vec)
+    {
+        auto &dt = vec->GetDataType();
+        if (dt) {
+            auto *dec = dynamic_cast<const DecimalDataType *>(dt.get());
+            if (dec != nullptr) {
+                return dec->GetPrecision();
+            }
+        }
+        return Traits::kDefaultPrecision;
+    }
+
+    template <typename Traits>
+    inline void SetDecResultMeta(BaseVector *result, int32_t precision, int32_t scale)
+    {
+        auto outDt = std::make_shared<typename Traits::DataType>(precision, scale);
+        VectorHelper::SetVectorDataType(result, outDt.get());
+    }
+
+    // ---- Unified floor/ceil policy: IsFloor=true -> floor, false -> ceil ----
+
+    template <typename Traits, bool IsFloor>
+    struct DecimalRoundPolicy {
+        using VT = typename Traits::ValueType;
+        using WT = typename Traits::WideType;
+
+        static int32_t outputScale(int32_t) { return 0; }
+        static int32_t outputPrecision(int32_t inPrec) { return inPrec; }
+
+        static VT apply(VT val, int32_t scale)
+        {
+            if (scale == 0) {
+                return val;
+            }
+            WT factor = Traits::powerOfTen(scale);
+            WT v = Traits::toWide(val);
+            WT q = v / factor;
+            WT r = v % factor;
+            if (r != 0) {
+                if constexpr (IsFloor) {
+                    if (v < 0) {
+                        q -= 1;
+                    }
+                } else {
+                    if (v > 0) {
+                        q += 1;
+                    }
+                }
+            }
+            return Traits::fromWide(q);
+        }
+    };
+
+    // ---- Unified unary vector function ----
+
+    template <typename Traits, typename Policy>
+    class DecimalUnaryFunc : public VectorFunction {
+    public:
+        void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType,
+                   BaseVector *&result, op::ExecutionContext *context) const override
+        {
+            if (args.empty()) { return; }
+            auto *input = args.top();
+            args.pop();
+
+            const auto size = context->GetResultRowSize();
+            int32_t inScale = GetDecScale<Traits>(input);
+            int32_t inPrec = GetDecPrecision<Traits>(input);
+            int32_t outScale = Policy::outputScale(inScale);
+            int32_t outPrec = Policy::outputPrecision(inPrec);
+
+            if (result == nullptr) {
+                auto outDt = std::make_shared<typename Traits::DataType>(outPrec, outScale);
+                result = VectorHelper::CreateComplexVector(outDt.get(), size);
+            } else {
+                SetDecResultMeta<Traits>(result, outPrec, outScale);
+            }
+
+            auto *resultVec = static_cast<Vector<typename Traits::ValueType> *>(result);
+            for (int32_t i = 0; i < size; i++) {
+                typename Traits::ValueType val;
+                if (VectorHelper::GetValueFromVector<typename Traits::ValueType>(input, i, val)) {
+                    resultVec->SetValue(i, Policy::apply(val, inScale));
+                } else {
+                    result->SetNull(i);
+                }
+            }
+            delete input;
+        }
+    };
+
+    // ---- Unified abs policy: preserves scale/precision, negates if negative ----
+
+    template <typename Traits>
+    struct AbsDecPolicy {
+        using VT = typename Traits::ValueType;
+        using WT = typename Traits::WideType;
+
+        static int32_t outputScale(int32_t inScale) { return inScale; }
+        static int32_t outputPrecision(int32_t inPrec) { return inPrec; }
+
+        static VT apply(VT val, int32_t /*scale*/)
+        {
+            WT v = Traits::toWide(val);
+            if (v < 0) {
+                v = -v;
+            }
+            return Traits::fromWide(v);
+        }
+    };
+
+    // ---- Convenience aliases for floor/ceil/abs on DECIMAL64 / DECIMAL128 ----
+
+    using FloorDec64Func  = DecimalUnaryFunc<Decimal64Traits,  DecimalRoundPolicy<Decimal64Traits,  true>>;
+    using CeilDec64Func   = DecimalUnaryFunc<Decimal64Traits,  DecimalRoundPolicy<Decimal64Traits,  false>>;
+    using FloorDec128Func = DecimalUnaryFunc<Decimal128Traits, DecimalRoundPolicy<Decimal128Traits, true>>;
+    using CeilDec128Func  = DecimalUnaryFunc<Decimal128Traits, DecimalRoundPolicy<Decimal128Traits, false>>;
+    using AbsDec64Func    = DecimalUnaryFunc<Decimal64Traits,  AbsDecPolicy<Decimal64Traits>>;
+    using AbsDec128Func   = DecimalUnaryFunc<Decimal128Traits, AbsDecPolicy<Decimal128Traits>>;
 }
