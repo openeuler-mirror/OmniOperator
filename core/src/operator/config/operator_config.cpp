@@ -104,10 +104,10 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
             case SPILL_CONFIG_SPARK: {
                 auto numElementsForSpillThreshold =
                     result.at("spillConfig").at("numElementsForSpillThreshold").get<int32_t>();
-                auto memUsagePctForSpillThreshold =
-                    result.at("spillConfig").at("memUsagePctForSpillThreshold").get<int32_t>();
+                auto memUsageFractionForSpillThreshold =
+                    result.at("spillConfig").at("memUsageFractionForSpillThreshold").get<double>();
                 resultSpillConfig = new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes,
-                    numElementsForSpillThreshold, memUsagePctForSpillThreshold, writeBufferSize, false);
+                    numElementsForSpillThreshold, memUsageFractionForSpillThreshold, writeBufferSize, false);
                 break;
             }
             default: {

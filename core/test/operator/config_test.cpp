@@ -2,6 +2,9 @@
 * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  */
 
+#include <cmath>
+#include <limits>
+#include "operator/config/operator_config.h"
 #include "util/config/ConfigBase.h"
 #include "util/config/QueryConfig.h"
 #include "util/format.h"
@@ -150,5 +153,87 @@ TEST(ConfigTest, maxRowCount)
         const QueryConfig config(configData);
         ASSERT_EQ(config.maxRowCount(), testConfig.expectedMaxRowCount);
     }
+}
+
+namespace {
+class ScopedSpillTestMemoryLimit {
+public:
+    explicit ScopedSpillTestMemoryLimit(int64_t limit)
+        : previous_(mem::MemoryManager::GetGlobalMemoryLimit())
+    {
+        mem::MemoryManager::SetGlobalMemoryLimit(limit);
+    }
+    ~ScopedSpillTestMemoryLimit()
+    {
+        mem::MemoryManager::SetGlobalMemoryLimit(previous_);
+    }
+private:
+    int64_t previous_;
+};
+}
+
+TEST(ConfigTest, spillMemoryFractionsPreserveDecimalsAndDefaults)
+{
+    const QueryConfig defaults;
+    EXPECT_DOUBLE_EQ(defaults.memFraction(), 0.1);
+    EXPECT_DOUBLE_EQ(defaults.SpillMemFraction(), 0.9);
+    for (const auto &value : {"0.9", "0.123456789", "1e-7", "1", " 0.9 "}) {
+        const QueryConfig config(std::unordered_map<std::string, std::string>{
+            {QueryConfig::kMemFraction, value}, {QueryConfig::KColumnarSpillMemThreshold, value}});
+        EXPECT_DOUBLE_EQ(config.memFraction(), std::stod(value));
+        EXPECT_DOUBLE_EQ(config.SpillMemFraction(), std::stod(value));
+    }
+}
+
+TEST(ConfigTest, spillMemoryFractionsRejectPercentagesAndMalformedValues)
+{
+    for (const auto &value : {"90", "0", "-0.1", "1.1", "nan", "inf", "0.9junk", "0.9 junk", ""}) {
+        SCOPED_TRACE(value);
+        const QueryConfig config(std::unordered_map<std::string, std::string>{
+            {QueryConfig::kMemFraction, value}, {QueryConfig::KColumnarSpillMemThreshold, value}});
+        EXPECT_THROW(config.memFraction(), exception::OmniException);
+        EXPECT_THROW(config.SpillMemFraction(), exception::OmniException);
+    }
+}
+
+TEST(ConfigTest, sparkSpillThresholdUsesFractionWithoutDividingAgain)
+{
+    const ScopedSpillTestMemoryLimit memoryLimit(1000000);
+    EXPECT_EQ(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX).GetSpillMemThreshold(), 900000);
+    EXPECT_EQ(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, 0.125).GetSpillMemThreshold(), 125000);
+    EXPECT_EQ(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, 1.0).GetSpillMemThreshold(), 1000000);
+    for (double fraction : {0.0, -0.1, 90.0, std::numeric_limits<double>::quiet_NaN(),
+                            std::numeric_limits<double>::infinity()}) {
+        EXPECT_THROW(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, fraction), exception::OmniException);
+    }
+}
+
+TEST(ConfigTest, sparkSpillThresholdPreservesUnlimitedAndMaximumLimits)
+{
+    {
+        const ScopedSpillTestMemoryLimit memoryLimit(mem::MemoryManager::UNLIMIT);
+        EXPECT_EQ(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, 0.9).GetSpillMemThreshold(), INT64_MAX);
+    }
+    {
+        const ScopedSpillTestMemoryLimit memoryLimit(INT64_MAX);
+        EXPECT_EQ(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, 1.0).GetSpillMemThreshold(), INT64_MAX);
+        const auto threshold = op::SparkSpillConfig(
+            "/tmp", UINT64_MAX, INT32_MAX, std::nextafter(1.0, 0.0)).GetSpillMemThreshold();
+        EXPECT_GT(threshold, 0);
+        EXPECT_LT(threshold, INT64_MAX);
+    }
+}
+
+TEST(ConfigTest, sparkSpillJsonPreservesDecimals)
+{
+    const ScopedSpillTestMemoryLimit memoryLimit(1000000);
+    nlohmann::json config = {{"spillConfig", {
+        {"spillConfigId", "SPILL_CONFIG_SPARK"}, {"spillEnabled", true}, {"spillPath", "/tmp"},
+        {"maxSpillBytes", 1024}, {"writeBufferSize", 0}, {"numElementsForSpillThreshold", INT32_MAX},
+        {"memUsageFractionForSpillThreshold", 0.125}}}};
+    auto decoded = op::OperatorConfig::DeserializeOperatorConfig(config.dump());
+    auto *spill = dynamic_cast<op::SparkSpillConfig *>(decoded.GetSpillConfig());
+    ASSERT_NE(spill, nullptr);
+    EXPECT_EQ(spill->GetSpillMemThreshold(), 125000);
 }
 }

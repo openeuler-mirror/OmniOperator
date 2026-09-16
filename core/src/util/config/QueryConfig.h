@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include "ConfigBase.h"
@@ -355,10 +356,10 @@ public:
         return get<int32_t>(kMinSpillableReservationPct, kDefaultPct);
     }
 
-    int32_t memFractionPct() const
+    double memFraction() const
     {
-        constexpr int32_t kDefaultPct = 10;
-        return get<int32_t>(kMemFraction, kDefaultPct);
+        // Preserve the native-only default of 10%; Gluten supplies its own fraction.
+        return getSpillMemoryFraction(kMemFraction, 0.1);
     }
 
     int32_t spillableReservationGrowthPct() const
@@ -384,10 +385,9 @@ public:
         return std::optional<T>(config_->Get<T>(key));
     }
 
-    uint64_t SpillMemThreshold() const
+    double SpillMemFraction() const
     {
-        constexpr uint64_t kDefaultValue = 90;
-        return get<uint64_t>(KColumnarSpillMemThreshold, kDefaultValue);
+        return getSpillMemoryFraction(KColumnarSpillMemThreshold, 0.9);
     }
 
     uint64_t SpillWriteBufferSize() const
@@ -504,6 +504,21 @@ public:
     void testingOverrideConfigUnsafe(std::unordered_map<std::string, std::string> &&values);
 
 private:
+    double getSpillMemoryFraction(const char *key, double defaultFraction) const
+    {
+        // Entry parsers receive the complete raw string, including any invalid suffix.
+        const ConfigBase::Entry<double> entry(key, defaultFraction, ToString<double>,
+            [](const std::string &configKey, const std::string &value) {
+                std::istringstream input(value);
+                double fraction = 0.0;
+                input >> fraction;
+                OMNI_CHECK(input && (input >> std::ws).eof() && fraction > 0.0 && fraction <= 1.0,
+                    "Invalid spill memory fraction for '{}': '{}'; expected a number in (0, 1]", configKey, value);
+                return fraction;
+            });
+        return config_->Get(entry);
+    }
+
     void ValidateConfig();
 
     std::shared_ptr<ConfigBase> config_;
