@@ -939,6 +939,12 @@ void ExpressionCodeGen::Visit(const IsNullExpr &isNullExpr)
     this->value = make_shared<CodeGenValue>(result, llvmTypes->CreateConstantBool(false));
 }
 
+// SimilarExpr only supports the vectorized path; codegen returns invalid so the evaluator falls back.
+void ExpressionCodeGen::Visit(const SimilarExpr &similarExpr)
+{
+    this->value = CreateInvalidCodeGenValue();
+}
+
 template <bool isNeedVerifyResult, bool isNeedVerifyVal>
 std::vector<Value *> ExpressionCodeGen::GetDefaultFunctionArgValues(
     const FuncExpr &fExpr, Value **isAnyNull, bool &isInvalidExpr)

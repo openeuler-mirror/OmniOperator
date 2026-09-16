@@ -336,6 +336,21 @@ void ExprVerifier::Visit(const IsNullExpr &isNullExpr)
     }
 }
 
+void ExprVerifier::Visit(const SimilarExpr &similarExpr)
+{
+    if (similarExpr.vectorFunction == nullptr) {
+        this->isSupportVectorization_ = false;
+    }
+    if (!VisitExpr(*similarExpr.value)) {
+        this->isSupportCodegen_ = false;
+        return;
+    }
+    if (!VisitExpr(*similarExpr.pattern)) {
+        this->isSupportCodegen_ = false;
+        return;
+    }
+}
+
 void ExprVerifier::Visit(const FuncExpr &funcExpr)
 {
     if (funcExpr.vectorFunction == nullptr) {

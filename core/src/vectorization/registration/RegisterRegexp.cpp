@@ -5,6 +5,7 @@
 
 #include <string>
 #include "../functions/RLike.h"
+#include "../functions/Similar.h"
 #include "../functions/RegexpExtractAll.h"
 #include "../functions/RegexpReplaceFunction.h"
 #include "RegistrationHelpers.h"
@@ -13,6 +14,13 @@ namespace omniruntime::vectorization {
 void RegisterRegexpFunctions(const std::string& prefix) {
     auto rlikeFunction = std::make_shared<RLikeFunction>();
     VectorFunction::RegisterVectorFunction("RLike", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, rlikeFunction);
+    auto similarFunction = std::make_shared<SimilarFunction>();
+    // Value column is VARCHAR while a pattern literal is CHAR; cover all VARCHAR/CHAR combos so the
+    // signature lookup always hits. SimilarFunction reads both via string_view (same runtime container).
+    VectorFunction::RegisterVectorFunction("similar_to", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, similarFunction);
+    VectorFunction::RegisterVectorFunction("similar_to", {OMNI_VARCHAR, OMNI_CHAR}, OMNI_BOOLEAN, similarFunction);
+    VectorFunction::RegisterVectorFunction("similar_to", {OMNI_CHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, similarFunction);
+    VectorFunction::RegisterVectorFunction("similar_to", {OMNI_CHAR, OMNI_CHAR}, OMNI_BOOLEAN, similarFunction);
     auto regexpReplaceFunction = std::make_shared<RegexpReplaceFunction>();
     VectorFunction::RegisterVectorFunction(prefix + "regexp_replace", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT},
         OMNI_VARCHAR, regexpReplaceFunction);

@@ -90,6 +90,7 @@ public:
     void Visit(const CoalesceExpr &e) override;
 
     void Visit(const IsNullExpr &e) override;
+    void Visit(const SimilarExpr &e) override;
 
     void Visit(const FuncExpr &e) override;
 

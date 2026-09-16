@@ -51,6 +51,11 @@ void IsNullExpr::Accept(ExprVisitor &visitor) const
     return visitor.Visit(*this);
 }
 
+void SimilarExpr::Accept(ExprVisitor &visitor) const
+{
+    return visitor.Visit(*this);
+}
+
 void FuncExpr::Accept(ExprVisitor &visitor) const
 {
     return visitor.Visit(*this);

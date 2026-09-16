@@ -76,6 +76,7 @@ enum class ExprType {
     SWITCH_E,
     COALESCE_E,
     IS_NULL_E,
+    SIMILAR_E,
     FUNC_E,
     LAMBDA_E,
     PARAM_REF_E,
@@ -514,6 +515,32 @@ public:
         std::string indent = "";
         std::string output = indent + "IsNull:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(";
         output += this->value->toString();
+        output += ")";
+        return output;
+    }
+};
+
+// SIMILAR TO: SQL regex match, vectorized via SimilarFunction (re2 FullMatch + SQL->regex conversion)
+class SimilarExpr : public Expr {
+public:
+    Expr *value = nullptr;
+    Expr *pattern = nullptr;
+    SimilarExpr();
+    ~SimilarExpr() override;
+    SimilarExpr(Expr *value, Expr *pattern);
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
+    bool supportVectorized() const override
+    {
+        return vectorFunction != nullptr && value->supportVectorized() && pattern->supportVectorized();
+    }
+    std::string toString() const override
+    {
+        std::string output = "Similar:" + TypeUtil::TypeToString(this->GetReturnTypeId()) + "(";
+        output += this->value->toString();
+        output += ", ";
+        output += this->pattern->toString();
         output += ")";
         return output;
     }

@@ -477,6 +477,12 @@ void BatchExpressionCodeGen::Visit(const IsNullExpr &isNullExpr)
     this->value = std::make_shared<CodeGenValue>(isNullValue->isNull, nullArrayPtr);
 }
 
+// SimilarExpr only supports the vectorized path; batch codegen returns invalid so the evaluator falls back.
+void BatchExpressionCodeGen::Visit(const SimilarExpr &similarExpr)
+{
+    this->value = CreateInvalidCodeGenValue();
+}
+
 llvm::AllocaInst *BatchExpressionCodeGen::GetResultArray(omniruntime::type::DataTypeId dataTypeId, Value *rowCnt)
 {
     AllocaInst *resultArray = nullptr;

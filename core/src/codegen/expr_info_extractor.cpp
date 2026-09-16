@@ -72,6 +72,12 @@ void ExprInfoExtractor::Visit(const IsNullExpr &e)
     e.value->Accept(*this);
 }
 
+void ExprInfoExtractor::Visit(const SimilarExpr &e)
+{
+    e.value->Accept(*this);
+    e.pattern->Accept(*this);
+}
+
 void ExprInfoExtractor::Visit(const FuncExpr &e)
 {
     for (auto arg : e.arguments) {

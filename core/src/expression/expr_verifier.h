@@ -20,6 +20,7 @@ public:
     void Visit(const omniruntime::expressions::IfExpr &ifExpr) override;
     void Visit(const omniruntime::expressions::CoalesceExpr &coalesceExpr) override;
     void Visit(const omniruntime::expressions::IsNullExpr &isNullExpr) override;
+    void Visit(const omniruntime::expressions::SimilarExpr &similarExpr) override;
     void Visit(const omniruntime::expressions::FuncExpr &funcExpr) override;
     void Visit(const omniruntime::expressions::SwitchExpr &switchExpr) override;
     void Visit(const omniruntime::expressions::ParamRefExpr &paramRefExpr) override;
