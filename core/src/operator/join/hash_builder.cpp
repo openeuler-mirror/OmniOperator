@@ -18,9 +18,17 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, const 
         throw OmniException("OPERATOR_RUNTIME_ERROR", "operatorCount is not in the acceptable range [1, 10000].");
     }
     if (joinType != OMNI_JOIN_TYPE_FULL) {
+#ifdef OMNI_USE_TAPER_JOIN
+        hashTablesVariants = InitTaperVariant<false>(buildHashColsCount, operatorCount, joinType);
+#else
         hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType);
+#endif
     } else {
+#ifdef OMNI_USE_TAPER_JOIN
+        hashTablesVariants = InitTaperVariant<true>(buildHashColsCount, operatorCount, joinType);
+#else
         hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType);
+#endif
     }
 }
 
@@ -35,9 +43,17 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, BuildS
     }
     if (joinType == OMNI_JOIN_TYPE_FULL || (joinType == OMNI_JOIN_TYPE_LEFT && buildSide == OMNI_BUILD_LEFT)
         || (joinType == OMNI_JOIN_TYPE_RIGHT && buildSide == OMNI_BUILD_RIGHT)) {
+#ifdef OMNI_USE_TAPER_JOIN
+        hashTablesVariants = InitTaperVariant<true>(buildHashColsCount, operatorCount, joinType, buildSide);
+#else
         hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType, buildSide);
+#endif
     } else {
+#ifdef OMNI_USE_TAPER_JOIN
+        hashTablesVariants = InitTaperVariant<false>(buildHashColsCount, operatorCount, joinType, buildSide);
+#else
         hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType, buildSide);
+#endif
     }
 }
 
@@ -198,6 +214,7 @@ int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVec
             arg.BuildHashTable(partitionIndex);
         },
         *hashTablesVariants);
+#ifndef OMNI_USE_TAPER_JOIN
     if (UNLIKELY(IsDebugEnable())) {
         int32_t hashTableSize = 0;
         auto hashTableType =
@@ -220,6 +237,7 @@ int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVec
         }
         UpdateGetOutputInfo(hashTableSize);
     }
+#endif
     SetStatus(OMNI_STATUS_FINISHED);
     std::visit([&](auto &&arg) { arg.SetStatus(OMNI_STATUS_FINISHED); }, *hashTablesVariants);
     return 0;

@@ -191,7 +191,8 @@ static int64_t TruncateTimestamp(int64_t timestampMicros, DateTruncMode level,
                 } catch (const std::runtime_error&) {
                     auto corrected = timeZone->correct_nonexistent_time(
                         std::chrono::seconds(truncatedLocalEpoch));
-                    auto utcResult = timeZone->to_sys(corrected);
+                    auto utcResult = timeZone->to_sys(
+                        corrected, tz::TimeZone::TChoose::kEarliest);
                     return static_cast<int64_t>(utcResult.count()) * 1000000LL;
                 }
             }

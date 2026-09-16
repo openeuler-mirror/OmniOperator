@@ -435,6 +435,13 @@ template <typename T> extern DLLEXPORT T Negative(T a) {
     }
     return result;
 }
+
+// Adaptor emits FUNCTION is_true / is_false / is_not_true / is_not_false.
+// Same INPUT_DATA + trailing isNull layout as GetHourFromTimestamp.
+extern "C" DLLEXPORT bool IsTrue(bool value, bool isNull);
+extern "C" DLLEXPORT bool IsFalse(bool value, bool isNull);
+extern "C" DLLEXPORT bool IsNotTrue(bool value, bool isNull);
+extern "C" DLLEXPORT bool IsNotFalse(bool value, bool isNull);
 }
 
 #endif

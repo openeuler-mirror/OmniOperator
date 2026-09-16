@@ -434,6 +434,9 @@ Expr *JSONParser::ParseJsonIsNotNull(const Json &jsonExpr)
 {
     using Operator = omniruntime::expressions::Operator;
     Expr *val = ParseJSON(jsonExpr["arguments"].at(0));
+    if (val == nullptr) {
+        return nullptr;
+    }
     auto isNullExpr = new IsNullExpr(val);
     return new UnaryExpr(Operator::NOT, isNullExpr, std::make_shared<BooleanDataType>());
 }
