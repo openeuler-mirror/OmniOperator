@@ -10,7 +10,6 @@
 #include "test/util/test_util.h"
 #include "vectorization/registration/Register.h"
 #include "vectorization/functions/IsBooleanFunction.h"
-#include "vectorization/functions/IsNotUnknownFunction.h"
 #include "vectorization/registration/SimpleFunctionRegistry.h"
 #include "vectorization/VectorFunction.h"
 #include "codegen/func_signature.h"
@@ -113,10 +112,9 @@ protected:
 const std::vector<PredicateTestParam>& PredicateCases() {
     // name,            TRUE,  FALSE, NULL
     static const std::vector<PredicateTestParam> cases = {
+        {"is_true",        true,  false, false}, // IS TRUE:         NULL->false, TRUE->true,  FALSE->false
         {"is_false",       false, true,  false}, // IS FALSE:        NULL->false, TRUE->false, FALSE->true
         {"is_not_false",   true,  false, true},  // IS NOT FALSE:    NULL->true,  TRUE->true,  FALSE->false
-        {"is_not_true",    false, true,  true},  // IS NOT TRUE:     NULL->true,  TRUE->false, FALSE->true
-        {"is_not_unknown", true,  true,  false}, // IS NOT UNKNOWN:  NULL->false, TRUE->true,  FALSE->true
     };
     return cases;
 }

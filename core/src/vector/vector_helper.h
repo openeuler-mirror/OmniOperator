@@ -314,6 +314,14 @@ public:
                 return true;
             }
         }
+        if (encoding == OMNI_DICTIONARY) {
+            auto *dictVec = static_cast<Vector<DictionaryContainer<T>> *>(vec);
+            if (dictVec->IsNull(row)) {
+                return false;
+            }
+            result = dictVec->GetValue(row);
+            return true;
+        }
         OMNI_THROW("GetValueFromVector Failed! ", "Unsupported encoding type");
     }
 
