@@ -48,6 +48,7 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<TanFunction, double, double>(prefix + "tan", {OMNI_DOUBLE}, OMNI_DOUBLE);
 	RegisterFunction<CbrtFunction, double, double>(prefix + "cbrt", {OMNI_DOUBLE}, OMNI_DOUBLE);
 	RegisterFunction<CeilFunction, int64_t, int64_t>(prefix + "ceil", {OMNI_LONG}, OMNI_LONG);
+    RegisterFunction<CeilFunction, int64_t, double>(prefix + "ceil", {OMNI_DOUBLE}, OMNI_LONG);
     RegisterFunction<CeilFunction, int32_t, int32_t>(prefix + "ceil", {OMNI_INT}, OMNI_INT);
 	RegisterFunction<CeilFunction, double, double>(prefix + "ceil", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SignFunction, double, double>(prefix + "sign", {OMNI_DOUBLE}, OMNI_DOUBLE);
@@ -119,6 +120,7 @@ void RegisterMathFunctions(const std::string &prefix)
 
     // Register floor: floor(long) -> long, floor(double) -> long (Spark), floor(double) -> double (Flink)
     // In Spark, floor must return Long type; in Flink, floor(DOUBLE) returns DOUBLE
+    RegisterFunction<FloorFunction, int64_t, double>(prefix + "floor", {OMNI_DOUBLE}, OMNI_LONG);
     RegisterFunction<FloorFunction, int32_t, int32_t>(prefix + "floor", {OMNI_INT}, OMNI_INT);
     RegisterFunction<FloorFunction, int64_t, int64_t>(prefix + "floor", {OMNI_LONG}, OMNI_LONG);
     RegisterFunction<FloorFunction, double, double>(prefix + "floor", {OMNI_DOUBLE}, OMNI_DOUBLE);
