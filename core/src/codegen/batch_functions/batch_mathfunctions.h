@@ -225,5 +225,10 @@ template <typename T> extern DLLEXPORT void BatchNegative(T *x, bool *resIsNull,
     }
 }
 
+extern "C" DLLEXPORT void BatchIsTrue(bool *value, bool *resIsNull, bool *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchIsFalse(bool *value, bool *resIsNull, bool *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchIsNotTrue(bool *value, bool *resIsNull, bool *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchIsNotFalse(bool *value, bool *resIsNull, bool *output, int32_t rowCnt);
+
 }
 #endif // OMNI_RUNTIME_BATCH_MATHFUNCTIONS_H

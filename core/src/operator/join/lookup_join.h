@@ -5,11 +5,15 @@
 #ifndef __LOOKUP_JOIN_H__
 #define __LOOKUP_JOIN_H__
 
+#include <functional>
 #include <memory>
+#include <string_view>
 #include "plannode/planNode.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "operator/filter/filter_and_project.h"
+#include "operator/join/taper_join_hash_table_variants.h"
+#include "operator/hashmap/row_container.h"
 #include "type/data_types.h"
 #include "type/data_type.h"
 #include "hash_builder.h"
@@ -29,6 +33,8 @@ public:
     void BuildOutput(BaseVector **probeOutputColumns, JoinType joinType,
                      bool isShuffleExchangeBuildPlan, VectorBatch **outputVecBatch, BuildSide buildSide);
     void ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeAllColumns, int32_t rowCount);
+    template <bool isInnerJoin, bool isShuffleExchangeBuildPlan>
+    void ConstructBuildColumnWithTaper(VectorBatch *vectorBatch, int32_t rowCount);
     template <bool isInnerJoin, bool isShuffleExchangeBuildPlan>
     void ConstructBuildColumns(VectorBatch *vectorBatch, int32_t rowCount);
     template<bool isMatched> void AppendExistenceRow(int32_t probePosition);
@@ -53,8 +59,25 @@ public:
     {
         probeRowOffset = 0;
         probeRowCount = 0;
-        probeBuildIndex.clear();
+        probePositions.clear();
+        buildRefs.clear();
+        buildArrays.clear();
         existJoinBuildIndex.clear();
+        taperRC_ = nullptr;
+        taperStoredColIndices_.clear();
+        taperVarcharResolver_ = nullptr;
+        taperNeedsUnvisited_ = false;
+    }
+
+    void AppendRowTaper(int32_t probePosition, omniruntime::vec::BaseVector*** array, uint64_t address, char* rowPtr);
+    void AppendRowsTaper(int32_t probePosition, char* const* rows, int32_t count);
+    void AppendRowsTaperBatched(const int32_t* positions, char* const* rows, int32_t count);
+    void SetTaperOutput(const omniruntime::op::RowContainer* rc, const std::vector<int32_t>& storedCols,
+        const omniruntime::op::RowContainer::VarcharResolver* varcharResolver = nullptr);
+    ALWAYS_INLINE void SetTaperNeedsUnvisited() { taperNeedsUnvisited_ = true; }
+    ALWAYS_INLINE const omniruntime::op::RowContainer::VarcharResolver* GetTaperVarcharResolver() const
+    {
+        return taperVarcharResolver_;
     }
 
     static const uint32_t SHIFT_SIZE_32 = 32;
@@ -78,10 +101,10 @@ private:
         int32_t rowCount)
     {
         auto probeOutputColsCount = probeOutputCols.size();
-        auto tempIndex = probeBuildIndex.data() + probeRowOffset;
-        int32_t probePositions[rowCount];
+        auto tempIndex = probePositions.data() + probeRowOffset;
+        int32_t probePositionsTmp[rowCount];
         for (int32_t i = 0; i < rowCount; ++i) {
-            probePositions[i] = std::get<0>(tempIndex[i]);
+            probePositionsTmp[i] = tempIndex[i];
         }
         for (size_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
@@ -92,13 +115,13 @@ private:
             if (column->GetEncoding() == vec::OMNI_ENCODING_CONST) {
                 probeColumn = VectorHelper::SliceVector(column, 0, rowCount);
             } else if (column->GetEncoding() == vec::OMNI_ENCODING_ARRAY || column->GetEncoding() == vec::OMNI_ENCODING_STRUCT) {
-                probeColumn = column->CopyPositions(probePositions, 0, rowCount);
+                probeColumn = column->CopyPositions(probePositionsTmp, 0, rowCount);
             } else if (column->GetEncoding() == vec::OMNI_DICTIONARY) {
-                probeColumn = VectorHelper::CopyPositionsVector(column, probePositions, 0, rowCount);
+                probeColumn = VectorHelper::CopyPositionsVector(column, probePositionsTmp, 0, rowCount);
             } else if (column->GetEncoding() == vec::OMNI_ENCODING_MAP) {
-                probeColumn = column->CopyPositions(probePositions, 0, rowCount);
+                probeColumn = column->CopyPositions(probePositionsTmp, 0, rowCount);
             } else {
-                probeColumn = VectorHelper::CreateDictionaryVector(probePositions, rowCount, column, type);
+                probeColumn = VectorHelper::CreateDictionaryVector(probePositionsTmp, rowCount, column, type);
             }
             vectorBatch->Append(probeColumn);
         }
@@ -119,7 +142,7 @@ private:
         int32_t rowCount)
     {
         auto probeOutputColsCount = probeOutputCols.size();
-        auto offset = std::get<0>(probeBuildIndex[probeRowOffset]);
+        auto offset = probePositions[probeRowOffset];
         for (size_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
             auto resultColumn = VectorHelper::SliceVector(column, offset, rowCount);
@@ -135,8 +158,14 @@ private:
     DataTypes buildOutputTypes;
     int32_t probeRowCount = 0;
     int32_t probeRowOffset = 0;
-    std::vector<std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t>> probeBuildIndex;
+    std::vector<int32_t> probePositions;
+    std::vector<uint64_t> buildRefs;
+    std::vector<BaseVector ***> buildArrays;
     std::vector<bool> existJoinBuildIndex;
+    const RowContainer* taperRC_ = nullptr;
+    std::vector<int32_t> taperStoredColIndices_;
+    const RowContainer::VarcharResolver* taperVarcharResolver_ = nullptr;
+    bool taperNeedsUnvisited_ = false;
 };
 
 class LookupJoinOperatorFactory : public OperatorFactory {
@@ -227,12 +256,22 @@ private:
     void ArrayJoinProbe(BaseVector ***buildColumns, size_t probeHashColsCount,
                         T &&arg, ExecutionContext *contextPtr);
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForInnerJoin();
+    template <bool hasJoinFilter, JoinType joinType> void TaperArrayJoinProbeSIMD();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForOppositeSideOuterJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForSameSideOuterJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForFullJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftSemiJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftAntiJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForExistenceJoin();
+
+#ifdef OMNI_USE_TAPER_JOIN
+    bool IsTaperTable();
+
+    bool EvaluateBuildFilter(char* row, const RowContainer* rc, ExecutionContext* contextPtr);
+
+    template <bool singleHT, typename Variant>
+    void TaperFindBatch(Variant& varg, int32_t inputRowCount);
+#endif
     template <bool hasJoinFilter> void ProbeJoinPosition(int32_t probePosition);
     bool BuildJoinPosition(uint32_t partition, uint32_t buildRowIdx,
                            uint32_t buildBatchIdx, ExecutionContext *contextPtr);
@@ -305,6 +344,12 @@ private:
     std::vector<BaseVector **> *buildFilterColPtrs = nullptr;
     size_t probeFilterColsSize = 0;
     size_t buildFilterColsSize = 0;
+    std::vector<omniruntime::vec::BaseVector**> taperRowPtrs;
+    omniruntime::op::RowContainer* taperRC_ = nullptr;
+    std::vector<int32_t> taperStoredColIndices_;
+    bool taperNeedsUnvisited_ = false;
+    std::vector<char*> taperChainHeads_;
+    omniruntime::vec::VectorBatch* taperChainHeadsBatch_ = nullptr;
 };
 } // end of op
 } // end of omniruntime

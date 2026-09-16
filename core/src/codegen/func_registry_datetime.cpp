@@ -17,6 +17,12 @@ std::vector<Function> DateTimeFunctionRegistry::GetFunctions()
                  {OMNI_LONG}, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(GetHourFromTimestampWithTz), "get_hour_with_tz", {},
                  {OMNI_LONG, OMNI_VARCHAR}, OMNI_INT, INPUT_DATA),
+        // Adaptor EXTRACT(HOUR) emits flink_hour / flink_hour_with_tz. Alias the
+        // existing codegen impl so ExprVerifier can keep the codegen path.
+        Function(reinterpret_cast<void *>(GetHourFromTimestamp), "flink_hour", {},
+                 {OMNI_LONG}, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(GetHourFromTimestampWithTz), "flink_hour_with_tz", {},
+                 {OMNI_LONG, OMNI_VARCHAR}, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(UnixTimestampFromStr), "unix_timestamp", {},
             { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(UnixTimestampFromDate), "unix_timestamp", {},
@@ -52,7 +58,26 @@ std::vector<Function> DateTimeFunctionRegistry::GetFunctions()
             INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
         Function(reinterpret_cast<void*>(DateAddDays), "date_add_days", {},
             {OMNI_LONG, OMNI_INT}, OMNI_LONG,
-            INPUT_DATA_AND_NULL_AND_RETURN_NULL)
+            INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimePlusYearMonthDate), "datetime_plus_year_month", {},
+            {OMNI_DATE32, OMNI_INT}, OMNI_DATE32, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimePlusYearMonthTimestamp), "datetime_plus_year_month", {},
+            {OMNI_LONG, OMNI_INT}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(TimePlusYearMonth), "time_plus_year_month", {},
+            {OMNI_LONG, OMNI_INT}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimePlusDayTimeDate), "datetime_plus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_DATE32, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimePlusDayTimeDateTimestamp), "datetime_plus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimePlusDayTimeTimestamp), "datetime_plus_day_time", {},
+            {OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        // Adaptor timestamp - INTERVAL emits datetime_minus_day_time (old path was BINARY SUBTRACT).
+        Function(reinterpret_cast<void *>(DateTimeMinusDayTimeDate), "datetime_minus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_DATE32, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimeMinusDayTimeDateTimestamp), "datetime_minus_day_time", {},
+            {OMNI_DATE32, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(DateTimeMinusDayTimeTimestamp), "datetime_minus_day_time", {},
+            {OMNI_LONG, OMNI_LONG}, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL)
     };
     return dateTimeFnRegistry;
 };
