@@ -98,6 +98,7 @@ void RegisterConversionFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("CAST", {OMNI_DOUBLE}, OMNI_DOUBLE, castFunction);
     VectorFunction::RegisterVectorFunction("CAST", {OMNI_BOOLEAN}, OMNI_BOOLEAN, castFunction);
     VectorFunction::RegisterVectorFunction("CAST", {OMNI_VARCHAR}, OMNI_VARCHAR, castFunction);
+    VectorFunction::RegisterVectorFunction("CAST", {OMNI_CHAR}, OMNI_VARCHAR, castFunction);
 
 
     // Decimal64 conversions

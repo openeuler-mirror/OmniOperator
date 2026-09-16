@@ -384,10 +384,19 @@ void ExprEval::Visit(const FieldExpr &e)
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
-            case OMNI_DECIMAL64:
             case OMNI_INTERVAL_DAY_TIME:
                 inputValues_.push(ColumnProjectionCopyPositionsHelper<int64_t>(colVec, selectRow, selectSize));
                 break;
+            case OMNI_DECIMAL64:
+            {
+                auto projVec = ColumnProjectionCopyPositionsHelper<int64_t>(colVec, selectRow, selectSize);
+                auto retType = e.GetReturnType();
+                if (retType != nullptr) {
+                    VectorHelper::SetVectorDataType(projVec, retType.get());
+                }
+                inputValues_.push(projVec);
+                break;
+            }
             case OMNI_DOUBLE:
                 inputValues_.push(ColumnProjectionCopyPositionsHelper<double>(colVec, selectRow, selectSize));
                 break;
@@ -398,8 +407,15 @@ void ExprEval::Visit(const FieldExpr &e)
                 inputValues_.push(ColumnProjectionCopyPositionsHelper<bool>(colVec, selectRow, selectSize));
                 break;
             case OMNI_DECIMAL128:
-                inputValues_.push(ColumnProjectionCopyPositionsHelper<Decimal128>(colVec, selectRow, selectSize));
+            {
+                auto projVec = ColumnProjectionCopyPositionsHelper<Decimal128>(colVec, selectRow, selectSize);
+                auto retType = e.GetReturnType();
+                if (retType != nullptr) {
+                    VectorHelper::SetVectorDataType(projVec, retType.get());
+                }
+                inputValues_.push(projVec);
                 break;
+            }
             case OMNI_VARCHAR:
             case OMNI_CHAR:
             case OMNI_VARBINARY:
@@ -433,10 +449,19 @@ void ExprEval::Visit(const FieldExpr &e)
             break;
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
-        case OMNI_DECIMAL64:
         case OMNI_INTERVAL_DAY_TIME:
             inputValues_.push(ColumnProjectionHelper<int64_t>(colVec, rowSize));
             break;
+        case OMNI_DECIMAL64:
+        {
+            auto projVec = ColumnProjectionHelper<int64_t>(colVec, rowSize);
+            auto retType = e.GetReturnType();
+            if (retType != nullptr) {
+                VectorHelper::SetVectorDataType(projVec, retType.get());
+            }
+            inputValues_.push(projVec);
+            break;
+        }
         case OMNI_DOUBLE:
             inputValues_.push(ColumnProjectionHelper<double>(colVec, rowSize));
             break;
@@ -447,8 +472,15 @@ void ExprEval::Visit(const FieldExpr &e)
             inputValues_.push(ColumnProjectionHelper<bool>(colVec, rowSize));
             break;
         case OMNI_DECIMAL128:
-            inputValues_.push(ColumnProjectionHelper<Decimal128>(colVec, rowSize));
+        {
+            auto projVec = ColumnProjectionHelper<Decimal128>(colVec, rowSize);
+            auto retType = e.GetReturnType();
+            if (retType != nullptr) {
+                VectorHelper::SetVectorDataType(projVec, retType.get());
+            }
+            inputValues_.push(projVec);
             break;
+        }
         case OMNI_VARCHAR:
         case OMNI_CHAR:
         case OMNI_VARBINARY:

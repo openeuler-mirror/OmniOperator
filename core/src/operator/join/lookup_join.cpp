@@ -980,15 +980,27 @@ template <bool hasJoinFilter, JoinType joinType> void LookupJoinOperator::TaperA
             return EvaluateBuildFilter(row, rc, contextPtr);
         };
 
+        // Unmatched probe row emission for outer/anti/existence joins.
+        // EXISTENCE join must emit AppendExistenceRow<false> (marker=false),
+        // same as the non-SIMD listResult path; dropping it loses rows.
+        auto emitMiss = [&](int32_t pos) {
+            if constexpr (joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                outputBuilder->AppendExistenceRow<false>(pos);
+            } else {
+                outputBuilder->AppendRowTaper(pos, nullptr, 0, nullptr);
+            }
+            return outputBuilder->IsFull();
+        };
+
         auto handleIdx = [&](int32_t pos, int64_t idx) -> bool {
             // 防护:int16 键 key-minValue 用 int64 计算(idx 传 int64,无 int16 溢出),
             // 越界 idx(负/超 arrayTable 范围)跳过,防 slots[idx] 越界崩溃。
             const int64_t idxRange = static_cast<int64_t>(maxValue) - static_cast<int64_t>(minValue) + 1;
             if (idx < 0 || idx >= idxRange) {
                 if constexpr (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_RIGHT ||
-                              joinType == OMNI_JOIN_TYPE_FULL || joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
-                    outputBuilder->AppendRowTaper(pos, nullptr, 0, nullptr);
-                    return outputBuilder->IsFull();
+                              joinType == OMNI_JOIN_TYPE_FULL || joinType == OMNI_JOIN_TYPE_LEFT_ANTI ||
+                              joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                    return emitMiss(pos);
                 }
                 return false;
             }
@@ -1005,18 +1017,18 @@ template <bool hasJoinFilter, JoinType joinType> void LookupJoinOperator::TaperA
             }
             if (!isAssigned[idx]) {
                 if constexpr (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL ||
-                              joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
-                    outputBuilder->AppendRowTaper(pos, nullptr, 0, nullptr);
-                    return outputBuilder->IsFull();
+                              joinType == OMNI_JOIN_TYPE_LEFT_ANTI ||
+                              joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                    return emitMiss(pos);
                 }
                 return false;
             }
             char* cur = slots[idx];
             if (!cur) {
                 if constexpr (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL ||
-                              joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
-                    outputBuilder->AppendRowTaper(pos, nullptr, 0, nullptr);
-                    return outputBuilder->IsFull();
+                              joinType == OMNI_JOIN_TYPE_LEFT_ANTI ||
+                              joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                    return emitMiss(pos);
                 }
                 return false;
             }
@@ -1097,8 +1109,13 @@ template <bool hasJoinFilter, JoinType joinType> void LookupJoinOperator::TaperA
                             return;
                         }
                     } else if constexpr (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL ||
-                                        joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
-                        outputBuilder->AppendRowTaper(probePosition + j, nullptr, 0, nullptr);
+                                        joinType == OMNI_JOIN_TYPE_LEFT_ANTI ||
+                                        joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                        if constexpr (joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                            outputBuilder->AppendExistenceRow<false>(probePosition + j);
+                        } else {
+                            outputBuilder->AppendRowTaper(probePosition + j, nullptr, 0, nullptr);
+                        }
                         if (outputBuilder->IsFull()) {
                             curProbePosition = probePosition + j + 1;
                             return;
@@ -1119,8 +1136,13 @@ template <bool hasJoinFilter, JoinType joinType> void LookupJoinOperator::TaperA
                             return;
                         }
                     } else if constexpr (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL ||
-                                        joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
-                        outputBuilder->AppendRowTaper(probePosition + j, nullptr, 0, nullptr);
+                                        joinType == OMNI_JOIN_TYPE_LEFT_ANTI ||
+                                        joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                        if constexpr (joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                            outputBuilder->AppendExistenceRow<false>(probePosition + j);
+                        } else {
+                            outputBuilder->AppendRowTaper(probePosition + j, nullptr, 0, nullptr);
+                        }
                         if (outputBuilder->IsFull()) {
                             curProbePosition = probePosition + j + 1;
                             return;
@@ -1141,8 +1163,13 @@ template <bool hasJoinFilter, JoinType joinType> void LookupJoinOperator::TaperA
                             return;
                         }
                     } else if constexpr (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL ||
-                                        joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
-                        outputBuilder->AppendRowTaper(probePosition + j, nullptr, 0, nullptr);
+                                        joinType == OMNI_JOIN_TYPE_LEFT_ANTI ||
+                                        joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                        if constexpr (joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                            outputBuilder->AppendExistenceRow<false>(probePosition + j);
+                        } else {
+                            outputBuilder->AppendRowTaper(probePosition + j, nullptr, 0, nullptr);
+                        }
                         if (outputBuilder->IsFull()) {
                             curProbePosition = probePosition + j + 1;
                             return;
@@ -1160,8 +1187,13 @@ template <bool hasJoinFilter, JoinType joinType> void LookupJoinOperator::TaperA
                     return;
                 }
             } else if constexpr (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL ||
-                                joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
-                outputBuilder->AppendRowTaper(probePosition, nullptr, 0, nullptr);
+                                joinType == OMNI_JOIN_TYPE_LEFT_ANTI ||
+                                joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                if constexpr (joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+                    outputBuilder->AppendExistenceRow<false>(probePosition);
+                } else {
+                    outputBuilder->AppendRowTaper(probePosition, nullptr, 0, nullptr);
+                }
                 if (outputBuilder->IsFull()) {
                     curProbePosition = probePosition + 1;
                     return;
