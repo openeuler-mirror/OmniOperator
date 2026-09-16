@@ -373,6 +373,7 @@ void ExprEval::Visit(const FieldExpr &e)
         switch (typeId) {
             case OMNI_INT:
             case OMNI_DATE32:
+            case OMNI_INTERVAL_MONTHS:
                 inputValues_.push(ColumnProjectionCopyPositionsHelper<int32_t>(colVec, selectRow, selectSize));
                 break;
             case OMNI_SHORT:
@@ -384,6 +385,7 @@ void ExprEval::Visit(const FieldExpr &e)
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
+            case OMNI_INTERVAL_DAY_TIME:
                 inputValues_.push(ColumnProjectionCopyPositionsHelper<int64_t>(colVec, selectRow, selectSize));
                 break;
             case OMNI_DOUBLE:
@@ -420,6 +422,7 @@ void ExprEval::Visit(const FieldExpr &e)
     switch (typeId) {
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             inputValues_.push(ColumnProjectionHelper<int32_t>(colVec, rowSize));
             break;
         case OMNI_SHORT:
@@ -431,6 +434,7 @@ void ExprEval::Visit(const FieldExpr &e)
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
+        case OMNI_INTERVAL_DAY_TIME:
             inputValues_.push(ColumnProjectionHelper<int64_t>(colVec, rowSize));
             break;
         case OMNI_DOUBLE:
