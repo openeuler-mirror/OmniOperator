@@ -59,7 +59,10 @@ CollectSetVarcharAggregator::~CollectSetVarcharAggregator() {
 
 void CollectSetVarcharAggregator::InitState(AggregateState *state) {
     CollectSetVarcharState *s = CastState(state + aggStateOffset);
-    auto *uniqueValues = new DefaultHashMap<std::string, int8_t>();
+    // Bug-XXX: default BaseHashMap initializes 2^15=32768 buckets per group (mem::Allocator accounted,
+    // ~1.34MB/group), so collect_set with many groups blows MEM_CAP instantly. Start with 2^4=16 buckets
+    // and grow on demand (Grower doubles); per-group sets are typically tiny.
+    auto *uniqueValues = new DefaultHashMap<std::string, int8_t>(6);
     uniqueValues->Reset();
     s->uniqueValuesAddr = reinterpret_cast<int64_t>(uniqueValues);
     allocatedUniqueValuesAddrs_.push_back(s->uniqueValuesAddr);
