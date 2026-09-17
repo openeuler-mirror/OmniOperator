@@ -1045,11 +1045,16 @@ void CastFunction::CastTimestampToString(BaseVector* input, BaseVector*& result,
     auto size = context->GetResultRowSize();
     result = VectorHelper::CreateFlatVector(OMNI_VARCHAR, size);
     if (input->GetEncoding() == OMNI_ENCODING_CONST) {
+        if (input->IsNull(0)) {
+            result->SetNulls(0, true, size);
+            return;
+        }
         Timestamp inputValue = Timestamp::fromMicros(static_cast<ConstVector<int64_t> *>(input)->GetConstValue());
         if (options.timeZone) {
             inputValue.toTimezone(*(options.timeZone));
         }
-        auto strView = Timestamp::tsToStringView(inputValue, options, 0);
+        std::string strValue = inputValue.toString(options);
+        std::string_view strView(strValue);
         for (int32_t row = 0; row < size; ++row) {
             dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,strView);
         }
