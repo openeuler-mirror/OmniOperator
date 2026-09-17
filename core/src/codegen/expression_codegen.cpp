@@ -2220,7 +2220,8 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
     bool isNullLiteral = lExpr.isNull;
     switch (lExpr.GetReturnTypeId()) {
         case OMNI_INT:
-        case OMNI_DATE32: {
+        case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS: {
             codeGenValue = new CodeGenValue(llvmTypes->CreateConstantInt(lExpr.intVal),
                 llvmTypes->CreateConstantBool(isNullLiteral));
             break;
@@ -2236,7 +2237,8 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
             break;
         }
         case OMNI_TIMESTAMP:
-        case OMNI_LONG: {
+        case OMNI_LONG:
+        case OMNI_INTERVAL_DAY_TIME: {
             codeGenValue = new CodeGenValue(llvmTypes->CreateConstantLong(lExpr.longVal),
                 llvmTypes->CreateConstantBool(isNullLiteral));
             break;

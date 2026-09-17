@@ -48,9 +48,11 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
                 return new LiteralExpr(SHORT_DEFAULT_VALUE, std::move(destType));
             case OMNI_INT:
             case OMNI_DATE32:
+            case OMNI_INTERVAL_MONTHS:
                 return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
             case OMNI_TIMESTAMP:
             case OMNI_LONG:
+            case OMNI_INTERVAL_DAY_TIME:
                 return new LiteralExpr(LONG_DEFAULT_VALUE, std::move(destType));
             case OMNI_DOUBLE:
                 return new LiteralExpr(DOUBLE_DEFAULT_VALUE, std::move(destType));
@@ -103,6 +105,10 @@ DataTypePtr ParserHelper::GetReturnDataType(nlohmann::json jsonExpr)
             return std::make_shared<LongDataType>();
         case OMNI_TIMESTAMP:
             return std::make_shared<TimestampDataType>();
+        case OMNI_INTERVAL_MONTHS:
+            return std::make_shared<IntervalMonthsDataType>();
+        case OMNI_INTERVAL_DAY_TIME:
+            return std::make_shared<IntervalDayTimeDataType>();
         case OMNI_DOUBLE:
             return std::make_shared<DoubleDataType>();
         case OMNI_FLOAT:

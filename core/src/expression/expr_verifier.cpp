@@ -50,8 +50,10 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
         case OMNI_SHORT:
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
+        case OMNI_INTERVAL_DAY_TIME:
         case OMNI_DOUBLE:
         case OMNI_CHAR:
         case OMNI_VARCHAR:
@@ -79,8 +81,10 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_SHORT:
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
+        case OMNI_INTERVAL_DAY_TIME:
         case OMNI_DOUBLE:
         case OMNI_CHAR:
         case OMNI_VARCHAR:

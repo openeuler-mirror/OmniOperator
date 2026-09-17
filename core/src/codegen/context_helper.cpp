@@ -80,6 +80,12 @@ extern "C" DLLEXPORT
             case OMNI_TIMESTAMP:
                 errorMessage << "TIMESTAMP";
                 break;
+            case OMNI_INTERVAL_MONTHS:
+                errorMessage << "INTERVAL_MONTHS";
+                break;
+            case OMNI_INTERVAL_DAY_TIME:
+                errorMessage << "INTERVAL_DAY_TIME";
+                break;
             case OMNI_DOUBLE:
                 errorMessage << "DOUBLE";
                 break;

@@ -72,6 +72,10 @@ public:
                 return std::make_shared<IntDataType>();
             case OMNI_LONG:
                 return std::make_shared<LongDataType>();
+            case OMNI_INTERVAL_MONTHS:
+                return std::make_shared<IntervalMonthsDataType>();
+            case OMNI_INTERVAL_DAY_TIME:
+                return std::make_shared<IntervalDayTimeDataType>();
             case OMNI_DOUBLE:
                 return std::make_shared<DoubleDataType>();
             case OMNI_BOOLEAN:

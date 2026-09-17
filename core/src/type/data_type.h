@@ -215,6 +215,20 @@ template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
     static constexpr bool isFixedWidth = true;
 };
 
+template <> struct NativeType<DataTypeId::OMNI_INTERVAL_MONTHS> {
+    using type = int32_t;
+    static constexpr const char* name = "INTERVAL_MONTHS";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
+};
+
+template <> struct NativeType<DataTypeId::OMNI_INTERVAL_DAY_TIME> {
+    using type = int64_t;
+    static constexpr const char* name = "INTERVAL_DAY_TIME";
+    static constexpr bool isPrimitiveType = true;
+    static constexpr bool isFixedWidth = true;
+};
+
 template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
     using type = vec::BaseVector*;
     static constexpr const char* name = "ARRAY";
@@ -285,6 +299,14 @@ template <> struct NativeType<DataTypeId::OMNI_ROW> {
             }                                                                                 \
             case OMNI_TIMESTAMP: {                                                            \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_TIMESTAMP>(__VA_ARGS__);  \
+            }                                                                                 \
+            case OMNI_INTERVAL_MONTHS: {                                                       \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_INTERVAL_MONTHS>(          \
+                    __VA_ARGS__);                                                              \
+            }                                                                                 \
+            case OMNI_INTERVAL_DAY_TIME: {                                                     \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_INTERVAL_DAY_TIME>(        \
+                    __VA_ARGS__);                                                              \
             }                                                                                 \
             default:                                                                          \
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",              \
@@ -418,6 +440,8 @@ using DoubleDataType = FixedWidthDataType<OMNI_DOUBLE>;
 using LongDataType = FixedWidthDataType<OMNI_LONG>;
 using BooleanDataType = FixedWidthDataType<OMNI_BOOLEAN>;
 using TimestampDataType = FixedWidthDataType<OMNI_TIMESTAMP>;
+using IntervalMonthsDataType = FixedWidthDataType<OMNI_INTERVAL_MONTHS>;
+using IntervalDayTimeDataType = FixedWidthDataType<OMNI_INTERVAL_DAY_TIME>;
 using InvalidDataType = FixedWidthDataType<OMNI_INVALID>;
 using NoneDataType = FixedWidthDataType<OMNI_NONE>;
 

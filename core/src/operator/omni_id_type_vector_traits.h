@@ -73,6 +73,16 @@ template <> struct NativeAndVectorType<type::DataTypeId::OMNI_TIMESTAMP> {
     using vector = vec::Vector<type>;
     using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
 };
+template <> struct NativeAndVectorType<type::DataTypeId::OMNI_INTERVAL_MONTHS> {
+    using type = int32_t;
+    using vector = vec::Vector<type>;
+    using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
+};
+template <> struct NativeAndVectorType<type::DataTypeId::OMNI_INTERVAL_DAY_TIME> {
+    using type = int64_t;
+    using vector = vec::Vector<type>;
+    using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
+};
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_DOUBLE> {
     using type = double;
     using vector = vec::Vector<type>;

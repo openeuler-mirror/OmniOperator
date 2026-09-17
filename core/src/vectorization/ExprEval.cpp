@@ -145,6 +145,7 @@ void ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec, con
     switch (literalVal.GetReturnTypeId()) {
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             SetConstantValues<int32_t>(literalVal.intVal, outVec);
             break;
         case OMNI_SHORT:
@@ -156,6 +157,7 @@ void ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec, con
         case OMNI_LONG:
         case OMNI_DECIMAL64:
         case OMNI_TIMESTAMP:
+        case OMNI_INTERVAL_DAY_TIME:
             SetConstantValues<int64_t>(literalVal.longVal, outVec);
             break;
         case OMNI_DOUBLE:
@@ -206,6 +208,7 @@ void ExprEval::Visit(const LiteralExpr &e)
         switch (e.dataType->GetId()) {
             case OMNI_INT:
             case OMNI_DATE32:
+            case OMNI_INTERVAL_MONTHS:
                 constVec = new ConstVector(e.intVal, typeId, rowSize);
                 break;
             case OMNI_SHORT:
@@ -217,6 +220,7 @@ void ExprEval::Visit(const LiteralExpr &e)
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
+            case OMNI_INTERVAL_DAY_TIME:
                 constVec = new ConstVector(e.longVal, typeId, rowSize);
                 break;
             case OMNI_DOUBLE:
@@ -369,6 +373,7 @@ void ExprEval::Visit(const FieldExpr &e)
         switch (typeId) {
             case OMNI_INT:
             case OMNI_DATE32:
+            case OMNI_INTERVAL_MONTHS:
                 inputValues_.push(ColumnProjectionCopyPositionsHelper<int32_t>(colVec, selectRow, selectSize));
                 break;
             case OMNI_SHORT:
@@ -379,6 +384,7 @@ void ExprEval::Visit(const FieldExpr &e)
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
+            case OMNI_INTERVAL_DAY_TIME:
                 inputValues_.push(ColumnProjectionCopyPositionsHelper<int64_t>(colVec, selectRow, selectSize));
                 break;
             case OMNI_DECIMAL64:
@@ -432,6 +438,7 @@ void ExprEval::Visit(const FieldExpr &e)
     switch (typeId) {
         case OMNI_INT:
         case OMNI_DATE32:
+        case OMNI_INTERVAL_MONTHS:
             inputValues_.push(ColumnProjectionHelper<int32_t>(colVec, rowSize));
             break;
         case OMNI_SHORT:
@@ -442,6 +449,7 @@ void ExprEval::Visit(const FieldExpr &e)
             break;
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
+        case OMNI_INTERVAL_DAY_TIME:
             inputValues_.push(ColumnProjectionHelper<int64_t>(colVec, rowSize));
             break;
         case OMNI_DECIMAL64:

@@ -99,6 +99,10 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
             auto intVal = jsonExpr["value"].get<int32_t>();
             return new LiteralExpr(intVal, std::make_shared<Date32DataType>());
         }
+        case OMNI_INTERVAL_MONTHS: {
+            auto intervalMonthsVal = jsonExpr["value"].get<int32_t>();
+            return new LiteralExpr(intervalMonthsVal, std::make_shared<IntervalMonthsDataType>());
+        }
         case OMNI_LONG: {
             auto longVal = jsonExpr["value"].get<int64_t>();
             return new LiteralExpr(longVal, std::make_shared<LongDataType>());
@@ -106,6 +110,10 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
         case OMNI_TIMESTAMP: {
             auto timestampVal = jsonExpr["value"].get<int64_t>();
             return new LiteralExpr(timestampVal, std::make_shared<TimestampDataType>());
+        }
+        case OMNI_INTERVAL_DAY_TIME: {
+            auto intervalDayTimeVal = jsonExpr["value"].get<int64_t>();
+            return new LiteralExpr(intervalDayTimeVal, std::make_shared<IntervalDayTimeDataType>());
         }
         case OMNI_DOUBLE: {
             auto doubleVal = jsonExpr["value"].get<double>();
