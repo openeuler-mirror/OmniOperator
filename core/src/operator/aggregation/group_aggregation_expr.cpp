@@ -55,7 +55,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
             } else {
                 delete simpleFilter;
                 throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT",
-                    "The expression is not supported yet.");
+                                                            "The expression is not supported yet.");
             }
         }
     }
@@ -63,7 +63,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<int32_t> groupByAndAggColumnarIdx;
     std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateRequiredProjections(sourceDataTypes, projectKeys, newSourceTypes, this->projections,
-        groupByAndAggColumnarIdx, *overflowConfig);
+                                            groupByAndAggColumnarIdx, *overflowConfig);
     uint32_t groupByCols[groupByNum];
     for (uint32_t i = 0; i < groupByNum; i++) {
         groupByCols[i] = static_cast<uint32_t>(groupByAndAggColumnarIdx[i]);
@@ -104,9 +104,9 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
 
     this->originSourceTypes = std::make_unique<DataTypes>(sourceDataTypes);
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
-    this->hashAggOperatorFactory =
-        new HashAggregationOperatorFactory(groupByCol, *groupByTypes, aggColIdx, aggInputDataTypes, aggOutputTypes,
-        aggFuncTypes, maskColumns, inputRaws, outputPartial, hasAggFilters, operatorConfig);
+    this->hashAggOperatorFactory = new HashAggregationOperatorFactory(
+        groupByCol, *groupByTypes, aggColIdx, aggInputDataTypes, aggOutputTypes, aggFuncTypes, maskColumns, inputRaws,
+        outputPartial, hasAggFilters, operatorConfig);
     this->hashAggOperatorFactory->Init();
 }
 
@@ -119,7 +119,8 @@ HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory(
     aggSimpleFilters.clear();
 }
 
-HashAggregationWithExprOperatorFactory *HashAggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
+HashAggregationWithExprOperatorFactory *
+HashAggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
     const std::shared_ptr<const AggregationNode> &planNode, const config::QueryConfig &queryConfig)
 {
     auto groupByKeys = planNode->GetGroupByKeys();
@@ -132,25 +133,23 @@ HashAggregationWithExprOperatorFactory *HashAggregationWithExprOperatorFactory::
     auto maskColsVector = planNode->GetMaskColumns();
     auto inputRaws = planNode->GetInputRaws();
     auto outputPartial = planNode->GetOutputPartials();
-    auto overflowConfig = queryConfig.IsOverFlowASNull() == true
-                              ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
-                              : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
-    auto spillConfig = new SparkSpillConfig(queryConfig.aggregationSpillEnabled(), queryConfig.SpillDir(),
-        queryConfig.SpillDirDiskReserveSize(), queryConfig.SpillHashAggRowThreshold(),
-        queryConfig.memFractionPct(), queryConfig.SpillWriteBufferSize());
+    auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                                                                 : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    auto spillConfig = new SparkSpillConfig(
+        queryConfig.aggregationSpillEnabled(), queryConfig.SpillDir(), queryConfig.SpillDirDiskReserveSize(),
+        queryConfig.SpillHashAggRowThreshold(), queryConfig.memFraction(), queryConfig.SpillWriteBufferSize());
     auto operatorConfig = std::make_shared<OperatorConfig>(spillConfig, overflowConfig);
 
     return new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggsKeys, aggFilters, *sourceDataTypes,
-                                                      aggsOutputTypes,
-                                                      aggFuncTypes, maskColsVector, inputRaws, outputPartial,
-                                                      *operatorConfig);
+                                                      aggsOutputTypes, aggFuncTypes, maskColsVector, inputRaws,
+                                                      outputPartial, *operatorConfig);
 }
 
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
     auto *op = new HashAggregationWithExprOperator(*originSourceTypes, *sourceTypes, projections, aggSimpleFilters,
-        hashAggOperator);
+                                                   hashAggOperator);
     std::vector<type::DataTypeId> dataTypeIds;
     for (int32_t i = 0; i < originSourceTypes->GetSize(); ++i) {
         dataTypeIds.push_back(originSourceTypes->GetType(i)->GetId());
@@ -160,11 +159,11 @@ Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 }
 
 HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &originSourceTypes,
-    const DataTypes &sourceTypes, std::vector<std::unique_ptr<Projection>> &projections,
-    std::vector<SimpleFilter *> &aggSimpleFilters, HashAggregationOperator *hashAggOperator)
-    : originTypes(originSourceTypes),
-      sourceTypes(sourceTypes),
-      projections(projections),
+                                                                 const DataTypes &sourceTypes,
+                                                                 std::vector<std::unique_ptr<Projection>> &projections,
+                                                                 std::vector<SimpleFilter *> &aggSimpleFilters,
+                                                                 HashAggregationOperator *hashAggOperator)
+    : originTypes(originSourceTypes), sourceTypes(sourceTypes), projections(projections),
       hashAggOperator(hashAggOperator)
 {
     auto aggFilterNum = aggSimpleFilters.size();
@@ -179,7 +178,7 @@ HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes
 
 HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
 {
-    for (auto it: aggSimpleFilters) {
+    for (auto it : aggSimpleFilters) {
         delete it;
     }
     aggSimpleFilters.clear();
@@ -202,7 +201,7 @@ int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
         try {
             // do filter and update newInputVecBatch
             AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext.get(),
-                originTypes);
+                                     originTypes);
         } catch (const std::exception &e) {
             VectorHelper::FreeVecBatch(inputVecBatch);
             ResetInputVecBatch();
@@ -249,30 +248,18 @@ OmniStatus HashAggregationWithExprOperator::Close()
     return OMNI_STATUS_NORMAL;
 }
 
-uint64_t HashAggregationWithExprOperator::GetSpilledBytes()
-{
-    return hashAggOperator->GetSpilledBytes();
-}
+uint64_t HashAggregationWithExprOperator::GetSpilledBytes() { return hashAggOperator->GetSpilledBytes(); }
 
-uint64_t HashAggregationWithExprOperator::GetUsedMemBytes()
-{
-    return hashAggOperator->GetUsedMemBytes();
-}
+uint64_t HashAggregationWithExprOperator::GetUsedMemBytes() { return hashAggOperator->GetUsedMemBytes(); }
 
-uint64_t HashAggregationWithExprOperator::GetTotalMemBytes()
-{
-    return hashAggOperator->GetTotalMemBytes();
-}
+uint64_t HashAggregationWithExprOperator::GetTotalMemBytes() { return hashAggOperator->GetTotalMemBytes(); }
 
 std::vector<uint64_t> HashAggregationWithExprOperator::GetSpecialMetricsInfo()
 {
     return hashAggOperator->GetSpecialMetricsInfo();
 }
 
-uint64_t HashAggregationWithExprOperator::GetHashMapUniqueKeys()
-{
-    return hashAggOperator->GetHashMapUniqueKeys();
-}
+uint64_t HashAggregationWithExprOperator::GetHashMapUniqueKeys() { return hashAggOperator->GetHashMapUniqueKeys(); }
 
 VectorBatch *HashAggregationWithExprOperator::AlignSchema(VectorBatch *inputVecBatch)
 {
@@ -304,5 +291,5 @@ OmniStatus HashAggregationWithExprOperator::Init(const std::vector<type::DataTyp
     oneRowAdaptor.Init(dataTypeIds);
     return OMNI_STATUS_NORMAL;
 }
-}
-}
+} // namespace op
+} // namespace omniruntime

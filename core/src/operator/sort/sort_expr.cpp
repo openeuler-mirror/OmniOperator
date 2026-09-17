@@ -17,41 +17,48 @@ SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOper
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
     int32_t sortKeysCount, const OperatorConfig &operatorConfig)
 {
-    auto pOperatorFactory = new SortWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, sortKeys,
-        sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig);
+    auto pOperatorFactory =
+        new SortWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, sortKeys, sortAscendings,
+                                        sortNullFirsts, sortKeysCount, operatorConfig);
     return pOperatorFactory;
 }
 
-SortWithExprOperatorFactory* SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-    std::shared_ptr<const OrderByNode> planNode, const config::QueryConfig& queryConfig)
+SortWithExprOperatorFactory *
+SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(std::shared_ptr<const OrderByNode> planNode,
+                                                               const config::QueryConfig &queryConfig)
 {
     auto sourceTypes = planNode->GetSourceTypes();
-    auto outputCols = const_cast<int32_t*>(planNode->GetOutputCols().data());
+    auto outputCols = const_cast<int32_t *>(planNode->GetOutputCols().data());
     auto outputColsCount = static_cast<int32_t>(planNode->GetOutputCols().size());
     auto sortExpressions = planNode->GetExpressions();
-    auto sortAscendings = const_cast<int32_t*>(planNode->GetSortAscending().data());
-    auto sortNullFirsts = const_cast<int32_t*>(planNode->GetNullFirsts().data());
+    auto sortAscendings = const_cast<int32_t *>(planNode->GetSortAscending().data());
+    auto sortNullFirsts = const_cast<int32_t *>(planNode->GetNullFirsts().data());
     auto expressionCount = static_cast<int32_t>(sortExpressions.size());
     auto spillConfig = new SparkSpillConfig(planNode->CanSpill(queryConfig) & queryConfig.orderBySpillEnabled(),
-        queryConfig.SpillDir(), queryConfig.SpillDirDiskReserveSize(), queryConfig.SpillSortRowThreshold(),
-        queryConfig.SpillMemThreshold(), queryConfig.SpillWriteBufferSize());
+                                            queryConfig.SpillDir(), queryConfig.SpillDirDiskReserveSize(),
+                                            queryConfig.SpillSortRowThreshold(), queryConfig.SpillMemFraction(),
+                                            queryConfig.SpillWriteBufferSize());
     auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                                                                  : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
-    auto pOperatorFactory = new SortWithExprOperatorFactory(*sourceTypes, outputCols, outputColsCount, sortExpressions,
-        sortAscendings, sortNullFirsts, expressionCount, OperatorConfig(spillConfig, overflowConfig));
+    auto pOperatorFactory =
+        new SortWithExprOperatorFactory(*sourceTypes, outputCols, outputColsCount, sortExpressions, sortAscendings,
+                                        sortNullFirsts, expressionCount, OperatorConfig(spillConfig, overflowConfig));
     return pOperatorFactory;
 }
 
 SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
-    int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
-    int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig)
+                                                         int32_t outputColsCount,
+                                                         const std::vector<omniruntime::expressions::Expr *> &sortKeys,
+                                                         int32_t *sortAscendings, int32_t *sortNullFirsts,
+                                                         int32_t sortKeysCount, const OperatorConfig &operatorConfig)
 {
     std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateProjections(sourceTypes, sortKeys, newSourceTypes, this->projections, this->sortCols,
-        operatorConfig.GetOverflowConfig());
+                                    operatorConfig.GetOverflowConfig());
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
-    this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(*(this->sourceTypes), outputCols,
-        outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig);
+    this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(
+        *(this->sourceTypes), outputCols, outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts,
+        sortKeysCount, operatorConfig);
 }
 
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
@@ -59,15 +66,13 @@ SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOper
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
     int32_t sortKeysCount)
 {
-    auto pOperatorFactory = new SortWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, sortKeys,
-        sortAscendings, sortNullFirsts, sortKeysCount, OperatorConfig());
+    auto pOperatorFactory =
+        new SortWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, sortKeys, sortAscendings,
+                                        sortNullFirsts, sortKeysCount, OperatorConfig());
     return pOperatorFactory;
 }
 
-SortWithExprOperatorFactory::~SortWithExprOperatorFactory()
-{
-    delete sortOperatorFactory;
-}
+SortWithExprOperatorFactory::~SortWithExprOperatorFactory() { delete sortOperatorFactory; }
 
 Operator *SortWithExprOperatorFactory::CreateOperator()
 {
@@ -77,16 +82,14 @@ Operator *SortWithExprOperatorFactory::CreateOperator()
 }
 
 SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes,
-    std::vector<std::unique_ptr<Projection>> &projections, SortOperator *sortOperator)
+                                           std::vector<std::unique_ptr<Projection>> &projections,
+                                           SortOperator *sortOperator)
     : sourceTypes(sourceTypes), projections(projections), sortOperator(sortOperator)
 {
     SetOperatorName(metricsNameSort);
 }
 
-SortWithExprOperator::~SortWithExprOperator()
-{
-    delete sortOperator;
-}
+SortWithExprOperator::~SortWithExprOperator() { delete sortOperator; }
 
 int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
@@ -122,9 +125,6 @@ OmniStatus SortWithExprOperator::Close()
     return OMNI_STATUS_NORMAL;
 }
 
-uint64_t SortWithExprOperator::GetSpilledBytes()
-{
-    return sortOperator->GetSpilledBytes();
-}
-}
-}
+uint64_t SortWithExprOperator::GetSpilledBytes() { return sortOperator->GetSpilledBytes(); }
+} // namespace op
+} // namespace omniruntime
