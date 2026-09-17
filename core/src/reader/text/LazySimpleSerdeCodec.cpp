@@ -11,9 +11,13 @@ namespace omniruntime::reader::text {
 
 LazySimpleSerdeCodec::LazySimpleSerdeCodec(
     LazySimpleOptions options,
-    const std::vector<int32_t>& projectedFieldIndices)
-    : options_(std::move(options)), projectionEnabled_(true)
+    const std::vector<int32_t>& projectedFieldIndices,
+    size_t fileFieldCount)
+    : options_(std::move(options)), projectionEnabled_(true), fileFieldCount_(fileFieldCount)
 {
+    if (options_.lastColumnTakesRest && fileFieldCount_ == 0) {
+        throw std::runtime_error("LazySimple last-column-takes-rest requires the full file schema.");
+    }
     projectedFields_.reserve(projectedFieldIndices.size());
     for (size_t outputIndex = 0; outputIndex < projectedFieldIndices.size(); ++outputIndex) {
         if (projectedFieldIndices[outputIndex] < 0) {
@@ -91,6 +95,11 @@ void LazySimpleSerdeCodec::DecodeProjectedRecord(
         return projected == projectedFields_.cend();
     };
 
+    if (options_.lastColumnTakesRest && fileFieldCount_ == 1) {
+        decodeIfProjected(record);
+        return;
+    }
+
     for (size_t index = 0; index < record.size(); ++index) {
         if (delimited.escapeEnabled && record[index] == delimited.escapeChar &&
             index + 1 < record.size()) {
@@ -105,6 +114,9 @@ void LazySimpleSerdeCodec::DecodeProjectedRecord(
         }
         ++sourceIndex;
         fieldStart = index + 1;
+        if (options_.lastColumnTakesRest && sourceIndex + 1 == fileFieldCount_) {
+            break;
+        }
     }
     decodeIfProjected(record.substr(fieldStart));
 }

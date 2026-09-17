@@ -74,6 +74,12 @@ struct CsvOptions {
     DelimitedOptions delimited;
     char quote = '"';
     std::string parseMode;
+    std::string emptyValue;
+    bool ignoreLeadingWhitespace = false;
+    bool ignoreTrailingWhitespace = false;
+    bool quoteAll = false;
+    bool escapeQuotes = true;
+    char comment = '\0';
 };
 
 using TextDialectOptions = std::variant<RawLineOptions, LazySimpleOptions, CsvOptions>;

@@ -170,10 +170,10 @@ void configureReaderOptions(
         case FileFormat::TEXT: {
             baseReaderOpts->SetUri(uri);
             baseReaderOpts->SetSplitStart(static_cast<int64_t>(hiveSplit->start));
-            uint64_t splitEnd = (hiveSplit->length == std::numeric_limits<uint64_t>::max())
-                                ? hiveSplit->length
-                                : (hiveSplit->start + hiveSplit->length);
-            baseReaderOpts->SetSplitEnd(static_cast<int64_t>(splitEnd));
+            const int64_t splitEnd = (hiveSplit->length == std::numeric_limits<uint64_t>::max())
+                                     ? std::numeric_limits<int64_t>::max()
+                                     : static_cast<int64_t>(hiveSplit->start + hiveSplit->length);
+            baseReaderOpts->SetSplitEnd(splitEnd);
             break;
         }
         default: {
@@ -225,10 +225,10 @@ void configureRowReaderOptions(
                 baseReaderOpts->SetFileRowType(fileRowType);
             }
             baseReaderOpts->SetSplitStart(static_cast<int64_t>(hiveSplit->start));
-            uint64_t splitEnd = (hiveSplit->length == std::numeric_limits<uint64_t>::max())
-                                ? hiveSplit->length
-                                : (hiveSplit->start + hiveSplit->length);
-            baseReaderOpts->SetSplitEnd(static_cast<int64_t>(splitEnd));
+            const int64_t splitEnd = (hiveSplit->length == std::numeric_limits<uint64_t>::max())
+                                     ? std::numeric_limits<int64_t>::max()
+                                     : static_cast<int64_t>(hiveSplit->start + hiveSplit->length);
+            baseReaderOpts->SetSplitEnd(splitEnd);
             break;
         }
         default: {

@@ -56,8 +56,14 @@ void CsvCodec::DecodeRecord(std::string_view record, DecodedTextRecord& output) 
         }
         const bool selected = !projected_ ||
             (projectedIndex < projection_.size() && projection_[projectedIndex].source == fieldIndex);
-        const size_t rawStart = position;
+        if (options_.ignoreLeadingWhitespace) {
+            while (position < record.size() && record[position] != delimiter &&
+                static_cast<unsigned char>(record[position]) <= ' ') {
+                ++position;
+            }
+        }
         bool quoted = position < record.size() && record[position] == quote;
+        const bool wasQuoted = quoted;
         if (quoted) {
             ++position;
         }
@@ -119,6 +125,12 @@ void CsvCodec::DecodeRecord(std::string_view record, DecodedTextRecord& output) 
             ++position;
             valueEnd = position;
         }
+        if (!wasQuoted && options_.ignoreTrailingWhitespace) {
+            while (valueEnd > valueStart &&
+                static_cast<unsigned char>(record[valueEnd - 1]) <= ' ') {
+                --valueEnd;
+            }
+        }
         if (selected) {
             std::string_view value;
             if (transformed) {
@@ -127,7 +139,11 @@ void CsvCodec::DecodeRecord(std::string_view record, DecodedTextRecord& output) 
             } else {
                 value = record.substr(valueStart, valueEnd - valueStart);
             }
-            const bool isNull = rawStart == position || value == options_.delimited.nullLiteral;
+            if (wasQuoted && value.empty()) {
+                value = options_.emptyValue;
+            }
+            const bool isNull = (!wasQuoted && value.empty()) ||
+                value == options_.delimited.nullLiteral;
             const TextFieldView field{isNull, value};
             if (projected_) {
                 do {
@@ -163,26 +179,51 @@ void CsvCodec::EncodeRecord(const std::vector<TextFieldView>& fields, std::strin
             continue;
         }
         auto value = fields[index].value;
+        const auto originalValue = value;
+        bool writeTrimmedEmptyValue = false;
         if (!hive_) {
-            while (!value.empty() && static_cast<unsigned char>(value.front()) <= ' ') {
-                value.remove_prefix(1);
+            const bool originallyEmpty = value.empty();
+            bool emptiedByLeadingTrim = false;
+            if (options_.ignoreLeadingWhitespace) {
+                while (!value.empty() && static_cast<unsigned char>(value.front()) <= ' ') {
+                    value.remove_prefix(1);
+                }
+                emptiedByLeadingTrim = !originallyEmpty && value.empty();
             }
-            while (!value.empty() && static_cast<unsigned char>(value.back()) <= ' ') {
-                value.remove_suffix(1);
-            }
-            // Spark's default emptyValue is the literal pair of double quotes,
-            // including when the configured quote character is different.
-            if (value.empty()) {
-                value = "\"\"";
-                if (quote == '"') {
-                    output.append(value);
-                    continue;
+            if (options_.ignoreTrailingWhitespace) {
+                while (!value.empty() && static_cast<unsigned char>(value.back()) <= ' ') {
+                    value.remove_suffix(1);
                 }
             }
+            if (value.empty()) {
+                if (originallyEmpty || emptiedByLeadingTrim) {
+                    output.append(options_.emptyValue);
+                    continue;
+                }
+                value = options_.emptyValue;
+                if (value.empty()) {
+                    continue;
+                }
+                writeTrimmedEmptyValue = true;
+            }
         }
-        const bool quoted = hive_ || value.empty() ||
+        if (writeTrimmedEmptyValue) {
+            output.append(originalValue);
+            for (const char byte : value) {
+                if (byte == quote || byte == escape) {
+                    output.push_back(escape);
+                }
+                output.push_back(byte);
+            }
+            // Match Univocity's shared appender: trailing whitespace remains at
+            // the front while the same number of bytes is removed from the end.
+            output.resize(output.size() - originalValue.size());
+            continue;
+        }
+        const bool quoted = hive_ || options_.quoteAll || value.empty() ||
             value.find(delimiter) != std::string_view::npos ||
-            value.find(quote) != std::string_view::npos ||
+            (options_.escapeQuotes && value.find(quote) != std::string_view::npos) ||
+            (!value.empty() && value.front() == quote) ||
             value.find_first_of("\r\n") != std::string_view::npos;
         if (quoted) {
             output.push_back(quote);

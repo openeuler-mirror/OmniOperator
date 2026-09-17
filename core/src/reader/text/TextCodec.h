@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -46,6 +47,7 @@ std::unique_ptr<TextCodec> CreateTextCodec(const TextFormatOptions& options);
 
 std::unique_ptr<TextCodec> CreateTextCodec(
     const TextFormatOptions& options,
-    const std::vector<int32_t>& projectedFieldIndices);
+    const std::vector<int32_t>& projectedFieldIndices,
+    size_t fileFieldCount = 0);
 
 } // namespace omniruntime::reader::text

@@ -144,6 +144,9 @@ TextRowReader::TextRowReader(TextReader& reader)
     fileRowType_ = options_->GetFileRowType();
     auto splitStart = options_->GetSplitStart();
     const auto& format = reader.GetTextOptions();
+    if (format.sourceKind == TextSourceKind::SPARK_CSV) {
+        csvComment_ = format.Csv().comment;
+    }
     if (format.Compression() == TextCompressionKind::NONE) {
         lineScanner_ = std::make_unique<TextLineScanner>(
             reader.GetFile(),
@@ -159,9 +162,20 @@ TextRowReader::TextRowReader(TextReader& reader)
             CreateTextSequentialInput(reader.GetFile(), format.Compression()),
             DEFAULT_TEXT_READ_BUFFER_SIZE, format.IsCsv());
     }
-    if (splitStart == 0 && format.IsCsv() && format.Csv().delimited.skipInputLines != 0) {
-        // Spark CSVHeaderChecker extracts a header only from the first file split.
-        CountRows(1, true);
+    uint32_t skipInputLines = 0;
+    if (format.IsCsv()) {
+        skipInputLines = format.Csv().delimited.skipInputLines;
+    } else if (format.IsLazySimple()) {
+        skipInputLines = format.LazySimple().delimited.skipInputLines;
+    }
+    if (splitStart == 0 && skipInputLines != 0) {
+        // Spark CSV selects its header from non-empty, non-comment records. Hive
+        // skip.header.line.count counts physical records, including empty records.
+        if (format.sourceKind == TextSourceKind::SPARK_CSV) {
+            CountSparkCsvRows(skipInputLines);
+        } else {
+            CountRows(skipInputLines, false);
+        }
     }
     if (rowType_ == nullptr) {
         throw std::runtime_error("Text reader projected row type is missing.");
@@ -181,7 +195,9 @@ TextRowReader::TextRowReader(TextReader& reader)
             }
             projectedFieldIndices.push_back(static_cast<int32_t>(*index));
         }
-        codec_ = CreateTextCodec(reader.GetTextOptions(), projectedFieldIndices);
+        codec_ = CreateTextCodec(
+            reader.GetTextOptions(), projectedFieldIndices,
+            static_cast<size_t>(fileRowType_->size()));
     } else if (rowType_->size() > 0) {
         codec_ = CreateTextCodec(reader.GetTextOptions());
     }
@@ -201,6 +217,28 @@ uint64_t TextRowReader::CountRows(uint64_t maxRows, bool skipBlankLines)
         : sequentialLineScanner_->CountRows(maxRows, skipBlankLines);
 }
 
+bool TextRowReader::IsIgnoredSparkCsvRecord(std::string_view record) const
+{
+    const bool blank = std::all_of(record.begin(), record.end(),
+        [](unsigned char byte) { return byte <= ' '; });
+    return blank || (csvComment_ != '\0' && !record.empty() && record.front() == csvComment_);
+}
+
+uint64_t TextRowReader::CountSparkCsvRows(uint64_t maxRows)
+{
+    if (csvComment_ == '\0') {
+        return CountRows(maxRows, true);
+    }
+    uint64_t rows = 0;
+    std::string_view record;
+    while (rows < maxRows && NextLine(record)) {
+        if (!IsIgnoredSparkCsvRecord(record)) {
+            ++rows;
+        }
+    }
+    return rows;
+}
+
 uint64_t TextRowReader::Next(uint64_t, vec::VectorPtr&)
 {
     return 0;
@@ -214,8 +252,9 @@ uint64_t TextRowReader::NextDirect(
     }
     const auto& textOptions = reader_.GetTextOptions();
     if (rowType_->size() == 0) {
-        return CountRows(batchLen,
-            textOptions.sourceKind == TextSourceKind::SPARK_CSV);
+        return textOptions.sourceKind == TextSourceKind::SPARK_CSV
+            ? CountSparkCsvRows(batchLen)
+            : CountRows(batchLen, false);
     }
     if (textOptions.IsRawLine()) {
         if (rowType_->size() > 1) {
@@ -280,8 +319,7 @@ uint64_t TextRowReader::NextDirect(
         std::string valueScratch;
         while (rows < batchLen && NextLine(record)) {
             if (textOptions.sourceKind == TextSourceKind::SPARK_CSV &&
-                std::all_of(record.begin(), record.end(),
-                    [](unsigned char byte) { return byte <= ' '; })) {
+                IsIgnoredSparkCsvRecord(record)) {
                 continue;
             }
             codec_->DecodeRecord(record, decoded);

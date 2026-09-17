@@ -77,7 +77,7 @@ std::shared_ptr<ReaderOptions> MakeReaderOptions(
     return options;
 }
 
-TextFormatOptions CsvTestOptions(bool hive = false)
+TextFormatOptions CsvTestOptions(bool hive = false, bool writing = false)
 {
     TextFormatOptions options;
     options.sourceKind = hive ? TextSourceKind::HIVE_TEXT : TextSourceKind::SPARK_CSV;
@@ -90,6 +90,9 @@ TextFormatOptions CsvTestOptions(bool hive = false)
     csv.delimited.escapeChar = hive ? '"' : '\\';
     csv.delimited.nullLiteral = "NULL";
     csv.parseMode = "PERMISSIVE";
+    csv.emptyValue = writing && !hive ? "\"\"" : "";
+    csv.ignoreLeadingWhitespace = writing && !hive;
+    csv.ignoreTrailingWhitespace = writing && !hive;
     options.dialect = csv;
     return options;
 }
@@ -149,16 +152,32 @@ TEST(CsvCodecTest, HiveDefaultsAndSparkWriterHaveDistinctSemantics)
     EXPECT_TRUE(decoded.storage.empty());
 
     std::string encoded;
-    auto sparkWriter = CreateTextCodec(CsvTestOptions());
+    auto sparkWriter = CreateTextCodec(CsvTestOptions(false, true));
     sparkWriter->EncodeRecord({{false, " a "}, {false, ""}, {true, {}}, {false, "a\"b"}}, encoded);
     EXPECT_EQ(encoded, R"(a,"",NULL,"a\"b")");
     hive->EncodeRecord({{false, " a "}, {false, ""}, {true, {}}, {false, "a\"b"}}, encoded);
     EXPECT_EQ(encoded, R"(" a ","",,"a""b")");
+
+    auto sparkOptions = CsvTestOptions(false, true);
+    auto csv = sparkOptions.Csv();
+    csv.quoteAll = true;
+    sparkOptions.dialect = csv;
+    auto configuredWriter = CreateTextCodec(sparkOptions);
+    configuredWriter->EncodeRecord({{false, "plain"}, {false, "a\"b"}}, encoded);
+    EXPECT_EQ(encoded, R"("plain","a\"b")");
+
+    csv.quoteAll = false;
+    csv.escapeQuotes = false;
+    sparkOptions.dialect = csv;
+    configuredWriter = CreateTextCodec(sparkOptions);
+    configuredWriter->EncodeRecord(
+        {{false, "test \"quote\""}, {false, "a,b"}, {false, "\"very\" well"}}, encoded);
+    EXPECT_EQ(encoded, R"(test "quote","a,b","\"very\" well")");
 }
 
 TEST(CsvCodecTest, SparkDefaultEmptyValueIsIndependentOfQuoteCharacter)
 {
-    auto options = CsvTestOptions();
+    auto options = CsvTestOptions(false, true);
     auto csv = options.Csv();
     csv.quote = '\'';
     options.dialect = csv;
@@ -166,6 +185,52 @@ TEST(CsvCodecTest, SparkDefaultEmptyValueIsIndependentOfQuoteCharacter)
     std::string encoded;
     codec->EncodeRecord({{false, ""}, {false, " a,b "}}, encoded);
     EXPECT_EQ(encoded, "\"\",'a,b'");
+}
+
+TEST(CsvCodecTest, SparkWhitespaceAndCustomEmptyValueFollowOptions)
+{
+    auto options = CsvTestOptions();
+    auto csv = options.Csv();
+    csv.ignoreLeadingWhitespace = true;
+    csv.ignoreTrailingWhitespace = true;
+    csv.emptyValue = "EMPTY";
+    options.dialect = csv;
+    auto codec = CreateTextCodec(options);
+    DecodedTextRecord decoded;
+    codec->DecodeRecord(R"(  value  ,"  quoted  ","",)", decoded);
+    ASSERT_EQ(decoded.fields.size(), 4);
+    EXPECT_EQ(decoded.fields[0].value, "value");
+    EXPECT_EQ(decoded.fields[1].value, "  quoted  ");
+    EXPECT_EQ(decoded.fields[2].value, "EMPTY");
+    EXPECT_TRUE(decoded.fields[3].isNull);
+
+    std::string encoded;
+    codec->EncodeRecord({{false, " value "}, {false, ""}}, encoded);
+    EXPECT_EQ(encoded, "value,EMPTY");
+}
+
+TEST(CsvCodecTest, SparkWriterDistinguishesLeadingAndTrailingWhitespaceTrimming)
+{
+    auto options = CsvTestOptions(false, true);
+    auto csv = options.Csv();
+    csv.ignoreTrailingWhitespace = true;
+    options.dialect = csv;
+    auto codec = CreateTextCodec(options);
+    std::string encoded;
+    codec->EncodeRecord({{false, ""}, {false, " "}, {false, "x"}}, encoded);
+    EXPECT_EQ(encoded, R"("","",x)");
+
+    csv.ignoreLeadingWhitespace = false;
+    options.dialect = csv;
+    codec = CreateTextCodec(options);
+    codec->EncodeRecord({{false, ""}, {false, " "}, {false, "x"}}, encoded);
+    EXPECT_EQ(encoded, R"("", \"\,x)");
+
+    csv.emptyValue.clear();
+    options.dialect = csv;
+    codec = CreateTextCodec(options);
+    codec->EncodeRecord({{false, ""}, {false, " "}, {false, "x"}}, encoded);
+    EXPECT_EQ(encoded, ",,x");
 }
 
 TEST(TextLineScannerTest, CsvCountSkipsBlankLinesAcrossSmallBuffers)
@@ -243,6 +308,46 @@ TEST(TextReaderTest, CsvZeroProjectionUsesNoVectorsAndSplitsDoNotDuplicateRows)
     std::remove(path.c_str());
 }
 
+TEST(TextReaderTest, CsvCommentIsIgnoredByHeaderAndZeroProjection)
+{
+    const auto path = MakeTempPath(".csv");
+    WriteBytes(path, "# before header\n\nname,age\n# data comment\nfirst,10\nsecond,20\n");
+    auto format = CsvTestOptions();
+    auto& csv = std::get<CsvOptions>(format.dialect);
+    csv.comment = '#';
+    csv.delimited.skipInputLines = 1;
+    auto options = MakeReaderOptions(
+        path, 0, std::numeric_limits<int64_t>::max(), false);
+    TextReader reader(options, format);
+    reader.InitReader();
+    auto rowReader = reader.CreateRowReader();
+    std::vector<vec::BaseVector*>* batch = nullptr;
+    EXPECT_EQ(rowReader->Next(&batch, nullptr, 17), 2);
+    ASSERT_NE(batch, nullptr);
+    EXPECT_TRUE(batch->empty());
+    delete batch;
+    std::remove(path.c_str());
+}
+
+TEST(TextReaderTest, OpenCsvHeaderSkipsMultiplePhysicalRecords)
+{
+    const auto path = MakeTempPath(".csv");
+    WriteBytes(path, "\nname,age\nfirst,10\n");
+    auto format = CsvTestOptions(true);
+    std::get<CsvOptions>(format.dialect).delimited.skipInputLines = 2;
+    auto options = MakeReaderOptions(
+        path, 0, std::numeric_limits<int64_t>::max(), false);
+    options->SetFileRowType(type::ROW(std::vector<std::string>{"name", "age"},
+        std::vector<type::DataTypePtr>{type::VarcharType(), type::VarcharType()}));
+    TextReader reader(options, format);
+    reader.InitReader();
+    auto rowReader = reader.CreateRowReader();
+    std::vector<vec::BaseVector*>* batch = nullptr;
+    EXPECT_EQ(rowReader->Next(&batch, nullptr, 17), 1);
+    delete batch;
+    std::remove(path.c_str());
+}
+
 TEST(TextLineScannerTest, CsvBomAndCountPreserveDataAndIgnoreBlankRecords)
 {
     const std::string contents = "\xef\xbb\xbf \r\nvalue\r\n";
@@ -290,6 +395,9 @@ TEST(TextFormatOptionsTest, AcceptsSupportedCodecCombinations)
     lazy.common.compressionCodec = "NONE";
     LazySimpleOptions lazyDialect;
     lazyDialect.delimited.fieldDelimiter = '|';
+    lazy.dialect = lazyDialect;
+    EXPECT_NO_THROW(lazy.Validate());
+    lazyDialect.lastColumnTakesRest = true;
     lazy.dialect = lazyDialect;
     EXPECT_NO_THROW(lazy.Validate());
 }
@@ -356,6 +464,14 @@ TEST(LazySimpleSerdeCodecTest, DecodesOnlyProjectedFieldsInOutputOrder)
     EXPECT_TRUE(decoded.fields[0].isNull);
     EXPECT_FALSE(decoded.fields[1].isNull);
     EXPECT_TRUE(decoded.fields[1].value.empty());
+
+    lazy.lastColumnTakesRest = true;
+    options.dialect = lazy;
+    codec = CreateTextCodec(options, {2, 0}, 3);
+    codec->DecodeRecord(R"(left|middle|last|keeps\|delimiters)", decoded);
+    ASSERT_EQ(decoded.fields.size(), 2);
+    EXPECT_EQ(decoded.fields[0].value, "last|keeps|delimiters");
+    EXPECT_EQ(decoded.fields[1].value, "left");
 }
 
 ReadResult ReadText(
@@ -410,18 +526,21 @@ struct LazyReadResult {
 LazyReadResult ReadLazySimple(
     const std::string& content,
     const std::vector<std::string>& projectedNames,
-    uint64_t batchSize)
+    uint64_t batchSize,
+    uint32_t skipInputLines = 0)
 {
     const auto path = MakeTempPath(".txt");
     WriteBytes(path, content);
     auto options = std::make_shared<ReaderOptions>();
-    options->ParseEnhanceJson(
+    std::string enhancementJson =
         R"({"text.source_kind":"HIVE_TEXT","text.codec_kind":"LAZY_SIMPLE",)"
         R"("text.charset":"UTF-8","text.line_separator":"",)"
         R"("text.compression_codec":"NONE","text.field_delimiter":"|",)"
         R"("text.null_literal":"NULL","text.escape_enabled":"true",)"
-        R"("text.escape_char":"\\"})",
-        codegen::FileFormat::TEXT);
+        R"("text.escape_char":"\\","text.skip_input_lines":")";
+    enhancementJson += std::to_string(skipInputLines);
+    enhancementJson += R"("})";
+    options->ParseEnhanceJson(enhancementJson, codegen::FileFormat::TEXT);
     options->SetUri(std::make_shared<UriInfo>("file", path, "", "-1"));
     options->SetSplitStart(0);
     options->SetSplitEnd(std::numeric_limits<int64_t>::max());
@@ -558,6 +677,16 @@ TEST(TextReaderTest, ReadsLazySimpleProjectedColumnsWithoutFullRecordBatch)
     EXPECT_EQ(result.nulls[0], (std::vector<bool>{false, true, true}));
     EXPECT_EQ(result.values[1], (std::vector<std::string>{"a|0", "a1", "a2"}));
     EXPECT_EQ(result.nulls[1], (std::vector<bool>{false, false, false}));
+}
+
+TEST(TextReaderTest, SkipsMultipleLazySimpleHeaderRecords)
+{
+    auto result = ReadLazySimple(
+        "\nignored|ignored|ignored|ignored\na0|b0|c0|d0\na1|b1|c1|d1",
+        {"a", "c"}, 4, 2);
+    EXPECT_EQ(result.rows, 2);
+    EXPECT_EQ(result.values[0], (std::vector<std::string>{"a0", "a1"}));
+    EXPECT_EQ(result.values[1], (std::vector<std::string>{"c0", "c1"}));
 }
 
 TEST(TextWriterTest, WritesFlatValuesEmptyAndNull)

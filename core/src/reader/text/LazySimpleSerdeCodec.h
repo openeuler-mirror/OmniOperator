@@ -19,7 +19,8 @@ public:
 
     LazySimpleSerdeCodec(
         LazySimpleOptions options,
-        const std::vector<int32_t>& projectedFieldIndices);
+        const std::vector<int32_t>& projectedFieldIndices,
+        size_t fileFieldCount = 0);
 
     void DecodeRecord(std::string_view record, DecodedTextRecord& output) const override;
 
@@ -40,6 +41,7 @@ private:
 
     LazySimpleOptions options_;
     bool projectionEnabled_ = false;
+    size_t fileFieldCount_ = 0;
     std::vector<ProjectedField> projectedFields_;
 };
 

@@ -122,6 +122,14 @@ TextFormatOptions TextFormatOptions::FromJson(const std::shared_ptr<nlohmann::js
         csv.delimited.emitHeader = json->value("text.emit_header", std::string("false")) == "true";
         csv.quote = ParseSingleByte(*json, "text.quote", false);
         csv.parseMode = json->value("text.parse_mode", std::string("PERMISSIVE"));
+        csv.emptyValue = json->value("text.empty_value", std::string{});
+        csv.ignoreLeadingWhitespace =
+            json->value("text.ignore_leading_whitespace", std::string("false")) == "true";
+        csv.ignoreTrailingWhitespace =
+            json->value("text.ignore_trailing_whitespace", std::string("false")) == "true";
+        csv.quoteAll = json->value("text.quote_all", std::string("false")) == "true";
+        csv.escapeQuotes = json->value("text.escape_quotes", std::string("true")) == "true";
+        csv.comment = ParseSingleByte(*json, "text.comment", true);
         options.dialect = csv;
     }
     return options;
@@ -212,14 +220,8 @@ void TextFormatOptions::Validate() const
         if (lazy.delimited.escapeEnabled && lazy.delimited.escapeChar == '\0') {
             throw std::runtime_error("LazySimple escape is enabled without an escape byte.");
         }
-        if (lazy.delimited.skipInputLines != 0) {
-            throw std::runtime_error("LazySimple skip header is not supported by Spark Hive scan.");
-        }
         if (lazy.delimited.emitHeader) {
             throw std::runtime_error("LazySimple writer does not emit headers.");
-        }
-        if (lazy.lastColumnTakesRest) {
-            throw std::runtime_error("LazySimple last-column-takes-rest is not supported.");
         }
         return;
     }
@@ -238,9 +240,12 @@ void TextFormatOptions::Validate() const
             delimiter == csv.delimited.escapeChar) {
             throw std::runtime_error("Unsupported CSV delimiter/quote/escape combination.");
         }
-        if (csv.parseMode != "PERMISSIVE" || csv.delimited.skipInputLines > 1 ||
-            (sourceKind == TextSourceKind::HIVE_TEXT &&
-                (csv.delimited.skipInputLines != 0 || csv.delimited.emitHeader))) {
+        if (csv.comment == '\r' || csv.comment == '\n') {
+            throw std::runtime_error("CSV comment must not be a line separator.");
+        }
+        if (csv.parseMode != "PERMISSIVE" ||
+            (sourceKind == TextSourceKind::SPARK_CSV && csv.delimited.skipInputLines > 1) ||
+            (sourceKind == TextSourceKind::HIVE_TEXT && csv.delimited.emitHeader)) {
             throw std::runtime_error("Unsupported CSV mode or header option.");
         }
         return;

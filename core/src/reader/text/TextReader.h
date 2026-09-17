@@ -37,12 +37,15 @@ public:
 private:
     bool NextLine(std::string_view& line);
     uint64_t CountRows(uint64_t maxRows, bool skipBlankLines);
+    bool IsIgnoredSparkCsvRecord(std::string_view record) const;
+    uint64_t CountSparkCsvRows(uint64_t maxRows);
 
     TextReader& reader_;
     std::unique_ptr<TextCodec> codec_;
     std::unique_ptr<TextValueConverter> valueConverter_;
     std::unique_ptr<TextLineScanner> lineScanner_;
     std::unique_ptr<SequentialTextLineScanner> sequentialLineScanner_;
+    char csvComment_ = '\0';
 };
 
 class TextReader final : public Reader {

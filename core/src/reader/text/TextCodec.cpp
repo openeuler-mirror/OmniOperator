@@ -28,14 +28,15 @@ std::unique_ptr<TextCodec> CreateTextCodec(const TextFormatOptions& options)
 
 std::unique_ptr<TextCodec> CreateTextCodec(
     const TextFormatOptions& options,
-    const std::vector<int32_t>& projectedFieldIndices)
+    const std::vector<int32_t>& projectedFieldIndices,
+    size_t fileFieldCount)
 {
     if (options.IsCsv()) {
         return std::make_unique<CsvCodec>(options, projectedFieldIndices);
     }
     if (options.IsLazySimple()) {
         return std::make_unique<LazySimpleSerdeCodec>(
-            options.LazySimple(), projectedFieldIndices);
+            options.LazySimple(), projectedFieldIndices, fileFieldCount);
     }
     throw std::runtime_error("Projected Text decoding requires LazySimple codec.");
 }
