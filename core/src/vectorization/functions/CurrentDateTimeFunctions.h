@@ -51,7 +51,7 @@ inline int32_t SessionLocalDaysSinceEpoch(std::chrono::system_clock::time_point 
         int32_t month = localTm.tm_mon + 1;
         int32_t day = localTm.tm_mday;
         int64_t daysSinceEpoch = 0;
-        omniruntime::type::Date32::DaysSinceEpochFromDate(year, month, day, daysSinceEpoch);
+        Date32::DaysSinceEpochFromDate(year, month, day, daysSinceEpoch);
         return static_cast<int32_t>(daysSinceEpoch);
     }
     auto secsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
@@ -62,7 +62,7 @@ inline int32_t SessionLocalDaysSinceEpoch(std::chrono::system_clock::time_point 
     int32_t month = localTm.tm_mon + 1;
     int32_t day = localTm.tm_mday;
     int64_t daysSinceEpoch = 0;
-    omniruntime::type::Date32::DaysSinceEpochFromDate(year, month, day, daysSinceEpoch);
+    Date32::DaysSinceEpochFromDate(year, month, day, daysSinceEpoch);
     return static_cast<int32_t>(daysSinceEpoch);
 }
 
@@ -93,7 +93,7 @@ inline int64_t SessionLocalWallClockAsUtcMillis(std::chrono::system_clock::time_
     int32_t month = localTm.tm_mon + 1;
     int32_t day = localTm.tm_mday;
     int64_t daysSinceEpoch = 0;
-    omniruntime::type::Date32::DaysSinceEpochFromDate(year, month, day, daysSinceEpoch);
+    Date32::DaysSinceEpochFromDate(year, month, day, daysSinceEpoch);
     int64_t millisSinceMidnight = static_cast<int64_t>(
         localTm.tm_hour * 3600 + localTm.tm_min * 60 + localTm.tm_sec) * kMillisPerSec;
     return daysSinceEpoch * kSecsPerDay * kMillisPerSec + millisSinceMidnight + subSecondMillis;

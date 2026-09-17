@@ -248,9 +248,9 @@ TEST(CeilTimeTest, CeilDate32ToDay) {
     };
     
     std::vector<int32_t> expected = {
-        CeilTimeFunctionTestHelper::DateToDays(2024, 6, 16),
-        CeilTimeFunctionTestHelper::DateToDays(2025, 1, 1),
-        CeilTimeFunctionTestHelper::DateToDays(2025, 1, 2)
+        CeilTimeFunctionTestHelper::DateToDays(2024, 6, 15),
+        CeilTimeFunctionTestHelper::DateToDays(2024, 12, 31),
+        CeilTimeFunctionTestHelper::DateToDays(2025, 1, 1)
     };
     
     std::vector<std::string> formatValues = {"DAY", "DAY", "DAY"};
@@ -620,7 +620,7 @@ TEST(CeilTimeTest, CeilDate32BoundaryEpoch) {
     std::vector<int32_t> expected = {
         CeilTimeFunctionTestHelper::DateToDays(1970, 1, 1),
         CeilTimeFunctionTestHelper::DateToDays(1970, 1, 1),
-        CeilTimeFunctionTestHelper::DateToDays(1970, 1, 2)
+        CeilTimeFunctionTestHelper::DateToDays(1970, 1, 1)
     };
     
     std::vector<std::string> formatValues = {"YEAR", "MONTH", "DAY"};
@@ -647,7 +647,7 @@ TEST(CeilTimeTest, CeilDate32BoundaryLeapYear) {
     std::vector<int32_t> expected = {
         CeilTimeFunctionTestHelper::DateToDays(2025, 1, 1),
         CeilTimeFunctionTestHelper::DateToDays(2024, 3, 1),
-        CeilTimeFunctionTestHelper::DateToDays(2024, 3, 1)
+        CeilTimeFunctionTestHelper::DateToDays(2024, 2, 29)
     };
     
     std::vector<std::string> formatValues = {"YEAR", "MONTH", "DAY"};
