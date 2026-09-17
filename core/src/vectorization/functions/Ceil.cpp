@@ -108,9 +108,6 @@ public:
                         result->SetNull(i);
                         return;
                     }
-                    if (level == DateTruncMode::TRUNC_TO_DAY) {
-                        resultDays += 1; // CEIL(date TO DAY)->date + 1
-                    }
                     resultRaw[i] = static_cast<int32_t>(resultDays);
                     result->SetNotNull(i);
                 } else {

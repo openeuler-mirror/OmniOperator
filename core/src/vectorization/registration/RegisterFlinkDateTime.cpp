@@ -6,7 +6,7 @@
  * the Velox/Spark-style datetime functions registered in RegisterDateTime.cpp).
  * Each function here is named with a "flink_" prefix so it can coexist with the
  * existing function of the same extraction semantics but different unit/timezone
- * behavior (e.g. flink_year vs year). 
+ * behavior (e.g. flink_year vs year).
  */
 
 #include <string>
@@ -22,10 +22,6 @@
 #include "../functions/FlinkSecond.h"
 #include "../functions/FlinkToTimestamp.h"
 #include "../functions/FlinkUnixTimestamp.h"
-#include "../functions/CurrentDateTimeFunctions.h"
-#include "../functions/Floor.h"
-#include "../functions/Ceil.h"
-#include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
 void RegisterFlinkDatetimeFunctions(const std::string &prefix)
@@ -115,29 +111,5 @@ void RegisterFlinkDatetimeFunctions(const std::string &prefix)
     // last operand for UNIX_TIMESTAMP(string[, fmt]) so the session timezone is
     // applied on the Flink path (where QueryConfig.session_timezone is not populated).
     RegisterFlinkUnixTimestampWithTzFunction(prefix + "flink_unix_timestamp_with_tz");
-    // Flink LOCALTIME -> TIME(3). Milliseconds since midnight in the session timezone
-    // (Flink falls back to ZoneId.systemDefault() when unset), evaluated once per query.
-    RegisterFunction<LocalTimeFunction, int64_t>(prefix + "flink_localtime", {}, OMNI_LONG);
-
-    // Flink LOCALTIMESTAMP -> TIMESTAMP(3). Session-local wall-clock time treated as UTC
-    // millis, evaluated once per query.
-    RegisterFunction<LocalTimestampFunction, int64_t>(prefix + "flink_localtimestamp", {}, OMNI_LONG);
-
-    // Flink CURRENT_ROW_TIMESTAMP() / NOW() -> TIMESTAMP_LTZ(3). The true UTC instant is
-    // re-evaluated on every call, where current_timestamp is fixed for the duration of a
-    // query.
-    RegisterFunction<CurrentRowTimestampFunction, int64_t>(prefix + "flink_current_row_timestamp", {}, OMNI_LONG);
-
-    // Flink CURRENT_DATE -> DATE. Days since the Unix epoch for the session-local date,
-    // evaluated once per query.
-    RegisterFunction<CurrentDateFunction, int32_t>(prefix + "flink_current_date", {}, OMNI_INT);
-
-    // Flink FLOOR(<temporal> TO <unit>) -> unit-truncated temporal. Registered as
-    // flink_floor_time to keep it distinct from Spark's numeric floor.
-    RegisterFloorFunction(prefix + "flink_floor_time");
-
-    // Flink CEIL(<temporal> TO <unit>) -> unit-rounded-up temporal. Registered as
-    // flink_ceil_time to keep it distinct from Spark's numeric ceil.
-    RegisterCeilFunction(prefix + "flink_ceil_time");
 }
 }

@@ -769,10 +769,6 @@ struct AsciiFunction {
 /// Supports all integer types (byte/short/int/long).
 template <typename T>
 struct ChrFunction {
-    ALWAYS_INLINE void call(std::string& result, const int32_t& n) {
-        call(result, static_cast<int64_t>(n));
-    }
-
     ALWAYS_INLINE void call(std::string& result, const int64_t& n) {
         if (n < 0) {
             result.clear();
@@ -1000,23 +996,6 @@ struct Base64Function {
         size_t encodedSize = Base64MimeEncodedSize(input.size());
         result.resize(encodedSize);
         Base64EncodeMime(input.data(), input.size(), &result[0]);
-    }
-};
-
-/// flink_base64(string) -> varchar
-/// Encodes binary data to Base64 string WITHOUT MIME line wrapping (single continuous line).
-/// Aligned with Flink SQL TO_BASE64 semantics (RFC 4648 standard encoding, no CRLF).
-/// Empty input returns empty string. NULL input yields NULL via framework propagation.
-template <typename T>
-struct FlinkBase64Function {
-    ALWAYS_INLINE void call(std::string& result, const std::string_view& input) {
-        if (input.empty()) {
-            result.clear();
-            return;
-        }
-        size_t encodedSize = Base64EncodedSize(input.size());
-        result.resize(encodedSize);
-        Base64Encode(input.data(), input.size(), &result[0]);
     }
 };
 
@@ -1847,54 +1826,6 @@ struct InitCapFunction {
     }
 };
 
-/// flink initcap function
-/// flink_initcap(string) -> string
-/// Converts the first letter of each word to uppercase and the rest to lowercase.
-/// Word boundaries are determined by any character outside [A-Za-z0-9] following
-/// Flink SQL semantics (non-alphanumeric characters act as word separators).
-/// Examples:
-///   flink_initcap("hello world") = "Hello World"
-///   flink_initcap("HELLO WORLD") = "Hello World"
-///   flink_initcap("hello-world") = "Hello-World"
-///   flink_initcap("he#wo") = "He#Wo"
-///   flink_initcap("") = ""
-///   flink_initcap(NULL) = NULL
-template <typename T>
-struct FlinkInitCapFunction {
-    ALWAYS_INLINE bool call(std::string &result, const std::string_view &input)
-    {
-        if (input.empty()) {
-            result.clear();
-            return true;
-        }
-
-        result.resize(input.size());
-        bool isStartOfWord = true;
-        for (size_t i = 0; i < input.size(); ++i) {
-            unsigned char c = static_cast<unsigned char>(input[i]);
-            bool isAlpha = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-            if (!isAlpha) {
-                isStartOfWord = true;
-                result[i] = input[i];
-            } else if (isStartOfWord) {
-                result[i] = static_cast<char>(std::toupper(c));
-                isStartOfWord = false;
-            } else {
-                result[i] = static_cast<char>(std::tolower(c));
-            }
-        }
-        return true;
-    }
-
-    ALWAYS_INLINE bool callNullable(std::string &result, const std::string_view *input)
-    {
-        if (input == nullptr) {
-            return false;
-        }
-        return call(result, *input);
-    }
-};
-
 inline void encodeDigestToBase16(uint8_t* output, int digestSize) {
     static unsigned char const kHexCodes[] = "0123456789abcdef";
     for (int i = digestSize - 1; i >= 0; --i) {
@@ -2217,53 +2148,6 @@ private:
     }
 };
 
-/// flink_locate(substring, string, start) -> integer
-/// Flink LOCATE, differs from Spark locate only in that a start position less than 1 is
-/// treated as 1 (Spark returns 0 for start < 1).
-template <typename T>
-struct FlinkLocateFunction {
-    // Non-nullable version for better performance when all arguments are non-null
-    ALWAYS_INLINE bool call(int32_t &result, const std::string_view &subString,
-        const std::string_view &string, const int32_t &start)
-    {
-        // Flink: start < 1 behaves the same as start == 1 (including negative start)
-        int32_t actualStart = (start < 1) ? 1 : start;
-        if (subString.empty()) {
-            result = 1;
-            return true;
-        }
-
-        // Calculate string length in characters (Unicode-aware)
-        int64_t stringLength = stringImpl::length<false /*isAscii*/>(string);
-        if (actualStart > static_cast<int32_t>(stringLength)) {
-            result = 0;
-            return true;
-        }
-
-        // Find the start byte index of the start character for Unicode strings
-        int64_t startByteIndex = stringImpl::cappedByteLengthUnicode(
-            string.data(), string.size(), actualStart - 1);
-
-        // Search from start position
-        std::string_view searchString(string.data() + startByteIndex, string.size() - startByteIndex);
-        auto position = stringImpl::StringPosition<false /*isAscii*/, true /*lpos*/>(
-            searchString, subString, 1 /*instance*/);
-        if (position > 0) {
-            result = position + actualStart - 1;
-        } else {
-            result = 0;
-        }
-        return true;
-    }
-
-    // Nullable version supporting both ASCII and Unicode
-    ALWAYS_INLINE bool callNullable(int32_t &result, const std::string_view *subString,
-        const std::string_view *string, const int32_t *start)
-    {
-        // Call the non-nullable version for better code reuse
-        return call(result, *subString, *string, *start);
-    }
-};
 // ============================================================================
 // ENCODE(string, charset) -> varbinary
 // Encodes a UTF-8 string into binary data using the specified character set.
