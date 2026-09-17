@@ -1914,7 +1914,7 @@ TEST(NativeOmniSortTest, TestSortSpillWithMemoryThreshold)
     auto sourceVecBatch3 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 500, true, false);
 
     // no row spill threshold, and memory percentage threshold 5%
-    SparkSpillConfig spillConfig(GenerateSpillPath(), INT32_MAX, INT32_MAX, 5);
+    SparkSpillConfig spillConfig(GenerateSpillPath(), INT32_MAX, INT32_MAX, 0.05);
     OperatorConfig operatorConfig(spillConfig);
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig);
@@ -1976,7 +1976,7 @@ TEST(NativeOmniSortTest, TestSortSpillWithMemoryUnlimit)
     auto sourceVecBatch2 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 500, true, false);
     auto sourceVecBatch3 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 500, true, false);
 
-    SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, INT32_MAX, 10);
+    SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, INT32_MAX, 0.10);
     OperatorConfig operatorConfig(spillConfig);
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig);
