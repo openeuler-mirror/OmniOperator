@@ -9,8 +9,10 @@
  * date_trunc(precision, date)     -> date     (days since epoch)
  *
  * For TIMESTAMP input:
- *   - Sub-day truncations (MICROSECOND to HOUR) use direct arithmetic on
- *     the microsecond value for optimal performance.
+ *   - MICROSECOND to SECOND use direct arithmetic on the microsecond value;
+ *     zone offsets never have sub-second granularity, so no conversion needed.
+ *   - MINUTE and HOUR boundaries are defined in local time and are computed
+ *     as a delta against the local clock.
  *   - Day-level and above (DAY to YEAR) use calendar time manipulation
  *     via Timestamp::epochToCalendarUtc / calendarUtcToEpoch.
  *
@@ -50,6 +52,27 @@ static inline int64_t FloorDiv(int64_t a, int64_t b) {
         q -= 1;
     }
     return q;
+}
+
+/// Truncates to a sub-day unit (MINUTE or HOUR) whose boundaries are defined in
+/// local time.  A zone offset is not necessarily a whole number of minutes:
+/// historical LMT offsets have second granularity (Asia/Shanghai is +08:05:43
+/// before 1901, America/Los_Angeles is -07:52:58 before 1883), so aligning the
+/// UTC epoch directly would land on the wrong instant.  The delta is computed in
+/// local time and subtracted from the UTC value, which avoids the ambiguity of a
+/// to_sys round trip across DST boundaries.
+static inline int64_t TruncateToLocalUnit(int64_t timestampMicros, int64_t unitSeconds,
+    const tz::TimeZone *timeZone)
+{
+    int64_t utcSeconds = FloorDiv(timestampMicros, 1000000LL);
+    if (timeZone == nullptr) {
+        return FloorDiv(utcSeconds, unitSeconds) * unitSeconds * 1000000LL;
+    }
+
+    int64_t localSeconds =
+        timeZone->to_local(std::chrono::seconds(utcSeconds)).count();
+    int64_t delta = localSeconds - FloorDiv(localSeconds, unitSeconds) * unitSeconds;
+    return (utcSeconds - delta) * 1000000LL;
 }
 
 /// Truncates the calendar time fields according to the specified level.
@@ -124,11 +147,11 @@ static void TruncateCalendarFields(std::tm &tmValue, DateTruncMode level)
 }
 
 /// Truncates a TIMESTAMP value (microseconds since epoch) to the specified
-/// precision level. For sub-DAY levels, uses direct arithmetic. For DAY and
-/// above, uses calendar-time manipulation.
+/// precision level. SECOND and below use direct arithmetic. MINUTE and above
+/// are truncated on local-time boundaries.
 /// @param timestampMicros Input timestamp in microseconds since epoch
 /// @param level Truncation precision level
-/// @param timeZone Optional timezone for local-time truncation (DAY+ levels)
+/// @param timeZone Optional timezone for local-time truncation (MINUTE+ levels)
 /// @return Truncated timestamp in microseconds since epoch
 static int64_t TruncateTimestamp(int64_t timestampMicros, DateTruncMode level,
     const tz::TimeZone *timeZone = nullptr)
@@ -144,21 +167,10 @@ static int64_t TruncateTimestamp(int64_t timestampMicros, DateTruncMode level,
             return FloorDiv(timestampMicros, 1000000LL) * 1000000LL;
         }
         case DateTruncMode::TRUNC_TO_MINUTE: {
-            // Timezone offsets are multiples of ≥30 min, so direct arithmetic
-            // is always correct (matching Velox's adjustEpoch(seconds, 60)).
-            return FloorDiv(timestampMicros, 60000000LL) * 60000000LL;
+            return TruncateToLocalUnit(timestampMicros, 60LL, timeZone);
         }
         case DateTruncMode::TRUNC_TO_HOUR: {
-            if (timeZone != nullptr) {
-                // For timezones with fractional-hour offsets (e.g. +05:30),
-                // truncate in local time via UTC delta to avoid to_sys DST risk.
-                auto localSec = timeZone->to_local(
-                    std::chrono::seconds(FloorDiv(timestampMicros, 1000000LL)));
-                int64_t delta = localSec.count() -
-                    FloorDiv(localSec.count(), 3600) * 3600;
-                return timestampMicros - delta * 1000000LL;
-            }
-            return FloorDiv(timestampMicros, 3600000000LL) * 3600000000LL;
+            return TruncateToLocalUnit(timestampMicros, 3600LL, timeZone);
         }
         case DateTruncMode::TRUNC_TO_DAY:
         case DateTruncMode::TRUNC_TO_WEEK:
