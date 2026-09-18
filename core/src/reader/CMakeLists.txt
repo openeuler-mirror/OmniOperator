@@ -39,7 +39,11 @@ target_link_libraries(${READER_TARGET} PUBLIC
         Parquet::parquet_shared
         nlohmann_json::nlohmann_json
         orc
-        hdfs)
+        hdfs
+        z
+        snappy
+        lz4
+        vectorization)
 install(TARGETS ${READER_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 file(GLOB READER_HEAD_FILES  ${SOURCE_ROOT}/src/reader/*.h)
@@ -52,6 +56,9 @@ file(GLOB READER_COMMON_HEAD_FILES
 file(GLOB READER_PARQUET_HEAD_FILES
         ${SOURCE_ROOT}/src/reader/parquet/*.h
         ${SOURCE_ROOT}/src/reader/parquet/*.hh)
+file(GLOB READER_TEXT_HEAD_FILES
+        ${SOURCE_ROOT}/src/reader/text/*.h
+        ${SOURCE_ROOT}/src/reader/text/*.hh)
 
 file(GLOB READER_FILE_HEAD_FILES  ${SOURCE_ROOT}/src/filesystem/*.h)
 install(FILES ${READER_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader)
@@ -59,3 +66,4 @@ install(FILES ${READER_ORC_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/inclu
 install(FILES ${READER_FILE_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/filesystem)
 install(FILES ${READER_COMMON_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/common)
 install(FILES ${READER_PARQUET_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/parquet)
+install(FILES ${READER_TEXT_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/reader/text)

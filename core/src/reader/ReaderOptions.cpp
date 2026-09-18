@@ -465,6 +465,9 @@ void ReaderOptions::ParseEnhanceJson(const std::string &enhancementJson, FileFor
             SetParquetIncludedColumns(std::move(includedColumns));
             break;
         }
+        case FileFormat::TEXT: {
+            break;
+        }
         default: {
             throw std::runtime_error("Unsupported format");
         }

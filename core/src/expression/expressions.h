@@ -483,6 +483,8 @@ public:
     FuncExpr();
     ~FuncExpr() override;
     FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType);
+    FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
+        const config::QueryConfig &queryConfig);
     FuncExpr(
         const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType, const Function *function);
     FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,

@@ -15,6 +15,8 @@
 
 #include <string>
 
+#include <nlohmann/json.hpp>
+
 namespace omniruntime::connector::hive {
 
 bool SplitReader::partitionValuePassesFilter(
@@ -125,6 +127,35 @@ bool SplitReader::partitionKeysPassFilters()
     return true;
 }
 
+namespace {
+
+std::string BuildTextEnhancementJson(
+    const std::string& enhancementJson,
+    const std::unordered_map<std::string, std::string>& customSplitInfo,
+    const std::shared_ptr<const HiveConfig>& hiveConfig)
+{
+    const std::string jsonStr = enhancementJson.empty() ? "{}" : enhancementJson;
+    auto json = nlohmann::json::parse(jsonStr);
+    for (const auto& [key, value] : customSplitInfo) {
+        if (key.rfind("text.", 0) == 0) {
+            json[key] = value;
+        }
+    }
+    const auto& config = hiveConfig->config();
+    if (!json.contains("text.session_timezone") || json["text.session_timezone"].get<std::string>().empty()) {
+        if (config->ValueExists("spark.sql.session.timeZone")) {
+            json["text.session_timezone"] =
+                config->Get<std::string>("spark.sql.session.timeZone", "");
+        } else if (config->ValueExists("spark.gluten.sql.session.timeZone.default")) {
+            json["text.session_timezone"] =
+                config->Get<std::string>("spark.gluten.sql.session.timeZone.default", "");
+        }
+    }
+    return json.dump();
+}
+
+} // namespace
+
 SplitReader::SplitReader(
     const std::shared_ptr<const hive::HiveConnectorSplit> &hiveSplit,
     const std::shared_ptr<const HiveTableHandle> &hiveTableHandle,
@@ -227,7 +258,12 @@ uint64_t SplitReader::next(vec::VectorBatch **output_, int *omniTypeId, uint64_t
 
 void SplitReader::createReader()
 {
-    baseReaderOpts_->ParseEnhanceJson(hiveTableHandle_->GetEnhancementJson(), hiveSplit_->fileFormat);
+    auto enhancementJson = hiveTableHandle_->GetEnhancementJson();
+    if (hiveSplit_->fileFormat == codegen::FileFormat::TEXT) {
+        enhancementJson = BuildTextEnhancementJson(
+            enhancementJson, hiveSplit_->customSplitInfo, hiveConfig_);
+    }
+    baseReaderOpts_->ParseEnhanceJson(enhancementJson, hiveSplit_->fileFormat);
     configureReaderOptions(hiveConfig_, hiveSplit_, baseReaderOpts_);
     baseReader_ = omniruntime::reader::GetReaderFactory(hiveSplit_->fileFormat)
         ->CreateReader(baseReaderOpts_);

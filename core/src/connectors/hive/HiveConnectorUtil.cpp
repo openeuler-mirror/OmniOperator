@@ -167,6 +167,15 @@ void configureReaderOptions(
             baseReaderOpts->SetSplitEnd(static_cast<int64_t>(splitEnd));
             break;
         }
+        case FileFormat::TEXT: {
+            baseReaderOpts->SetUri(uri);
+            baseReaderOpts->SetSplitStart(static_cast<int64_t>(hiveSplit->start));
+            const int64_t splitEnd = (hiveSplit->length == std::numeric_limits<uint64_t>::max())
+                                     ? std::numeric_limits<int64_t>::max()
+                                     : static_cast<int64_t>(hiveSplit->start + hiveSplit->length);
+            baseReaderOpts->SetSplitEnd(splitEnd);
+            break;
+        }
         default: {
             throw std::runtime_error("Unsupported format");
             break;
@@ -200,6 +209,26 @@ void configureRowReaderOptions(
         case FileFormat::PARQUET: {
             baseReaderOpts->SetSplitStart(hiveSplit->start);
             baseReaderOpts->SetSplitEnd(hiveSplit->start + hiveSplit->length);
+            break;
+        }
+        case FileFormat::TEXT: {
+            // Text readers emit file data columns only. SplitReader appends partition columns
+            // afterwards. LazySimple additionally needs the complete table data schema to map
+            // projected names to physical field ordinals.
+            baseReaderOpts->SetRowType(fileRowType);
+            auto codec = hiveSplit->customSplitInfo.find("text.codec_kind");
+            if (codec != hiveSplit->customSplitInfo.end() &&
+                (codec->second == "LAZY_SIMPLE" || codec->second == "CSV") &&
+                hiveTableHandle->dataColumns() != nullptr) {
+                baseReaderOpts->SetFileRowType(hiveTableHandle->dataColumns());
+            } else {
+                baseReaderOpts->SetFileRowType(fileRowType);
+            }
+            baseReaderOpts->SetSplitStart(static_cast<int64_t>(hiveSplit->start));
+            const int64_t splitEnd = (hiveSplit->length == std::numeric_limits<uint64_t>::max())
+                                     ? std::numeric_limits<int64_t>::max()
+                                     : static_cast<int64_t>(hiveSplit->start + hiveSplit->length);
+            baseReaderOpts->SetSplitEnd(splitEnd);
             break;
         }
         default: {

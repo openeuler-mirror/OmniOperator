@@ -1029,6 +1029,11 @@ FuncExpr::~FuncExpr()
 }
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType)
+    : FuncExpr(fnName, args, std::move(returnType), config::QueryConfig())
+{}
+
+FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
+    const config::QueryConfig &queryConfig)
     : funcName(fnName), arguments(args), functionType(BUILTIN)
 {
     dataType = std::move(returnType);
@@ -1039,9 +1044,9 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     auto signature = std::make_shared<FunctionSignature>(funcName, argTypes, dataType->GetId());
     this->function = FunctionRegistry::LookupFunction(signature.get());
     constantInputs = GetConstantInputs(arguments);
-    vectorFunction = VectorFunction::Find(signature, constantInputs);
+    vectorFunction = VectorFunction::Find(signature, constantInputs, queryConfig);
     if (vectorFunction == nullptr) {
-        vectorFunction = VectorFunction::Find(signature);
+        vectorFunction = VectorFunction::Find(signature, queryConfig);
     }
     if (vectorFunction == nullptr && funcName == "name_struct" && dataType->GetId() == OMNI_ROW) {
         vectorFunction = std::make_shared<vectorization::NameStructFunction>();

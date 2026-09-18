@@ -28,8 +28,8 @@ Expected<int64_t> CastHooks::castStringToTimestamp(const std::string_view &view)
         return folly::makeUnexpected(conversionResult.error());
     }
 
-    auto sessionTimezone = config_.SessionTimezone().empty() ? nullptr : tz::locateZone(config_.SessionTimezone());
-    return util::fromParsedTimestampWithTimeZone(conversionResult.value(), sessionTimezone).toMicros();
+    return util::fromParsedTimestampWithTimeZone(
+        conversionResult.value(), timestampToStringOptions_.timeZone).toMicros();
 }
 
 template <typename T>
