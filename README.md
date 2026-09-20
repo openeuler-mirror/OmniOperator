@@ -77,9 +77,20 @@ OmniOperator算子加速特性主要应用于数据分析引擎场景，通过�
 
 为了更准确地规划与使用OmniOperator算子加速特性，建议合理规避可能的风险和限制。
 
-- Decimal数据类型限制：OmniOperator算子加速特性支持64位和128位的Decimal数据类型。当Decimal值超过128位范围时，可能会抛出异常或返回null。这种行为可能导致OmniOperator算子加速特性与引擎开源版本在聚合操作（如SUM、AVG）中的表现存在不一致的情况。如果字段可能涉及AVG操作，且结果存在大数值的累加风险，建议改用Double或其他适合的类型存储以降低风险。
-- Double类型的浮点精度问题：在使用Double类型对SUM和AVG进行操作时，OmniOperator算子加速特性可能因计算过程中的顺序差异导致结果的不一致。如果要求结果的精确性较高，请考虑使用更高精度的数据类型（如Decimal）。
-- 算子Spill功能支持情况：当前Sort、Window和HashAgg等算子支持Spill功能，而BroadcastHashJoin、ShuffledHashJoin和SortMergeJoin等算子仍不支持该功能。请根据数据的特性和处理需求进行算子选择。
+- **Decimal数据类型限制**：OmniOperator算子加速特性支持64位和128位的Decimal数据类型。当Decimal值超过128位范围时，可能会抛出异常或返回null。这种行为可能导致OmniOperator算子加速特性与引擎开源版本在聚合操作（如SUM、AVG）中的表现存在不一致的情况。如果字段可能涉及AVG操作，且结果存在大数值的累加风险，建议改用Double或其他适合的类型存储以降低风险。
+- **Double类型的浮点精度问题**：在使用Double类型对SUM和AVG进行操作时，OmniOperator算子加速特性可能因计算过程中的顺序差异导致结果的不一致。如果要求结果的精确性较高，请考虑使用更高精度的数据类型（如Decimal）。
+- **算子Spill功能支持情况**：当前Sort、Window和HashAgg等算子支持Spill功能，而BroadcastHashJoin、ShuffledHashJoin和SortMergeJoin等算子仍不支持该功能。请根据数据的特性和处理需求进行算子选择。
+- **Float/Double转String的格式化差异**：OmniOperator算子加速特性对float使用`{:.7E}`科学计数法（约7位有效数字），并做规范化处理，尾数位数通常少于Spark。Spark尾数位数更多，两者在末几位上常有差异。依赖「先cast再对字符串运算」的表达式，OmniOperator算子加速特性与Spark结果可能不一致。涉及表达式示例：
+    - `contains(CAST(c_float AS STRING), …)`：子串匹配受字符串内容影响，可能true/false不一致；
+    - `levenshtein(c_float, c_string)`：先隐式cast再算编辑距离，字符串差1～3个字符时，距离通常也差1～3；
+    - `reverse(c_float)`：对cast后的字符串反转，输出可能完全不同；
+    - `bit_length(c_float)`（及类似先cast再算位长的用法）：在float边界值上可能少1位精度，位长结果随之不同。
+- **数学函数定义域/异常值语义差异**：对部分越界输入，OmniOperator算子加速特性与Spark所用数学库行为不同。涉及表达式示例：
+    - `acosh(x)`：仅在x ≥ 1时有定义；表中若存在0或负数等非法输入，OmniOperator算子加速特性返回NaN，Spark可能返回-Infinity。
+- **位运算按原始类型位宽计算**：OmniOperator算子加速特性按类型原始位宽计算位相关函数，Spark统一提升到64位。涉及表达式示例：
+    - `bit_count(x)`：同一数值在不同类型列上，OmniOperator算子加速特性与Spark结果可能不一致。
+- **日期/时间类型语义差异**：部分时间提取函数在OmniOperator算子加速特性中仅对TIMESTAMP（及被当作timestamp的LONG）有意义；DATE无时分秒分量。Gluten路径下若对DATE做隐式cast再取秒，可能得到0～59的伪随机秒数，而非Spark对DATE的恒0行为。涉及表达式示例：
+    - `second(c_date)`：Spark对非NULL的DATE恒为0；OmniOperator算子加速特性可能出现0及17等异常值。
 
 ### Hive引擎约束<a name="ZH-CN_TOPIC_0000002515825400"></a>
 
@@ -110,7 +121,7 @@ OmniOperator算子加速特性主要应用于数据分析引擎场景，通过�
 - 不同的负载所需内存配置不一样，例如TPC-DS 3TB数据集，SparkExtension推荐配置下，堆外内存配置不低于20GB，99条所有SQL可成功运行，运行过程中日志可能出现`MEM_CAP_EXCEEDED`但不影响最终功能，建议适当增大堆外内存配置。如果堆外内存配置过低，SQL执行结果可能不正确。
 - Spark OmniOperator算子加速支持`from_unixtime`和`unix_timestamp`表达式：
     1. 仅支持时间解析策略spark.sql.legacy.timeParserPolicy为EXCEPTION、CORRECTED的情况，不支持LEGACY。
-    2. <a name="li23961023256"></a>对于一些不合理的参数（如不存在的日期，无效的超大时间戳值等），Omni实现与Spark开源版本实现的处理结果存在不一致。
+    2. <a name="li23961023256"></a>对于一些不合理的参数（如不存在的日期，无效的超大时间戳值等），OmniOperator算子加速实现与Spark开源版本实现的处理结果存在不一致。
     3. SparkExtension场景可以通过配置spark.omni.sql.columnar.unixTimeFunc.enabled=false来回退这两个函数，Gluten场景可以通过配置spark.gluten.sql.columnar.backend.omni.unixTimeFunc.enabled来回退这两个函数，即使用Spark开源版本对应的函数来规避[2](#li23961023256)中的不一致问题。
 
 - Spark OmniOperator算子加速同时对超多列进行表达式Codegen时，例如500列，编译开销大于OmniOperator加速效果，建议该场景采用Spark开源版本执行相关操作。
@@ -280,11 +291,6 @@ OmniOperator算子加速特性主要应用于数据分析引擎场景，通过�
 **致数据所有者**
 
 如果您不希望您的模型或数据集等信息在OmniOperator中被提及，或希望更新OmniOperator中有关的描述，请在GitCode提交issue，我们将根据您的issue要求删除或更新您相关描述。衷心感谢您对OmniOperator的理解和贡献。
-
-## 公网地址声明<a name="ZH-CN_TOPIC_0000002547298197"></a>
-声明：以下依赖库均使用Gitee镜像源，以提高国内下载速度。<br>
-fmt 镜像地址：https://gitee.com/mirrors/fmt.git<br>
-folly 镜像地址：https://gitee.com/mirrors/folly.git
 
 ## License<a name="ZH-CN_TOPIC_0000002547298197"></a>
 
