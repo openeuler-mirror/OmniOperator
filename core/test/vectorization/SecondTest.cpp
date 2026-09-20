@@ -7,8 +7,11 @@
 #include <iostream>
 #include <vector>
 #include <ctime>
+#include <string>
+#include <unordered_map>
 
 #include "test/util/test_util.h"
+#include "util/config/QueryConfig.h"
 #include "vectorization/registration/Register.h"
 #include "vectorization/functions/Second.h"
 #include "vectorization/VectorFunction.h"
@@ -78,6 +81,13 @@ public:
     }
 
     static void ExecuteSecond(BaseVector* inputVec, DataTypeId inputTypeId, BaseVector*& result) {
+        ExecuteSecondInZone(inputVec, inputTypeId, "", result);
+    }
+
+    /// Same as ExecuteSecond, but runs with the given session timezone.
+    /// An empty name leaves the session timezone unset.
+    static void ExecuteSecondInZone(BaseVector* inputVec, DataTypeId inputTypeId,
+                                     const std::string& sessionTimezone, BaseVector*& result) {
         auto signature = std::make_shared<FunctionSignature>("second",
             std::vector<DataTypeId>{inputTypeId}, OMNI_INT);
         auto function = VectorFunction::Find(signature);
@@ -86,11 +96,28 @@ public:
         auto outputType = std::make_shared<DataType>(OMNI_INT);
         ExecutionContext context;
         context.SetResultRowSize(inputVec->GetSize());
+        if (!sessionTimezone.empty()) {
+            context.SetConfig(config::QueryConfig(std::unordered_map<std::string, std::string>{
+                {config::QueryConfig::kSessionTimezone, sessionTimezone}}));
+        }
         std::stack<BaseVector*> args;
         args.push(inputVec);
 
         ASSERT_NO_THROW(function->Apply(args, outputType, result, &context))
             << "Second function threw an exception";
+    }
+
+    /// Builds a microsecond timestamp for a UTC wall clock reading. Unlike
+    /// TimestampToMicros this does not depend on the system timezone.
+    static int64_t TimestampUtcToMicros(int year, int month, int day, int hour, int minute, int second) {
+        std::tm tm = {};
+        tm.tm_year = year - 1900;
+        tm.tm_mon = month - 1;
+        tm.tm_mday = day;
+        tm.tm_hour = hour;
+        tm.tm_min = minute;
+        tm.tm_sec = second;
+        return Timestamp::calendarUtcToEpoch(tm) * 1000000LL;
     }
 
     static void ExecuteSecondWithFraction(BaseVector* inputVec, DataTypeId inputTypeId, BaseVector*& result) {
@@ -225,6 +252,29 @@ TEST(SecondTest, TimestampAllSeconds) {
     BaseVector* inputVec = SecondFunctionTestHelper::CreateTimestampVector(timestampValues);
     BaseVector* resultVec = nullptr;
     SecondFunctionTestHelper::ExecuteSecond(inputVec, OMNI_TIMESTAMP, resultVec);
+    SecondFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
+
+    delete resultVec;
+}
+
+// Test: the second of minute comes from the local clock, not from UTC.
+// Asia/Shanghai uses the LMT offset +08:05:43 before 1901, so its seconds
+// component shifts the second of minute as well: local midnight sits at
+// 15:54:17 UTC and reading tm_sec off the UTC clock yields 17.
+TEST(SecondTest, TimestampLmtOffset) {
+    std::vector<int64_t> timestampValues = {
+        // 1900-11-11 00:00:00 Asia/Shanghai
+        SecondFunctionTestHelper::TimestampUtcToMicros(1900, 11, 10, 15, 54, 17),
+        // 1900-11-11 00:00:25 Asia/Shanghai
+        SecondFunctionTestHelper::TimestampUtcToMicros(1900, 11, 10, 15, 54, 42),
+        // 1901-01-02 00:00:00 Asia/Shanghai, past the switch to +08:00
+        SecondFunctionTestHelper::TimestampUtcToMicros(1901, 1, 1, 16, 0, 0)
+    };
+    std::vector<int32_t> expected = {0, 25, 0};
+
+    BaseVector* inputVec = SecondFunctionTestHelper::CreateTimestampVector(timestampValues);
+    BaseVector* resultVec = nullptr;
+    SecondFunctionTestHelper::ExecuteSecondInZone(inputVec, OMNI_TIMESTAMP, "Asia/Shanghai", resultVec);
     SecondFunctionTestHelper::ValidateResult(resultVec, expected, timestampValues.size());
 
     delete resultVec;

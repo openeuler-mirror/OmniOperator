@@ -69,9 +69,14 @@ public:
             SelectivityVector rows(size);
             rows.setFromBitsNegate(inputNulls, size);
 
+            const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+
             rows.applyToSelected([&](vector_size_t i) {
-                int64_t microseconds = inputRaw[i];
-                int64_t seconds = microseconds / kMicrosPerSecond;
+                // Historical LMT offsets have second granularity
+                // (Asia/Shanghai is +08:05:43 before 1901), so the second of
+                // minute has to be read off the local clock as well.
+                Timestamp ts = Timestamp::fromMicros(inputRaw[i]);
+                int64_t seconds = util::GetSeconds(ts, sessionTz);
 
                 std::tm tmValue;
                 if (Timestamp::epochToCalendarUtc(seconds, tmValue)) {
