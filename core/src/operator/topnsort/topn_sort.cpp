@@ -936,22 +936,21 @@ int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBat
     auto mapEnd = partitionedMap.end();
     for (mapPos = currentIter; mapPos != mapEnd; ++mapPos) {
         auto value = mapPos->second;
-        outputRowCount += value->nextIndex;
-        if (outputRowCount >= maxRowCount) {
+        // Keep a partition intact.  If the first partition is larger than the
+        // configured batch size, emit it as one batch to guarantee progress.
+        if (outputRowCount > 0 && outputRowCount + value->nextIndex > maxRowCount) {
             break;
         }
+        outputRowCount += value->nextIndex;
     }
     if (outputRowCount == 0) {
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
     }
 
-    std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator end;
+    auto end = mapPos;
     if (mapPos == mapEnd) {
-        end = mapEnd;
         SetStatus(OMNI_STATUS_FINISHED);
-    } else {
-        end = mapPos++;
     }
 
     auto outputColNum = sourceTypes.GetSize();
@@ -974,6 +973,8 @@ int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBat
             resultRowIdx++;
         }
     }
+    OMNI_CHECK(resultRowIdx == outputRowCount,
+        "TopNSort output row count must match the number of copied rows.");
     *outputVecBatch = result.release();
     currentIter = end;
     return 0;

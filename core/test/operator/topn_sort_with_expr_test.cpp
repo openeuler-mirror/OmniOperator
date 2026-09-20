@@ -14,6 +14,43 @@ using namespace std;
 using namespace TestUtil;
 
 namespace TopnWithExprTest {
+TEST(TopNSortWithExprOperatorTest, TestTopNSortOutputRespectsConfiguredBatchBoundary)
+{
+    constexpr int32_t dataSize = 6;
+    std::string partitionValues[dataSize] = {"a", "a", "b", "b", "c", "c"};
+    int64_t sortValues[dataSize] = {1, 2, 1, 2, 1, 2};
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType() }));
+    VectorBatch *input = CreateVectorBatch(sourceTypes, dataSize, partitionValues, sortValues);
+
+    std::vector<omniruntime::expressions::Expr *> partitionKeys = { new FieldExpr(0, VarcharType(10)) };
+    std::vector<omniruntime::expressions::Expr *> sortKeys = { new FieldExpr(1, LongType()) };
+    std::vector<int32_t> sortAscendings = { 1 };
+    std::vector<int32_t> sortNullFirsts = { 0 };
+    auto overflowConfig = new OverflowConfig();
+    const config::QueryConfig queryConfig(
+        {{config::QueryConfig::KMaxBatchRowCount, "4"}});
+    auto factory = new TopNSortWithExprOperatorFactory(sourceTypes, 2, false, partitionKeys, sortKeys,
+        sortAscendings, sortNullFirsts, overflowConfig, queryConfig);
+    auto op = static_cast<TopNSortWithExprOperator *>(CreateTestOperator(factory));
+
+    op->AddInput(input);
+    VectorBatch *firstOutput;
+    op->GetOutput(&firstOutput);
+    EXPECT_EQ(firstOutput->GetRowCount(), 4);
+    VectorHelper::FreeVecBatch(firstOutput);
+
+    VectorBatch *secondOutput;
+    op->GetOutput(&secondOutput);
+    EXPECT_EQ(secondOutput->GetRowCount(), 2);
+    VectorHelper::FreeVecBatch(secondOutput);
+
+    Expr::DeleteExprs(partitionKeys);
+    Expr::DeleteExprs(sortKeys);
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
 TEST(TopNSortWithExprOperatorTest, TestTopNSortDescNullLast)
 {
     // construct input data
