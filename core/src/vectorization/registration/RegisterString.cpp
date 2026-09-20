@@ -298,8 +298,10 @@ void RegisterStringFunctions(const std::string &prefix)
 
     // is_digit(string) -> bool
     // Returns true if all characters are digits ('0'-'9'), false otherwise.
-    RegisterFunction<IsDigitFunction, bool, std::string_view>(
-        prefix + "is_digit", {OMNI_VARCHAR}, OMNI_BOOLEAN);
+    // NULL input yields false (Flink semantics: no NULL propagation).
+    // Implemented as VectorFunction (Path B) for per-row NULL control.
+    VectorFunction::RegisterVectorFunction(
+        prefix + "is_digit", {OMNI_VARCHAR}, OMNI_BOOLEAN, std::make_shared<IsDigitFunction>());
 
     RegisterFunction<Sha1HexStringFunction, std::string, std::string_view>(prefix + "sha1", {OMNI_VARBINARY}, OMNI_VARCHAR);
     RegisterFunction<Sha2HexStringFunction, std::string, std::string_view, int32_t>(prefix + "sha2", {OMNI_VARBINARY, OMNI_INT}, OMNI_VARCHAR);

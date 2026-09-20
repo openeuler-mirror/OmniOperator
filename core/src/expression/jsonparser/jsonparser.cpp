@@ -742,6 +742,8 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
         width = jsonExpr.contains("width") ? jsonExpr["width"].get<int32_t>() : width;
         if (retTypeId == OMNI_CHAR) {
             retType = std::make_shared<CharDataType>(width);
+        } else if (retTypeId == OMNI_VARBINARY) {
+            retType = std::make_shared<VarBinaryDataType>(width);
         } else {
             retType = std::make_shared<VarcharDataType>(width);
         }
@@ -778,21 +780,6 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
             } else {
                 return args[0];
             }
-        }
-    }
-
-    // check rlike since we only support ^d+$ currently, all other regex are fallback
-    if (funcName == "RLike" && args.size() == 2) {
-        auto secondArg = args[1];
-        if (secondArg->GetType() != ExprType::LITERAL_E) {
-            Expr::DeleteExprs(args);
-            return nullptr;
-        }
-
-        auto literalExpr = static_cast<LiteralExpr *>(secondArg);
-        if (*(literalExpr->stringVal) != "^\\d+$") {
-            Expr::DeleteExprs(args);
-            return nullptr;
         }
     }
 

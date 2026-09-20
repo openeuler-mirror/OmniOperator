@@ -38,8 +38,8 @@ public:
 
 class TimestampDiffTestHelper {
 public:
-    /// Convert date/time components to microseconds since epoch (UTC)
-    static int64_t ToMicros(int32_t year, int month, int day, int hour = 0, int minute = 0, int second = 0)
+    /// Convert date/time components to milliseconds since epoch (UTC)
+    static int64_t ToMillis(int32_t year, int month, int day, int hour = 0, int minute = 0, int second = 0)
     {
         std::tm tmValue = {};
         tmValue.tm_year = year - 1900;
@@ -50,16 +50,16 @@ public:
         tmValue.tm_sec = second;
         tmValue.tm_isdst = 0;
         int64_t epochSeconds = Timestamp::calendarUtcToEpoch(tmValue);
-        return epochSeconds * 1000000LL;
+        return epochSeconds * 1000LL;
     }
 
-    /// Create a TIMESTAMP flat vector from microsecond values
-    static BaseVector* CreateTimestampVector(const std::vector<int64_t>& micros)
+    /// Create a TIMESTAMP flat vector (native representation: OMNI_LONG epoch millis)
+    static BaseVector* CreateTimestampVector(const std::vector<int64_t>& millis)
     {
-        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_TIMESTAMP, micros.size());
+        BaseVector* vec = VectorHelper::CreateFlatVector(OMNI_LONG, millis.size());
         auto* typedVec = static_cast<Vector<int64_t>*>(vec);
-        for (size_t i = 0; i < micros.size(); ++i) {
-            typedVec->SetValue(i, micros[i]);
+        for (size_t i = 0; i < millis.size(); ++i) {
+            typedVec->SetValue(i, millis[i]);
         }
         return vec;
     }
@@ -69,7 +69,7 @@ public:
                                      BaseVector*& result)
     {
         auto signature = std::make_shared<FunctionSignature>("timestampdiff",
-            std::vector<DataTypeId>{OMNI_VARCHAR, OMNI_TIMESTAMP, OMNI_TIMESTAMP}, OMNI_LONG);
+            std::vector<DataTypeId>{OMNI_VARCHAR, OMNI_LONG, OMNI_LONG}, OMNI_LONG);
         auto function = VectorFunction::Find(signature);
         ASSERT_NE(function, nullptr) << "TimestampDiff function not found for signature";
 
@@ -78,10 +78,11 @@ public:
         context.SetResultRowSize(ts1Vec->GetSize());
         std::stack<BaseVector*> args;
 
-        // Push order: ts2 first (bottom), ts1, unit last (top)
-        args.push(ts2Vec);
-        args.push(ts1Vec);
+        // Push order follows declaration order (unit, ts1, ts2); the eval stack
+        // pops the LAST argument first, so ts2 ends up on top.
         args.push(unitVec);
+        args.push(ts1Vec);
+        args.push(ts2Vec);
 
         ASSERT_NO_THROW(function->Apply(args, outputType, result, &context))
             << "TimestampDiff function threw an exception";
@@ -111,15 +112,16 @@ TEST(TimestampDiffTest, DiffSeconds) {
     std::cout << "=== Test: DiffSeconds ===" << std::endl;
     int32_t rowSize = 2;
 
-    // ts1: 2024-01-01 00:01:00, ts2: 2024-01-01 00:00:00 -> 60 seconds
+    // Flink semantics: timestampdiff(unit, ts1, ts2) = ts1 - ts2
+    // ts1: 2024-01-01 00:01:00, ts2: 2024-01-01 00:00:00 -> +60 seconds
     // ts1: 2024-01-01 00:00:00, ts2: 2024-01-01 00:01:00 -> -60 seconds
     std::vector<int64_t> ts1 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 1, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 1, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)
     };
     std::vector<int64_t> ts2 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 1, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 1, 0)
     };
     std::vector<int64_t> expected = {60, -60};
 
@@ -140,15 +142,15 @@ TEST(TimestampDiffTest, DiffMinutes) {
     std::cout << "=== Test: DiffMinutes ===" << std::endl;
     int32_t rowSize = 2;
 
-    // ts1: 2024-01-01 00:05:00, ts2: 2024-01-01 00:00:00 -> 5 minutes
+    // ts1: 2024-01-01 00:05:00, ts2: 2024-01-01 00:00:00 -> +5 minutes
     // ts1: 2024-01-01 00:00:30, ts2: 2024-01-01 00:00:00 -> 0 minutes (truncated)
     std::vector<int64_t> ts1 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 5, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 30)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 5, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 30)
     };
     std::vector<int64_t> ts2 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)
     };
     std::vector<int64_t> expected = {5, 0};
 
@@ -169,9 +171,9 @@ TEST(TimestampDiffTest, DiffHours) {
     std::cout << "=== Test: DiffHours ===" << std::endl;
     int32_t rowSize = 1;
 
-    // ts1: 2024-01-01 02:00:00, ts2: 2024-01-01 00:00:00 -> 2 hours
-    std::vector<int64_t> ts1 = {TimestampDiffTestHelper::ToMicros(2024, 1, 1, 2, 0, 0)};
-    std::vector<int64_t> ts2 = {TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)};
+    // ts1: 2024-01-01 02:00:00, ts2: 2024-01-01 00:00:00 -> +2 hours
+    std::vector<int64_t> ts1 = {TimestampDiffTestHelper::ToMillis(2024, 1, 1, 2, 0, 0)};
+    std::vector<int64_t> ts2 = {TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)};
     std::vector<int64_t> expected = {2};
 
     std::string unitStr = "HOUR";
@@ -191,15 +193,15 @@ TEST(TimestampDiffTest, DiffDays) {
     std::cout << "=== Test: DiffDays ===" << std::endl;
     int32_t rowSize = 2;
 
-    // ts1: 2024-01-11, ts2: 2024-01-01 -> 10 days
+    // ts1: 2024-01-11, ts2: 2024-01-01 -> +10 days
     // ts1: 2024-01-05, ts2: 2024-01-10 -> -5 days
     std::vector<int64_t> ts1 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 11, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 5, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 11, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 5, 0, 0, 0)
     };
     std::vector<int64_t> ts2 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 10, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 10, 0, 0, 0)
     };
     std::vector<int64_t> expected = {10, -5};
 
@@ -220,18 +222,18 @@ TEST(TimestampDiffTest, DiffMonths) {
     std::cout << "=== Test: DiffMonths ===" << std::endl;
     int32_t rowSize = 3;
 
-    // ts1: 2024-03-15, ts2: 2024-01-15 -> 2 months
-    // ts1: 2024-02-29, ts2: 2024-01-31 -> 0 months (same calendar month diff based on month only)
-    // ts1: 2025-06-01, ts2: 2024-06-01 -> 12 months
+    // ts1: 2024-03-15, ts2: 2024-01-15 -> +2 months
+    // ts1: 2024-02-29, ts2: 2024-01-31 -> +1 month (day clamped to the target month)
+    // ts1: 2025-06-01, ts2: 2024-06-01 -> +12 months
     std::vector<int64_t> ts1 = {
-        TimestampDiffTestHelper::ToMicros(2024, 3, 15, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 2, 29, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2025, 6, 1, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 3, 15, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 2, 29, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2025, 6, 1, 0, 0, 0)
     };
     std::vector<int64_t> ts2 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 15, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 31, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 6, 1, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 15, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 31, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 6, 1, 0, 0, 0)
     };
     std::vector<int64_t> expected = {2, 1, 12};
 
@@ -252,17 +254,17 @@ TEST(TimestampDiffTest, DiffYears) {
     std::cout << "=== Test: DiffYears ===" << std::endl;
     int32_t rowSize = 2;
 
-    // ts1: 2026-06-15, ts2: 2024-06-15 -> 2 years
-    // ts1: 2024-12-31, ts2: 2025-01-01 -> -1 year (based on calendar year)
+    // ts1: 2026-06-15, ts2: 2024-06-15 -> +2 years
+    // ts1: 2024-12-31, ts2: 2025-01-01 -> 0 years (subtractMonths = 0, 0 / 12 = 0)
     std::vector<int64_t> ts1 = {
-        TimestampDiffTestHelper::ToMicros(2026, 6, 15, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 12, 31, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2026, 6, 15, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 12, 31, 0, 0, 0)
     };
     std::vector<int64_t> ts2 = {
-        TimestampDiffTestHelper::ToMicros(2024, 6, 15, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2025, 1, 1, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 6, 15, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2025, 1, 1, 0, 0, 0)
     };
-    std::vector<int64_t> expected = {2, -1};
+    std::vector<int64_t> expected = {2, 0};
 
     std::string unitStr = "YEAR";
     BaseVector* unitVec = new ConstVector<std::string_view>(std::string_view(unitStr), OMNI_VARCHAR, rowSize);
@@ -282,8 +284,8 @@ TEST(TimestampDiffTest, ZeroDiff) {
     int32_t rowSize = 1;
 
     // ts1 == ts2 -> 0
-    std::vector<int64_t> ts1 = {TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)};
-    std::vector<int64_t> ts2 = {TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)};
+    std::vector<int64_t> ts1 = {TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)};
+    std::vector<int64_t> ts2 = {TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)};
     std::vector<int64_t> expected = {0};
 
     std::string unitStr = "HOUR";
@@ -304,14 +306,14 @@ TEST(TimestampDiffTest, NullTs1) {
     int32_t rowSize = 3;
 
     std::vector<int64_t> ts1 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)
     };
     std::vector<int64_t> ts2 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)
     };
 
     std::string unitStr = "DAY";
@@ -338,14 +340,14 @@ TEST(TimestampDiffTest, NullTs2) {
     int32_t rowSize = 3;
 
     std::vector<int64_t> ts1 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)
     };
     std::vector<int64_t> ts2 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)
     };
 
     std::string unitStr = "DAY";
@@ -371,8 +373,8 @@ TEST(TimestampDiffTest, InvalidUnit) {
     std::cout << "=== Test: InvalidUnit ===" << std::endl;
     int32_t rowSize = 1;
 
-    std::vector<int64_t> ts1 = {TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)};
-    std::vector<int64_t> ts2 = {TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)};
+    std::vector<int64_t> ts1 = {TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)};
+    std::vector<int64_t> ts2 = {TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)};
 
     std::string unitStr = "INVALID";
     BaseVector* unitVec = new ConstVector<std::string_view>(std::string_view(unitStr), OMNI_VARCHAR, rowSize);
@@ -392,8 +394,8 @@ TEST(TimestampDiffTest, CaseInsensitiveUnit) {
     std::cout << "=== Test: CaseInsensitiveUnit ===" << std::endl;
     int32_t rowSize = 1;
 
-    std::vector<int64_t> ts1 = {TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 1, 0)};
-    std::vector<int64_t> ts2 = {TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)};
+    std::vector<int64_t> ts1 = {TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 1, 0)};
+    std::vector<int64_t> ts2 = {TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)};
     std::vector<int64_t> expected = {60};
 
     std::string unitStr = "second";
@@ -413,15 +415,15 @@ TEST(TimestampDiffTest, IntegerTruncation) {
     std::cout << "=== Test: IntegerTruncation ===" << std::endl;
     int32_t rowSize = 2;
 
-    // 90 seconds = 1 minute (truncated toward zero)
-    // 90 seconds = 0 hours (truncated toward zero)
+    // 90 seconds later -> +1 minute (truncated toward zero)
+    // 90 seconds later -> 0 hours (truncated toward zero)
     std::vector<int64_t> ts1 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 1, 30),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 1, 30)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 1, 30),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 1, 30)
     };
     std::vector<int64_t> ts2 = {
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0),
-        TimestampDiffTestHelper::ToMicros(2024, 1, 1, 0, 0, 0)
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0),
+        TimestampDiffTestHelper::ToMillis(2024, 1, 1, 0, 0, 0)
     };
     std::vector<int64_t> expectedMinutes = {1};
     std::vector<int64_t> expectedHours = {0};
