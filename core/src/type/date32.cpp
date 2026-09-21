@@ -345,7 +345,9 @@ Status Date32::StringToDate32(const char *buf, int32_t len, int64_t &result)
         }
     }
 
-    if (pos - startPos - sign < YEAR_LENGTH) {
+    // Spark DateTimeUtils.stringToDate: a bare year is only 4-7 digits; 8+ digits
+    // (e.g. "00000000") are invalid and must be NULL, not year 0.
+    if (pos - startPos - sign < YEAR_LENGTH || pos - startPos - sign > 7) {
         return Status::IS_NOT_A_NUMBER;
     }
     if (yearNeg) {
