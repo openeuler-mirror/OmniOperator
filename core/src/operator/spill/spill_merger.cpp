@@ -3,6 +3,7 @@
  * Description: spill merger implementation
  */
 
+#include <algorithm>
 #include <unistd.h>
 #include "spill_merger.h"
 #include "vector/map_vector.h"
@@ -51,6 +52,21 @@ ErrorCode SpillReader::ReadVecBatch(std::unique_ptr<vec::VectorBatch> &vectorBat
         isEnd = true;
         fclose(file);
         LogError("Read row count from %s failed.", filePath.c_str());
+        return ErrorCode::READ_FAILED;
+    }
+
+    // A zero-sized batch is not a valid spill record. Treat it as a corrupt or
+    // misaligned stream instead of silently marking the merge stream empty.
+    const auto remainingRows = totalRowCount - rowOffset;
+    if (rowCount <= 0 || static_cast<uint64_t>(rowCount) > remainingRows) {
+        long filePosition = ftell(file);
+        LogWarn("[HashAggSpillTrace] invalid-reader-batch rowCount=%d loaded=%llu "
+                "remaining=%llu declaredRows=%llu fileOffset=%ld path=%s",
+            rowCount, static_cast<unsigned long long>(rowOffset),
+            static_cast<unsigned long long>(remainingRows),
+            static_cast<unsigned long long>(totalRowCount), filePosition, filePath.c_str());
+        isEnd = true;
+        fclose(file);
         return ErrorCode::READ_FAILED;
     }
 
@@ -362,67 +378,69 @@ ErrorCode SpillReader::ReadWithCompress(void *buf, size_t bufSize)
         return ErrorCode::SUCCESS;
     }
 
-    if (remainLength == 0) {
-        if (prevBuffer_ != nullptr) {
-            delete[] prevBuffer_;
-            prevBuffer_ = nullptr;
-        }
-        char* header_data = new char[3];
-        size_t nread = fread(header_data, 1, 3, file);
-        if (nread != 3) {
-            int savedErrno = ferror(file) ? errno : 0;
-            if (savedErrno == 0 && feof(file)) {
-                savedErrno = EIO;
+    size_t copied = 0;
+    while (copied < bufSize) {
+        if (remainLength == 0) {
+            if (prevBuffer_ != nullptr) {
+                delete[] prevBuffer_;
+                prevBuffer_ = nullptr;
             }
-            char errorBuf[ERROR_BUFFER_SIZE];
-            GetErrorMsg(savedErrno, errorBuf, ERROR_BUFFER_SIZE);
-            LogError("Read header from %s failed: %s (errno=%d)", filePath.c_str(), errorBuf, savedErrno);
-            delete[] header_data;
-            return ErrorCode::READ_FAILED;
-        }
-        std::pair<size_t, bool> header_info = parseCompressionHeader(header_data);
-        delete[] header_data;
-        size_t compressed_block_size = header_info.first;
-        bool is_original_data = header_info.second;
-        int32_t actual_decompress_len = 0;
-        char* compressed_data = new char[compressed_block_size];
-        nread = fread(compressed_data, 1, compressed_block_size, file);
-        if (nread != compressed_block_size) {
-            int savedErrno = ferror(file) ? errno : 0;
-            if (savedErrno == 0 && feof(file)) {
-                savedErrno = EIO;
-            }
-            char errorBuf[ERROR_BUFFER_SIZE];
-            GetErrorMsg(savedErrno, errorBuf, ERROR_BUFFER_SIZE);
-            LogError("Read compressed data from %s failed: %s (errno=%d)", filePath.c_str(), errorBuf, savedErrno);
-            delete[] compressed_data;
-            return ErrorCode::READ_FAILED;
-        }
-        if (is_original_data) {
-            actual_decompress_len = static_cast<int32_t>(compressed_block_size);
-            prevBuffer_ = compressed_data;
-            currentBuffer_ = prevBuffer_;
-            remainLength = actual_decompress_len;
-        } else {
-            auto [decomp_data, decomp_len] = decompressLZ4(
-                    compressed_data, static_cast<int32_t>(compressed_block_size), 32 * 1024 * 1024
-            );
-            delete[] compressed_data;
-            if (decomp_data == nullptr || decomp_len <= 0) {
+            char header_data[3];
+            size_t nread = fread(header_data, 1, sizeof(header_data), file);
+            if (nread != sizeof(header_data)) {
+                int savedErrno = ferror(file) ? errno : 0;
+                if (savedErrno == 0 && feof(file)) {
+                    savedErrno = EIO;
+                }
+                char errorBuf[ERROR_BUFFER_SIZE];
+                GetErrorMsg(savedErrno, errorBuf, ERROR_BUFFER_SIZE);
+                LogError("Read header from %s failed: %s (errno=%d)", filePath.c_str(), errorBuf, savedErrno);
                 return ErrorCode::READ_FAILED;
             }
 
-            prevBuffer_ = decomp_data;
-            currentBuffer_ = prevBuffer_;
-            remainLength = decomp_len;
+            std::pair<size_t, bool> header_info = parseCompressionHeader(header_data);
+            size_t compressed_block_size = header_info.first;
+            bool is_original_data = header_info.second;
+            if (compressed_block_size == 0) {
+                LogError("Read compressed data from %s failed: zero-sized block.", filePath.c_str());
+                return ErrorCode::READ_FAILED;
+            }
+            char* compressed_data = new char[compressed_block_size];
+            nread = fread(compressed_data, 1, compressed_block_size, file);
+            if (nread != compressed_block_size) {
+                int savedErrno = ferror(file) ? errno : 0;
+                if (savedErrno == 0 && feof(file)) {
+                    savedErrno = EIO;
+                }
+                char errorBuf[ERROR_BUFFER_SIZE];
+                GetErrorMsg(savedErrno, errorBuf, ERROR_BUFFER_SIZE);
+                LogError("Read compressed data from %s failed: %s (errno=%d)", filePath.c_str(), errorBuf, savedErrno);
+                delete[] compressed_data;
+                return ErrorCode::READ_FAILED;
+            }
+            if (is_original_data) {
+                prevBuffer_ = compressed_data;
+                currentBuffer_ = prevBuffer_;
+                remainLength = static_cast<int32_t>(compressed_block_size);
+            } else {
+                auto [decomp_data, decomp_len] = decompressLZ4(
+                    compressed_data, static_cast<int32_t>(compressed_block_size), 32 * 1024 * 1024);
+                delete[] compressed_data;
+                if (decomp_data == nullptr || decomp_len <= 0) {
+                    return ErrorCode::READ_FAILED;
+                }
+                prevBuffer_ = decomp_data;
+                currentBuffer_ = prevBuffer_;
+                remainLength = decomp_len;
+            }
         }
+
+        size_t bytes_to_copy = std::min(static_cast<size_t>(remainLength), bufSize - copied);
+        memcpy(static_cast<char *>(buf) + copied, currentBuffer_, bytes_to_copy);
+        currentBuffer_ += bytes_to_copy;
+        remainLength -= static_cast<int32_t>(bytes_to_copy);
+        copied += bytes_to_copy;
     }
-
-    size_t bytes_to_copy = remainLength <bufSize ? remainLength : bufSize;
-    memcpy(buf, currentBuffer_, bytes_to_copy);
-
-    currentBuffer_ += bytes_to_copy;
-    remainLength -= bytes_to_copy;
 
     return ErrorCode::SUCCESS;
 }
