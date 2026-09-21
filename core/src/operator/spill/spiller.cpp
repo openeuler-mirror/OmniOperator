@@ -165,28 +165,28 @@ uint64_t Spiller::CollectComplexVectorSize(const DataTypePtr& dataType, vec::Bas
 {
     switch (dataType->GetId()) {
     case OMNI_BOOLEAN:
-        return CollectVectorSize<bool>(vector);
+        return CollectVectorSize<bool>(vector, rowCount);
     case OMNI_INT:
     case OMNI_DATE32:
-        return CollectVectorSize<int32_t>(vector);
+        return CollectVectorSize<int32_t>(vector, rowCount);
     case OMNI_SHORT:
-        return CollectVectorSize<int16_t>(vector);
+        return CollectVectorSize<int16_t>(vector, rowCount);
     case OMNI_LONG:
     case OMNI_DECIMAL64:
     case OMNI_TIMESTAMP:
-        return CollectVectorSize<int64_t>(vector);
+        return CollectVectorSize<int64_t>(vector, rowCount);
     case OMNI_DOUBLE:
-        return CollectVectorSize<double>(vector);
+        return CollectVectorSize<double>(vector, rowCount);
     case OMNI_FLOAT:
-        return CollectVectorSize<float>(vector);
+        return CollectVectorSize<float>(vector, rowCount);
     case OMNI_DECIMAL128:
-        return CollectVectorSize<Decimal128>(vector);
+        return CollectVectorSize<Decimal128>(vector, rowCount);
     case OMNI_VARBINARY:
     case OMNI_VARCHAR:
     case OMNI_CHAR:
-        return CollectVectorSize<std::string_view>(vector);
+        return CollectVectorSize<std::string_view>(vector, rowCount);
     case OMNI_BYTE:
-        return CollectVectorSize<int8_t>(vector);
+        return CollectVectorSize<int8_t>(vector, rowCount);
     case OMNI_ARRAY:
         return CollectArrayVectorSize(dataType, vector, rowCount);
     case OMNI_MAP:
@@ -274,9 +274,8 @@ uint64_t Spiller::CollectRowVectorSize(const DataTypePtr &rowType, vec::BaseVect
         return isSpillCompressEnabled;
     }
 
-    template <typename T> uint64_t Spiller::CollectVectorSize(vec::BaseVector *vector)
+template <typename T> uint64_t Spiller::CollectVectorSize(vec::BaseVector *vector, int32_t rowCount)
 {
-    int32_t rowCount = vector->GetSize();
     uint64_t result = BitUtil::Nbytes(rowCount); // nulls byte size
     if constexpr (std::is_same_v<T, std::string_view>) {
         // offsets

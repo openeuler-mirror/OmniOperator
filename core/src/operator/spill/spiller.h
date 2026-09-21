@@ -164,7 +164,7 @@ public:
 private:
     uint64_t CollectVecBatchSize(vec::VectorBatch *vectorBatch);
 
-    template <typename T> uint64_t CollectVectorSize(vec::BaseVector *vector);
+    template <typename T> uint64_t CollectVectorSize(vec::BaseVector *vector, int32_t rowCount);
 
     uint64_t CollectComplexVectorSize(const DataTypePtr &dataType, vec::BaseVector *vector, int32_t rowCount);
 
