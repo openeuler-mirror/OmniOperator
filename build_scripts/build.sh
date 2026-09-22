@@ -92,6 +92,9 @@ else
       elif [ "$i" == '--exclude-duplicate-codegen' ]; then
           echo "-- Exclude Duplicate Codegen Functions"
           OPTIONS+=" -DEXCLUDE_DUPLICATE_CODEGEN_FUNCTIONS=ON"
+      elif [ "$i" == '--experimental-sort-enable' ]; then
+          echo "-- Enable Experimental Sort"
+          OPTIONS+=" -DOMNI_ENABLE_EXPERIMENTAL_SORT=ON"
       else
           exit_with_message_and_print_help "ERROR: Invalid option: $i"
       fi

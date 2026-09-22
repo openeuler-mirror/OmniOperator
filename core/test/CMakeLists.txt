@@ -49,6 +49,8 @@ endif ()
 
     # find gtest package
     find_package(GTest REQUIRED)
+    find_package(folly REQUIRED)
+    find_package(gflags REQUIRED)
 
     # compile a executable file
     add_executable(${OM_TEST_TARGET} ${ROOT_SRCS} ${TEST_ROOT_SRCS})
@@ -66,6 +68,7 @@ endif ()
             dl
             LLVM-15
             re2::re2
+            Folly::folly
             gcov
     $<$<BOOL:${ENABLE_BENCHMARK}>:benchmark::benchmark>)
     target_compile_options(${OM_TEST_TARGET} PUBLIC -g -O2 -fPIC)

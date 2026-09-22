@@ -18,7 +18,12 @@ namespace omniruntime {
 namespace op {
 class PagesIndex : public MemoryBuilder {
 public:
-    explicit PagesIndex(const DataTypes &types);
+    explicit PagesIndex(const DataTypes &types, bool pdqSortEnabled, bool inplacePdqSortEnabled,
+        bool timSortEnabled);
+    
+    explicit PagesIndex(const DataTypes &types)
+        : PagesIndex(types, false, false, false)
+    {}
 
     ~PagesIndex() override;
 
@@ -106,6 +111,11 @@ public:
     ALWAYS_INLINE bool HasDictionary(uint32_t index) const
     {
         return hasDictionaries[index];
+    }
+
+    ALWAYS_INLINE bool HasNull(uint32_t index) const
+    {
+        return hasNulls[index];
     }
 
     ALWAYS_INLINE size_t GetVectorBatchSize() const
@@ -213,6 +223,10 @@ private:
     const DataTypes dataTypes;
     omniruntime::vec::BaseVector ***columns = nullptr; // Vector* [columnIndex][tableIndex]
     omniruntime::vec::BaseVector *inplaceSortColumn = nullptr;
+
+    bool pdqSortEnabled = false;
+    bool inplacePdqSortEnabled = false;
+    bool timSortEnabled = false;
 };
 
 constexpr uint32_t SHIFT_SIZE_32 = 32;

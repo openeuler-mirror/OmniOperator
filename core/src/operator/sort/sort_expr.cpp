@@ -37,9 +37,12 @@ SortWithExprOperatorFactory* SortWithExprOperatorFactory::CreateSortWithExprOper
         queryConfig.SpillMemFraction(), queryConfig.SpillWriteBufferSize(), queryConfig.SpillEnableCompress());
     auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                                                                  : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    OperatorConfig operatorConfig(spillConfig, overflowConfig);
+    operatorConfig.SetSortAlgorithm(queryConfig.PdqSortEnabled(), queryConfig.InplacePdqSortEnabled(),
+        queryConfig.TimSortEnabled());
     auto pOperatorFactory = new SortWithExprOperatorFactory(*sourceTypes, outputCols, outputColsCount, sortExpressions,
-        sortAscendings, sortNullFirsts, expressionCount, OperatorConfig(spillConfig, overflowConfig)
-        , queryConfig);
+        sortAscendings, sortNullFirsts, expressionCount, operatorConfig);
+    pOperatorFactory->SetQueryConfig(queryConfig);
     return pOperatorFactory;
 }
 
@@ -55,13 +58,13 @@ SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &
         outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig);
 }
 
-SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
-    int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
-    int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig
-    , const config::QueryConfig& queryConfig) : SortWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount,
-    sortKeys, sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig)
-{
-    this->queryConfig_ = queryConfig;
+SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,	
+    int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,	
+    int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig	
+    , const config::QueryConfig& queryConfig) : SortWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount,	
+    sortKeys, sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig)	
+{	
+    this->queryConfig_ = queryConfig;	
 }
 
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(

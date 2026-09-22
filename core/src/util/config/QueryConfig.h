@@ -184,6 +184,9 @@ public:
     static constexpr const char *KStringViewRuntimeValidationEnabled =
         "string_view_runtime_validation_enabled";
 
+    static constexpr const char *kPdqSortEnabled = "pdq_sort_enabled";
+    static constexpr const char *kInplacePdqSortEnabled = "inplace_pdq_sort_enabled";
+    static constexpr const char *kTimSortEnabled = "tim_sort_enabled";
     /// When true, each executor builds the BHJ hash table only once and shares it
     /// across all tasks that probe the same broadcast relation.
     static constexpr const char *KBuildHashTableOncePerExecutor = "build_hash_table_once_per_executor";
@@ -453,6 +456,33 @@ public:
         return get<bool>(KPreferVectorizationExpression, kDefaultValue);
     }
 
+    bool PdqSortEnabled() const
+    {
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+        return get<bool>(kPdqSortEnabled, false);
+#else
+        return false;
+#endif
+    }
+
+    bool InplacePdqSortEnabled() const
+    {
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+        return get<bool>(kInplacePdqSortEnabled, false);
+#else
+        return false;
+#endif
+    }
+
+    bool TimSortEnabled() const
+    {
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+        return get<bool>(kTimSortEnabled, false);
+#else
+        return false;
+#endif
+    }
+    
     bool StringViewRuntimeValidationEnabled() const
     {
         constexpr bool kDefaultValue = false;

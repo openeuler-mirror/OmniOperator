@@ -138,6 +138,37 @@ TEST(ConfigTest, setConfig)
 
     ASSERT_TRUE(config.spillEnabled());
 }
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+
+TEST(ConfigTest, sortAlgorithmConfigDefaultsDisabled)
+{
+    const QueryConfig config{};
+    ASSERT_FALSE(config.PdqSortEnabled());
+    ASSERT_FALSE(config.InplacePdqSortEnabled());
+    ASSERT_FALSE(config.TimSortEnabled());
+}
+#endif
+
+TEST(ConfigTest, sortAlgorithmConfigFromQueryConfig)
+{
+    const std::unordered_map<std::string, std::string> configData({
+        {QueryConfig::kPdqSortEnabled, "true"},
+        {QueryConfig::kInplacePdqSortEnabled, "true"},
+        {QueryConfig::kTimSortEnabled, "true"}
+    });
+    const QueryConfig config(configData);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+    // Compile-time switch enabled: the runtime knobs are respected.
+    ASSERT_TRUE(config.PdqSortEnabled());
+    ASSERT_TRUE(config.InplacePdqSortEnabled());
+    ASSERT_TRUE(config.TimSortEnabled());
+#else
+    // Compile-time switch strips experimental sorts; runtime knobs are ignored.
+    ASSERT_FALSE(config.PdqSortEnabled());
+    ASSERT_FALSE(config.InplacePdqSortEnabled());
+    ASSERT_FALSE(config.TimSortEnabled());
+#endif
+}
 
 TEST(ConfigTest, maxRowCount)
 {
