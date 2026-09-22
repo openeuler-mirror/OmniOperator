@@ -12,6 +12,7 @@
 #include <string_view>
 #include <unordered_map>
 #include "vectorization/Status.h"
+#include "vectorization/VectorFunction.h"
 #include "vectorization/functions/Base64Util.h"
 #include "type/string_Impl.h"
 #include "folly/ssl/OpenSSLHash.h"
@@ -2152,8 +2153,9 @@ private:
 // ENCODE(string, charset) -> varbinary
 // Encodes a UTF-8 string into binary data using the specified character set.
 // Supported charsets: US-ASCII, ISO-8859-1, UTF-8, UTF-16BE, UTF-16LE, UTF-16.
-// Returns NULL if either argument is NULL, charset is unsupported, or a character
-// cannot be represented in the target charset.
+// Returns NULL if either argument is NULL or the charset is unsupported.
+// Characters that cannot be represented in US-ASCII / ISO-8859-1 are replaced
+// by '?' (0x3F), matching java.lang.String#getBytes.
 // ============================================================================
 
 namespace encode_detail {
@@ -2182,9 +2184,11 @@ inline bool EncodeAscii(std::string& result, const std::string_view& input)
             return false;
         }
         if (cp > 0x7F) {
-            return false;
+            // Java 的 String#getBytes("US-ASCII") 对不可映射字符用 '?' 替换。
+            result.push_back('?');
+        } else {
+            result.push_back(static_cast<char>(cp));
         }
-        result.push_back(static_cast<char>(cp));
         pos += byteLen;
     }
     return true;
@@ -2200,9 +2204,11 @@ inline bool EncodeIso88591(std::string& result, const std::string_view& input)
             return false;
         }
         if (cp > 0xFF) {
-            return false;
+            // Java 的 String#getBytes("ISO-8859-1") 对不可映射字符用 '?' 替换。
+            result.push_back('?');
+        } else {
+            result.push_back(static_cast<char>(cp));
         }
-        result.push_back(static_cast<char>(cp));
         pos += byteLen;
     }
     return true;
@@ -2535,27 +2541,16 @@ struct DecodeFunction {
 
 /// is_digit(string) -> bool
 /// Returns true if all characters in the string are digits ('0'-'9'), false otherwise.
-/// Empty string returns false. NULL input yields NULL output.
-template <typename T>
-struct IsDigitFunction {
-    ALWAYS_INLINE bool callNullable(bool &result, const std::string_view *str)
-    {
-        if (str == nullptr) {
-            return false;
-        }
-        if (str->empty()) {
-            result = false;
-            return true;
-        }
-        for (char c : *str) {
-            if (c < '0' || c > '9') {
-                result = false;
-                return true;
-            }
-        }
-        result = true;
-        return true;
-    }
+/// Empty string returns false. NULL input yields false (Flink IS_DIGIT semantics: no NULL propagation).
+///
+/// Implemented as a VectorFunction (Path B) rather than a SimpleFunction, because
+/// the SimpleFunction framework skips NULL input rows (IntersectNull) and would
+/// propagate NULL — but Flink requires IS_DIGIT(NULL) = FALSE. Path B gives full
+/// per-row control so NULL inputs yield an explicit FALSE result.
+class IsDigitFunction final : public VectorFunction {
+public:
+    void Apply(std::stack<omniruntime::vec::BaseVector *> &args, const omniruntime::type::DataTypePtr &outputType,
+        omniruntime::vec::BaseVector *&result, omniruntime::op::ExecutionContext *context) const override;
 };
 
 }

@@ -149,9 +149,10 @@ bool TryParseStandardDateTime(
     }
 
     const size_t standardLength = hasTime ? kYmdHmsLength : kYmdLength;
-    if (!HasValidStandardSuffix(input, standardLength, format.allowTrailingWhitespace,
-            format.allowUnconsumedSuffix) ||
-        input[4] != '-' || input[7] != '-' ||
+    if (input.size() < standardLength) {
+        return false;
+    }
+    if (input[4] != '-' || input[7] != '-' ||
         (hasTime && (input[10] != ' ' || input[13] != ':' || input[16] != ':'))) {
         return false;
     }
@@ -177,6 +178,51 @@ bool TryParseStandardDateTime(
         return false;
     }
 
+    // Parse optional fractional seconds for YMD_HMS format.
+    //
+    // Only when the caller requires the whole string to be consumed while still
+    // tolerating trailing whitespace (flink_to_timestamp / get_timestamp with the
+    // default "yyyy-MM-dd HH:mm:ss"): there ".123" is part of the value and must be
+    // parsed. When format.allowUnconsumedSuffix is set the caller follows Flink's
+    // lenient SimpleDateFormat.parse semantics and drops whatever follows the
+    // seconds field, so ".123" is leftover to be ignored, not a fraction.
+    int64_t fractionalMicros = 0;
+    size_t pos = standardLength;
+    const bool parseFractional = format.allowTrailingWhitespace && !format.allowUnconsumedSuffix;
+    if (hasTime && parseFractional && pos < input.size() && input[pos] == '.') {
+        ++pos;
+        int64_t fracValue = 0;
+        int fracDigits = 0;
+        while (pos < input.size() && input[pos] >= '0' && input[pos] <= '9' && fracDigits < 9) {
+            fracValue = fracValue * 10 + (input[pos] - '0');
+            ++fracDigits;
+            ++pos;
+        }
+        // Skip any extra digits beyond 9 (nanosecond precision limit).
+        while (pos < input.size() && input[pos] >= '0' && input[pos] <= '9') {
+            ++pos;
+        }
+        if (fracDigits == 0) {
+            return false; // dot with no digits
+        }
+        // Normalize to microseconds: pad or truncate to 6 digits.
+        while (fracDigits < 6) {
+            fracValue *= 10;
+            ++fracDigits;
+        }
+        while (fracDigits > 6) {
+            fracValue /= 10;
+            --fracDigits;
+        }
+        fractionalMicros = fracValue;
+    }
+
+    // Validate suffix: only trailing whitespace allowed.
+    if (!HasValidStandardSuffix(input, pos, format.allowTrailingWhitespace,
+            format.allowUnconsumedSuffix)) {
+        return false;
+    }
+
     std::tm timeInfo = {};
     timeInfo.tm_year = year - 1900;
     timeInfo.tm_mon = month - 1;
@@ -185,7 +231,7 @@ bool TryParseStandardDateTime(
     timeInfo.tm_min = minute;
     timeInfo.tm_sec = second;
     timeInfo.tm_isdst = -1;
-    resultMicros = Timestamp::calendarUtcToEpoch(timeInfo) * Timestamp::kMicrosecondsInSecond;
+    resultMicros = Timestamp::calendarUtcToEpoch(timeInfo) * Timestamp::kMicrosecondsInSecond + fractionalMicros;
     return true;
 }
 

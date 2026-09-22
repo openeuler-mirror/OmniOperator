@@ -116,7 +116,10 @@ TEST_F(EncodeTest, AsciiNonAsciiChar) {
     auto* result = RunEncode(stringVec, charsetVec, rowSize);
     auto* outVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(result);
     ASSERT_NE(outVec, nullptr);
-    EXPECT_TRUE(outVec->IsNull(0));
+    // Flink ENCODE is String#getBytes(charset): an unmappable character is
+    // replaced by '?' (0x3F) instead of yielding NULL.
+    EXPECT_FALSE(outVec->IsNull(0));
+    EXPECT_EQ(std::string(outVec->GetValue(0)), "?");
 
     delete result;
     delete stringVec;
@@ -203,7 +206,9 @@ TEST_F(EncodeTest, Iso88591CodepointTooLarge) {
     auto* result = RunEncode(stringVec, charsetVec, rowSize);
     auto* outVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(result);
     ASSERT_NE(outVec, nullptr);
-    EXPECT_TRUE(outVec->IsNull(0));
+    // Same replacement semantics as US-ASCII: '?' for codepoints above 0xFF.
+    EXPECT_FALSE(outVec->IsNull(0));
+    EXPECT_EQ(std::string(outVec->GetValue(0)), "?");
 
     delete result;
     delete stringVec;
