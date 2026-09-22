@@ -10,6 +10,9 @@
 #include "type/Timestamp.h"
 #include "vector/vector_helper.h"
 #include "util/bit_util.h"
+#include "util/TimeUtils.h"
+#include "util/config/QueryConfig.h"
+#include "type/tz/TimeZoneMap.h"
 #include <ctime>
 #include <cstring>
 #include "libboundscheck/include/securec.h"
@@ -19,6 +22,16 @@ using namespace omniruntime::vec;
 using namespace omniruntime::type;
 
 namespace {
+
+const tz::TimeZone *getTimeZoneFromConfig(const config::QueryConfig &config)
+{
+    const auto sessionTzName = config.SessionTimezone();
+    if (!sessionTzName.empty()) {
+        return tz::locateZone(sessionTzName);
+    }
+    return nullptr;
+}
+
 class MinuteFunction : public VectorFunction {
 public:
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
@@ -44,6 +57,8 @@ public:
         // Get input type
         const auto inputTypeId = inputArg->GetTypeId();
         
+        const tz::TimeZone *sessionTz = getTimeZoneFromConfig(context->queryConfig());
+        
         // TIMESTAMP is represented as OMNI_LONG (int64_t) at runtime
         if (inputTypeId == OMNI_TIMESTAMP || inputTypeId == OMNI_LONG) {
             // Extract minute from timestamp
@@ -61,11 +76,13 @@ public:
             rows.setFromBitsNegate(inputNulls, size);
             
             rows.applyToSelected([&](vector_size_t i) {
-                // Convert timestamp (microseconds) to seconds
-                int64_t microseconds = inputRaw[i];
-                int64_t seconds = microseconds / 1000000;
+                // The minute of hour is read off the local clock: a zone offset
+                // is not necessarily a whole number of hours, and may not even
+                // be a whole number of minutes for historical LMT offsets
+                // (Asia/Shanghai is +08:05:43 before 1901).
+                Timestamp ts = Timestamp::fromMicros(inputRaw[i]);
+                int64_t seconds = util::GetSeconds(ts, sessionTz);
                 
-                // Extract minute using Timestamp::epochToCalendarUtc (static method)
                 std::tm tmValue;
                 if (Timestamp::epochToCalendarUtc(seconds, tmValue)) {
                     resultRaw[i] = static_cast<int32_t>(tmValue.tm_min);
