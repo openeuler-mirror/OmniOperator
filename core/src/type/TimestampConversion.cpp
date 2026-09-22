@@ -658,7 +658,9 @@ bool tryParseDateString(const char *buf, size_t len, size_t &pos, int64_t &daysS
     /// `[+-]yyyy*-[m]m-[d]d `
     /// `[+-]yyyy*-[m]m-[d]d *`
     /// `[+-]yyyy*-[m]m-[d]dT*`
-    if (pos - sign < 4) {
+    /// A bare year is only 4-7 digits (Spark DateTimeUtils.stringToDate): 8+ digits
+    /// (e.g. "00000000") are invalid and must be NULL, not year 0.
+    if (pos - sign < 4 || pos - sign > 7) {
         return false;
     }
     if (yearneg) {

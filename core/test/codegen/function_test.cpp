@@ -336,14 +336,16 @@ TEST(FunctionTest, XxH64Decimal64)
 
 TEST(FunctionTest, XxH64Decimal128)
 {
+    // Expected values are Spark-correct: XXH64.hashBytes(unscaledValue.toByteArray, 42)
+    // after Decimal128ToBytes aligned with java.math.BigInteger.toByteArray (13c91d41).
     auto value1 = Decimal128(0x80111e8f827844e5, 0x7c03905da66c0000);
     auto value2 = Decimal128(0x00002bd35ae79a49, 0xf98f65489dd30001);
-    EXPECT_EQ(XxH64Decimal128(value1.HighBits(), value1.LowBits(), 38, 16, false, 42, false), -216624505269361667);
+    EXPECT_EQ(XxH64Decimal128(value1.HighBits(), value1.LowBits(), 38, 16, false, 42, false), 4920002044141115121);
     EXPECT_EQ(XxH64Decimal128(value2.HighBits(), value2.LowBits(), 38, 16, false, 42, false), 8484287969139273592);
     auto value3 = Decimal128(0x0, 0x29a2241af62bffff);
     auto value4 = Decimal128(0x8000000000000000, 0x0de0b6b3a763ffff);
     EXPECT_EQ(XxH64Decimal128(value3.HighBits(), value3.LowBits(), 38, 18, false, 42, false), -5056633277332826927);
-    EXPECT_EQ(XxH64Decimal128(value4.HighBits(), value4.LowBits(), 38, 18, false, 42, false), -6640857474798889004);
+    EXPECT_EQ(XxH64Decimal128(value4.HighBits(), value4.LowBits(), 38, 18, false, 42, false), -268196483217773069);
 }
 
 /*

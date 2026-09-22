@@ -41,52 +41,53 @@ public:
         return str;
     }
 
+    // Emulate java.math.BigInteger.toByteArray() (minimal two's-complement). The old code fed raw
+    // two's-complement bits into the magnitude path (sign bit stripped, 0xFF padding kept), giving
+    // 17 bytes for -1 and wrong negative hashes. Steps: |value| -> byteLen = bitLength()/8 + 1
+    // (negative powers of two: one bit less, -128 -> 1 byte) -> big-endian bytes -> negate for
+    // negatives (invert + 1).
     static int8_t *Decimal128ToBytes(int64_t highBits, uint64_t lowBits, int32_t &byteLen)
     {
-        bool isNegative = highBits < 0;
-        highBits = isNegative ? omniruntime::op::HashUtil::UnpackUnsignedLong(highBits) : highBits;
-        int32_t tmpArray[] = { static_cast<int32_t>(highBits >> 32), static_cast<int32_t>(highBits),
-                               static_cast<int32_t>(lowBits >> 32), static_cast<int32_t>(lowBits) };
-        auto tmpLen = sizeof(tmpArray) / sizeof(tmpArray[0]);
-        int32_t int32Array[tmpLen];
+        const __uint128_t value =
+            (static_cast<__uint128_t>(static_cast<uint64_t>(highBits)) << 64) | static_cast<__uint128_t>(lowBits);
+        const bool isNegative = (static_cast<uint64_t>(highBits) >> 63) != 0;
+        __uint128_t mag = isNegative ? (static_cast<__uint128_t>(0) - value) : value;
 
-        int32_t len = 0;
-        int32_t idx2 = 0;
-        for (int idx1 = 0; idx1 < tmpLen; idx1++) {
-            auto val = tmpArray[idx1];
-            if (val != 0) {
-                len = tmpLen - idx1;
-                while (idx1 < tmpLen) {
-                    int32Array[idx2++] = tmpArray[idx1];
-                    idx1++;
-                }
+        int32_t magBitLength = 0;
+        for (int32_t b = 127; b >= 0; --b) {
+            if (((mag >> b) & 1) != 0) {
+                magBitLength = b + 1;
                 break;
             }
         }
+        if (magBitLength == 0) {
+            // value == 0 -> BigInteger.toByteArray(0) = { 0x00 }
+            byteLen = 1;
+            auto *bytes = new int8_t[1];
+            bytes[0] = 0;
+            return bytes;
+        }
 
-        auto bitLength = omniruntime::type::DataUtils::BitLength(int32Array, len, isNegative);
-
+        int32_t bitLength = magBitLength;
+        if (isNegative && (mag & (mag - 1)) == 0) {
+            // |value| is a power of two: BigInteger reports one bit less (-128 -> 7, 1 byte).
+            bitLength = magBitLength - 1;
+        }
+        // BigInteger.toByteArray byte count = bitLength / 8 + 1 (bitLength excludes the sign bit).
         byteLen = bitLength / 8 + 1;
-        auto bytes = new int8_t[byteLen];
-        int32_t firstNonZeroReverseIndex = 0;
-        for (auto idx = len - 1; idx >= 0; idx--) {
-            if (int32Array[idx] != 0) {
-                firstNonZeroReverseIndex = len - 1 - idx;
-                break;
-            }
+        auto *bytes = new int8_t[byteLen];
+        for (int32_t i = byteLen - 1; i >= 0; --i) {
+            bytes[i] = static_cast<int8_t>(mag & 0xFF);
+            mag >>= 8;
         }
-
-        for (int32_t i = byteLen - 1, bytesCopyied = 4, nextInt = 0, intIndex = len - 1; i >= 0; i--) {
-            if (bytesCopyied == 4 && intIndex >= 0) {
-                nextInt = (!isNegative) ? int32Array[intIndex--] :
-                                          ((len - 1 - intIndex) <= firstNonZeroReverseIndex ? -int32Array[intIndex--] :
-                                                                                              ~int32Array[intIndex--]);
-                bytesCopyied = 1;
-            } else {
-                nextInt = static_cast<uint32_t>(nextInt) >> 8;
-                bytesCopyied++;
+        if (isNegative) {
+            // Two's complement of the magnitude bytes: invert each byte, then add one.
+            int32_t carry = 1;
+            for (int32_t i = byteLen - 1; i >= 0; --i) {
+                const int32_t v = static_cast<int32_t>(static_cast<uint8_t>(~bytes[i])) + carry;
+                bytes[i] = static_cast<int8_t>(v & 0xFF);
+                carry = v >> 8;
             }
-            bytes[i] = static_cast<int8_t>(nextInt);
         }
         return bytes;
     }
