@@ -12,6 +12,11 @@
 #include "pages_index.h"
 #include "simd/func/quick_sort_simd.h"
 #include "operator/util/operator_util.h"
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+#include "varchar_sort_policies.h"
+#include "pdqsort.h"
+#include "inplace_pdqsort.h"
+#endif
 
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
@@ -35,9 +40,10 @@ void ConstructVectorRadixSort(const uint8_t *vaStart, int32_t length, BaseVector
     bool hasDictionary, uint32_t radixRowWidth, BaseVector *outputVector);
 
 // function implements for class PagesIndex
-PagesIndex::PagesIndex(const DataTypes &types)
+PagesIndex::PagesIndex(const DataTypes &types, bool pdqSortEnabled, bool inplacePdqSortEnabled, bool timSortEnabled)
     : typesCount(types.GetSize()), hasDictionaries(typesCount, false),
-      hasNulls(typesCount, false), dataTypes(types)
+      hasNulls(typesCount, false), dataTypes(types), pdqSortEnabled(pdqSortEnabled),
+      inplacePdqSortEnabled(inplacePdqSortEnabled), timSortEnabled(timSortEnabled)
 {}
 
 void ALWAYS_INLINE Swap(int64_t *values, uint64_t *addresses, int32_t a, int32_t b)
@@ -1685,30 +1691,84 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
         // second, sort all non-null values
         if constexpr (std::is_same_v<RawType, Decimal128>) {
             if (sortAscending == 0) {
-                QuickSortDecimal128<0>(values, valueAddresses, nonNullFrom, nonNullTo);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+                if (pdqSortEnabled) {
+                    pdqsort::pdqsort<Decimal128, 0>(values, valueAddresses, nonNullFrom, nonNullTo);
+                } else
+#endif
+                {
+                    QuickSortDecimal128<0>(values, valueAddresses, nonNullFrom, nonNullTo);
+                }
             } else {
-                QuickSortDecimal128<1>(values, valueAddresses, nonNullFrom, nonNullTo);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+                if (pdqSortEnabled) {
+                    pdqsort::pdqsort<Decimal128, 1>(values, valueAddresses, nonNullFrom, nonNullTo);
+                } else
+#endif
+                {
+                    QuickSortDecimal128<1>(values, valueAddresses, nonNullFrom, nonNullTo);
+                }
             }
         } else {
             if constexpr (std::is_same_v<RawType, double>) {
                 if (sortAscending == 0) {
-                    QuickSortDouble<0>(values, valueAddresses, nonNullFrom, nonNullTo);
-                    // QuickSortAscSIMD(reinterpret_cast<double *>(values), valueAddresses, nonNullFrom, nonNullTo);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+                    if (pdqSortEnabled) {
+                        pdqsort::pdqsort<double, 0>(values, valueAddresses, nonNullFrom, nonNullTo);
+                    } else
+#endif
+                    {
+                        QuickSortDouble<0>(values, valueAddresses, nonNullFrom, nonNullTo);
+                    }
                 } else {
-                    QuickSortDouble<1>(values, valueAddresses, nonNullFrom, nonNullTo);
-                    // QuickSortAscSIMD(reinterpret_cast<double *>(values), valueAddresses, nonNullFrom, nonNullTo);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+                    if (pdqSortEnabled) {
+                        pdqsort::pdqsort<double, 1>(values, valueAddresses, nonNullFrom, nonNullTo);
+                    } else
+#endif
+                    {
+                        QuickSortDouble<1>(values, valueAddresses, nonNullFrom, nonNullTo);
+                    }
                 }
             } else if constexpr (std::is_same_v<RawType, float>) {
                 if (sortAscending == 0) {
-                    QuickSortFloat<0>(values, valueAddresses, nonNullFrom, nonNullTo);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+                    if (pdqSortEnabled) {
+                        pdqsort::pdqsort<float, 0>(values, valueAddresses, nonNullFrom, nonNullTo);
+                    } else
+#endif
+                    {
+                        QuickSortFloat<0>(values, valueAddresses, nonNullFrom, nonNullTo);
+                    }
                 } else {
-                    QuickSortFloat<1>(values, valueAddresses, nonNullFrom, nonNullTo);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+                    if (pdqSortEnabled) {
+                        pdqsort::pdqsort<float, 1>(values, valueAddresses, nonNullFrom, nonNullTo);
+                    } else
+#endif
+                    {
+                        QuickSortFloat<1>(values, valueAddresses, nonNullFrom, nonNullTo);
+                    }
                 }
             } else {
                 if (sortAscending == 0) {
-                    QuickSortDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+                    if (pdqSortEnabled) {
+                        pdqsort::pdqsort<RawType, 0>(values, valueAddresses, nonNullFrom, nonNullTo);
+                    } else
+#endif
+                    {
+                        QuickSortDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+                    }
                 } else {
-                    QuickSortAscSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+                    if (pdqSortEnabled) {
+                        pdqsort::pdqsort<RawType, 1>(values, valueAddresses, nonNullFrom, nonNullTo);
+                    } else
+#endif
+                    {
+                        QuickSortAscSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+                    }
                 }
             }
         }
@@ -1817,9 +1877,23 @@ void PagesIndex::VarcharColumnarSort(const int32_t *sortCols, const int32_t *sor
     if (nonNullFrom + 1 < nonNullTo) {
         // second, sort all non-null values
         if (sortAscending == 0) {
-            QuickSortVarChar<0>(values, varcharLength, valueAddresses, nonNullFrom, nonNullTo);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+            if (timSortEnabled) {
+                tipi::TimSortVarChar<0>(values, varcharLength.data(), valueAddresses, nonNullFrom, nonNullTo);
+            } else
+#endif
+            {
+                QuickSortVarChar<0>(values, varcharLength, valueAddresses, nonNullFrom, nonNullTo);
+            }
         } else {
-            QuickSortVarChar<1>(values, varcharLength, valueAddresses, nonNullFrom, nonNullTo);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+            if (timSortEnabled) {
+                tipi::TimSortVarChar<1>(values, varcharLength.data(), valueAddresses, nonNullFrom, nonNullTo);
+            } else
+#endif
+            {
+                QuickSortVarChar<1>(values, varcharLength, valueAddresses, nonNullFrom, nonNullTo);
+            }
         }
     }
 
@@ -1951,7 +2025,18 @@ void PagesIndex::SortInplace(int32_t sortAscending, int32_t sortNullFirst, int32
         auto comp = [](const T &left, const T &right) { return left < right; };
         if (sortNullFirst) {
             // null values have been preprocessed and can be skipped directly
-            std::sort(values + totalNullCount + from, values + to, comp);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+            if (inplacePdqSortEnabled) {
+                inplace_pdqsort::pdqsort(values + totalNullCount + from, values + to, comp);
+            } else
+#endif
+            {
+                std::sort(values + totalNullCount + from, values + to, comp);
+            }
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+        } else if (inplacePdqSortEnabled) {
+            inplace_pdqsort::pdqsort(values + from, values + to - totalNullCount, comp);
+#endif
         } else {
             std::sort(values + from, values + to - totalNullCount, comp);
         }
@@ -1959,7 +2044,18 @@ void PagesIndex::SortInplace(int32_t sortAscending, int32_t sortNullFirst, int32
         auto comp = [](const T &left, const T &right) { return left > right; };
         if (sortNullFirst) {
             // null values have been preprocessed and can be skipped directly
-            std::sort(values + totalNullCount + from, values + to, comp);
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+            if (inplacePdqSortEnabled) {
+                inplace_pdqsort::pdqsort(values + totalNullCount + from, values + to, comp);
+            } else
+#endif
+            {
+                std::sort(values + totalNullCount + from, values + to, comp);
+            }
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+        } else if (inplacePdqSortEnabled) {
+            inplace_pdqsort::pdqsort(values + from, values + to - totalNullCount, comp);
+#endif
         } else {
             std::sort(values + from, values + to - totalNullCount, comp);
         }

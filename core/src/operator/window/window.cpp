@@ -183,7 +183,8 @@ WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<i
 OmniStatus WindowOperator::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
-    pagesIndex = std::make_unique<PagesIndex>(sourceTypes);
+    pagesIndex = std::make_unique<PagesIndex>(sourceTypes, operatorConfig.PdqSortEnabled(),
+        operatorConfig.InplacePdqSortEnabled(), operatorConfig.TimSortEnabled());
     for (int32_t i = 0; i < windowFunctionCount; i++) {
         auto type = windowFunctionTypes[i];
         auto windowFrame = std::make_unique<WindowFrameInfo>(static_cast<FrameType>(windowFrameTypes[i]),

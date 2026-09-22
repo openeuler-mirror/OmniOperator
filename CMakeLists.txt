@@ -95,6 +95,15 @@ if (STRINGVIEW_ENABLE)
 endif ()
 message(STATUS "Option STRINGVIEW_ENABLE: ${STRINGVIEW_ENABLE}")
 
+# PDQSort / inplace PDQSort / TimSort are opt-in at compile time. When OFF, their
+# headers and call sites are excluded and runtime flags are forced off.
+option(OMNI_ENABLE_EXPERIMENTAL_SORT
+       "Compile PDQSort / inplace PDQSort / TimSort support" OFF)
+if (OMNI_ENABLE_EXPERIMENTAL_SORT)
+    add_compile_definitions(OMNI_ENABLE_EXPERIMENTAL_SORT)
+endif ()
+message(STATUS "Option OMNI_ENABLE_EXPERIMENTAL_SORT: ${OMNI_ENABLE_EXPERIMENTAL_SORT}")
+
 if (EXISTS $ENV{OMNI_HOME})
     set(CMAKE_INSTALL_PREFIX $ENV{OMNI_HOME}/lib)
 else ()
@@ -138,7 +147,7 @@ add_subdirectory(bindings/java/src/main/cpp EXCLUDE_FROM_ALL)
 option(DEBUG "Debug" OFF)
 message(STATUS "Option DEBUG: ${DEBUG}")
 
-option(DEBUG "Trace" OFF)
+option(TRACE "Trace" OFF)
 message(STATUS "Option TRACE: ${TRACE}")
 
 option(DEBUG_OPERATOR "Using for debug into native operator code" OFF)

@@ -297,6 +297,46 @@ public:
         return isStatisticalAggregate;
     }
 
+    bool PdqSortEnabled() const
+    {
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+        return pdqSortEnabled;
+#else
+        return false;
+#endif
+    }
+
+    bool InplacePdqSortEnabled() const
+    {
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+        return inplacePdqSortEnabled;
+#else
+        return false;
+#endif
+    }
+
+    bool TimSortEnabled() const
+    {
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+        return timSortEnabled;
+#else
+        return false;
+#endif
+    }
+
+    void SetSortAlgorithm(bool enablePdqSort, bool enableInplacePdqSort, bool enableTimSort)
+    {
+#ifdef OMNI_ENABLE_EXPERIMENTAL_SORT
+        pdqSortEnabled = enablePdqSort;
+        inplacePdqSortEnabled = enableInplacePdqSort;
+        timSortEnabled = enableTimSort;
+#else
+        (void)enablePdqSort;
+        (void)enableInplacePdqSort;
+        (void)enableTimSort;
+#endif
+    }
+
     static OperatorConfig DeserializeOperatorConfig(const std::string &configString);
 
     static void CheckSpillConfig(SpillConfig *spillConfig);
@@ -308,6 +348,9 @@ private:
     int adaptivityThreshold = -1;
     bool isRowOutput = false;
     bool isStatisticalAggregate = false;
+    bool pdqSortEnabled = false;
+    bool inplacePdqSortEnabled = false;
+    bool timSortEnabled = false;
 };
 
 struct PrefixSortConfig {

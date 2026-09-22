@@ -69,6 +69,9 @@ OperatorConfig::OperatorConfig(const OperatorConfig &operatorConfig)
     this->overflowConfig = std::make_shared<OverflowConfig>(operatorConfig.GetOverflowConfig()->GetOverflowConfigId());
     this->adaptivityThreshold = operatorConfig.GetAdaptivityThreshold();
     this->isRowOutput = operatorConfig.IsRowOutput();
+    this->pdqSortEnabled = operatorConfig.PdqSortEnabled();
+    this->inplacePdqSortEnabled = operatorConfig.InplacePdqSortEnabled();
+    this->timSortEnabled = operatorConfig.TimSortEnabled();
 }
 
 OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &configString)

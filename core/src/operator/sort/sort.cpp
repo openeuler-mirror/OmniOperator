@@ -64,8 +64,11 @@ SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(std::shared_
     auto sortCols = planNode->GetSortCols();
     auto sortAscending = planNode->GetSortAscending();
     auto sortNullFirsts = planNode->GetNullFirsts();
+    OperatorConfig operatorConfig(spillConfig);
+    operatorConfig.SetSortAlgorithm(queryConfig.PdqSortEnabled(), queryConfig.InplacePdqSortEnabled(),
+        queryConfig.TimSortEnabled());
     auto pOperatorFactory = new SortOperatorFactory(*dataTypes.get(), outputCols, sortCols, sortAscending,
-        sortNullFirsts, std::move(OperatorConfig(spillConfig)));
+        sortNullFirsts, std::move(operatorConfig));
     return pOperatorFactory;
 }
 
@@ -84,7 +87,8 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
       sortCols(sortCols),
       sortAscendings(sortAscendings),
       sortNullFirsts(sortNullFirsts),
-      pagesIndex(std::make_unique<PagesIndex>(sourceTypes)),
+      pagesIndex(std::make_unique<PagesIndex>(sourceTypes, operatorConfig.PdqSortEnabled(),
+          operatorConfig.InplacePdqSortEnabled(), operatorConfig.TimSortEnabled())),
       operatorConfig(operatorConfig)
 {
     for (auto outputCol : outputCols) {
