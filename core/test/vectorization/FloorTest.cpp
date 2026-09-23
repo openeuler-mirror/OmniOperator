@@ -34,7 +34,11 @@ protected:
     }
 };
 
-// Helper: test decimal unary operations (ceil/floor/abs) for DECIMAL64/DECIMAL128
+// Helper: test decimal unary operations (ceil/floor/abs) for DECIMAL64/DECIMAL128.
+// DECIMAL math functions are registered only as DataTypeId gate placeholders (nullptr DataType);
+// the scale-aware Floor/Ceil/AbsDecimalFunction is built inside FuncExpr from the operand DataType.
+// A direct VectorFunction::Find would resolve the gate and crash in Apply, so the tests MUST run
+// through the FuncExpr/ExprEval path (see MathDecimalFunctionTest.cpp for the same requirement).
 template <typename ValueType, typename DecimalDataTypeT, DataTypeId DTID>
 void TestDecimalUnaryOperation(
     const std::string& functionName,
@@ -58,19 +62,19 @@ void TestDecimalUnaryOperation(
         nullFlags[idx] = true;
     }
 
-    std::vector<DataTypeId> argTypes = {DTID};
-    auto signature = std::make_shared<FunctionSignature>(functionName, argTypes, DTID);
-    auto vectorFunction = VectorFunction::Find(signature);
-    ASSERT_NE(vectorFunction, nullptr);
+    auto* batch = new VectorBatch(rowSize);
+    batch->Append(rawInput);
 
-    ExecutionContext context;
-    context.SetResultRowSize(rowSize);
-    std::stack<BaseVector*> args;
-    args.push(rawInput);
-
-    BaseVector* rawResult = nullptr;
+    std::vector<Expr*> args = {new FieldExpr(0, decType)};
     auto resultType = std::make_shared<DataType>(DTID);
-    vectorFunction->Apply(args, resultType, rawResult, &context);
+    auto* funcExpr = new FuncExpr(functionName, args, resultType);
+
+    auto* context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(batch, context);
+    e.Visit(*funcExpr);
+    auto* rawResult = e.GetResult();
     ASSERT_NE(rawResult, nullptr);
 
     auto* resultVector = static_cast<Vector<ValueType>*>(rawResult);
@@ -91,6 +95,9 @@ void TestDecimalUnaryOperation(
     }
 
     delete rawResult;
+    delete funcExpr;
+    delete batch;
+    delete context;
 }
 
 // Test floor function with double inputs (Flink semantics: floor(double) -> double)

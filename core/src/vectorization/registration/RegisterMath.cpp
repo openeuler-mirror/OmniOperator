@@ -125,21 +125,25 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<FloorFunction, int64_t, int64_t>(prefix + "floor", {OMNI_LONG}, OMNI_LONG);
     RegisterFunction<FloorFunction, double, double>(prefix + "floor", {OMNI_DOUBLE}, OMNI_DOUBLE);
 
-    // Register floor/ceil/abs/negative for DECIMAL64 via vectorized path
-    VectorFunction::RegisterVectorFunction(prefix + "floor", {OMNI_DECIMAL64}, OMNI_DECIMAL64,
-        std::make_shared<FloorDec64Func>());
-    VectorFunction::RegisterVectorFunction(prefix + "ceil", {OMNI_DECIMAL64}, OMNI_DECIMAL64,
-        std::make_shared<CeilDec64Func>());
-    VectorFunction::RegisterVectorFunction(prefix + "abs", {OMNI_DECIMAL64}, OMNI_DECIMAL64,
-        std::make_shared<AbsDec64Func>());
-
-    // Register floor/ceil/abs for DECIMAL128 via vectorized path
-    VectorFunction::RegisterVectorFunction(prefix + "floor", {OMNI_DECIMAL128}, OMNI_DECIMAL128,
-        std::make_shared<FloorDec128Func>());
-    VectorFunction::RegisterVectorFunction(prefix + "ceil", {OMNI_DECIMAL128}, OMNI_DECIMAL128,
-        std::make_shared<CeilDec128Func>());
-    VectorFunction::RegisterVectorFunction(prefix + "abs", {OMNI_DECIMAL128}, OMNI_DECIMAL128,
-        std::make_shared<AbsDec128Func>());
+    // Register floor/ceil/abs/negative for DECIMAL64 via vectorized path. Gate placeholders per
+    // name (return type == input id); FuncExpr overrides with the scale-aware FloorDecimalFunction /
+    // CeilDecimalFunction / AbsDecimalFunction built from the operand DataType (precision/scale),
+    // same pattern as sign below.
+    {
+        auto gate = std::make_shared<FloorDecimalFunction>(type::DataTypePtr(nullptr));
+        VectorFunction::RegisterVectorFunction(prefix + "floor", {OMNI_DECIMAL64}, OMNI_DECIMAL64, gate);
+        VectorFunction::RegisterVectorFunction(prefix + "floor", {OMNI_DECIMAL128}, OMNI_DECIMAL128, gate);
+    }
+    {
+        auto gate = std::make_shared<CeilDecimalFunction>(type::DataTypePtr(nullptr));
+        VectorFunction::RegisterVectorFunction(prefix + "ceil", {OMNI_DECIMAL64}, OMNI_DECIMAL64, gate);
+        VectorFunction::RegisterVectorFunction(prefix + "ceil", {OMNI_DECIMAL128}, OMNI_DECIMAL128, gate);
+    }
+    {
+        auto gate = std::make_shared<AbsDecimalFunction>(type::DataTypePtr(nullptr));
+        VectorFunction::RegisterVectorFunction(prefix + "abs", {OMNI_DECIMAL64}, OMNI_DECIMAL64, gate);
+        VectorFunction::RegisterVectorFunction(prefix + "abs", {OMNI_DECIMAL128}, OMNI_DECIMAL128, gate);
+    }
 
     // Register factorial: factorial(int) -> bigint
     // Input: int32 (OMNI_INT), Output: int64 (OMNI_LONG)
