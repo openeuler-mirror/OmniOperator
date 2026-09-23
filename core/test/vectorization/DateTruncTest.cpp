@@ -9,8 +9,10 @@
 #include <ctime>
 #include <stack>
 #include <string>
+#include <unordered_map>
 
 #include "test/util/test_util.h"
+#include "util/config/QueryConfig.h"
 #include "vectorization/registration/Register.h"
 #include "vectorization/functions/DateTrunc.h"
 #include "vectorization/VectorFunction.h"
@@ -128,6 +130,14 @@ public:
     /// delete them.
     static void ExecuteTimestamp(const std::string& format,
                                   BaseVector* inputVec, BaseVector*& result) {
+        ExecuteTimestampInZone(format, "", inputVec, result);
+    }
+
+    /// Same as ExecuteTimestamp, but runs with the given session timezone.
+    /// An empty name leaves the session timezone unset.
+    static void ExecuteTimestampInZone(const std::string& format,
+                                        const std::string& sessionTimezone,
+                                        BaseVector* inputVec, BaseVector*& result) {
         int32_t size = inputVec->GetSize();
         auto* fmtVec = VectorHelper::CreateFlatVector(OMNI_VARCHAR, size);
         auto* typedFmt =
@@ -148,6 +158,10 @@ public:
         auto outType = std::make_shared<TimestampDataType>();
         ExecutionContext ctx;
         ctx.SetResultRowSize(size);
+        if (!sessionTimezone.empty()) {
+            ctx.SetConfig(config::QueryConfig(std::unordered_map<std::string, std::string>{
+                {config::QueryConfig::kSessionTimezone, sessionTimezone}}));
+        }
         std::stack<BaseVector*> args;
         args.push(fmtVec);
         args.push(inputVec);
@@ -582,6 +596,92 @@ TEST(DateTruncTest, NegativeDay) {
     auto* iv = DateTruncTestHelper::CreateTimestampVector(in);
     BaseVector* rv = nullptr;
     DateTruncTestHelper::ExecuteTimestamp("DAY", iv, rv);
+    DateTruncTestHelper::ValidateInt64Result(rv, ex, in.size());
+    delete rv;
+}
+
+// =========================================================================
+// Session timezone — MINUTE/HOUR boundaries live in local time
+// =========================================================================
+
+// Asia/Shanghai uses the LMT offset +08:05:43 before 1901, so a UTC minute
+// boundary lands on :43 in local time. Truncating the epoch directly would
+// shift local midnight back by 17 seconds.
+TEST(DateTruncTest, MinuteLmtOffsetIsAlreadyOnLocalBoundary) {
+    // 1900-11-11 00:00:00 Asia/Shanghai == 1900-11-10 15:54:17 UTC.
+    auto t = DateTruncTestHelper::MakeTimestampUtc(1900, 11, 10, 15, 54, 17);
+    std::vector<int64_t> in = {t}, ex = {t};
+    auto* iv = DateTruncTestHelper::CreateTimestampVector(in);
+    BaseVector* rv = nullptr;
+    DateTruncTestHelper::ExecuteTimestampInZone("MINUTE", "Asia/Shanghai", iv, rv);
+    DateTruncTestHelper::ValidateInt64Result(rv, ex, in.size());
+    delete rv;
+}
+
+TEST(DateTruncTest, MinuteLmtOffsetRoundsDownToLocalBoundary) {
+    // 1900-11-11 00:00:30 Asia/Shanghai == 1900-11-10 15:54:47 UTC,
+    // truncating to 1900-11-11 00:00:00 local == 15:54:17 UTC.
+    auto t = DateTruncTestHelper::MakeTimestampUtc(1900, 11, 10, 15, 54, 47);
+    std::vector<int64_t> in = {t};
+    std::vector<int64_t> ex = {
+        DateTruncTestHelper::MakeTimestampUtc(1900, 11, 10, 15, 54, 17),
+    };
+    auto* iv = DateTruncTestHelper::CreateTimestampVector(in);
+    BaseVector* rv = nullptr;
+    DateTruncTestHelper::ExecuteTimestampInZone("MINUTE", "Asia/Shanghai", iv, rv);
+    DateTruncTestHelper::ValidateInt64Result(rv, ex, in.size());
+    delete rv;
+}
+
+TEST(DateTruncTest, MinuteWholeHourOffset) {
+    // 1901-01-02 00:00:00 Asia/Shanghai == 1901-01-01 16:00:00 UTC, past the
+    // switch from LMT to the whole +08:00 offset.
+    auto t = DateTruncTestHelper::MakeTimestampUtc(1901, 1, 1, 16, 0, 0);
+    std::vector<int64_t> in = {t}, ex = {t};
+    auto* iv = DateTruncTestHelper::CreateTimestampVector(in);
+    BaseVector* rv = nullptr;
+    DateTruncTestHelper::ExecuteTimestampInZone("MINUTE", "Asia/Shanghai", iv, rv);
+    DateTruncTestHelper::ValidateInt64Result(rv, ex, in.size());
+    delete rv;
+}
+
+TEST(DateTruncTest, HourSubHourOffset) {
+    // 2024-06-15 12:45:30 Asia/Kolkata (+05:30) == 07:15:30 UTC,
+    // truncating to 12:00:00 local == 06:30:00 UTC.
+    auto t = DateTruncTestHelper::MakeTimestampUtc(2024, 6, 15, 7, 15, 30);
+    std::vector<int64_t> in = {t};
+    std::vector<int64_t> ex = {
+        DateTruncTestHelper::MakeTimestampUtc(2024, 6, 15, 6, 30, 0),
+    };
+    auto* iv = DateTruncTestHelper::CreateTimestampVector(in);
+    BaseVector* rv = nullptr;
+    DateTruncTestHelper::ExecuteTimestampInZone("HOUR", "Asia/Kolkata", iv, rv);
+    DateTruncTestHelper::ValidateInt64Result(rv, ex, in.size());
+    delete rv;
+}
+
+TEST(DateTruncTest, HourClearsSubSecondPart) {
+    auto t = DateTruncTestHelper::MakeTimestampUtc(2024, 6, 15, 12, 30, 45, 123456);
+    std::vector<int64_t> in = {t};
+    std::vector<int64_t> ex = {
+        DateTruncTestHelper::MakeTimestampUtc(2024, 6, 15, 12, 0, 0),
+    };
+    auto* iv = DateTruncTestHelper::CreateTimestampVector(in);
+    BaseVector* rv = nullptr;
+    DateTruncTestHelper::ExecuteTimestampInZone("HOUR", "Asia/Shanghai", iv, rv);
+    DateTruncTestHelper::ValidateInt64Result(rv, ex, in.size());
+    delete rv;
+}
+
+TEST(DateTruncTest, MinuteClearsSubSecondPart) {
+    auto t = DateTruncTestHelper::MakeTimestampUtc(2024, 6, 15, 12, 30, 45, 123456);
+    std::vector<int64_t> in = {t};
+    std::vector<int64_t> ex = {
+        DateTruncTestHelper::MakeTimestampUtc(2024, 6, 15, 12, 30, 0),
+    };
+    auto* iv = DateTruncTestHelper::CreateTimestampVector(in);
+    BaseVector* rv = nullptr;
+    DateTruncTestHelper::ExecuteTimestampInZone("MINUTE", "Asia/Shanghai", iv, rv);
     DateTruncTestHelper::ValidateInt64Result(rv, ex, in.size());
     delete rv;
 }
