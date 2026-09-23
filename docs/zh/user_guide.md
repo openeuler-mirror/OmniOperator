@@ -1754,63 +1754,63 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
 
             **表 2** Gluten相关启动参数信息<a id="Gluten相关启动参数信息"></a>
 
-    |启动参数名称|缺省值|含义|
-    |--|--|--|
-    |spark.plugins|org.apache.gluten.GlutenPlugin|启用Gluten。|
-    |spark.shuffle.manager|sort|是否启用列式Shuffle，若启用请配置OmniShuffle Shuffle加速自有的shuffleManager类，需添加配置项--conf spark.shuffle.manager="org.apache.spark.shuffle.sort.OmniColumnarShuffleManager"。默认sort使用开源版本的Shuffle。|
-    |spark.gluten.sql.columnar.hashagg|true|是否启用列式HashAgg，true表示启用，false表示关闭|
-    |spark.gluten.sql.columnar.project|true|是否启用列式Project，true表示启用，false表示关闭。|
-    |spark.gluten.sql.columnar.filter|true|是否启用列式Filter，true表示启用，false表示关闭。|
-    |spark.gluten.sql.columnar.sort|true|是否启用列式Sort，true表示启用，false表示关闭。|
-    |spark.gluten.sql.columnar.window|true|是否启用列式Window，true表示启用，false表示关闭。|
-    |spark.gluten.sql.columnar.broadcastJoin|true|是否启用列式BroadcastHashJoin，true表示启用，false表示关闭。|
-    |spark.gluten.sql.columnar.filescan|true|是否启用列式NativeFilescan，true表示启用，false表示关闭，包括ORC和Parquet的文件格式。|
-    |spark.gluten.sql.columnar.sortMergeJoin|true|是否启用列式SortMergeJoin，true表示启用，false表示关闭。|
-    |spark.gluten.sql.columnar.takeOrderedAndProject|true|是否启用列式TakeOrderedAndProject，true表示启用，false表示关闭。|
-    |spark.gluten.sql.columnar.shuffledHashJoin|true|是否启用列式ShuffledHashJoin，true表示启用，false表示关闭。|
-    |spark.gluten.sql.columnar.backend.omni.shuffleSpillBatchRowNum|10000|Shuffle输出的每个batch中包含数据的行数。请根据实际环境的内存调整参数，可以适当增大此参数，从而减少写入磁盘文件的批次，提升写入速度。|
-    |spark.gluten.sql.columnar.backend.omni.shuffleTaskSpillMemoryThreshold|2147483648|Shuffle内存溢写上限，Shuffle内存上限达到缺省值时会发生溢写，单位：Byte。请根据实际环境的内存调整参数，可以适当增大此参数，从而减少Shuffle内存溢写到磁盘文件次数，减少磁盘IO操作。|
-    |spark.gluten.sql.columnar.backend.omni.compressBlockSize|65536|Shuffle数据压缩块大小，单位：Byte。请根据实际环境的内存调整参数，建议采用缺省值。|
-    |spark.gluten.sql.columnar.backend.omni.shuffleSpillBatchRowNum|10000|列式Shuffle初始化Buffer大小，单位：Byte。请根据实际环境的内存调整参数，可以适当增大此参数，从而减少Shuffle读写次数，提升性能。|
-    |spark.shuffle.compress|true|Shuffle是否开启压缩。true表示压缩，false表示不压缩。|
-    |spark.io.compression.codec|lz4|Shuffle压缩格式。支持uncompressed、zlib、snappy、lz4和zstd格式。|
-    |spark.gluten.sql.columnar.backend.omni.sortSpill.rowThreshold|214783647|sort算子溢写触发条件，处理数据行超过此值触发溢写，单位：行。请根据实际环境的内存调整参数，可以适当增大此参数，从而减少sort算子溢写到磁盘文件的次数，减少磁盘IO操作。|
-    |spark.gluten.sql.columnar.backend.omni.memFraction|90|sort算子溢写触发条件，处理数据使用堆外内存超过此百分比触发溢写，与堆外内存总大小参数spark.memory.offHeap.size同时使用。请根据实际环境的内存调整参数，可以适当增大此参数，从而减少sort算子溢写到磁盘文件的次数，减少磁盘IO操作。|
-    |spark.gluten.sql.columnar.backend.omni.broadcastJoin.sharehashtable|true|在Broadcast Join场景下，是否开启builder侧只构建一份hash table，并允许所有lookup join侧共用。true表示开启，false表示关闭。|
-    |spark.gluten.sql.columnar.backend.omni.spill.dirDiskReserveSize|10737418240|sort溢写磁盘预留可用空间大小，如果实际小于此值会抛异常，单位：Byte。根据实际环境的磁盘容量和业务场景调整参数，建议不超过业务数据大小，取值上限为实际环境的磁盘容量大小。|
-    |spark.gluten.sql.columnar.backend.omni.joinReorderEnhance|true|是否开启join重排序优化策略。默认为true表示开启，false表示关闭。启发式join可以根据where过滤条件的数量和table表的大小，自动优化join的顺序。|
-    |spark.default.parallelism|200|Spark并行执行的任务数。|
-    |spark.sql.shuffle.partitions|200|Spark执行聚合操作或者Join操作时的Shuffle分区数。|
-    |spark.sql.adaptive.enabled|false|是否启用自适应查询执行优化，可以在查询执行过程中动态地调整执行计划，true开启，false关闭。|
-    |spark.executorEnv.MALLOC_CONF|narenas:1|控制Spark中每一个Executor进程中的内存分配策略。|
-    |spark.sql.autoBroadcastJoinThreshold|10M|控制在执行Join操作时使用boradcastjoin小表的阈值大小。|
-    |spark.sql.broadcastTimeout|300|控制广播小表到其它节点的超时时间。|
-    |spark.locality.wait|3|数据本地化等待时长。|
-    |spark.sql.cbo.enabled|false|是否开启CBO。true表示开启，false表示关闭。|
-    |spark.sql.codegen.wholeStage|true|是否开启全阶段代码生成。true表示开启，false表示关闭。|
-    |spark.sql.orc.impl|native|native表示使用开源版本的ORC库，hive表示使用Hive中的ORC库。|
-    |spark.serializer|空|使用Kryo序列化。|
-    |spark.executor.extraJavaOptions|空|Executor使用Hadoop本地库加速路径。|
-    |spark.driver.extraJavaOptions|空|Driver使用Hadoop本地库加速路径。|
-    |spark.network.timeout|120|所有网络交互的默认超时时间，单位：s。|
-    |spark.gluten.sql.columnar.backend.omni.rewriteSelfJoinInInPredicate|false|是否启用将in表达式中的self join转换为hashagg，删除没用到的列，减少数据量。true表示开启，false表示关闭。|
-    |spark.gluten.sql.columnar.backend.omni.filterMerge|false|是否开启将在同一个表上的结构相似的多个表达式合并处理，减少Scan数据量。true表示开启，false表示关闭。|
-    |spark.gluten.sql.columnar.backend.omni.dedupLeftSemiJoin|false|是否启用对leftsemi join右表去重，减少join数据量。true表示开启，false表示关闭。|
-    |spark.gluten.sql.columnar.backend.omni.preferShuffledHashJoin|false|是否开启尽可能使用ShuffledHashJoin。true表示开启，false表示关闭。|
-    |spark.sql.adaptive.skewedJoin.enabled|false|是否开启自适应倾斜连接优化。自适应倾斜连接优化会在连接操作中检测到数据倾斜的情况下，自动采用一些特殊的连接算法来处理倾斜数据，从而提高连接操作的效率。true表示开启，false表示关闭。|
-    |spark.sql.adaptive.coalescePartitions.minPartitionNum|1|合并后的最小Shuffle分区数。如果不设置，默认为Spark集群的默认并行度。|
-    |spark.gluten.sql.columnar.backend.omni.adaptivePartialAggregation|false|是否开启自适应跳过HashAgg分组聚合操作Partial阶段处理优化。该优化为运行时优化，在满足必要条件：存在分组聚合操作，但不存在First/Last聚合前提下，若采样识别为高基数场景，则跳过分组聚合Partial阶段处理，直接向下游算子输出数据。true表示开启，false表示关闭。|
-    |spark.gluten.sql.columnar.backend.omni.pushOrderedLimitThroughAggEnable|false|是否开启pushOrderedLimitThroughAgg优化。在执行计划包含Sort+Limit Operator，且排序字段为分组聚合操作中分组字段的子集时，该优化将TopNSort Operator下推到分组聚合partial阶段后，以减少下游算子数据处理量。true表示开启，false表示关闭。该优化不会和adaptivePartialAggregation优化同时生效。|
-    |spark.gluten.sql.columnar.backend.omni.combineJoinedAggregates|false|是否开启combineJoinedAggregates优化。该优化通过合并基于相同数据的子查询减少重复的读表操作。true表示开启，false表示关闭。|
-    |spark.gluten.sql.columnar.wholeStage.fallback.threshold|-1|在AQE开启的情况下，如果Stage回退的算子个数大于等于这个阈值，则该Stage的全部算子（除OmniColumnarToRow和OmniAQEShuffleReadExec算子）全部回退为开源软件对应算子。当设置为-1时，关闭此功能。|
-    |spark.gluten.sql.columnar.query.fallback.threshold|-1|在AQE关闭的情况下，如果整个执行计划回退的算子个数大于等于这个阈值，则该Stage的全部算子全部回退为开源软件对应算子。当设置为-1时，关闭此功能。|
-    |spark.gluten.sql.columnar.backend.omni.unixTimeFunc.enabled|true|是否启用from_unixtime和unix_timestamp表达式，true表示启用，false表示关闭。|
-    |spark.sql.orc.filterPushdown|true|控制ORC文件格式的数据查询时是否启用谓词下推功能。|
-    |spark.gluten.sql.columnar.backend.omni.catalog.cache.size|128|设置缓存Catelog元数据的缓存空间大小。小于或等于0时为关闭缓存功能。|
-    |spark.gluten.sql.columnar.backend.omni.catalog.cache.expire.time|600|设置缓存Catelog元数据的缓存过期时间，默认为600秒。|
-    |spark.gluten.sql.columnar.backend.omni.vec.predicate.enabled|false|是否开启向量化谓词下推功能，true表示开启，false表示关闭。此配置在使用Iceberg场景不生效。|
-    |spark.gluten.sql.native.writer.enabled|true|是否开启列式写算子，true表示开启，false表示关闭。|
-    |spark.gluten.sql.columnar.backend.omni.preferVectorizationExpression| false                          |是否优选表达式向量化版本，true表示优选向量化版本，false表示使用codegen版本。|
+    |启动参数名称|缺省值| 含义                                                                                                                                                                                               |
+    |--|--|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    |spark.plugins|org.apache.gluten.GlutenPlugin| 启用Gluten。                                                                                                                                                                                        |
+    |spark.shuffle.manager|sort| 是否启用列式Shuffle，若启用请配置OmniShuffle Shuffle加速自有的shuffleManager类，需添加配置项--conf spark.shuffle.manager="org.apache.spark.shuffle.sort.OmniColumnarShuffleManager"。默认sort使用开源版本的Shuffle。                  |
+    |spark.gluten.sql.columnar.hashagg|true| 是否启用列式HashAgg，true表示启用，false表示关闭                                                                                                                                                                 |
+    |spark.gluten.sql.columnar.project|true| 是否启用列式Project，true表示启用，false表示关闭。                                                                                                                                                                |
+    |spark.gluten.sql.columnar.filter|true| 是否启用列式Filter，true表示启用，false表示关闭。                                                                                                                                                                 |
+    |spark.gluten.sql.columnar.sort|true| 是否启用列式Sort，true表示启用，false表示关闭。                                                                                                                                                                   |
+    |spark.gluten.sql.columnar.window|true| 是否启用列式Window，true表示启用，false表示关闭。                                                                                                                                                                 |
+    |spark.gluten.sql.columnar.broadcastJoin|true| 是否启用列式BroadcastHashJoin，true表示启用，false表示关闭。                                                                                                                                                      |
+    |spark.gluten.sql.columnar.filescan|true| 是否启用列式NativeFilescan，true表示启用，false表示关闭，包括ORC和Parquet的文件格式。                                                                                                                                      |
+    |spark.gluten.sql.columnar.sortMergeJoin|true| 是否启用列式SortMergeJoin，true表示启用，false表示关闭。                                                                                                                                                          |
+    |spark.gluten.sql.columnar.takeOrderedAndProject|true| 是否启用列式TakeOrderedAndProject，true表示启用，false表示关闭。                                                                                                                                                  |
+    |spark.gluten.sql.columnar.shuffledHashJoin|true| 是否启用列式ShuffledHashJoin，true表示启用，false表示关闭。                                                                                                                                                       |
+    |spark.gluten.sql.columnar.backend.omni.shuffleSpillBatchRowNum|10000| Shuffle输出的每个batch中包含数据的行数。请根据实际环境的内存调整参数，可以适当增大此参数，从而减少写入磁盘文件的批次，提升写入速度。该参数最小值限制为1024，因为过小的值会导致Shuffle产生大量微批次，显著增加内存元数据开销并降低性能，极端情况下可能引发OOM。                                                     |
+    |spark.gluten.sql.columnar.backend.omni.shuffleTaskSpillMemoryThreshold|2147483648| Shuffle内存溢写上限，Shuffle内存上限达到缺省值时会发生溢写，单位：Byte。请根据实际环境的内存调整参数，可以适当增大此参数，从而减少Shuffle内存溢写到磁盘文件次数，减少磁盘IO操作。                                                                                           |
+    |spark.gluten.sql.columnar.backend.omni.compressBlockSize|65536| Shuffle数据压缩块大小，单位：Byte。请根据实际环境的内存调整参数，建议采用缺省值。                                                                                                                                                   |
+    |spark.gluten.sql.columnar.backend.omni.shuffleSpillBatchRowNum|10000| 列式Shuffle初始化Buffer大小，单位：Byte。请根据实际环境的内存调整参数，可以适当增大此参数，从而减少Shuffle读写次数，提升性能。                                                                                                                      |
+    |spark.shuffle.compress|true| Shuffle是否开启压缩。true表示压缩，false表示不压缩。                                                                                                                                                               |
+    |spark.io.compression.codec|lz4| Shuffle压缩格式。支持uncompressed、zlib、snappy、lz4和zstd格式。                                                                                                                                               |
+    |spark.gluten.sql.columnar.backend.omni.sortSpill.rowThreshold|214783647| sort算子溢写触发条件，处理数据行超过此值触发溢写，单位：行。请根据实际环境的内存调整参数，可以适当增大此参数，从而减少sort算子溢写到磁盘文件的次数，减少磁盘IO操作。                                                                                                          |
+    |spark.gluten.sql.columnar.backend.omni.memFraction|90| sort算子溢写触发条件，处理数据使用堆外内存超过此百分比触发溢写，与堆外内存总大小参数spark.memory.offHeap.size同时使用。请根据实际环境的内存调整参数，可以适当增大此参数，从而减少sort算子溢写到磁盘文件的次数，减少磁盘IO操作。                                                                |
+    |spark.gluten.sql.columnar.backend.omni.broadcastJoin.sharehashtable|true| 在Broadcast Join场景下，是否开启builder侧只构建一份hash table，并允许所有lookup join侧共用。true表示开启，false表示关闭。                                                                                                           |
+    |spark.gluten.sql.columnar.backend.omni.spill.dirDiskReserveSize|10737418240| sort溢写磁盘预留可用空间大小，如果实际小于此值会抛异常，单位：Byte。根据实际环境的磁盘容量和业务场景调整参数，建议不超过业务数据大小，取值上限为实际环境的磁盘容量大小。                                                                                                         |
+    |spark.gluten.sql.columnar.backend.omni.joinReorderEnhance|true| 是否开启join重排序优化策略。默认为true表示开启，false表示关闭。启发式join可以根据where过滤条件的数量和table表的大小，自动优化join的顺序。                                                                                                             |
+    |spark.default.parallelism|200| Spark并行执行的任务数。                                                                                                                                                                                   |
+    |spark.sql.shuffle.partitions|200| Spark执行聚合操作或者Join操作时的Shuffle分区数。                                                                                                                                                                 |
+    |spark.sql.adaptive.enabled|false| 是否启用自适应查询执行优化，可以在查询执行过程中动态地调整执行计划，true开启，false关闭。                                                                                                                                                |
+    |spark.executorEnv.MALLOC_CONF|narenas:1| 控制Spark中每一个Executor进程中的内存分配策略。                                                                                                                                                                   |
+    |spark.sql.autoBroadcastJoinThreshold|10M| 控制在执行Join操作时使用boradcastjoin小表的阈值大小。                                                                                                                                                              |
+    |spark.sql.broadcastTimeout|300| 控制广播小表到其它节点的超时时间。                                                                                                                                                                                |
+    |spark.locality.wait|3| 数据本地化等待时长。                                                                                                                                                                                       |
+    |spark.sql.cbo.enabled|false| 是否开启CBO。true表示开启，false表示关闭。                                                                                                                                                                      |
+    |spark.sql.codegen.wholeStage|true| 是否开启全阶段代码生成。true表示开启，false表示关闭。                                                                                                                                                                  |
+    |spark.sql.orc.impl|native| native表示使用开源版本的ORC库，hive表示使用Hive中的ORC库。                                                                                                                                                          |
+    |spark.serializer|空| 使用Kryo序列化。                                                                                                                                                                                       |
+    |spark.executor.extraJavaOptions|空| Executor使用Hadoop本地库加速路径。                                                                                                                                                                         |
+    |spark.driver.extraJavaOptions|空| Driver使用Hadoop本地库加速路径。                                                                                                                                                                           |
+    |spark.network.timeout|120| 所有网络交互的默认超时时间，单位：s。                                                                                                                                                                              |
+    |spark.gluten.sql.columnar.backend.omni.rewriteSelfJoinInInPredicate|false| 是否启用将in表达式中的self join转换为hashagg，删除没用到的列，减少数据量。true表示开启，false表示关闭。                                                                                                                                |
+    |spark.gluten.sql.columnar.backend.omni.filterMerge|false| 是否开启将在同一个表上的结构相似的多个表达式合并处理，减少Scan数据量。true表示开启，false表示关闭。                                                                                                                                         |
+    |spark.gluten.sql.columnar.backend.omni.dedupLeftSemiJoin|false| 是否启用对leftsemi join右表去重，减少join数据量。true表示开启，false表示关闭。                                                                                                                                             |
+    |spark.gluten.sql.columnar.backend.omni.preferShuffledHashJoin|false| 是否开启尽可能使用ShuffledHashJoin。true表示开启，false表示关闭。                                                                                                                                                    |
+    |spark.sql.adaptive.skewedJoin.enabled|false| 是否开启自适应倾斜连接优化。自适应倾斜连接优化会在连接操作中检测到数据倾斜的情况下，自动采用一些特殊的连接算法来处理倾斜数据，从而提高连接操作的效率。true表示开启，false表示关闭。                                                                                                   |
+    |spark.sql.adaptive.coalescePartitions.minPartitionNum|1| 合并后的最小Shuffle分区数。如果不设置，默认为Spark集群的默认并行度。                                                                                                                                                         |
+    |spark.gluten.sql.columnar.backend.omni.adaptivePartialAggregation|false| 是否开启自适应跳过HashAgg分组聚合操作Partial阶段处理优化。该优化为运行时优化，在满足必要条件：存在分组聚合操作，但不存在First/Last聚合前提下，若采样识别为高基数场景，则跳过分组聚合Partial阶段处理，直接向下游算子输出数据。true表示开启，false表示关闭。                                                |
+    |spark.gluten.sql.columnar.backend.omni.pushOrderedLimitThroughAggEnable|false| 是否开启pushOrderedLimitThroughAgg优化。在执行计划包含Sort+Limit Operator，且排序字段为分组聚合操作中分组字段的子集时，该优化将TopNSort Operator下推到分组聚合partial阶段后，以减少下游算子数据处理量。true表示开启，false表示关闭。该优化不会和adaptivePartialAggregation优化同时生效。 |
+    |spark.gluten.sql.columnar.backend.omni.combineJoinedAggregates|false| 是否开启combineJoinedAggregates优化。该优化通过合并基于相同数据的子查询减少重复的读表操作。true表示开启，false表示关闭。                                                                                                                     |
+    |spark.gluten.sql.columnar.wholeStage.fallback.threshold|-1| 在AQE开启的情况下，如果Stage回退的算子个数大于等于这个阈值，则该Stage的全部算子（除OmniColumnarToRow和OmniAQEShuffleReadExec算子）全部回退为开源软件对应算子。当设置为-1时，关闭此功能。                                                                          |
+    |spark.gluten.sql.columnar.query.fallback.threshold|-1| 在AQE关闭的情况下，如果整个执行计划回退的算子个数大于等于这个阈值，则该Stage的全部算子全部回退为开源软件对应算子。当设置为-1时，关闭此功能。                                                                                                                      |
+    |spark.gluten.sql.columnar.backend.omni.unixTimeFunc.enabled|true| 是否启用from_unixtime和unix_timestamp表达式，true表示启用，false表示关闭。                                                                                                                                          |
+    |spark.sql.orc.filterPushdown|true| 控制ORC文件格式的数据查询时是否启用谓词下推功能。                                                                                                                                                                       |
+    |spark.gluten.sql.columnar.backend.omni.catalog.cache.size|128| 设置缓存Catelog元数据的缓存空间大小。小于或等于0时为关闭缓存功能。                                                                                                                                                            |
+    |spark.gluten.sql.columnar.backend.omni.catalog.cache.expire.time|600| 设置缓存Catelog元数据的缓存过期时间，默认为600秒。                                                                                                                                                                   |
+    |spark.gluten.sql.columnar.backend.omni.vec.predicate.enabled|false| 是否开启向量化谓词下推功能，true表示开启，false表示关闭。此配置在使用Iceberg场景不生效。                                                                                                                                             |
+    |spark.gluten.sql.native.writer.enabled|true| 是否开启列式写算子，true表示开启，false表示关闭。                                                                                                                                                                    |
+    |spark.gluten.sql.columnar.backend.omni.preferVectorizationExpression| false                          | 是否优选表达式向量化版本，true表示优选向量化版本，false表示使用codegen版本。                                                                                                                                                   |
 
 2. 查看Gluten是否生效。
 
@@ -2375,3 +2375,4 @@ Spark Extension配置的目录以`/opt/omni-operator/conf`和`/opt/omni-operator
         ```shell
         source ~/.bashrc
         ```
+       
