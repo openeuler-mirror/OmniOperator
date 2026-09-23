@@ -22,10 +22,10 @@ SIMD_ALWAYS_INLINE void VarSampPartialOp(double &mean, double &m2, double &cnt, 
 SIMD_ALWAYS_INLINE void VarSampFinalOp(double &inMean, double &inM2, double &inCnt, double cnt, double mean, double m2)
 {
     double newCnt = inCnt + cnt;
-    double delta = mean - inMean;
-    double deltaN = newCnt == 0 ? 0.0 : delta / newCnt;
-    inMean = inMean + deltaN * cnt;
-    inM2 = inM2 + m2 + delta * deltaN * inCnt * cnt;
+    double mergeMean = newCnt == 0 ? 0.0 : (inMean * inCnt + mean * cnt) / newCnt;
+    inM2 = inM2 + m2 + inCnt * (inMean - mergeMean) * (inMean - mergeMean)
+                 + cnt * (mean - mergeMean) * (mean - mergeMean);
+    inMean = mergeMean;
     inCnt = newCnt;
 }
 
