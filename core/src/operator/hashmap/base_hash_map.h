@@ -885,6 +885,22 @@ private:
                 break;
             }
         }
+        // Bug-015: probe 找不到空槽(表尾跨 kSentinel 哨兵区非空,FindFirstNibbles 不识别哨兵为空槽)。
+        // 原实现返回当前 offset,它可能是被占用的槽位 → EmplaceNotNullKey 覆盖已有 key 且 elementsSize
+        // 虚增 → ForEachKV 按虚增遍历未构造/越界槽 → ExtractValuesBatch 里 LargeStringContainer::SetValue
+        // 的 memcpy 读到垃圾 string(_M_p/size 野) → SIGSEGV/SIGABRT。此处线性扫描表内找真正的空槽;
+        // 负载 ≤ Rehash 阈值(0.9,见 MAX_LOAD_FACTOR)时必有空槽,scanned 上限仅防御。
+        size_t pos = seq.GetOffset();
+        size_t scanned = 0;
+        while (scanned < capacity) {
+            if (identifiers[pos] == kEmpty) {
+                inserted = true;
+                return pos;
+            }
+            ++pos;
+            if (pos >= capacity) pos = 0;
+            ++scanned;
+        }
         inserted = true;
         return seq.GetOffset();
     }
