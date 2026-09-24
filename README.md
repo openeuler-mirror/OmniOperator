@@ -78,7 +78,9 @@ OmniOperator算子加速特性主要应用于数据分析引擎场景，通过�
 为了更准确地规划与使用OmniOperator算子加速特性，建议合理规避可能的风险和限制。
 
 - **Decimal数据类型限制**：OmniOperator算子加速特性支持64位和128位的Decimal数据类型。当Decimal值超过128位范围时，可能会抛出异常或返回null。这种行为可能导致OmniOperator算子加速特性与引擎开源版本在聚合操作（如SUM、AVG）中的表现存在不一致的情况。如果字段可能涉及AVG操作，且结果存在大数值的累加风险，建议改用Double或其他适合的类型存储以降低风险。
-- **Double类型的浮点精度问题**：在使用Double类型对SUM和AVG进行操作时，OmniOperator算子加速特性可能因计算过程中的顺序差异导致结果的不一致。如果要求结果的精确性较高，请考虑使用更高精度的数据类型（如Decimal）。
+- **Double类型的浮点精度问题**：在使用Double类型对SUM和AVG进行操作时，OmniOperator算子加速特性可能因计算过程中的顺序差异导致结果的不一致。如果要求结果的精确性较高，请考虑使用更高精度的数据类型（如Decimal）。涉及表达式示例：
+    - `AVG(c_double)`：c_double里若包含大量±Double.Max（约1.8E308），AVG的中间态sum在累加时很容易溢出成±Infinity，或在正负无穷相遇时变成NaN；同时浮点加法不满足结合律，所以最终的AVG可能落在NaN或±Infinity上。
+    - **规避建议**：若业务不接受`NaN`/`Infinity`或要求跨引擎结果稳定，避免在`AVG`/`SUM`字段中使用接近`double`极限的数值；需要精确累加时优先使用Decimal，或在上游对极值做截断/清洗。
 - **算子Spill功能支持情况**：当前Sort、Window和HashAgg等算子支持Spill功能，而BroadcastHashJoin、ShuffledHashJoin和SortMergeJoin等算子仍不支持该功能。请根据数据的特性和处理需求进行算子选择。
 - **Float/Double转String的格式化差异**：OmniOperator算子加速特性对float使用`{:.7E}`科学计数法（约7位有效数字），并做规范化处理，尾数位数通常少于Spark。Spark尾数位数更多，两者在末几位上常有差异。依赖「先cast再对字符串运算」的表达式，OmniOperator算子加速特性与Spark结果可能不一致。涉及表达式示例：
     - `contains(CAST(c_float AS STRING), …)`：子串匹配受字符串内容影响，可能true/false不一致；
