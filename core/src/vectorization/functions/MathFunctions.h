@@ -350,14 +350,20 @@ using namespace omniruntime::type;
     template <typename T>
     struct Log10Function {
         ALWAYS_INLINE bool call(double &result, double a) {
+            if (a <= 0.0) {
+                return false;
+            }
             result = std::log10(a);
             return true;
         }
-    };
+     };
 
     template <typename T>
     struct Log1pFunction {
         ALWAYS_INLINE bool call(double &result, double a) {
+            if (a <= -1) {
+                return false;
+            }
             result = std::log1p(a);
             return true;
         }
@@ -366,6 +372,9 @@ using namespace omniruntime::type;
     template <typename T>
     struct Log2Function {
         ALWAYS_INLINE bool call(double &result, double a) {
+            if (a <= 0.0) {
+                return false;
+            }
             result = std::log2(a);
             return true;
         }
@@ -374,6 +383,9 @@ using namespace omniruntime::type;
     template <typename T>
     struct LogarithmFunction {
         ALWAYS_INLINE bool call(double &result, double a, double b) {
+            if (a <= 0 || b <= 0) {
+                return false;
+            }
             result = std::log(b) / std::log(a);
             return true;
         }
