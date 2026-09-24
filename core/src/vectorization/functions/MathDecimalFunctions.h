@@ -306,8 +306,215 @@ private:
     type::DataTypePtr inputType_;
 };
 
+/// floor(DECIMAL(p,s)) -> DECIMAL(p,0). Rounds toward negative infinity, preserving precision.
+class FloorDecimalFunction : public VectorFunction {
+public:
+    explicit FloorDecimalFunction(const type::DataTypePtr &inputType) : inputType_(inputType) {}
+
+    ~FloorDecimalFunction() override = default;
+
+    void Apply(std::stack<vec::BaseVector *> &args, const type::DataTypePtr &outputType,
+        vec::BaseVector *&result, op::ExecutionContext *context) const override
+    {
+        auto input = args.top();
+        args.pop();
+
+        const int32_t size = context->GetResultRowSize();
+        const type::DataTypeId id = inputType_->GetId();
+        const int32_t scale = static_cast<type::DecimalDataType *>(inputType_.get())->GetScale();
+        const int32_t precision = static_cast<type::DecimalDataType *>(inputType_.get())->GetPrecision();
+        const __int128 factor = DecimalPowerOfTen(scale);
+        const bool isConst = input->GetEncoding() == vec::OMNI_ENCODING_CONST;
+
+        std::shared_ptr<type::DecimalDataType> outDt;
+        if (id == type::OMNI_DECIMAL64) {
+            outDt = std::make_shared<type::Decimal64DataType>(precision, 0);
+        } else {
+            outDt = std::make_shared<type::Decimal128DataType>(precision, 0);
+        }
+        result = vec::VectorHelper::CreateFlatVector(id, size);
+        vec::VectorHelper::SetVectorDataType(result, outDt.get());
+
+        if (id == type::OMNI_DECIMAL64) {
+            auto resultVec = static_cast<vec::Vector<int64_t> *>(result);
+            const int64_t factorI64 = static_cast<int64_t>(factor);
+            for (int32_t row = 0; row < size; ++row) {
+                if (input->IsNull(isConst ? 0 : row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                int64_t v = vec::VectorHelper::GetValueFromVector<int64_t>(input, row);
+                int64_t q = v / factorI64;
+                int64_t r = v % factorI64;
+                if (r != 0 && v < 0) {
+                    q -= 1;
+                }
+                resultVec->SetValue(row, q);
+            }
+        } else {
+            auto resultVec = static_cast<vec::Vector<type::Decimal128> *>(result);
+            for (int32_t row = 0; row < size; ++row) {
+                if (input->IsNull(isConst ? 0 : row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                __int128 v = vec::VectorHelper::GetValueFromVector<type::Decimal128>(input, row).ToInt128();
+                __int128 q = v / factor;
+                __int128 r = v % factor;
+                if (r != 0 && v < 0) {
+                    q -= 1;
+                }
+                resultVec->SetValue(row, type::Decimal128(q));
+            }
+        }
+
+        if (input != nullptr) {
+            delete input;
+        }
+    }
+
+private:
+    type::DataTypePtr inputType_;
+};
+
+/// ceil(DECIMAL(p,s)) -> DECIMAL(p,0). Rounds toward positive infinity, preserving precision.
+class CeilDecimalFunction : public VectorFunction {
+public:
+    explicit CeilDecimalFunction(const type::DataTypePtr &inputType) : inputType_(inputType) {}
+
+    ~CeilDecimalFunction() override = default;
+
+    void Apply(std::stack<vec::BaseVector *> &args, const type::DataTypePtr &outputType,
+        vec::BaseVector *&result, op::ExecutionContext *context) const override
+    {
+        auto input = args.top();
+        args.pop();
+
+        const int32_t size = context->GetResultRowSize();
+        const type::DataTypeId id = inputType_->GetId();
+        const int32_t scale = static_cast<type::DecimalDataType *>(inputType_.get())->GetScale();
+        const int32_t precision = static_cast<type::DecimalDataType *>(inputType_.get())->GetPrecision();
+        const __int128 factor = DecimalPowerOfTen(scale);
+        const bool isConst = input->GetEncoding() == vec::OMNI_ENCODING_CONST;
+
+        std::shared_ptr<type::DecimalDataType> outDt;
+        if (id == type::OMNI_DECIMAL64) {
+            outDt = std::make_shared<type::Decimal64DataType>(precision, 0);
+        } else {
+            outDt = std::make_shared<type::Decimal128DataType>(precision, 0);
+        }
+        result = vec::VectorHelper::CreateFlatVector(id, size);
+        vec::VectorHelper::SetVectorDataType(result, outDt.get());
+
+        if (id == type::OMNI_DECIMAL64) {
+            auto resultVec = static_cast<vec::Vector<int64_t> *>(result);
+            const int64_t factorI64 = static_cast<int64_t>(factor);
+            for (int32_t row = 0; row < size; ++row) {
+                if (input->IsNull(isConst ? 0 : row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                int64_t v = vec::VectorHelper::GetValueFromVector<int64_t>(input, row);
+                int64_t q = v / factorI64;
+                int64_t r = v % factorI64;
+                if (r != 0 && v > 0) {
+                    q += 1;
+                }
+                resultVec->SetValue(row, q);
+            }
+        } else {
+            auto resultVec = static_cast<vec::Vector<type::Decimal128> *>(result);
+            for (int32_t row = 0; row < size; ++row) {
+                if (input->IsNull(isConst ? 0 : row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                __int128 v = vec::VectorHelper::GetValueFromVector<type::Decimal128>(input, row).ToInt128();
+                __int128 q = v / factor;
+                __int128 r = v % factor;
+                if (r != 0 && v > 0) {
+                    q += 1;
+                }
+                resultVec->SetValue(row, type::Decimal128(q));
+            }
+        }
+
+        if (input != nullptr) {
+            delete input;
+        }
+    }
+
+private:
+    type::DataTypePtr inputType_;
+};
+
+/// abs(DECIMAL(p,s)) -> DECIMAL(p,s). Scale-preserving, mirrors DecimalDataUtils.abs.
+class AbsDecimalFunction : public VectorFunction {
+public:
+    explicit AbsDecimalFunction(const type::DataTypePtr &inputType) : inputType_(inputType) {}
+
+    ~AbsDecimalFunction() override = default;
+
+    void Apply(std::stack<vec::BaseVector *> &args, const type::DataTypePtr &outputType,
+        vec::BaseVector *&result, op::ExecutionContext *context) const override
+    {
+        auto input = args.top();
+        args.pop();
+
+        const int32_t size = context->GetResultRowSize();
+        const type::DataTypeId id = inputType_->GetId();
+        const int32_t scale = static_cast<type::DecimalDataType *>(inputType_.get())->GetScale();
+        const int32_t precision = static_cast<type::DecimalDataType *>(inputType_.get())->GetPrecision();
+        const bool isConst = input->GetEncoding() == vec::OMNI_ENCODING_CONST;
+
+        std::shared_ptr<type::DecimalDataType> outDt;
+        if (id == type::OMNI_DECIMAL64) {
+            outDt = std::make_shared<type::Decimal64DataType>(precision, scale);
+        } else {
+            outDt = std::make_shared<type::Decimal128DataType>(precision, scale);
+        }
+        result = vec::VectorHelper::CreateFlatVector(id, size);
+        vec::VectorHelper::SetVectorDataType(result, outDt.get());
+
+        if (id == type::OMNI_DECIMAL64) {
+            auto resultVec = static_cast<vec::Vector<int64_t> *>(result);
+            for (int32_t row = 0; row < size; ++row) {
+                if (input->IsNull(isConst ? 0 : row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                int64_t v = vec::VectorHelper::GetValueFromVector<int64_t>(input, row);
+                if (v < 0) {
+                    v = -v;
+                }
+                resultVec->SetValue(row, v);
+            }
+        } else {
+            auto resultVec = static_cast<vec::Vector<type::Decimal128> *>(result);
+            for (int32_t row = 0; row < size; ++row) {
+                if (input->IsNull(isConst ? 0 : row)) {
+                    result->SetNull(row);
+                    continue;
+                }
+                __int128 v = vec::VectorHelper::GetValueFromVector<type::Decimal128>(input, row).ToInt128();
+                if (v < 0) {
+                    v = -v;
+                }
+                resultVec->SetValue(row, type::Decimal128(v));
+            }
+        }
+
+        if (input != nullptr) {
+            delete input;
+        }
+    }
+
+private:
+    type::DataTypePtr inputType_;
+};
+
 /// Returns a scale-preserving DECIMAL->DECIMAL VectorFunction if `name`+arity is supported and
-/// every operand is DECIMAL64/DECIMAL128, else nullptr. Currently: sign.
+/// every operand is DECIMAL64/DECIMAL128, else nullptr. Currently: sign, floor, ceil, abs.
 inline std::shared_ptr<VectorFunction> TryCreateDecimalToDecimalFunction(
     const std::string &name, const std::vector<type::DataTypePtr> &argTypes)
 {
@@ -316,8 +523,19 @@ inline std::shared_ptr<VectorFunction> TryCreateDecimalToDecimalFunction(
             return nullptr;
         }
     }
-    if (name == "sign" && argTypes.size() == 1) {
-        return std::make_shared<SignDecimalFunction>(argTypes[0]);
+    if (argTypes.size() == 1) {
+        if (name == "sign") {
+            return std::make_shared<SignDecimalFunction>(argTypes[0]);
+        }
+        if (name == "floor") {
+            return std::make_shared<FloorDecimalFunction>(argTypes[0]);
+        }
+        if (name == "ceil") {
+            return std::make_shared<CeilDecimalFunction>(argTypes[0]);
+        }
+        if (name == "abs") {
+            return std::make_shared<AbsDecimalFunction>(argTypes[0]);
+        }
     }
     return nullptr;
 }

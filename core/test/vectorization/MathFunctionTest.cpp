@@ -37,6 +37,72 @@ protected:
     }
 };
 
+// Helper: test decimal unary operations (ceil/floor/abs) for DECIMAL64/DECIMAL128.
+// DECIMAL math functions are registered only as DataTypeId gate placeholders (nullptr DataType);
+// the scale-aware Floor/Ceil/AbsDecimalFunction is built inside FuncExpr from the operand DataType.
+// A direct VectorFunction::Find would resolve the gate and crash in Apply, so the tests MUST run
+// through the FuncExpr/ExprEval path (see MathDecimalFunctionTest.cpp for the same requirement).
+template <typename ValueType, typename DecimalDataTypeT, DataTypeId DTID>
+void TestDecimalUnaryOperation(
+    const std::string& functionName,
+    const std::vector<ValueType>& inputData,
+    const std::vector<ValueType>& expectedResults,
+    int32_t precision,
+    int32_t scale,
+    const std::vector<int32_t>& nullIndices = {})
+{
+    int32_t rowSize = static_cast<int32_t>(inputData.size());
+    auto decType = std::make_shared<DecimalDataTypeT>(precision, scale);
+    BaseVector* rawInput = VectorHelper::CreateComplexVector(decType.get(), rowSize);
+    auto* inputVector = static_cast<Vector<ValueType>*>(rawInput);
+    for (int32_t i = 0; i < rowSize; ++i) {
+        inputVector->SetValue(i, inputData[i]);
+        inputVector->SetNotNull(i);
+    }
+    std::vector<bool> nullFlags(rowSize, false);
+    for (int32_t idx : nullIndices) {
+        rawInput->SetNull(idx);
+        nullFlags[idx] = true;
+    }
+
+    auto* batch = new VectorBatch(rowSize);
+    batch->Append(rawInput);
+
+    std::vector<Expr*> args = {new FieldExpr(0, decType)};
+    auto resultType = std::make_shared<DataType>(DTID);
+    auto* funcExpr = new FuncExpr(functionName, args, resultType);
+
+    auto* context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(batch, context);
+    e.Visit(*funcExpr);
+    auto* rawResult = e.GetResult();
+    ASSERT_NE(rawResult, nullptr);
+
+    auto* resultVector = static_cast<Vector<ValueType>*>(rawResult);
+    ASSERT_NE(resultVector, nullptr);
+
+    for (int32_t i = 0; i < rowSize; ++i) {
+        if (nullFlags[i]) {
+            EXPECT_TRUE(rawResult->IsNull(i)) << "Result should be NULL at index " << i;
+        } else {
+            EXPECT_FALSE(rawResult->IsNull(i)) << "Result should not be NULL at index " << i;
+            ValueType actual = resultVector->GetValue(i);
+            ValueType expected = expectedResults[i];
+            EXPECT_EQ(actual, expected)
+                << "Value mismatch at index " << i << " for " << functionName
+                << "(" << inputData[i] << ")"
+                << ", expected=" << expected << ", actual=" << actual;
+        }
+    }
+
+    delete rawResult;
+    delete funcExpr;
+    delete batch;
+    delete context;
+}
+
 // Helper function to test unary mathematical operations
 template<typename T, DataTypeId typeId, DataTypeId returnId>
 void TestUnaryMathOperation(
@@ -569,7 +635,7 @@ TEST(MathFunctionsTest, ceilDouble) {
     for (double x : inputData) {
         expectedResults.push_back(std::ceil(x));
     }
-    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_LONG>("ceil", inputData, expectedResults);
+    TestUnaryMathOperation<double, OMNI_DOUBLE, OMNI_DOUBLE>("ceil", inputData, expectedResults);
 }
 
 
@@ -1883,4 +1949,64 @@ TEST(MathFunctionsTest, TruncateShortWithNegativeScale) {
     std::vector<int32_t> scale =    {-2, -2};
     std::vector<int16_t> expected = {static_cast<int16_t>(1200), static_cast<int16_t>(-1200)};
     TestBinaryRoundOperation<int16_t, OMNI_SHORT>("truncate", left, scale, expected);
+}
+
+// Test ceil(DECIMAL64) -> DECIMAL64 with scale=2
+TEST(MathFunctionsTest, CeilDec64) {
+    TestDecimalUnaryOperation<int64_t, Decimal64DataType, OMNI_DECIMAL64>(
+        "ceil", {12345, -12345, 10000, -50, 0, 999}, {124, -123, 100, 0, 0, 10}, 18, 2);
+}
+
+// Test ceil(DECIMAL64) with NULL input
+TEST(MathFunctionsTest, CeilDec64Null) {
+    TestDecimalUnaryOperation<int64_t, Decimal64DataType, OMNI_DECIMAL64>(
+        "ceil", {12345, -12345, 10000, -50}, {12345, -123, 10000, 0}, 18, 2, {0, 2});
+}
+
+// Test ceil(DECIMAL128) -> DECIMAL128 with scale=2
+TEST(MathFunctionsTest, CeilDec128) {
+    TestDecimalUnaryOperation<Decimal128, Decimal128DataType, OMNI_DECIMAL128>(
+        "ceil",
+        {Decimal128(12345), Decimal128(-12345), Decimal128(10000), Decimal128(-50), Decimal128(0), Decimal128(999)},
+        {Decimal128(124), Decimal128(-123), Decimal128(100), Decimal128(0), Decimal128(0), Decimal128(10)},
+        38, 2);
+}
+
+// Test ceil(DECIMAL128) with NULL input
+TEST(MathFunctionsTest, CeilDec128Null) {
+    TestDecimalUnaryOperation<Decimal128, Decimal128DataType, OMNI_DECIMAL128>(
+        "ceil",
+        {Decimal128(12345), Decimal128(-12345), Decimal128(10000), Decimal128(-50)},
+        {Decimal128(12345), Decimal128(-123), Decimal128(10000), Decimal128(0)},
+        38, 2, {0, 2});
+}
+
+// Test abs(DECIMAL64) -> DECIMAL64 with scale=2
+TEST(MathFunctionsTest, AbsDec64) {
+    TestDecimalUnaryOperation<int64_t, Decimal64DataType, OMNI_DECIMAL64>(
+        "abs", {12345, -12345, 0, -50, -1}, {12345, 12345, 0, 50, 1}, 18, 2);
+}
+
+// Test abs(DECIMAL64) with NULL input
+TEST(MathFunctionsTest, AbsDec64Null) {
+    TestDecimalUnaryOperation<int64_t, Decimal64DataType, OMNI_DECIMAL64>(
+        "abs", {12345, -12345, 0, -50}, {12345, 12345, 0, 50}, 18, 2, {0, 2});
+}
+
+// Test abs(DECIMAL128) -> DECIMAL128 with scale=2
+TEST(MathFunctionsTest, AbsDec128) {
+    TestDecimalUnaryOperation<Decimal128, Decimal128DataType, OMNI_DECIMAL128>(
+        "abs",
+        {Decimal128(12345), Decimal128(-12345), Decimal128(0), Decimal128(-50), Decimal128(-1)},
+        {Decimal128(12345), Decimal128(12345), Decimal128(0), Decimal128(50), Decimal128(1)},
+        38, 2);
+}
+
+// Test abs(DECIMAL128) with NULL input
+TEST(MathFunctionsTest, AbsDec128Null) {
+    TestDecimalUnaryOperation<Decimal128, Decimal128DataType, OMNI_DECIMAL128>(
+        "abs",
+        {Decimal128(12345), Decimal128(-12345), Decimal128(0), Decimal128(-50)},
+        {Decimal128(12345), Decimal128(12345), Decimal128(0), Decimal128(50)},
+        38, 2, {0, 2});
 }

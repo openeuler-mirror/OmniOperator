@@ -469,7 +469,7 @@ public:
             std::string message("positions is null or the input length is incorrect: %d.", length);
             throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
-        auto vector = new Vector<RAW_DATA_TYPE>(length);
+        auto vector = new Vector<RAW_DATA_TYPE>(length, this->dataTypeId);
         auto startPositions = positions + positionOffset;
         for (int32_t i = 0; i < length; i++) {
             int position = startPositions[i];

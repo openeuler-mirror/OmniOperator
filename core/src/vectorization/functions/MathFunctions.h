@@ -11,12 +11,19 @@
 #include <iostream>
 #include <random>
 #include <utility>
+#include <limits>
 #include "type/decimal128.h"
 #include "type/data_type.h"
+#include "type/decimal_operations.h"
 #include "vectorization/functions/Arithmetic.h"
+#include "vectorization/VectorFunction.h"
+#include "vectorization/SelectivityVector.h"
+#include "util/bit_util.h"
 #include "util/config/QueryConfig.h"
 
 namespace omniruntime::vectorization {
+using namespace omniruntime::vec;
+using namespace omniruntime::type;
     template <typename T>
     struct AbsFunction {
         template <typename TInput>
@@ -794,5 +801,4 @@ namespace omniruntime::vectorization {
             return Status::OK();
         }
     };
-
 }
