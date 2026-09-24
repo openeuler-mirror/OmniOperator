@@ -1104,7 +1104,10 @@ template <bool hasJoinFilter, JoinType joinType> void LookupJoinOperator::TaperA
                 probeVector += vecLanes;
                 for (int32_t j = 0; j < vecLanes; ++j) {
                     if (matches[j]) {
-                        if (handleIdx(probePosition + j, hashes[j])) {
+                        // int16 差值可能超出 int16 表示域(如全域 -32768..32767),
+                        // SIMD 内按 int16 计算的 hashes 已回绕为负;用 int64 重新精确计算 idx。
+                        int64_t key = probeBase[probePosition + j];
+                        if (handleIdx(probePosition + j, key - static_cast<int64_t>(minValue))) {
                             curProbePosition = probePosition + j + 1;
                             return;
                         }
@@ -1131,7 +1134,9 @@ template <bool hasJoinFilter, JoinType joinType> void LookupJoinOperator::TaperA
                 probeVector += vecLanes;
                 for (int32_t j = 0; j < vecLanes; ++j) {
                     if (matches[j]) {
-                        if (handleIdx(probePosition + j, hashes[j])) {
+                        // 同 int16:range 超过 int32 表示域时 SIMD 差值会回绕,int64 重算 idx。
+                        int64_t key = probeBase[probePosition + j];
+                        if (handleIdx(probePosition + j, key - static_cast<int64_t>(minValue))) {
                             curProbePosition = probePosition + j + 1;
                             return;
                         }
