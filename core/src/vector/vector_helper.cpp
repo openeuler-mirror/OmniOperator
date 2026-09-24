@@ -26,7 +26,7 @@ RowBatch *VectorHelper::TransRowBatchFromVectorBatch(VectorBatch *vecBatch)
         auto oneRowLen = rowBuffer->FillBuffer();
 
         // 3.set one row
-        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), oneRowLen));
+        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), oneRowLen, true));
     }
     return rowBatch;
 }

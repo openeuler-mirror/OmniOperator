@@ -321,7 +321,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVect
         auto oneRowLen = rowBuffer->FillBuffer();
 
         // 3.set one row
-        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), oneRowLen));
+        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), oneRowLen, true));
     }
     return reinterpret_cast<jlong>(rowBatch.release());
 }
