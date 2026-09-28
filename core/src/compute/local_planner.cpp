@@ -17,6 +17,7 @@
 #include "operator/join/lookup_join_wrapper.h"
 #include "operator/join/nest_loop_join_builder.h"
 #include "operator/join/nest_loop_join_lookup_wrapper.h"
+#include "operator/join/cascading_lookup_join.h"
 #include "operator/limit/limit.h"
 #include "operator/sort/sort_expr.h"
 #include "operator/topn/topn_expr.h"
@@ -161,7 +162,61 @@ void planDetail(
         }
     }
 
-    // JoinNode and UnionNode has multiple sources, so we need to create a builder driver for each source
+    if (auto cascadingNode = std::dynamic_pointer_cast<const CascadingJoinNode>(planNode)) {
+        const auto& buildNodes = cascadingNode->BuildNodes();
+        const auto& buildKeysList = cascadingNode->BuildKeysList();
+
+        OMNI_CHECK(buildNodes.size() == buildKeysList.size(),
+            "Cascading build nodes size must equal build keys size");
+        OMNI_CHECK(builderDrivers.size() == buildNodes.size() + 1,
+            "Cascading sources size must equal probe plus build nodes size");
+
+        std::vector<HashBuilderWithExprOperatorFactory*> hashBuilderFactories;
+
+        for (size_t i = 0; i < buildNodes.size(); ++i) {
+            const auto& buildKeys = buildKeysList[i];
+
+            OMNI_CHECK(!builderDrivers[i + 1].empty(),
+                "Cascading build driver cannot be empty");
+            auto builderDriver = builderDrivers[i + 1][0];
+
+            auto overflowConfig = queryConfig.IsOverFlowASNull()
+                ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+
+            auto hashBuilderOperatorFactory =
+                new HashBuilderWithExprOperatorFactory(
+                    OMNI_JOIN_TYPE_INNER,
+                    *(buildNodes[i]->OutputType()),
+                    buildKeys,
+                    1,
+                    overflowConfig);
+
+            delete overflowConfig;
+            overflowConfig = nullptr;
+
+            builderDriver->operators()->emplace_back(
+                createOperator(hashBuilderOperatorFactory, buildNodes[i]));
+            factories->emplace_back(hashBuilderOperatorFactory);
+
+            hashBuilderFactories.push_back(hashBuilderOperatorFactory);
+        }
+
+        auto cascadingFactory = CascadingLookupJoinOperatorFactory::CreateCascadingLookupJoinOperatorFactory(
+            cascadingNode, hashBuilderFactories, queryConfig);
+
+        factories->emplace_back(cascadingFactory);
+
+        auto cascadingOperator = createOperator(cascadingFactory, cascadingNode);
+        cascadingOperator->setInputOperatorCnt(1);
+        currentOperators->emplace_back(cascadingOperator);
+
+        for (auto builderDriver : builderDrivers) {
+            drivers->insert(drivers->end(), builderDriver.begin(), builderDriver.end());
+        }
+        return;
+    }
+
     if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
         auto res = createHashBuilderOperatorPairFactory(joinNode, queryConfig);
         auto builderDriver = builderDrivers[1][0];
