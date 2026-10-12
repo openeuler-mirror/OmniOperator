@@ -4,11 +4,15 @@
 #include "topn_sort.h"
 #include "operator/util/operator_util.h"
 #include "type/data_type.h"
+#include "vector/array_vector.h"
+#include "vector/row_vector.h"
 #include "vector/vector_helper.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::type;
 using namespace omniruntime::vec;
+
+using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
 
 template <type::DataTypeId typeId> void *GetValueFromFlat(BaseVector *inputVec, int32_t inputPos, int32_t &length)
 {
@@ -16,8 +20,8 @@ template <type::DataTypeId typeId> void *GetValueFromFlat(BaseVector *inputVec, 
         length = 0;
         return nullptr;
     }
-    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
-        auto value = static_cast<Vector<LargeStringContainer<std::string_view>> *>(inputVec)->GetValue(inputPos);
+    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR || typeId == OMNI_VARBINARY) {
+        auto value = static_cast<VarcharVector *>(inputVec)->GetValue(inputPos);
         length = value.length();
         return const_cast<char *>(value.data());
     } else {
@@ -40,11 +44,11 @@ bool EqualValueTemplate(BaseVector *leftVec, int32_t leftPos, BaseVector *rightV
         return false;
     }
 
-    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR) {
+    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR || typeId == OMNI_VARBINARY) {
         std::string_view leftValue;
         std::string_view rightValue;
-        leftValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(leftVec)->GetValue(leftPos);
-        rightValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rightVec)->GetValue(rightPos);
+        leftValue = static_cast<VarcharVector *>(leftVec)->GetValue(leftPos);
+        rightValue = static_cast<VarcharVector *>(rightVec)->GetValue(rightPos);
         auto leftLength = leftValue.length();
         auto rightLength = rightValue.length();
         if (leftLength != rightLength) {
@@ -64,6 +68,12 @@ bool EqualValueTemplate(BaseVector *leftVec, int32_t leftPos, BaseVector *rightV
             } else {
                 return false;
             }
+        } else if constexpr (typeId == OMNI_FLOAT) {
+            if (std::abs(leftValue - rightValue) < __FLT_EPSILON__) {
+                return true;
+            } else {
+                return false;
+            }
         } else {
             return leftValue == rightValue;
         }
@@ -75,7 +85,7 @@ void SetValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVect
 {
     using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
     if (inputVec->IsNull(inputPos)) {
-        if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+        if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR || typeId == OMNI_VARBINARY) {
             static_cast<VarcharVector *>(outputVec)->SetNull(outputPos);
         } else {
             outputVec->SetNull(outputPos);
@@ -84,7 +94,7 @@ void SetValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVect
     }
 
     using RawDataType = typename NativeAndVectorType<typeId>::type;
-    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR || typeId == OMNI_VARBINARY) {
         auto outputVarcharVec = static_cast<VarcharVector *>(outputVec);
         auto inputVarcharVec = static_cast<VarcharVector *>(inputVec);
         auto value = inputVarcharVec->GetValue(inputPos);
@@ -100,7 +110,7 @@ void SetValueFromDictionary(vec::BaseVector *inputVec, int32_t inputPos, vec::Ba
 {
     using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
     if (inputVec->IsNull(inputPos)) {
-        if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+        if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR || typeId == OMNI_VARBINARY) {
             static_cast<VarcharVector *>(outputVec)->SetNull(outputPos);
         } else {
             outputVec->SetNull(outputPos);
@@ -109,7 +119,7 @@ void SetValueFromDictionary(vec::BaseVector *inputVec, int32_t inputPos, vec::Ba
     }
 
     using RawDataType = typename NativeAndVectorType<typeId>::type;
-    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR || typeId == OMNI_VARBINARY) {
         auto outputVarcharVec = static_cast<VarcharVector *>(outputVec);
         auto inputVarcharVec = static_cast<Vector<DictionaryContainer<std::string_view>> *>(inputVec);
         auto value = inputVarcharVec->GetValue(inputPos);
@@ -124,8 +134,8 @@ template <type::DataTypeId typeId> static BaseVector *CreateVectorFromFlat(BaseV
 {
     using RawDataType = typename NativeAndVectorType<typeId>::type;
     BaseVector *outputVec;
-    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR) {
-        outputVec = new Vector<LargeStringContainer<std::string_view>>(1);
+    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR || typeId == OMNI_VARBINARY) {
+        outputVec = new VarcharVector(1);
     } else {
         outputVec = new Vector<RawDataType>(1);
     }
@@ -137,8 +147,8 @@ template <type::DataTypeId typeId> static BaseVector *CreateVectorFromDictionary
 {
     using RawDataType = typename NativeAndVectorType<typeId>::type;
     BaseVector *outputVec;
-    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR) {
-        outputVec = new Vector<LargeStringContainer<std::string_view>>(1);
+    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR || typeId == OMNI_VARBINARY) {
+        outputVec = new VarcharVector(1);
     } else {
         outputVec = new Vector<RawDataType>(1);
     }
@@ -149,9 +159,9 @@ template <type::DataTypeId typeId> static BaseVector *CreateVectorFromDictionary
 template <type::DataTypeId typeId>
 static int32_t CompareValueOptimizeFromFlat(void *valuePtr, int32_t length, BaseVector *rightVec, int32_t rightPos)
 {
-    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR) {
+    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR || typeId == OMNI_VARBINARY) {
         auto leftValue = (char *)valuePtr;
-        auto rightValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rightVec)->GetValue(rightPos);
+        auto rightValue = static_cast<VarcharVector *>(rightVec)->GetValue(rightPos);
         auto leftLength = static_cast<uint64_t>(length);
         auto rightLength = rightValue.length();
         int32_t result = memcmp(leftValue, rightValue.data(), std::min(leftLength, rightLength));
@@ -171,9 +181,9 @@ static int32_t CompareValueOptimizeFromFlat(void *valuePtr, int32_t length, Base
 template <type::DataTypeId typeId>
 static int32_t CompareValueFromFlat(BaseVector *leftVec, int32_t leftPos, BaseVector *rightVec, int32_t rightPos)
 {
-    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR) {
-        auto leftValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(leftVec)->GetValue(leftPos);
-        auto rightValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rightVec)->GetValue(rightPos);
+    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR || typeId == OMNI_VARBINARY) {
+        auto leftValue = static_cast<VarcharVector *>(leftVec)->GetValue(leftPos);
+        auto rightValue = static_cast<VarcharVector *>(rightVec)->GetValue(rightPos);
         auto leftLength = leftValue.length();
         auto rightLength = rightValue.length();
         int32_t result = memcmp(leftValue.data(), rightValue.data(), std::min(leftLength, rightLength));
@@ -212,6 +222,52 @@ static int32_t CompareValueFromDictionary(BaseVector *leftVec, int32_t leftPos, 
     }
 }
 
+static void SetArrayValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec,
+    int32_t outputPos)
+{
+    auto *inputArrayVec = static_cast<ArrayVector *>(inputVec);
+    auto *outputArrayVec = static_cast<ArrayVector *>(outputVec);
+
+    if (inputArrayVec->IsNull(inputPos)) {
+        outputArrayVec->SetNull(outputPos);
+        return;
+    }
+
+    BaseVector *arrayValue = inputArrayVec->GetValue(inputPos);
+    outputArrayVec->SetValue(outputPos, arrayValue);
+    delete arrayValue;
+}
+
+// Forward declaration for SetStructValueFromFlat
+static void SetStructValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec,
+    int32_t outputPos);
+
+static int32_t CompareArrayFromFlat(vec::BaseVector *leftVec, int32_t leftPos, vec::BaseVector *rightVec,
+    int32_t rightPos)
+{
+    return OperatorUtil::CompareArrayValue(leftVec, leftPos, rightVec, rightPos, true);
+}
+
+static bool EqualArrayFromFlat(vec::BaseVector *leftVec, int32_t leftPos, vec::BaseVector *rightVec,
+    int32_t rightPos)
+{
+    return OperatorUtil::CompareArrayValue(leftVec, leftPos, rightVec, rightPos, true)
+        == OperatorUtil::COMPARE_STATUS_EQUAL;
+}
+
+static int32_t CompareStructFromFlat(vec::BaseVector *leftVec, int32_t leftPos, vec::BaseVector *rightVec,
+    int32_t rightPos)
+{
+    return OperatorUtil::CompareStructValue(leftVec, leftPos, rightVec, rightPos, true);
+}
+
+static bool EqualStructFromFlat(vec::BaseVector *leftVec, int32_t leftPos, vec::BaseVector *rightVec,
+    int32_t rightPos)
+{
+    return OperatorUtil::CompareStructValue(leftVec, leftPos, rightVec, rightPos, true)
+        == OperatorUtil::COMPARE_STATUS_EQUAL;
+}
+
 static std::vector<GetValueFunc> getValueFromFlatFuncs = {
     nullptr,                           // OMNI_NONE,
     GetValueFromFlat<OMNI_INT>,        // OMNI_INT
@@ -231,7 +287,19 @@ static std::vector<GetValueFunc> getValueFromFlatFuncs = {
     GetValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     GetValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                           // OMNI_CONTAINER,
-    GetValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    GetValueFromFlat<OMNI_BYTE>,       // OMNI_BYTE
+    GetValueFromFlat<OMNI_FLOAT>,      // OMNI_FLOAT
+    GetValueFromFlat<OMNI_VARBINARY>,  // OMNI_VARBINARY = 20
+    nullptr,                           // OMNI_TIME_WITHOUT_TIME_ZONE = 21
+    nullptr,                           // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22
+    nullptr,                           // OMNI_TIMESTAMP_WITH_TIME_ZONE = 23
+    nullptr,                           // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE = 24
+    nullptr,                           // OMNI_MULTISET = 25
+    nullptr, nullptr, nullptr, nullptr, // reserved (26-29)
+    nullptr,                           // OMNI_ARRAY = 30
+    nullptr,                           // OMNI_MAP = 31
+    nullptr,                           // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr  // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
 static std::vector<CompareOptimizeFunc> compareOptimizeFromFlatFuncs = {
@@ -253,7 +321,19 @@ static std::vector<CompareOptimizeFunc> compareOptimizeFromFlatFuncs = {
     CompareValueOptimizeFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueOptimizeFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                       // OMNI_CONTAINER,
-    CompareValueOptimizeFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    CompareValueOptimizeFromFlat<OMNI_BYTE>,       // OMNI_BYTE
+    CompareValueOptimizeFromFlat<OMNI_FLOAT>,      // OMNI_FLOAT
+    CompareValueOptimizeFromFlat<OMNI_VARBINARY>,  // OMNI_VARBINARY = 20
+    nullptr,                                       // OMNI_TIME_WITHOUT_TIME_ZONE = 21
+    nullptr,                                       // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22
+    nullptr,                                       // OMNI_TIMESTAMP_WITH_TIME_ZONE = 23
+    nullptr,                                       // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE = 24
+    nullptr,                                       // OMNI_MULTISET = 25
+    nullptr, nullptr, nullptr, nullptr,           // reserved (26-29)
+    nullptr,                                       // OMNI_ARRAY = 30
+    nullptr,                                       // OMNI_MAP = 31
+    nullptr,                                       // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr            // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
 static std::vector<CompareFunc> compareFromFlatFuncs = {
@@ -275,7 +355,19 @@ static std::vector<CompareFunc> compareFromFlatFuncs = {
     CompareValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                               // OMNI_CONTAINER,
-    CompareValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    CompareValueFromFlat<OMNI_BYTE>,       // OMNI_BYTE
+    CompareValueFromFlat<OMNI_FLOAT>,      // OMNI_FLOAT
+    CompareValueFromFlat<OMNI_VARBINARY>,  // OMNI_VARBINARY = 20
+    nullptr,                               // OMNI_TIME_WITHOUT_TIME_ZONE = 21
+    nullptr,                               // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22
+    nullptr,                               // OMNI_TIMESTAMP_WITH_TIME_ZONE = 23
+    nullptr,                               // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE = 24
+    nullptr,                               // OMNI_MULTISET = 25
+    nullptr, nullptr, nullptr, nullptr,   // reserved (26-29)
+    CompareArrayFromFlat,                  // OMNI_ARRAY = 30
+    nullptr,                               // OMNI_MAP = 31
+    CompareStructFromFlat,                 // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr      // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
 static std::vector<CompareFunc> compareFromDictionaryFuncs = {
@@ -297,7 +389,15 @@ static std::vector<CompareFunc> compareFromDictionaryFuncs = {
     CompareValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                     // OMNI_CONTAINER,
-    CompareValueFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    CompareValueFromDictionary<OMNI_BYTE>,        // OMNI_BYTE
+    CompareValueFromDictionary<OMNI_FLOAT>,      // OMNI_FLOAT
+    nullptr,                                     // OMNI_VARBINARY
+    nullptr, nullptr, nullptr, nullptr, nullptr, // 21-25
+    nullptr, nullptr, nullptr, nullptr,          // reserved (26-29)
+    nullptr,                                     // OMNI_ARRAY = 30
+    nullptr,                                     // OMNI_MAP = 31
+    nullptr,                                     // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr            // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
 static std::vector<EqualFunc> equalFromFlatFuncs = {
@@ -319,7 +419,19 @@ static std::vector<EqualFunc> equalFromFlatFuncs = {
     EqualValueTemplate<OMNI_VARCHAR>,    // OMNI_VARCHAR
     EqualValueTemplate<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                             // OMNI_CONTAINER,
-    EqualValueTemplate<OMNI_BYTE>        // OMNI_BYTE
+    EqualValueTemplate<OMNI_BYTE>,       // OMNI_BYTE
+    EqualValueTemplate<OMNI_FLOAT>,      // OMNI_FLOAT
+    EqualValueTemplate<OMNI_VARBINARY>, // OMNI_VARBINARY = 20
+    nullptr,                             // OMNI_TIME_WITHOUT_TIME_ZONE = 21
+    nullptr,                             // OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22
+    nullptr,                             // OMNI_TIMESTAMP_WITH_TIME_ZONE = 23
+    nullptr,                             // OMNI_TIMESTAMP_WITH_LOCAL_TIME_ZONE = 24
+    nullptr,                             // OMNI_MULTISET = 25
+    nullptr, nullptr, nullptr, nullptr,  // reserved (26-29)
+    EqualArrayFromFlat,                  // OMNI_ARRAY = 30
+    nullptr,                             // OMNI_MAP = 31
+    EqualStructFromFlat,                 // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr   // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
 static std::vector<CreateVectorFunc> createVectorFromFlatFuncs = {
@@ -341,7 +453,15 @@ static std::vector<CreateVectorFunc> createVectorFromFlatFuncs = {
     CreateVectorFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CreateVectorFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                               // OMNI_CONTAINER,
-    CreateVectorFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    CreateVectorFromFlat<OMNI_BYTE>,       // OMNI_BYTE
+    CreateVectorFromFlat<OMNI_FLOAT>,      // OMNI_FLOAT
+    nullptr,                               // OMNI_VARBINARY
+    nullptr, nullptr, nullptr, nullptr, nullptr, // 21-25
+    nullptr, nullptr, nullptr, nullptr,          // reserved (26-29)
+    nullptr,                               // OMNI_ARRAY = 30
+    nullptr,                               // OMNI_MAP = 31
+    nullptr,                               // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr      // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
 static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
@@ -363,30 +483,45 @@ static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
     CreateVectorFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CreateVectorFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                     // OMNI_CONTAINER,
-    CreateVectorFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    CreateVectorFromDictionary<OMNI_BYTE>,        // OMNI_BYTE
+    CreateVectorFromDictionary<OMNI_FLOAT>,      // OMNI_FLOAT
+    nullptr,                                     // OMNI_VARBINARY
+    nullptr, nullptr, nullptr, nullptr, nullptr, // 21-25
+    nullptr, nullptr, nullptr, nullptr,          // reserved (26-29)
+    nullptr,                                     // OMNI_ARRAY = 30
+    nullptr,                                     // OMNI_MAP = 31
+    nullptr,                                     // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr            // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
 
-static std::vector<SetValueFunc> setValueFromFlatFuncs = {
-    nullptr,                           // OMNI_NONE,
-    SetValueFromFlat<OMNI_INT>,        // OMNI_INT
-    SetValueFromFlat<OMNI_LONG>,       // OMNI_LONG
-    SetValueFromFlat<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    SetValueFromFlat<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    SetValueFromFlat<OMNI_SHORT>,      // OMNI_SHORT
-    SetValueFromFlat<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    SetValueFromFlat<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    SetValueFromFlat<OMNI_DATE32>,     // OMNI_DATE32
-    SetValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64
-    SetValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32
-    SetValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    SetValueFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
-    nullptr,                           // OMNI_INTERVAL_MONTHS
-    nullptr,                           // OMNI_INTERVAL_DAY_TIME
-    SetValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    SetValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                           // OMNI_CONTAINER,
-    SetValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
-};
+static std::vector<SetValueFunc> InitSetValueFromFlatFuncs()
+{
+    std::vector<SetValueFunc> funcs(OMNI_ROW + 1, nullptr);
+
+    funcs[OMNI_INT] = SetValueFromFlat<OMNI_INT>;
+    funcs[OMNI_LONG] = SetValueFromFlat<OMNI_LONG>;
+    funcs[OMNI_DOUBLE] = SetValueFromFlat<OMNI_DOUBLE>;
+    funcs[OMNI_BOOLEAN] = SetValueFromFlat<OMNI_BOOLEAN>;
+    funcs[OMNI_SHORT] = SetValueFromFlat<OMNI_SHORT>;
+    funcs[OMNI_DECIMAL64] = SetValueFromFlat<OMNI_DECIMAL64>;
+    funcs[OMNI_DECIMAL128] = SetValueFromFlat<OMNI_DECIMAL128>;
+    funcs[OMNI_DATE32] = SetValueFromFlat<OMNI_DATE32>;
+    funcs[OMNI_DATE64] = SetValueFromFlat<OMNI_DATE64>;
+    funcs[OMNI_TIME32] = SetValueFromFlat<OMNI_TIME32>;
+    funcs[OMNI_TIME64] = SetValueFromFlat<OMNI_TIME64>;
+    funcs[OMNI_TIMESTAMP] = SetValueFromFlat<OMNI_TIMESTAMP>;
+    funcs[OMNI_VARCHAR] = SetValueFromFlat<OMNI_VARCHAR>;
+    funcs[OMNI_CHAR] = SetValueFromFlat<OMNI_CHAR>;
+    funcs[OMNI_BYTE] = SetValueFromFlat<OMNI_BYTE>;
+    funcs[OMNI_FLOAT] = SetValueFromFlat<OMNI_FLOAT>;
+    funcs[OMNI_VARBINARY] = SetValueFromFlat<OMNI_VARBINARY>;
+    funcs[OMNI_ARRAY] = SetArrayValueFromFlat;
+    funcs[OMNI_ROW] = SetStructValueFromFlat;
+
+    return funcs;
+}
+
+static std::vector<SetValueFunc> setValueFromFlatFuncs = InitSetValueFromFlatFuncs();
 
 static std::vector<SetValueFunc> setValueFromDictionaryFuncs = {
     nullptr,                                 // OMNI_NONE,
@@ -407,8 +542,46 @@ static std::vector<SetValueFunc> setValueFromDictionaryFuncs = {
     SetValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     SetValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr,                                 // OMNI_CONTAINER,
-    SetValueFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    SetValueFromDictionary<OMNI_BYTE>,       // OMNI_BYTE
+    SetValueFromDictionary<OMNI_FLOAT>,      // OMNI_FLOAT
+    nullptr,                                 // OMNI_VARBINARY
+    nullptr, nullptr, nullptr, nullptr, nullptr, // 21-25
+    nullptr, nullptr, nullptr, nullptr,          // reserved (26-29)
+    nullptr,                                 // OMNI_ARRAY = 30
+    nullptr,                                 // OMNI_MAP = 31
+    nullptr,                                 // OMNI_ROW = 32
+    nullptr, nullptr, nullptr, nullptr            // OMNI_UNKNOWN..OMNI_INVALID = 36
 };
+
+// Actual implementation of SetStructValueFromFlat (after setValueFromFlatFuncs is initialized)
+static void SetStructValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec,
+    int32_t outputPos)
+{
+    auto *inputRowVec = static_cast<RowVector *>(inputVec);
+    auto *outputRowVec = static_cast<RowVector *>(outputVec);
+
+    if (inputRowVec->IsNull(inputPos)) {
+        outputRowVec->SetNull(outputPos);
+        return;
+    }
+
+    int32_t childCount = inputRowVec->ChildSize();
+    for (int32_t i = 0; i < childCount; ++i) {
+        auto &inputChild = inputRowVec->ChildAt(i);
+        auto &outputChild = outputRowVec->ChildAt(i);
+        auto childTypeId = static_cast<type::DataTypeId>(inputChild->GetTypeId());
+
+        if (inputChild->IsNull(inputPos)) {
+            outputChild->SetNull(outputPos);
+        } else if (childTypeId == type::OMNI_VARCHAR || childTypeId == type::OMNI_CHAR ||
+                   childTypeId == type::OMNI_VARBINARY) {
+            auto value = static_cast<VarcharVector *>(inputChild.get())->GetValue(inputPos);
+            static_cast<VarcharVector *>(outputChild.get())->SetValue(outputPos, value);
+        } else {
+            setValueFromFlatFuncs[childTypeId](inputChild.get(), inputPos, outputChild.get(), outputPos);
+        }
+    }
+}
 
 TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n, bool isStrictTopN,
     const std::vector<int32_t> &partitionCols, const std::vector<int32_t> &sortCols,
@@ -763,22 +936,21 @@ int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBat
     auto mapEnd = partitionedMap.end();
     for (mapPos = currentIter; mapPos != mapEnd; ++mapPos) {
         auto value = mapPos->second;
-        outputRowCount += value->nextIndex;
-        if (outputRowCount >= maxRowCount) {
+        // Keep a partition intact.  If the first partition is larger than the
+        // configured batch size, emit it as one batch to guarantee progress.
+        if (outputRowCount > 0 && outputRowCount + value->nextIndex > maxRowCount) {
             break;
         }
+        outputRowCount += value->nextIndex;
     }
     if (outputRowCount == 0) {
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
     }
 
-    std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator end;
+    auto end = mapPos;
     if (mapPos == mapEnd) {
-        end = mapEnd;
         SetStatus(OMNI_STATUS_FINISHED);
-    } else {
-        end = mapPos++;
     }
 
     auto outputColNum = sourceTypes.GetSize();
@@ -801,6 +973,8 @@ int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBat
             resultRowIdx++;
         }
     }
+    OMNI_CHECK(resultRowIdx == outputRowCount,
+        "TopNSort output row count must match the number of copied rows.");
     *outputVecBatch = result.release();
     currentIter = end;
     return 0;

@@ -22,9 +22,13 @@
 #define VQSORT_H
 
 #include <type_traits>
+#include "util/debug.h"
 #include "traits-inl.h"
 
 namespace simd {
+
+// -1 地址（全 1）：Sort8Rows 地址侧 padding 哨兵；回拷后据此识别泄漏并换回真实地址。
+constexpr uint64_t kPaddingAddrSentinel = 0xFFFFFFFFFFFFFFFFULL;
 
 #define MAX_LEVELS 50
 
@@ -1210,6 +1214,26 @@ void Sort8Rows(Traits st, T *OMNI_RESTRICT keys, uint64_t *OMNI_RESTRICT address
     // Last iteration: copy partial vector
     const size_t addrRemaining = num_lanes - i;
     SafeCopyN(addrRemaining, addrMax, addrBuf + i, addresses + i);
+
+    // [FIX] padding对(值=LONG.MAX,地址=-1)与真实LONG.MAX平局时，-1被排进真实地址槽导致下游越界崩，与padding区被挤出的真实地址换回即可
+    if (kKeysPerRow >= 2) {
+        for (size_t scI = 0; scI < num_lanes; ++scI) {
+            if (addresses[scI] == kPaddingAddrSentinel) {
+                for (size_t scJ = num_lanes; scJ < kRows * kLanesPerRow; ++scJ) {
+                    if (addrBuf[scJ] != kPaddingAddrSentinel) {
+                        const uint64_t scTmp = addresses[scI];
+                        addresses[scI] = addrBuf[scJ];
+                        addrBuf[scJ] = scTmp;
+                        LogDebug("Sort8Rows kKeysPerRow=%zu num_lanes=%zu lane=%zu repaired via padBuf[%zu]=%016llx",
+                            kKeysPerRow, num_lanes, scI, scJ,
+                            static_cast<unsigned long long>(addresses[scI]));
+                        break;
+                    }
+                }
+                break; // 该机制每次至多一处泄漏（仅混合向量的真实 lane）
+            }
+        }
+    }
 }
 
 template <size_t kKeysPerRow, class Traits, typename T>
