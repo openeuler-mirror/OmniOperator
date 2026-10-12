@@ -242,12 +242,14 @@ public:
         const std::vector<ExprPtr> &aggFilters, const std::vector<uint32_t> &maskColumns,
         const std::vector<bool> &inputRaws, const std::vector<bool> &outputPartials, const bool isStatisticalAggregate,
         const DataTypesPtr outputType, PlanNodePtr source, Step step, bool mixedInputExpected = false,
-        bool mixedOutputEnabled = false)
+        bool mixedOutputEnabled = false,
+        const std::vector<std::string> &aggUdafNames = {})
         : PlanNode(id), groupByKeys(groupByKeys), groupByNum(groupByNum), aggKeys(aggKeys),
           sourceDataTypes(sourceDataTypes), aggsOutputTypes(aggsOutputTypes), aggFuncTypes(aggFuncTypes),
           aggFilters(aggFilters), maskColumns(maskColumns), inputRaws(inputRaws), outputPartials(outputPartials),
         isStatisticalAggregate(isStatisticalAggregate), outputType(outputType), sources({source}), step(step),
-        mixedInputExpected(mixedInputExpected), mixedOutputEnabled(mixedOutputEnabled) {}
+        mixedInputExpected(mixedInputExpected), mixedOutputEnabled(mixedOutputEnabled),
+        aggUdafNames(aggUdafNames) {}
 
     ~AggregationNode() override = default;
 
@@ -279,6 +281,8 @@ public:
 
     const std::vector<DataTypes> &GetAggsOutputTypes() const { return aggsOutputTypes; }
 
+    const std::vector<std::string> &GetAggUdafNames() const { return aggUdafNames; }
+
     Step GetStep() const { return step;}
 
     bool IsMixedInputExpected() const { return mixedInputExpected; }
@@ -292,6 +296,7 @@ private:
     const DataTypesPtr sourceDataTypes;
     const std::vector<DataTypes> aggsOutputTypes; // 要改成这个
     const std::vector<uint32_t> aggFuncTypes;
+    const std::vector<std::string> aggUdafNames;
     const std::vector<ExprPtr> aggFilters;
     const std::vector<uint32_t> maskColumns;
     const std::vector<bool> inputRaws;

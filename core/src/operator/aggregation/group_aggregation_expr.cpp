@@ -19,7 +19,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<omniruntime::expressions::Expr *> &aggFilters, DataTypes &sourceDataTypes,
     std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColumns,
     std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OperatorConfig &operatorConfig,
-    config::QueryConfig queryConfig, AggregationNode::Step step, bool mixedInputExpected, bool mixedOutputEnabled)
+    config::QueryConfig queryConfig, AggregationNode::Step step, bool mixedInputExpected, bool mixedOutputEnabled, const std::vector<std::string> &aggUdafNames)
 {
     this->queryConfig_ = queryConfig;
     uint32_t aggColNum = 0;
@@ -109,7 +109,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     this->hashAggOperatorFactory =
         new HashAggregationOperatorFactory(groupByCol, *groupByTypes, aggColIdx, aggInputDataTypes, aggOutputTypes,
         aggFuncTypes, maskColumns, inputRaws, outputPartial, hasAggFilters, operatorConfig, step,
-        mixedInputExpected, mixedOutputEnabled);
+        mixedInputExpected, mixedOutputEnabled, aggUdafNames);
     this->hashAggOperatorFactory->SetNormalizedKeyEnabledForFactory(
         queryConfig.HashAggNormalizedKeyEnabled());
     this->hashAggOperatorFactory->Init();
@@ -149,7 +149,8 @@ HashAggregationWithExprOperatorFactory *HashAggregationWithExprOperatorFactory::
                                                       aggsOutputTypes,
                                                       aggFuncTypes, maskColsVector, inputRaws, outputPartial,
                                                       *operatorConfig, queryConfig, planNode->GetStep(),
-                                                      planNode->IsMixedInputExpected(), planNode->IsMixedOutputEnabled());
+                                                      planNode->IsMixedInputExpected(), planNode->IsMixedOutputEnabled(),
+                                                      planNode->GetAggUdafNames());
 }
 
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
