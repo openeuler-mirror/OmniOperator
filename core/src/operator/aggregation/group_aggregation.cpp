@@ -241,7 +241,7 @@ OmniStatus HashAggregationOperatorFactory::Init()
         aggsInputCols.push_back(aggInputCols);
     }
     ChooseGroupByType();
-    auto ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
+    auto ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns(), aggUdafNamesVector);
 
     return ret;
 }
