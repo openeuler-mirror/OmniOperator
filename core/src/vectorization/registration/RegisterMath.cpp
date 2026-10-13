@@ -51,6 +51,8 @@ void RegisterMathFunctions(const std::string &prefix)
     RegisterFunction<CeilFunction, int64_t, double>(prefix + "ceil", {OMNI_DOUBLE}, OMNI_LONG);
     RegisterFunction<CeilFunction, int32_t, int32_t>(prefix + "ceil", {OMNI_INT}, OMNI_INT);
 	RegisterFunction<CeilFunction, double, double>(prefix + "ceil", {OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<SignFunction, int32_t, int32_t>(prefix + "sign", {OMNI_INT}, OMNI_INT);
+    RegisterFunction<SignFunction, int64_t, int64_t>(prefix + "sign", {OMNI_LONG}, OMNI_LONG);
     RegisterFunction<SignFunction, double, double>(prefix + "sign", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<SinhFunction, double, double>(prefix + "sinh", {OMNI_DOUBLE}, OMNI_DOUBLE);
     RegisterFunction<TanhFunction, double, double>(prefix + "tanh", {OMNI_DOUBLE}, OMNI_DOUBLE);
