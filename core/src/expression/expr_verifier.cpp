@@ -342,16 +342,21 @@ void ExprVerifier::Visit(const IsNullExpr &isNullExpr)
 
 void ExprVerifier::Visit(const SimilarExpr &similarExpr)
 {
+    // ExpressionCodeGen / BatchExpressionCodeGen refuse SimilarExpr. If this flag
+    // stays true, CAST(SIMILAR TO ...) (a SWITCH) disables vectorization, codegen
+    // then fails to emit the projection, and ProcessProject dereferences the hole.
+    this->isSupportCodegen_ = false;
     if (similarExpr.vectorFunction == nullptr) {
         this->isSupportVectorization_ = false;
     }
     if (!VisitExpr(*similarExpr.value)) {
-        this->isSupportCodegen_ = false;
         return;
     }
     if (!VisitExpr(*similarExpr.pattern)) {
-        this->isSupportCodegen_ = false;
         return;
+    }
+    if (similarExpr.escape != nullptr) {
+        VisitExpr(*similarExpr.escape);
     }
 }
 
