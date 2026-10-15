@@ -37,6 +37,7 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
         case OMNI_INTERVAL_DAY_TIME:
+        case OMNI_TIME_WITHOUT_TIME_ZONE:
             return reinterpret_cast<int64_t>(unsafe::UnsafeVector::GetRawValues(
                 reinterpret_cast<Vector<int64_t> *>(colVec)));
         case OMNI_DOUBLE:
