@@ -22,9 +22,7 @@
 #include "row_ref.h"
 #include "operator/join/taper_join_hash_table_variants.h"
 
-#ifdef SVEHT
 #include "sve_join_hash_table32.h"
-#endif
 
 namespace omniruntime {
 namespace op {
@@ -54,7 +52,8 @@ public:
     ALWAYS_INLINE bool HasDuplicates() const { return true; } // default to true
 
     explicit JoinHashTableVariants(uint32_t hashTableCount, DataTypes *buildDataTypes,
-        std::vector<int32_t> &buildHashCols, JoinType joinType, BuildSide buildSide, bool isMultiCols = false);
+        std::vector<int32_t> &buildHashCols, JoinType joinType, BuildSide buildSide, bool isMultiCols = false,
+        bool forceSve32 = false);
 
     ~JoinHashTableVariants();
 
@@ -91,12 +90,10 @@ public:
         return arrayTables[partitionIndex];
     }
 
-#ifdef SVEHT
     ALWAYS_INLINE std::unique_ptr<SveJoinHashTable32<uint32_t, uint32_t>> &GetSve32HashTable(int32_t partitionIndex)
     {
         return sve32HashTables[partitionIndex];
     }
-#endif
     // Uniform raw accessors for taper array-join dispatch (non-taper returns null; taper path never invoked).
     ALWAYS_INLINE char** GetArraySlots(int32_t /*partitionIndex*/) { return nullptr; }
     ALWAYS_INLINE bool* GetArrayAssigned(int32_t /*partitionIndex*/) { return nullptr; }
@@ -121,7 +118,6 @@ public:
                                         ExecutionContext *probeArena, BaseVector **probeHashColumns,
                                         int32_t probeHashColCount, int32_t probePosition, uint32_t partition);
 
-#ifdef SVEHT
     int32_t ProbeBatchSVE32(const uint32_t *probeKeys,
                             const uint32_t *probePayloads,
                             int32_t numRows,
@@ -139,7 +135,6 @@ public:
     {
         return sve32RowRefPools[partition][handle];
     }
-#endif
 
     ALWAYS_INLINE bool CanProbeSIMD(BaseVector** probeHashColumns, int32_t probeHashColCount, uint32_t partition)
     {
@@ -322,10 +317,8 @@ private:
     uint32_t hashTableCount;            // the number of hashTables will be built
     std::atomic_uint32_t hashTableSize; // the number of hashTables having been built already
     std::vector<std::unique_ptr<JoinHashTableVariant<KeyType, RowRefListType>>> hashTables;
-#ifdef SVEHT
     std::vector<std::unique_ptr<SveJoinHashTable32<uint32_t, uint32_t>>> sve32HashTables;
     std::vector<std::vector<RowRefListType *>> sve32RowRefPools;
-#endif
     std::vector<std::unique_ptr<DefaultArrayMap<RowRefListType>>> arrayTables;
     std::vector<HashTableImplementationType> hashTableTypes;
     std::vector<std::pair<int64_t, int64_t>> maxMins;
@@ -341,6 +334,7 @@ private:
     JoinType joinType;
     BuildSide buildSide;
     bool isMultiCols;
+    bool forceSve32 = false;
     bool isFixedKeys = true;
     size_t fixedKeysSize = 0;
     size_t sizeOfRowRefList = 0;
@@ -355,15 +349,11 @@ using HashTableVariants =
     JoinHashTableVariants<int128_t, RowRefList>, JoinHashTableVariants<int128_t, RowRefListWithFlags>,
     JoinHashTableVariants<int8_t, RowRefListWithFlags>, JoinHashTableVariants<int16_t, RowRefListWithFlags>,
     JoinHashTableVariants<int32_t, RowRefListWithFlags>, JoinHashTableVariants<int64_t, RowRefListWithFlags>,
-    JoinHashTableVariants<Decimal128, RowRefListWithFlags>, JoinHashTableVariants<StringRef, RowRefListWithFlags>
-#ifdef OMNI_USE_TAPER_JOIN
-    ,
+    JoinHashTableVariants<Decimal128, RowRefListWithFlags>, JoinHashTableVariants<StringRef, RowRefListWithFlags>,
     TaperJoinHashTableVariants<int8_t,  false>, TaperJoinHashTableVariants<int8_t,  true>,
     TaperJoinHashTableVariants<int16_t, false>, TaperJoinHashTableVariants<int16_t, true>,
     TaperJoinHashTableVariants<int32_t, false>, TaperJoinHashTableVariants<int32_t, true>,
-    TaperJoinHashTableVariants<int64_t, false>, TaperJoinHashTableVariants<int64_t, true>
-#endif
-    >;
+    TaperJoinHashTableVariants<int64_t, false>, TaperJoinHashTableVariants<int64_t, true>>;
 }
 }
 #endif // OMNI_RUNTIME_JOIN_HASH_TABLE_VARIANTS_H

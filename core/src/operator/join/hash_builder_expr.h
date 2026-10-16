@@ -30,11 +30,12 @@ public:
 
     HashBuilderWithExprOperatorFactory(JoinType joinType, const DataTypes &buildTypes,
         const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t hashTableCount,
-        OverflowConfig *overflowConfig, bool enableInt32KeyRewrite = false);
+        OverflowConfig *overflowConfig, bool enableInt32KeyRewrite = false, bool enableTaper = true);
 
     HashBuilderWithExprOperatorFactory(JoinType joinType, BuildSide buildSide, const DataTypes &buildTypes,
         const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t hashTableCount,
-        OverflowConfig *overflowConfig, bool enableInt32KeyRewrite = false);
+        OverflowConfig *overflowConfig, bool enableInt32KeyRewrite = false, bool enableSveJoin = false,
+        bool enableTaper = true);
 
     HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType joinType, BuildSide buildSide,
         const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,

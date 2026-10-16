@@ -59,7 +59,7 @@ HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHa
 
 HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType joinType,
     const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
-    int32_t hashTableCount, OverflowConfig *overflowConfig, bool enableInt32KeyRewrite)
+    int32_t hashTableCount, OverflowConfig *overflowConfig, bool enableInt32KeyRewrite, bool enableTaper)
 {
     std::vector<DataTypePtr> newBuildTypes;
 #ifdef OMNI_SVEHT32_JOIN_KEY_REWRITE
@@ -76,12 +76,13 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType 
         overflowConfig);
     this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinType, *(this->buildTypes),
-        this->buildHashCols.data(), effectiveBuildHashKeys.size(), hashTableCount);
+        this->buildHashCols.data(), effectiveBuildHashKeys.size(), hashTableCount, enableTaper);
 }
 
 HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType joinType, BuildSide buildSide,
     const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
-    int32_t hashTableCount, OverflowConfig *overflowConfig, bool enableInt32KeyRewrite)
+    int32_t hashTableCount, OverflowConfig *overflowConfig, bool enableInt32KeyRewrite, bool enableSveJoin,
+    bool enableTaper)
 {
     std::vector<DataTypePtr> newBuildTypes;
 #ifdef OMNI_SVEHT32_JOIN_KEY_REWRITE
@@ -98,7 +99,8 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType 
         overflowConfig);
     this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinType, buildSide,
-        *(this->buildTypes), this->buildHashCols.data(), effectiveBuildHashKeys.size(), hashTableCount);
+        *(this->buildTypes), this->buildHashCols.data(), effectiveBuildHashKeys.size(), hashTableCount, enableSveJoin,
+        enableTaper);
 }
 
 HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType joinType, BuildSide buildSide,
@@ -106,7 +108,8 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType 
     int32_t hashTableCount, OverflowConfig *overflowConfig, const config::QueryConfig &queryConfig,
     bool enableInt32KeyRewrite)
     : HashBuilderWithExprOperatorFactory(
-          joinType, buildSide, buildTypes, buildHashKeys, hashTableCount, overflowConfig, enableInt32KeyRewrite)
+          joinType, buildSide, buildTypes, buildHashKeys, hashTableCount, overflowConfig,
+          enableInt32KeyRewrite, queryConfig.SveJoinEnabled(), queryConfig.TaperEnabled())
 {
     this->queryConfig_ = queryConfig;
 }

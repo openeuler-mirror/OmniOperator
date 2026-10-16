@@ -22,10 +22,6 @@
 #include <sstream>
 #endif
 
-#if defined(SVEHTMISSES) && !defined(OMNI_SVEHT32_HASH_AGG)
-#error "SVEHTMISSES requires OMNI_SVEHT32_HASH_AGG"
-#endif
-
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::type;
@@ -311,8 +307,8 @@ void HashAggregationOperatorFactory::ChooseGroupByType()
     // The serialization method can be continuously evolved based on different types.
     // The singleFix method is used for OMNI_INT/OMNI_LONG which is only one column.
     const auto groupBySize = groupByTypes.GetSize();
-#ifdef OMNI_SVEHT32_HASH_AGG
-    if (!operatorConfig.GetSpillConfig()->IsSpillEnabled() && groupBySize >= 1 && groupBySize <= 2) {
+    if (sveHashAggEnabled && !operatorConfig.GetSpillConfig()->IsSpillEnabled() &&
+        groupBySize >= 1 && groupBySize <= 2) {
         bool all32Bit = true;
         for (uint32_t i = 0; i < groupBySize; ++i) {
             const auto &type = groupByTypes.GetIds()[i];
@@ -327,7 +323,6 @@ void HashAggregationOperatorFactory::ChooseGroupByType()
             return;
         }
     }
-#endif
     if (groupBySize == 1) {
         auto &type = groupByTypes.GetIds()[0];
         if (type == OMNI_INT || type == OMNI_DATE32) {
@@ -476,7 +471,6 @@ OmniStatus HashAggregationOperator::Init()
         }
     } else if (groupByColumnsHandleType == HandleType::fixedInt32) {
         fixedInt32 = std::make_unique<TaperGroupbySingleFixHandler<int32_t>>(*executionContext->GetArena(), totalAggStatesSize);
-#ifdef OMNI_SVEHT32_HASH_AGG
     } else if (groupByColumnsHandleType == HandleType::fixedInt32SveAos) {
         fixedInt32SveAos = std::make_unique<hashmap::SveAggAosHashTable32>();
         fixedInt32 = std::make_unique<TaperGroupbySingleFixHandler<int32_t>>(*executionContext->GetArena(),
@@ -484,7 +478,6 @@ OmniStatus HashAggregationOperator::Init()
     } else if (groupByColumnsHandleType == HandleType::fixedInt32PairSveAos) {
         fixedInt32PairSveAos = std::make_unique<hashmap::SveAggAosHashTable32Pair>();
         initSerializeHandler();
-#endif
     } else if (groupByColumnsHandleType == HandleType::fixedInt64) {
         fixedInt64 = std::make_unique<TaperGroupbySingleFixHandler<int64_t>>(*executionContext->GetArena(), totalAggStatesSize);
     } else if (groupByColumnsHandleType == HandleType::fixedInt16) {
@@ -588,7 +581,6 @@ void HashAggregationOperator::ResizeArrayMap(int64_t oldMin)
 void HashAggregationOperator::MoveEntryArrayTableToHashMap(int64_t minValue)
 {
     bool hasAgg = aggregators.size() > 0;
-#ifdef OMNI_SVEHT32_HASH_AGG
     if (groupByColumnsHandleType == HandleType::fixedInt32SveAos) {
         bool hasReservedKey = false;
         arrayTable->ForEachValue([&](const auto &value, const auto &index) {
@@ -603,24 +595,18 @@ void HashAggregationOperator::MoveEntryArrayTableToHashMap(int64_t minValue)
             FallbackSveAggToFixedInt32();
         }
     }
-#endif
     arrayTable->ForEachValue([&](const auto &value, const auto &index) {
         if (index != 0) {
             if (groupByColumnsHandleType == HandleType::fixedInt32
-#ifdef OMNI_SVEHT32_HASH_AGG
-                || (groupByColumnsHandleType == HandleType::fixedInt32SveAos && sveAosFallbackToFixedInt32)
-#endif
-            ) {
+                || (groupByColumnsHandleType == HandleType::fixedInt32SveAos && sveAosFallbackToFixedInt32)) {
                 fixedInt32->InsertOneValueToHashmap<false>(static_cast<int32_t>(index + minValue - 1),
                             reinterpret_cast<AggregateState *>(value));
-#ifdef OMNI_SVEHT32_HASH_AGG
             } else if (groupByColumnsHandleType == HandleType::fixedInt32SveAos) {
                 const auto key = static_cast<uint32_t>(static_cast<int32_t>(index + minValue - 1));
                 auto ret = fixedInt32SveAos->EmplaceScalar(key);
                 if (ret.IsInsert() && hasAgg) {
                     ret.SetValue(RegisterSveAggState(reinterpret_cast<AggregateState *>(value)));
                 }
-#endif
             } else if (groupByColumnsHandleType == HandleType::fixedInt64) {
                 fixedInt64->InsertOneValueToHashmap<false>(static_cast<int64_t>(index + minValue - 1),
                             reinterpret_cast<AggregateState *>(value));
@@ -631,18 +617,13 @@ void HashAggregationOperator::MoveEntryArrayTableToHashMap(int64_t minValue)
             return;
         }
         if (groupByColumnsHandleType == HandleType::fixedInt32
-#ifdef OMNI_SVEHT32_HASH_AGG
-            || (groupByColumnsHandleType == HandleType::fixedInt32SveAos && sveAosFallbackToFixedInt32)
-#endif
-        ) {
+            || (groupByColumnsHandleType == HandleType::fixedInt32SveAos && sveAosFallbackToFixedInt32)) {
             fixedInt32->InsertOneValueToHashmap<true>(0, reinterpret_cast<AggregateState *>(value));
-#ifdef OMNI_SVEHT32_HASH_AGG
         } else if (groupByColumnsHandleType == HandleType::fixedInt32SveAos) {
             hasNullGroupState32 = true;
             if (hasAgg) {
                 nullGroupState32 = reinterpret_cast<AggregateState *>(value);
             }
-#endif
         } else if (groupByColumnsHandleType == HandleType::fixedInt64) {
             fixedInt64->InsertOneValueToHashmap<true>(0, reinterpret_cast<AggregateState *>(value));
         } else if (groupByColumnsHandleType == HandleType::fixedInt16) {
@@ -939,9 +920,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
             serialize->DecodeGroupByColumns(groupVectors, groupColNum, rowCount);
             Emplace(serialize, vecBatch, groupVectors, groupColNum);
         }
-    }
-#ifdef OMNI_SVEHT32_HASH_AGG
-    else if (groupByColumnsHandleType == HandleType::fixedInt32SveAos) {
+    } else if (groupByColumnsHandleType == HandleType::fixedInt32SveAos) {
         if (sveAosFallbackToFixedInt32) {
             Emplace(fixedInt32, vecBatch, groupVectors, groupColNum);
         } else {
@@ -954,9 +933,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         } else {
             EmplaceFixedInt32PairSveAos(vecBatch, groupVectors[0], groupVectors[1]);
         }
-    }
-#endif
-    else if (LIKELY(groupByColumnsHandleType == HandleType::serialize)) {
+    } else if (LIKELY(groupByColumnsHandleType == HandleType::serialize)) {
         // Decode all group-by columns upfront to eliminate encoding branches in hot path
         serialize->DecodeGroupByColumns(groupVectors, groupColNum, rowCount);
         Emplace(serialize, vecBatch, groupVectors, groupColNum);
@@ -1562,7 +1539,6 @@ int32_t HashAggregationOperator::GetOutput(VectorBatch **outputVecBatch)
         expectedBatchSize = Output(normalizeKeyWithoutAgg, outputVecBatch);
     } else if (groupByColumnsHandleType == HandleType::NormalizeKey && normalizeKey != nullptr) {
         expectedBatchSize = Output(normalizeKey, outputVecBatch);
-#ifdef OMNI_SVEHT32_HASH_AGG
     } else if (groupByColumnsHandleType == HandleType::fixedInt32SveAos && arrayTable != nullptr &&
         vectorAnalyzer != nullptr && vectorAnalyzer->IsArrayHashTableType()) {
         return Output(fixedInt32, outputVecBatch);
@@ -1574,7 +1550,6 @@ int32_t HashAggregationOperator::GetOutput(VectorBatch **outputVecBatch)
         return OutputFixedInt32PairSveAos(outputVecBatch);
     } else if (groupByColumnsHandleType == HandleType::fixedInt32PairSveAos && svePairFallbackToSerialize) {
         return Output(serialize, outputVecBatch);
-#endif
     } else if (LIKELY(groupByColumnsHandleType == HandleType::serialize)) {
         expectedBatchSize = Output(serialize, outputVecBatch);
     } else if (LIKELY(groupByColumnsHandleType == HandleType::fixedInt32)) {
@@ -1663,7 +1638,6 @@ void HashAggregationOperator::ProcessStates(VectorBatch *vecBatch)
     }
 }
 
-#ifdef OMNI_SVEHT32_HASH_AGG
 AggregateState *HashAggregationOperator::AllocateAggState()
 {
     return reinterpret_cast<AggregateState *>(executionContext->GetArena()->Allocate(totalAggStatesSize));
@@ -2245,7 +2219,6 @@ void HashAggregationOperator::EmplaceFixedInt32PairSveAos(
 
     ProcessStatesWithNewGroups(vecBatch, newGroupStates);
 }
-#endif
 
 template <bool hasNull>
 void ComputeHashSIMD(int64_t *key, uint8_t nullMask, uint64_t *hashes, int64x2_t vMin, uint64x2_t vOne)
@@ -2877,12 +2850,10 @@ uint64_t HashAggregationOperator::GetHashMapUniqueKeys()
         return normalizeKeyWithoutAgg->GetElementsSize();
     } else if (groupByColumnsHandleType == HandleType::NormalizeKey && normalizeKey != nullptr) {
         return normalizeKey->GetElementsSize();
-#ifdef OMNI_SVEHT32_HASH_AGG
     } else if (fixedInt32PairSveAos != nullptr && !svePairFallbackToSerialize) {
         return fixedInt32PairSveAos->GetElementsSize();
     } else if (fixedInt32SveAos != nullptr && !sveAosFallbackToFixedInt32) {
         return fixedInt32SveAos->GetElementsSize() + (hasNullGroupState32 ? 1 : 0);
-#endif
     } else if (serialize != nullptr) {
         return serialize->GetElementsSize();
     } else if (fixedInt32 != nullptr) {
@@ -4054,7 +4025,6 @@ void HashAggregationOperator::CalcAndSetStatesSize()
     }
 }
 
-#ifdef OMNI_SVEHT32_HASH_AGG
 int32_t HashAggregationOperator::OutputFixedInt32SveAos(VectorBatch **outputVecBatch)
 {
     usedMemBytes = executionContext->GetArena()->UsedBytes();
@@ -4196,7 +4166,6 @@ int32_t HashAggregationOperator::OutputFixedInt32PairSveAos(VectorBatch **output
     }
     return 1;
 }
-#endif
 
 template<typename Deserialize>
 int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch)
@@ -4258,12 +4227,10 @@ ALWAYS_INLINE size_t HashAggregationOperator::GetElementsSize()
         elementSize = normalizeKeyWithoutAgg->GetElementsSize();
     } else if (groupByColumnsHandleType == HandleType::NormalizeKey && normalizeKey != nullptr) {
         elementSize = normalizeKey->GetElementsSize();
-#ifdef OMNI_SVEHT32_HASH_AGG
     } else if (fixedInt32PairSveAos != nullptr && !svePairFallbackToSerialize) {
         elementSize = fixedInt32PairSveAos->GetElementsSize();
     } else if (fixedInt32SveAos != nullptr && !sveAosFallbackToFixedInt32) {
         elementSize = fixedInt32SveAos->GetElementsSize() + (hasNullGroupState32 ? 1 : 0);
-#endif
     } else if (serialize != nullptr) {
         elementSize = serialize->GetElementsSize();
     } else if (fixedInt32 != nullptr) {
@@ -4288,7 +4255,6 @@ ALWAYS_INLINE void HashAggregationOperator::ResetHashmap()
         normalizeKeyWithoutAgg->ResetHashmap();
     } else if (groupByColumnsHandleType == HandleType::NormalizeKey && normalizeKey != nullptr) {
         normalizeKey->ResetHashmap();
-#ifdef OMNI_SVEHT32_HASH_AGG
     } else if (fixedInt32PairSveAos != nullptr && !svePairFallbackToSerialize) {
         fixedInt32PairSveAos->Reset();
         fixedInt32PairSveAosStates.clear();
@@ -4298,7 +4264,6 @@ ALWAYS_INLINE void HashAggregationOperator::ResetHashmap()
         nullGroupState32 = nullptr;
         hasNullGroupState32 = false;
         sveAosNullGroupOutput = false;
-#endif
     } else if (serialize != nullptr) {
         serialize->ResetHashmap();
     } else if (fixedInt32 != nullptr) {

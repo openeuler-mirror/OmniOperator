@@ -74,6 +74,7 @@ public:
     void AppendRowsTaperBatched(const int32_t* positions, char* const* rows, int32_t count);
     void SetTaperOutput(const omniruntime::op::RowContainer* rc, const std::vector<int32_t>& storedCols,
         const omniruntime::op::RowContainer::VarcharResolver* varcharResolver = nullptr);
+    ALWAYS_INLINE void SetTaperOutputMode(bool enabled) { useTaperOutput_ = enabled; }
     ALWAYS_INLINE void SetTaperNeedsUnvisited() { taperNeedsUnvisited_ = true; }
     ALWAYS_INLINE const omniruntime::op::RowContainer::VarcharResolver* GetTaperVarcharResolver() const
     {
@@ -162,6 +163,8 @@ private:
     std::vector<uint64_t> buildRefs;
     std::vector<BaseVector ***> buildArrays;
     std::vector<bool> existJoinBuildIndex;
+    // The output format is fixed by the variant, including an empty Taper build without a RowContainer.
+    bool useTaperOutput_ = false;
     const RowContainer* taperRC_ = nullptr;
     std::vector<int32_t> taperStoredColIndices_;
     const RowContainer::VarcharResolver* taperVarcharResolver_ = nullptr;
@@ -264,14 +267,13 @@ private:
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftAntiJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForExistenceJoin();
 
-#ifdef OMNI_USE_TAPER_JOIN
     bool IsTaperTable();
+    bool IsTaperVariant() const;
 
     bool EvaluateBuildFilter(char* row, const RowContainer* rc, ExecutionContext* contextPtr);
 
     template <bool singleHT, typename Variant>
     void TaperFindBatch(Variant& varg, int32_t inputRowCount);
-#endif
     template <bool hasJoinFilter> void ProbeJoinPosition(int32_t probePosition);
     bool BuildJoinPosition(uint32_t partition, uint32_t buildRowIdx,
                            uint32_t buildBatchIdx, ExecutionContext *contextPtr);

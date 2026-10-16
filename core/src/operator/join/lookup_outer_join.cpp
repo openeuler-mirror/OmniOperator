@@ -90,27 +90,27 @@ void LookupOuterJoinOperator::PrepareTotalVisitedCounts()
 {
     std::visit(
         [&](auto &&arg) {
-#ifdef OMNI_USE_TAPER_JOIN
-            auto* rc = arg.GetTaperRowContainer(0);
-            if (rc) {
-                arg.AddTotalVisitedCounts(static_cast<uint32_t>(rc->NumRows()));
-                return;
-            }
-#else
-            size_t partitionIndex = 0;
-            while (partitionIndex < arg.GetHashTableSize()) {
-                if (arg.GetHashTableTypes(partitionIndex) == HashTableImplementationType::ARRAY_HASH_TABLE) {
-                    auto &hashTable = arg.GetArrayTable(partitionIndex);
-                    hashTable->ForEachValue(
-                        [&](const auto &value, const auto &index) { arg.AddTotalVisitedCounts(value->GetRowCount()); });
-                } else {
-                    auto &hashTable = arg.GetHashTable(partitionIndex);
-                    hashTable->hashmap.ForEachValue(
-                        [&](const auto &value, const auto &index) { arg.AddTotalVisitedCounts(value->GetRowCount()); });
+            if constexpr (std::is_same_v<typename std::decay_t<decltype(arg)>::Mapped, TaperMapped>) {
+                auto* rc = arg.GetTaperRowContainer(0);
+                if (rc) {
+                    arg.AddTotalVisitedCounts(static_cast<uint32_t>(rc->NumRows()));
+                    return;
                 }
-                partitionIndex++;
+            } else {
+                size_t partitionIndex = 0;
+                while (partitionIndex < arg.GetHashTableSize()) {
+                    if (arg.GetHashTableTypes(partitionIndex) == HashTableImplementationType::ARRAY_HASH_TABLE) {
+                        auto &hashTable = arg.GetArrayTable(partitionIndex);
+                        hashTable->ForEachValue(
+                            [&](const auto &value, const auto &index) { arg.AddTotalVisitedCounts(value->GetRowCount()); });
+                    } else {
+                        auto &hashTable = arg.GetHashTable(partitionIndex);
+                        hashTable->hashmap.ForEachValue(
+                            [&](const auto &value, const auto &index) { arg.AddTotalVisitedCounts(value->GetRowCount()); });
+                    }
+                    partitionIndex++;
+                }
             }
-#endif
         },
         *hashTables);
 }
@@ -249,7 +249,6 @@ void AppendTo(VectorBatch *vectorBatch, int32_t destCol, int32_t destRowIndex, u
 void LookupOuterJoinOperator::AppendAllUnvisitedRows(VectorBatch *vectorBatch, const int32_t *buildOutputIds,
     int32_t buildOutputColsCount, int32_t probeOutputColsCount, int rowCount)
 {
-#ifdef OMNI_USE_TAPER_JOIN
     if (!taperUnvisitedRowPtrs_.empty()) {
         auto* rc = std::visit([&](auto&& arg) { return arg.GetTaperRowContainer(0); }, *hashTables);
         const auto& storedCols = std::visit([&](auto&& arg) { return arg.GetTaperStoredColIndices(); }, *hashTables);
@@ -272,42 +271,41 @@ void LookupOuterJoinOperator::AppendAllUnvisitedRows(VectorBatch *vectorBatch, c
         }
         return;
     }
-#else
     std::visit(
         [&](auto &&arg) {
-            if (arg.GetHashTableSize() == 1) {
-                for (auto i = 0, addrIdx = outputtedRowCount; i < rowCount; i++, addrIdx++) {
-                    auto vecBatchIndex = addresses[addrIdx].first;
-                    auto srcRowIndex = addresses[addrIdx].second;
+            if constexpr (!std::is_same_v<typename std::decay_t<decltype(arg)>::Mapped, TaperMapped>) {
+                if (arg.GetHashTableSize() == 1) {
+                    for (auto i = 0, addrIdx = outputtedRowCount; i < rowCount; i++, addrIdx++) {
+                        auto vecBatchIndex = addresses[addrIdx].first;
+                        auto srcRowIndex = addresses[addrIdx].second;
 
-                    for (int32_t col = 0; col < buildOutputColsCount; col++) {
-                        auto buildOutputCol = buildOutputCols[col];
-                        auto destCol = col + probeOutputColsCount;
-                        auto src = arg.GetColumns(0)[buildOutputCol][vecBatchIndex];
-                        DYNAMIC_TYPE_DISPATCH(AppendTo, buildOutputIds[col], vectorBatch, destCol, i, srcRowIndex, src);
+                        for (int32_t col = 0; col < buildOutputColsCount; col++) {
+                            auto buildOutputCol = buildOutputCols[col];
+                            auto destCol = col + probeOutputColsCount;
+                            auto src = arg.GetColumns(0)[buildOutputCol][vecBatchIndex];
+                            DYNAMIC_TYPE_DISPATCH(AppendTo, buildOutputIds[col], vectorBatch, destCol, i, srcRowIndex, src);
+                        }
                     }
-                }
-            } else {
-                for (auto i = 0, addrIdx = outputtedRowCount; i < rowCount; i++, addrIdx++) {
-                    auto vecBatchIndex = addresses[addrIdx].first;
-                    auto srcRowIndex = addresses[addrIdx].second;
+                } else {
+                    for (auto i = 0, addrIdx = outputtedRowCount; i < rowCount; i++, addrIdx++) {
+                        auto vecBatchIndex = addresses[addrIdx].first;
+                        auto srcRowIndex = addresses[addrIdx].second;
 
-                    for (int32_t col = 0; col < buildOutputColsCount; col++) {
-                        auto buildOutputCol = buildOutputCols[col];
-                        auto destCol = col + probeOutputColsCount;
-                        auto src = arg.GetColumns(hashTableIndexes[addrIdx])[buildOutputCol][vecBatchIndex];
-                        DYNAMIC_TYPE_DISPATCH(AppendTo, buildOutputIds[col], vectorBatch, destCol, i, srcRowIndex, src);
+                        for (int32_t col = 0; col < buildOutputColsCount; col++) {
+                            auto buildOutputCol = buildOutputCols[col];
+                            auto destCol = col + probeOutputColsCount;
+                            auto src = arg.GetColumns(hashTableIndexes[addrIdx])[buildOutputCol][vecBatchIndex];
+                            DYNAMIC_TYPE_DISPATCH(AppendTo, buildOutputIds[col], vectorBatch, destCol, i, srcRowIndex, src);
+                        }
                     }
                 }
             }
         },
         *hashTables);
-#endif
 }
 
 void LookupOuterJoinOperator::PrepareAllUnvisitedRows()
 {
-#ifdef OMNI_USE_TAPER_JOIN
     auto* rc = std::visit([&](auto&& arg) { return arg.GetTaperRowContainer(0); }, *hashTables);
     if (rc) {
         auto payloadOff = rc->PayloadOffset();
@@ -325,17 +323,17 @@ void LookupOuterJoinOperator::PrepareAllUnvisitedRows()
         }
         return;
     }
-#else
     std::visit(
         [&](auto &&arg) {
-            if (arg.GetHashTableSize() == 1) {
-                iterator->GetAllUnVisitedAddressFromSingleTable(hashTableIndexes, addresses);
-            } else {
-                iterator->GetAllUnVisitedAddressFromMultipleTables(hashTableIndexes, addresses);
+            if constexpr (!std::is_same_v<typename std::decay_t<decltype(arg)>::Mapped, TaperMapped>) {
+                if (arg.GetHashTableSize() == 1) {
+                    iterator->GetAllUnVisitedAddressFromSingleTable(hashTableIndexes, addresses);
+                } else {
+                    iterator->GetAllUnVisitedAddressFromMultipleTables(hashTableIndexes, addresses);
+                }
             }
         },
         *hashTables);
-#endif
 }
 
 LookupOuterPositionIterator::LookupOuterPositionIterator(HashTableVariants *hashTables)
@@ -350,7 +348,6 @@ void LookupOuterPositionIterator::GetAllUnVisitedAddressFromSingleTable(std::vec
             using VariantType = std::decay_t<decltype(arg)>;
             using Mapped = typename VariantType::Mapped;
             if constexpr (std::is_same_v<Mapped, RowRefListWithFlags>) {
-#ifndef OMNI_USE_TAPER_JOIN
                 if (arg.GetHashTableTypes(currentHashTable) == HashTableImplementationType::ARRAY_HASH_TABLE) {
                     auto &hashTable = arg.GetArrayTable(currentHashTable);
                     hashTable->ForEachValue([&](const auto &value, const auto &index) {
@@ -374,7 +371,6 @@ void LookupOuterPositionIterator::GetAllUnVisitedAddressFromSingleTable(std::vec
                         }
                     });
                 }
-#endif
                 currentHashTable++;
             }
         },
@@ -390,7 +386,6 @@ void LookupOuterPositionIterator::GetAllUnVisitedAddressFromMultipleTables(std::
             using Mapped = typename VariantType::Mapped;
             if constexpr (std::is_same_v<Mapped, RowRefListWithFlags>) {
                 while (currentHashTable < arg.GetHashTableSize()) {
-#ifndef OMNI_USE_TAPER_JOIN
                     if (arg.GetHashTableTypes(currentHashTable) == HashTableImplementationType::ARRAY_HASH_TABLE) {
                         auto &hashTable = arg.GetArrayTable(currentHashTable);
                         hashTable->ForEachValue([&](const auto &value, const auto &index) {
@@ -416,7 +411,6 @@ void LookupOuterPositionIterator::GetAllUnVisitedAddressFromMultipleTables(std::
                             }
                         });
                     }
-#endif
                     currentHashTable++;
                 }
             }
