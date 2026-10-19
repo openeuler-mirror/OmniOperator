@@ -636,6 +636,9 @@ void ExprEval::Visit(const SimilarExpr &e)
 {
     e.value->Accept(*this);
     e.pattern->Accept(*this);
+    if (e.escape != nullptr) {
+        e.escape->Accept(*this);
+    }
     if (e.vectorFunction == nullptr) {
         OMNI_THROW("Vectorization Error:", "Vector function not found for similar_to expression");
     }

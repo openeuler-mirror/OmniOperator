@@ -14,13 +14,25 @@ namespace omniruntime::vectorization {
 void RegisterRegexpFunctions(const std::string& prefix) {
     auto rlikeFunction = std::make_shared<RLikeFunction>();
     VectorFunction::RegisterVectorFunction("RLike", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, rlikeFunction);
-    auto similarFunction = std::make_shared<SimilarFunction>();
+    auto similarFunction = std::make_shared<SimilarFunction>(2);
     // Value column is VARCHAR while a pattern literal is CHAR; cover all VARCHAR/CHAR combos so the
     // signature lookup always hits. SimilarFunction reads both via string_view (same runtime container).
     VectorFunction::RegisterVectorFunction("similar_to", {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, similarFunction);
     VectorFunction::RegisterVectorFunction("similar_to", {OMNI_VARCHAR, OMNI_CHAR}, OMNI_BOOLEAN, similarFunction);
     VectorFunction::RegisterVectorFunction("similar_to", {OMNI_CHAR, OMNI_VARCHAR}, OMNI_BOOLEAN, similarFunction);
     VectorFunction::RegisterVectorFunction("similar_to", {OMNI_CHAR, OMNI_CHAR}, OMNI_BOOLEAN, similarFunction);
+    // SIMILAR TO ... ESCAPE. Adaptor normalizes CHAR literals to VARCHAR; still accept CHAR escape.
+    auto similarEscapeFunction = std::make_shared<SimilarFunction>(3);
+    VectorFunction::RegisterVectorFunction("similar_to", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+        similarEscapeFunction);
+    VectorFunction::RegisterVectorFunction("similar_to", {OMNI_VARCHAR, OMNI_CHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+        similarEscapeFunction);
+    VectorFunction::RegisterVectorFunction("similar_to", {OMNI_CHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+        similarEscapeFunction);
+    VectorFunction::RegisterVectorFunction("similar_to", {OMNI_CHAR, OMNI_CHAR, OMNI_VARCHAR}, OMNI_BOOLEAN,
+        similarEscapeFunction);
+    VectorFunction::RegisterVectorFunction("similar_to", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_CHAR}, OMNI_BOOLEAN,
+        similarEscapeFunction);
     auto regexpReplaceFunction = std::make_shared<RegexpReplaceFunction>();
     VectorFunction::RegisterVectorFunction(prefix + "regexp_replace", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT},
         OMNI_VARCHAR, regexpReplaceFunction);

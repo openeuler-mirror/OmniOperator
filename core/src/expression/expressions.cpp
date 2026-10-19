@@ -1084,23 +1084,29 @@ ExprType IsNullExpr::GetType() const
     return ExprType::IS_NULL_E;
 }
 
-SimilarExpr::SimilarExpr() : value(nullptr), pattern(nullptr) {}
+SimilarExpr::SimilarExpr() : value(nullptr), pattern(nullptr), escape(nullptr) {}
 
 SimilarExpr::~SimilarExpr()
 {
     delete value;
     delete pattern;
+    delete escape;
 }
 
 // Look up the vectorized similar_to function; NULL inputs are handled by SimilarFunction.
-SimilarExpr::SimilarExpr(Expr *value, Expr *pattern)
+// escape == nullptr is the 2-arg form (no ESCAPE). A non-null escape selects the 3-arg signature.
+SimilarExpr::SimilarExpr(Expr *value, Expr *pattern, Expr *escape)
 {
     dataType = BooleanType();
     std::vector<omniruntime::type::DataTypeId> args = {value->dataType->GetId(), pattern->dataType->GetId()};
+    if (escape != nullptr) {
+        args.push_back(escape->dataType->GetId());
+    }
     auto signature = std::make_shared<FunctionSignature>("similar_to", args, dataType->GetId());
     vectorFunction = VectorFunction::Find(signature);
     this->value = value;
     this->pattern = pattern;
+    this->escape = escape;
 }
 
 uint8_t *SimilarExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)

@@ -452,7 +452,16 @@ Expr *JSONParser::ParseJsonSimilarTo(const Json &jsonExpr)
         delete value;
         return nullptr;
     }
-    return new SimilarExpr(value, pattern);
+    Expr *escape = nullptr;
+    if (jsonExpr.contains("escape") && !jsonExpr["escape"].is_null()) {
+        escape = ParseJSON(jsonExpr["escape"]);
+        if (escape == nullptr) {
+            delete value;
+            delete pattern;
+            return nullptr;
+        }
+    }
+    return new SimilarExpr(value, pattern, escape);
 }
 
 namespace {

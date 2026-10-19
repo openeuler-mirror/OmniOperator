@@ -910,6 +910,10 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
             projectedVecs->Append(outCol);
         }
     } else {
+        if (static_cast<int32_t>(projections.size()) != projectVecCount) {
+            throw OmniException("OPERATOR_RUNTIME_ERROR",
+                "Codegen projection was not generated for every expression");
+        }
         for (int32_t i = 0; i < projectVecCount; i++) {
             BaseVector *outCol = projections[i]->Project(vecBatch, valueAddrs, nullAddrs, offsetAddrs, context,
                 dictionaries, GetInputDataTypes().GetIds());

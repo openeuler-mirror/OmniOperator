@@ -525,15 +525,17 @@ class SimilarExpr : public Expr {
 public:
     Expr *value = nullptr;
     Expr *pattern = nullptr;
+    Expr *escape = nullptr;
     SimilarExpr();
     ~SimilarExpr() override;
-    SimilarExpr(Expr *value, Expr *pattern);
+    SimilarExpr(Expr *value, Expr *pattern, Expr *escape = nullptr);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
     bool supportVectorized() const override
     {
-        return vectorFunction != nullptr && value->supportVectorized() && pattern->supportVectorized();
+        return vectorFunction != nullptr && value->supportVectorized() && pattern->supportVectorized() &&
+            (escape == nullptr || escape->supportVectorized());
     }
     std::string toString() const override
     {
@@ -541,6 +543,10 @@ public:
         output += this->value->toString();
         output += ", ";
         output += this->pattern->toString();
+        if (escape != nullptr) {
+            output += ", ";
+            output += escape->toString();
+        }
         output += ")";
         return output;
     }
