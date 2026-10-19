@@ -1373,8 +1373,9 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildDynamicFilters()
         return;
     }
     if (joinType != OMNI_JOIN_TYPE_INNER && joinType != OMNI_JOIN_TYPE_LEFT_SEMI &&
-        joinType != OMNI_JOIN_TYPE_RIGHT) {
-        LogDebug("DFP: skip filter generation, unsupported joinType=%d", static_cast<int>(joinType));
+        (joinType != OMNI_JOIN_TYPE_RIGHT || buildSide != OMNI_BUILD_RIGHT)) {
+        LogDebug("DFP: skip filter generation, unsupported joinType=%d buildSide=%d",
+            static_cast<int>(joinType), static_cast<int>(buildSide));
         dynamicFiltersBuilt_ = true;
         return;
     }
