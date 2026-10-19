@@ -80,6 +80,8 @@ void RegisterStringFunctions(const std::string &prefix)
 #endif
     RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_VARCHAR}, OMNI_VARCHAR);
     RegisterFunction<LowerFunction, std::string, std::string_view>(prefix + "lower", {OMNI_CHAR}, OMNI_VARCHAR);
+    RegisterFunction<UpperFunction, std::string, std::string_view>(prefix + "upper", {OMNI_VARCHAR}, OMNI_VARCHAR);
+    RegisterFunction<UpperFunction, std::string, std::string_view>(prefix + "upper", {OMNI_CHAR}, OMNI_VARCHAR);
 #ifdef STRINGVIEW_ENABLE
     RegisterFunction<LowerFunction, std::string, omniruntime::vec::StringView>(
         prefix + "lower", {OMNI_STRING_VIEW}, OMNI_VARCHAR);
