@@ -975,6 +975,29 @@ private:
                 return kPartitionOverflow;
             }
         }
+        // Probe can miss an empty slot when the group straddles the trailing sentinel
+        // bytes: FindFirstNibbles does not treat kSentinel as empty, then the original
+        // return uses the current offset, which may already hold another key.
+        // Emplace overwrites that key and increments elementsSize, so later iteration
+        // walks unconstructed slots. Scan for a real empty slot. Load stays under the
+        // rehash threshold, so an empty slot exists; scanned is only a bound.
+        // A partitioned insert must not take a slot outside its range.
+        size_t pos = curOffset;
+        size_t scanned = 0;
+        while (scanned < capacity) {
+            if (partitionInfo != nullptr && !partitionInfo->InRange(pos)) {
+                return kPartitionOverflow;
+            }
+            if (identifiers[pos] == kEmpty) {
+                inserted = true;
+                return pos;
+            }
+            ++pos;
+            if (pos >= capacity) {
+                pos = 0;
+            }
+            ++scanned;
+        }
         inserted = true;
         return curOffset;
     }
