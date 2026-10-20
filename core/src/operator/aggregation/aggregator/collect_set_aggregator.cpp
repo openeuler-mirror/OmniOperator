@@ -5,9 +5,24 @@
 
 #include "collect_set_aggregator.h"
 #include "vector/vector_helper.h"
+#include "vector/nulls_buffer.h"
 #include <algorithm>
 
 namespace omniruntime::op {
+
+static std::shared_ptr<NullsHelper> SliceNullMapForSingleRow(const std::shared_ptr<NullsHelper> &nullMap,
+    int32_t rowIdx)
+{
+    if (nullMap == nullptr) {
+        return nullptr;
+    }
+    auto nullsBuffer = std::make_shared<vec::NullsBuffer>(1);
+    auto rowNullMap = std::make_shared<NullsHelper>(nullsBuffer);
+    if ((*nullMap)[rowIdx]) {
+        rowNullMap->SetNull(0, true);
+    }
+    return rowNullMap;
+}
 
 /**
  * we have a Set in state (keySet of the DefaultHashMap)
@@ -119,7 +134,10 @@ template<DataTypeId IN_ID, DataTypeId OUT_ID>
 void CollectSetAggregator<IN_ID, OUT_ID>::InitState(AggregateState *state) {
     SetState<InType> *setState = SetState<InType>::CastState(state + aggStateOffset);
     using stateType = typename AggNativeAndVectorType<IN_ID>::type;
-    DefaultHashMap<stateType, int8_t>* uniqueValues = new DefaultHashMap<stateType, int8_t>();
+    // Bug-XXX: default BaseHashMap initializes 2^15=32768 buckets per group (mem::Allocator accounted,
+    // ~0.29MB/group for int, ~1.34MB for string), so collect_set with many groups blows MEM_CAP instantly.
+    // Start with 2^4=16 buckets and grow on demand (Grower doubles); per-group sets are typically tiny.
+    DefaultHashMap<stateType, int8_t>* uniqueValues = new DefaultHashMap<stateType, int8_t>(6);
     uniqueValues->Reset();
     setState->uniqueValuesAddr = reinterpret_cast<int64_t>(uniqueValues);
     allocatedUniqueValuesAddrs_.push_back(setState->uniqueValuesAddr);
@@ -245,12 +263,14 @@ void CollectSetAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
         SetState<stateType> *setState = SetState<stateType>::CastState(rowStates[rowIndex] + aggStateOffset);
         if (IsInputRaw()) {
             BaseVector *sliced = vector->Slice(offset, 1);
-            setState->UpdatePartialState(sliced, 1, nullMap, isDictionary, static_cast<int32_t>(rowIndex));
+            auto rowNullMap = SliceNullMapForSingleRow(nullMap, offset);
+            setState->UpdatePartialState(sliced, 1, rowNullMap, isDictionary, 0);
             delete sliced;
         } else {
             auto arrayVector = reinterpret_cast<ArrayVector *>(vector);
             BaseVector *sliced = arrayVector->Slice(offset, 1);
-            setState->UpdateFinalState(static_cast<ArrayVector *>(sliced), 1, nullMap, isDictionary, static_cast<int32_t>(rowIndex));
+            auto rowNullMap = SliceNullMapForSingleRow(nullMap, offset);
+            setState->UpdateFinalState(static_cast<ArrayVector *>(sliced), 1, rowNullMap, isDictionary, 0);
             delete sliced;
         }
         ++offset;

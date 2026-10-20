@@ -6,9 +6,24 @@
 #include "collect_set_varchar_aggregator.h"
 #include "vector/vector_helper.h"
 #include "vector/vector.h"
+#include "vector/nulls_buffer.h"
 #include <algorithm>
 
 namespace omniruntime::op {
+
+static std::shared_ptr<NullsHelper> SliceNullMapForSingleRow(const std::shared_ptr<NullsHelper> &nullMap,
+    int32_t rowIdx)
+{
+    if (nullMap == nullptr) {
+        return nullptr;
+    }
+    auto nullsBuffer = std::make_shared<vec::NullsBuffer>(1);
+    auto rowNullMap = std::make_shared<NullsHelper>(nullsBuffer);
+    if ((*nullMap)[rowIdx]) {
+        rowNullMap->SetNull(0, true);
+    }
+    return rowNullMap;
+}
 
 #pragma pack(push, 1)
 struct CollectSetVarcharState {
@@ -44,7 +59,10 @@ CollectSetVarcharAggregator::~CollectSetVarcharAggregator() {
 
 void CollectSetVarcharAggregator::InitState(AggregateState *state) {
     CollectSetVarcharState *s = CastState(state + aggStateOffset);
-    auto *uniqueValues = new DefaultHashMap<std::string, int8_t>();
+    // Bug-XXX: default BaseHashMap initializes 2^15=32768 buckets per group (mem::Allocator accounted,
+    // ~1.34MB/group), so collect_set with many groups blows MEM_CAP instantly. Start with 2^4=16 buckets
+    // and grow on demand (Grower doubles); per-group sets are typically tiny.
+    auto *uniqueValues = new DefaultHashMap<std::string, int8_t>(6);
     uniqueValues->Reset();
     s->uniqueValuesAddr = reinterpret_cast<int64_t>(uniqueValues);
     allocatedUniqueValuesAddrs_.push_back(s->uniqueValuesAddr);
@@ -201,12 +219,14 @@ void CollectSetVarcharAggregator::ProcessGroupInternal(std::vector<AggregateStat
         auto *uniqueValues = reinterpret_cast<DefaultHashMap<std::string, int8_t> *>(s->uniqueValuesAddr);
         if (IsInputRaw()) {
             BaseVector *sliced = vector->Slice(offset, 1);
-            UpdatePartialStateVarchar(uniqueValues, sliced, 1, nullMap, isDictionary, static_cast<int32_t>(rowIndex));
+            auto rowNullMap = SliceNullMapForSingleRow(nullMap, offset);
+            UpdatePartialStateVarchar(uniqueValues, sliced, 1, rowNullMap, isDictionary, 0);
             delete sliced;
         } else {
             auto *arrayVector = reinterpret_cast<ArrayVector *>(vector);
             BaseVector *sliced = arrayVector->Slice(offset, 1);
-            UpdateFinalStateVarchar(uniqueValues, static_cast<ArrayVector *>(sliced), 1, nullMap, static_cast<int32_t>(rowIndex));
+            auto rowNullMap = SliceNullMapForSingleRow(nullMap, offset);
+            UpdateFinalStateVarchar(uniqueValues, static_cast<ArrayVector *>(sliced), 1, rowNullMap, 0);
             delete sliced;
         }
         ++offset;

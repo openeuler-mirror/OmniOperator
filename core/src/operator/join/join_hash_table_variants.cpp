@@ -4,6 +4,7 @@
  */
 #include "join_hash_table_variants.h"
 #include "operator/util/operator_util.h"
+#include "type/data_type.h"
 #include "util/debug.h"
 
 namespace omniruntime {
@@ -1333,6 +1334,28 @@ void JoinHashTableVariants<KeyType, RowRefListType>::InitBuildFilterCols(std::ve
     }
 }
 
+namespace {
+
+// Only integer keys produce a filter. chooseCommonFilter emits BigintRange for a
+// contiguous set and BigintValues otherwise, and both are exact membership tests.
+// Other types are omitted: boolean/double readers ignore testInt64, a double range
+// is a superset and would disagree with canReplace, date32 is rebased after the
+// filter, and decimal/timestamp/float readers throw on value filters.
+::common::FilterPtr MakeDynamicFilter(int32_t typeId, const std::unordered_set<int64_t> &values)
+{
+    switch (static_cast<omniruntime::type::DataTypeId>(typeId)) {
+        case omniruntime::type::OMNI_BYTE:
+        case omniruntime::type::OMNI_SHORT:
+        case omniruntime::type::OMNI_INT:
+        case omniruntime::type::OMNI_LONG:
+            return ::common::chooseCommonFilter(values, /*nullAllowed*/ false);
+        default:
+            return nullptr;
+    }
+}
+
+} // namespace
+
 template <typename KeyType, typename RowRefListType>
 void JoinHashTableVariants<KeyType, RowRefListType>::BuildDynamicFilters()
 {
@@ -1350,8 +1373,9 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildDynamicFilters()
         return;
     }
     if (joinType != OMNI_JOIN_TYPE_INNER && joinType != OMNI_JOIN_TYPE_LEFT_SEMI &&
-        joinType != OMNI_JOIN_TYPE_RIGHT) {
-        LogDebug("DFP: skip filter generation, unsupported joinType=%d", static_cast<int>(joinType));
+        (joinType != OMNI_JOIN_TYPE_RIGHT || buildSide != OMNI_BUILD_RIGHT)) {
+        LogDebug("DFP: skip filter generation, unsupported joinType=%d buildSide=%d",
+            static_cast<int>(joinType), static_cast<int>(buildSide));
         dynamicFiltersBuilt_ = true;
         return;
     }
@@ -1404,9 +1428,11 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildDynamicFilters()
             LogDebug("DFP: skip filter generation, distinct keys > %zu", kMax);
             return;
         }
-        auto filter = ::common::chooseCommonFilter(values, /*nullAllowed*/ false);
+        const int32_t columnType = buildTypes->GetIds()[buildHashCols[0]];
+        auto filter = MakeDynamicFilter(columnType, values);
         if (filter == nullptr) {
-            LogDebug("DFP: skip filter generation, chooseCommonFilter returned null distinct=%zu", values.size());
+            LogDebug("DFP: skip filter generation, column type %d cannot be filtered exactly distinct=%zu",
+                columnType, values.size());
             return;
         }
         dynamicFilters_[buildHashCols[0]] = std::move(filter);

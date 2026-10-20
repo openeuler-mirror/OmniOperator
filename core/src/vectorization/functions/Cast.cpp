@@ -833,15 +833,14 @@ void CastFunction::CastToFloat(BaseVector* input, BaseVector*& result, Execution
             {
                 auto temp = static_cast<ConstVector<int64_t> *>(input)->GetConstValue();
                 auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
-                floatValue = static_cast<float>(static_cast<double>(temp) / static_cast<double>(kPowersOfTen[scale]));
+                floatValue = std::stof(Decimal64(temp).SetScale(scale).ToString());
                 break;
             }
             case OMNI_DECIMAL128:
             {
                 Decimal128 temp(static_cast<ConstVector<std::string_view> *>(input)->GetConstValue());
                 auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
-                double doubleValue = static_cast<double>(temp.ToInt128()) / static_cast<double>(kPowersOfTen[scale]);
-                floatValue = static_cast<float>(doubleValue);
+                floatValue = static_cast<float>(static_cast<double>(Decimal128Wrapper(temp).SetScale(scale)));
                 break;
             }
             default:
@@ -914,7 +913,7 @@ void CastFunction::CastToFloat(BaseVector* input, BaseVector*& result, Execution
                 for (int32_t row = 0; row < size; ++row) {
                     if (input->IsNull(row)) { result->SetNull(row); continue; }
                     auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
-                    resultVec->SetValue(row, static_cast<float>(static_cast<double>(temp) / static_cast<double>(kPowersOfTen[scale])));
+                    resultVec->SetValue(row, std::stof(Decimal64(temp).SetScale(scale).ToString()));
                 }
                 break;
             }
@@ -923,8 +922,7 @@ void CastFunction::CastToFloat(BaseVector* input, BaseVector*& result, Execution
                 for (int32_t row = 0; row < size; ++row) {
                     if (input->IsNull(row)) { result->SetNull(row); continue; }
                     Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
-                    double doubleValue = static_cast<double>(temp.ToInt128()) / static_cast<double>(kPowersOfTen[scale]);
-                    resultVec->SetValue(row, static_cast<float>(doubleValue));
+                    resultVec->SetValue(row, static_cast<float>(static_cast<double>(Decimal128Wrapper(temp).SetScale(scale))));
                 }
                 break;
             }
@@ -974,14 +972,14 @@ void CastFunction::CastToDouble(BaseVector* input, BaseVector*& result, Executio
             {
                 auto temp = static_cast<ConstVector<int64_t> *>(input)->GetConstValue();
                 auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
-                doubleValue = static_cast<double>(temp) / static_cast<double>(kPowersOfTen[scale]);
+                doubleValue = static_cast<double>(Decimal64(temp).SetScale(scale));
                 break;
             }
             case OMNI_DECIMAL128:
             {
                 Decimal128 temp(static_cast<ConstVector<std::string_view> *>(input)->GetConstValue());
                 auto scale = static_cast<DecimalDataType *>(fromType_.get())->GetScale();
-                doubleValue = static_cast<double>(temp.ToInt128()) / static_cast<double>(kPowersOfTen[scale]);
+                doubleValue = static_cast<double>(Decimal128Wrapper(temp).SetScale(scale));
                 break;
             }
             default:
@@ -1054,7 +1052,7 @@ void CastFunction::CastToDouble(BaseVector* input, BaseVector*& result, Executio
                 for (int32_t row = 0; row < size; ++row) {
                     if (input->IsNull(row)) { result->SetNull(row); continue; }
                     auto temp = VectorHelper::GetValueFromVector<int64_t>(input, row);
-                    resultVec->SetValue(row, static_cast<double>(temp) / static_cast<double>(kPowersOfTen[scale]));
+                    resultVec->SetValue(row, static_cast<double>(Decimal64(temp).SetScale(scale)));
                 }
                 break;
             }
@@ -1063,7 +1061,7 @@ void CastFunction::CastToDouble(BaseVector* input, BaseVector*& result, Executio
                 for (int32_t row = 0; row < size; ++row) {
                     if (input->IsNull(row)) { result->SetNull(row); continue; }
                     Decimal128 temp = VectorHelper::GetValueFromVector<Decimal128>(input, row);
-                    resultVec->SetValue(row, static_cast<double>(temp.ToInt128()) / static_cast<double>(kPowersOfTen[scale]));
+                    resultVec->SetValue(row, static_cast<double>(Decimal128Wrapper(temp).SetScale(scale)));
                 }
                 break;
             }

@@ -1,9 +1,8 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  * Description: upper function unit tests (StringView vectorized path).
- *   upper(string) -> string. ASCII a-z -> A-Z; other bytes (incl. UTF-8 multibyte) unchanged.
- *   Only the StringView overload is registered in the vectorized route (VARCHAR upper stays on codegen),
- *   so these tests target the {OMNI_STRING_VIEW}->OMNI_VARCHAR path (SV-in / VARCHAR-out).
+ *   upper(string) -> string. ASCII fast path; UTF-8 code points follow Spark upper (π -> Π).
+ *   These tests target the {OMNI_STRING_VIEW}->OMNI_VARCHAR path (SV-in / VARCHAR-out).
  */
 
 #include <gtest/gtest.h>
@@ -118,15 +117,14 @@ TEST(UpperTest, SVNonLetterBytesUnchanged) {
     delete result;
 }
 
-TEST(UpperTest, SVUtf8BytesUnchanged) {
-    // ASCII-only semantics (matches codegen ToUpperStr): multibyte UTF-8 left untouched, ASCII uppercased.
-    // "café hello" -> "CAFÉ HELLO" would require Unicode; here é stays lowercase-accented (byte >= 0x80).
-    std::vector<std::string> strings = {u8"café hello world", u8"中文 abc"};
-    std::vector<std::string> expected = {u8"CAFé HELLO WORLD", u8"中文 ABC"};
+TEST(UpperTest, SVUtf8Upper) {
+    // é (U+00E9) -> É, π (U+03C0) -> Π. Uncased characters stay as-is.
+    std::vector<std::string> strings = {u8"café hello world", u8"中文 abc", u8"○π△"};
+    std::vector<std::string> expected = {u8"CAFÉ HELLO WORLD", u8"中文 ABC", u8"○Π△"};
     BaseVector* strVec = UpperFunctionTestHelper::CreateStringViewVector(strings);
     BaseVector* result = nullptr;
     UpperFunctionTestHelper::ExecuteUpperSV(strVec, result);
-    UpperFunctionTestHelper::ValidateStringResult(result, expected, 2);
+    UpperFunctionTestHelper::ValidateStringResult(result, expected, 3);
     delete strVec;
     delete result;
 }
