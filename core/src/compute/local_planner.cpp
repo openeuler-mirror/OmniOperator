@@ -130,7 +130,8 @@ std::pair<OperatorFactory*, HashBuilderOperatorFactory*> createHashBuilderOperat
         return std::make_pair(hashBuilderWithExprOperatorFactory, hashBuilderOperatorFactory);
     } else {
         auto hashBuilderOperatorFactory =
-            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
+            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
+                joinNode, queryConfig.SveJoinEnabled(), queryConfig.TaperEnabled());
         return std::make_pair(hashBuilderOperatorFactory, hashBuilderOperatorFactory);
     }
 }
@@ -190,7 +191,9 @@ void planDetail(
                     *(buildNodes[i]->OutputType()),
                     buildKeys,
                     1,
-                    overflowConfig);
+                    overflowConfig,
+                    false,
+                    queryConfig.TaperEnabled());
 
             delete overflowConfig;
             overflowConfig = nullptr;

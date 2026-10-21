@@ -112,6 +112,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
         mixedInputExpected, mixedOutputEnabled, aggUdafNames);
     this->hashAggOperatorFactory->SetNormalizedKeyEnabledForFactory(
         queryConfig.HashAggNormalizedKeyEnabled());
+    this->hashAggOperatorFactory->SetSveHashAggEnabledForFactory(queryConfig.SveHashAggEnabled());
     this->hashAggOperatorFactory->Init();
 }
 

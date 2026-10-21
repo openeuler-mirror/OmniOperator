@@ -39,10 +39,8 @@ enum class HandleType {
     fixedInt16,
     fixedInt32,
     fixedInt64,
-#ifdef OMNI_SVEHT32_HASH_AGG
     fixedInt32SveAos,
     fixedInt32PairSveAos,
-#endif
     packedInt32,
     packedInt64,
     packedInt128,

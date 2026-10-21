@@ -47,11 +47,7 @@ endif (CCACHE_FOUND)
 find_package(re2 REQUIRED)
 find_package(fmt REQUIRED)
 
-option(SVEHT "Enable SVE32 vectorized join hash tables" ON)
-option(OMNI_SVEHT32_HASH_AGG "Enable SVE32 vectorized hash table-based hash aggregation" ON)
 option(SVEHTMISSES "Enable SVE hash aggregation miss optimization" ON)
-message(STATUS "Option Enable SVEHT: ${SVEHT}")
-message(STATUS "Option Enable OMNI_SVEHT32_HASH_AGG: ${OMNI_SVEHT32_HASH_AGG}")
 message(STATUS "Option Enable SVEHTMISSES: ${SVEHTMISSES}")
 
 set(IS_COVERAGE_BUILD FALSE)
@@ -61,55 +57,17 @@ endif ()
 
 if (IS_COVERAGE_BUILD)
     add_definitions(-DCOVERAGE)
-    set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc -fpermissive")
-elseif (SVEHT OR OMNI_SVEHT32_HASH_AGG)
-    set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc+sve -fpermissive")
-else ()
-    # Detect SVE/SVE2 support on ARM
-    if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
-        file(READ "/proc/cpuinfo" CPUINFO)
-        string(FIND "${CPUINFO}" "sve2" SVE2_FOUND)
-        string(FIND "${CPUINFO}" "sve " SVE_FOUND)
-        if(SVE2_FOUND GREATER -1)
-            message(STATUS "SVE2 is supported")
-            set(SIMD_COMPILE_LEVEL "-march=armv8.3-a+crc+sve2 -fpermissive")
-        elseif(SVE_FOUND GREATER -1)
-            message(STATUS "SVE is supported")
-            set(SIMD_COMPILE_LEVEL "-march=armv8.3-a+crc+sve -fpermissive")
-        else()
-            message(STATUS "SVE is not supported")
-            set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc -fpermissive")
-        endif()
-    else()
-        set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc+sve -fpermissive")
-    endif()
 endif ()
+set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc+sve -fpermissive")
 
-# SVEHT: SVE32 vectorized hash table-based inner join for single INT keys
-# OMNI_SVEHT32_HASH_AGG: SVE32 vectorized hash table-based hash agg for single and dual INT keys
+# Compile SVE Join and HashAgg alongside their fallback paths; QueryConfig selects them per query.
 # SVEHTMISSES: optimize SVE agg miss handling with known miss slots
 # OMNI_SVEHT32_JOIN_KEY_REWRITE: convert eligible CAST(INT AS LONG) join keys back to INT
 if (NOT IS_COVERAGE_BUILD)
-    if (SVEHT)
-        add_definitions(-DSVEHT)
-        #add_definitions(-DOMNI_SVEHT32_JOIN_KEY_REWRITE)
+    #add_definitions(-DOMNI_SVEHT32_JOIN_KEY_REWRITE)
+    if (SVEHTMISSES)
+        add_definitions(-DSVEHTMISSES)
     endif ()
-
-    if (OMNI_SVEHT32_HASH_AGG)
-        add_definitions(-DOMNI_SVEHT32_HASH_AGG)
-        if (SVEHTMISSES)
-            add_definitions(-DSVEHTMISSES)
-        endif ()
-    elseif (SVEHTMISSES)
-        message(FATAL_ERROR "SVEHTMISSES requires OMNI_SVEHT32_HASH_AGG")
-    endif ()
-endif ()
-
-option(TAPER "Enable taper hash table" ON)
-message(STATUS "Option Enable TAPER: ${TAPER}")
-if (TAPER)
-    # OMNI_USE_TAPER_JOIN: use taper hash table for join
-    add_definitions(-DOMNI_USE_TAPER_JOIN)
 endif ()
 
 #-ffast-math

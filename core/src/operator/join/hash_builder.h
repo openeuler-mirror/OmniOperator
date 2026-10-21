@@ -19,19 +19,21 @@ namespace op {
 class HashBuilderOperatorFactory : public OperatorFactory {
 public:
     HashBuilderOperatorFactory(JoinType joinType, const DataTypes &buildTypes, const int32_t *buildHashCols,
-        int32_t buildHashColsCount, int32_t operatorCount);
+        int32_t buildHashColsCount, int32_t operatorCount, bool enableTaper = true);
     HashBuilderOperatorFactory(JoinType joinType, BuildSide buildSide, const DataTypes &buildTypes,
-        const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
+        const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount,
+        bool enableSveJoin = false, bool enableTaper = true);
     ~HashBuilderOperatorFactory()
     {
         delete hashTablesVariants;
     }
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(JoinType joinType, const DataTypes &buildTypes,
-        const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
+        const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount, bool enableTaper = true);
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(JoinType joinType, BuildSide buildSide,
-        const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
+        const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount,
+        bool enableSveJoin = false, bool enableTaper = true);
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(
-        std::shared_ptr<const HashJoinNode> planNode);
+        std::shared_ptr<const HashJoinNode> planNode, bool enableSveJoin = false, bool enableTaper = true);
     omniruntime::op::Operator *CreateOperator() override;
 
     HashTableVariants *GetHashTablesVariants()
@@ -51,7 +53,7 @@ private:
 
     template <class RowRefListType>
     HashTableVariants *InitVariant(int32_t buildHashColsCount, int32_t operatorCount, JoinType joinType,
-        BuildSide buildSide = OMNI_BUILD_UNKNOWN, bool isMultiCols = false);
+        BuildSide buildSide = OMNI_BUILD_UNKNOWN, bool isMultiCols = false, bool forceSve32 = false);
 };
 
 class HashBuilderOperator : public Operator {

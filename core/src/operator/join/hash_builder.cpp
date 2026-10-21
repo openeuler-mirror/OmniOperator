@@ -9,7 +9,7 @@
 namespace omniruntime {
 namespace op {
 HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, const DataTypes &buildTypes,
-    const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
+    const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount, bool enableTaper)
     : buildTypes(buildTypes),
       buildHashCols(std::vector<int32_t>(buildHashCols, buildHashCols + buildHashColsCount)),
       operatorIndex(0)
@@ -18,22 +18,23 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, const 
         throw OmniException("OPERATOR_RUNTIME_ERROR", "operatorCount is not in the acceptable range [1, 10000].");
     }
     if (joinType != OMNI_JOIN_TYPE_FULL) {
-#ifdef OMNI_USE_TAPER_JOIN
-        hashTablesVariants = InitTaperVariant<false>(buildHashColsCount, operatorCount, joinType);
-#else
-        hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType);
-#endif
+        if (enableTaper) {
+            hashTablesVariants = InitTaperVariant<false>(buildHashColsCount, operatorCount, joinType);
+        } else {
+            hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType);
+        }
     } else {
-#ifdef OMNI_USE_TAPER_JOIN
-        hashTablesVariants = InitTaperVariant<true>(buildHashColsCount, operatorCount, joinType);
-#else
-        hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType);
-#endif
+        if (enableTaper) {
+            hashTablesVariants = InitTaperVariant<true>(buildHashColsCount, operatorCount, joinType);
+        } else {
+            hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType);
+        }
     }
 }
 
 HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, BuildSide buildSide,
-    const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
+    const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount,
+    bool enableSveJoin, bool enableTaper)
     : buildTypes(buildTypes),
       buildHashCols(std::vector<int32_t>(buildHashCols, buildHashCols + buildHashColsCount)),
       operatorIndex(0)
@@ -41,25 +42,32 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, BuildS
     if (operatorCount <= 0 || operatorCount > 10000) {
         throw OmniException("OPERATOR_RUNTIME_ERROR", "operatorCount is not in the acceptable range [1, 10000].");
     }
+    if (enableSveJoin && joinType == OMNI_JOIN_TYPE_INNER && operatorCount == 1 && buildHashColsCount == 1 &&
+        (buildTypes.GetIds()[buildHashCols[0]] == OMNI_INT ||
+         buildTypes.GetIds()[buildHashCols[0]] == OMNI_DATE32)) {
+        hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType, buildSide,
+            false, true);
+        return;
+    }
     if (joinType == OMNI_JOIN_TYPE_FULL || (joinType == OMNI_JOIN_TYPE_LEFT && buildSide == OMNI_BUILD_LEFT)
         || (joinType == OMNI_JOIN_TYPE_RIGHT && buildSide == OMNI_BUILD_RIGHT)) {
-#ifdef OMNI_USE_TAPER_JOIN
-        hashTablesVariants = InitTaperVariant<true>(buildHashColsCount, operatorCount, joinType, buildSide);
-#else
-        hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType, buildSide);
-#endif
+        if (enableTaper) {
+            hashTablesVariants = InitTaperVariant<true>(buildHashColsCount, operatorCount, joinType, buildSide);
+        } else {
+            hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType, buildSide);
+        }
     } else {
-#ifdef OMNI_USE_TAPER_JOIN
-        hashTablesVariants = InitTaperVariant<false>(buildHashColsCount, operatorCount, joinType, buildSide);
-#else
-        hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType, buildSide);
-#endif
+        if (enableTaper) {
+            hashTablesVariants = InitTaperVariant<false>(buildHashColsCount, operatorCount, joinType, buildSide);
+        } else {
+            hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType, buildSide);
+        }
     }
 }
 
 template <class RowRefListType>
 HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashColsCount, int32_t operatorCount,
-    JoinType joinType, BuildSide buildSide, bool isMultiCols)
+    JoinType joinType, BuildSide buildSide, bool isMultiCols, bool forceSve32)
 {
     if (buildHashColsCount == 1) {
         auto type = buildTypes.GetIds()[buildHashCols[0]];
@@ -75,7 +83,7 @@ HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashCols
             case OMNI_DATE32:
             case OMNI_FLOAT:
                 return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int32_t, RowRefListType>>,
-                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
+                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide, false, forceSve32 };
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
@@ -140,21 +148,23 @@ int32_t GetTypeLength(int buildHashColsCount, DataTypes& buildTypes, std::vector
 }
 
 HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(JoinType joinType,
-    const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
+    const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount,
+    bool enableTaper)
 {
-    return new HashBuilderOperatorFactory(joinType, buildTypes, buildHashCols, buildHashColsCount, operatorCount);
+    return new HashBuilderOperatorFactory(joinType, buildTypes, buildHashCols, buildHashColsCount, operatorCount,
+        enableTaper);
 }
 
 HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(JoinType joinType,
     BuildSide buildSide, const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount,
-    int32_t operatorCount)
+    int32_t operatorCount, bool enableSveJoin, bool enableTaper)
 {
     return new HashBuilderOperatorFactory(joinType, buildSide, buildTypes, buildHashCols, buildHashColsCount,
-        operatorCount);
+        operatorCount, enableSveJoin, enableTaper);
 }
 
 HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
-    std::shared_ptr<const HashJoinNode> planNode)
+    std::shared_ptr<const HashJoinNode> planNode, bool enableSveJoin, bool enableTaper)
 {
     // Extract necessary information from planNode
     auto joinType = planNode->GetJoinType();
@@ -169,7 +179,8 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperato
     }
 
     auto buildHashColsCount = (int32_t) buildHashCols.size();
-    return new HashBuilderOperatorFactory(joinType, buildSide, *buildTypes, buildHashCols.data(), buildHashColsCount, 1);
+    return new HashBuilderOperatorFactory(joinType, buildSide, *buildTypes, buildHashCols.data(), buildHashColsCount,
+        1, enableSveJoin, enableTaper);
 }
 
 Operator *HashBuilderOperatorFactory::CreateOperator()
@@ -214,30 +225,25 @@ int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVec
             arg.BuildHashTable(partitionIndex);
         },
         *hashTablesVariants);
-#ifndef OMNI_USE_TAPER_JOIN
     if (UNLIKELY(IsDebugEnable())) {
-        int32_t hashTableSize = 0;
-        auto hashTableType =
-            std::visit([&](auto &&arg) { return arg.GetHashTableTypes(partitionIndex); }, *hashTablesVariants);
-        if (hashTableType == HashTableImplementationType::NORMAL_HASH_TABLE) {
-            hashTableSize = std::visit([&](auto &&arg) { return arg.GetHashTable(partitionIndex)->GetElementsSize(); },
-                *hashTablesVariants);
-        } else if (hashTableType == HashTableImplementationType::ARRAY_HASH_TABLE) {
-            hashTableSize = std::visit([&](auto &&arg) { return arg.GetArrayTable(partitionIndex)->GetElementsSize(); },
-                *hashTablesVariants);
-#ifdef SVEHT
-        } else if (hashTableType == HashTableImplementationType::SVE_HASH_TABLE32) {
-            hashTableSize = std::visit(
-                [&](auto &&arg) {
-                    auto &sveHashTable = arg.GetSve32HashTable(partitionIndex);
-                    return sveHashTable == nullptr ? 0 : sveHashTable->GetElementsSize();
-                },
-                *hashTablesVariants);
-#endif
-        }
-        UpdateGetOutputInfo(hashTableSize);
+        std::visit(
+            [&](auto &&arg) {
+                if constexpr (!std::is_same_v<typename std::decay_t<decltype(arg)>::Mapped, TaperMapped>) {
+                    int32_t hashTableSize = 0;
+                    auto hashTableType = arg.GetHashTableTypes(partitionIndex);
+                    if (hashTableType == HashTableImplementationType::NORMAL_HASH_TABLE) {
+                        hashTableSize = arg.GetHashTable(partitionIndex)->GetElementsSize();
+                    } else if (hashTableType == HashTableImplementationType::ARRAY_HASH_TABLE) {
+                        hashTableSize = arg.GetArrayTable(partitionIndex)->GetElementsSize();
+                    } else if (hashTableType == HashTableImplementationType::SVE_HASH_TABLE32) {
+                        auto &sveHashTable = arg.GetSve32HashTable(partitionIndex);
+                        hashTableSize = sveHashTable == nullptr ? 0 : sveHashTable->GetElementsSize();
+                    }
+                    UpdateGetOutputInfo(hashTableSize);
+                }
+            },
+            *hashTablesVariants);
     }
-#endif
     SetStatus(OMNI_STATUS_FINISHED);
     std::visit([&](auto &&arg) { arg.SetStatus(OMNI_STATUS_FINISHED); }, *hashTablesVariants);
     return 0;

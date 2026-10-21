@@ -5,10 +5,8 @@
 #include "join_hash_table_variants.h"
 #include "operator/util/operator_util.h"
 #include "vector/unsafe_vector.h"
-#ifdef SVEHT
 #include <cstdio>
 #include "simd/sve.h"
-#endif
 
 namespace omniruntime {
 namespace op {
@@ -21,7 +19,7 @@ static constexpr uint8_t MIN_DEGREE = 5;
 template <typename KeyType, typename RowRefListType>
 JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t hashTableCount,
     DataTypes *buildDataTypes, std::vector<int32_t> &buildHashCols,
-    JoinType joinType, BuildSide buildSide, bool isMultiCols)
+    JoinType joinType, BuildSide buildSide, bool isMultiCols, bool forceSve32)
     : hashTableCount(hashTableCount),
       hashTableSize(0),
       probeTypes(nullptr),
@@ -32,13 +30,12 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
       columns(std::vector<omniruntime::vec::BaseVector ***>(hashTableCount)),
       joinType(joinType),
       buildSide(buildSide),
-      isMultiCols(isMultiCols)
+      isMultiCols(isMultiCols),
+      forceSve32(forceSve32)
 {
     hashTables = std::vector<std::unique_ptr<JoinHashTableVariant<KeyType, RowRefListType>>>(hashTableCount);
-#ifdef SVEHT
     sve32HashTables = std::vector<std::unique_ptr<SveJoinHashTable32<uint32_t, uint32_t>>>(hashTableCount);
     sve32RowRefPools = std::vector<std::vector<RowRefListType *>>(hashTableCount);
-#endif
     arrayTables = std::vector<std::unique_ptr<DefaultArrayMap<RowRefListType>>>(hashTableCount);
     hashTableTypes = std::vector<HashTableImplementationType>(hashTableCount);
     maxMins = std::vector<std::pair<int64_t, int64_t>>(hashTableCount);
@@ -226,7 +223,6 @@ InsertResult<RowRefListType *> JoinHashTableVariants<KeyType, RowRefListType>::F
     }
 }
 
-#ifdef SVEHT
 template <typename KeyType, typename RowRefListType>
 int32_t JoinHashTableVariants<KeyType, RowRefListType>::ProbeBatchSVE32(
     const uint32_t *probeKeys,
@@ -247,7 +243,6 @@ int32_t JoinHashTableVariants<KeyType, RowRefListType>::ProbeBatchSVE32(
             outputProbePayloads);
     }
 }
-#endif
 
 template<typename KeyType, typename RowRefListType>
 KeyType JoinHashTableVariants<KeyType, RowRefListType>::GetKeyValue(BaseVector **probeHashColumns,
@@ -781,7 +776,7 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildHashTable(int32_t part
     auto initDegree = static_cast<uint8_t>(std::ceil(log2(totalRowCount[partitionIndex] / LOAD_FACTOR)));
     auto lengthOfArrayHT = static_cast<int64_t>(std::pow(2, initDegree));
     bool shouldBuildArrayTable = false;
-    if (buildHashCols.size() == 1) {
+    if (!forceSve32 && buildHashCols.size() == 1) {
         switch (buildTypes->GetIds()[buildHashCols[0]]) {
             case omniruntime::type::OMNI_INT:
             case omniruntime::type::OMNI_DATE32: {
@@ -820,9 +815,8 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildHashTable(int32_t part
     }
 
     if (!shouldBuildArrayTable) {
-#ifdef SVEHT
         if constexpr (std::is_same_v<KeyType, int32_t> || std::is_same_v<KeyType, uint32_t>) {
-            if (!isMultiCols && joinType == OMNI_JOIN_TYPE_INNER && hashTableCount == 1) {
+            if (forceSve32 && !isMultiCols && joinType == OMNI_JOIN_TYPE_INNER && hashTableCount == 1) {
                 auto sveInitDegree =
                     static_cast<uint8_t>(std::ceil(log2(totalRowCount[partitionIndex] / SVE_LOAD_FACTOR)));
                 auto sveHashTable =
@@ -917,7 +911,6 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildHashTable(int32_t part
                 return;
             }
         }
-#endif
 
         if (isFixedKeys) {
             BuildNormalHashTableWithFixedKey(partitionIndex, initDegree);
