@@ -35,22 +35,6 @@ const int32_t BUILD_POSITION_COUNT = 1000;
 const int32_t PROBE_POSITION_COUNT = 1000;
 const int32_t TIME_TO_SLEEP = 100;
 
-class DebugLogGuard {
-public:
-    DebugLogGuard() : oldDebugEnable_(g_isDebugEnable)
-    {
-        g_isDebugEnable = true;
-    }
-
-    ~DebugLogGuard()
-    {
-        g_isDebugEnable = oldDebugEnable_;
-    }
-
-private:
-    bool oldDebugEnable_;
-};
-
 void DeleteJoinOperatorFactory(HashBuilderOperatorFactory *hashBuilderOperatorFactory,
     LookupJoinOperatorFactory *lookupJoinOperatorFactory,
     LookupOuterJoinOperatorFactory *lookupOuterJoinOperatorFactory)
@@ -324,49 +308,6 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithOneBuildOp)
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
 }
 
-TEST(NativeOmniJoinTest, TestInnerJoinWithInMemorySubPartition)
-{
-    JoinTest::DebugLogGuard debugLogGuard;
-    JoinSubPartitionConfig subPartCfg;
-    subPartCfg.numSubPartitions = 4;
-    subPartCfg.startPartitionBit = 0;
-    subPartCfg.activeSubPartition = 0;
-
-    VectorBatch *vecBatch = ConstructSimpleBuildData();
-    HashBuilderOperatorFactory *hashBuilderFactory = CreateSimpleBuildFactory(4, OMNI_JOIN_TYPE_INNER);
-    hashBuilderFactory->SetJoinSpillSubPartitionPolicy(true, 1, subPartCfg);
-    auto *hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(hashBuilderFactory->CreateOperator());
-
-    testing::internal::CaptureStdout();
-    hashBuilderOperator->AddInput(vecBatch);
-    VectorBatch *hashBuildOutput = nullptr;
-    hashBuilderOperator->GetOutput(&hashBuildOutput);
-    const auto buildLogs = testing::internal::GetCapturedStdout();
-
-    VectorBatch *probeVecBatch = ConstructSimpleProbeData();
-    LookupJoinOperatorFactory *lookupJoinFactory = CreateSimpleProbeFactory(hashBuilderFactory);
-    lookupJoinFactory->SetJoinSpillPolicy(true, 1, subPartCfg);
-    auto *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
-
-    testing::internal::CaptureStdout();
-    lookupJoinOperator->AddInput(probeVecBatch);
-    VectorBatch *outputVecBatch = nullptr;
-    lookupJoinOperator->GetOutput(&outputVecBatch);
-    const auto probeLogs = testing::internal::GetCapturedStdout();
-
-    VectorBatch *expectVecBatch = ConstructSimpleExpectedData();
-    EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
-    EXPECT_NE(buildLogs.find("partitioned_input_rows=10"), std::string::npos);
-    EXPECT_NE(buildLogs.find("built_subpartition_hash_tables=4"), std::string::npos);
-    EXPECT_NE(probeLogs.find("merged_subpartition_output_rows="), std::string::npos);
-
-    VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectVecBatch);
-    omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
-    omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
-    DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
-}
 // need calculate probe data partitionId
 TEST(NativeOmniJoinTest, DISABLED_TestInnerEqualityJoinWithTwoBuildOp)
 {
@@ -528,15 +469,27 @@ void TestLookupJoin(struct HashJoinThreadArgs *hashJoinThreadArgs)
     } else {
         lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinOperatorFactory));
     }
+    lookupJoinOperator->setNoMoreInput(false);
     const int32_t maxLoopCount = 1000;
     for (int loop = 0; loop < maxLoopCount; loop++) {
         for (int i = 0; i < hashJoinThreadArgs->probeVecBatchCount; ++i) {
             lookupJoinOperator->AddInput(DuplicateVectorBatch(hashJoinThreadArgs->probeVecBatches[i]));
-            VectorBatch *outputVecBatch = nullptr;
-            lookupJoinOperator->GetOutput(&outputVecBatch);
-            if (outputVecBatch != nullptr) {
-                VectorHelper::FreeVecBatch(outputVecBatch);
+            while (!lookupJoinOperator->needsInput() &&
+                lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+                VectorBatch *outputVecBatch = nullptr;
+                lookupJoinOperator->GetOutput(&outputVecBatch);
+                if (outputVecBatch != nullptr) {
+                    VectorHelper::FreeVecBatch(outputVecBatch);
+                }
             }
+        }
+    }
+    lookupJoinOperator->noMoreInput();
+    while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        VectorBatch *outputVecBatch = nullptr;
+        lookupJoinOperator->GetOutput(&outputVecBatch);
+        if (outputVecBatch != nullptr) {
+            VectorHelper::FreeVecBatch(outputVecBatch);
         }
     }
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);

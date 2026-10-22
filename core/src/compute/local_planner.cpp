@@ -36,6 +36,9 @@
 #include "operator/join/join_sub_partitioner.h"
 #include "connectors/hive/HiveConnector.h"
 #include "util/debug.h"
+#include "operator/config/operator_config.h"
+
+#include <climits>
 
 namespace omniruntime::compute {
 
@@ -68,38 +71,38 @@ bool ResolveDynamicFilterPushdownEnabled(const config::QueryConfig &queryConfig)
 // Returns ture if source nodes must run in a separate pipeline
 bool MustStartNewPipeline(int sourceId) { return sourceId != 0; }
 
-/// todo: only support Long and Varchar for first version of Join Spill
-bool IsLongOrVarcharTypes(const omniruntime::type::DataTypes &types)
+bool AreJoinSpillKeysSupported(const std::shared_ptr<const HashJoinNode> &joinNode)
 {
-    auto ids = types.GetIds();
-    for (int32_t i = 0; i < types.GetSize(); ++i) {
-        if (ids[i] != omniruntime::type::OMNI_LONG && ids[i] != omniruntime::type::OMNI_VARCHAR) {
+    auto keysOk = [](const std::vector<omniruntime::expressions::Expr *> &keys) {
+        if (keys.empty()) {
             return false;
         }
-    }
-    return true;
+        for (auto *key : keys) {
+            if (key == nullptr) {
+                return false;
+            }
+            const auto id = key->GetReturnTypeId();
+            if (id != omniruntime::type::OMNI_INT && id != omniruntime::type::OMNI_LONG &&
+                id != omniruntime::type::OMNI_DATE32 && id != omniruntime::type::OMNI_VARCHAR) {
+                return false;
+            }
+        }
+        return true;
+    };
+    return keysOk(joinNode->LeftKeys()) && keysOk(joinNode->RightKeys());
 }
 
-/// todo: only support inner join for first version
-bool IsJoinSpillV1Supported(const std::shared_ptr<const HashJoinNode> &joinNode)
+bool IsJoinSpillSupported(const std::shared_ptr<const HashJoinNode> &joinNode)
 {
-    if (!joinNode->IsInnerJoin() || !IsLongOrVarcharTypes(*joinNode->LeftOutputType()) ||
-        !IsLongOrVarcharTypes(*joinNode->RightOutputType())) {
+    const bool joinTypeSupported = joinNode->IsInnerJoin() || joinNode->IsFullJoin() ||
+        (joinNode->IsLeftJoin() && joinNode->IsBuildRight()) ||
+        (joinNode->IsRightJoin() && joinNode->IsBuildLeft()) ||
+        (joinNode->IsLeftJoin() && joinNode->IsBuildLeft()) ||
+        (joinNode->IsRightJoin() && joinNode->IsBuildRight());
+    if (!joinTypeSupported) {
         return false;
     }
-
-    /// todo: only support field key, not support expression key for first version
-    for (auto *key : joinNode->LeftKeys()) {
-        if (key->GetType() != omniruntime::expressions::ExprType::FIELD_E) {
-            return false;
-        }
-    }
-    for (auto *key : joinNode->RightKeys()) {
-        if (key->GetType() != omniruntime::expressions::ExprType::FIELD_E) {
-            return false;
-        }
-    }
-    return true;
+    return AreJoinSpillKeysSupported(joinNode);
 }
 
 std::shared_ptr<omniruntime::op::Operator> createOperator(
@@ -212,15 +215,8 @@ std::pair<OperatorFactory*, HashBuilderOperatorFactory*> createHashBuilderOperat
         auto hashBuilderOperatorFactory = hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory();
         return std::make_pair(hashBuilderWithExprOperatorFactory, hashBuilderOperatorFactory);
     } else {
-        const auto subPartCfg = op::JoinSubPartitionConfig::FromQueryConfig(queryConfig);
-        const int32_t hashTableCount = queryConfig.joinSpillEnabled() && queryConfig.maxSpillRunRows() != 0
-                && subPartCfg.IsEnabled() && IsJoinSpillV1Supported(joinNode)
-            ? static_cast<int32_t>(subPartCfg.numSubPartitions)
-            : 1;
-
-        /// hashTableCount is equal to join sub partitions count.
         auto hashBuilderOperatorFactory =
-            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode, hashTableCount);
+            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode, 1);
         return std::make_pair(hashBuilderOperatorFactory, hashBuilderOperatorFactory);
     }
 }
@@ -287,15 +283,20 @@ void planDetail(
         }
 
         auto subPartCfg = op::JoinSubPartitionConfig::FromQueryConfig(queryConfig);
-        const bool joinSpillV1Enabled = !isBHJ && queryConfig.joinSpillEnabled()
-            && queryConfig.maxSpillRunRows() != 0
-            && subPartCfg.IsEnabled() && IsJoinSpillV1Supported(joinNode);
+        const bool joinSpillEnabled = !isBHJ && joinNode->IsShuffle() && queryConfig.spillEnabled() &&
+            queryConfig.joinSpillEnabled() && IsJoinSpillSupported(joinNode);
         std::shared_ptr<op::JoinSpillState> joinSpillState = nullptr;
-        if (joinSpillV1Enabled) {
+        if (joinSpillEnabled) {
             joinSpillState = std::make_shared<op::JoinSpillState>(queryConfig.SpillDir(),
-                *joinNode->RightOutputType(), *joinNode->LeftOutputType(), subPartCfg.numSubPartitions);
+                res.second->GetBuildTypes(), *joinNode->LeftOutputType(), subPartCfg.numSubPartitions);
+            joinSpillState->SetInitialRuntimeLayout(op::JoinBuildRuntimeLayout::Single);
+            joinSpillState->SetSpillJoinType(joinNode->GetJoinType(), joinNode->GetBuildSide());
+            auto spillConfig = std::make_shared<op::SparkSpillConfig>(true, queryConfig.SpillDir(),
+                queryConfig.maxSpillBytes(), INT32_MAX, queryConfig.memFraction(),
+                queryConfig.SpillWriteBufferSize(), queryConfig.SpillEnableCompress());
+            res.second->SetSpillConfig(spillConfig);
         }
-        res.second->SetJoinSpillSubPartitionPolicy(joinSpillV1Enabled, queryConfig.maxSpillRunRows(), subPartCfg);
+        res.second->SetJoinSpillPolicy(joinSpillEnabled, subPartCfg);
         res.second->SetJoinSpillState(joinSpillState);
         res.second->SetDynamicFilterPushdownEnabled(ResolveDynamicFilterPushdownEnabled(queryConfig));
         if (isBHJ && !res.second->IsPrebuilt() && !HasExprBuildKeys(joinNode)) {
@@ -304,7 +305,15 @@ void planDetail(
         }
         auto builderDriver = builderDrivers[1][0];
         builderDriver->operators()->emplace_back(createOperator(res.first, joinNode));
-        factories->emplace_back(res.first);
+        // Join spill: keep HashBuilder factory on the build driver so HT /
+        // buildTypes / buildHashCols stay valid until HashBuilder finishes.
+        // HashBuilder stays blocked until handoff Complete (FULL/SameSide:
+        // ProbeFinished only after LookupOuterJoin, via FinishFullTableProbeAfterOuter).
+        if (joinSpillEnabled) {
+            builderDriver->operatorFactories()->emplace_back(res.first);
+        } else {
+            factories->emplace_back(res.first);
+        }
 
         if (joinNode->IsFullJoin() || (joinNode->IsLeftJoin() && joinNode->IsBuildLeft()) || (joinNode->IsRightJoin() && joinNode->IsBuildRight())) {
             factory =

@@ -70,6 +70,7 @@ endif ()
             re2::re2
             Folly::folly
             gcov
+            z-ng
     $<$<BOOL:${ENABLE_BENCHMARK}>:benchmark::benchmark>)
     target_compile_options(${OM_TEST_TARGET} PUBLIC -g -O2 -fPIC)
 

@@ -68,6 +68,27 @@ TEST(JoinSubPartitionerTest, BuildsConfigFromQueryConfig)
     EXPECT_TRUE(cfg.IsEnabled());
 }
 
+TEST(JoinSubPartitionerTest, SparkBitsMapsToPowerOfTwoSubPartitions)
+{
+    auto fromBits = [](const char *bits) {
+        std::unordered_map<std::string, std::string> queryValues;
+        queryValues.emplace(omniruntime::config::QueryConfig::kSpillNumPartitionBits, bits);
+        queryValues.emplace(omniruntime::config::QueryConfig::kSpillStartPartitionBit, "0");
+        return JoinSubPartitionConfig::FromQueryConfig(omniruntime::config::QueryConfig(std::move(queryValues)));
+    };
+    EXPECT_EQ(fromBits("2").numSubPartitions, 4U);
+    EXPECT_EQ(fromBits("4").numSubPartitions, 16U);
+    EXPECT_EQ(fromBits("6").numSubPartitions, 64U);
+    EXPECT_EQ(fromBits("0").numSubPartitions, 1U);
+}
+
+TEST(JoinSubPartitionerTest, UnsetBitsDefaultToSixteenSubPartitions)
+{
+    omniruntime::config::QueryConfig queryConfig(std::unordered_map<std::string, std::string>{});
+    auto cfg = JoinSubPartitionConfig::FromQueryConfig(queryConfig);
+    EXPECT_EQ(cfg.numSubPartitions, 16U);
+}
+
 TEST(JoinSubPartitionerTest, PartitionsLongRows)
 {
     auto *batch = MakeLongBatch({1, 2, 3, 4});
@@ -142,10 +163,10 @@ TEST(JoinSubPartitionerTest, PartitionsMultiLongKeys)
 TEST(JoinSubPartitionerTest, RejectsUnsupportedKeyType)
 {
     auto *batch = new VectorBatch(1);
-    auto *vec = new Vector<int32_t>(1);
-    vec->SetValue(0, 1);
+    auto *vec = new Vector<double>(1);
+    vec->SetValue(0, 1.0);
     batch->Append(vec);
-    DataTypes types(std::vector<DataTypePtr>({ IntDataType::Instance() }));
+    DataTypes types(std::vector<DataTypePtr>({ DoubleDataType::Instance() }));
     JoinSubPartitioner partitioner(TestConfig());
 
     EXPECT_THROW(partitioner.PartitionRowsByKeyColumns(batch, types, {0}), omniruntime::exception::OmniException);

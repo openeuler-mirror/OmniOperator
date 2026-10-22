@@ -186,8 +186,8 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     overflowConfig, outputList)
 {
     this->queryConfig_ = queryConfig;
-    this->operatorFactory->SetJoinSpillPolicy(queryConfig.joinSpillEnabled(),
-        queryConfig.maxSpillRunRows(), JoinSubPartitionConfig::FromQueryConfig(queryConfig));
+    this->operatorFactory->SetJoinSpillPolicy(queryConfig.spillEnabled() && queryConfig.joinSpillEnabled(),
+        JoinSubPartitionConfig::FromQueryConfig(queryConfig));
 }
 
 LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()
@@ -233,6 +233,7 @@ int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *vecBatch)
 
     lookupJoinOperator->AddInput(newInputVecBatch);
     SetStatus(lookupJoinOperator->GetStatus());
+    UpdateSpilledMetrics(lookupJoinOperator);
     return 0;
 }
 
@@ -240,12 +241,19 @@ int32_t LookupJoinWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     int32_t status = lookupJoinOperator->GetOutput(outputVecBatch);
     SetStatus(lookupJoinOperator->GetStatus());
+    // Driver snapshots stats before Close(); copy after each GetOutput.
+    UpdateSpilledMetrics(lookupJoinOperator);
     return status;
 }
 
 BlockingReason LookupJoinWithExprOperator::IsBlocked(ContinueFuture* future)
 {
     return lookupJoinOperator->IsBlocked(future);
+}
+
+bool LookupJoinWithExprOperator::needsInput()
+{
+    return lookupJoinOperator->needsInput();
 }
 
 OmniStatus LookupJoinWithExprOperator::Close()
