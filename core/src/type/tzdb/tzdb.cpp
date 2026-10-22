@@ -17,6 +17,7 @@
 #include <limits.h>
 #include <fstream>
 #include <fmt/format.h>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -152,11 +153,11 @@ namespace {
 
 [[nodiscard]] std::string __canonical_path(const std::string &__p)
 {
-    char __resolved[PATH_MAX];
-    if (realpath(__p.c_str(), __resolved) == nullptr) {
+    std::unique_ptr<char, decltype(&std::free)> __resolved(canonicalize_file_name(__p.c_str()), &std::free);
+    if (!__resolved) {
         std::__throw_runtime_error("tzdb: realpath failed");
     }
-    return std::string(__resolved);
+    return std::string(__resolved.get());
 }
 
 [[nodiscard]] std::string __relative_under_zoneinfo(const std::string &__absolute)
