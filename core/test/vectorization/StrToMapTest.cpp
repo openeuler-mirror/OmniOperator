@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -26,7 +27,8 @@ public:
         const std::vector<std::string> &inputStrs,
         const std::string &entryDelimiter,
         const std::string &kvDelimiter,
-        const std::vector<std::vector<std::pair<std::string, std::optional<std::string>>>> &expected)
+        const std::vector<std::vector<std::pair<std::string, std::optional<std::string>>>> &expected,
+        std::optional<bool> isLastWin = std::nullopt)
     {
         int32_t rowSize = static_cast<int32_t>(inputStrs.size());
 
@@ -43,9 +45,11 @@ public:
         std::unique_ptr<ConstVector<std::string_view>> kvDelimVec(
             new ConstVector<std::string_view>(std::string_view(kvDelimiter), OMNI_VARCHAR, rowSize));
 
-        auto signature = std::make_shared<codegen::FunctionSignature>("str_to_map",
-            std::vector<DataTypeId>{OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR},
-            OMNI_MAP);
+        std::vector<DataTypeId> argumentTypes = {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR};
+        if (isLastWin.has_value()) {
+            argumentTypes.push_back(OMNI_BOOLEAN);
+        }
+        auto signature = std::make_shared<codegen::FunctionSignature>("str_to_map", argumentTypes, OMNI_MAP);
         auto function = VectorFunction::Find(signature);
         ASSERT_NE(function, nullptr);
 
@@ -54,12 +58,24 @@ public:
 
         ExecutionContext context;
         context.SetResultRowSize(rowSize);
+        // Nested expression evaluation can leave unrelated operands below this call.
+        auto outerOperand = std::make_unique<ConstVector<bool>>(false, OMNI_BOOLEAN, rowSize);
         std::stack<BaseVector *> args;
+        args.push(outerOperand.get());
         args.push(inputVec);
         args.push(entryDelimVec.get());
         args.push(kvDelimVec.get());
+        std::unique_ptr<ConstVector<bool>> policyVec;
+        if (isLastWin.has_value()) {
+            policyVec = std::make_unique<ConstVector<bool>>(isLastWin.value(), OMNI_BOOLEAN, rowSize);
+            // Apply takes ownership of the added policy operand.
+            args.push(policyVec.release());
+        }
 
         function->Apply(args, mapType, resultVector, &context);
+        std::unique_ptr<BaseVector> resultGuard(resultVector);
+        ASSERT_EQ(args.size(), 1);
+        ASSERT_EQ(args.top(), outerOperand.get());
         ASSERT_NE(resultVector, nullptr);
 
         auto *mapVec = dynamic_cast<MapVector *>(resultVector);
@@ -92,7 +108,6 @@ public:
             }
         }
 
-        delete resultVector;
     }
 };
 
@@ -177,6 +192,71 @@ TEST(StrToMapTest, DuplicateKeysThrows)
             ",", ":",
             {{{"a", "1"}, {"b", "2"}, {"a", "3"}}}),
         omniruntime::exception::OmniException);
+}
+
+TEST(StrToMapTest, ExplicitExceptionPolicyThrows)
+{
+    ASSERT_THROW(
+        StrToMapTestHelper::ExecuteAndValidate(
+            {"a:1,b:2,a:3"},
+            ",", ":",
+            {{{"a", "1"}, {"b", "2"}}},
+            false),
+        omniruntime::exception::OmniException);
+}
+
+TEST(StrToMapTest, LastWinOverwritesValueAndPreservesKeyOrder)
+{
+    StrToMapTestHelper::ExecuteAndValidate(
+        {"a:1,b:2,a:3"},
+        ",", ":",
+        {{{"a", "3"}, {"b", "2"}}},
+        true);
+}
+
+TEST(StrToMapTest, LastWinOverwritesMultipleTimes)
+{
+    StrToMapTestHelper::ExecuteAndValidate(
+        {"a:1,a:2,a:3"},
+        ",", ":",
+        {{{"a", "3"}}},
+        true);
+}
+
+TEST(StrToMapTest, LastWinNullOverwritesValue)
+{
+    StrToMapTestHelper::ExecuteAndValidate(
+        {"a:1,a"},
+        ",", ":",
+        {{{"a", std::nullopt}}},
+        true);
+}
+
+TEST(StrToMapTest, LastWinValueOverwritesNull)
+{
+    StrToMapTestHelper::ExecuteAndValidate(
+        {"a,a:2"},
+        ",", ":",
+        {{{"a", "2"}}},
+        true);
+}
+
+TEST(StrToMapTest, LastWinHandlesEmptyKey)
+{
+    StrToMapTestHelper::ExecuteAndValidate(
+        {":1,:2"},
+        ",", ":",
+        {{{"", "2"}}},
+        true);
+}
+
+TEST(StrToMapTest, LastWinKeepsRowsIndependent)
+{
+    StrToMapTestHelper::ExecuteAndValidate(
+        {"a:1,a:2", "a:3,b:4,a:5"},
+        ",", ":",
+        {{{"a", "2"}}, {{"a", "5"}, {"b", "4"}}},
+        true);
 }
 
 TEST(StrToMapTest, EmptyEntryDelimiterThrows)

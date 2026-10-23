@@ -39,7 +39,10 @@ void RegisterMapFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunction("map_entries", {OMNI_MAP}, OMNI_ARRAY,
         std::make_shared<MapEntriesFunction>());
     VectorFunction::RegisterVectorFunction("str_to_map", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_MAP,
-        std::make_shared<StrToMapFunction>());
+        std::make_shared<StrToMapFunction>(false));
+    VectorFunction::RegisterVectorFunction("str_to_map",
+        {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_BOOLEAN}, OMNI_MAP,
+        std::make_shared<StrToMapFunction>(true));
 
     auto mapFactory = [](const std::string&, const std::vector<DataTypeId>&,
                          const config::QueryConfig&) -> std::shared_ptr<VectorFunction> {

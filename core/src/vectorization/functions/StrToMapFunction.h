@@ -9,7 +9,7 @@
 #include <vector>
 #include <string>
 #include <string_view>
-#include <unordered_set>
+#include <unordered_map>
 #include <memory>
 
 namespace omniruntime::vectorization {
@@ -19,11 +19,27 @@ using namespace omniruntime::op;
 
 class StrToMapFunction final : public VectorFunction {
 public:
-    explicit StrToMapFunction() {}
+    explicit StrToMapFunction(bool hasPolicyArgument = false) : hasPolicyArgument_(hasPolicyArgument) {}
 
     void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         ExecutionContext *context) const override
     {
+        size_t argumentCount = hasPolicyArgument_ ? 4 : 3;
+        if (args.size() < argumentCount) {
+            OMNI_THROW("StrToMap Error:", "Insufficient arguments.");
+        }
+
+        bool isLastWin = false;
+        if (hasPolicyArgument_) {
+            std::unique_ptr<BaseVector> policyArg(args.top());
+            args.pop();
+            auto *policyConst = dynamic_cast<ConstVector<bool> *>(policyArg.get());
+            if (policyConst == nullptr || policyArg->IsNull(0)) {
+                OMNI_THROW("StrToMap Error:", "map key dedup policy should be a non-null constant boolean.");
+            }
+            isLastWin = policyConst->GetConstValue();
+        }
+
         auto kvDelimiterArg = args.top();
         args.pop();
         auto entryDelimiterArg = args.top();
@@ -59,19 +75,19 @@ public:
             rowNulls[row] = false;
 
             std::string_view inputStr = GetStringValue(inputArg, row);
-            std::unordered_set<std::string_view> keySet;
+            std::unordered_map<std::string_view, size_t> keyToValueIndex;
             size_t pos = 0;
             auto nextEntryPos = inputStr.find(entryDelimiter, pos);
 
             while (nextEntryPos != std::string_view::npos) {
                 ProcessEntry(std::string_view(inputStr.data() + pos, nextEntryPos - pos),
-                    kvDelimiter, keySet, allKeys, allValues, valueNulls);
+                    kvDelimiter, isLastWin, keyToValueIndex, allKeys, allValues, valueNulls);
                 pos = nextEntryPos + 1;
                 nextEntryPos = inputStr.find(entryDelimiter, pos);
             }
 
             ProcessEntry(std::string_view(inputStr.data() + pos, inputStr.size() - pos),
-                kvDelimiter, keySet, allKeys, allValues, valueNulls);
+                kvDelimiter, isLastWin, keyToValueIndex, allKeys, allValues, valueNulls);
 
             offsets.push_back(static_cast<int32_t>(allKeys.size()));
         }
@@ -108,6 +124,8 @@ public:
     }
 
 private:
+    bool hasPolicyArgument_;
+
     std::string_view GetStringValue(BaseVector *vector, int32_t row) const
     {
         switch (vector->GetEncoding()) {
@@ -128,34 +146,33 @@ private:
         }
     }
 
-    void ProcessEntry(std::string_view entry, std::string_view kvDelimiter,
-        std::unordered_set<std::string_view> &keySet,
+    void ProcessEntry(std::string_view entry, std::string_view kvDelimiter, bool isLastWin,
+        std::unordered_map<std::string_view, size_t> &keyToValueIndex,
         std::vector<std::string_view> &allKeys,
         std::vector<std::string_view> &allValues,
         std::vector<bool> &valueNulls) const
     {
         auto delimiterPos = entry.find(kvDelimiter, 0);
-        if (delimiterPos == std::string_view::npos) {
-            auto insertResult = keySet.insert(entry);
-            if (!insertResult.second) {
+        bool valueIsNull = delimiterPos == std::string_view::npos;
+        std::string_view key = valueIsNull ? entry : std::string_view(entry.data(), delimiterPos);
+        std::string_view value = valueIsNull
+            ? std::string_view()
+            : std::string_view(entry.data() + delimiterPos + 1, entry.size() - delimiterPos - 1);
+
+        auto keyIter = keyToValueIndex.find(key);
+        if (keyIter != keyToValueIndex.end()) {
+            if (!isLastWin) {
                 OMNI_THROW("StrToMap Error:", "Duplicate keys are not allowed.");
             }
-            allKeys.push_back(entry);
-            allValues.push_back(std::string_view());
-            valueNulls.push_back(true);
+            allValues[keyIter->second] = value;
+            valueNulls[keyIter->second] = valueIsNull;
             return;
         }
 
-        std::string_view key(entry.data(), delimiterPos);
-        auto insertResult = keySet.insert(key);
-        if (!insertResult.second) {
-            OMNI_THROW("StrToMap Error:", "Duplicate keys are not allowed.");
-        }
-
-        std::string_view value(entry.data() + delimiterPos + 1, entry.size() - delimiterPos - 1);
+        keyToValueIndex.emplace(key, allKeys.size());
         allKeys.push_back(key);
         allValues.push_back(value);
-        valueNulls.push_back(false);
+        valueNulls.push_back(valueIsNull);
     }
 };
 }
