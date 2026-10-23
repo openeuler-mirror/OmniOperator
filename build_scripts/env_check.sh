@@ -31,6 +31,9 @@ print_help() {
     --disable-cpuchecker               = Disable CPU checker
     --enable-dt                        = Enable DT checker
     --exclude-test                     = Exclude Test Source
+    --enable-sve                       = Enable SVE (default: NEON)
+    --exclude-batch-codegen            = Exclude batch codegen functions (default: OFF)
+    --exclude-duplicate-codegen        = Exclude duplicate codegen functions (default: OFF)
   "
 }
 

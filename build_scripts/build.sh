@@ -82,13 +82,18 @@ else
       elif [ "$i" == '--enable-sve' ]; then
           echo "-- ENABLE SVE"
           OPTIONS+=" -DENABLE_SVE=ON"
+      elif [ "$i" == '--exclude-batch-codegen' ]; then
+          echo "-- Exclude Batch Functions"
+          OPTIONS+=" -DEXCLUDE_BATCH_FUNCTIONS=ON"
+      elif [ "$i" == '--exclude-duplicate-codegen' ]; then
+          echo "-- Exclude Duplicate Codegen Functions"
+          OPTIONS+=" -DEXCLUDE_DUPLICATE_CODEGEN_FUNCTIONS=ON"
       else
           exit_with_message_and_print_help "ERROR: Invalid option: $i"
       fi
     done
   fi
 fi
-
 print_gcc_lib
 
 # need to delete the CMakeCache.txt to refresh the options
