@@ -166,6 +166,20 @@ setup_dependencies() {
   fi
 }
 
+check_ninja() {
+  if ! command -v ninja &> /dev/null; then
+    echo "ERROR: Ninja is required for the OMNI build."
+    exit 1
+  fi
+  if ! command -v ld.lld &> /dev/null && ! command -v lld &> /dev/null; then
+    echo "ERROR: LLD is required for the OMNI build."
+    exit 1
+  fi
+  if ! command -v ccache &> /dev/null; then
+    echo "WARN: ccache is not installed; compilation caching is disabled."
+  fi
+}
+
 # package build_script/build.sh functionality here
 build() {
   local workspace=$(pwd)

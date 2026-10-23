@@ -18,6 +18,7 @@ fi
 # check if required env vars are set
 check_java_home
 check_omni_home
+check_ninja
 
 ### main build begins here ###
 echo "Start building modules using $1"

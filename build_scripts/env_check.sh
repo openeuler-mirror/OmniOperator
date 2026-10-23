@@ -71,6 +71,7 @@ check_omni_home() {
 check_set_prerequisites() {
   check_java_home
   check_omni_home
+  check_ninja
 
   echo "OMNI_HOME = $OMNI_HOME"
   LIB_HOME=$OMNI_HOME/lib
@@ -87,6 +88,20 @@ exit_with_message_and_print_help()
    echo "$1"
    print_help
    exit 1
+}
+
+check_ninja() {
+  if ! command -v ninja &> /dev/null; then
+    echo "ERROR: Ninja is required for the OMNI build."
+    exit 1
+  fi
+  if ! command -v ld.lld &> /dev/null && ! command -v lld &> /dev/null; then
+    echo "ERROR: LLD is required for the OMNI build."
+    exit 1
+  fi
+  if ! command -v ccache &> /dev/null; then
+    echo "WARN: ccache is not installed; compilation caching is disabled."
+  fi
 }
 
 exit_with_message()
