@@ -14,11 +14,11 @@ namespace simd {
 #define OMNI_NEON (1LL << 28)
 #define OMNI_SVE_256 (1LL << 19)
 
-#ifdef COVERAGE
-#define OMNI_TARGET OMNI_NEON
-#else
+#ifdef ENABLE_SVE
 #define OMNI_TARGET OMNI_SVE_256
-#endif
+#else
+#define OMNI_TARGET OMNI_NEON
+#endif //ENABLE_SVE
 } // namespace omni
 
 #endif // OMNI_TARGETS_H_

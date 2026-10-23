@@ -41,37 +41,37 @@ std::vector<BaseVector *> GetConstantInputs(const std::vector<Expr *> &arguments
             switch (typeId) {
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    constantInputs.push_back(new ConstVector(literalExpr->intVal, typeId));
+                    constantInputs.push_back(new ConstVector<int32_t>(literalExpr->intVal, typeId));
                     break;
                 case OMNI_SHORT:
-                    constantInputs.push_back(new ConstVector(literalExpr->shortVal, typeId));
+                    constantInputs.push_back(new ConstVector<int16_t>(literalExpr->shortVal, typeId));
                     break;
                 case OMNI_BYTE:
-                    constantInputs.push_back(new ConstVector(literalExpr->byteVal, typeId));
+                    constantInputs.push_back(new ConstVector<int8_t>(literalExpr->byteVal, typeId));
                     break;
                 case OMNI_LONG:
                 case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
-                    constantInputs.push_back(new ConstVector(literalExpr->longVal, typeId));
+                    constantInputs.push_back(new ConstVector<int64_t>(literalExpr->longVal, typeId));
                     break;
                 case OMNI_DOUBLE:
-                    constantInputs.push_back(new ConstVector(literalExpr->doubleVal, typeId));
+                    constantInputs.push_back(new ConstVector<double>(literalExpr->doubleVal, typeId));
                     break;
                 case OMNI_FLOAT:
-                    constantInputs.push_back(new ConstVector(literalExpr->floatVal, typeId));
+                    constantInputs.push_back(new ConstVector<float>(literalExpr->floatVal, typeId));
                     break;
                 case OMNI_BOOLEAN:
-                    constantInputs.push_back(new ConstVector(literalExpr->boolVal, typeId));
+                    constantInputs.push_back(new ConstVector<bool>(literalExpr->boolVal, typeId));
                     break;
-                case OMNI_DECIMAL128: {
-                    Decimal128 decimal128(*literalExpr->stringVal);
-                    constantInputs.push_back(new ConstVector<Decimal128>(decimal128, typeId));
+                case OMNI_DECIMAL128:
+                    constantInputs.push_back(new ConstVector<Decimal128>(
+                        Decimal128(std::string_view(*literalExpr->stringVal)), typeId));
                     break;
-                }
                 case OMNI_VARCHAR:
                 case OMNI_CHAR:
                 case OMNI_VARBINARY:
-                    constantInputs.push_back(new ConstVector(std::string_view(*literalExpr->stringVal), typeId));
+                    constantInputs.push_back(
+                        new ConstVector<std::string_view>(std::string_view(*literalExpr->stringVal), typeId));
                     break;
                 default: LogError("Do not support such vector type %d", typeId);
             }
