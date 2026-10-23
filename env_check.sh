@@ -183,7 +183,8 @@ check_ninja() {
 # package build_script/build.sh functionality here
 build() {
   local workspace=$(pwd)
-  export OMNI_COMPILER_THREAD_COUNT=2
+  export OMNI_COMPILER_THREAD_COUNT=${OMNI_COMPILER_THREAD_COUNT:-2}
+  echo "OMNI_COMPILER_THREAD_COUNT=${OMNI_COMPILER_THREAD_COUNT}"
   sh $workspace/build_scripts/build.sh "$@"
   cd $workspace
 }
