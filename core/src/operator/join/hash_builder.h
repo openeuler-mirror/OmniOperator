@@ -6,12 +6,14 @@
 #define __HASH_BUILDER_H__
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "plannode/planNode.h"
 #include "operator/operator_factory.h"
 #include "operator/operator.h"
 #include "util/config/QueryConfig.h"
+#include "operator/config/operator_config.h"
 #include "join_hash_table_variants.h"
 #include "common_join.h"
 #include "join_sub_partitioner.h"
@@ -52,8 +54,8 @@ public:
         const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(JoinType joinType, BuildSide buildSide,
         const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
-    /// when Join run without spill, we only need one HashBuilderOperator
-    /// But when Join run with spill, we need muti HashBuilderOperator that every join sub partition o
+    /// One hash table slot. Spill still ingests into this slot until memory NeedSpill;
+    /// restore also rebuilds into slot 0.
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(
         std::shared_ptr<const HashJoinNode> planNode, int32_t operatorCount = 1);
 
@@ -72,8 +74,7 @@ public:
     void InjectCachedVariants(HashTableVariants* cachedVariants, const std::string& broadcastHashTableId = "");
 
     omniruntime::op::Operator *CreateOperator() override;
-    void SetJoinSpillSubPartitionPolicy(bool joinSpillEnabled, uint64_t maxSpillRunRows,
-        JoinSubPartitionConfig joinSubPartCfg);
+    void SetJoinSpillPolicy(bool joinSpillEnabled, JoinSubPartitionConfig joinSubPartCfg);
     void SetJoinSpillState(std::shared_ptr<JoinSpillState> joinSpillState);
     void SetBroadcastParallelBuildPolicy(BroadcastParallelBuildPolicy policy)
     {
@@ -92,9 +93,21 @@ public:
         return broadcastParallelBuildPolicy_;
     }
 
+    void SetSpillConfig(std::shared_ptr<SparkSpillConfig> spillConfig);
+    void SetJoinSpillMemThresholdForTest(int64_t bytes);
+    const std::vector<int32_t> &GetBuildHashCols() const
+    {
+        return buildHashCols;
+    }
+
     std::shared_ptr<JoinSpillState> GetJoinSpillState() const
     {
         return joinSpillState_;
+    }
+
+    const DataTypes &GetBuildTypes() const
+    {
+        return buildTypes;
     }
 
     HashTableVariants *GetHashTablesVariants()
@@ -146,7 +159,6 @@ private:
     HashTableVariants *hashTablesVariants;
     std::atomic<int32_t> operatorIndex;
     bool joinSpillEnabled_ = false;
-    uint64_t joinMaxSpillRunRows_ = 0;
     JoinSubPartitionConfig joinSubPartCfg_;
     std::shared_ptr<JoinSpillState> joinSpillState_;
     BroadcastParallelBuildPolicy broadcastParallelBuildPolicy_;
@@ -157,6 +169,10 @@ private:
     bool ownsVariants_ = true; // false when variants are owned by cache
     bool cachePinned_ = false; // true when cache owns this factory after publish
     bool dynamicFilterPushdownEnabled_ = false;
+    std::shared_ptr<SparkSpillConfig> spillConfig_;
+    std::optional<int64_t> joinSpillMemThresholdForTest_;
+
+    void SyncSpillBindingsToState();
 
     template <class RowRefListType>
     HashTableVariants *InitVariant(int32_t buildHashColsCount, int32_t operatorCount, JoinType joinType,
@@ -169,20 +185,21 @@ private:
 class HashBuilderOperator : public Operator {
 public:
     HashBuilderOperator(const DataTypes &buildTypes, HashTableVariants *hashTables, int32_t partitionIndex,
-        bool joinSpillEnabled, uint64_t joinMaxSpillRunRows, JoinSubPartitionConfig joinSubPartCfg,
-        std::vector<int32_t> buildHashCols, JoinSpillState *joinSpillState,
-        bool prebuilt = false, std::string broadcastHashTableId = "",
-        HashBuilderOperatorFactory* ownerFactory = nullptr,
-        BroadcastParallelBuildPolicy broadcastParallelBuildPolicy = {},
-        bool dynamicFilterPushdownEnabled = false);
+        bool joinSpillEnabled, JoinSubPartitionConfig joinSubPartCfg, std::vector<int32_t> buildHashCols,
+        JoinSpillState *joinSpillState, SparkSpillConfig *spillConfig,
+        std::optional<int64_t> spillMemThresholdOverride, bool prebuilt, std::string broadcastHashTableId,
+        HashBuilderOperatorFactory *ownerFactory, BroadcastParallelBuildPolicy broadcastParallelBuildPolicy,
+        bool dynamicFilterPushdownEnabled);
 
-    ~HashBuilderOperator() = default;
+    ~HashBuilderOperator();
 
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
 
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
+
+    BlockingReason IsBlocked(ContinueFuture *future) override;
 
     // for test
     DataTypes &GetBuildTypes()
@@ -207,33 +224,53 @@ public:
         return std::visit([&](auto &&arg) -> uint32_t { return arg.GetHashTableCount(); }, *hashTablesVariants);
     }
 
+    void KeepJoinSpillState(std::shared_ptr<JoinSpillState> state);
+
+    bool TryProduceNextRestoreRound();
+    /// Spill the probe-held build table and publish spilled partition ids.
+    void FlushHeldBuildTable();
+
+    /// True if the last restore open chose BuildHashTableAdaptive (forecast >= threshold).
+    bool LastRestoreUsedAdaptiveOpen() const
+    {
+        return lastRestoreUsedAdaptiveOpen_;
+    }
+
 private:
-    /// True when join spill sub-partition layout applies (computed once in ctor). Spill/replay still require
-    /// \c joinSpillState_ and (for spill) row count >= \c joinMaxSpillRunRows_ at the call site.
-    bool UseJoinSubPartitioning() const;
     uint32_t ComputeParallelBuildThreads(uint32_t rowCount, uint64_t estimatedBuildBytes) const;
-    bool AddSubPartitionedInput(omniruntime::vec::VectorBatch *vecBatch);
+    void AddLatchedInput(omniruntime::vec::VectorBatch *vecBatch);
+    void MaybeTriggerSpill();
+    void MaybeSpillBeforeOpenSlot0();
+    void SpillAndClearResidentBuild();
+    void TryPublishEmptyTableHandoff();
+    int32_t DriveHandoffRestore();
+    void PrepareAndBuildSlot0();
+    void PrepareAndBuildSlot0Adaptive();
+    void PrepareAndBuildSlot0ForRestore();
+    void ResetSlot0();
+    uint32_t DistinctCountSlot0() const;
+    uint32_t ResidentRowCountSlot0() const;
 
     DataTypes buildTypes;
     int32_t partitionIndex;
     HashTableVariants *hashTablesVariants;
     bool joinSpillEnabled_ = false;
-    uint64_t joinMaxSpillRunRows_ = 0;
-    uint64_t cumulativeBuildRows_ = 0;
-    bool joinSpillBoundaryLogged_ = false;
-    bool joinSubPartitionLogged_ = false;
+    bool buildSpillTriggered_ = false;
+    bool restoreDriving_ = false;
+    bool lastRestoreUsedAdaptiveOpen_ = false;
     JoinSubPartitionConfig joinSubPartCfg_;
-    /// Cached at construction; matches the former \c UseJoinSubPartitioning() predicate (no spill-state / batch).
-    const bool useJoinSubPartitioning_;
     BroadcastParallelBuildPolicy broadcastParallelBuildPolicy_;
     std::vector<int32_t> buildHashCols_;
     JoinSpillState *joinSpillState_ = nullptr;
+    std::shared_ptr<JoinSpillState> joinSpillStateKeep_;
+    SparkSpillConfig *spillConfig_ = nullptr;
+    std::optional<int64_t> spillMemThresholdOverride_;
 
     // BHJ cache support: skip build and publish when pre-built from cache.
     const bool prebuilt_ = false;
     const std::string broadcastHashTableId_;
     // Back-pointer to factory so we can release its ownership after cache publish.
-    HashBuilderOperatorFactory* ownerFactory_ = nullptr;
+    HashBuilderOperatorFactory *ownerFactory_ = nullptr;
     const bool dynamicFilterPushdownEnabled_ = false;
 };
 

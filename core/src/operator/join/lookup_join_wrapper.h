@@ -38,12 +38,9 @@ public:
     ~LookupJoinWrapperOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
+    BlockingReason IsBlocked(ContinueFuture *future) override;
+    bool needsInput() override;
     OmniStatus Close() override;
-
-    BlockingReason IsBlocked(ContinueFuture *future) override
-    {
-        return lookupJoinWithExprOperator->IsBlocked(future);
-    }
 
     bool hasPendingDynamicFilters() const override
     {

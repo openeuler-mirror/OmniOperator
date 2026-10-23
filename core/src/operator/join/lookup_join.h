@@ -6,6 +6,7 @@
 #define __LOOKUP_JOIN_H__
 
 #include <memory>
+#include <optional>
 #include "plannode/planNode.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
@@ -20,6 +21,7 @@
 namespace omniruntime {
 namespace op {
 class JoinSpillState;
+class SpillWriter;
 
 class LookupJoinOutputBuilder {
 public:
@@ -38,6 +40,12 @@ public:
     void ConstructBuildColumns(VectorBatch *vectorBatch, int32_t rowCount);
     template<bool isMatched> void AppendExistenceRow(int32_t probePosition);
     void ConstructExistenceColumn(VectorBatch *vectorBatch);
+    void ApplyOutputColumnOrder(VectorBatch *output, BuildSide buildSide);
+
+    ALWAYS_INLINE int32_t GetMaxRowCount() const
+    {
+        return maxRowCount;
+    }
 
     ALWAYS_INLINE bool IsFull()
     {
@@ -171,9 +179,9 @@ public:
         HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig &queryConfig);
     Operator *CreateOperator() override;
 
-    void SetJoinSpillPolicy(bool joinSpillEnabled, uint64_t maxSpillRunRows,
-        JoinSubPartitionConfig joinSubPartCfg = {});
+    void SetJoinSpillPolicy(bool joinSpillEnabled, JoinSubPartitionConfig joinSubPartCfg = {});
     void SetJoinSpillState(std::shared_ptr<JoinSpillState> joinSpillState);
+    void SetRetainBroadcastHashTable(bool retain);
 
 private:
     void CommonInitActions(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
@@ -195,7 +203,7 @@ private:
     // this is for lookup join with expression operator when join key and join filter both are expressions
     int32_t originalProbeColsCount;
     bool joinSpillEnabled_ = false;
-    uint64_t joinMaxSpillRunRows_ = 0;
+    bool retainBroadcastHashTable_ = false;
     JoinSubPartitionConfig joinSubPartCfg_;
     std::shared_ptr<JoinSpillState> joinSpillState_;
 };
@@ -207,16 +215,15 @@ public:
         std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
         SimpleFilter *simpleFilter, int32_t originalProbeColsCount,
         int32_t outputRowSize, bool isShuffleExchangeBuildPlan, bool joinSpillEnabled = false,
-        uint64_t joinMaxSpillRunRows = 0, JoinSubPartitionConfig joinSubPartCfg = {},
-        JoinSpillState *joinSpillState = nullptr);
+        JoinSubPartitionConfig joinSubPartCfg = {}, JoinSpillState *joinSpillState = nullptr);
 
     LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
                        std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes,
                        std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
                        SimpleFilter *simpleFilter, int32_t originalProbeColsCount,
                        int32_t outputRowSize, bool isShuffleExchangeBuildPlan, std::vector<int32_t> &outputList,
-                       bool joinSpillEnabled = false, uint64_t joinMaxSpillRunRows = 0,
-                       JoinSubPartitionConfig joinSubPartCfg = {}, JoinSpillState *joinSpillState = nullptr);
+                       bool joinSpillEnabled = false, JoinSubPartitionConfig joinSubPartCfg = {},
+                       JoinSpillState *joinSpillState = nullptr);
     ~LookupJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
@@ -237,6 +244,31 @@ public:
     {
         dynamicFiltersAppliedCount_ = appliedCount;
     }
+
+    bool IsRestoreRoundActive() const
+    {
+        return probeRestoreActive_;
+    }
+
+    bool UsesHandoffRestorePath() const;
+    bool UsedPathARestore() const;
+    uint64_t ProbeSpilledRows() const
+    {
+        return probeSpilledRows_;
+    }
+    bool NeedsUnvisitedBuildOutput() const;
+    void FinishFullTableProbeAfterOuter();
+    void ReleaseSharedBuildState();
+    void KeepJoinSpillState(std::shared_ptr<JoinSpillState> state);
+    void SetRetainBroadcastHashTable(bool retain);
+
+private:
+    void ReleaseThisJoinTableIfBothSidesDone();
+    /// After Complete the build driver may already have deleted hashTables.
+    bool HandoffComplete() const;
+    /// A held table with no resident rows has nothing to spill.
+    bool HeldTableEmpty() const;
+    void RemoveProbeSpillFiles(const std::vector<std::string> &openWriterPaths);
 
 private:
     void InitFirst();
@@ -273,15 +305,26 @@ private:
                            uint32_t buildBatchIdx, ExecutionContext *contextPtr);
     void PrepareCurrentProbe();
     void PrepareSerializers();
-    bool TrySpillCurrentProbeInput(omniruntime::vec::VectorBatch *vecBatch);
-    bool LoadNextSpilledProbeInput();
-    bool HasPendingSpilledProbeInput() const;
+    bool TrySpillPathAProbeInput(omniruntime::vec::VectorBatch *vecBatch);
+    void ClosePathASpillWriters();
+    bool LoadNextRestoreProbeInput();
+    bool HasPendingRestoreProbeInput() const;
+    void ApplyProbeHandoffIfReady();
+    void MaybeFinishPathAIngest();
+    void FinishFullTableProbeOnce();
+    void MaybeFinishAfterProbeDrained();
+    void MaybeReleaseBuildStateAfterProbe();
+    void BeginRestoreUnvisitedEmit();
+    bool EmitRestoreUnvisitedBuildBatch(VectorBatch **outputVecBatch);
+    void EnqueueCurrentOutput();
+    bool DrainPendingOutput(VectorBatch **outputVecBatch);
+    void FinishRestoreRound();
+    void FinishRestoreRoundAfterHeldFlush();
+    bool MaybeTriggerHeldTableSpill(const char *site);
+    void RefreshHasMoreProbeInput();
     void PopulateProbeHashes();
     void PopulateProbeNulls();
     void ProcessProbe();
-    /// True when join spill sub-partitioning layout applies (computed once in ctor). Spill/replay still require
-    /// \c joinSpillState_ and (for spill) row count >= \c joinMaxSpillRunRows_ at the call site.
-    bool UseJoinSubPartitioning() const;
     uint32_t GetProbePartition(int32_t probePosition) const;
     ALWAYS_INLINE int32_t ProbePhysicalRow(int32_t probePosition) const
     {
@@ -357,23 +400,40 @@ private:
     size_t probeFilterColsSize = 0;
     size_t buildFilterColsSize = 0;
     bool joinSpillEnabled_ = false;
-    uint64_t joinMaxSpillRunRows_ = 0;
+    bool retainBroadcastHashTable_ = false;
     JoinSubPartitionConfig joinSubPartCfg_;
-    /// Cached at construction; matches the former \c UseJoinSubPartitioning() predicate (no spill-state / batch).
-    const bool useJoinSubPartitioning_;
     JoinSpillState *joinSpillState_ = nullptr;
+    std::shared_ptr<JoinSpillState> joinSpillStateKeep_;
+    /// Initialized from NeedsUnvisitedBuildOutput() after joinType/buildSide.
+    /// Cleared when outer / restore-unvisited for this join is done. Guard
+    /// MaybeRelease with this bit, not the type predicate.
+    bool unvisitedBuildOutputPending_ = false;
     struct ProbeSpillFile {
         uint64_t runId;
         uint32_t subPartition;
         SpillFileInfo file;
     };
     std::vector<std::vector<ProbeSpillFile>> probeSpillFiles_;
-    uint32_t probeSpillReadSubPartition_ = 0;
+    std::vector<std::unique_ptr<SpillWriter>> pathAWriters_;
+    std::unique_ptr<SpillReader> probeRestoreReader_;
+    omniruntime::vec::VectorBatch *pendingRestoreProbeBatch_ = nullptr;
+    std::optional<uint64_t> pathARunId_;
+    std::vector<uint32_t> pathASpillPartitionIds_;
+    bool probePathAActive_ = false;
+    bool probeRestoreActive_ = false;
+    bool restoreRoundHasProbed_ = false;
+    uint32_t probeRestorePartitionId_ = 0;
+    uint64_t lastSeenHandoffGeneration_ = 0;
     size_t probeSpillReadFileIndex_ = 0;
     uint64_t probeSpilledRows_ = 0;
     bool dynamicFiltersPushed_ = false;
     size_t dynamicFiltersAppliedCount_ = 0;
     bool canReplaceWithDynamicFilter_ = false;
+    bool restoreUnvisitedEmitPending_ = false;
+    size_t restoreUnvisitedEmitNext_ = 0;
+    std::vector<std::pair<uint32_t, uint32_t>> restoreUnvisitedEmitAddrs_;
+    bool probeFullTableFinishedMarked_ = false;
+    std::vector<omniruntime::vec::VectorBatch *> pendingProbeOutputs_;
 };
 } // end of op
 } // end of omniruntime

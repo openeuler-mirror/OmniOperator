@@ -7,6 +7,9 @@
 #include "type/data_type.h"
 #include "util/debug.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace omniruntime {
 namespace op {
 static constexpr uint32_t ARRAY_THRESHOLD = 8;
@@ -88,6 +91,21 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
 template <typename KeyType, typename RowRefListType>
 JoinHashTableVariants<KeyType, RowRefListType>::~JoinHashTableVariants()
 {
+    ReleaseBuildState();
+}
+
+template <typename KeyType, typename RowRefListType>
+void JoinHashTableVariants<KeyType, RowRefListType>::ReleaseBuildState()
+{
+    if (buildStateReleased_) {
+        return;
+    }
+    for (auto &hashTable : hashTables) {
+        hashTable.reset();
+    }
+    for (auto &arrayTable : arrayTables) {
+        arrayTable.reset();
+    }
     for (auto &column : columns) {
         if (column != nullptr) {
             for (auto colIdx = 0; colIdx < buildTypes->GetSize(); ++colIdx) {
@@ -97,12 +115,46 @@ JoinHashTableVariants<KeyType, RowRefListType>::~JoinHashTableVariants()
             column = nullptr;
         }
     }
-    columns.clear();
-
     for (auto &inputVecBatch : inputVecBatches) {
         VectorHelper::FreeVecBatches(inputVecBatch);
+        inputVecBatch.clear();
     }
-    inputVecBatches.clear();
+    for (auto &ctx : executionContexts) {
+        ctx.reset();
+    }
+    for (auto &rows : totalRowCount) {
+        rows = 0;
+    }
+    hashTableSize.store(0);
+    buildStateReleased_ = true;
+}
+
+template <typename KeyType, typename RowRefListType>
+void JoinHashTableVariants<KeyType, RowRefListType>::ResetPartition(int32_t partitionIndex)
+{
+    if (buildStateReleased_ || partitionIndex < 0 || static_cast<uint32_t>(partitionIndex) >= hashTableCount) {
+        return;
+    }
+    if (columns[partitionIndex] != nullptr) {
+        for (auto colIdx = 0; colIdx < buildTypes->GetSize(); ++colIdx) {
+            delete[] columns[partitionIndex][colIdx];
+        }
+        delete[] columns[partitionIndex];
+        columns[partitionIndex] = nullptr;
+    }
+    VectorHelper::FreeVecBatches(inputVecBatches[partitionIndex]);
+    inputVecBatches[partitionIndex].clear();
+    totalRowCount[partitionIndex] = 0;
+    if (hashTables[partitionIndex] != nullptr || arrayTables[partitionIndex] != nullptr) {
+        if (hashTableSize > 0) {
+            hashTableSize--;
+        }
+    }
+    hashTables[partitionIndex].reset();
+    arrayTables[partitionIndex].reset();
+    hashTableTypes[partitionIndex] = HashTableImplementationType::NORMAL_HASH_TABLE;
+    executionContexts[partitionIndex] = std::make_unique<ExecutionContext>();
+    visitedCounts = 0;
 }
 
 template <typename T>
@@ -1018,6 +1070,9 @@ bool JoinHashTableVariants<KeyType, RowRefListType>::IsArrayTableEligible(uint32
 template <typename KeyType, typename RowRefListType>
 void JoinHashTableVariants<KeyType, RowRefListType>::BuildHashTable(int32_t partitionIndex)
 {
+    if (buildStateReleased_) {
+        return;
+    }
     /// if build size partition is an empty partition, we need to provide a empty HashTable for probe size.
     if (totalRowCount[partitionIndex] == 0) {
         if (isFixedKeys) {
@@ -1075,6 +1130,54 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildHashTable(int32_t part
             BuildNormalHashTableWithVariableKey(partitionIndex, initDegree);
         }
     }
+}
+
+template <typename KeyType, typename RowRefListType>
+void JoinHashTableVariants<KeyType, RowRefListType>::BuildHashTableAdaptive(int32_t partitionIndex)
+{
+    if (buildStateReleased_) {
+        return;
+    }
+    uint8_t initDegree = MIN_DEGREE;
+    // Group probe leaves the sentinel tail unwrapped. Keep one entire group empty
+    // at the 0.9 growth threshold so a tiny adaptive seed cannot overwrite a live
+    // slot before NeedRehash. With 16-slot groups this starts at 256 slots.
+    auto spareSlots = [](uint8_t degree) {
+        const uint64_t capacity = 1ULL << degree;
+        return capacity - static_cast<uint64_t>(std::ceil(static_cast<double>(capacity) * MAX_LOAD_FACTOR));
+    };
+    while (initDegree < 63 && spareSlots(initDegree) < Group::kWidth) {
+        ++initDegree;
+    }
+    if (isFixedKeys) {
+        BuildNormalHashTableWithFixedKey(partitionIndex, initDegree);
+    } else {
+        BuildNormalHashTableWithVariableKey(partitionIndex, initDegree);
+    }
+}
+
+template <typename KeyType, typename RowRefListType>
+int64_t JoinHashTableVariants<KeyType, RowRefListType>::EstimateHashTableInitBytes(int32_t partitionIndex) const
+{
+    const uint32_t rows = totalRowCount[partitionIndex];
+    if (rows == 0) {
+        return 0;
+    }
+    using Map = JoinHashMap<KeyType, RowRefListType *>;
+    if (partitionIndex >= 0 && static_cast<uint32_t>(partitionIndex) < hashTables.size() &&
+        hashTables[partitionIndex] != nullptr) {
+        return static_cast<int64_t>(hashTables[partitionIndex]->EstimateAllocatedBytes() +
+            hashTables[partitionIndex]->EstimateRehashAllocation(rows));
+    }
+    auto initDegree = static_cast<uint8_t>(std::ceil(log2(rows / LOAD_FACTOR)));
+    const uint8_t ctorDegree = std::max(initDegree, MIN_DEGREE);
+    return static_cast<int64_t>(Map::EstimateRehashAllocationFromEmpty(rows, ctorDegree));
+}
+
+template <typename KeyType, typename RowRefListType>
+int64_t JoinHashTableVariants<KeyType, RowRefListType>::EstimateRowRefArenaBytes(int32_t partitionIndex) const
+{
+    return static_cast<int64_t>(totalRowCount[partitionIndex]) * static_cast<int64_t>(sizeOfRowRefList);
 }
 
 template <typename KeyType, typename RowRefListType>
@@ -1300,6 +1403,9 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceKeyToArrayTable(T &m
 template <typename KeyType, typename RowRefListType>
 void JoinHashTableVariants<KeyType, RowRefListType>::Prepare(int32_t partitionIndex)
 {
+    if (buildStateReleased_) {
+        return;
+    }
     auto &vecBatchesOnePartition = inputVecBatches[partitionIndex];
     int32_t vecBatchCount = vecBatchesOnePartition.size();
     uint32_t columnCount = buildTypes->GetSize();
@@ -1323,13 +1429,20 @@ template <typename KeyType, typename RowRefListType>
 void JoinHashTableVariants<KeyType, RowRefListType>::InitBuildFilterCols(std::vector<int32_t> &buildFilterCols,
     int32_t originalProbeColsCount, std::vector<std::vector<BaseVector **>> &tableBuildFilterColPtrs)
 {
-    tableBuildFilterColPtrs.resize(hashTableSize);
+    // Index by fixed slot count (hashTableCount), not hashTableSize. After Path A / restore
+    // many slots have columns==nullptr; hashTableSize is a cumulative counter and
+    // ResetPartition does not decrement it. assign() drops stale pointers from a previous
+    // restore round so BuildJoinPosition does not dereference freed build columns.
+    tableBuildFilterColPtrs.assign(hashTableCount, {});
     auto buildFilterColsCount = buildFilterCols.size();
-    for (uint32_t i = 0; i < buildFilterColsCount; i++) {
-        auto buildFilterCol = buildFilterCols[i] - originalProbeColsCount;
-        for (uint32_t hashTableIdx = 0; hashTableIdx < hashTableSize; ++hashTableIdx) {
-            auto buildColumns = GetColumns(hashTableIdx)[buildFilterCol];
-            tableBuildFilterColPtrs[hashTableIdx].emplace_back(buildColumns);
+    for (uint32_t hashTableIdx = 0; hashTableIdx < hashTableCount; ++hashTableIdx) {
+        auto *partitionColumns = GetColumns(static_cast<int32_t>(hashTableIdx));
+        if (partitionColumns == nullptr) {
+            continue;
+        }
+        for (uint32_t i = 0; i < buildFilterColsCount; i++) {
+            auto buildFilterCol = buildFilterCols[i] - originalProbeColsCount;
+            tableBuildFilterColPtrs[hashTableIdx].emplace_back(partitionColumns[buildFilterCol]);
         }
     }
 }

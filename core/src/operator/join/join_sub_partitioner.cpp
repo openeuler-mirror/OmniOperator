@@ -13,7 +13,6 @@
 
 namespace omniruntime::op {
 
-/// get all config of spill partitions
 JoinSubPartitionConfig JoinSubPartitionConfig::FromQueryConfig(
     const omniruntime::config::QueryConfig &queryConfig)
 {
@@ -24,7 +23,6 @@ JoinSubPartitionConfig JoinSubPartitionConfig::FromQueryConfig(
     return cfg;
 }
 
-/// get patitionId by hash, from 0 to numSubPartitions
 uint32_t JoinSubPartitioner::SubPartitionFromHash(int64_t hash) const
 {
     if (config_.numSubPartitions <= 1U) {
@@ -36,25 +34,40 @@ uint32_t JoinSubPartitioner::SubPartitionFromHash(int64_t hash) const
 
 namespace {
 
-int64_t HashLongColumn(omniruntime::vec::BaseVector *col, int32_t row)
+template <typename T>
+int64_t HashPrimitiveColumn(omniruntime::vec::BaseVector *col, int32_t row)
 {
-    auto *v = dynamic_cast<omniruntime::vec::Vector<int64_t> *>(col);
-    if (v == nullptr) {
-        throw omniruntime::exception::OmniException(
-            "UNSUPPORTED_ERROR", "JoinSubPartitioner: LONG key column has unexpected vector type.");
+    using namespace omniruntime::vec;
+    const auto enc = col->GetEncoding();
+    if (enc == OMNI_ENCODING_CONST) {
+        return HashUtil::HashValue(static_cast<ConstVector<T> *>(col)->GetConstValue());
     }
-    return HashUtil::HashValue(v->GetValue(row));
+    if (enc == OMNI_DICTIONARY) {
+        return HashUtil::HashValue(static_cast<Vector<DictionaryContainer<T>> *>(col)->GetValue(row));
+    }
+    if (enc != OMNI_FLAT) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Unsupported join key vector encoding " + std::to_string(static_cast<int32_t>(enc)));
+    }
+    return HashUtil::HashValue(static_cast<Vector<T> *>(col)->GetValue(row));
 }
 
 int64_t HashVarcharColumn(omniruntime::vec::BaseVector *col, int32_t row)
 {
-    using LC = omniruntime::vec::LargeStringContainer<std::string_view>;
-    auto *v = dynamic_cast<omniruntime::vec::Vector<LC> *>(col);
-    if (v == nullptr) {
-        throw omniruntime::exception::OmniException(
-            "UNSUPPORTED_ERROR", "JoinSubPartitioner: VARCHAR key column has unexpected vector type.");
+    using namespace omniruntime::vec;
+    using LC = LargeStringContainer<std::string_view>;
+    const auto enc = col->GetEncoding();
+    std::string_view value;
+    if (enc == OMNI_ENCODING_CONST) {
+        value = static_cast<ConstVector<std::string_view> *>(col)->GetConstValue();
+    } else if (enc == OMNI_DICTIONARY) {
+        value = static_cast<Vector<DictionaryContainer<std::string_view>> *>(col)->GetValue(row);
+    } else if (enc == OMNI_FLAT) {
+        value = static_cast<Vector<LC> *>(col)->GetValue(row);
+    } else {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
+            "Unsupported VARCHAR join key vector encoding " + std::to_string(static_cast<int32_t>(enc)));
     }
-    auto value = v->GetValue(row);
     auto *data = reinterpret_cast<int8_t *>(const_cast<char *>(value.data()));
     return HashUtil::HashValue(data, static_cast<int32_t>(value.size()));
 }
@@ -62,21 +75,24 @@ int64_t HashVarcharColumn(omniruntime::vec::BaseVector *col, int32_t row)
 int64_t HashKeyColumn(omniruntime::vec::BaseVector *col, int32_t row, int32_t typeId)
 {
     switch (typeId) {
+        case omniruntime::type::OMNI_BOOLEAN:
+            return HashPrimitiveColumn<bool>(col, row);
+        case omniruntime::type::OMNI_INT:
+        case omniruntime::type::OMNI_DATE32:
+            return HashPrimitiveColumn<int32_t>(col, row);
         case omniruntime::type::OMNI_LONG:
-            return HashLongColumn(col, row);
+            return HashPrimitiveColumn<int64_t>(col, row);
         case omniruntime::type::OMNI_VARCHAR:
             return HashVarcharColumn(col, row);
         default:
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR",
-                "JoinSubPartitioner: unsupported join key type id " + std::to_string(typeId)
-                    + " (only LONG and VARCHAR are supported in this iteration).");
+                "Unsupported join key type id " + std::to_string(typeId) +
+                " (supported: BOOLEAN, INT, LONG, DATE32, VARCHAR).");
     }
 }
 
 } // namespace
 
-/// input VectorBatch, output vector<partitionId: uint32_t>, mark the partitionId of every row in current batch.
-/// activeSubPartition is fixed to partition 0
 std::vector<uint32_t> JoinSubPartitioner::PartitionRowsByKeyColumns(omniruntime::vec::VectorBatch *batch,
     const omniruntime::type::DataTypes &rowTypes, const std::vector<int32_t> &keyColIndices) const
 {
@@ -94,7 +110,8 @@ std::vector<uint32_t> JoinSubPartitioner::PartitionRowsByKeyColumns(omniruntime:
         bool anyNull = false;
         for (auto keyCol : keyColIndices) {
             auto *col = batch->Get(keyCol);
-            if (col->IsNull(row)) {
+            const int32_t nullIdx = (col->GetEncoding() == omniruntime::vec::OMNI_ENCODING_CONST) ? 0 : row;
+            if (col->IsNull(nullIdx)) {
                 anyNull = true;
                 break;
             }
@@ -103,8 +120,8 @@ std::vector<uint32_t> JoinSubPartitioner::PartitionRowsByKeyColumns(omniruntime:
             firstKey = false;
         }
 
-        // if row is null, put it in the active subpartition 0 for avoid to spill it.
-        partitions[static_cast<size_t>(row)] = anyNull ? config_.activeSubPartition : SubPartitionFromHash(combinedHash);
+        partitions[static_cast<size_t>(row)] =
+            anyNull ? config_.activeSubPartition : SubPartitionFromHash(combinedHash);
     }
     return partitions;
 }

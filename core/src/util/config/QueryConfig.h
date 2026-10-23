@@ -77,13 +77,6 @@ public:
     /// TopNRowNumber spilling flag, only applies if "spill_enabled" flag is set.
     static constexpr const char *kTopNRowNumberSpillEnabled = "topn_row_number_spill_enabled";
 
-    /// The max row numbers to fill and spill for each spill run. This is used to
-    /// cap the memory used for spilling. If it is zero, then there is no limit
-    /// and spilling might run out of memory.
-    /// Based on offline test results, the default value is set to 12 million rows
-    /// which uses ~128MB memory when to fill a spill run.
-    static constexpr const char *kMaxSpillRunRows = "max_spill_run_rows";
-
     /// The max spill bytes limit set for each query. This is used to cap the
     /// storage used for spilling. If it is zero, then there is no limit and
     /// spilling might exhaust the storage or takes too long to run. The default
@@ -119,7 +112,9 @@ public:
     /// calculate the spill partition number for hash join and RowNumber. The
     /// number of spill partitions will be power of two.
     ///
-    /// NOTE: as for now, we only support up to 8-way spill partitioning.
+    /// Spark key: spark.gluten.sql.columnar.backend.omni.spillPartitionBits.
+    /// Default 4 means 16 sub-partitions. Native clamps at 6 (64 sub-partitions),
+    /// matching Gluten kSpillPartitionBitsMax.
     static constexpr const char *kSpillNumPartitionBits = "spiller_num_partition_bits";
 
     /// The minimal available spillable memory reservation in percentage of the
@@ -246,12 +241,6 @@ public:
         return get<uint64_t>(KCompressBlockSize, 1048);
     }
 
-    uint64_t maxSpillRunRows() const
-    {
-        static constexpr uint64_t kDefault = 12UL << 20;
-        return get<uint64_t>(kMaxSpillRunRows, kDefault);
-    }
-
     uint64_t maxSpillBytes() const
     {
         static constexpr uint64_t kDefault = 100UL << 30;
@@ -282,8 +271,8 @@ public:
 
     bool joinSpillEnabled() const
     {
-        // todo: join spill is not ready, set fix false. return `get<bool>(kJoinSpillEnabled, true)` in final version
-        return false;
+        // Same default as aggregationSpillEnabled: on unless Spark conf turns it off.
+        return get<bool>(kJoinSpillEnabled, true);
     }
 
     bool orderBySpillEnabled() const
@@ -330,8 +319,11 @@ public:
 
     uint8_t spillNumPartitionBits() const
     {
-        constexpr int32_t kDefaultBits = 3;
-        constexpr int32_t kMaxBits = 3;
+        // Fallback when Spark conf is absent; production runs set spillPartitionBits explicitly.
+        constexpr int32_t kDefaultBits = 4;
+        // Upper bound: 2^bits sub-partitions. bits=6 means 64. Do not raise this
+        // without reviewing JoinSubPartitioner and hash-table slot capacity.
+        constexpr int32_t kMaxBits = 6;
         const int32_t parsed = get<int32_t>(kSpillNumPartitionBits, kDefaultBits);
         const int32_t clamped = std::min(kMaxBits, std::max<int32_t>(0, parsed));
         return static_cast<uint8_t>(clamped);
