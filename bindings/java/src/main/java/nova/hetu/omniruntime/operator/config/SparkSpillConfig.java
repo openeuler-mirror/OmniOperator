@@ -13,7 +13,7 @@ import java.util.Objects;
  */
 public class SparkSpillConfig extends SpillConfig {
     private int numElementsForSpillThreshold;
-    private int memUsagePctForSpillThreshold;
+    private double memUsageFractionForSpillThreshold;
 
     /**
      * Instantiates a new spark spill config.
@@ -21,7 +21,7 @@ public class SparkSpillConfig extends SpillConfig {
     public SparkSpillConfig() {
         super();
         numElementsForSpillThreshold = Integer.MAX_VALUE;
-        memUsagePctForSpillThreshold = 90;
+        memUsageFractionForSpillThreshold = 0.9;
     }
 
     /**
@@ -32,7 +32,7 @@ public class SparkSpillConfig extends SpillConfig {
      */
     public SparkSpillConfig(String spillPath, int numElementsForSpillThreshold) {
         this(true, spillPath, DEFAULT_MAX_SPILL_BYTES, numElementsForSpillThreshold);
-        this.memUsagePctForSpillThreshold = 90; // default memory usage percentage for spill threshold
+        this.memUsageFractionForSpillThreshold = 0.9; // default memory usage fraction for spill threshold
     }
 
     /**
@@ -47,7 +47,7 @@ public class SparkSpillConfig extends SpillConfig {
             int numElementsForSpillThreshold) {
         super(SpillConfigId.SPILL_CONFIG_SPARK, isSpillEnabled, spillPath, maxSpillBytes, DEFAULT_WRITE_BUFFER_SIZE);
         this.numElementsForSpillThreshold = numElementsForSpillThreshold;
-        this.memUsagePctForSpillThreshold = 90; // default memory usage percentage for spill threshold
+        this.memUsageFractionForSpillThreshold = 0.9; // default memory usage fraction for spill threshold
     }
 
     /**
@@ -57,14 +57,14 @@ public class SparkSpillConfig extends SpillConfig {
      * @param spillPath the spill path
      * @param maxSpillBytes the max spill bytes
      * @param numElementsForSpillThreshold the num elements for spill threshold
-     * @param memUsagePctForSpillThreshold the memory usage percentage for spill threshold
+     * @param memUsageFractionForSpillThreshold the memory usage fraction for spill threshold
      * @param writeBufferSize the spill write buffer size
      */
     public SparkSpillConfig(boolean isSpillEnabled, String spillPath, long maxSpillBytes,
-            int numElementsForSpillThreshold, int memUsagePctForSpillThreshold, long writeBufferSize) {
+            int numElementsForSpillThreshold, double memUsageFractionForSpillThreshold, long writeBufferSize) {
         super(SpillConfigId.SPILL_CONFIG_SPARK, isSpillEnabled, spillPath, maxSpillBytes, writeBufferSize);
         this.numElementsForSpillThreshold = numElementsForSpillThreshold;
-        this.memUsagePctForSpillThreshold = memUsagePctForSpillThreshold;
+        setMemUsageFractionForSpillThreshold(memUsageFractionForSpillThreshold);
     }
 
     /**
@@ -86,22 +86,25 @@ public class SparkSpillConfig extends SpillConfig {
     }
 
     /**
-     * set the memory usage percentage for spill threshold.
+     * set the memory usage fraction for spill threshold.
      *
-     * @param memUsagePctForSpillThreshold the memory usage percentage for spill
+     * @param memUsageFractionForSpillThreshold the memory usage fraction for spill
      *            threshold
      */
-    public void setMemUsagePctForSpillThreshold(int memUsagePctForSpillThreshold) {
-        this.memUsagePctForSpillThreshold = memUsagePctForSpillThreshold;
+    public void setMemUsageFractionForSpillThreshold(double memUsageFractionForSpillThreshold) {
+        if (!(memUsageFractionForSpillThreshold > 0.0 && memUsageFractionForSpillThreshold <= 1.0)) {
+            throw new IllegalArgumentException("Spill memory fraction must be in (0, 1]");
+        }
+        this.memUsageFractionForSpillThreshold = memUsageFractionForSpillThreshold;
     }
 
     /**
-     * get the memory usage percentage for spill threshold.
+     * get the memory usage fraction for spill threshold.
      *
-     * @return the num elements for spill threshold
+     * @return the memory usage fraction in (0, 1]
      */
-    public int getMemUsagePctForSpillThreshold() {
-        return memUsagePctForSpillThreshold;
+    public double getMemUsageFractionForSpillThreshold() {
+        return memUsageFractionForSpillThreshold;
     }
 
     @Override
@@ -117,11 +120,11 @@ public class SparkSpillConfig extends SpillConfig {
         }
         SparkSpillConfig that = (SparkSpillConfig) obj;
         return numElementsForSpillThreshold == that.numElementsForSpillThreshold
-                && memUsagePctForSpillThreshold == that.memUsagePctForSpillThreshold;
+                && Double.compare(memUsageFractionForSpillThreshold, that.memUsageFractionForSpillThreshold) == 0;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), numElementsForSpillThreshold, memUsagePctForSpillThreshold);
+        return Objects.hash(super.hashCode(), numElementsForSpillThreshold, memUsageFractionForSpillThreshold);
     }
 }

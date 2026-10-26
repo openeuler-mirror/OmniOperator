@@ -1,7 +1,10 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  */
 
+#include <cmath>
+#include <limits>
+#include "operator/config/operator_config.h"
 #include "util/config/ConfigBase.h"
 #include "util/config/QueryConfig.h"
 #include "util/format.h"
@@ -12,8 +15,7 @@ enum TestEnum { ENUM_0 = 0, ENUM_1 = 1, ENUM_2 = 2, UNKNOWN = 3 };
 
 class TestConfig : public ConfigBase {
 public:
-    template <typename T>
-    using Entry = ConfigBase::Entry<T>;
+    template <typename T> using Entry = ConfigBase::Entry<T>;
 
     static Entry<int32_t> kInt32Entry;
     static Entry<uint64_t> kUint64Entry;
@@ -22,7 +24,9 @@ public:
     static Entry<TestEnum> kEnumEntry;
 
     TestConfig(std::unordered_map<std::string, std::string> &&configs, bool _mutable)
-        : ConfigBase(std::move(configs), _mutable) {}
+        : ConfigBase(std::move(configs), _mutable)
+    {
+    }
 };
 
 // Definition needs to be outside of class
@@ -30,7 +34,9 @@ TestConfig::Entry<int32_t> TestConfig::kInt32Entry("int32_entry", -32);
 TestConfig::Entry<uint64_t> TestConfig::kUint64Entry("uint64_entry", 64);
 TestConfig::Entry<bool> TestConfig::kBoolEntry("bool_entry", true);
 TestConfig::Entry<std::string> TestConfig::kStringEntry("string_entry", "default.string.value");
-TestConfig::Entry<TestEnum> TestConfig::kEnumEntry("enum_entry", TestEnum::ENUM_0, [](const TestEnum &value) {
+TestConfig::Entry<TestEnum> TestConfig::kEnumEntry(
+    "enum_entry", TestEnum::ENUM_0,
+    [](const TestEnum &value) {
         if (value == TestEnum::ENUM_0) {
             return "ENUM_0";
         }
@@ -41,7 +47,8 @@ TestConfig::Entry<TestEnum> TestConfig::kEnumEntry("enum_entry", TestEnum::ENUM_
             return "ENUM_2";
         }
         return "UNKNOWN";
-    }, [](const std::string & /* unused */, const std::string &v) {
+    },
+    [](const std::string & /* unused */, const std::string &v) {
         if (v == "ENUM_0") {
             return TestEnum::ENUM_0;
         }
@@ -64,10 +71,11 @@ TEST(ConfigTest, immutableConfig)
     ASSERT_EQ(config->Get(TestConfig::kStringEntry), "default.string.value");
     ASSERT_EQ(config->Get(TestConfig::kEnumEntry), TestEnum::ENUM_0);
 
-    std::unordered_map<std::string, std::string> rawConfigs{
-        {TestConfig::kInt32Entry.key, "-3200"}, {TestConfig::kUint64Entry.key, "6400"},
-        {TestConfig::kStringEntry.key, "not.default.string.value"}, {TestConfig::kBoolEntry.key, "false"},
-        {TestConfig::kEnumEntry.key, "ENUM_2"}};
+    std::unordered_map<std::string, std::string> rawConfigs{{TestConfig::kInt32Entry.key, "-3200"},
+                                                            {TestConfig::kUint64Entry.key, "6400"},
+                                                            {TestConfig::kStringEntry.key, "not.default.string.value"},
+                                                            {TestConfig::kBoolEntry.key, "false"},
+                                                            {TestConfig::kEnumEntry.key, "ENUM_2"}};
 
     auto expectedRawConfigs = rawConfigs;
 
@@ -83,7 +91,7 @@ TEST(ConfigTest, immutableConfig)
     ASSERT_EQ(config->Get(TestConfig::kUint64Entry.key, TestConfig::kUint64Entry.defaultVal), 6400);
     ASSERT_EQ(config->Get(TestConfig::kBoolEntry.key, TestConfig::kBoolEntry.defaultVal), false);
     ASSERT_EQ(config->Get(TestConfig::kStringEntry.key, TestConfig::kStringEntry.defaultVal),
-        "not.default.string.value");
+              "not.default.string.value");
     ASSERT_TRUE(config->Get<int32_t>(TestConfig::kInt32Entry.key).has_value());
     ASSERT_EQ(config->Get<int32_t>(TestConfig::kInt32Entry.key).value(), -3200);
     ASSERT_FALSE(config->Get<int32_t>("wrong_int32_key").has_value());
@@ -96,16 +104,20 @@ TEST(ConfigTest, immutableConfig)
 TEST(ConfigTest, mutableConfig)
 {
     // Create a mutable configuration with some initial values
-    std::unordered_map<std::string, std::string> initialConfigs{
-        {TestConfig::kInt32Entry.key, "-3200"}, {TestConfig::kUint64Entry.key, "6400"},
-        {TestConfig::kStringEntry.key, "initial.string.value"}, {TestConfig::kBoolEntry.key, "false"},
-        {TestConfig::kEnumEntry.key, "ENUM_2"}};
+    std::unordered_map<std::string, std::string> initialConfigs{{TestConfig::kInt32Entry.key, "-3200"},
+                                                                {TestConfig::kUint64Entry.key, "6400"},
+                                                                {TestConfig::kStringEntry.key, "initial.string.value"},
+                                                                {TestConfig::kBoolEntry.key, "false"},
+                                                                {TestConfig::kEnumEntry.key, "ENUM_2"}};
 
     auto config = std::make_shared<TestConfig>(std::move(initialConfigs), true);
 
     // Test setting new values
-    (*config).Set(TestConfig::kInt32Entry, 123).Set(TestConfig::kStringEntry, std::string("modified.string.value")).
-              Set(TestConfig::kBoolEntry.key, "true").Set(TestConfig::kEnumEntry.key, "ENUM_1");
+    (*config)
+        .Set(TestConfig::kInt32Entry, 123)
+        .Set(TestConfig::kStringEntry, std::string("modified.string.value"))
+        .Set(TestConfig::kBoolEntry.key, "true")
+        .Set(TestConfig::kEnumEntry.key, "ENUM_1");
 
     ASSERT_EQ(config->Get(TestConfig::kInt32Entry), 123);
     ASSERT_EQ(config->Get(TestConfig::kStringEntry), "modified.string.value");
@@ -139,7 +151,8 @@ TEST(ConfigTest, setConfig)
 TEST(ConfigTest, maxRowCount)
 {
     struct {
-        std::optional<int> maxRowCount;;
+        std::optional<int> maxRowCount;
+        ;
         int expectedMaxRowCount;
     } testSettings[] = {{std::nullopt, 12UL << 20}, {2, 2}, {4, 4}, {6, 6}};
     for (const auto &testConfig : testSettings) {
@@ -151,4 +164,87 @@ TEST(ConfigTest, maxRowCount)
         ASSERT_EQ(config.maxRowCount(), testConfig.expectedMaxRowCount);
     }
 }
+
+namespace {
+class ScopedSpillTestMemoryLimit {
+public:
+    explicit ScopedSpillTestMemoryLimit(int64_t limit) : previous_(mem::MemoryManager::GetGlobalMemoryLimit())
+    {
+        mem::MemoryManager::SetGlobalMemoryLimit(limit);
+    }
+    ~ScopedSpillTestMemoryLimit() { mem::MemoryManager::SetGlobalMemoryLimit(previous_); }
+
+private:
+    int64_t previous_;
+};
+} // namespace
+
+TEST(ConfigTest, spillMemoryFractionsPreserveDecimalsAndDefaults)
+{
+    const QueryConfig defaults;
+    EXPECT_DOUBLE_EQ(defaults.memFraction(), 0.1);
+    EXPECT_DOUBLE_EQ(defaults.SpillMemFraction(), 0.9);
+    for (const auto &value : {"0.9", "0.123456789", "1e-7", "1", " 0.9 "}) {
+        const QueryConfig config(std::unordered_map<std::string, std::string>{
+            {QueryConfig::kMemFraction, value}, {QueryConfig::KColumnarSpillMemThreshold, value}});
+        EXPECT_DOUBLE_EQ(config.memFraction(), std::stod(value));
+        EXPECT_DOUBLE_EQ(config.SpillMemFraction(), std::stod(value));
+    }
 }
+
+TEST(ConfigTest, spillMemoryFractionsRejectPercentagesAndMalformedValues)
+{
+    for (const auto &value : {"90", "0", "-0.1", "1.1", "nan", "inf", "0.9junk", "0.9 junk", ""}) {
+        SCOPED_TRACE(value);
+        const QueryConfig config(std::unordered_map<std::string, std::string>{
+            {QueryConfig::kMemFraction, value}, {QueryConfig::KColumnarSpillMemThreshold, value}});
+        EXPECT_THROW(config.memFraction(), exception::OmniException);
+        EXPECT_THROW(config.SpillMemFraction(), exception::OmniException);
+    }
+}
+
+TEST(ConfigTest, sparkSpillThresholdUsesFractionWithoutDividingAgain)
+{
+    const ScopedSpillTestMemoryLimit memoryLimit(1000000);
+    EXPECT_EQ(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX).GetSpillMemThreshold(), 900000);
+    EXPECT_EQ(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, 0.125).GetSpillMemThreshold(), 125000);
+    EXPECT_EQ(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, 1.0).GetSpillMemThreshold(), 1000000);
+    for (double fraction :
+         {0.0, -0.1, 90.0, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()}) {
+        EXPECT_THROW(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, fraction), exception::OmniException);
+    }
+}
+
+TEST(ConfigTest, sparkSpillThresholdPreservesUnlimitedAndMaximumLimits)
+{
+    {
+        const ScopedSpillTestMemoryLimit memoryLimit(mem::MemoryManager::UNLIMIT);
+        EXPECT_EQ(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, 0.9).GetSpillMemThreshold(), INT64_MAX);
+    }
+    {
+        const ScopedSpillTestMemoryLimit memoryLimit(INT64_MAX);
+        EXPECT_EQ(op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, 1.0).GetSpillMemThreshold(), INT64_MAX);
+        const auto threshold =
+            op::SparkSpillConfig("/tmp", UINT64_MAX, INT32_MAX, std::nextafter(1.0, 0.0)).GetSpillMemThreshold();
+        EXPECT_GT(threshold, 0);
+        EXPECT_LT(threshold, INT64_MAX);
+    }
+}
+
+TEST(ConfigTest, sparkSpillJsonPreservesDecimals)
+{
+    const ScopedSpillTestMemoryLimit memoryLimit(1000000);
+    nlohmann::json config = {{"spillConfig",
+                              {{"spillConfigId", "SPILL_CONFIG_SPARK"},
+                               {"spillEnabled", true},
+                               {"spillPath", "/tmp"},
+                               {"maxSpillBytes", 1024},
+                               {"writeBufferSize", 0},
+                               {"numElementsForSpillThreshold", INT32_MAX},
+                               {"memUsageFractionForSpillThreshold", 0.125}}}};
+    auto decoded = op::OperatorConfig::DeserializeOperatorConfig(config.dump());
+    auto *spill = dynamic_cast<op::SparkSpillConfig *>(decoded.GetSpillConfig());
+    ASSERT_NE(spill, nullptr);
+    EXPECT_EQ(spill->GetSpillMemThreshold(), 125000);
+}
+} // namespace omniruntime::config

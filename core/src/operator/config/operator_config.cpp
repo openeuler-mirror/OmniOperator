@@ -22,7 +22,7 @@ bool SparkSpillConfig::NeedSpill(MemoryBuilder *memoryBuilder)
     if (IsSpillEnabled() &&
         (memoryBuilder->GetRowCount() >= GetSpillRowThreshold() || usedMemorySize >= GetSpillMemThreshold())) {
         LogDebug("spill get row count %d, row threshold %d, and get memory usage %lld, memory threshold %lld.",
-            memoryBuilder->GetRowCount(), GetSpillRowThreshold(), usedMemorySize, GetSpillMemThreshold());
+                 memoryBuilder->GetRowCount(), GetSpillRowThreshold(), usedMemorySize, GetSpillMemThreshold());
         return true;
     } else {
         return false;
@@ -35,7 +35,7 @@ bool SparkSpillConfig::NeedSpill(size_t elementsSize)
     if (IsSpillEnabled() &&
         (usedMemorySize >= GetSpillMemThreshold() || static_cast<int32_t>(elementsSize) >= GetSpillRowThreshold())) {
         LogDebug("spill get row count %d, row threshold %d, and get memory usage %lld, memory threshold %lld.",
-            elementsSize, GetSpillRowThreshold(), usedMemorySize, GetSpillMemThreshold());
+                 elementsSize, GetSpillRowThreshold(), usedMemorySize, GetSpillMemThreshold());
         return true;
     } else {
         return false;
@@ -97,15 +97,16 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
             case SPILL_CONFIG_SPARK: {
                 auto numElementsForSpillThreshold =
                     result.at("spillConfig").at("numElementsForSpillThreshold").get<int32_t>();
-                auto memUsagePctForSpillThreshold =
-                    result.at("spillConfig").at("memUsagePctForSpillThreshold").get<int32_t>();
-                resultSpillConfig = new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes,
-                    numElementsForSpillThreshold, memUsagePctForSpillThreshold, writeBufferSize);
+                auto memUsageFractionForSpillThreshold =
+                    result.at("spillConfig").at("memUsageFractionForSpillThreshold").get<double>();
+                resultSpillConfig =
+                    new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes, numElementsForSpillThreshold,
+                                         memUsageFractionForSpillThreshold, writeBufferSize);
                 break;
             }
             default: {
-                std::string omniExceptionInfo = "In fucntion DeserializeOperatorConfig, no such data type " +
-                    std::to_string(static_cast<int>(spillConfigId));
+                std::string omniExceptionInfo = "In function DeserializeOperatorConfig, no such data type " +
+                                                std::to_string(static_cast<int>(spillConfigId));
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
@@ -123,8 +124,8 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
     if (result.contains("statisticalAggregate")) {
         isStatisticalAggregate = result.at("statisticalAggregate").get<bool>();
     }
-    return OperatorConfig{resultSpillConfig, resultOverflowConfig, needSkipVerify, adaptThreshold, curIsRowOutput,
-                          isStatisticalAggregate};
+    return OperatorConfig{resultSpillConfig, resultOverflowConfig, needSkipVerify,
+                          adaptThreshold,    curIsRowOutput,       isStatisticalAggregate};
 }
 
 void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfig)
@@ -133,7 +134,7 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfi
     auto result = statfs(spillPathChars, &diskInfo);
     if (result != 0) {
         std::string message = GetErrorMessage(ErrorCode::DISK_STAT_FAILED) + "Get stat for " + spillPathChars +
-            " failed since " + strerror(errno) + ".";
+                              " failed since " + strerror(errno) + ".";
         throw exception::OmniException(GetErrorCode(ErrorCode::DISK_STAT_FAILED), message);
     }
 
@@ -142,9 +143,9 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfi
     auto maxSpillBytes = spillConfig.GetMaxSpillBytes();
     if (availableDiskSize < maxSpillBytes) {
         std::string message = GetErrorMessage(ErrorCode::DISK_SPACE_NOT_ENOUGH) +
-            "The available size of the disk where the spill directory " + spillPathChars +
-            " located:" + std::to_string(availableDiskSize / GB_UNIT) +
-            "GB and the max spill size:" + std::to_string(maxSpillBytes / GB_UNIT) + "GB.";
+                              "The available size of the disk where the spill directory " + spillPathChars +
+                              " located:" + std::to_string(availableDiskSize / GB_UNIT) +
+                              "GB and the max spill size:" + std::to_string(maxSpillBytes / GB_UNIT) + "GB.";
         throw exception::OmniException(GetErrorCode(ErrorCode::DISK_SPACE_NOT_ENOUGH), message);
     }
 }
@@ -154,7 +155,7 @@ static void CreateSpillDirectory(const char *spillPathChars)
     mkdir(spillPathChars, 0750);
     if (access(spillPathChars, 0) != 0) {
         std::string message = GetErrorMessage(ErrorCode::MKDIR_FAILED) + "Create spill directory " + spillPathChars +
-            " failed since " + strerror(errno) + ".";
+                              " failed since " + strerror(errno) + ".";
         throw exception::OmniException(GetErrorCode(ErrorCode::MKDIR_FAILED), message);
     }
 }
@@ -189,5 +190,5 @@ void OperatorConfig::CheckSpillConfig(SpillConfig *spillConfig)
     CreateSpillDirectories(spillPath);
     CheckHasEnoughDiskSpace(spillPath.c_str(), *spillConfig);
 }
-}
-}
+} // namespace op
+} // namespace omniruntime

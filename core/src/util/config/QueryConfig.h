@@ -20,6 +20,7 @@
 #include <string>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include "ConfigBase.h"
 
 namespace omniruntime::config {
@@ -29,20 +30,20 @@ namespace omniruntime::config {
 /// Does not allow altering properties on the fly. Only at creation time.
 class QueryConfig {
 public:
-    explicit QueryConfig(): config_{
-        std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>())}
+    explicit QueryConfig()
+        : config_{std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>())}
     {
         ValidateConfig();
     }
 
-    explicit QueryConfig(const std::unordered_map<std::string, std::string> &values): config_{
-        std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>(values))}
+    explicit QueryConfig(const std::unordered_map<std::string, std::string> &values)
+        : config_{std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>(values))}
     {
         ValidateConfig();
     }
 
-    explicit QueryConfig(std::unordered_map<std::string, std::string> &&values): config_{
-        std::make_unique<config::ConfigBase>(std::move(values))}
+    explicit QueryConfig(std::unordered_map<std::string, std::string> &&values)
+        : config_{std::make_unique<config::ConfigBase>(std::move(values))}
     {
         ValidateConfig();
     }
@@ -163,30 +164,15 @@ public:
         return get<uint64_t>(KMaxRowCount, kDefault);
     }
 
-    std::string SpillDir() const
-    {
-        return get<std::string>(KSpillDir, "/tmp/spill");
-    }
+    std::string SpillDir() const { return get<std::string>(KSpillDir, "/tmp/spill"); }
 
-    bool aqeShuffle() const
-    {
-        return get<bool>(KAqeShuffle, false);
-    }
+    bool aqeShuffle() const { return get<bool>(KAqeShuffle, false); }
 
-    bool IsOverFlowASNull() const
-    {
-        return get<bool>(KIsOverFlowASNull, true);
-    }
+    bool IsOverFlowASNull() const { return get<bool>(KIsOverFlowASNull, true); }
 
-    bool joinReorderEnhance() const
-    {
-        return get<bool>(KJoinReorderEnhance, false);
-    }
+    bool joinReorderEnhance() const { return get<bool>(KJoinReorderEnhance, false); }
 
-    uint64_t compressBlockSize() const
-    {
-        return get<uint64_t>(KCompressBlockSize, 1048);
-    }
+    uint64_t compressBlockSize() const { return get<uint64_t>(KCompressBlockSize, 1048); }
 
     uint64_t maxSpillRunRows() const
     {
@@ -212,50 +198,23 @@ public:
         return kDefault;
     }
 
-    bool spillEnabled() const
-    {
-        return get<bool>(kSpillEnabled, false);
-    }
+    bool spillEnabled() const { return get<bool>(kSpillEnabled, false); }
 
-    bool aggregationSpillEnabled() const
-    {
-        return get<bool>(kAggregationSpillEnabled, true);
-    }
+    bool aggregationSpillEnabled() const { return get<bool>(kAggregationSpillEnabled, true); }
 
-    bool joinSpillEnabled() const
-    {
-        return get<bool>(kJoinSpillEnabled, true);
-    }
+    bool joinSpillEnabled() const { return get<bool>(kJoinSpillEnabled, true); }
 
-    bool orderBySpillEnabled() const
-    {
-        return get<bool>(kOrderBySpillEnabled, true);
-    }
+    bool orderBySpillEnabled() const { return get<bool>(kOrderBySpillEnabled, true); }
 
-    bool windowSpillEnabled() const
-    {
-        return get<bool>(kWindowSpillEnabled, true);
-    }
+    bool windowSpillEnabled() const { return get<bool>(kWindowSpillEnabled, true); }
 
-    bool writerSpillEnabled() const
-    {
-        return get<bool>(kWriterSpillEnabled, true);
-    }
+    bool writerSpillEnabled() const { return get<bool>(kWriterSpillEnabled, true); }
 
-    bool rowNumberSpillEnabled() const
-    {
-        return get<bool>(kRowNumberSpillEnabled, true);
-    }
+    bool rowNumberSpillEnabled() const { return get<bool>(kRowNumberSpillEnabled, true); }
 
-    bool topNRowNumberSpillEnabled() const
-    {
-        return get<bool>(kTopNRowNumberSpillEnabled, true);
-    }
+    bool topNRowNumberSpillEnabled() const { return get<bool>(kTopNRowNumberSpillEnabled, true); }
 
-    int32_t maxSpillLevel() const
-    {
-        return get<int32_t>(kMaxSpillLevel, 1);
-    }
+    int32_t maxSpillLevel() const { return get<int32_t>(kMaxSpillLevel, 1); }
 
     uint8_t spillStartPartitionBit() const
     {
@@ -276,15 +235,9 @@ public:
         return get<uint64_t>(kMaxSpillFileSize, kDefaultMaxFileSize);
     }
 
-    std::string spillCompressionKind() const
-    {
-        return get<std::string>(kSpillCompressionKind, "none");
-    }
+    std::string spillCompressionKind() const { return get<std::string>(kSpillCompressionKind, "none"); }
 
-    bool spillPrefixSortEnabled() const
-    {
-        return get<bool>(kSpillPrefixSortEnabled, false);
-    }
+    bool spillPrefixSortEnabled() const { return get<bool>(kSpillPrefixSortEnabled, false); }
 
     int32_t minSpillableReservationPct() const
     {
@@ -292,10 +245,10 @@ public:
         return get<int32_t>(kMinSpillableReservationPct, kDefaultPct);
     }
 
-    int32_t memFractionPct() const
+    double memFraction() const
     {
-        constexpr int32_t kDefaultPct = 10;
-        return get<int32_t>(kMemFraction, kDefaultPct);
+        // Preserve the native-only default of 10%; Gluten supplies its own fraction.
+        return getSpillMemoryFraction(kMemFraction, 0.1);
     }
 
     int32_t spillableReservationGrowthPct() const
@@ -304,28 +257,19 @@ public:
         return get<int32_t>(kSpillableReservationGrowthPct, kDefaultPct);
     }
 
-    std::string shuffleCompressionKind() const
-    {
-        return get<std::string>(kShuffleCompressionKind, "none");
-    }
+    std::string shuffleCompressionKind() const { return get<std::string>(kShuffleCompressionKind, "none"); }
 
-    template <typename T>
-    T get(const std::string &key, const T &defaultValue) const
+    template <typename T> T get(const std::string &key, const T &defaultValue) const
     {
         return config_->Get<T>(key, defaultValue);
     }
 
-    template <typename T>
-    std::optional<T> get(const std::string &key) const
+    template <typename T> std::optional<T> get(const std::string &key) const
     {
         return std::optional<T>(config_->Get<T>(key));
     }
 
-    uint64_t SpillMemThreshold() const
-    {
-        constexpr uint64_t kDefaultValue = 90;
-        return get<uint64_t>(KColumnarSpillMemThreshold, kDefaultValue);
-    }
+    double SpillMemFraction() const { return getSpillMemoryFraction(KColumnarSpillMemThreshold, 0.9); }
 
     uint64_t SpillWriteBufferSize() const
     {
@@ -356,8 +300,24 @@ public:
     void testingOverrideConfigUnsafe(std::unordered_map<std::string, std::string> &&values);
 
 private:
+    double getSpillMemoryFraction(const char *key, double defaultFraction) const
+    {
+        // Entry parsers receive the complete raw string, including any invalid suffix.
+        const ConfigBase::Entry<double> entry(
+            key, defaultFraction, ToString<double>, [](const std::string &configKey, const std::string &value) {
+                std::istringstream input(value);
+                double fraction = 0.0;
+                input >> fraction;
+                OMNI_CHECK(input && (input >> std::ws).eof() && fraction > 0.0 && fraction <= 1.0,
+                           Format("Invalid spill memory fraction for '{}': '{}'; expected a number in (0, 1]",
+                                  configKey, value));
+                return fraction;
+            });
+        return config_->Get(entry);
+    }
+
     void ValidateConfig() {}
 
     std::shared_ptr<ConfigBase> config_;
 };
-} // namespace facebook::velox::core
+} // namespace omniruntime::config
