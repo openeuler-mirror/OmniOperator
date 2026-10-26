@@ -82,17 +82,22 @@ else
       elif [ "$i" == '--enable-sve' ]; then
           echo "-- ENABLE SVE"
           OPTIONS+=" -DENABLE_SVE=ON"
+      elif [ "$i" == '--exclude-batch-codegen' ]; then
+          echo "-- Exclude Batch Functions"
+          OPTIONS+=" -DEXCLUDE_BATCH_FUNCTIONS=ON"
+      elif [ "$i" == '--exclude-duplicate-codegen' ]; then
+          echo "-- Exclude Duplicate Codegen Functions"
+          OPTIONS+=" -DEXCLUDE_DUPLICATE_CODEGEN_FUNCTIONS=ON"
       else
           exit_with_message_and_print_help "ERROR: Invalid option: $i"
       fi
     done
   fi
 fi
-
 print_gcc_lib
 
 # need to delete the CMakeCache.txt to refresh the options
-rm -rf $CWD/build/CMakeCache.txt && cmake -S $(cd $(dirname ${BASH_SOURCE[0]})/.. && pwd)  -B $CWD/build $OPTIONS
+rm -rf $CWD/build/CMakeCache.txt && cmake -S $(cd $(dirname ${BASH_SOURCE[0]})/.. && pwd)  -B $CWD/build $OPTIONS -G Ninja -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld"
 # use all available cpu cores to speed up build process
 cmake --build $CWD/build --clean-first $TARGETS -j $(test -z "${OMNI_COMPILER_THREAD_COUNT}" && echo $(nproc) || echo ${OMNI_COMPILER_THREAD_COUNT})
 # install requires root privilege

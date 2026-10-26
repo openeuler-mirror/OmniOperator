@@ -110,6 +110,9 @@ add_subdirectory(bindings/java/src/main/cpp EXCLUDE_FROM_ALL)
 
 
 # options
+option(EXCLUDE_BATCH_FUNCTIONS "Exclude batch codegen functions" OFF)
+option(EXCLUDE_DUPLICATE_CODEGEN_FUNCTIONS "Exclude duplicate codegen functions" OFF)
+
 option(DEBUG "Debug" OFF)
 message(STATUS "Option DEBUG: ${DEBUG}")
 
