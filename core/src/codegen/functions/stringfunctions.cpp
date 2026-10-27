@@ -227,6 +227,11 @@ struct RapidJsonCache {
     bool IsCacheValid(const std::string &jsonContent) const
     {
         return lastJsonContent == jsonContent;
+    bool IsCacheValid(const std::string &jsonContent) const
+    {
+        // An empty lastJsonContent also means "never populated": empty input is
+        // invalid JSON and must fall through to the parse-failure path.
+        return !lastJsonContent.empty() && lastJsonContent == jsonContent;
     }
 
     void SetCache(const std::string &jsonContent, rapidjson::Document &json)
