@@ -42,10 +42,7 @@ public:
     {
         JsonRowDocumentCacheBeginBatch(contextPtr_);
     }
-    ~JsonRowDocumentCacheScope()
-    {
-        JsonRowDocumentCacheEndBatch(contextPtr_);
-    }
+    ~JsonRowDocumentCacheScope() { JsonRowDocumentCacheEndBatch(contextPtr_); }
     JsonRowDocumentCacheScope(const JsonRowDocumentCacheScope &) = delete;
     JsonRowDocumentCacheScope &operator=(const JsonRowDocumentCacheScope &) = delete;
 

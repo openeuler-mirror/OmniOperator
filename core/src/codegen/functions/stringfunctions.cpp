@@ -201,10 +201,7 @@ struct JsonCache {
 
     // std::string equality first compares length and then content. Computing a
     // hash for this single-entry cache would add an unconditional full scan.
-    bool IsCacheValid(const std::string &jsonContent) const
-    {
-        return lastJsonContent == jsonContent;
-    }
+    bool IsCacheValid(const std::string &jsonContent) const { return lastJsonContent == jsonContent; }
 
     void SetCache(const std::string &jsonContent, const JsonDocument &json)
     {
@@ -224,9 +221,6 @@ struct RapidJsonCache {
 
     // This is also a single-entry cache; compare directly instead of scanning
     // the JSON once for a hash and again to rule out hash collisions.
-    bool IsCacheValid(const std::string &jsonContent) const
-    {
-        return lastJsonContent == jsonContent;
     bool IsCacheValid(const std::string &jsonContent) const
     {
         // An empty lastJsonContent also means "never populated": empty input is
@@ -264,12 +258,11 @@ struct JsonQueryResultCacheKey {
                errorBehavior == other.errorBehavior && jsonContent == other.jsonContent && rawPath == other.rawPath;
     }
 
-    bool Matches(const char *jsonStr, int32_t jsonStrLen, const char *pathStr, int32_t pathStrLen,
-                 int32_t wrapper, int32_t empty, int32_t error) const
+    bool Matches(const char *jsonStr, int32_t jsonStrLen, const char *pathStr, int32_t pathStrLen, int32_t wrapper,
+                 int32_t empty, int32_t error) const
     {
         return wrapperBehavior == wrapper && emptyBehavior == empty && errorBehavior == error &&
-               IsSameCacheString(jsonContent, jsonStr, jsonStrLen) &&
-               IsSameCacheString(rawPath, pathStr, pathStrLen);
+               IsSameCacheString(jsonContent, jsonStr, jsonStrLen) && IsSameCacheString(rawPath, pathStr, pathStrLen);
     }
 };
 
@@ -341,8 +334,7 @@ struct JsonValueResultCacheKey {
                  int32_t error) const
     {
         return emptyBehavior == empty && errorBehavior == error &&
-               IsSameCacheString(jsonContent, jsonStr, jsonStrLen) &&
-               IsSameCacheString(rawPath, pathStr, pathStrLen);
+               IsSameCacheString(jsonContent, jsonStr, jsonStrLen) && IsSameCacheString(rawPath, pathStr, pathStrLen);
     }
 };
 
@@ -407,10 +399,7 @@ struct RowJsonDocumentKey {
     const char *data = nullptr;
     int32_t length = 0;
 
-    bool operator==(const RowJsonDocumentKey &other) const
-    {
-        return data == other.data && length == other.length;
-    }
+    bool operator==(const RowJsonDocumentKey &other) const { return data == other.data && length == other.length; }
 };
 
 struct RowJsonDocumentKeyHash {
@@ -457,8 +446,7 @@ struct RowJsonDocumentCache {
         return it == documents.end() ? nullptr : &it->second;
     }
 
-    rapidjson::Document *Store(int64_t storeContextPtr, const char *data, int32_t length,
-                               rapidjson::Document &document)
+    rapidjson::Document *Store(int64_t storeContextPtr, const char *data, int32_t length, rapidjson::Document &document)
     {
         if (!active || contextPtr != storeContextPtr || data == nullptr || length < 0) {
             return nullptr;
@@ -502,8 +490,8 @@ struct RowJsonDocumentCache {
 
 thread_local RowJsonDocumentCache ROW_JSON_DOCUMENT_CACHE;
 
-rapidjson::Document *GetParsedJsonWithCacheRapidJson(int64_t contextPtr, const char *rowJsonStr,
-                                                      int32_t rowJsonStrLen, std::string &jsonContent)
+rapidjson::Document *GetParsedJsonWithCacheRapidJson(int64_t contextPtr, const char *rowJsonStr, int32_t rowJsonStrLen,
+                                                     std::string &jsonContent)
 {
     if (rapidjson::Document *rowDocument = ROW_JSON_DOCUMENT_CACHE.Find(contextPtr, rowJsonStr, rowJsonStrLen)) {
         return rowDocument;
@@ -776,15 +764,9 @@ const std::vector<std::string> &GetConstantJsonValuePath(const char *path, int32
 }
 } // namespace
 
-void JsonRowDocumentCacheBeginBatch(int64_t contextPtr)
-{
-    ROW_JSON_DOCUMENT_CACHE.BeginBatch(contextPtr);
-}
+void JsonRowDocumentCacheBeginBatch(int64_t contextPtr) { ROW_JSON_DOCUMENT_CACHE.BeginBatch(contextPtr); }
 
-void JsonRowDocumentCacheEndBatch(int64_t contextPtr)
-{
-    ROW_JSON_DOCUMENT_CACHE.EndBatch(contextPtr);
-}
+void JsonRowDocumentCacheEndBatch(int64_t contextPtr) { ROW_JSON_DOCUMENT_CACHE.EndBatch(contextPtr); }
 
 static JsonDocument *GetParsedJsonWithCache(std::string &jsonContent)
 {
@@ -947,8 +929,7 @@ extern "C" DLLEXPORT const char *JsonValueRetNull(int64_t contextPtr, const char
     JsonValueResultCacheKey cacheKey{jsonContent, pathContent, 0, 0};
 
     try {
-        rapidjson::Document *jsonData =
-            GetParsedJsonWithCacheRapidJson(contextPtr, jsonStr, jsonStrLen, jsonContent);
+        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(contextPtr, jsonStr, jsonStrLen, jsonContent);
         if (jsonData == nullptr) {
             *outIsNull = true;
             *outLen = 0;
@@ -1253,8 +1234,7 @@ JsonQueryWithWrapperAndBehavior(int64_t contextPtr, const char *jsonStr, int32_t
     }
 
     try {
-        rapidjson::Document *jsonData =
-            GetParsedJsonWithCacheRapidJson(contextPtr, jsonStr, jsonStrLen, jsonContent);
+        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(contextPtr, jsonStr, jsonStrLen, jsonContent);
         if (jsonData == nullptr) {
             return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, "Invalid JSON", outIsNull, outLen);
         }
@@ -1358,8 +1338,7 @@ extern "C" DLLEXPORT const char *JsonValueExtended(int64_t contextPtr, const cha
     JsonValueResultCacheKey cacheKey{jsonContent, pathContent, emptyBehavior, errorBehavior};
 
     try {
-        rapidjson::Document *jsonData =
-            GetParsedJsonWithCacheRapidJson(contextPtr, jsonStr, jsonStrLen, jsonContent);
+        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(contextPtr, jsonStr, jsonStrLen, jsonContent);
         if (jsonData == nullptr) {
             if (errorBehavior == 2 && !defaultOnErrorIsNull) {
                 *outIsNull = false;
