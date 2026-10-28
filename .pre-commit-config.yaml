@@ -27,7 +27,7 @@ repos:
     rev: v2.4.1
     hooks:
       - id: codespell
-        args: ["-L", "ErrorProne,errorprone,testng"]
+        args: ["-L", "ErrorProne,errorprone,testng,CreateOr"]
 #--------------- C++ 核心检查 ---------------------------------------------
   # clang-format：C/C++ 代码格式化
   - repo: https://gitcode.com/pre-commit-clang/mirrors-clang-format

@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cstring>
 #include <ctime>
 #include <functional>
 #include <nlohmann/json.hpp>
@@ -194,31 +195,16 @@ extern "C" DLLEXPORT const char *RegexpExtractRetNull(int64_t contextPtr, const 
 // JSON parse cache to improve performance for repeated JSON queries
 // Uses thread-local storage to avoid synchronization overhead
 namespace {
-// Simple hash function for JSON content
-inline uint64_t HashJsonContent(const std::string &content)
-{
-    // FNV-1a hash algorithm
-    uint64_t hash = 14695981039346656037ULL;
-    for (char c : content) {
-        hash ^= static_cast<unsigned char>(c);
-        hash *= 1099511628211ULL;
-    }
-    return hash;
-}
-
 struct JsonCache {
-    uint64_t hash = 0;
     JsonDocument parsedJson;
     std::string lastJsonContent;
 
-    bool IsCacheValid(const std::string &jsonContent) const
-    {
-        return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
-    }
+    // std::string equality first compares length and then content. Computing a
+    // hash for this single-entry cache would add an unconditional full scan.
+    bool IsCacheValid(const std::string &jsonContent) const { return lastJsonContent == jsonContent; }
 
     void SetCache(const std::string &jsonContent, const JsonDocument &json)
     {
-        hash = HashJsonContent(jsonContent);
         lastJsonContent = jsonContent;
         parsedJson = json;
     }
@@ -230,18 +216,20 @@ thread_local JsonCache THREAD_LOCAL_JSON_CACHE;
 
 // RapidJSON cache for target functions
 struct RapidJsonCache {
-    uint64_t hash = 0;
     rapidjson::Document parsedJson;
     std::string lastJsonContent;
 
+    // This is also a single-entry cache; compare directly instead of scanning
+    // the JSON once for a hash and again to rule out hash collisions.
     bool IsCacheValid(const std::string &jsonContent) const
     {
-        return hash == HashJsonContent(jsonContent) && lastJsonContent == jsonContent;
+        // An empty lastJsonContent also means "never populated": empty input is
+        // invalid JSON and must fall through to the parse-failure path.
+        return !lastJsonContent.empty() && lastJsonContent == jsonContent;
     }
 
     void SetCache(const std::string &jsonContent, rapidjson::Document &json)
     {
-        hash = HashJsonContent(jsonContent);
         std::string(jsonContent).swap(lastJsonContent);
         parsedJson.Swap(json);
     }
@@ -249,7 +237,13 @@ struct RapidJsonCache {
 
 thread_local RapidJsonCache RAPIDJSON_CACHE;
 
-std::string SerializeRapidJsonValue(const rapidjson::Value &value);
+bool IsSameCacheString(const std::string &cachedValue, const char *value, int32_t valueLen)
+{
+    if (valueLen < 0 || cachedValue.size() != static_cast<size_t>(valueLen)) {
+        return false;
+    }
+    return cachedValue.empty() || memcmp(cachedValue.data(), value, cachedValue.size()) == 0;
+}
 
 struct JsonQueryResultCacheKey {
     std::string jsonContent;
@@ -263,6 +257,13 @@ struct JsonQueryResultCacheKey {
         return wrapperBehavior == other.wrapperBehavior && emptyBehavior == other.emptyBehavior &&
                errorBehavior == other.errorBehavior && jsonContent == other.jsonContent && rawPath == other.rawPath;
     }
+
+    bool Matches(const char *jsonStr, int32_t jsonStrLen, const char *pathStr, int32_t pathStrLen, int32_t wrapper,
+                 int32_t empty, int32_t error) const
+    {
+        return wrapperBehavior == wrapper && emptyBehavior == empty && errorBehavior == error &&
+               IsSameCacheString(jsonContent, jsonStr, jsonStrLen) && IsSameCacheString(rawPath, pathStr, pathStrLen);
+    }
 };
 
 struct JsonQueryResultCacheEntry {
@@ -274,10 +275,12 @@ struct JsonQueryResultCache {
     static constexpr size_t CACHE_SIZE = 16;
     std::vector<JsonQueryResultCacheEntry> entries;
 
-    bool Get(const JsonQueryResultCacheKey &key, std::string *value)
+    bool Get(const char *jsonStr, int32_t jsonStrLen, const char *pathStr, int32_t pathStrLen, int32_t wrapperBehavior,
+             int32_t emptyBehavior, int32_t errorBehavior, std::string *value)
     {
         for (size_t i = 0; i < entries.size(); ++i) {
-            if (!(entries[i].key == key)) {
+            if (!entries[i].key.Matches(jsonStr, jsonStrLen, pathStr, pathStrLen, wrapperBehavior, emptyBehavior,
+                                        errorBehavior)) {
                 continue;
             }
             *value = entries[i].value;
@@ -315,21 +318,190 @@ struct JsonQueryResultCache {
 
 thread_local JsonQueryResultCache JSON_QUERY_RESULT_CACHE;
 
-std::string SerializeRapidJsonValueWithCache(const rapidjson::Value &value, const JsonQueryResultCacheKey &cacheKey)
-{
-    std::string result;
-    if (JSON_QUERY_RESULT_CACHE.Get(cacheKey, &result)) {
-        return result;
+struct JsonValueResultCacheKey {
+    std::string jsonContent;
+    std::string rawPath;
+    int32_t emptyBehavior = 0;
+    int32_t errorBehavior = 0;
+
+    bool operator==(const JsonValueResultCacheKey &other) const
+    {
+        return emptyBehavior == other.emptyBehavior && errorBehavior == other.errorBehavior &&
+               jsonContent == other.jsonContent && rawPath == other.rawPath;
     }
 
-    result = SerializeRapidJsonValue(value);
-    JSON_QUERY_RESULT_CACHE.Put(cacheKey, result);
-    return result;
-}
+    bool Matches(const char *jsonStr, int32_t jsonStrLen, const char *pathStr, int32_t pathStrLen, int32_t empty,
+                 int32_t error) const
+    {
+        return emptyBehavior == empty && errorBehavior == error &&
+               IsSameCacheString(jsonContent, jsonStr, jsonStrLen) && IsSameCacheString(rawPath, pathStr, pathStrLen);
+    }
+};
 
-rapidjson::Document *GetParsedJsonWithCacheRapidJson(std::string &jsonContent)
+struct JsonValueResultCacheEntry {
+    JsonValueResultCacheKey key;
+    bool isNull = false;
+    std::string value;
+};
+
+struct JsonValueResultCache {
+    static constexpr size_t CACHE_SIZE = 16;
+    std::vector<JsonValueResultCacheEntry> entries;
+
+    bool Get(const char *jsonStr, int32_t jsonStrLen, const char *pathStr, int32_t pathStrLen, int32_t emptyBehavior,
+             int32_t errorBehavior, std::string *value, bool *isNull)
+    {
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (!entries[i].key.Matches(jsonStr, jsonStrLen, pathStr, pathStrLen, emptyBehavior, errorBehavior)) {
+                continue;
+            }
+            *value = entries[i].value;
+            *isNull = entries[i].isNull;
+            if (i != 0) {
+                JsonValueResultCacheEntry hit = entries[i];
+                entries.erase(entries.begin() + i);
+                entries.insert(entries.begin(), std::move(hit));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void Put(const JsonValueResultCacheKey &key, const std::string &value, bool isNull)
+    {
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (!(entries[i].key == key)) {
+                continue;
+            }
+            entries[i].value = value;
+            entries[i].isNull = isNull;
+            if (i != 0) {
+                JsonValueResultCacheEntry hit = entries[i];
+                entries.erase(entries.begin() + i);
+                entries.insert(entries.begin(), std::move(hit));
+            }
+            return;
+        }
+
+        entries.insert(entries.begin(), JsonValueResultCacheEntry{key, isNull, value});
+        if (entries.size() > CACHE_SIZE) {
+            entries.pop_back();
+        }
+    }
+};
+
+thread_local JsonValueResultCache JSON_VALUE_RESULT_CACHE;
+
+// Keys use the input address rather than a JSON-content hash. Projection input
+// strings are immutable for one evaluator batch, so repeated paths over one
+// row share a Document without rescanning the JSON payload.
+struct RowJsonDocumentKey {
+    const char *data = nullptr;
+    int32_t length = 0;
+
+    bool operator==(const RowJsonDocumentKey &other) const { return data == other.data && length == other.length; }
+};
+
+struct RowJsonDocumentKeyHash {
+    size_t operator()(const RowJsonDocumentKey &key) const
+    {
+        auto address = reinterpret_cast<uintptr_t>(key.data);
+        return static_cast<size_t>(address ^ (address >> 33) ^ (static_cast<uint64_t>(key.length) << 1));
+    }
+};
+
+struct RowJsonDocumentCache {
+    static constexpr size_t MAX_DOCUMENTS = 4096;
+    static constexpr size_t MAX_INPUT_BYTES = 64 * 1024 * 1024;
+
+    bool active = false;
+    int64_t contextPtr = 0;
+    size_t cachedInputBytes = 0;
+    std::unordered_map<RowJsonDocumentKey, rapidjson::Document, RowJsonDocumentKeyHash> documents;
+
+    void BeginBatch(int64_t newContextPtr)
+    {
+        documents.clear();
+        cachedInputBytes = 0;
+        active = true;
+        contextPtr = newContextPtr;
+    }
+
+    void EndBatch(int64_t endingContextPtr)
+    {
+        if (active && contextPtr == endingContextPtr) {
+            documents.clear();
+            cachedInputBytes = 0;
+            active = false;
+            contextPtr = 0;
+        }
+    }
+
+    rapidjson::Document *Find(int64_t lookupContextPtr, const char *data, int32_t length)
+    {
+        if (!active || contextPtr != lookupContextPtr || data == nullptr || length < 0) {
+            return nullptr;
+        }
+        auto it = documents.find(RowJsonDocumentKey{data, length});
+        return it == documents.end() ? nullptr : &it->second;
+    }
+
+    rapidjson::Document *Store(int64_t storeContextPtr, const char *data, int32_t length, rapidjson::Document &document)
+    {
+        if (!active || contextPtr != storeContextPtr || data == nullptr || length < 0) {
+            return nullptr;
+        }
+        const RowJsonDocumentKey key{data, length};
+        auto it = documents.find(key);
+        if (it == documents.end()) {
+            const size_t inputBytes = static_cast<size_t>(length);
+            if (documents.size() >= MAX_DOCUMENTS || inputBytes > MAX_INPUT_BYTES - cachedInputBytes) {
+                return nullptr;
+            }
+            it = documents.emplace(key, rapidjson::Document()).first;
+            cachedInputBytes += inputBytes;
+        }
+        auto &cached = it->second;
+        cached.Swap(document);
+        return &cached;
+    }
+
+    rapidjson::Document *StoreCopy(int64_t storeContextPtr, const char *data, int32_t length,
+                                   const rapidjson::Document &document)
+    {
+        if (!active || contextPtr != storeContextPtr || data == nullptr || length < 0) {
+            return nullptr;
+        }
+        const RowJsonDocumentKey key{data, length};
+        auto it = documents.find(key);
+        if (it == documents.end()) {
+            const size_t inputBytes = static_cast<size_t>(length);
+            if (documents.size() >= MAX_DOCUMENTS || inputBytes > MAX_INPUT_BYTES - cachedInputBytes) {
+                return nullptr;
+            }
+            it = documents.emplace(key, rapidjson::Document()).first;
+            cachedInputBytes += inputBytes;
+        }
+        auto &cached = it->second;
+        cached.CopyFrom(document, cached.GetAllocator());
+        return &cached;
+    }
+};
+
+thread_local RowJsonDocumentCache ROW_JSON_DOCUMENT_CACHE;
+
+rapidjson::Document *GetParsedJsonWithCacheRapidJson(int64_t contextPtr, const char *rowJsonStr, int32_t rowJsonStrLen,
+                                                     std::string &jsonContent)
 {
+    if (rapidjson::Document *rowDocument = ROW_JSON_DOCUMENT_CACHE.Find(contextPtr, rowJsonStr, rowJsonStrLen)) {
+        return rowDocument;
+    }
+
     if (RAPIDJSON_CACHE.IsCacheValid(jsonContent)) {
+        if (rapidjson::Document *rowDocument =
+                ROW_JSON_DOCUMENT_CACHE.StoreCopy(contextPtr, rowJsonStr, rowJsonStrLen, RAPIDJSON_CACHE.parsedJson)) {
+            return rowDocument;
+        }
         return &RAPIDJSON_CACHE.parsedJson;
     }
 
@@ -359,6 +531,11 @@ rapidjson::Document *GetParsedJsonWithCacheRapidJson(std::string &jsonContent)
             return nullptr;
         }
         jsonContent = fixedJsonContent;
+    }
+
+    if (rapidjson::Document *rowDocument =
+            ROW_JSON_DOCUMENT_CACHE.Store(contextPtr, rowJsonStr, rowJsonStrLen, parsedJson)) {
+        return rowDocument;
     }
 
     RAPIDJSON_CACHE.SetCache(jsonContent, parsedJson);
@@ -555,6 +732,42 @@ static std::vector<std::string> ParseJsonPath(const std::string &path)
     return keys;
 }
 
+namespace {
+constexpr size_t CONSTANT_JSON_PATH_CACHE_CAPACITY = 128;
+
+struct ConstantJsonValuePath {
+    std::string rawPath;
+    std::vector<std::string> keys;
+};
+
+// Codegen marks literal JSON paths with a negative CHAR width. Pointer
+// identity makes lookup O(1); rawPath verification protects against stale JIT
+// literal addresses being reused for a different path.
+thread_local std::unordered_map<const char *, ConstantJsonValuePath> CONSTANT_JSON_VALUE_PATHS;
+
+const std::vector<std::string> &GetConstantJsonValuePath(const char *path, int32_t length)
+{
+    auto it = CONSTANT_JSON_VALUE_PATHS.find(path);
+    if (it != CONSTANT_JSON_VALUE_PATHS.end() && it->second.rawPath.size() == static_cast<size_t>(length) &&
+        memcmp(it->second.rawPath.data(), path, static_cast<size_t>(length)) == 0) {
+        return it->second.keys;
+    }
+
+    if (CONSTANT_JSON_VALUE_PATHS.size() >= CONSTANT_JSON_PATH_CACHE_CAPACITY) {
+        CONSTANT_JSON_VALUE_PATHS.clear();
+    }
+    ConstantJsonValuePath parsedPath;
+    parsedPath.rawPath.assign(path, static_cast<size_t>(length));
+    parsedPath.keys = ParseJsonPath(parsedPath.rawPath);
+    auto inserted = CONSTANT_JSON_VALUE_PATHS.insert_or_assign(path, std::move(parsedPath));
+    return inserted.first->second.keys;
+}
+} // namespace
+
+void JsonRowDocumentCacheBeginBatch(int64_t contextPtr) { ROW_JSON_DOCUMENT_CACHE.BeginBatch(contextPtr); }
+
+void JsonRowDocumentCacheEndBatch(int64_t contextPtr) { ROW_JSON_DOCUMENT_CACHE.EndBatch(contextPtr); }
+
 static JsonDocument *GetParsedJsonWithCache(std::string &jsonContent)
 {
     if (THREAD_LOCAL_JSON_CACHE.IsCacheValid(jsonContent)) {
@@ -686,7 +899,7 @@ extern "C" DLLEXPORT const char *JsonValueRetNull(int64_t contextPtr, const char
                                                   int32_t pathStrLen, bool pathStrIsNull, bool *outIsNull,
                                                   int32_t *outLen)
 {
-    static_cast<void>(pathStrWidth);
+    const bool isConstantPath = pathStrWidth < 0;
     if (outIsNull == nullptr || outLen == nullptr) {
         return nullptr;
     }
@@ -697,30 +910,53 @@ extern "C" DLLEXPORT const char *JsonValueRetNull(int64_t contextPtr, const char
         return nullptr;
     }
 
+    bool cachedIsNull = false;
+    std::string result;
+    if (JSON_VALUE_RESULT_CACHE.Get(jsonStr, jsonStrLen, pathStr, pathStrLen, 0, 0, &result, &cachedIsNull)) {
+        if (cachedIsNull) {
+            *outIsNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        *outIsNull = false;
+        *outLen = static_cast<int32_t>(result.size());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
+        return ret;
+    }
     std::string jsonContent(jsonStr, jsonStrLen);
     std::string pathContent(pathStr, pathStrLen);
+    JsonValueResultCacheKey cacheKey{jsonContent, pathContent, 0, 0};
 
     try {
-        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
+        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(contextPtr, jsonStr, jsonStrLen, jsonContent);
         if (jsonData == nullptr) {
             *outIsNull = true;
             *outLen = 0;
             return nullptr;
         }
-        std::vector<std::string> keys = ParseJsonPath(pathContent);
-        rapidjson::Value *current = ResolveJsonPathTargetRapidJson(jsonData, keys);
+        std::vector<std::string> dynamicKeys;
+        const std::vector<std::string> *keys = nullptr;
+        if (isConstantPath) {
+            keys = &GetConstantJsonValuePath(pathStr, pathStrLen);
+        } else {
+            dynamicKeys = ParseJsonPath(pathContent);
+            keys = &dynamicKeys;
+        }
+        rapidjson::Value *current = ResolveJsonPathTargetRapidJson(jsonData, *keys);
         if (current == nullptr || current->IsNull()) {
             *outIsNull = true;
             *outLen = 0;
             return nullptr;
         }
 
-        std::string result;
         if (!TryFormatJsonValueScalarRapidJson(*current, &result)) {
+            JSON_VALUE_RESULT_CACHE.Put(cacheKey, "", true);
             *outIsNull = true;
             *outLen = 0;
             return nullptr;
         }
+        JSON_VALUE_RESULT_CACHE.Put(cacheKey, result, false);
 
         *outIsNull = false;
         *outLen = static_cast<int32_t>(result.size());
@@ -790,6 +1026,33 @@ bool ParseJsonQueryPathSpec(const std::string &rawPath, JsonPathMode *mode, std:
     }
     *normalizedPath = trimmed;
     return true;
+}
+
+struct ConstantJsonQueryPath {
+    std::string rawPath;
+    JsonPathMode mode = JsonPathMode::LAX;
+    std::string normalizedPath;
+    bool valid = false;
+};
+
+thread_local std::unordered_map<const char *, ConstantJsonQueryPath> CONSTANT_JSON_QUERY_PATHS;
+
+const ConstantJsonQueryPath &GetConstantJsonQueryPath(const char *path, int32_t length)
+{
+    auto it = CONSTANT_JSON_QUERY_PATHS.find(path);
+    if (it != CONSTANT_JSON_QUERY_PATHS.end() && it->second.rawPath.size() == static_cast<size_t>(length) &&
+        memcmp(it->second.rawPath.data(), path, static_cast<size_t>(length)) == 0) {
+        return it->second;
+    }
+
+    if (CONSTANT_JSON_QUERY_PATHS.size() >= CONSTANT_JSON_PATH_CACHE_CAPACITY) {
+        CONSTANT_JSON_QUERY_PATHS.clear();
+    }
+    ConstantJsonQueryPath parsedPath;
+    parsedPath.rawPath.assign(path, static_cast<size_t>(length));
+    parsedPath.valid = ParseJsonQueryPathSpec(parsedPath.rawPath, &parsedPath.mode, &parsedPath.normalizedPath);
+    auto inserted = CONSTANT_JSON_QUERY_PATHS.insert_or_assign(path, std::move(parsedPath));
+    return inserted.first->second;
 }
 
 bool IsJsonQueryScalar(const JsonDocument &value)
@@ -932,7 +1195,7 @@ JsonQueryWithWrapperAndBehavior(int64_t contextPtr, const char *jsonStr, int32_t
                                 bool emptyBehaviorIsNull, int32_t errorBehavior, bool errorBehaviorIsNull,
                                 bool *outIsNull, int32_t *outLen)
 {
-    static_cast<void>(pathStrWidth);
+    const bool isConstantPath = pathStrWidth < 0;
     if (outIsNull == nullptr || outLen == nullptr) {
         return nullptr;
     }
@@ -946,17 +1209,32 @@ JsonQueryWithWrapperAndBehavior(int64_t contextPtr, const char *jsonStr, int32_t
     int32_t normalizedWrapper = wrapperBehaviorIsNull ? JSON_QUERY_WITHOUT_ARRAY_WRAPPER : wrapperBehavior;
     int32_t normalizedEmpty = emptyBehaviorIsNull ? JSON_QUERY_NULL_BEHAVIOR : emptyBehavior;
     int32_t normalizedError = errorBehaviorIsNull ? JSON_QUERY_NULL_BEHAVIOR : errorBehavior;
+    std::string result;
+    if (JSON_QUERY_RESULT_CACHE.Get(jsonStr, jsonStrLen, pathStr, pathStrLen, normalizedWrapper, normalizedEmpty,
+                                    normalizedError, &result)) {
+        return CreateJsonQueryResult(contextPtr, result, outIsNull, outLen);
+    }
     std::string jsonContent(jsonStr, jsonStrLen);
     std::string rawPath(pathStr, pathStrLen);
+    JsonQueryResultCacheKey cacheKey{jsonContent, rawPath, normalizedWrapper, normalizedEmpty, normalizedError};
     JsonPathMode pathMode = JsonPathMode::LAX;
     std::string pathContent;
-    if (!ParseJsonQueryPathSpec(rawPath, &pathMode, &pathContent)) {
+    bool validPath = false;
+    if (isConstantPath) {
+        const ConstantJsonQueryPath &parsedPath = GetConstantJsonQueryPath(pathStr, pathStrLen);
+        pathMode = parsedPath.mode;
+        pathContent = parsedPath.normalizedPath;
+        validPath = parsedPath.valid;
+    } else {
+        validPath = ParseJsonQueryPathSpec(rawPath, &pathMode, &pathContent);
+    }
+    if (!validPath) {
         return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, "Illegal JSON path in JSON_QUERY function",
                                             outIsNull, outLen);
     }
 
     try {
-        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
+        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(contextPtr, jsonStr, jsonStrLen, jsonContent);
         if (jsonData == nullptr) {
             return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, "Invalid JSON", outIsNull, outLen);
         }
@@ -986,9 +1264,9 @@ JsonQueryWithWrapperAndBehavior(int64_t contextPtr, const char *jsonStr, int32_t
                                                 outIsNull, outLen);
         }
 
-        JsonQueryResultCacheKey cacheKey{jsonContent, rawPath, normalizedWrapper, normalizedEmpty, normalizedError};
-        return CreateJsonQueryResult(contextPtr, SerializeRapidJsonValueWithCache(wrappedValue, cacheKey), outIsNull,
-                                     outLen);
+        result = SerializeRapidJsonValue(wrappedValue);
+        JSON_QUERY_RESULT_CACHE.Put(cacheKey, result);
+        return CreateJsonQueryResult(contextPtr, result, outIsNull, outLen);
     } catch (const std::exception &e) {
         return HandleJsonQueryErrorBehavior(contextPtr, normalizedError, e.what(), outIsNull, outLen);
     }
@@ -1016,6 +1294,7 @@ extern "C" DLLEXPORT const char *JsonValueExtended(int64_t contextPtr, const cha
                                                    const char *defaultOnError, int32_t defaultOnErrorLen,
                                                    bool defaultOnErrorIsNull, bool *outIsNull, int32_t *outLen)
 {
+    const bool isConstantPath = pathStrWidth < 0;
     if (outIsNull == nullptr || outLen == nullptr) {
         return nullptr;
     }
@@ -1040,11 +1319,26 @@ extern "C" DLLEXPORT const char *JsonValueExtended(int64_t contextPtr, const cha
         }
     }
 
+    bool cachedIsNull = false;
+    std::string result;
+    if (JSON_VALUE_RESULT_CACHE.Get(jsonStr, jsonStrLen, pathStr, pathStrLen, emptyBehavior, errorBehavior, &result,
+                                    &cachedIsNull)) {
+        if (cachedIsNull) {
+            return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
+                                                defaultOnEmptyIsNull, outIsNull, outLen);
+        }
+        *outIsNull = false;
+        *outLen = static_cast<int32_t>(result.size());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        memcpy_s(ret, *outLen + 1, result.c_str(), *outLen + 1);
+        return ret;
+    }
     std::string jsonContent(jsonStr, jsonStrLen);
     std::string pathContent(pathStr, pathStrLen);
+    JsonValueResultCacheKey cacheKey{jsonContent, pathContent, emptyBehavior, errorBehavior};
 
     try {
-        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(jsonContent);
+        rapidjson::Document *jsonData = GetParsedJsonWithCacheRapidJson(contextPtr, jsonStr, jsonStrLen, jsonContent);
         if (jsonData == nullptr) {
             if (errorBehavior == 2 && !defaultOnErrorIsNull) {
                 *outIsNull = false;
@@ -1064,9 +1358,16 @@ extern "C" DLLEXPORT const char *JsonValueExtended(int64_t contextPtr, const cha
             }
         }
 
-        std::vector<std::string> keys = ParseJsonPath(pathContent);
+        std::vector<std::string> dynamicKeys;
+        const std::vector<std::string> *keys = nullptr;
+        if (isConstantPath) {
+            keys = &GetConstantJsonValuePath(pathStr, pathStrLen);
+        } else {
+            dynamicKeys = ParseJsonPath(pathContent);
+            keys = &dynamicKeys;
+        }
 
-        if (keys.empty()) {
+        if (keys->empty()) {
             if (errorBehavior == 2 && !defaultOnErrorIsNull) {
                 *outIsNull = false;
                 *outLen = defaultOnErrorLen;
@@ -1085,17 +1386,18 @@ extern "C" DLLEXPORT const char *JsonValueExtended(int64_t contextPtr, const cha
             }
         }
 
-        rapidjson::Value *current = ResolveJsonPathTargetRapidJson(jsonData, keys);
+        rapidjson::Value *current = ResolveJsonPathTargetRapidJson(jsonData, *keys);
         if (current == nullptr || current->IsNull()) {
             return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
                                                 defaultOnEmptyIsNull, outIsNull, outLen);
         }
 
-        std::string result;
         if (!TryFormatJsonValueScalarRapidJson(*current, &result)) {
+            JSON_VALUE_RESULT_CACHE.Put(cacheKey, "", true);
             return HandleJsonValueEmptyBehavior(contextPtr, emptyBehavior, defaultOnEmpty, defaultOnEmptyLen,
                                                 defaultOnEmptyIsNull, outIsNull, outLen);
         }
+        JSON_VALUE_RESULT_CACHE.Put(cacheKey, result, false);
 
         *outIsNull = false;
         *outLen = static_cast<int32_t>(result.size());

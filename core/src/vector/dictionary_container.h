@@ -21,29 +21,21 @@ class DictionaryContainer {
 
 public:
     DictionaryContainer(const int32_t *values, int32_t valueSize, std::shared_ptr<DictType> dictionary,
-        int32_t dictSize, int32_t dictOffset = 0)
-        : valueSize(valueSize),
-          dictionary(std::move(dictionary)),
-          dictSize(dictSize),
-          dictOffset(dictOffset),
+                        int32_t dictSize, int32_t dictOffset = 0)
+        : valueSize(valueSize), dictionary(std::move(dictionary)), dictSize(dictSize), dictOffset(dictOffset),
           isSliced(false)
     {
-        this->values.reserve(valueSize);
-        // init values
-        for (int32_t i = 0; i < valueSize; i++) {
-            this->values[i] = values[i];
+        if (valueSize > 0 && values != nullptr) {
+            this->values.assign(values, values + valueSize);
         }
     }
 
     DictionaryContainer(std::vector<int32_t> &values, int32_t valueSize, std::shared_ptr<DictType> dictionary,
-        int32_t dictSize, int32_t dictOffset = 0)
-        : values(std::move(values)),
-          valueSize(valueSize),
-          dictionary(std::move(dictionary)),
-          dictSize(dictSize),
-          dictOffset(dictOffset),
-          isSliced(true)
-    {}
+                        int32_t dictSize, int32_t dictOffset = 0)
+        : values(std::move(values)), valueSize(valueSize), dictionary(std::move(dictionary)), dictSize(dictSize),
+          dictOffset(dictOffset), isSliced(true)
+    {
+    }
 
     ~DictionaryContainer() = default;
 
@@ -54,7 +46,7 @@ public:
             newValues[i] = values[positions[i]];
         }
         return std::make_shared<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>(newValues, length, dictionary, dictSize,
-            dictOffset);
+                                                                               dictOffset);
     }
 
     ALWAYS_INLINE typename PARAM_TYPE<RAW_DATA_TYPE>::type GetValue(int32_t index)
@@ -99,5 +91,5 @@ private:
     int32_t dictOffset;
     bool isSliced;
 };
-}
+} // namespace omniruntime::vec
 #endif // OMNI_RUNTIME_DICTIONARY_CONTAINER_H
