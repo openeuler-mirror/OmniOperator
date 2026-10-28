@@ -401,7 +401,7 @@ public:
             case type::OMNI_CHAR: {
                 return CreateStringDictionary(
                     values, valueSize, reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector),
-                    dataTypeId);
+                    static_cast<omniruntime::type::DataTypeId>(dataTypeId));
             }
             default: {
                 std::string omniExceptionInfo =
