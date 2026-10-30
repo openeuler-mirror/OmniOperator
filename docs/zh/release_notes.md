@@ -7,7 +7,7 @@
 <a name="table227mcpsimp"></a>
 <table><tbody><tr id="row232mcpsimp"><th class="firstcol" valign="top" width="30%" id="mcps1.1.3.1.1"><p id="p234mcpsimp"><a name="p234mcpsimp"></a><a name="p234mcpsimp"></a>产品名称</p>
 </th>
-<td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.1.1 "><p id="p236mcpsimp"><a name="p236mcpsimp"></a><a name="p236mcpsimp"></a>Kunpeng BoostKit</p>
+<td class="cellrowborder" valign="top" width="70%" headers="mcps1.1.3.1.1 "><p id="p236mcpsimp"><a name="p236mcpsimp"></a><a name="p236mcpsimp"></a>鲲鹏BoostKit</p>
 </td>
 </tr>
 <tr id="row237mcpsimp"><th class="firstcol" valign="top" width="30%" id="mcps1.1.3.2.1"><p id="p239mcpsimp"><a name="p239mcpsimp"></a><a name="p239mcpsimp"></a>产品版本</p>
@@ -207,7 +207,7 @@
 **新增特性<a name="section9559165534817"></a>**
 
 - 新增适配Spark的Gluten 1.3版本适配层。
-- SparkExtension新增支持`concat_ws`、regexp、`regexp_replace`、trim和floor表达式。
+- SparkExtension新增支持`concat_ws`、`regexp`、`regexp_replace`、`trim`和`floor`表达式
 
 **修改特性<a name="section299616132492"></a>**
 

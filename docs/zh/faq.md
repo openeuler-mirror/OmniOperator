@@ -6,7 +6,7 @@
 
 配置LD\_PRELOAD环境变量的情况下，基于毕昇JDK 1.8.0.262执行Spark，偶发JVM core dump，报错堆栈如下。
 
-```bash
+```output
 Stack: [0x0000ffd2ce0d0000, 0x0000ffd2ce2d00001, sp=0x0000ffd2ce2cb830, free space=2030k
 Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
 C [libzip.so+0x52a4] fill_window+0x164
@@ -46,7 +46,7 @@ C 0x00000007822fef70
 
 使用Spark查询Parquet数据源时，若开启OmniOperator并依赖Hadoop 3.2.0版本的libhdfs.so时，会偶发core dump，报错堆栈如下。
 
-```bash
+```output
 Stack: [0x00007fb9e8e5d000,0x00007fb9e8f5e000], sp=0x00007fb9e8f5cd40, free space=1023k
 Native frames: (J=compiled Java code, j=interpreted , Vv=VM code, C=native code)
 C [libhdfs.so+0xcd39]  hdfsThreadDestructor+0xb9
@@ -89,7 +89,7 @@ Compressed class space size: 1073741824 Address: 0x0000000100000000
 
 在Spark执行INSERT语句且只有1个数据分区的场景下，当出现50个表连续SMJ（Sort Merge Join）操作时，可能会导致SMJ算子在堆外内存耗尽时调用new来申请vector内存，从而引发core dump问题。
 
-![](figures/9A6D576E-BF4E-45C1-AFB0-1DC31EFDF3A6.png)
+![Spark单分区执行50个SMJ算子时堆外内存耗尽引发core dump的报错堆栈截图](figures/9A6D576E-BF4E-45C1-AFB0-1DC31EFDF3A6.png)
 
 **关键过程、根本原因分析**
 
@@ -110,15 +110,16 @@ Compressed class space size: 1073741824 Address: 0x0000000100000000
 
 当使用Spark OmniOperator对包含大量变长类型列（如500列）的数据进行聚合查询时，SQL查询性能可能会下降。
 
-![](figures/zh-cn_image_0000001950071221.png)
+![500列cast string to double聚合查询开启算子加速前后的耗时对比柱状图，查询性能明显下降
+](figures/zh-cn_image_0000001950071221.png)
 
 **关键过程、根本原因分析<a name="zh-cn_topic_0000001921984084_zh-cn_topic_0000001454201442_section145813300553"></a>**
 
 在对变长类型列进行聚合操作时，需通过Codegen实现字符串到双精度浮点数的类型转换。由于Codegen本身存在编译开销，SQL查询的性能将受到编译时间和算子执行时间的双重影响。当超多列需要同时进行Codegen编译时，编译开销远大于OmniOperator算子执行时间，导致整体SQL查询性能慢。
 
-![](figures/zh-cn_image_0000001922362322.png)
+![超多列Codegen编译耗时与算子执行耗时占比对比图，编译开销明显大于算子执行时间](figures/zh-cn_image_0000001922362322.png)
 
-![](figures/zh-cn_image_0000001922202730.png)
+![回退Spark开源版本前后的多列聚合查询耗时对比图，回退后查询性能明显回升](figures/zh-cn_image_0000001922202730.png)
 
 **结论、解决方案及效果<a name="zh-cn_topic_0000001921984084_section239217135912"></a>**
 
@@ -130,7 +131,7 @@ Compressed class space size: 1073741824 Address: 0x0000000100000000
 
 某些SQL包含Group By算子，Hive OmniOperator会出现Unable to create serializer "org.apache.hive.com.esotericsoftware.kryo.serializers.FieldSerializer" for class: com.huawei.boostkit.hive.OmniGroupByOperator报错。
 
-![](figures/zh-cn_image_0000002070583738.png)
+![Hive OmniOperator执行Group By算子时报Unable to create serializer错误的运行日志截图](figures/zh-cn_image_0000002070583738.png)
 
 **关键过程、根本原因分析<a name="zh-cn_topic_0000002070738706_zh-cn_topic_0000001921984084_zh-cn_topic_0000001454201442_section145813300553"></a>**
 
@@ -140,7 +141,7 @@ Compressed class space size: 1073741824 Address: 0x0000000100000000
 
 需要在Hive工程的pom文件将Kryo的version改为4.0.0重新编译打包，替换Hive安装目录“lib“下的hive-exec-3.1.0.jar，也可以使用已经编译好的[Hive JAR包](https://gitee.com/kunpengcompute/boostkit-bigdata/releases/download/tag_24.0.0_release_hive/hive-exec-3.1.0.jar)进行替换。
 
-## Hive MetaStore远程部署，出现q64卡顿<a name="ZH-CN_TOPIC_0000002517291328"></a>
+## Hive MetaStore远程部署运行TPCDS-99时q64卡顿的解决方法<a name="ZH-CN_TOPIC_0000002517291328"></a>
 
 **问题现象描述<a name="zh-cn_topic_0000002145370381_zh-cn_topic_0000002105043824_zh-cn_topic_0000002070738706_zh-cn_topic_0000001921984084_zh-cn_topic_0000001454201442_section758133012554"></a>**
 
@@ -206,3 +207,9 @@ cmake ..   -DCMAKE_CXX_STANDARD=17   -DCMAKE_CXX_STANDARD_REQUIRED=ON   -DABSL_P
 make -j32
 make install
 ```
+
+## 修订记录
+
+| 文档版本 | 发布日期 | 修改说明 |
+| --- | --- | --- |
+| 01 | 2026-06-30 | 第一次正式发布。 |

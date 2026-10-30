@@ -935,11 +935,11 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
 
     SparkExtension输出执行计划如下图，如果算子以**Omni**开头则证明SparkExtension生效。
 
-    ![](figures/zh-cn_image_0000002515902982.png)
+    ![验证SparkExtension是否生效的执行回显](figures/zh-cn_image_0000002515902982.png)
 
     Spark-SQL开源版本输出执行计划如下图。
 
-    ![](figures/zh-cn_image_0000002515743078.png)
+    ![验证SparkExtension是否生效的执行回显](figures/zh-cn_image_0000002515743078.png)
 
 3. 运行SQL语句。
 
@@ -967,19 +967,19 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认SparkE
 
     - 开源版本Spark-SQL执行结果。
 
-        ![](figures/zh-cn_image_0000002547382895.png)
+        ![运行SQL语句的执行回显](figures/zh-cn_image_0000002547382895.png)
 
         执行计划如下。
 
-        ![](figures/zh-cn_image_0000002547382893.png)
+        ![运行SQL语句的执行回显](figures/zh-cn_image_0000002547382893.png)
 
     - 使能SparkExtension后的执行结果。
 
-        ![](figures/zh-cn_image_0000002547462889.png)
+        ![运行SQL语句的执行回显](figures/zh-cn_image_0000002547462889.png)
 
         执行计划如下。
 
-        ![](figures/zh-cn_image_0000002547462887.png)
+        ![运行SQL语句的执行回显](figures/zh-cn_image_0000002547462887.png)
 
     执行结果对比：两项测试在查询结果上完全一致，使能SparkExtension后，执行SQL的耗时减少。SparkExtension在不影响查询结果的前提下，有效提升了Q82查询的执行效率。
 
@@ -1835,11 +1835,11 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
 
     Gluten输出执行计划如下图。如果算子以**Omni**开头或者**Transformer**结尾，证明Gluten生效。
 
-    ![](figures/zh-cn_image_0000002515902986.png)
+    ![查看Gluten是否生效的执行回显](figures/zh-cn_image_0000002515902986.png)
 
     开源版本Spark-SQL输出执行计划如下图。
 
-    ![](figures/zh-cn_image_0000002515743080.png)
+    ![查看Gluten是否生效的执行回显](figures/zh-cn_image_0000002515743080.png)
 
 3. 运行SQL语句。
 
@@ -1867,11 +1867,11 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
 
     - 开源版本Spark-SQL执行结果。
 
-        ![](figures/zh-cn_image_0000002547382899.png)
+        ![对比开源版本Spark-SQL和Gluten执行TPC-的执行回显](figures/zh-cn_image_0000002547382899.png)
 
     - 使能Gluten后的执行结果。
 
-        ![](figures/zh-cn_image_0000002547462895.png)
+        ![对比开源版本Spark-SQL和Gluten执行TPC-的执行回显](figures/zh-cn_image_0000002547462895.png)
 
     执行结果对比：两项测试在查询结果上完全一致，使能Gluten后，执行SQL的耗时减少。Gluten在不影响查询结果的前提下，有效提升了Q82查询的执行效率。
 
@@ -2219,11 +2219,11 @@ Hive使用交互式页面命令行来执行SQL任务。在Hive侧查看HiveExten
 
     HiveExtension输出执行计划如下图，算子以Omni开头则说明HiveExtension生效。
 
-    ![](figures/hive-plan-1.png)
+    ![查看HiveExtension是否生效的执行回显](figures/hive-plan-1.png)
 
     Hive-SQL开源版本输出执行计划如下图。
 
-    ![](figures/hive-plan.png)
+    ![查看HiveExtension是否生效的执行回显](figures/hive-plan.png)
 
 3. 运行SQL语句。
 
