@@ -1874,6 +1874,9 @@ Spark使用交互式页面命令行来执行SQL任务。如果需要确认Gluten
     |spark.omni.sql.columnar.unixTimeFunc.enabled|true| 是否启用from_unixtime和unix_timestamp表达式（与spark.gluten.sql.columnar.backend.omni.unixTimeFunc.enabled等效）。true表示启用，false表示关闭。                                                                                |
     |spark.gluten.sql.native.writer.enabled|true| 是否开启列式写算子，true表示开启，false表示关闭。                                                                                                                                                                    |
     |spark.gluten.sql.columnar.backend.omni.preferVectorizationExpression| false                          | 是否优选表达式向量化版本，true表示优选向量化版本，false表示使用codegen版本。                                                                                                                                                   |
+    |spark.gluten.sql.columnar.backend.omni.sveJoin.enabled|true| 是否为Join算子启用SVE Vertical Hash Table。true表示开启，false表示关闭。                                                                                                                                                 |
+    |spark.gluten.sql.columnar.backend.omni.sveHashAgg.enabled|true| 是否为HashAggregate算子启用SVE Vertical Hash Table。true表示开启，false表示关闭。                                                                                                                                        |
+    |spark.gluten.sql.columnar.backend.omni.taper.enabled|true| 是否为Join算子启用Taper Hash Table。true表示开启，false表示关闭。                                                                                                                                                        |
 
 2. 查看Gluten是否生效。
 
