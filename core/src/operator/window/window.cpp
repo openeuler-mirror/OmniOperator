@@ -4,6 +4,7 @@
  */
 
 #include "window.h"
+#include <cmath>
 #include "lead_lag_function.h"
 
 using namespace std;
@@ -766,21 +767,11 @@ static ALWAYS_INLINE bool ValueEqualsLastValue(vec::VectorBatch *partitionVecBat
     } else if constexpr (std::is_same_v<T, double>) {
         double lastValue = static_cast<Vector<double> *>(partitionVector)->GetValue(lastIdx);
         double nextValue = static_cast<Vector<double> *>(currentVector)->GetValue(nextIdx);
-
-        if (std::abs(lastValue - nextValue) < __DBL_EPSILON__) {
-            return true;
-        } else {
-            return false;
-        }
+        return lastValue == nextValue || (std::isnan(lastValue) && std::isnan(nextValue));
     } else if constexpr (std::is_same_v<T, float>) {
         float lastValue = static_cast<Vector<float> *>(partitionVector)->GetValue(lastIdx);
         float nextValue = static_cast<Vector<float> *>(currentVector)->GetValue(nextIdx);
-
-        if (std::abs(lastValue - nextValue) < __DBL_EPSILON__) {
-            return true;
-        } else {
-            return false;
-        }
+        return lastValue == nextValue || (std::isnan(lastValue) && std::isnan(nextValue));
     } else {
         T lastValue = static_cast<Vector<T> *>(partitionVector)->GetValue(lastIdx);
         T nextValue = static_cast<Vector<T> *>(currentVector)->GetValue(nextIdx);

@@ -3,6 +3,7 @@
  * @Description: pages index implementations
  */
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include "vector/vector.h"
 #include "vector/array_vector.h"
@@ -495,14 +496,21 @@ void QuickSortVarChar(int64_t *values, std::vector<uint32_t> &varcharLength, uin
     QuickSortVarcharInternal<sortAscending>(values, varcharLength, addresses, from, to, compareResult.data());
 }
 
+// Spark semantics for floating point ordering: NaN == NaN, and NaN is greater than any other value.
+template <typename T> static bool ALWAYS_INLINE FloatingEqual(T left, T right)
+{
+    return left == right || (std::isnan(left) && std::isnan(right));
+}
+
+template <typename T> static bool ALWAYS_INLINE FloatingGreater(T left, T right)
+{
+    return std::isnan(left) ? !std::isnan(right) : (!std::isnan(right) && left > right);
+}
+
 template <typename RawType> static bool ALWAYS_INLINE OnlyEqual(RawType &left, RawType &right)
 {
-    if constexpr (std::is_same_v<RawType, double>) {
-        const double diff = left - right;
-        return (std::abs(diff) < __DBL_EPSILON__);
-    } else if constexpr (std::is_same_v<RawType, float>) {
-        const float diff = left - right;
-        return (std::abs(diff) < __FLT_EPSILON__);
+    if constexpr (std::is_floating_point_v<RawType>) {
+        return FloatingEqual(left, right);
     } else {
         return left == right;
     }
@@ -522,60 +530,27 @@ template <int32_t sortAscending> static int8_t ALWAYS_INLINE Decimal128Compare(D
 }
 
 
-static bool ALWAYS_INLINE DoubleEqual(double left, double right)
+template <int32_t sortAscending, typename T> static int8_t ALWAYS_INLINE FloatingCompare(T left, T right)
 {
-
-    if (left == right) return true;
-
-    double diff = std::fabs(left - right);
-
-    if (diff < __DBL_EPSILON__) return true;
-
-    double max_val = std::max(std::fabs(left), std::fabs(right));
-    return diff < max_val * __DBL_EPSILON__;
+    if (FloatingEqual(left, right)) {
+        return OperatorUtil::COMPARE_STATUS_EQUAL;
+    }
+    bool greater = FloatingGreater(left, right);
+    if constexpr (sortAscending == 1) {
+        return greater ? OperatorUtil::COMPARE_STATUS_GREATER_THAN : OperatorUtil::COMPARE_STATUS_LESS_THAN;
+    } else {
+        return greater ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_GREATER_THAN;
+    }
 }
 
 template <int32_t sortAscending> static int8_t ALWAYS_INLINE DoubleCompare(double left, double right)
 {
-
-    if (DoubleEqual(left, right)) {
-        return omniruntime::op::OperatorUtil::COMPARE_STATUS_EQUAL;
-    }
-
-    if constexpr (sortAscending == 1) {
-        return left > right?
-            OperatorUtil::COMPARE_STATUS_GREATER_THAN : OperatorUtil::COMPARE_STATUS_LESS_THAN;
-    } else {
-        return right > left ?
-            OperatorUtil::COMPARE_STATUS_GREATER_THAN : OperatorUtil::COMPARE_STATUS_LESS_THAN;
-    }
-}
-
-static bool ALWAYS_INLINE FloatEqual(float left, float right)
-{
-    if (left == right) return true;
-
-    float diff = std::fabs(left - right);
-
-    if (diff < __FLT_EPSILON__) return true;
-
-    float max_val = std::max(std::fabs(left), std::fabs(right));
-    return diff < max_val * __FLT_EPSILON__;
+    return FloatingCompare<sortAscending, double>(left, right);
 }
 
 template <int32_t sortAscending> static int8_t ALWAYS_INLINE FloatCompare(float left, float right)
 {
-    if (FloatEqual(left, right)) {
-        return omniruntime::op::OperatorUtil::COMPARE_STATUS_EQUAL;
-    }
-
-    if constexpr (sortAscending == 1) {
-        return left > right ?
-            OperatorUtil::COMPARE_STATUS_GREATER_THAN : OperatorUtil::COMPARE_STATUS_LESS_THAN;
-    } else {
-        return right > left ?
-            OperatorUtil::COMPARE_STATUS_GREATER_THAN : OperatorUtil::COMPARE_STATUS_LESS_THAN;
-    }
+    return FloatingCompare<sortAscending, float>(left, right);
 }
 
 template <int32_t sortAscending>
@@ -589,14 +564,8 @@ static void ALWAYS_INLINE QuickSortFloatSmall(int64_t *values, uint64_t *address
         while (j >= from) {
             auto jValuePtr = values[j];
             auto jValue = *(reinterpret_cast<float *>(&jValuePtr));
-            if constexpr (sortAscending == 0) {
-                if (FloatEqual(jValue, iValue) || jValue > iValue) {
-                    break;
-                }
-            } else {
-                if (FloatEqual(jValue, iValue) || jValue < iValue) {
-                    break;
-                }
+            if (FloatCompare<sortAscending>(jValue, iValue) <= 0) {
+                break;
             }
             values[j + 1] = values[j];
             addresses[j + 1] = addresses[j];
@@ -845,16 +814,8 @@ static void ALWAYS_INLINE QuickSortDoubleSmall(int64_t *values, uint64_t *addres
         while (j >= from) {
             auto jValuePtr = values[j];
             auto jValue = *(reinterpret_cast<double *>(&jValuePtr));
-			if constexpr (sortAscending == 0) {
-                // condition is jValue >= iValue
-                if (DoubleEqual(jValue, iValue) || jValue > iValue) {
-                    break;
-                }
-            } else {
-                // condition is jValue <= iValue
-                if (DoubleEqual(jValue, iValue) || jValue < iValue) {
-                    break;
-                }
+            if (DoubleCompare<sortAscending>(jValue, iValue) <= 0) {
+                break;
             }
             values[j + 1] = values[j];
             addresses[j + 1] = addresses[j];
@@ -1752,10 +1713,19 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
             }
         }
     } else {
-        RawType currentValue = values[nonNullFrom];
+        auto loadValue = [values](int32_t idx) {
+            if constexpr (std::is_floating_point_v<RawType>) {
+                RawType v;
+                memcpy(&v, values + idx, sizeof(RawType));
+                return v;
+            } else {
+                return static_cast<RawType>(values[idx]);
+            }
+        };
+        RawType currentValue = loadValue(nonNullFrom);
         for (int32_t i = nonNullFrom + 1; i < nonNullTo; ++i) {
-            RawType value = values[i];
-            if (!OnlyEqual<RawType>(value, currentValue) != 0) {
+            RawType value = loadValue(i);
+            if (!OnlyEqual<RawType>(value, currentValue)) {
                 currentValue = value;
                 if (start + 1 != i) { // sort next column when |equivalent class| > 1
                     ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, start,
@@ -1948,7 +1918,13 @@ void PagesIndex::SortInplace(int32_t sortAscending, int32_t sortNullFirst, int32
     using T = typename NativeType<typeId>::type;
     auto *values = reinterpret_cast<T *>(VectorHelper::UnsafeGetValues(inplaceSortColumn));
     if (sortAscending) {
-        auto comp = [](const T &left, const T &right) { return left < right; };
+        auto comp = [](const T &left, const T &right) {
+            if constexpr (std::is_floating_point_v<T>) {
+                return FloatingGreater(right, left);
+            } else {
+                return left < right;
+            }
+        };
         if (sortNullFirst) {
             // null values have been preprocessed and can be skipped directly
             std::sort(values + totalNullCount + from, values + to, comp);
@@ -1956,7 +1932,13 @@ void PagesIndex::SortInplace(int32_t sortAscending, int32_t sortNullFirst, int32
             std::sort(values + from, values + to - totalNullCount, comp);
         }
     } else {
-        auto comp = [](const T &left, const T &right) { return left > right; };
+        auto comp = [](const T &left, const T &right) {
+            if constexpr (std::is_floating_point_v<T>) {
+                return FloatingGreater(left, right);
+            } else {
+                return left > right;
+            }
+        };
         if (sortNullFirst) {
             // null values have been preprocessed and can be skipped directly
             std::sort(values + totalNullCount + from, values + to, comp);

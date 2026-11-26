@@ -3,6 +3,7 @@
  * @Description: hash strategy implementations
  */
 #include "pages_hash_strategy.h"
+#include <cmath>
 #include <memory>
 #include "vector/vector.h"
 #include "util/operator_util.h"
@@ -80,11 +81,7 @@ static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(omniruntime::vec::Ba
         rightValue = static_cast<FlatVector *>(rightVector)->GetValue(rightIndex);
     }
 
-    if (std::abs(leftValue - rightValue) < __DBL_EPSILON__) {
-        return true;
-    } else {
-        return false;
-    }
+    return leftValue == rightValue || (std::isnan(leftValue) && std::isnan(rightValue));
 }
 
 static ALWAYS_INLINE bool FloatValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector,
@@ -105,11 +102,7 @@ static ALWAYS_INLINE bool FloatValueEqualsValueIgnoreNulls(omniruntime::vec::Bas
         rightValue = static_cast<FlatVector *>(rightVector)->GetValue(rightIndex);
     }
 
-    if (std::abs(leftValue - rightValue) < __FLT_EPSILON__) {
-        return true;
-    } else {
-        return false;
-    }
+    return leftValue == rightValue || (std::isnan(leftValue) && std::isnan(rightValue));
 }
 
 static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector,
