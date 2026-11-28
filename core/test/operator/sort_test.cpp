@@ -10,6 +10,8 @@
 #include <memory>
 #include <tuple>
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <random>
 #include "gtest/gtest.h"
 #include "operator/sort/sort.h"
@@ -3966,6 +3968,116 @@ TEST(NativeOmniSortTest, TestSortWithConstVectorVarchar)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
+}
+
+// Spark ordering for double: NaN is greater than any other value, including +Infinity
+static bool SparkDoubleLess(double left, double right)
+{
+    if (std::isnan(left)) {
+        return false;
+    }
+    return std::isnan(right) || left < right;
+}
+
+// More than QUICK_SORT_SMALL_LEN rows with NaN at the median sample positions, so the quick sort
+// would pick NaN as pivot.
+static void RunDoubleSortWithNaNTest(bool ascending, bool nullFirst, bool singleColumn)
+{
+    constexpr int32_t dataSize = 40;
+    const double inf = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    std::vector<double> doubles(dataSize);
+    for (int32_t i = 0; i < dataSize; ++i) {
+        doubles[i] = static_cast<double>((i * 7) % 13) - 6.0;
+    }
+    for (int32_t idx : {5, 19, 20, 21, 30}) {
+        doubles[idx] = nan;
+    }
+    doubles[10] = inf;
+    doubles[25] = inf;
+    doubles[15] = -inf;
+    doubles[35] = std::numeric_limits<double>::max();
+    doubles[36] = -std::numeric_limits<double>::max();
+    const std::vector<int32_t> nullRows = {3, 33};
+
+    std::vector<int32_t> keys(dataSize, 0);
+    DataTypes sourceTypes(singleColumn ? std::vector<DataTypePtr>({ DoubleType() }) :
+                                         std::vector<DataTypePtr>({ IntType(), DoubleType() }));
+    VectorBatch *vecBatch = singleColumn ? CreateVectorBatch(sourceTypes, dataSize, doubles.data()) :
+                                           CreateVectorBatch(sourceTypes, dataSize, keys.data(), doubles.data());
+    const int32_t doubleCol = singleColumn ? 0 : 1;
+    for (int32_t row : nullRows) {
+        vecBatch->Get(doubleCol)->SetNull(row);
+    }
+
+    std::vector<double> expected;
+    for (int32_t i = 0; i < dataSize; ++i) {
+        if (std::find(nullRows.begin(), nullRows.end(), i) == nullRows.end()) {
+            expected.push_back(doubles[i]);
+        }
+    }
+    if (ascending) {
+        std::stable_sort(expected.begin(), expected.end(), SparkDoubleLess);
+    } else {
+        std::stable_sort(expected.begin(), expected.end(), [](double l, double r) { return SparkDoubleLess(r, l); });
+    }
+
+    const int32_t colCount = singleColumn ? 1 : 2;
+    int32_t outputCols[] = {0, 1};
+    int32_t sortCols[] = {0, 1};
+    int32_t ascendings[] = {ascending, ascending};
+    int32_t nullFirsts[] = {nullFirst, nullFirst};
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, colCount, sortCols,
+        ascendings, nullFirsts, colCount);
+    auto sortOperator = CreateTestOperator(operatorFactory);
+    sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    ASSERT_NE(outputVecBatch, nullptr);
+    ASSERT_EQ(outputVecBatch->GetRowCount(), dataSize);
+    auto *result = static_cast<DoubleVector *>(outputVecBatch->Get(doubleCol));
+    const int32_t nullCount = static_cast<int32_t>(nullRows.size());
+    const int32_t nonNullStart = nullFirst ? nullCount : 0;
+    const int32_t nullStart = nullFirst ? 0 : dataSize - nullCount;
+    for (int32_t i = 0; i < nullCount; ++i) {
+        EXPECT_TRUE(result->IsNull(nullStart + i)) << "row " << nullStart + i;
+    }
+    for (int32_t i = 0; i < static_cast<int32_t>(expected.size()); ++i) {
+        int32_t row = nonNullStart + i;
+        ASSERT_FALSE(result->IsNull(row)) << "row " << row;
+        double actual = result->GetValue(row);
+        if (std::isnan(expected[i])) {
+            EXPECT_TRUE(std::isnan(actual)) << "row " << row << " actual " << actual;
+        } else {
+            EXPECT_EQ(actual, expected[i]) << "row " << row;
+        }
+    }
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortDoubleWithNaNAscNullFirst)
+{
+    RunDoubleSortWithNaNTest(true, true, false);
+}
+
+TEST(NativeOmniSortTest, TestSortDoubleWithNaNDescNullLast)
+{
+    RunDoubleSortWithNaNTest(false, false, false);
+}
+
+TEST(NativeOmniSortTest, TestSortDoubleWithNaNSingleColumnAsc)
+{
+    RunDoubleSortWithNaNTest(true, true, true);
+}
+
+TEST(NativeOmniSortTest, TestSortDoubleWithNaNSingleColumnDesc)
+{
+    RunDoubleSortWithNaNTest(false, false, true);
 }
 
 } // namespace SortTest

@@ -939,13 +939,24 @@ namespace omniruntime::reader {
             }
         }
 
+        auto dataTypeId = static_cast<omniruntime::type::DataTypeId>(omniTypeId);
+        // An empty dictionary means every row is null, but null rows still carry index 0, which is out of
+        // range for the dictionary offsets. Return a flat all-null vector instead of a DictionaryVector.
+        if (omniDictSize_ == 0) {
+            auto vec = new omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>(
+                static_cast<int>(numValues), omniruntime::vec::INITIAL_STRING_SIZE, dataTypeId);
+            for (uint64_t i = 0; i < numValues; ++i) {
+                vec->SetNull(static_cast<int32_t>(i));
+            }
+            return vec;
+        }
+
         auto container = std::make_shared<omniruntime::vec::DictionaryContainer<std::string_view>>(
             indices.data(),
             static_cast<int32_t>(numValues),
             omniDict_,
             omniDictSize_);
 
-        auto dataTypeId = static_cast<omniruntime::type::DataTypeId>(omniTypeId);
         return new omniruntime::vec::Vector<omniruntime::vec::DictionaryContainer<std::string_view>>(
             static_cast<int>(numValues), container, nullsBuf.get(), dataTypeId);
     }
